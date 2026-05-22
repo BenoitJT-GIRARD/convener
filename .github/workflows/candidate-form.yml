@@ -1,0 +1,36 @@
+name: Handle proposal
+
+on:
+  repository_dispatch:
+    types: [proposal-submitted]
+
+permissions:
+  contents: write
+
+jobs:
+  handle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: pip install pyyaml
+      - name: Process payload
+        env:
+          PROPOSAL_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          PROPOSAL_SIGNATURE: ${{ github.event.client_payload.signature }}
+          TALLY_WEBHOOK_SECRET: ${{ secrets.TALLY_WEBHOOK_SECRET }}
+        run: python .github/scripts/handle_proposal.py
+      - name: Commit
+        run: |
+          set -e
+          git config user.name "convener-form"
+          git config user.email "convener-form@forum.example.test"
+          git add data/speakers.yml
+          if git diff --staged --quiet; then
+            echo "no new lead"
+            exit 0
+          fi
+          git commit -m "data: new lead from public form"
+          git push
