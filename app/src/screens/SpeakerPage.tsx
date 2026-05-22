@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useData } from '../data/DataContext';
 import { Field } from '../components/Field';
 import { Button } from '../components/Button';
+import { VotePanel } from '../components/VotePanel';
 import type { Speaker, SpeakerStatus } from '../data/types';
 
 const STATUSES: SpeakerStatus[] = ['lead','approved','invited','confirmed','scheduled','parking-lot','declined'];
@@ -67,6 +68,15 @@ export function SpeakerPage() {
     <div className="max-w-2xl">
       <h1 className="font-serif text-3xl mb-2">{isNew ? 'New speaker' : draft.name || '(unnamed)'}</h1>
       <p className="text-xs text-ink-muted font-mono mb-6">{draft.id || '(new id at save)'}</p>
+
+      {!isNew && draft.status === 'lead' && (
+        <VotePanel speaker={draft} onVote={async (votes) => {
+          const updated = { ...draft, selection: { ...draft.selection, votes_for: votes } };
+          setDraft(updated);
+          await saveSpeakers(speakers.map(s => s.id === updated.id ? updated : s),
+            `data: vote on ${updated.id} (${votes.length} now)`);
+        }} />
+      )}
 
       <Field label="Name" value={draft.name} onChange={v => up('name', v)} />
       <Field label="Email" value={draft.email} type="email" onChange={v => up('email', v)} />
