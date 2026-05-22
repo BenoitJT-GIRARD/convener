@@ -1,0 +1,35 @@
+/* TEC Convener — design tokens. Palette: warm paper + moss + copper. */
+:root {
+  --paper:        #f8f5f0;
+  --surface:      #ffffff;
+  --ink:          #1a1a1a;
+  --ink-muted:    #6b6b6b;
+  --primary:      #3a5a40;
+  --primary-hover:#2d4731;
+  --accent:       #a8763e;
+  --border:       #e8e3da;
+  --danger:       #9b2226;
+  --info:         #4a6c75;
+
+  --radius-sm:    6px;
+  --radius-md:    10px;
+  --shadow-card:  0 1px 2px rgba(26, 26, 26, 0.04), 0 0 0 1px var(--border);
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 500;
+  line-height: 1.2;
+}
+code, .mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.92em;
+  color: var(--ink-muted);
+}
