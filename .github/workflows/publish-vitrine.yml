@@ -1,0 +1,46 @@
+name: Publish vitrine data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/events.yml'
+      - 'data/speakers.yml'
+      - '.github/scripts/filter_public_data.py'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: pip install pyyaml
+      - run: python .github/scripts/filter_public_data.py
+      - name: Push to example-showcase
+        env:
+          DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$DEPLOY_TOKEN" ]; then
+            echo "VITRINE_DEPLOY_TOKEN not set — skipping push (set up the secret to enable)."
+            exit 0
+          fi
+          git config --global user.name "convener-publisher"
+          git config --global user.email "convener-publisher@forum.example.test"
+          git clone --depth 1 \
+            "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
+          mkdir -p /tmp/vit/src/_data
+          cp public-data/events-public.json /tmp/vit/src/_data/events.json
+          cd /tmp/vit
+          git add src/_data/events.json
+          if git diff --staged --quiet; then
+            echo "no changes"
+            exit 0
+          fi
+          git commit -m "data: refresh public events"
+          git push
