@@ -1,20 +1,16 @@
 # Glossary
 
-| Term | Meaning |
+| Word | What it means |
 |---|---|
-| **Convener** | Monthly Reading Group — the webinar series itself. |
-| **MRG-NN** | A webinar's identifier (e.g. `MRG-07`). |
-| **Event Owner** *(MCP)* | The Directly Responsible Individual for one webinar, end to end. "MCP" (Main Contact Point) is the older name. |
-| **DRI** | Directly Responsible Individual — the single named owner of an entry. Never blank once active. |
-| **Editorial Board** | The bounded, named body that curates the series and validates the gates. |
-| **Architecte** | The system's design role (repo, data model, architecture). A design role, not support. |
-| **Contributor** | Anyone helping out — the entry tier. |
-| **Track 1 / Track 2** | The speaker pipeline / the event lifecycle. |
-| **Lead → Approved → Invited → Confirmed → Scheduled** | The speaker pipeline states. |
-| **Parking Lot / Declined** | Off-pipeline buckets: a good lead with no slot / a lead not retained. |
-| **Gate 1 — Selection** | A lead becomes an invited speaker. Two-thirds Board vote. |
-| **Gate 2 — Publication** | Content goes public. Lazy consensus. |
-| **Supermajority (⅔)** | The selection rule: two-thirds of the Board must vote YES. |
-| **Lazy consensus** | Approved unless someone vetoes within 72h. Silence = assent. |
-| **T-minus runbook** | The countdown checklist for preparing a webinar. |
-| **Season** | A year of programming. |
+| **Convener** | Monthly Reading Group — our webinar series. |
+| **MRG-NN** | A webinar's number, e.g. `MRG-07`. |
+| **Contributor** | Anyone helping out. |
+| **Event Owner** | The one person in charge of a single webinar, start to finish. (Once called "MCP".) |
+| **Editorial Board** | The small group that chooses speakers and steers the series. |
+| **Architecte** | The person who looks after the handbook and the system behind it. |
+| **Owner** | The one named person responsible for something — never "the team". |
+| **Gate** | A moment that needs the Board's approval. There are two: choosing a speaker, and publishing a recording. |
+| **Lead** | A speaker who has been suggested but not yet chosen. |
+| **Parking Lot** | A good speaker idea kept for later, for when a slot opens. |
+| **Season** | A year of webinars. |
+| **The forum** | The Example Collective (forum.example.test) — where discussion happens before and after each talk. |

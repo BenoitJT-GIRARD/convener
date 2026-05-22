@@ -1,15 +1,11 @@
-# Selection criteria
+# How we choose speakers
 
-These criteria are applied at **🚪 Gate 1 — Selection**, when the Editorial Board votes on a `lead`. They derive from the [editorial line](editorial-line.md) and are steered by the current season's objectives.
+These are what the Editorial Board weighs when [choosing a speaker](../workflow/1-sourcing-selection.md). They come from our [editorial line](editorial-line.md).
 
-## The criteria
+- **Quality.** The biggest lever. A great speaker brings the next audience by word of mouth; a weak one quietly loses it. With few slots a year, be selective — a quick look at an earlier recorded talk usually tells you enough.
+- **Diversity.** A deliberate aim, not an afterthought — across career stage, gender, country and institution. Left alone, line-ups drift senior and male; correct for it on purpose.
+- **Early-career first.** We favour emerging and less-visible researchers. A genuine preference, not a hard rule — established names are welcome, they just should not crowd out the rest.
+- **Behaviour at the centre.** Whatever the method, the talk's core question is a behavioural one.
+- **Conflicts of interest.** Handled per the [conflict-of-interest policy](conflict-of-interest.md).
 
-- **Quality.** The single biggest lever. A great speaker fills the next event by word of mouth; a weak one quietly costs attendance. With few slots a year, be selective — a quick look at a previous recorded talk is enough to confirm someone presents well online.
-- **Diversity.** Treated as a *design constraint*, not an afterthought — across career stage, gender, geography and institution. Left to default, lists drift senior and male; correct for it deliberately.
-- **Early-career preference (soft).** We favour emerging and less-visible researchers. A genuine preference, not a hard quota — established PIs remain welcome; they should simply not crowd out the early-career mission.
-- **Behaviour-centred.** The talk's anchoring question is a behavioural one, whatever the technique.
-- **Conflicts of interest.** Disclosed and handled per the [conflict-of-interest policy](conflict-of-interest.md).
-
-## Not a scoring rubric
-
-This is a checklist for judgement, not a weighted score. The Board reads a lead against these criteria and votes. Keep it light.
+This is a guide for judgement, not a score sheet. Read a candidate against these points, and vote.

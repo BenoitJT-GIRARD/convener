@@ -1,41 +1,39 @@
-# Workflow — overview
+# How a webinar happens
 
-Running a webinar is really two jobs, so the workflow has **two tracks**:
+Running a webinar has two parts:
 
-- **Track 1 — the speaker pipeline:** *getting* a speaker, from a name on a list to a locked date.
-- **Track 2 — the event lifecycle:** *delivering* the webinar once a speaker and date are set.
-
-They meet at a single handoff.
-
-```
-TRACK 1 — Speaker pipeline
-  Lead ──▶ [Gate 1: Selection] ──▶ Approved ──▶ Invited ──▶ Confirmed ──▶ Scheduled
-   │                                                                         │
-   ├─▶ Parking Lot                                                           │
-   └─▶ Declined                                                     HANDOFF ─┘
-                                                                              ▼
-TRACK 2 — Event lifecycle
-  Upcoming (T-minus runbook) ──▶ Delivered ──▶ Wrapped ──▶ Archived
-```
+- **Part 1 — Finding a speaker:** from a name on a list to a confirmed date.
+- **Part 2 — Running the webinar:** preparing, hosting, and following up.
 
 ## The four phases
 
-| Phase | Track | What happens |
-|---|---|---|
-| [1 · Sourcing & selection](1-sourcing-selection.md) | 1 | Find speakers, vet them at Gate 1 |
-| [2 · Preparation](2-preparation.md) | 2 | The T-minus runbook, from invitation to the day before |
-| [3 · Hosting day](3-hosting.md) | 2 | The day-of timeline and run-of-show |
-| [4 · After the webinar](4-after.md) | 2 | Recording, summary, thank-you, metrics |
+| Phase | What happens |
+|---|---|
+| [1 · Finding & choosing speakers](1-sourcing-selection.md) | Find speakers; the Board chooses them |
+| [2 · Preparing the webinar](2-preparation.md) | The six-week countdown to the event |
+| [3 · Hosting day](3-hosting.md) | The day itself |
+| [4 · After the webinar](4-after.md) | Recording, summary, thank-you |
+
+## A speaker's journey
+
+A suggested speaker moves through these stages:
+
+```
+Lead → [ Gate: the Board chooses ] → Approved → Invited → Confirmed → Scheduled
+```
+
+- **Lead** — suggested, not yet chosen.
+- **Approved** — the Board said yes.
+- **Invited / Confirmed** — invitation sent; the speaker accepts and sends their details.
+- **Scheduled** — date locked. The webinar now exists, and preparation begins.
+
+Two side outcomes: **Parking Lot** (a good idea, kept for later) and **Declined**.
 
 ## The two gates
 
-Most of the work happens in **autonomy** — an Event Owner advances without asking permission. Only two transitions pass a gate, validated by the Editorial Board:
+Almost everything you do, you do on your own initiative. Only **two moments** need the Editorial Board's approval:
 
-- **🚪 Gate 1 — Selection:** a Lead becomes an invited speaker. Two-thirds supermajority of the Board.
-- **🚪 Gate 2 — Publication:** content goes public (YouTube, forum summary). Lazy consensus.
+- 🚪 **Choosing a speaker** — before anyone is invited.
+- 🚪 **Publishing a recording** — before it goes public.
 
-See [Roles & ownership](../roles.md) for the gate mechanics.
-
-## The handoff
-
-When a speaker reaches **Scheduled** (date locked), an **event** is born: it gets an ID (`MRG-NN`), an entry in `data/events.yml`, and its own T-minus runbook. Track 1 found the speaker; Track 2 now delivers the webinar.
+Everything in between is yours to run.

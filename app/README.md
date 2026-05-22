@@ -1,9 +1,7 @@
-# Reserved — Chantier B (the dynamic layer)
+# Reserved for the companion app (Phase 2)
 
-This folder is intentionally empty.
+This folder is intentionally empty for now.
 
-It is reserved for **Chantier B**: a friendly, low-barrier interface for non-technical volunteers, built on top of the Git data in [`../data/`](../data/). It will let people track invitations, follow each webinar's progress visually, and run polls — without ever seeing raw GitHub or YAML.
+It is reserved for a future, friendlier **companion app** — a simple interface so volunteers can follow each webinar's progress and update it without ever touching GitHub.
 
-Chantier B will be designed in its own specification, later, once Chantier A (this handbook + data model) is in use.
-
-**Guiding principle:** the data lives in Git as the source of truth; any UI built here is a *replaceable projection* of it. If the dynamic layer is ever retired, the data — and the workflow — survive untouched.
+It will be designed later, as a separate project, once the handbook is in everyday use.

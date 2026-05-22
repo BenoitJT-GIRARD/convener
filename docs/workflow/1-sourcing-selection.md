@@ -1,41 +1,26 @@
-# Phase 1 — Sourcing & selection
+# Phase 1 — Finding & choosing speakers
 
-This phase fills **Track 1** of the pipeline: turning potential speakers into confirmed, scheduled ones.
+## Two ways a speaker arrives
 
-## Two ways speakers arrive
+- **They come to us.** A public form (linked from our page and the forum) lets anyone suggest a speaker — including themselves.
+- **We reach out.** The Board and Event Owners can invite labs or colleagues to suggest names, using the [outreach template](../toolkit/emails/outreach-sourcing.md). What we look for is steered by the season's aims.
 
-- **Inbound — the form.** A public application form (linked from the vitrine and the forum) lets anyone propose a speaker, or propose themselves. Each submission becomes a `lead`.
-- **Outbound — outreach.** The Editorial Board and Event Owners can actively invite labs, institutes or individuals to suggest speakers, using the [outreach template](../toolkit/emails/outreach-sourcing.md). Outbound sourcing is steered by the season's editorial objectives.
+Either way, the result is a new **Lead**, with one **owner** to look after it.
 
-Both feed the same place: a new `lead` in `data/speakers.yml`, with an `owner` (a DRI) assigned from the start.
+## 🚪 The gate — choosing the speaker
 
-## The pipeline states
+A Lead becomes a confirmed choice only when the **Editorial Board** agrees:
 
-```
-Lead ──▶ Approved ──▶ Invited ──▶ Confirmed ──▶ Scheduled
-```
+- **The rule:** two-thirds of the Board say yes (a board of 6 → 4 yes). The vote runs over about two weeks.
+- **Yes** → the speaker is **Approved**, ready to be invited.
+- **No** → moved to **Parking Lot** (kept for later) or **Declined**.
+- **What the Board weighs:** quality, diversity, a preference for early-career researchers, and any conflicts of interest. See [selection criteria](../governance/selection-criteria.md).
 
-Plus two off-pipeline buckets:
+## Every candidate gets an answer
 
-- **Parking Lot** — a good lead with no slot right now. Kept warm, revisited later.
-- **Declined** — not retained, or the speaker said no. Kept on record so nobody re-pitches the same person.
+- **When they apply** — an automatic acknowledgement.
+- **When the Board decides** — a short, kind message: [declined](../toolkit/emails/decision-declined.md) or [parked](../toolkit/emails/decision-parked.md).
 
-## 🚪 Gate 1 — Selection
+## Once approved
 
-A `lead` becomes `approved` only by passing the Selection gate.
-
-- **Decision rule:** a **two-thirds supermajority of the Editorial Board** votes YES. Default board of 6 → 4 YES. The vote runs on a ~2-week window.
-- **If the threshold is reached** → `approved`: cleared to invite, ready to be matched to a slot and an Event Owner.
-- **If not** → `parking-lot` (revisit later) or `declined`.
-- **Criteria:** quality, diversity, a soft preference for early-career researchers, and conflicts of interest — all derived from the [editorial line](../governance/editorial-line.md). See [selection criteria](../governance/selection-criteria.md).
-
-## Feedback to candidates
-
-Nobody is left without an answer:
-
-- **On submission** — an automatic acknowledgement (the form's confirmation message + email).
-- **On decision** — a templated, kind message: [declined](../toolkit/emails/decision-declined.md) or [parked](../toolkit/emails/decision-parked.md).
-
-## After approval
-
-An `approved` speaker is picked up by an Event Owner, who sends the invitation — moving the entry to `invited`, then `confirmed` (speaker accepts and talk details are collected), then `scheduled` (date locked). At `scheduled`, the [handoff](overview.md#the-handoff) to Track 2 happens and the T-minus runbook begins.
+An Event Owner picks up the approved speaker, sends the invitation, collects the talk details, and locks a date. With the date set, the webinar exists — and [preparation](2-preparation.md) begins.

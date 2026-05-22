@@ -1,18 +1,18 @@
 # Tools & access
 
-Every tool the series uses, and where access comes from.
+Every tool the series uses, and how to get access.
 
-| Tool | Used for | Access |
+| Tool | What it is for | Access |
 |---|---|---|
-| **GitHub repo** (`workshop-series`) | This handbook + the data (source of truth) | Org The Example Collective — ask the Architecte |
-| **Google Form** | Inbound speaker proposals | Ask the organizers |
-| **Google Drive** | Shared files, exports, metrics CSVs | Ask the organizers |
-| **Canva** | Visuals & flyers — sign in with the The Example Collective account | www.canva.com — ask the organizers. Folder: Projects ▸ Workshop Series. **Duplicate templates, never edit them in place.** |
-| **LinkedIn** | Announcement posts | Ask the organizers; a bot can pre-write drafts |
-| **Zoom** (Helsinki) | Hosting the webinar + recording | Via the Zoom responsible — see [Contacts](contacts.md) |
-| **YouTube** (TEATIME channel) | Publishing recordings | Via the YouTube responsible — see [Contacts](contacts.md) |
-| **The Example Collective** (Discourse) | Pre/post discussion, announcements, polls | forum.example.test |
-| **WhatsApp** | Co-host coordination during the live event | Optional, ad hoc |
+| **The handbook** (this site) | All our guides, in one place | Ask the Architecte |
+| **Google Form** | People suggest speakers through it | Ask the organisers |
+| **Google Drive** | Shared files and exports | Ask the organisers |
+| **Canva** | Visuals and flyers | www.canva.com — sign in with the The Example Collective account; ask the organisers. Folder: *Projects ▸ Workshop Series*. Always **duplicate** a template, never edit the original. |
+| **LinkedIn** | Announcement posts | Ask the organisers |
+| **Zoom** | Hosting the webinar and recording it | Through the Zoom contact — see [Contacts](contacts.md) |
+| **YouTube** (TEATIME channel) | Publishing the recordings | Through the YouTube contact — see [Contacts](contacts.md) |
+| **The forum** | Discussion before and after each talk | forum.example.test |
+| **WhatsApp** | Quick co-host chat during the live event | Optional |
 
-!!! tip "Registration"
-    Everyone registers via the Zoom link — including the organizers and the speaker.
+!!! tip "Everyone registers"
+    Everyone signs up through the Zoom link — organisers and the speaker included.

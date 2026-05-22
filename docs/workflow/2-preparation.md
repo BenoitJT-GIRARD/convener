@@ -1,44 +1,41 @@
-# Phase 2 — Preparation (the T-minus runbook)
+# Phase 2 — Preparing the webinar
 
-Once a webinar is **Scheduled**, the Event Owner runs this runbook. It counts down from the event date (**T**).
+Once the date is set, the Event Owner prepares the event. This is a countdown to the big day.
 
-!!! note "Suggested, not imposed"
-    Every window below is a **recommendation**, not a deadline. The runbook shows the sequence and hands you the templates — *you* pace it. What matters is that each step gets done and ticked, so everyone can see the progress.
+!!! note "The timings are suggestions"
+    The weeks below are **recommendations**, not deadlines. Go at your own pace — just tick each step as you do it, so everyone can see how the webinar is coming along.
 
-Each step is an atomic, checkable item with a single owner (the DRI). The share of ticked steps is the webinar's progress bar.
+## 6 weeks before
 
-## T-6 weeks — launch
+- [ ] Send the **invitation** to the speaker — [template](../toolkit/emails/invitation.md).
+- [ ] Ask for the **talk details** — title, abstract, short bio — [template](../toolkit/emails/talk-details.md). Copy in the Zoom contact so they know it is coming.
+- [ ] Ask the **Zoom contact** for a registration link and recording — [template](../toolkit/emails/zoom-request.md).
+- [ ] Ask the organisers for **Canva and LinkedIn** access if you do not have it.
 
-- [ ] Send the **invitation** to the speaker — [template](../toolkit/emails/invitation.md). *(Owner: Event Owner)*
-- [ ] Collect the **talk details** (title, abstract, bio) — [template](../toolkit/emails/talk-details.md); CC the Zoom responsible for a heads-up. *(Owner: Event Owner)*
-- [ ] Request the **Zoom link + recording** from the Zoom responsible — [template](../toolkit/emails/zoom-request.md). *(Owner: Event Owner)*
-- [ ] Request access to **Canva and LinkedIn** if you don't have it yet. *(Owner: Event Owner)*
+## 4 weeks before
 
-## T-4 weeks — promote
+- [ ] Make the **visuals and flyer** in Canva from the templates. Always *duplicate* a template — never edit the original.
+- [ ] Publish the **LinkedIn post** — [template](../toolkit/linkedin-post.md).
+- [ ] Publish the **forum announcement** and start the discussion — [template](../toolkit/forum-post-announce.md).
 
-- [ ] Create the **visuals + flyer** in Canva from the templates. **Duplicate the templates — never edit them in place.** *(Owner: Event Owner)*
-- [ ] Publish the **LinkedIn post** — [template](../toolkit/linkedin-post.md). *(Owner: Event Owner)*
-- [ ] Publish the **forum announcement** and seed the discussion — [template](../toolkit/forum-post-announce.md). *(Owner: Event Owner)*
+## 2 weeks before
 
-## T-2 weeks — rehearse
+- [ ] Do a short **tech check** with the speaker (screen sharing, sound).
+- [ ] If the forum is quiet, **post a question or two yourself** to get the discussion going.
 
-- [ ] Run a short **tech check / dry run** with the speaker (screen share, audio). *(Owner: Event Owner)*
-- [ ] If no questions have appeared on the forum, **seed one or two yourself** to stimulate discussion. *(Owner: Event Owner)*
+## 1 week before
 
-## T-1 week — finalise
+- [ ] Send the **reminder** to the speaker — [template](../toolkit/emails/reminder.md).
+- [ ] Pick the two **day-of roles**: Host and Tech (see [Roles](../roles.md)).
+- [ ] Run through the **plan for the day** with both co-hosts (see [Hosting day](3-hosting.md)).
 
-- [ ] Send the **reminder email** to the speaker — [template](../toolkit/emails/reminder.md). *(Owner: Event Owner)*
-- [ ] Assign the **day-of roles**: Host/MC and Tech-Producer — see [roles](../roles.md). *(Owner: Event Owner)*
-- [ ] Confirm the **run-of-show** with both co-hosts — see [hosting day](3-hosting.md). *(Owner: Host/MC)*
+## The day before
 
-## T-1 day
-
-- [ ] Send a final reminder if useful; check the registration link still works. *(Owner: Event Owner)*
-
-## Scheduling a forum post for later
-
-A forum topic must first be posted in a **private category**, then scheduled to publish to a public category from the topic settings. Use the *Moderators ▸ Scheduled topics* subcategory. Guide: [Discourse — scheduling topics for future publication](https://meta.discourse.org/t/scheduling-topics-for-future-publication/60731).
+- [ ] A final reminder if useful; check the registration link still works.
 
 ---
 
-When the day arrives, continue with **[Phase 3 — Hosting day](3-hosting.md)**.
+!!! tip "Scheduling a forum post in advance"
+    On the forum, post the topic in a private category first, then schedule it to go public from the topic settings (the *Moderators ▸ Scheduled topics* area).
+
+When the day comes, go to **[Hosting day](3-hosting.md)**.

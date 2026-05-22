@@ -1,25 +1,17 @@
-# TEC Monthly Reading Group — Handbook
+# Monthly Reading Group — Handbook
 
-Welcome to the operating handbook of **The Example Collective Monthly Reading Group** — the community of volunteers who run our online behavioural-science webinars.
-
-This handbook is the **single source of truth**: how we find speakers, prepare events, host them and follow up — plus who does what, and the principles we work by.
+Welcome. This handbook holds everything our volunteers need to run The Example Collective's online webinars — and it is the **one place** we keep it. If it is not written here, it is not official.
 
 ## Where to go
 
-- **[Start here](start-here/index.md)** — new volunteer? Read this first.
-- **[The workflow](workflow/overview.md)** — the end-to-end process, in two tracks and four phases.
-- **[Roles & ownership](roles.md)** — the four tiers and who owns what.
-- **[Governance](governance/editorial-line.md)** — our editorial line and how decisions are made.
-- **[Templates](toolkit/index.md)** — ready-to-use emails, posts and scripts.
+- **[Start here](start-here/index.md)** — new? Read this first.
+- **[The workflow](workflow/overview.md)** — how a webinar happens, step by step.
+- **[Roles](roles.md)** — who does what.
+- **[Templates](toolkit/index.md)** — ready-made emails, posts and scripts.
+- **[Governance](governance/editorial-line.md)** — what the series stands for, and how we decide.
 
-## The five principles
+## How we work — three ideas
 
-1. **Scalable by default** — roles are functions, not people. It works for 4 volunteers and for 30.
-2. **Autonomy + gatekeeping + transparency** — contribute freely; key steps pass a gate; everything is visible to everyone.
-3. **Suggest, don't command** — the process shows recommended windows, never imposes a date.
-4. **Resilient to variable involvement** — state is always explicit, so anyone can pick up where someone left off.
-5. **Data in Git is the source of truth** — any tool built on top is a replaceable projection.
-
----
-
-*This handbook is itself the product. If something is not written here, it does not exist. Disagree with a page? Edit it.*
+- **You are trusted to act.** Pick up a task and move it forward; you do not need permission for everyday steps.
+- **Two moments need a green light:** choosing a speaker, and publishing a recording. Everything else is yours to run.
+- **Everything is visible.** Anyone can see where each webinar stands, so nothing falls through the cracks.

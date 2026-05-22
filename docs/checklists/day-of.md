@@ -1,13 +1,13 @@
-# Day-of checklist (DO-CONFIRM)
+# Final check — before going live
 
-Run this **about 60 seconds before going live**. It is a *do-confirm* checklist: do your setup from habit, then pause and confirm these killer items. One screen, nothing more.
+Run this about a minute before 12:30. A quick check of the things that hurt most if forgotten.
 
 - [ ] **Recording is ON**
-- [ ] **Speaker audio** confirmed — heard clearly in headphones
-- [ ] **Speaker screen share** tested and working
-- [ ] **Registration link** still valid (a latecomer can still join)
-- [ ] **Co-host has co-host rights** in Zoom (backup if the Host drops)
+- [ ] **Speaker's sound** is clear in your headphones
+- [ ] **Speaker's screen sharing** works
+- [ ] **Registration link** still works (latecomers can still join)
+- [ ] The **co-host has co-host rights** (a backup if the Host drops out)
 - [ ] **Zoom background** applied
-- [ ] **Forum thread** open, to spot questions during the talk
+- [ ] **Forum** open in a tab, to catch questions
 
-If any item fails, fix it before 12:30. Then start on time.
+Anything failing? Fix it before 12:30 — then start on time.

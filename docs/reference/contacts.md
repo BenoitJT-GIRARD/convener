@@ -1,12 +1,12 @@
 # Contacts
 
-External roles the series depends on.
+The outside people the series relies on.
 
 | Role | Person | Contact | Notes |
 |---|---|---|---|
-| **Zoom responsible** | Anonymous | someone@example.test | Sets up the Zoom registration link and the recording. Needs the speaker name + title (last resort: just the date). Opens the room for organizers at 12:00 CET. Ask him to share the link with the TEATIME mailing list. |
-| **YouTube / TEATIME responsible** | Aleksandra Bartelik | someone@example.test | Receives the recording after the webinar and publishes it on the TEATIME YouTube channel. |
+| **Zoom contact** | Anonymous | someone@example.test | Sets up the Zoom registration link and the recording. Needs the speaker's name and talk title (at the very least, the date). Opens the room at 12:00 CET. Ask him to share the link with the TEATIME mailing list. |
+| **YouTube contact** | Aleksandra Bartelik | someone@example.test | Receives the recording after the webinar and puts it on the TEATIME YouTube channel. |
 
-## Organizing team — founding Editorial Board
+## The organising team
 
-Anonymous · Anonymous · Anonymous · Anonymous. See [Editorial Board](../governance/editorial-board.md).
+Anonymous · Anonymous · Anonymous · Anonymous — the founding [Editorial Board](../governance/editorial-board.md).

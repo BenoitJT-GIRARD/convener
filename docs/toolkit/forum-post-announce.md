@@ -1,6 +1,6 @@
 # Forum post — Announce
 
-*Posted in the Events, Meetings & Training category on forum.example.test. Can be scheduled — see the [T-minus runbook](../workflow/2-preparation.md#scheduling-a-forum-post-for-later).*
+*Posted in the Events, Meetings & Training category on forum.example.test. It can be scheduled in advance — see [Preparing the webinar](../workflow/2-preparation.md).*
 
 ---
 

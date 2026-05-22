@@ -4,31 +4,33 @@
 
 ## The series in three lines
 
-The Example Collective Monthly Reading Group is a community-run set of online behavioural-science webinars (Thursdays, 12:30 CET). Volunteers find speakers, prepare events, host them, and follow up. Everything we do is in this handbook.
+We run online behavioural-science webinars — Thursdays, 12:30 CET. Volunteers find the speakers, prepare each event, host it, and follow up. Everything we do is in this handbook.
 
-## The four tiers
+## How you grow
 
-You grow by earned trust — see [Roles & ownership](../roles.md):
+You start small and take on more as you go:
 
-1. **Contributor** — anyone. Pick up an open task, propose a speaker, volunteer as a co-host.
-2. **Event Owner** — you own one webinar end to end.
-3. **Editorial Board** — the curatorial body.
-4. **Architecte** — the system's design core.
+1. **Contributor** — anyone. Pick up a task, suggest a speaker, help host.
+2. **Event Owner** — you take charge of one whole webinar.
+3. **Editorial Board** — you help choose speakers and steer the series.
+4. **Architecte** — you look after the system itself.
 
-## How we work — the triangle
+See [Roles](../roles.md) for what each one does.
 
-- **Autonomy** — you do not wait for permission. The runbook shows the steps and hands you the templates.
-- **Gatekeeping** — only two moments need validation: speaker selection and publication.
-- **Transparency** — every webinar's progress is visible to everyone.
+## The way we work
 
-## Essential reading
+- **Act without asking.** The step-by-step guides hand you the templates — just go.
+- **Two green lights only.** Choosing a speaker and publishing a recording need the Board's nod. Nothing else does.
+- **Everything is visible.** Each webinar's progress is open to all, so a task is never lost.
 
-Before anything else, read the **[editorial line](../governance/editorial-line.md)** — it is the personality of the series, and everything flows from it.
+## Read this first
 
-## Choose a first task
+The **[editorial line](../governance/editorial-line.md)** — one short page on what the series stands for. Everything else flows from it.
 
-- Browse the speaker pipeline (`data/speakers.yml`) and pick up a `lead` to shepherd, or
-- Volunteer as **co-host** or **Tech-Producer** for an upcoming webinar, or
-- Volunteer as **Event Owner** for a free slot.
+## Pick a first task
 
-Then read **[Your first webinar](first-webinar.md)**. Lost on a term? See the [glossary](glossary.md).
+- Take a speaker idea and move it forward, **or**
+- Offer to **co-host** an upcoming webinar, **or**
+- Become the **Event Owner** of a free slot.
+
+Then read **[Your first webinar](first-webinar.md)**. Stuck on a word? See the [glossary](glossary.md).

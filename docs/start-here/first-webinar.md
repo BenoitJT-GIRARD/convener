@@ -1,23 +1,23 @@
 # Your first webinar
 
-So you are the **Event Owner** of an upcoming webinar. Here is the whole path.
+So you are the **Event Owner** of an upcoming webinar — in charge of it from start to finish. Here is the whole path.
 
-## 1. You have an approved, scheduled speaker
+## 1. You have a speaker with a date
 
-A speaker who passed [Gate 1 — Selection](../workflow/1-sourcing-selection.md) and has a locked date. Their entry in `data/speakers.yml` is `scheduled` and linked to a `MRG-NN` event.
+A speaker the Board has chosen, with a date locked in. From here, it is yours to run.
 
-## 2. Run the T-minus runbook
+## 2. Prepare it
 
-Open **[Phase 2 — the T-minus runbook](../workflow/2-preparation.md)** and work the checklist from T-6 weeks down. Every step has a template ready in the [templates library](../toolkit/index.md). Remember: the windows are *suggestions* — pace it yourself, but tick each step so everyone can see progress.
+Open the **[preparation countdown](../workflow/2-preparation.md)** and work through it, starting six weeks out. Every step comes with a ready-made template. The timings are *suggestions* — go at your own pace, but tick each step so everyone can see how it is going.
 
 ## 3. Host the day
 
-On the Thursday, follow **[Phase 3 — Hosting day](../workflow/3-hosting.md)** and run the **[day-of checklist](../checklists/day-of.md)** before going live.
+On the Thursday, follow **[Hosting day](../workflow/3-hosting.md)** and run the quick **[final check](../checklists/day-of.md)** before going live.
 
 ## 4. Wrap up
 
-In the days after, follow **[Phase 4 — After the webinar](../workflow/4-after.md)** and the **[post-event checklist](../checklists/post-event.md)** — including its last item: update the runbook with anything you learned.
+In the days after, follow **[After the webinar](../workflow/4-after.md)** and its **[checklist](../checklists/post-event.md)** — including the last step: note anything that could be smoother, so the next person has it easier.
 
-## If you get stuck
+## Stuck?
 
-The handbook is the help desk. Still stuck? Ask the Editorial Board. And if something here is missing or wrong — fix it. This handbook is the product.
+The handbook is your first help. Still stuck? Ask the Editorial Board. And if a page here is wrong or missing — fix it.

@@ -1,40 +1,38 @@
-# Editorial Board
+# The Editorial Board
 
-The Editorial Board is the **curatorial and governance body** of the series. It carries the [editorial line](editorial-line.md), decides who speaks, and keeps the system honest.
+The Editorial Board is the small group that **steers the series**: it chooses the speakers, approves recordings, and keeps the series true to its [editorial line](editorial-line.md).
 
-## Composition
+## Who is on it
 
-- A **bounded, named body** — not a crowd. Founding board: the four current organizers. Target size: ~6.
-- Resized every year at the start-of-season ritual (below).
-- The Board is the **committed core** of the system: accepting an annual mandate means committing to take part in selection votes. Resilience to variable involvement protects the *volunteer* layer — the Board is the reliable one.
+- A **small, named group** — not a crowd. To start: the four current organisers. Aim: about six.
+- It is reviewed once a year (see below).
+- Being on the Board is a real commitment: you take part in the speaker votes. The Board is the **dependable core** of the series.
 
-## Mandates
+## What a Board member does
 
-A Board member takes part in selection votes, may validate publication, onboards and confirms Event Owners, and helps shape and uphold the editorial line and the policies.
+Takes part in choosing speakers; may approve recordings for publishing; welcomes and confirms new Event Owners; helps shape the editorial line and the rules.
 
-## Selection vote procedure — 🚪 Gate 1
+## 🚪 Choosing a speaker
 
-- A `lead` is moved to a vote. Each Board member casts a YES or abstains.
-- **A two-thirds supermajority of the Board votes YES** → the speaker is `approved`. Expressed as a ratio so it survives resizing: board of 6 → 4 YES · of 4 → 3 · of 9 → 6.
-- The vote runs on a **~2-week window**. Threshold reached → `approved`. Not reached → `parking-lot` or `declined`.
+- A suggested speaker is put to a vote. Each Board member votes yes, or abstains.
+- **Two-thirds of the Board must say yes** for the speaker to be chosen (a board of 6 → 4 yes; of 9 → 6).
+- The vote runs over about **two weeks**. Enough yes votes → chosen. Not enough → kept for later, or declined.
 
-## Publication validation — 🚪 Gate 2
+## 🚪 Publishing a recording
 
-A compliance check (conflicts of interest, commercial content), by **lazy consensus**: one Board member approves; validated unless another member vetoes within 72h.
+A quick check (conflicts of interest, commercial content): one Board member approves, and it is done unless another member objects within **three days**.
 
-## Annual ritual — start of season
+## Once a year — the start-of-season meeting
 
-Once a year the Board holds the **"Board renewal, editorial review & season objectives"** ritual:
+Each year the Board meets to:
 
-1. **Composition** — who joins, who leaves, the size for the year.
-2. **Editorial review** — re-read the [editorial line](editorial-line.md); adjust the policies ([selection criteria](selection-criteria.md), [conflict of interest](conflict-of-interest.md), the vote threshold).
-3. **Season objectives** — discuss the editorial aims for the season: themes to seek, balance to aim for.
+1. **Review who is on the Board** — who joins, who leaves, the size for the year.
+2. **Re-read the editorial line** and adjust the rules if needed.
+3. **Set the season's aims** — the themes and the balance to aim for.
 
-!!! warning "Season objectives are a soft compass, not a locked line-up"
-    Speakers arrive rolling, all year, through the pipeline — you cannot pick a whole season in advance. The objectives set *intentions* that steer Gate 1 and outreach; they never pre-fill slots.
+!!! warning "Season aims are a compass, not a fixed line-up"
+    Speakers arrive all year round — you cannot choose a whole season in advance. The aims simply guide the choices; they never lock in slots.
 
-Everything is recorded in the [decision log](decisions.md). The lighter metrics season review is a separate, smaller moment.
+## Other Board decisions
 
-## Internal decisions
-
-Outside selection and publication — a policy change, co-opting a new member, replacing a durably inactive one — the Board decides by **lazy consensus**, or batches it to the annual ritual. No seat stays a "ghost seat".
+Changing a rule, adding a member, replacing an inactive one: one member proposes it, and it is done unless someone objects within three days — or it waits for the yearly meeting.
