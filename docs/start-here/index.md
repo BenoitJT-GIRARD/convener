@@ -8,8 +8,8 @@ We run online behavioural-science webinars — Thursdays, 12:30 CET. Volunteers 
 
 ## The roles
 
-- **Contributor** — anyone. Pick up a task, suggest a speaker, help co-host.
-- **Event Host** — takes charge of one whole webinar.
+- **Contributor** — anyone. Suggest a speaker, pick up a task, lend a hand.
+- **Event Host** — runs a webinar; each webinar has two.
 - **Editorial Board** — validates speakers and steers the series.
 - **Architecte** — looks after the system itself.
 
@@ -28,7 +28,6 @@ The **[editorial line](../governance/editorial-line.md)** — one short page on 
 ## Pick a first task
 
 - Take a speaker idea and look after it, **or**
-- Offer to **co-host** an upcoming webinar, **or**
-- Become the **Event Host** of a free slot.
+- Sign up as an **Event Host** for an upcoming webinar — you will run it with a fellow host.
 
 Then read **[Your first webinar](first-webinar.md)**. Stuck on a word? See the [glossary](glossary.md).

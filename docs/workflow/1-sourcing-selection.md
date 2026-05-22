@@ -23,4 +23,4 @@ A Lead moves forward only when the **Editorial Board** validates it:
 
 ## Once validated
 
-An Event Host picks up the approved speaker, sends the invitation, collects the talk details, and locks a date. With the date set, the webinar exists — and [preparation](2-preparation.md) begins.
+Two Event Hosts take the webinar on: they send the invitation, collect the talk details, and lock a date. With the date set, the webinar exists — and [preparation](2-preparation.md) begins.

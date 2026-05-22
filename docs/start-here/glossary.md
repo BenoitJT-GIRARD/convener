@@ -5,8 +5,7 @@
 | **Convener** | Monthly Reading Group — our webinar series. |
 | **MRG-NN** | A webinar's number, e.g. `MRG-07`. |
 | **Contributor** | Anyone helping out. |
-| **Event Host** | The person in charge of one webinar, start to finish. |
-| **Co-host** | One of the two people who run a webinar live. |
+| **Event Host** | One of the **two** volunteers who run a webinar together — preparing and hosting it. |
 | **Editorial Board** | The small group that validates speakers and steers the series. |
 | **Architecte** | The person who looks after the handbook and the system behind it. |
 | **Gate** | A moment that needs the Board's approval. There are two: validating a speaker, and publishing a recording. |
