@@ -1,0 +1,26 @@
+import type { Config } from 'tailwindcss';
+
+export default {
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        paper: 'var(--paper)',
+        surface: 'var(--surface)',
+        ink: { DEFAULT: 'var(--ink)', muted: 'var(--ink-muted)' },
+        primary: { DEFAULT: 'var(--primary)', hover: 'var(--primary-hover)' },
+        accent: 'var(--accent)',
+        border: 'var(--border)',
+        danger: 'var(--danger)',
+        info: 'var(--info)',
+      },
+      fontFamily: {
+        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
+        sans: ['"Source Sans 3"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
+      },
+      maxWidth: { content: '1280px' },
+    },
+  },
+  plugins: [],
+} satisfies Config;
