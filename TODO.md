@@ -9,12 +9,6 @@ A short list so nothing gets forgotten. Tick items as they are done.
 - [ ] Turn on the website: enable **GitHub for Nonprofits** (free), then *Settings → Pages → source `gh-pages`*.
 - [ ] Check that `repo_url` in `mkdocs.yml` matches the real organisation address.
 
-## Make the handbook truly ours (for the Editorial Board)
-
-- [ ] Review and ratify the **editorial line** (`docs/governance/editorial-line.md`) — it is a draft, and it is the personality of the series.
-- [ ] Confirm the webinar numbering (`MRG-01` … `MRG-04`) and the past-event details in the event list.
-- [ ] Finalise the **conflict-of-interest** policy.
-- [ ] Confirm the founding **Editorial Board** members and the board size for the year.
 
 ## Later — Phase 2
 

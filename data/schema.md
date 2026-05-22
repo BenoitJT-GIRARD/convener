@@ -17,4 +17,3 @@ One entry per webinar (`MRG-01`, `MRG-02`, …): the speaker, title, date, statu
 
 The exact fields are listed at the top of each file. Keep the files tidy: two spaces per indentation level, never tabs. When the companion app arrives, it will edit these files for you.
 
-> Migrated from the old `Speakers database.xlsx` on 2026-05-22.
