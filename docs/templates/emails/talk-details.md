@@ -1,0 +1,26 @@
+# Email — Talk details
+
+*Sent once the speaker has accepted. CC the Zoom responsible for a heads-up.*
+
+---
+
+**Subject:** Your TEC talk on {{date}} — a few details
+
+Dear {{speaker_first}},
+
+Wonderful — we are very glad you will join us on **{{date}}**!
+
+To prepare the announcement, could you please send us:
+
+- the **title** of your talk;
+- a short **abstract** (a paragraph);
+- a short **bio** (a few sentences), and a photo if you are happy to share one.
+
+We will post the announcement on The Example Collective and on LinkedIn, and the discussion will start there ahead of the talk.
+
+A couple of practical points: everyone — including you and the hosts — registers via the Zoom link (we will send it shortly), and we will suggest a short tech check a couple of weeks before.
+
+Looking forward to it!
+
+Best regards,
+{{your_name}}
