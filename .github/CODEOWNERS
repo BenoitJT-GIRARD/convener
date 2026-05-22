@@ -1,0 +1,11 @@
+# Automatic reviewer assignment on pull requests.
+# Later patterns override earlier ones.
+# Requires the @example-instance/editorial-board team to exist on GitHub
+# (see TODO.md for the one-off setup).
+
+# Default: handbook, governance, and app changes are reviewed by the Editorial Board.
+*               @example-instance/editorial-board
+
+# data/ is driven by the team app and validated by CI on every commit.
+# No required review here.
+/data/
