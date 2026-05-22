@@ -24,6 +24,12 @@ Send a short, warm thank-you — [template](../toolkit/emails/thank-you.md). Men
 
 Add the four numbers for this webinar to the event list: registrations, peak live attendance, YouTube views after a month, and forum replies. They feed the Board's yearly review.
 
-## Close the loop
+## Checklist
 
-- [ ] **Improve the handbook.** If something went wrong or could be smoother, fix the relevant page now — while it is fresh. This is what keeps the handbook trustworthy.
+- [ ] Transcript saved
+- [ ] Recording sent to the YouTube contact (TEATIME channel)
+- [ ] Summary posted on the forum thread
+- [ ] Recording published on YouTube — only after the Board's green light
+- [ ] Thank-you sent to the speaker
+- [ ] Numbers noted in the event list
+- [ ] **Handbook improved** — fix anything that was unclear or could be smoother. This is what keeps the handbook trustworthy.

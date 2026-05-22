@@ -1,6 +1,6 @@
 # Phase 3 — Hosting day
 
-The webinar runs on a **Thursday, 12:30–14:00 CET**.
+The webinar runs on a **Thursday, 12:30–14:00 CET**, with **two co-hosts**.
 
 ## Timeline
 
@@ -9,26 +9,38 @@ The webinar runs on a **Thursday, 12:30–14:00 CET**.
 | 12:00 | Zoom room opens — co-hosts can join. |
 | 12:15 | Co-hosts check everything works; apply the [Zoom background](../assets/zoom-background.png). |
 | 12:20 | Speaker joins (at least 10 minutes early). |
-| 12:25 | Quick final check with the speaker. |
+| 12:25 | Quick tech check with the speaker — screen sharing, sound. |
 | 12:30 | Webinar starts — **on time**. |
 
-Run the quick **[final check](../checklists/day-of.md)** about a minute before going live.
+## The two co-hosts
 
-## The two roles for the day
+Every webinar is run by two co-hosts — both are hosts. The Zoom contact handles the recording, so there is no separate technical role. How the two split the work is up to them; the usual division:
 
-- **Host** — introduces the speaker, keeps time, runs the questions, closes.
-- **Tech** — lets people in, watches the chat, shares links, keeps an eye on the recording.
+- **Co-host 1** — introduces the speaker, runs the questions, closes.
+- **Co-host 2** — introduces The Example Collective and the series, keeps an eye on the chat and forum for questions.
+
+## Final check — before going live
+
+Run this about a minute before 12:30:
+
+- [ ] Recording is running
+- [ ] Speaker's sound is clear
+- [ ] Speaker's screen sharing works
+- [ ] Registration link still works (latecomers can still join)
+- [ ] Both co-hosts have co-host rights in Zoom
+- [ ] Zoom background applied
+- [ ] Forum open in a tab, to catch questions
 
 ## Plan for the day (~90 minutes)
 
 | Time | What | Who |
 |---|---|---|
-| 0:00 | Welcome + housekeeping (recording notice, how to ask questions) | Host |
+| 0:00 | Welcome + housekeeping (recording notice, how to ask questions) | Co-host 1 |
 | 0:02 | Introduce The Example Collective and the series | Co-host 2 |
-| 0:04 | Introduce the speaker | Host |
+| 0:04 | Introduce the speaker | Co-host 1 |
 | 0:06 | The talk | Speaker |
-| ~0:50 | Questions & discussion | Host |
-| ~1:25 | Closing | Host |
+| ~0:50 | Questions & discussion | Both co-hosts |
+| ~1:25 | Closing | Co-host 1 |
 
 Use the [intro scripts](../toolkit/intro-scripts.md) for the two introductions.
 
@@ -37,7 +49,7 @@ Use the [intro scripts](../toolkit/intro-scripts.md) for the two introductions.
 - **Order:** forum questions first, then questions from the chat. Link a live question to the forum when you can.
 - Co-hosts **take turns** asking.
 - When you read a question out, **do not name the person** who asked it.
-- Reading questions out yourself keeps things tidy; now and then, you can let someone ask live.
+- Reading questions out yourselves keeps things tidy; now and then, you can let someone ask live.
 
 ## Hosting well
 

@@ -1,16 +1,16 @@
 # Phase 2 — Preparing the webinar
 
-Once the date is set, the Event Owner prepares the event. This is a countdown to the big day.
+Once the date is set, the Event Host prepares the event. This is a countdown to the big day.
 
 !!! note "The timings are suggestions"
-    The weeks below are **recommendations**, not deadlines. Go at your own pace — just tick each step as you do it, so everyone can see how the webinar is coming along.
+    The weeks below are recommendations, not deadlines. Go at your own pace — just tick each step as you do it, so everyone can see how the webinar is coming along.
 
 ## 6 weeks before
 
 - [ ] Send the **invitation** to the speaker — [template](../toolkit/emails/invitation.md).
 - [ ] Ask for the **talk details** — title, abstract, short bio — [template](../toolkit/emails/talk-details.md). Copy in the Zoom contact so they know it is coming.
 - [ ] Ask the **Zoom contact** for a registration link and recording — [template](../toolkit/emails/zoom-request.md).
-- [ ] Ask the organisers for **Canva and LinkedIn** access if you do not have it.
+- [ ] Get **Canva and LinkedIn** access if you do not have it.
 
 ## 4 weeks before
 
@@ -20,13 +20,12 @@ Once the date is set, the Event Owner prepares the event. This is a countdown to
 
 ## 2 weeks before
 
-- [ ] Do a short **tech check** with the speaker (screen sharing, sound).
 - [ ] If the forum is quiet, **post a question or two yourself** to get the discussion going.
 
 ## 1 week before
 
 - [ ] Send the **reminder** to the speaker — [template](../toolkit/emails/reminder.md).
-- [ ] Pick the two **day-of roles**: Host and Tech (see [Roles](../roles.md)).
+- [ ] Line up the **two co-hosts** for the day (see [Roles](../roles.md)).
 - [ ] Run through the **plan for the day** with both co-hosts (see [Hosting day](3-hosting.md)).
 
 ## The day before

@@ -1,9 +1,6 @@
 # Editorial line
 
-!!! note "DRAFT — to be ratified by the Editorial Board"
-    This document is the *personality* of the Monthly Reading Group. It is a proposal, to be discussed, amended and ratified by the Editorial Board, then revisited each year at the start-of-season ritual.
-
-The editorial line is what turns "we run webinars" into "we have a point of view". Every selection criterion, the tone of every template, the public vitrine and the intro scripts all flow from it.
+What the series stands for.
 
 ## What the Convener is
 

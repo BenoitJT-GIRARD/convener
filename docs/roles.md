@@ -1,39 +1,39 @@
 # Roles
 
-Roles are **jobs, not people** — the same setup works whether we are 4 volunteers or 30. You take on more as trust grows.
+Roles are jobs, not people — the same setup works whether we are 4 volunteers or 30.
 
 ## The four roles
 
-| Role | What it is | What it does | How you get there |
-|---|---|---|---|
-| **Contributor** | Anyone helping | Picks up a task, suggests a speaker, helps host | Just read [Start here](start-here/index.md) |
-| **Event Owner** | In charge of one webinar | Runs one webinar from start to finish | Volunteer for a free slot — the Board confirms you |
-| **Editorial Board** | The steering group | Chooses speakers, approves recordings, sets direction, welcomes new Event Owners | Invited by the Board |
-| **Architecte** | Looks after the system | Designs and maintains the handbook and the tools behind it | A small core; invited |
+| Role | What it does |
+|---|---|
+| **Contributor** | Anyone helping: picks up a task, suggests a speaker, co-hosts. |
+| **Event Host** | Takes charge of one webinar, from start to finish. |
+| **Editorial Board** | Validates speakers, approves recordings, steers the series. |
+| **Architecte** | Designs and maintains the handbook and the tools behind it. |
 
-You move up by **earned trust** — a reliable Contributor becomes an Event Owner, and so on.
+There is no ladder to climb. Most volunteers are Contributors and Event Hosts. After a few events, anyone who wants to can put themselves forward for the Editorial Board, or as Architecte.
 
 !!! warning "The Architecte designs — they are not a help desk"
-    The Architecte shapes the handbook and the system. They are *not* the person to call whenever something breaks. For help, use the handbook first, then ask the Editorial Board.
+    The Architecte shapes the handbook and the system; they do not fix things on demand. For help, use the handbook first, then ask the Editorial Board.
 
-## One owner per thing
+## One Event Host per webinar
 
-Every speaker and every webinar has **exactly one owner** — one named person, never "the team". The owner makes sure it keeps moving (not that they do every task alone). This single habit is what stops things from being forgotten.
+Every webinar has exactly one **Event Host** — one named person, never "the team". The Host makes sure it keeps moving (not that they do every task alone). This is what stops things being forgotten. In the same way, every suggested speaker has someone looking after them until the Board decides.
 
 ## The two gates
 
 | Gate | When | Who decides |
 |---|---|---|
-| 🚪 **Choosing a speaker** | Before anyone is invited | Two-thirds of the Editorial Board say yes |
+| 🚪 **Validating a speaker** | Before anyone is invited | Two-thirds of the Editorial Board say yes |
 | 🚪 **Publishing a recording** | Before it goes public | One Board member approves; done unless someone objects within 3 days |
 
 Everything else, you do without asking.
 
-## The two roles on the day
+## On the day — two co-hosts
 
-For each webinar, two people are picked (they rotate):
+Every webinar is run by **two co-hosts** — both are hosts. There is no separate technical role: the Zoom contact handles the recording. How the two split the work is up to them; the usual division:
 
-- **Host** — introduces the speaker, keeps time, runs the questions, closes.
-- **Tech** — lets people in, watches the chat, shares links, watches the recording.
+- **Co-host 1** — introduces the speaker, runs the questions, closes the session.
+- **Co-host 2** — introduces The Example Collective and the series, keeps an eye on the chat and forum for questions.
 
-See [Hosting day](workflow/3-hosting.md).
+The Event Host is usually one of the two co-hosts, and lines up the other. See [Hosting day](workflow/3-hosting.md).

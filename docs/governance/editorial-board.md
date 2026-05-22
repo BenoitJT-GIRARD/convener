@@ -1,22 +1,22 @@
 # The Editorial Board
 
-The Editorial Board is the small group that **steers the series**: it chooses the speakers, approves recordings, and keeps the series true to its [editorial line](editorial-line.md).
+The Editorial Board is the small group that **steers the series**: it validates the speakers, approves recordings, and keeps the series true to its [editorial line](editorial-line.md).
 
 ## Who is on it
 
-- A **small, named group** — not a crowd. To start: the four current organisers. Aim: about six.
+- A small, named group — not a crowd. To start: the four current organisers. Aim: about six.
 - It is reviewed once a year (see below).
-- Being on the Board is a real commitment: you take part in the speaker votes. The Board is the **dependable core** of the series.
+- Being on the Board is a real commitment: you take part in the speaker votes. The Board is the dependable core of the series.
 
 ## What a Board member does
 
-Takes part in choosing speakers; may approve recordings for publishing; welcomes and confirms new Event Owners; helps shape the editorial line and the rules.
+Takes part in validating speakers; may approve recordings for publishing; welcomes and confirms new Event Hosts; helps shape the editorial line and the rules.
 
-## 🚪 Choosing a speaker
+## 🚪 Validating a speaker
 
 - A suggested speaker is put to a vote. Each Board member votes yes, or abstains.
-- **Two-thirds of the Board must say yes** for the speaker to be chosen (a board of 6 → 4 yes; of 9 → 6).
-- The vote runs over about **two weeks**. Enough yes votes → chosen. Not enough → kept for later, or declined.
+- **Two-thirds of the Board must say yes** for the speaker to be validated (a board of 6 → 4 yes; of 9 → 6).
+- The vote runs over about **two weeks**. Enough yes votes → validated. Not enough → kept for later, or declined.
 
 ## 🚪 Publishing a recording
 

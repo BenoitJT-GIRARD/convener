@@ -1,6 +1,6 @@
-# How we choose speakers
+# How we validate speakers
 
-These are what the Editorial Board weighs when [choosing a speaker](../workflow/1-sourcing-selection.md). They come from our [editorial line](editorial-line.md).
+These are what the Editorial Board weighs when [validating a speaker](../workflow/1-sourcing-selection.md). They come from our [editorial line](editorial-line.md).
 
 - **Quality.** The biggest lever. A great speaker brings the next audience by word of mouth; a weak one quietly loses it. With few slots a year, be selective — a quick look at an earlier recorded talk usually tells you enough.
 - **Diversity.** A deliberate aim, not an afterthought — across career stage, gender, country and institution. Left alone, line-ups drift senior and male; correct for it on purpose.
