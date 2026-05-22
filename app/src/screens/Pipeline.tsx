@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { SpeakerCard } from '../components/Card';
 import { Button } from '../components/Button';
+import { HandbookLink } from '../components/HandbookLink';
 import type { SpeakerStatus } from '../data/types';
 
 const COLUMNS: { key: SpeakerStatus; label: string }[] = [
@@ -21,7 +22,10 @@ export function Pipeline() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-3xl">Pipeline</h1>
+        <div className="flex items-baseline gap-4">
+          <h1 className="font-serif text-3xl">Pipeline</h1>
+          <HandbookLink to="/workflow/1-sourcing-selection/">how speakers move</HandbookLink>
+        </div>
         <Link to="/speakers/new"><Button>+ New speaker</Button></Link>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-4">

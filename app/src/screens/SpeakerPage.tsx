@@ -4,6 +4,7 @@ import { useData } from '../data/DataContext';
 import { Field } from '../components/Field';
 import { Button } from '../components/Button';
 import { VotePanel } from '../components/VotePanel';
+import { HandbookLink } from '../components/HandbookLink';
 import type { Speaker, SpeakerStatus } from '../data/types';
 
 const STATUSES: SpeakerStatus[] = ['lead','approved','invited','confirmed','scheduled','parking-lot','declined'];
@@ -68,6 +69,7 @@ export function SpeakerPage() {
     <div className="max-w-2xl">
       <h1 className="font-serif text-3xl mb-2">{isNew ? 'New speaker' : draft.name || '(unnamed)'}</h1>
       <p className="text-xs text-ink-muted font-mono mb-6">{draft.id || '(new id at save)'}</p>
+      <p className="mb-6"><HandbookLink to="/governance/selection-criteria/">selection criteria</HandbookLink></p>
 
       {!isNew && draft.status === 'lead' && (
         <VotePanel speaker={draft} onVote={async (votes) => {
