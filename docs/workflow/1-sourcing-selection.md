@@ -5,7 +5,7 @@ This phase fills **Track 1** of the pipeline: turning potential speakers into co
 ## Two ways speakers arrive
 
 - **Inbound — the form.** A public application form (linked from the vitrine and the forum) lets anyone propose a speaker, or propose themselves. Each submission becomes a `lead`.
-- **Outbound — outreach.** The Editorial Board and Event Owners can actively invite labs, institutes or individuals to suggest speakers, using the [outreach template](../templates/emails/outreach-sourcing.md). Outbound sourcing is steered by the season's editorial objectives.
+- **Outbound — outreach.** The Editorial Board and Event Owners can actively invite labs, institutes or individuals to suggest speakers, using the [outreach template](../toolkit/emails/outreach-sourcing.md). Outbound sourcing is steered by the season's editorial objectives.
 
 Both feed the same place: a new `lead` in `data/speakers.yml`, with an `owner` (a DRI) assigned from the start.
 
@@ -34,7 +34,7 @@ A `lead` becomes `approved` only by passing the Selection gate.
 Nobody is left without an answer:
 
 - **On submission** — an automatic acknowledgement (the form's confirmation message + email).
-- **On decision** — a templated, kind message: [declined](../templates/emails/decision-declined.md) or [parked](../templates/emails/decision-parked.md).
+- **On decision** — a templated, kind message: [declined](../toolkit/emails/decision-declined.md) or [parked](../toolkit/emails/decision-parked.md).
 
 ## After approval
 

@@ -8,7 +8,7 @@ A speaker who passed [Gate 1 — Selection](../workflow/1-sourcing-selection.md)
 
 ## 2. Run the T-minus runbook
 
-Open **[Phase 2 — the T-minus runbook](../workflow/2-preparation.md)** and work the checklist from T-6 weeks down. Every step has a template ready in the [templates library](../templates/index.md). Remember: the windows are *suggestions* — pace it yourself, but tick each step so everyone can see progress.
+Open **[Phase 2 — the T-minus runbook](../workflow/2-preparation.md)** and work the checklist from T-6 weeks down. Every step has a template ready in the [templates library](../toolkit/index.md). Remember: the windows are *suggestions* — pace it yourself, but tick each step so everyone can see progress.
 
 ## 3. Host the day
 

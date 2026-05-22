@@ -10,7 +10,7 @@ This handbook is the **single source of truth**: how we find speakers, prepare e
 - **[The workflow](workflow/overview.md)** — the end-to-end process, in two tracks and four phases.
 - **[Roles & ownership](roles.md)** — the four tiers and who owns what.
 - **[Governance](governance/editorial-line.md)** — our editorial line and how decisions are made.
-- **[Templates](templates/index.md)** — ready-to-use emails, posts and scripts.
+- **[Templates](toolkit/index.md)** — ready-to-use emails, posts and scripts.
 
 ## The five principles
 

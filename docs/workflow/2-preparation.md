@@ -9,16 +9,16 @@ Each step is an atomic, checkable item with a single owner (the DRI). The share 
 
 ## T-6 weeks — launch
 
-- [ ] Send the **invitation** to the speaker — [template](../templates/emails/invitation.md). *(Owner: Event Owner)*
-- [ ] Collect the **talk details** (title, abstract, bio) — [template](../templates/emails/talk-details.md); CC the Zoom responsible for a heads-up. *(Owner: Event Owner)*
-- [ ] Request the **Zoom link + recording** from the Zoom responsible — [template](../templates/emails/zoom-request.md). *(Owner: Event Owner)*
+- [ ] Send the **invitation** to the speaker — [template](../toolkit/emails/invitation.md). *(Owner: Event Owner)*
+- [ ] Collect the **talk details** (title, abstract, bio) — [template](../toolkit/emails/talk-details.md); CC the Zoom responsible for a heads-up. *(Owner: Event Owner)*
+- [ ] Request the **Zoom link + recording** from the Zoom responsible — [template](../toolkit/emails/zoom-request.md). *(Owner: Event Owner)*
 - [ ] Request access to **Canva and LinkedIn** if you don't have it yet. *(Owner: Event Owner)*
 
 ## T-4 weeks — promote
 
 - [ ] Create the **visuals + flyer** in Canva from the templates. **Duplicate the templates — never edit them in place.** *(Owner: Event Owner)*
-- [ ] Publish the **LinkedIn post** — [template](../templates/linkedin-post.md). *(Owner: Event Owner)*
-- [ ] Publish the **forum announcement** and seed the discussion — [template](../templates/forum-post-announce.md). *(Owner: Event Owner)*
+- [ ] Publish the **LinkedIn post** — [template](../toolkit/linkedin-post.md). *(Owner: Event Owner)*
+- [ ] Publish the **forum announcement** and seed the discussion — [template](../toolkit/forum-post-announce.md). *(Owner: Event Owner)*
 
 ## T-2 weeks — rehearse
 
@@ -27,7 +27,7 @@ Each step is an atomic, checkable item with a single owner (the DRI). The share 
 
 ## T-1 week — finalise
 
-- [ ] Send the **reminder email** to the speaker — [template](../templates/emails/reminder.md). *(Owner: Event Owner)*
+- [ ] Send the **reminder email** to the speaker — [template](../toolkit/emails/reminder.md). *(Owner: Event Owner)*
 - [ ] Assign the **day-of roles**: Host/MC and Tech-Producer — see [roles](../roles.md). *(Owner: Event Owner)*
 - [ ] Confirm the **run-of-show** with both co-hosts — see [hosting day](3-hosting.md). *(Owner: Host/MC)*
 

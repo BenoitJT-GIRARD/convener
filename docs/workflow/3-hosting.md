@@ -32,7 +32,7 @@ A coherent series sends one voice: even though roles rotate, the audience should
 | ~0:50 | Q&A — moderated discussion | Host/MC |
 | ~1:25 | Closing | Host/MC |
 
-Use the [intro scripts](../templates/intro-scripts.md) for the two introductions.
+Use the [intro scripts](../toolkit/intro-scripts.md) for the two introductions.
 
 ## Q&A organisation
 

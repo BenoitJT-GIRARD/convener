@@ -8,7 +8,7 @@ During the discussion phase, enable Zoom's live transcription — **CC / Live Tr
 
 ## Post the discussion summary
 
-Turn the transcript into a short, readable summary and post it on the forum, under the announcement thread — [template](../templates/forum-post-summary.md). The summary is a **synthesis, not a literal transcript**: give the necessary context, be diplomatic, and organise the discussion coherently.
+Turn the transcript into a short, readable summary and post it on the forum, under the announcement thread — [template](../toolkit/forum-post-summary.md). The summary is a **synthesis, not a literal transcript**: give the necessary context, be diplomatic, and organise the discussion coherently.
 
 ## 🚪 Gate 2 — Publication
 
@@ -19,7 +19,7 @@ Before the recording goes public:
 
 ## Thank the speaker
 
-Send a short, warm thank-you — [template](../templates/emails/thank-you.md). Mention the engagement and any audience numbers; speakers value the reach. This small step greatly improves the experience for invited speakers.
+Send a short, warm thank-you — [template](../toolkit/emails/thank-you.md). Mention the engagement and any audience numbers; speakers value the reach. This small step greatly improves the experience for invited speakers.
 
 ## Record the metrics
 
