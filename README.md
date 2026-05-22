@@ -18,7 +18,7 @@ Once the website is online, the handbook reads much better there than on GitHub.
 
 ## Spot a mistake?
 
-Every page has a ✏️ pencil to suggest a fix — or just tell a member of the Editorial Board. The handbook is meant to be corrected; keeping it accurate is everyone's job.
+Every page has a ✏️ pencil. Your edit becomes a pull request reviewed by the Editorial Board, then merged. The handbook is meant to evolve — just send the change.
 
 ## Still to do
 

@@ -10,7 +10,7 @@ The Editorial Board is the small group that **steers the series**: it validates 
 
 ## What a Board member does
 
-Takes part in validating speakers; may approve recordings for publishing; welcomes and confirms new Event Hosts; helps shape the editorial line and the rules.
+Takes part in validating speakers; may approve recordings for publishing; reviews edits to the handbook; welcomes and confirms new Event Hosts; helps shape the editorial line and the rules.
 
 ## 🚪 Validating a speaker
 

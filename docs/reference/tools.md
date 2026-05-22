@@ -12,3 +12,11 @@ Every tool the series uses, and how to get access.
 
 !!! tip "Everyone registers"
     Everyone signs up through the Zoom link — organisers and the speaker included.
+
+## How we communicate
+
+The team app (in development) is for **tracking and editing** the pipeline and webinars — not for chat. For team communication, use:
+
+- **Email** — substantive coordination, decisions, formal speaker contact.
+- **The forum** — discussion meant to involve the community.
+- **WhatsApp** — quick co-host coordination on the live day (optional).
