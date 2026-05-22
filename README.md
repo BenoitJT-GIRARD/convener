@@ -14,7 +14,6 @@ Once the website is online, the handbook reads much better there than on GitHub.
 |---|---|
 | `docs/` | The handbook — every guide, checklist and template |
 | `data/` | The speaker list and the event list |
-| `archive/` | Records of past webinars |
 | `app/` | Reserved for a future companion app |
 
 ## Spot a mistake?
