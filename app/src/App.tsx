@@ -4,6 +4,7 @@ import { Login } from './auth/Login';
 import { Layout } from './components/Layout';
 import { DataProvider } from './data/DataContext';
 import { Pipeline } from './screens/Pipeline';
+import { SpeakerPage } from './screens/SpeakerPage';
 
 function Placeholder({ name }: { name: string }) {
   return <h1 className="font-serif text-3xl">{name}</h1>;
@@ -20,7 +21,7 @@ function Shell() {
           <Route index element={<Placeholder name="Home" />} />
           <Route path="pipeline" element={<Pipeline />} />
           <Route path="analytics" element={<Placeholder name="Analytics" />} />
-          <Route path="speakers/:id" element={<Placeholder name="Speaker" />} />
+          <Route path="speakers/:id" element={<SpeakerPage />} />
           <Route path="events/:id" element={<Placeholder name="Event" />} />
         </Route>
       </Routes>
