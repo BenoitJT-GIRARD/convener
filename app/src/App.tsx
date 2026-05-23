@@ -10,6 +10,7 @@ import { Archive } from './screens/Archive';
 import { Handbook } from './screens/Handbook';
 import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
+import { NewSpeaker } from './screens/NewSpeaker';
 
 function Shell() {
   const { ready, token } = useAuth();
@@ -25,6 +26,7 @@ function Shell() {
           <Route path="archive" element={<Archive />} />
           <Route path="handbook" element={<Handbook />} />
           <Route path="templates" element={<Templates />} />
+          <Route path="speakers/new" element={<NewSpeaker />} />
           <Route path="speakers/:id" element={<SpeakerPage />} />
         </Route>
       </Routes>

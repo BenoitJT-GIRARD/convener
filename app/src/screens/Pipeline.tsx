@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { SpeakerCard } from '../components/Card';
 import type { SpeakerStatus } from '../data/types';
@@ -22,7 +23,15 @@ export function Pipeline() {
   if (error) return <p className="text-danger">Error: {error}</p>;
   return (
     <div>
-      <h1 className="font-serif text-3xl mb-6">Pipeline</h1>
+      <div className="flex items-baseline justify-between mb-6">
+        <h1 className="font-serif text-3xl">Pipeline</h1>
+        <Link
+          to="/speakers/new"
+          className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90"
+        >
+          + New speaker
+        </Link>
+      </div>
       <div className="flex gap-4 overflow-x-auto pb-4">
         {ACTIVE_COLUMNS.map(col => {
           const items = speakers.filter(s => s.status === col.key);
