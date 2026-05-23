@@ -1,0 +1,174 @@
+import { useState } from 'react';
+import {
+  canTransition,
+  applyTransition,
+  type Transition,
+  type Role,
+} from '../state/transitions';
+import { useData } from '../data/DataContext';
+import { useAuth } from '../auth/AuthContext';
+import { findOverlaps, nextEditionCode } from '../state/agenda';
+import type { Speaker } from '../data/types';
+
+interface Props {
+  speaker: Speaker;
+  role: Role;
+}
+
+export function ActionButtons({ speaker, role }: Props) {
+  const { config, speakers, saveSpeakers } = useData();
+  const { login } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const threshold = config?.vote_threshold ?? 3;
+
+  async function fire(t: Transition, payload?: any) {
+    if (!login || !canTransition(speaker, t, role)) return;
+    setBusy(true);
+    try {
+      const next = applyTransition(speaker, t, login, threshold, today, payload);
+      const updated = speakers.map(sp => (sp.id === speaker.id ? next : sp));
+      await saveSpeakers(updated, `data: ${speaker.id} → ${t}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const btnCls = (variant: 'primary' | 'danger' | 'ghost') =>
+    variant === 'danger'
+      ? 'px-3 py-1.5 text-sm rounded border border-danger text-danger hover:bg-danger hover:text-white disabled:opacity-50'
+      : variant === 'ghost'
+        ? 'px-3 py-1.5 text-sm rounded border border-border text-ink-muted hover:text-ink disabled:opacity-50'
+        : 'px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50';
+
+  function btn(
+    label: string,
+    t: Transition,
+    variant: 'primary' | 'danger' | 'ghost' = 'primary',
+  ) {
+    if (!canTransition(speaker, t, role)) return null;
+    return (
+      <button
+        key={label}
+        disabled={busy}
+        onClick={() => fire(t)}
+        className={btnCls(variant)}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  const buttons: React.ReactNode[] = [];
+  switch (speaker.status) {
+    case 'lead':
+      if (role === 'board') {
+        const voted = login && speaker.selection.votes_for.includes(login);
+        if (!voted) buttons.push(btn('Vote yes', 'lead-vote'));
+        else buttons.push(btn('Withdraw vote', 'lead-vote-withdraw', 'ghost'));
+        buttons.push(btn('Park', 'lead-park', 'ghost'));
+        buttons.push(btn('Decline', 'lead-decline', 'danger'));
+      } else {
+        buttons.push(
+          <span className="text-sm text-ink-muted" key="msg">
+            Awaiting board vote ({speaker.selection.votes_for.length} / {threshold}).
+          </span>,
+        );
+      }
+      break;
+    case 'approved':
+      buttons.push(btn('Mark invitation sent', 'send-invitation'));
+      break;
+    case 'invited':
+      buttons.push(btn('Speaker accepted', 'invited-accept'));
+      buttons.push(btn('Speaker declined', 'invited-decline', 'danger'));
+      break;
+    case 'confirmed':
+      buttons.push(
+        <LockDateForm
+          key="lock"
+          speaker={speaker}
+          disabled={busy}
+          onSubmit={(d, e) => fire('lock-date', { date: d, edition_code: e })}
+        />,
+      );
+      break;
+    case 'parked':
+    case 'decline-board':
+      if (role === 'board') buttons.push(btn('Reactivate', 'reactivate'));
+      break;
+    case 'delivered':
+      buttons.push(btn('Mark wrapped', 'mark-wrapped'));
+      break;
+    default:
+      break;
+  }
+  return <div className="flex flex-wrap gap-2 items-center">{buttons}</div>;
+}
+
+function LockDateForm({
+  speaker,
+  onSubmit,
+  disabled,
+}: {
+  speaker: Speaker;
+  onSubmit: (d: string, e: string) => void;
+  disabled: boolean;
+}) {
+  const { speakers, config } = useData();
+  const [date, setDate] = useState('');
+  const [edition, setEdition] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+
+  function suggestEdition() {
+    if (!config) return;
+    setEdition(nextEditionCode(speakers, config.vw_counter));
+  }
+
+  function attempt() {
+    setErr(null);
+    if (!date || !edition || !config) return;
+    const hits = findOverlaps(date, speakers, config.overlap_window_days, speaker.id);
+    if (hits.length) {
+      const h = hits[0];
+      setErr(
+        `Overlap: ${h.speaker.edition_code || h.speaker.id} is on ${h.speaker.date} (${h.daysApart}d apart). Choose another date.`,
+      );
+      return;
+    }
+    onSubmit(date, edition);
+  }
+
+  return (
+    <div className="space-y-2 w-full">
+      <div className="flex gap-2 items-center flex-wrap">
+        <input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          className="px-2 py-1 border border-border rounded text-sm"
+        />
+        <input
+          type="text"
+          placeholder="MRG-N"
+          value={edition}
+          onChange={e => setEdition(e.target.value)}
+          className="px-2 py-1 border border-border rounded text-sm font-mono w-24"
+        />
+        <button onClick={suggestEdition} className="text-xs text-primary underline" type="button">
+          suggest
+        </button>
+        <button
+          disabled={disabled || !date || !edition}
+          onClick={attempt}
+          className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          type="button"
+        >
+          Lock date
+        </button>
+      </div>
+      {err && <p className="text-danger text-xs">{err}</p>}
+    </div>
+  );
+}

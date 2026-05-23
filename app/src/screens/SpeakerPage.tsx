@@ -1,15 +1,19 @@
-// Stub — replaced in Phase C with the action-driven speaker workspace.
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
+import { useRole } from '../auth/useRole';
+import { ActionButtons } from '../components/ActionButtons';
 
 export function SpeakerPage() {
   const { id } = useParams();
-  const { speakers, loading } = useData();
-  if (loading) return <p className="text-ink-muted">Loading…</p>;
+  const { speakers, loading, error } = useData();
+  const role = useRole();
+  if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
+  if (error) return <p className="text-danger">Error: {error}</p>;
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
+
   return (
-    <div>
+    <div className="max-w-3xl">
       <p className="text-xs text-ink-muted font-mono mb-1">
         {s.id}
         {s.edition_code && ` · ${s.edition_code}`}
@@ -22,14 +26,55 @@ export function SpeakerPage() {
       <p className="text-ink-muted mt-1">
         Status: <strong>{s.status}</strong>
         {s.date && ` · ${s.date}`}
+        {s.host && ` · host: ${s.host}`}
+        {s.co_hosts.length > 0 && ` · co-hosts: ${s.co_hosts.join(', ')}`}
       </p>
+
+      <div className="mt-6">
+        <ActionButtons speaker={s} role={role} />
+      </div>
+
       {s.title && (
-        <div className="mt-6">
+        <div className="mt-8">
           <h2 className="font-serif text-xl mb-2">Talk</h2>
           <p className="font-medium">{s.title}</p>
-          {s.abstract && <p className="text-ink-muted mt-2 whitespace-pre-wrap">{s.abstract}</p>}
+          {s.abstract && (
+            <p className="text-ink-muted mt-2 whitespace-pre-wrap text-sm">{s.abstract}</p>
+          )}
         </div>
       )}
+
+      {s.status === 'lead' && (
+        <div className="mt-8 text-sm text-ink-muted">
+          Votes: {s.selection.votes_for.join(', ') || '(none yet)'}
+        </div>
+      )}
+
+      {s.links.length > 0 && (
+        <div className="mt-8">
+          <h2 className="font-serif text-xl mb-2">Links</h2>
+          <ul className="space-y-1 text-sm">
+            {s.links.map(l => (
+              <li key={l}>
+                <a href={l} target="_blank" rel="noreferrer" className="text-primary underline">
+                  {l}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {s.notes && (
+        <div className="mt-8">
+          <h2 className="font-serif text-xl mb-2">Notes</h2>
+          <p className="text-ink-muted whitespace-pre-wrap text-sm">{s.notes}</p>
+        </div>
+      )}
+
+      <div className="mt-12 pt-6 border-t border-border text-sm">
+        <Link to="/pipeline" className="text-primary underline">← back to pipeline</Link>
+      </div>
     </div>
   );
 }
