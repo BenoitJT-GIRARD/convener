@@ -11,15 +11,17 @@ const base: Speaker = {
   country: '',
   title: '',
   abstract: '',
+  conflicts_of_interest: '',
   source: 'organizer',
   proposed_by: '',
   links: [],
-  host: '',
-  co_hosts: [],
+  host_1: '',
+  host_2: '',
   status: 'lead',
   selection: { votes_for: [], decided_on: '' },
   edition_code: '',
   date: '',
+  time: '',
   zoom_link: '',
   youtube_url: '',
   forum_thread: '',
@@ -28,7 +30,7 @@ const base: Speaker = {
   notes: '',
 };
 
-describe('transitions', () => {
+describe('transitions v2', () => {
   it('allows board to vote on a lead; refuses organizer', () => {
     expect(canTransition(base, 'lead-vote', 'board')).toBe(true);
     expect(canTransition(base, 'lead-vote', 'organizer')).toBe(false);
@@ -75,8 +77,15 @@ describe('transitions', () => {
     expect(applyTransition(declined, 'reactivate', '', 3, '2026-05-23').status).toBe('lead');
   });
 
+  it('send-invitation requires host_1 and host_2 set', () => {
+    const noHosts: Speaker = { ...base, status: 'approved' };
+    expect(canTransition(noHosts, 'send-invitation', 'organizer')).toBe(false);
+    const withHosts: Speaker = { ...noHosts, host_1: 'a', host_2: 'b' };
+    expect(canTransition(withHosts, 'send-invitation', 'organizer')).toBe(true);
+  });
+
   it('send-invitation moves approved → invited and ticks the gate', () => {
-    const s: Speaker = { ...base, status: 'approved' };
+    const s: Speaker = { ...base, status: 'approved', host_1: 'a', host_2: 'b' };
     const next = applyTransition(s, 'send-invitation', '', 3, '2026-05-23');
     expect(next.status).toBe('invited');
     expect(next.runbook_progress['approved/invitation-sent']).toBe(true);
@@ -88,16 +97,23 @@ describe('transitions', () => {
     expect(applyTransition(s, 'invited-decline', '', 3, '2026-05-23').status).toBe('decline-speaker');
   });
 
-  it('lock-date locks date + edition + sets gate', () => {
+  it('lock-date locks date + time + edition', () => {
     const s: Speaker = { ...base, status: 'confirmed' };
     const next = applyTransition(s, 'lock-date', '', 3, '2026-05-23', {
       date: '2026-08-01',
       edition_code: 'MRG-07',
+      time: '14:30',
     });
     expect(next.status).toBe('scheduled');
     expect(next.date).toBe('2026-08-01');
     expect(next.edition_code).toBe('MRG-07');
-    expect(next.runbook_progress['confirmed/date-locked']).toBe(true);
+    expect(next.time).toBe('14:30');
+  });
+
+  it('finalize-archive moves delivered → archived', () => {
+    const s: Speaker = { ...base, status: 'delivered' };
+    expect(canTransition(s, 'finalize-archive', 'organizer')).toBe(true);
+    expect(applyTransition(s, 'finalize-archive', '', 3, '2026-05-23').status).toBe('archived');
   });
 
   it('override is board only', () => {

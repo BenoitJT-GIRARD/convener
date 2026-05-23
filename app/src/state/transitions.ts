@@ -12,14 +12,13 @@ export type Transition =
   | 'invited-accept'
   | 'invited-decline'
   | 'lock-date'
-  | 'auto-deliver'
-  | 'mark-wrapped'
-  | 'auto-archive'
+  | 'finalize-archive'
   | 'override';
 
 export interface LockDatePayload {
   date: string;
   edition_code: string;
+  time: string;
 }
 
 export interface OverridePayload {
@@ -46,18 +45,14 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
     case 'reactivate':
       return s.status === 'parked' || s.status === 'decline-board';
     case 'send-invitation':
-      return s.status === 'approved';
+      return s.status === 'approved' && !!s.host_1 && !!s.host_2;
     case 'invited-accept':
     case 'invited-decline':
       return s.status === 'invited';
     case 'lock-date':
       return s.status === 'confirmed';
-    case 'mark-wrapped':
+    case 'finalize-archive':
       return s.status === 'delivered';
-    case 'auto-deliver':
-      return s.status === 'scheduled';
-    case 'auto-archive':
-      return s.status === 'wrapped';
     case 'override':
       return true;
     default:
@@ -103,17 +98,9 @@ export function applyTransition(
         runbook_progress: { ...s.runbook_progress, 'approved/invitation-sent': true },
       };
     case 'invited-accept':
-      return {
-        ...s,
-        status: 'confirmed',
-        runbook_progress: { ...s.runbook_progress, 'invited/response-logged': true },
-      };
+      return { ...s, status: 'confirmed' };
     case 'invited-decline':
-      return {
-        ...s,
-        status: 'decline-speaker',
-        runbook_progress: { ...s.runbook_progress, 'invited/response-logged': true },
-      };
+      return { ...s, status: 'decline-speaker' };
     case 'lock-date': {
       const p = payload as LockDatePayload;
       return {
@@ -121,14 +108,10 @@ export function applyTransition(
         status: 'scheduled',
         date: p.date,
         edition_code: p.edition_code,
-        runbook_progress: { ...s.runbook_progress, 'confirmed/date-locked': true },
+        time: p.time,
       };
     }
-    case 'auto-deliver':
-      return { ...s, status: 'delivered' };
-    case 'mark-wrapped':
-      return { ...s, status: 'wrapped' };
-    case 'auto-archive':
+    case 'finalize-archive':
       return { ...s, status: 'archived' };
     case 'override': {
       const p = payload as OverridePayload;
