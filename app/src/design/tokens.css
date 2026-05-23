@@ -87,3 +87,213 @@ input:focus, select:focus, textarea:focus {
 }
 
 button { font-family: inherit; }
+
+/* ── Prose: handbook + template markdown rendering ───────────── */
+.prose {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.65;
+  max-width: 72ch;
+}
+.prose-page { max-width: 76ch; }
+.prose-inline {
+  background: var(--paper-soft);
+  border: 1px solid var(--border);
+  padding: 1.25rem 1.5rem;
+  font-size: 14.5px;
+  line-height: 1.6;
+  max-width: none;
+}
+
+.prose > * + * { margin-top: 1em; }
+.prose > h1 + *,
+.prose > h2 + *,
+.prose > h3 + *,
+.prose > h4 + * { margin-top: .6em; }
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  font-family: "Archivo", -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+  line-height: 1.18;
+}
+.prose h1 {
+  font-size: 1.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  padding-bottom: .6rem;
+  border-bottom: 3px solid var(--primary);
+}
+.prose h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-top: 2rem;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+}
+.prose h2::before {
+  content: "§";
+  font-family: "Archivo", sans-serif;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: .9em;
+}
+.prose h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  color: var(--primary-hover);
+}
+.prose h4 {
+  font-size: .92rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink-muted);
+}
+
+.prose p { margin: 0; }
+.prose strong { font-weight: 700; color: var(--ink); }
+.prose em { font-style: italic; }
+
+.prose a {
+  color: var(--primary-hover);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  transition: color .15s, border-color .15s;
+}
+.prose a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+.prose ul, .prose ol {
+  padding-left: 1.4rem;
+  list-style-position: outside;
+}
+.prose ul { list-style: none; }
+.prose ul > li {
+  position: relative;
+  padding-left: .2rem;
+}
+.prose ul > li::before {
+  content: "▸";
+  color: var(--primary);
+  position: absolute;
+  left: -1.1rem;
+  top: 0;
+  font-size: .9em;
+}
+.prose ol {
+  list-style: decimal;
+  font-variant-numeric: tabular-nums;
+}
+.prose ol > li::marker { color: var(--accent); font-weight: 600; }
+.prose li + li { margin-top: .35rem; }
+.prose li > p { display: inline; }
+
+/* GFM task list */
+.prose li.task-list-item {
+  list-style: none;
+  padding-left: 0;
+}
+.prose li.task-list-item::before { content: none; }
+.prose li.task-list-item input[type="checkbox"] {
+  margin-right: .55rem;
+  vertical-align: middle;
+  accent-color: var(--primary);
+}
+
+.prose code {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .88em;
+  background: var(--surface-mute);
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+.prose pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  background: var(--surface-mute);
+  color: var(--ink);
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 2px;
+  overflow-x: auto;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+.prose pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  padding: .25rem 1rem;
+  color: var(--ink-muted);
+  font-style: italic;
+  margin-left: 0;
+  background: var(--accent-soft);
+}
+.prose blockquote p { margin: 0; }
+
+.prose hr {
+  border: 0;
+  height: 1px;
+  background: var(--border);
+  margin: 2rem 0;
+  position: relative;
+}
+.prose hr::after {
+  content: "✦";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--paper);
+  padding: 0 .75rem;
+  color: var(--accent);
+  font-size: .9rem;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+.prose th, .prose td {
+  text-align: left;
+  padding: .55rem .8rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.prose th {
+  font-family: "Archivo", sans-serif;
+  font-weight: 700;
+  font-size: .76rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper-soft);
+}
+.prose td code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: .85em;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+}

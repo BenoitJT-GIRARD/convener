@@ -15,10 +15,12 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
   const { token } = useAuth();
   const [text, setText] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setText(null);
     setErr(null);
+    setCopied(false);
     fetchContent(contentKey, token)
       .then(setText)
       .catch(e => setErr(e.message));
@@ -28,21 +30,30 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
   if (text === null) return <p className="text-ink-muted text-sm">Loading content…</p>;
 
   const rendered = ctx ? substitute(text, ctx) : text;
-  const wrapperCls =
-    variant === 'page'
-      ? 'prose max-w-none text-sm'
-      : 'prose prose-sm max-w-none bg-paper border border-border rounded p-4 text-sm';
+  const wrapperCls = variant === 'page' ? 'prose prose-page' : 'prose prose-inline';
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(rendered);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
-    <div className={wrapperCls}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{rendered}</ReactMarkdown>
+    <div>
+      <div className={wrapperCls}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{rendered}</ReactMarkdown>
+      </div>
       {variant === 'inline' && (
-        <div className="mt-3 text-right">
+        <div className="mt-2 text-right">
           <button
-            onClick={() => navigator.clipboard.writeText(rendered)}
-            className="text-xs text-primary underline"
+            onClick={copy}
+            className="font-display font-bold text-[11px] tracking-widest uppercase text-primary-hover border border-border px-2.5 py-1 hover:bg-primary-soft transition-colors"
           >
-            Copy to clipboard
+            {copied ? '✓ Copied' : 'Copy to clipboard'}
           </button>
         </div>
       )}
