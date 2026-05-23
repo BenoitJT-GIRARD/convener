@@ -3,8 +3,12 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { Login } from './auth/Login';
 import { Layout } from './components/Layout';
 import { DataProvider } from './data/DataContext';
-import { Home } from './screens/Home';
+import { Inbox } from './screens/Inbox';
 import { Pipeline } from './screens/Pipeline';
+import { Agenda } from './screens/Agenda';
+import { Archive } from './screens/Archive';
+import { Handbook } from './screens/Handbook';
+import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
 
 function Shell() {
@@ -15,8 +19,12 @@ function Shell() {
     <DataProvider>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Home />} />
+          <Route index element={<Inbox />} />
           <Route path="pipeline" element={<Pipeline />} />
+          <Route path="agenda" element={<Agenda />} />
+          <Route path="archive" element={<Archive />} />
+          <Route path="handbook" element={<Handbook />} />
+          <Route path="templates" element={<Templates />} />
           <Route path="speakers/:id" element={<SpeakerPage />} />
         </Route>
       </Routes>
@@ -27,7 +35,9 @@ function Shell() {
 export function App() {
   return (
     <AuthProvider>
-      <HashRouter><Shell /></HashRouter>
+      <HashRouter>
+        <Shell />
+      </HashRouter>
     </AuthProvider>
   );
 }

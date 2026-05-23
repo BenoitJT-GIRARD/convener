@@ -1,5 +1,5 @@
-// Placeholder — replaced by Inbox in Phase B/D.
-export function Home() {
+// Placeholder — implemented in Phase D with state-derived rows.
+export function Inbox() {
   return (
     <div>
       <h1 className="font-serif text-3xl mb-4">Inbox</h1>
