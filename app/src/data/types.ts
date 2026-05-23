@@ -1,6 +1,6 @@
 export type SpeakerStatus =
   | 'lead' | 'approved' | 'invited' | 'confirmed'
-  | 'scheduled' | 'delivered' | 'wrapped' | 'archived'
+  | 'scheduled' | 'delivered' | 'archived'
   | 'parked' | 'decline-board' | 'decline-speaker';
 
 export type Gender = 'M' | 'F' | 'NB' | 'undisclosed';
@@ -27,19 +27,21 @@ export interface Speaker {
 
   title: string;
   abstract: string;
+  conflicts_of_interest: string;
 
   source: 'form' | 'outreach' | 'organizer';
   proposed_by: string;
   links: string[];
 
-  host: string;
-  co_hosts: string[];
+  host_1: string;
+  host_2: string;
 
   status: SpeakerStatus;
   selection: SpeakerSelection;
 
   edition_code: string;
   date: string;
+  time: string;
 
   zoom_link: string;
   youtube_url: string;
@@ -55,5 +57,6 @@ export interface Config {
   vw_counter: number;
   vote_threshold: number;
   overlap_window_days: number;
+  seminar_duration_minutes: number;
   board_members: string[];
 }
