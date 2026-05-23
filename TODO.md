@@ -9,11 +9,11 @@ A short list so nothing gets forgotten. Tick items as they are done.
 - [ ] Create an **empty private repository** named `workshop-series` in the The Example Collective GitHub organisation.
 - [ ] Push this folder to it: `git remote add origin <url>` then `git push -u origin main`.
 - [ ] Enable **GitHub for Nonprofits** (free) to allow Pages on private repos.
-- [ ] In *Settings → Pages*, set source to branch `gh-pages` (will be created by the first deploy Action). The handbook lands at `/` and the team app at `/app/`.
+- [ ] In *Settings → Pages*, set source to branch `gh-pages` (will be created by the first deploy Action). The handbook lands at `/` and the team app at `/team-app/` (one page inside the handbook site, deployed by the same unified workflow).
 - [ ] Check that `repo_url` in `mkdocs.yml` matches the real organisation address.
 - [ ] Create the **`editorial-board` team** in the org and add the founding Board members. The `CODEOWNERS` file references it.
 - [ ] Set **branch protection** on `main`: require PR + 1 review for all paths **except** `data/**`. This activates the Board's auto-review on handbook changes; the team app commits to `data/` directly.
-- [ ] Set the repo variables `ARCHITECT_USERNAME` (your GitHub login) and `APP_URL` (e.g. `https://example-instance.github.io/workshop-series/app`) so the gate-issue Action assigns reviewers and links into the app.
+- [ ] Set the repo variables `ARCHITECT_USERNAME` (your GitHub login) and `APP_URL` (e.g. `https://example-instance.github.io/workshop-series/team-app/`) so the gate-issue Action assigns reviewers and links into the app.
 
 ### `example-showcase` — the public vitrine (separate repo)
 

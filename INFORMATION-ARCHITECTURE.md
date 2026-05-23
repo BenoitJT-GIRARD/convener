@@ -22,6 +22,10 @@ Each concept, term, rule, step has exactly one home file. If two places talk abo
 
 The handbook explains *who · what · why*. The app shows *where you are · click to advance*. Never the other way around. The team app contains no explanatory paragraphs; small `↗ in the handbook` links bridge the two.
 
+The two surfaces share the same shell: the handbook is the entire MkDocs Material site,
+and the team app is one page inside it (`team-app.md`). One nav, one chrome, one URL space.
+The app uses hash routing for its sub-routes so MkDocs serves a single HTML page.
+
 ## 3 · Same labels everywhere, via generation
 
 Where the same identifier appears in both surfaces (runbook step labels, pipeline statuses), it lives in a single source file in the repo. A build hook injects it into the handbook page. The app reads it directly.

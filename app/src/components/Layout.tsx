@@ -1,13 +1,11 @@
 import { Outlet } from 'react-router-dom';
-import { Nav } from './Nav';
+import { TopTabs } from './TopTabs';
 
 export function Layout() {
   return (
-    <div className="flex min-h-screen">
-      <Nav />
-      <main className="flex-1 max-w-content mx-auto p-8">
-        <Outlet />
-      </main>
+    <div className="max-w-content mx-auto">
+      <TopTabs />
+      <main><Outlet /></main>
     </div>
   );
 }
