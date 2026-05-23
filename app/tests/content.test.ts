@@ -52,3 +52,18 @@ describe('substitute', () => {
     expect(substitute('no templates here', {})).toBe('no templates here');
   });
 });
+
+describe('substitute v2 context', () => {
+  it('derives speaker.first_name from speaker.name', () => {
+    const s: any = { name: 'Mei Tanaka' };
+    expect(substitute('{{ speaker.first_name }}', { speaker: s })).toBe('Mei');
+  });
+  it('resolves host_1.name from speaker.host_1', () => {
+    const s: any = { name: 'X', host_1: 'alice', host_2: 'bob' };
+    expect(substitute('{{ host_1.name }}', { speaker: s })).toBe('alice');
+  });
+  it('resolves speaker.time', () => {
+    const s: any = { name: 'X', time: '14:30' };
+    expect(substitute('starts at {{ speaker.time }}', { speaker: s })).toBe('starts at 14:30');
+  });
+});
