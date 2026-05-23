@@ -5,7 +5,8 @@ import { useRole } from '../auth/useRole';
 import { ActionButtons } from '../components/ActionButtons';
 import { AdminOverride } from '../components/AdminOverride';
 import { Checklist } from '../components/Checklist';
-import { canFinalize, setField, type FieldKey } from '../state/phases';
+import { canFinalize, setField, phaseOf, type FieldKey } from '../state/phases';
+import type { Speaker } from '../data/types';
 
 export function SpeakerPage() {
   const { id } = useParams();
@@ -44,6 +45,8 @@ export function SpeakerPage() {
     );
   }
 
+  const hasPhase = phaseOf(s.status) !== undefined;
+
   return (
     <div className="max-w-3xl">
       <p className="text-xs text-ink-muted font-mono mb-1">
@@ -64,6 +67,7 @@ export function SpeakerPage() {
       </p>
       <p className="text-ink-muted mt-1 text-sm">
         Proposed by <strong>{s.proposed_by || '(unknown)'}</strong> · source: {s.source}
+        {s.email && ` · ${s.email}`}
       </p>
 
       {s.conflicts_of_interest && (
@@ -79,9 +83,11 @@ export function SpeakerPage() {
         <ActionButtons speaker={s} role={role} />
       </div>
 
-      <div className="mt-10">
-        <Checklist speaker={s} onToggle={toggle} onField={onField} />
-      </div>
+      {hasPhase && (
+        <div className="mt-10">
+          <Checklist speaker={s} onToggle={toggle} onField={onField} />
+        </div>
+      )}
 
       {s.status === 'delivered' && (
         <div className="mt-8">
@@ -97,33 +103,7 @@ export function SpeakerPage() {
         </div>
       )}
 
-      {s.status === 'lead' && (
-        <div className="mt-8 text-sm text-ink-muted">
-          Votes: {s.selection.votes_for.join(', ') || '(none yet)'}
-        </div>
-      )}
-
-      {s.links.length > 0 && (
-        <div className="mt-8">
-          <h2 className="font-serif text-xl mb-2">Links</h2>
-          <ul className="space-y-1 text-sm">
-            {s.links.map(l => (
-              <li key={l}>
-                <a href={l} target="_blank" rel="noreferrer" className="text-primary-hover underline">
-                  {l}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {s.notes && (
-        <div className="mt-8">
-          <h2 className="font-serif text-xl mb-2">Notes</h2>
-          <p className="text-ink-muted whitespace-pre-wrap text-sm">{s.notes}</p>
-        </div>
-      )}
+      <SpeakerDetails speaker={s} />
 
       {role === 'board' && (
         <details className="mt-12 border-t border-border pt-6">
@@ -138,5 +118,123 @@ export function SpeakerPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
+  const eventFields: { label: string; value: string }[] = [
+    { label: 'Edition', value: s.edition_code },
+    { label: 'Date', value: s.date },
+    { label: 'Time (Paris)', value: s.time },
+    { label: 'Zoom link', value: s.zoom_link },
+    { label: 'YouTube URL', value: s.youtube_url },
+    { label: 'Forum thread', value: s.forum_thread },
+  ].filter(f => f.value);
+  const metricFields: { label: string; value: number | null }[] = [
+    { label: 'Registrations', value: s.metrics.registrations },
+    { label: 'Live peak', value: s.metrics.live_peak },
+    { label: 'YouTube views (30d)', value: s.metrics.youtube_views_30d },
+    { label: 'Forum replies', value: s.metrics.forum_replies },
+  ].filter(f => f.value !== null);
+  const hasVotes = s.selection.votes_for.length > 0 || !!s.selection.decided_on;
+
+  return (
+    <section className="mt-12 border-t border-border pt-8">
+      <h2 className="font-display font-extrabold text-xs uppercase tracking-[0.16em] text-ink mb-6">
+        Speaker file
+      </h2>
+
+      <DetailBlock title="Talk">
+        {s.title ? (
+          <>
+            <p className="font-medium">{s.title}</p>
+            {s.abstract && (
+              <p className="text-ink-muted mt-2 whitespace-pre-wrap text-sm">{s.abstract}</p>
+            )}
+          </>
+        ) : (
+          <p className="text-ink-faint text-sm italic">No title captured yet.</p>
+        )}
+      </DetailBlock>
+
+      {eventFields.length > 0 && (
+        <DetailBlock title="Event">
+          <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 text-sm">
+            {eventFields.map(f => (
+              <DetailLine key={f.label} label={f.label} value={f.value} />
+            ))}
+          </dl>
+        </DetailBlock>
+      )}
+
+      {metricFields.length > 0 && (
+        <DetailBlock title="Metrics">
+          <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 text-sm">
+            {metricFields.map(f => (
+              <DetailLine key={f.label} label={f.label} value={String(f.value)} mono />
+            ))}
+          </dl>
+        </DetailBlock>
+      )}
+
+      {hasVotes && (
+        <DetailBlock title="Selection vote">
+          <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 text-sm">
+            <DetailLine
+              label="Votes for"
+              value={s.selection.votes_for.join(', ') || '(none)'}
+            />
+            {s.selection.decided_on && (
+              <DetailLine label="Decided on" value={s.selection.decided_on} mono />
+            )}
+          </dl>
+        </DetailBlock>
+      )}
+
+      {s.links.length > 0 && (
+        <DetailBlock title="Links">
+          <ul className="space-y-1 text-sm">
+            {s.links.map(l => (
+              <li key={l}>
+                <a
+                  href={l}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary-hover underline break-all"
+                >
+                  {l}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </DetailBlock>
+      )}
+
+      {s.notes && (
+        <DetailBlock title="Notes">
+          <p className="text-ink-muted whitespace-pre-wrap text-sm">{s.notes}</p>
+        </DetailBlock>
+      )}
+    </section>
+  );
+}
+
+function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-8">
+      <p className="font-display font-bold uppercase tracking-widest text-[11px] text-ink-muted mb-2">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function DetailLine({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <>
+      <dt className="text-ink-muted">{label}</dt>
+      <dd className={mono ? 'font-mono break-all' : 'break-all'}>{value}</dd>
+    </>
   );
 }

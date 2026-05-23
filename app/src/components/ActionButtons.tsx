@@ -144,6 +144,8 @@ function LockDateForm({
   }
 
   const titleMissing = !speaker.title || !speaker.abstract;
+  const formIncomplete = !date || !edition || !time;
+  const locked = disabled || formIncomplete || titleMissing;
 
   return (
     <div className="space-y-2 w-full">
@@ -175,17 +177,17 @@ function LockDateForm({
           suggest
         </button>
         <button
-          disabled={disabled || !date || !edition || !time}
+          disabled={locked}
           onClick={attempt}
-          className="px-3 py-1.5 text-sm font-display font-bold tracking-widest uppercase bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50"
+          className="px-3 py-1.5 text-sm font-display font-bold tracking-widest uppercase bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
           type="button"
         >
           Lock date →
         </button>
       </div>
       {titleMissing && (
-        <p className="text-xs text-ink-muted italic">
-          Title or abstract still empty — recommended before locking the date.
+        <p className="text-xs text-danger italic">
+          Title and abstract are required before locking the date. Fill them in the checklist above.
         </p>
       )}
       {err && <p className="text-danger text-xs">{err}</p>}
