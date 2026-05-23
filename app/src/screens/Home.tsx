@@ -13,6 +13,22 @@ export function Home() {
   if (error) return <p className="text-danger">Error: {error}</p>;
   const today = new Date().toISOString().slice(0, 10);
 
+  if (speakers.length === 0 && events.length === 0) {
+    return (
+      <div className="max-w-xl mx-auto mt-16">
+        <div className="rounded-md bg-surface border border-border p-8 shadow-card">
+          <h1 className="font-serif text-2xl mb-3">Welcome.</h1>
+          <p className="text-ink-muted mb-4">
+            As speakers and events are added to the series, they will appear here.
+          </p>
+          <p>
+            <HandbookLink to="/start-here/first-webinar/">handbook · your first webinar</HandbookLink>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const upcoming = events
     .filter(e => e.status === 'upcoming' || (e.date && e.date >= today))
     .sort((a, b) => a.date.localeCompare(b.date));
