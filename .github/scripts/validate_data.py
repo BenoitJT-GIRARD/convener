@@ -1,14 +1,10 @@
-"""Validate data/*.yml against the expected shape.
+"""Validate data/*.yml against the unified schema.
 
-Run by CI on every commit/PR touching data/. Fails on:
-- Invalid YAML.
-- Missing required fields (id, name, status).
-- Invalid status values.
-- Duplicate ids.
-- Malformed dates (must be YYYY-MM-DD).
+Runs in CI on data/ commits. Fails on missing required fields, invalid
+statuses, invalid co_hosts cardinality (for active scheduled status),
+malformed dates, duplicate ids or edition_codes.
 """
 from __future__ import annotations
-
 import re
 import sys
 from pathlib import Path
@@ -17,17 +13,18 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEAKERS = ROOT / "data" / "speakers.yml"
-EVENTS = ROOT / "data" / "events.yml"
 CONFIG = ROOT / "data" / "config.yml"
 
-SPEAKER_STATUSES = {
+STATUSES = {
     "lead", "approved", "invited", "confirmed", "scheduled",
-    "parking-lot", "declined",
+    "delivered", "wrapped", "archived",
+    "parked", "decline-board", "decline-speaker",
 }
-EVENT_STATUSES = {"upcoming", "delivered", "wrapped", "archived"}
+GENDERS = {"M", "F", "NB", "undisclosed"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-CONFIG_REQUIRED = {"season", "vw_counter", "vote_threshold", "overlap_window_days", "board_members"}
+EDITION_RE = re.compile(r"^MRG-\d+$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
+CONFIG_REQUIRED = {"season", "vw_counter", "vote_threshold", "overlap_window_days", "board_members"}
 
 errors: list[str] = []
 
@@ -51,49 +48,53 @@ def check_speakers(speakers) -> None:
     if not isinstance(speakers, list):
         fail("speakers.yml: top-level must be a list")
         return
-    seen: set[str] = set()
-    for i, entry in enumerate(speakers):
+    seen_id: set[str] = set()
+    seen_edition: set[str] = set()
+    for i, s in enumerate(speakers):
         loc = f"speakers[{i}]"
-        if not isinstance(entry, dict):
+        if not isinstance(s, dict):
             fail(f"{loc}: not a mapping")
             continue
-        sid = entry.get("id")
+        sid = s.get("id")
         if not sid:
             fail(f"{loc}: missing id")
-        elif sid in seen:
+        elif sid in seen_id:
             fail(f"{loc}: duplicate id {sid!r}")
         else:
-            seen.add(sid)
-        if not entry.get("name"):
-            fail(f"{loc} ({sid}): missing name")
-        status = entry.get("status")
-        if status not in SPEAKER_STATUSES:
+            seen_id.add(sid)
+        for k in ("name", "status"):
+            if not s.get(k):
+                fail(f"{loc} ({sid}): missing {k}")
+        status = s.get("status")
+        if status not in STATUSES:
             fail(f"{loc} ({sid}): invalid status {status!r}")
-
-
-def check_events(events) -> None:
-    if not isinstance(events, list):
-        fail("events.yml: top-level must be a list")
-        return
-    seen: set[str] = set()
-    for i, entry in enumerate(events):
-        loc = f"events[{i}]"
-        if not isinstance(entry, dict):
-            fail(f"{loc}: not a mapping")
-            continue
-        eid = entry.get("id")
-        if not eid:
-            fail(f"{loc}: missing id")
-        elif eid in seen:
-            fail(f"{loc}: duplicate id {eid!r}")
-        else:
-            seen.add(eid)
-        status = entry.get("status")
-        if status is not None and status not in EVENT_STATUSES:
-            fail(f"{loc} ({eid}): invalid status {status!r}")
-        date = entry.get("date")
+        gender = s.get("gender")
+        if gender is not None and gender not in GENDERS:
+            fail(f"{loc} ({sid}): invalid gender {gender!r}")
+        date = s.get("date")
         if date and not DATE_RE.match(str(date)):
-            fail(f"{loc} ({eid}): date must be YYYY-MM-DD, got {date!r}")
+            fail(f"{loc} ({sid}): date must be YYYY-MM-DD, got {date!r}")
+        edition = s.get("edition_code")
+        if edition:
+            if not EDITION_RE.match(edition):
+                fail(f"{loc} ({sid}): edition_code must match MRG-N, got {edition!r}")
+            elif edition in seen_edition:
+                fail(f"{loc} ({sid}): duplicate edition_code {edition!r}")
+            else:
+                seen_edition.add(edition)
+        # statuses that require edition + date
+        if status in ("scheduled", "delivered", "wrapped", "archived"):
+            if not edition:
+                fail(f"{loc} ({sid}): status {status} requires edition_code")
+            if not date:
+                fail(f"{loc} ({sid}): status {status} requires date")
+        # co_hosts is a list; for actively-scheduled we want exactly 2
+        # (historical delivered/wrapped/archived may have empty co_hosts)
+        co = s.get("co_hosts", [])
+        if not isinstance(co, list):
+            fail(f"{loc} ({sid}): co_hosts must be a list")
+        elif status == "scheduled" and len(co) != 2:
+            fail(f"{loc} ({sid}): co_hosts must have exactly 2 entries for scheduled")
 
 
 def check_config(cfg) -> None:
@@ -117,12 +118,9 @@ def check_config(cfg) -> None:
 
 def main() -> int:
     speakers = load(SPEAKERS)
-    events = load(EVENTS) if EVENTS.exists() else None
-    config = load(CONFIG) if CONFIG.exists() else None
+    config = load(CONFIG)
     if speakers is not None:
         check_speakers(speakers)
-    if events is not None:
-        check_events(events)
     if config is not None:
         check_config(config)
     if errors:
@@ -130,8 +128,7 @@ def main() -> int:
         for e in errors:
             print(f"  - {e}")
         return 1
-    nevents = len(events) if events else 0
-    print(f"Data OK — {len(speakers or [])} speakers, {nevents} events, config={'ok' if config else 'missing'}")
+    print(f"Data OK — {len(speakers or [])} speakers, config=ok")
     return 0
 
 
