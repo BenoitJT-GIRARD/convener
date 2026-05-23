@@ -1,16 +1,34 @@
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
+import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { ActionButtons } from '../components/ActionButtons';
+import { Checklist } from '../components/Checklist';
+import { phaseOf, gatesComplete } from '../state/phases';
 
 export function SpeakerPage() {
   const { id } = useParams();
-  const { speakers, loading, error } = useData();
+  const { speakers, loading, error, saveSpeakers } = useData();
+  const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
   if (error) return <p className="text-danger">Error: {error}</p>;
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
+
+  async function toggle(key: string, value: boolean) {
+    if (!login || !s) return;
+    const nextProgress = { ...s.runbook_progress, [key]: value };
+    let next = { ...s, runbook_progress: nextProgress };
+    const phase = phaseOf(s.status);
+    if (phase?.autoAdvance && gatesComplete(phase, nextProgress)) {
+      next = { ...next, status: phase.autoAdvance };
+    }
+    await saveSpeakers(
+      speakers.map(sp => (sp.id === s.id ? next : sp)),
+      `data: ${s.id} runbook ${key}=${value}`,
+    );
+  }
 
   return (
     <div className="max-w-3xl">
@@ -34,8 +52,12 @@ export function SpeakerPage() {
         <ActionButtons speaker={s} role={role} />
       </div>
 
+      <div className="mt-10">
+        <Checklist speaker={s} onToggle={toggle} />
+      </div>
+
       {s.title && (
-        <div className="mt-8">
+        <div className="mt-10">
           <h2 className="font-serif text-xl mb-2">Talk</h2>
           <p className="font-medium">{s.title}</p>
           {s.abstract && (
@@ -73,7 +95,9 @@ export function SpeakerPage() {
       )}
 
       <div className="mt-12 pt-6 border-t border-border text-sm">
-        <Link to="/pipeline" className="text-primary underline">← back to pipeline</Link>
+        <Link to="/pipeline" className="text-primary underline">
+          ← back to pipeline
+        </Link>
       </div>
     </div>
   );

@@ -1,41 +1,72 @@
-import { RUNBOOK } from '../data/runbook';
+import type { Speaker } from '../data/types';
+import { phaseOf, type RunbookItem } from '../state/phases';
 
-const WINDOW_LABEL = {
-  'T-6w': '6 weeks before',
-  'T-4w': '4 weeks before',
-  'T-2w': '2 weeks before',
-  'T-1w': '1 week before',
-  'T-1d': 'The day before',
-} as const;
-
-export function Checklist({ progress, onToggle }: {
-  progress: Record<string, boolean>;
+interface Props {
+  speaker: Speaker;
   onToggle: (key: string, value: boolean) => void;
-}) {
-  const windows = ['T-6w','T-4w','T-2w','T-1w','T-1d'] as const;
+  disabled?: boolean;
+  today?: string;
+}
+
+export function Checklist({ speaker, onToggle, disabled, today }: Props) {
+  const phase = phaseOf(speaker.status);
+  if (!phase) return null;
+  const todayStr = today ?? new Date().toISOString().slice(0, 10);
+  const targetDate = speaker.date ? Date.parse(speaker.date) : null;
+  const daysUntil =
+    targetDate !== null
+      ? Math.round((targetDate - Date.parse(todayStr)) / 86400000)
+      : null;
+
   return (
-    <div className="space-y-6">
-      {windows.map(w => {
-        const items = RUNBOOK.filter(s => s.window === w);
-        if (items.length === 0) return null;
-        return (
-          <section key={w}>
-            <h3 className="text-xs uppercase tracking-wider text-ink-muted mb-2">{w} — {WINDOW_LABEL[w]}</h3>
-            <ul className="space-y-1">
-              {items.map(s => (
-                <li key={s.key} className="flex items-start gap-2">
-                  <input
-                    type="checkbox" checked={!!progress[s.key]}
-                    onChange={e => onToggle(s.key, e.target.checked)}
-                    className="mt-1 accent-primary"
-                  />
-                  <span className={progress[s.key] ? 'line-through text-ink-muted' : ''}>{s.label}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+    <div className="space-y-2">
+      <h2 className="font-serif text-xl mb-3">{phase.label}</h2>
+      {phase.items.map(item => (
+        <RunbookRow
+          key={item.key}
+          item={item}
+          checked={!!speaker.runbook_progress[item.key]}
+          inWindow={item.window === undefined || daysUntil === null || daysUntil <= item.window}
+          disabled={disabled}
+          onToggle={onToggle}
+        />
+      ))}
+      {phase.autoAdvance && (
+        <p className="text-xs text-ink-muted mt-3">
+          When all gates checked, status advances to <strong>{phase.autoAdvance}</strong>.
+        </p>
+      )}
     </div>
+  );
+}
+
+interface RowProps {
+  item: RunbookItem;
+  checked: boolean;
+  inWindow: boolean;
+  disabled?: boolean;
+  onToggle: (key: string, value: boolean) => void;
+}
+
+function RunbookRow({ item, checked, inWindow, disabled, onToggle }: RowProps) {
+  const label = item.window !== undefined ? `${item.label} (T-${item.window})` : item.label;
+  return (
+    <label
+      className={`flex items-start gap-2 p-2 rounded border border-transparent hover:border-border transition-colors ${
+        inWindow ? '' : 'opacity-50'
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={e => onToggle(item.key, e.target.checked)}
+        className="mt-1 accent-primary"
+      />
+      <span className={`text-sm ${item.gate ? 'font-medium' : ''}`}>
+        {label}
+        {item.gate && <span className="ml-1 text-xs text-primary">(gate)</span>}
+      </span>
+    </label>
   );
 }
