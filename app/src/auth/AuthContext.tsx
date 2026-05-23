@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { validateToken } from './api';
+import { isDemoMode, exitDemoMode, DEMO_USER } from '../data/demo';
 
 interface AuthState { token: string | null; login: string | null; ready: boolean; }
 interface AuthCtx extends AuthState { signIn: (t: string) => Promise<boolean>; signOut: () => void; }
@@ -12,6 +13,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [s, setS] = useState<AuthState>({ token: null, login: null, ready: false });
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setS({ token: 'demo', login: DEMO_USER.login, ready: true });
+      return;
+    }
     const stored = localStorage.getItem(KEY);
     if (!stored) { setS({ token: null, login: null, ready: true }); return; }
     validateToken(stored).then(u =>
@@ -28,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   function signOut() {
     localStorage.removeItem(KEY);
+    exitDemoMode();
     setS({ token: null, login: null, ready: true });
   }
   return <Ctx.Provider value={{ ...s, signIn, signOut }}>{children}</Ctx.Provider>;

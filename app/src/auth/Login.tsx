@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { Button } from '../components/Button';
+import { activateDemoMode } from '../data/demo';
 
 export function Login() {
   const { signIn } = useAuth();
@@ -14,6 +15,11 @@ export function Login() {
     const ok = await signIn(token.trim());
     setBusy(false);
     if (!ok) setErr('That token did not work. Check the scope and try again.');
+  }
+
+  function enterDemo() {
+    activateDemoMode();
+    window.location.reload();
   }
 
   return (
@@ -42,6 +48,13 @@ export function Login() {
         <Button type="submit" disabled={busy}>{busy ? 'Checking…' : 'Sign in'}</Button>
         {err && <p className="text-danger text-sm">{err}</p>}
       </form>
+      <p className="text-sm text-ink-muted mt-8 pt-6 border-t border-border">
+        Just exploring?{' '}
+        <button type="button" onClick={enterDemo} className="text-primary underline">
+          View a live demo
+        </button>
+        {' '}— no sign-in required, edits stay local.
+      </p>
     </div>
   );
 }

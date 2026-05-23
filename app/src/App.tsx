@@ -5,9 +5,7 @@ import { Layout } from './components/Layout';
 import { DataProvider } from './data/DataContext';
 import { Home } from './screens/Home';
 import { Pipeline } from './screens/Pipeline';
-import { Analytics } from './screens/Analytics';
 import { SpeakerPage } from './screens/SpeakerPage';
-import { EventPage } from './screens/EventPage';
 
 function Shell() {
   const { ready, token } = useAuth();
@@ -19,9 +17,7 @@ function Shell() {
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="pipeline" element={<Pipeline />} />
-          <Route path="analytics" element={<Analytics />} />
           <Route path="speakers/:id" element={<SpeakerPage />} />
-          <Route path="events/:id" element={<EventPage />} />
         </Route>
       </Routes>
     </DataProvider>

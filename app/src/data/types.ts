@@ -1,47 +1,59 @@
 export type SpeakerStatus =
-  | 'lead' | 'approved' | 'invited' | 'confirmed' | 'scheduled'
-  | 'parking-lot' | 'declined';
-export type EventStatus = 'upcoming' | 'delivered' | 'wrapped' | 'archived';
+  | 'lead' | 'approved' | 'invited' | 'confirmed'
+  | 'scheduled' | 'delivered' | 'wrapped' | 'archived'
+  | 'parked' | 'decline-board' | 'decline-speaker';
 
-export interface Speaker {
-  id: string;
-  name: string;
-  status: SpeakerStatus;
-  owner: string;
-  email: string;
-  affiliation: string;
-  country: string;
-  topic: string;
-  source: 'form' | 'outreach' | 'organizer';
-  proposed_by: string;
-  links: string[];
-  selection: { votes_for: string[]; decided_on: string };
-  next_action: string;
-  next_action_date: string;
-  event_id: string;
-  notes: string;
-}
+export type Gender = 'M' | 'F' | 'NB' | 'undisclosed';
 
-export interface EventMetrics {
+export interface SpeakerMetrics {
   registrations: number | null;
   live_peak: number | null;
   youtube_views_30d: number | null;
   forum_replies: number | null;
 }
 
-export interface VwsEvent {
+export interface SpeakerSelection {
+  votes_for: string[];
+  decided_on: string;
+}
+
+export interface Speaker {
   id: string;
-  speaker_id: string;
+  name: string;
+  gender: Gender;
+  email: string;
+  affiliation: string;
+  country: string;
+
   title: string;
-  date: string;
-  status: EventStatus;
-  season: number;
-  event_owner: string;
+  abstract: string;
+
+  source: 'form' | 'outreach' | 'organizer';
+  proposed_by: string;
+  links: string[];
+
+  host: string;
   co_hosts: string[];
+
+  status: SpeakerStatus;
+  selection: SpeakerSelection;
+
+  edition_code: string;
+  date: string;
+
   zoom_link: string;
   youtube_url: string;
   forum_thread: string;
-  metrics: EventMetrics;
-  /** progress of the T-minus runbook: map of step key -> checked */
-  runbook_progress?: Record<string, boolean>;
+
+  runbook_progress: Record<string, boolean>;
+  metrics: SpeakerMetrics;
+  notes: string;
+}
+
+export interface Config {
+  season: number;
+  vw_counter: number;
+  vote_threshold: number;
+  overlap_window_days: number;
+  board_members: string[];
 }
