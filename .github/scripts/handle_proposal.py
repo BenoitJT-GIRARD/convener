@@ -2,7 +2,7 @@
 
 Triggered via `repository_dispatch` event type `proposal-submitted`. Validates the
 HMAC signature when a shared secret is configured, parses the form fields, assigns
-the next `spk-NNN` id, and writes the YAML back on the unified schema.
+the next `spk-NNN` id, and writes the YAML back on the v2 unified schema.
 """
 from __future__ import annotations
 
@@ -56,7 +56,6 @@ def get(*keys: str) -> str:
 
 speakers = yaml.safe_load(SPEAKERS_FILE.read_text(encoding='utf-8')) or []
 
-# Idempotency: don't double-create on same email when still a lead.
 new_email = get('Email')
 if new_email and any(
     isinstance(s, dict) and s.get('email') == new_email and s.get('status') == 'lead'
@@ -94,15 +93,17 @@ lead = {
     'country': get('Country'),
     'title': get('Preliminary title', '(preliminary) Title', 'Title'),
     'abstract': get('Short abstract', 'Summary', 'Abstract'),
+    'conflicts_of_interest': get('Conflicts of interest'),
     'source': 'form',
-    'proposed_by': get('How you propose', 'Who are you'),
+    'proposed_by': get('Your name', 'Who are you', 'How you propose'),
     'links': links,
-    'host': '',
-    'co_hosts': [],
+    'host_1': '',
+    'host_2': '',
     'status': 'lead',
     'selection': {'votes_for': [], 'decided_on': ''},
     'edition_code': '',
     'date': '',
+    'time': '',
     'zoom_link': '',
     'youtube_url': '',
     'forum_thread': '',
@@ -113,7 +114,7 @@ lead = {
         'youtube_views_30d': None,
         'forum_replies': None,
     },
-    'notes': f"CoI: {get('Conflicts of interest')}".strip(),
+    'notes': '',
 }
 
 if not lead['name']:
@@ -122,7 +123,7 @@ if not lead['name']:
 
 speakers.append(lead)
 
-text = '# Speakers (unified schema — see docs/reference/schema.md)\n' + yaml.safe_dump(
+text = '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' + yaml.safe_dump(
     speakers, allow_unicode=True, sort_keys=False, default_flow_style=False, width=1000,
 )
 SPEAKERS_FILE.write_text(text, encoding='utf-8')
