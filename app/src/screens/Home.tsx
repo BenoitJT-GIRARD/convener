@@ -23,7 +23,7 @@ export function Home() {
   return (
     <div className="max-w-3xl">
       <div className="flex items-baseline justify-between mb-8">
-        <h1 className="font-serif text-3xl">Home</h1>
+        <h1 className="font-serif text-3xl">Dashboard</h1>
         <HandbookLink to="/start-here/">handbook · start here</HandbookLink>
       </div>
 
