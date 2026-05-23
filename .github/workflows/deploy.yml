@@ -1,4 +1,4 @@
-name: Deploy handbook + app
+name: Deploy app
 
 on:
   push:
@@ -34,16 +34,10 @@ jobs:
         working-directory: app
         run: npm run build
 
-      - name: Copy app bundle into MkDocs assets
-        run: |
-          rm -rf docs/assets/app
-          mkdir -p docs/assets/app
-          cp -r app/dist/* docs/assets/app/
-
-      - uses: actions/setup-python@v5
+      - name: Deploy to Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          python-version: '3.x'
-
-      - run: pip install mkdocs-material mkdocs-git-revision-date-localized-plugin pyyaml
-
-      - run: mkdocs gh-deploy --force
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./app/dist
+          publish_branch: gh-pages
+          force_orphan: true

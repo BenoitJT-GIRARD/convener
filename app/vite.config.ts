@@ -3,16 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: '/workshop-series/',
   build: {
     outDir: 'dist',
-    rollupOptions: {
-      output: {
-        entryFileNames: 'app.js',
-        chunkFileNames: 'app-[name].js',
-        assetFileNames: 'app[extname]',
-      },
-    },
   },
   test: { environment: 'jsdom', globals: true, setupFiles: ['./tests/setup.ts'] },
 });
