@@ -132,16 +132,8 @@ button { font-family: inherit; }
   font-weight: 800;
   margin-top: 2rem;
   color: var(--ink);
-  display: flex;
-  align-items: baseline;
-  gap: .65rem;
-}
-.prose h2::before {
-  content: "§";
-  font-family: "Archivo", sans-serif;
-  font-weight: 600;
-  color: var(--accent);
-  font-size: .9em;
+  padding-bottom: .25rem;
+  border-bottom: 1px solid var(--border);
 }
 .prose h3 {
   font-size: 1.05rem;
