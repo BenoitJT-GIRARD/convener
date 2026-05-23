@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
     paths:
-      - 'data/events.yml'
       - 'data/speakers.yml'
       - '.github/scripts/filter_public_data.py'
 
