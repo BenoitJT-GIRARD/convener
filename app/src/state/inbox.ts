@@ -1,5 +1,5 @@
 import type { Speaker } from '../data/types';
-import { phaseOf } from './phases';
+import { phaseOf, fieldValue } from './phases';
 
 export type InboxKind = 'vote' | 'action' | 'awareness';
 
@@ -7,11 +7,8 @@ export interface InboxRow {
   kind: InboxKind;
   speaker: Speaker;
   label: string;
-  /** runbook key when kind === 'action' or 'awareness' */
   itemKey?: string;
-  /** for scheduled phase: days until event date (negative = past) */
   daysUntil?: number;
-  /** sort key: lower (incl. negative) = more urgent */
   urgency: number;
 }
 
@@ -32,61 +29,88 @@ export function deriveInbox(
   for (const s of speakers) {
     const phase = phaseOf(s.status);
     if (!phase) continue;
-    const mine = s.host === login || s.co_hosts.includes(login);
 
-    // votes (board only, when not yet voted)
+    const mine =
+      s.host_1 === login ||
+      s.host_2 === login ||
+      s.proposed_by === login;
+
+    // ── votes (board only)
     if (s.status === 'lead' && role === 'board') {
       if (!s.selection.votes_for.includes(login)) {
-        rows.push({
-          kind: 'vote',
-          speaker: s,
-          label: `Vote on lead: ${s.name}`,
-          urgency: -100,
-        });
+        rows.push({ kind: 'vote', speaker: s, label: `Vote on lead: ${s.name}`, urgency: -100 });
       }
     }
 
-    // actions on speakers I shepherd (or anyone, if I'm board)
-    if (mine || role === 'board') {
-      if (['approved', 'invited', 'confirmed', 'delivered'].includes(s.status)) {
-        for (const item of phase.items) {
-          if (item.gate && !s.runbook_progress[item.key]) {
-            rows.push({
-              kind: 'action',
-              speaker: s,
-              label: item.label,
-              itemKey: item.key,
-              urgency: 0,
-            });
-          }
-        }
+    if (!(mine || role === 'board')) continue;
+
+    // ── approved: hosts + invitation
+    if (s.status === 'approved') {
+      if (!s.host_1) {
+        rows.push({ kind: 'action', speaker: s, label: 'Assign Host 1', urgency: 0 });
+      } else if (!s.host_2) {
+        rows.push({ kind: 'action', speaker: s, label: 'Assign Host 2', urgency: 0 });
+      } else {
+        rows.push({ kind: 'action', speaker: s, label: 'Send invitation', urgency: 0 });
       }
-      if (s.status === 'scheduled' && s.date) {
-        const days = daysBetween(today, s.date);
-        for (const item of phase.items) {
-          if (item.window === undefined) continue;
-          if (s.runbook_progress[item.key]) continue;
-          if (days <= item.window) {
-            rows.push({
-              kind: 'action',
-              speaker: s,
-              label: `${item.label} (T-${item.window})`,
-              itemKey: item.key,
-              daysUntil: days,
-              urgency: days,
-            });
-          }
-        }
+    }
+
+    // ── invited
+    if (s.status === 'invited') {
+      rows.push({
+        kind: 'action',
+        speaker: s,
+        label: 'Log speaker reply (accept / decline)',
+        urgency: 0,
+      });
+    }
+
+    // ── confirmed
+    if (s.status === 'confirmed') {
+      if (!s.title) rows.push({ kind: 'action', speaker: s, label: 'Capture talk title', urgency: 0 });
+      if (!s.abstract)
+        rows.push({ kind: 'action', speaker: s, label: 'Capture talk abstract', urgency: 0 });
+      if (!s.date || !s.edition_code || !s.time) {
+        rows.push({ kind: 'action', speaker: s, label: 'Lock date, time and edition code', urgency: 0 });
       }
-      if (s.status === 'wrapped') {
-        for (const item of phase.items) {
-          if (s.runbook_progress[item.key]) continue;
+    }
+
+    // ── scheduled: checkbox items in their T-window
+    if (s.status === 'scheduled' && s.date) {
+      const days = daysBetween(today, s.date);
+      for (const item of phase.items) {
+        if (item.form !== 'checkbox' || item.window === undefined) continue;
+        if (s.runbook_progress[item.key]) continue;
+        if (days <= item.window) {
           rows.push({
-            kind: 'awareness',
+            kind: 'action',
+            speaker: s,
+            label: `${item.label} (T-${item.window})`,
+            itemKey: item.key,
+            daysUntil: days,
+            urgency: days,
+          });
+        }
+      }
+    }
+
+    // ── delivered: required fields + required checkboxes
+    if (s.status === 'delivered') {
+      for (const item of phase.items) {
+        if (!item.required) continue;
+        if (item.form === 'field' && item.fieldKey) {
+          const val = fieldValue(s, item.fieldKey);
+          if (val === '' || val === null || val === undefined) {
+            rows.push({ kind: 'action', speaker: s, label: `Fill ${item.label}`, urgency: 0 });
+          }
+        }
+        if (item.form === 'checkbox' && !s.runbook_progress[item.key]) {
+          rows.push({
+            kind: 'action',
             speaker: s,
             label: item.label,
             itemKey: item.key,
-            urgency: 100,
+            urgency: 0,
           });
         }
       }
