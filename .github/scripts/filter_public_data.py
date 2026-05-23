@@ -14,7 +14,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 SPEAKERS_FILE = ROOT / 'data' / 'speakers.yml'
 
-PUBLIC_STATUSES = {'scheduled', 'delivered', 'wrapped', 'archived'}
+PUBLIC_STATUSES = {'scheduled', 'delivered', 'archived'}
 
 speakers = yaml.safe_load(SPEAKERS_FILE.read_text(encoding='utf-8')) or []
 
