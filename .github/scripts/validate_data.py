@@ -1,9 +1,4 @@
-"""Validate data/*.yml against the unified schema.
-
-Runs in CI on data/ commits. Fails on missing required fields, invalid
-statuses, invalid co_hosts cardinality (for active scheduled status),
-malformed dates, duplicate ids or edition_codes.
-"""
+"""Validate data/*.yml against the v2 unified schema."""
 from __future__ import annotations
 import re
 import sys
@@ -17,14 +12,18 @@ CONFIG = ROOT / "data" / "config.yml"
 
 STATUSES = {
     "lead", "approved", "invited", "confirmed", "scheduled",
-    "delivered", "wrapped", "archived",
+    "delivered", "archived",
     "parked", "decline-board", "decline-speaker",
 }
 GENDERS = {"M", "F", "NB", "undisclosed"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 EDITION_RE = re.compile(r"^MRG-\d+$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
-CONFIG_REQUIRED = {"season", "vw_counter", "vote_threshold", "overlap_window_days", "board_members"}
+CONFIG_REQUIRED = {
+    "season", "vw_counter", "vote_threshold",
+    "overlap_window_days", "seminar_duration_minutes", "board_members",
+}
 
 errors: list[str] = []
 
@@ -74,6 +73,9 @@ def check_speakers(speakers) -> None:
         date = s.get("date")
         if date and not DATE_RE.match(str(date)):
             fail(f"{loc} ({sid}): date must be YYYY-MM-DD, got {date!r}")
+        time = s.get("time")
+        if time and not TIME_RE.match(str(time)):
+            fail(f"{loc} ({sid}): time must be HH:MM, got {time!r}")
         edition = s.get("edition_code")
         if edition:
             if not EDITION_RE.match(edition):
@@ -82,19 +84,17 @@ def check_speakers(speakers) -> None:
                 fail(f"{loc} ({sid}): duplicate edition_code {edition!r}")
             else:
                 seen_edition.add(edition)
-        # statuses that require edition + date
-        if status in ("scheduled", "delivered", "wrapped", "archived"):
+        if status in ("scheduled", "delivered", "archived"):
             if not edition:
                 fail(f"{loc} ({sid}): status {status} requires edition_code")
             if not date:
                 fail(f"{loc} ({sid}): status {status} requires date")
-        # co_hosts is a list; for actively-scheduled we want exactly 2
-        # (historical delivered/wrapped/archived may have empty co_hosts)
-        co = s.get("co_hosts", [])
-        if not isinstance(co, list):
-            fail(f"{loc} ({sid}): co_hosts must be a list")
-        elif status == "scheduled" and len(co) != 2:
-            fail(f"{loc} ({sid}): co_hosts must have exactly 2 entries for scheduled")
+        for k in ("host_1", "host_2"):
+            v = s.get(k, "")
+            if v is not None and not isinstance(v, str):
+                fail(f"{loc} ({sid}): {k} must be a string")
+        if status == "scheduled" and (not s.get("host_1") or not s.get("host_2")):
+            fail(f"{loc} ({sid}): scheduled requires both host_1 and host_2")
 
 
 def check_config(cfg) -> None:
@@ -111,7 +111,7 @@ def check_config(cfg) -> None:
         for b in bm:
             if not isinstance(b, str) or not LOGIN_RE.match(b):
                 fail(f"config.yml: invalid board_member {b!r}")
-    for k in ("season", "vw_counter", "vote_threshold", "overlap_window_days"):
+    for k in ("season", "vw_counter", "vote_threshold", "overlap_window_days", "seminar_duration_minutes"):
         if k in cfg and not isinstance(cfg[k], int):
             fail(f"config.yml: {k} must be an integer")
 
