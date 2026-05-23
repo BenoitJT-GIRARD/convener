@@ -26,6 +26,9 @@ extra:
     text: Archivo
     code: JetBrains Mono
 
+hooks:
+  - .github/scripts/mkdocs_hook.py
+
 plugins:
   - search
   - git-revision-date-localized:
@@ -55,19 +58,21 @@ nav:
       - 4 · After the webinar: workflow/4-after.md
   - Templates:
       - Overview: toolkit/index.md
-      - Email · Invitation: toolkit/emails/invitation.md
-      - Email · Talk details: toolkit/emails/talk-details.md
-      - Email · Zoom request: toolkit/emails/zoom-request.md
-      - Email · Reminder: toolkit/emails/reminder.md
-      - Email · Thank-you: toolkit/emails/thank-you.md
-      - Email · Registration confirmation: toolkit/emails/registration-confirmation.md
-      - Email · Decision (declined): toolkit/emails/decision-declined.md
-      - Email · Decision (parked): toolkit/emails/decision-parked.md
-      - Email · Outreach sourcing: toolkit/emails/outreach-sourcing.md
-      - Forum post · Announce: toolkit/forum-post-announce.md
-      - Forum post · Summary: toolkit/forum-post-summary.md
-      - LinkedIn post: toolkit/linkedin-post.md
-      - Intro scripts: toolkit/intro-scripts.md
+      - Emails:
+          - Invitation: toolkit/emails/invitation.md
+          - Talk details: toolkit/emails/talk-details.md
+          - Zoom request: toolkit/emails/zoom-request.md
+          - Reminder: toolkit/emails/reminder.md
+          - Thank-you: toolkit/emails/thank-you.md
+          - Registration confirmation: toolkit/emails/registration-confirmation.md
+          - Decision (declined): toolkit/emails/decision-declined.md
+          - Decision (parked): toolkit/emails/decision-parked.md
+          - Outreach sourcing: toolkit/emails/outreach-sourcing.md
+      - Posts & scripts:
+          - Forum announcement: toolkit/forum-post-announce.md
+          - Forum summary: toolkit/forum-post-summary.md
+          - LinkedIn post: toolkit/linkedin-post.md
+          - Intro scripts: toolkit/intro-scripts.md
   - Governance:
       - Editorial line: governance/editorial-line.md
       - The Editorial Board: governance/editorial-board.md

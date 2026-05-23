@@ -30,11 +30,6 @@ Every suggested speaker also has **one person looking after them** until the Boa
 
 ## The two gates
 
-| Gate | When | Who decides |
-|---|---|---|
-| 🚪 **Validating a speaker** | Before anyone is invited | Two-thirds of the Editorial Board say yes |
-| 🚪 **Publishing a recording** | Before it goes public | One Board member approves; done unless someone objects within 3 days |
-
-Everything else, the Event Hosts do without asking.
+Two moments need a Board green light: **validating a speaker** before they are invited, and **publishing a recording** before it goes public. The mechanics — who votes, what threshold, what window — live in [The Editorial Board](governance/editorial-board.md). Everything else, the Event Hosts do without asking.
 
 See [Hosting day](workflow/3-hosting.md) for how the two hosts run the event.

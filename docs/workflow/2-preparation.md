@@ -5,32 +5,35 @@ Once the date is set, the **two Event Hosts** prepare the webinar together. This
 !!! note "The timings are suggestions"
     The weeks below are recommendations, not deadlines. Go at your own pace — just tick each step as you do it, so everyone can see how the webinar is coming along.
 
-## 6 weeks before
+<!-- runbook:steps -->
+### T-6w — 6 weeks before
 
-- [ ] Make sure **both Event Hosts** are signed up — a webinar is run by two.
-- [ ] Send the **invitation** to the speaker — [template](../toolkit/emails/invitation.md).
-- [ ] Ask for the **talk details** — title, abstract, short bio — [template](../toolkit/emails/talk-details.md). Copy in the Zoom contact so they know it is coming.
-- [ ] Ask the **Zoom contact** for a registration link and recording — [template](../toolkit/emails/zoom-request.md).
-- [ ] Get **Canva and LinkedIn** access if you do not have it.
+- [ ] Both Event Hosts signed up
+- [ ] Invitation sent to speaker
+- [ ] Talk details collected (title, abstract, bio)
+- [ ] Zoom link + recording requested
+- [ ] Canva and LinkedIn access in place
 
-## 4 weeks before
+### T-4w — 4 weeks before
 
-- [ ] Make the **visuals and flyer** in Canva from the templates. Always *duplicate* a template — never edit the original.
-- [ ] Publish the **LinkedIn post** — [template](../toolkit/linkedin-post.md).
-- [ ] Publish the **forum announcement** and start the discussion — [template](../toolkit/forum-post-announce.md).
+- [ ] Visuals + flyer made in Canva
+- [ ] LinkedIn post published
+- [ ] Forum announcement + discussion seeded
 
-## 2 weeks before
+### T-2w — 2 weeks before
 
-- [ ] If the forum is quiet, **post a question or two yourselves** to get the discussion going.
+- [ ] Seeded a question or two on the forum
 
-## 1 week before
+### T-1w — 1 week before
 
-- [ ] Send the **reminder** to the speaker — [template](../toolkit/emails/reminder.md).
-- [ ] Agree the **plan for the day** between the two hosts — who does what (see [Hosting day](3-hosting.md)).
+- [ ] Reminder sent to speaker
+- [ ] Plan for the day agreed between hosts
 
-## The day before
+### T-1d — The day before
 
-- [ ] A final reminder if useful; check the registration link still works.
+- [ ] Final reminder + registration link check
+
+<!-- /runbook:steps -->
 
 ---
 
