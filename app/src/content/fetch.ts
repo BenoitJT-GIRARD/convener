@@ -1,24 +1,17 @@
 import { CONTENT_REGISTRY } from './registry';
-import { isDemoMode } from '../data/demo';
 
 const cache = new Map<string, string>();
-const REPO = 'example-instance/workshop-series';
+const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
-export async function fetchContent(key: string, token: string | null): Promise<string> {
+export async function fetchContent(key: string, _token: string | null): Promise<string> {
   if (cache.has(key)) return cache.get(key)!;
   const entry = CONTENT_REGISTRY[key];
   if (!entry) return `*Missing content for \`${key}\`*`;
-  if (isDemoMode() || !token) {
-    return `_(demo) content not loaded for **${key}** — file: \`docs/${entry.file}\`_`;
+  const url = `${BASE}/handbook/${entry.file}`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    throw new Error(`Content fetch failed (${r.status}): handbook/${entry.file}`);
   }
-  const url = `https://api.github.com/repos/${REPO}/contents/docs/${entry.file}`;
-  const r = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.raw',
-    },
-  });
-  if (!r.ok) throw new Error(`Content fetch failed (${r.status}): docs/${entry.file}`);
   const text = await r.text();
   cache.set(key, text);
   return text;

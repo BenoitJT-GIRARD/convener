@@ -1,20 +1,40 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchContent, invalidateContent } from '../src/content/fetch';
 import { substitute } from '../src/content/render';
 
 beforeEach(() => {
   invalidateContent();
+  vi.unstubAllGlobals();
 });
 
 describe('fetchContent', () => {
   it('returns missing marker for unknown key', async () => {
-    const out = await fetchContent('unknown/key', 'tok');
+    const out = await fetchContent('unknown/key', null);
     expect(out).toMatch(/Missing/);
   });
 
-  it('returns demo placeholder when no token', async () => {
+  it('fetches markdown from /<base>/handbook/<file>', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => '# Hello from invitation.md',
+    });
+    vi.stubGlobal('fetch', fetchSpy);
     const out = await fetchContent('toolkit/emails/invitation', null);
-    expect(out).toMatch(/demo/);
+    expect(out).toBe('# Hello from invitation.md');
+    expect(fetchSpy.mock.calls[0][0]).toMatch(/handbook\/toolkit\/emails\/invitation\.md$/);
+  });
+
+  it('throws on non-ok response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+    await expect(fetchContent('handbook/overview', null)).rejects.toThrow(/Content fetch failed/);
+  });
+
+  it('caches subsequent calls', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, text: async () => 'cached body' });
+    vi.stubGlobal('fetch', fetchSpy);
+    await fetchContent('handbook/glossary', null);
+    await fetchContent('handbook/glossary', null);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
 
