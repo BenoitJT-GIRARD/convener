@@ -34,7 +34,3 @@ mkdocs serve
 ## Spot a mistake?
 
 Every page has a pencil icon. Your edit becomes a pull request reviewed by the Editorial Board, then merged. The handbook is meant to evolve — just send the change.
-
-## Still to do
-
-See [`TODO.md`](TODO.md).
