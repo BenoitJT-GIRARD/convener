@@ -1,5 +1,6 @@
 # Design tokens
 
-Warm paper background, deep moss primary, copper accent. Source Serif 4 for headings,
-Source Sans 3 for body, JetBrains Mono for IDs. Restrained, intentional, never generic.
-Any new color or font must justify its existence here first.
+TEC brand identity: turquoise (#3FB1C2) with deep-purple accent (#3D2D7C),
+on a pale cyan-tinted paper background. Archivo for both display and body,
+JetBrains Mono for IDs. Restrained, intentional, never generic. Any new
+colour or font must justify its existence here first.

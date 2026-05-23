@@ -15,8 +15,9 @@ export default {
         info: 'var(--info)',
       },
       fontFamily: {
-        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
-        sans: ['"Source Sans 3"', 'system-ui', 'sans-serif'],
+        serif: ['"Archivo"', 'system-ui', 'sans-serif'],
+        sans: ['"Archivo"', 'system-ui', 'sans-serif'],
+        display: ['"Archivo"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       maxWidth: { content: '1280px' },

@@ -1,13 +1,13 @@
 export const colors = {
-  paper: '#f8f5f0', surface: '#ffffff',
-  ink: '#1a1a1a', inkMuted: '#6b6b6b',
-  primary: '#3a5a40', primaryHover: '#2d4731',
-  accent: '#a8763e', border: '#e8e3da',
+  paper: '#f7fafa', surface: '#ffffff',
+  ink: '#0f172a', inkMuted: '#64748b',
+  primary: '#3FB1C2', primaryHover: '#2E8C9C',
+  accent: '#3D2D7C', border: '#d6e5e7',
   danger: '#9b2226', info: '#4a6c75',
 } as const;
 
 export const fonts = {
-  serif: '"Source Serif 4", Georgia, serif',
-  sans: '"Source Sans 3", system-ui, sans-serif',
+  display: '"Archivo", system-ui, sans-serif',
+  body: '"Archivo", system-ui, sans-serif',
   mono: '"JetBrains Mono", monospace',
 } as const;

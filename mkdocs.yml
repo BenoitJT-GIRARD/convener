@@ -8,8 +8,8 @@ theme:
   name: material
   palette:
     - scheme: default
-      primary: teal
-      accent: teal
+      primary: custom
+      accent: custom
   features:
     - navigation.sections
     - navigation.top
@@ -17,6 +17,14 @@ theme:
     - content.action.edit
     - search.suggest
     - toc.follow
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  font:
+    text: Archivo
+    code: JetBrains Mono
 
 plugins:
   - search
