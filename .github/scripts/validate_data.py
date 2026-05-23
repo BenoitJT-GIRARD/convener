@@ -18,6 +18,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 SPEAKERS = ROOT / "data" / "speakers.yml"
 EVENTS = ROOT / "data" / "events.yml"
+CONFIG = ROOT / "data" / "config.yml"
 
 SPEAKER_STATUSES = {
     "lead", "approved", "invited", "confirmed", "scheduled",
@@ -25,6 +26,8 @@ SPEAKER_STATUSES = {
 }
 EVENT_STATUSES = {"upcoming", "delivered", "wrapped", "archived"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+CONFIG_REQUIRED = {"season", "vw_counter", "vote_threshold", "overlap_window_days", "board_members"}
+LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
 
 errors: list[str] = []
 
@@ -93,19 +96,42 @@ def check_events(events) -> None:
             fail(f"{loc} ({eid}): date must be YYYY-MM-DD, got {date!r}")
 
 
+def check_config(cfg) -> None:
+    if not isinstance(cfg, dict):
+        fail("config.yml: top-level must be a mapping")
+        return
+    missing = CONFIG_REQUIRED - set(cfg.keys())
+    if missing:
+        fail(f"config.yml: missing keys {sorted(missing)}")
+    bm = cfg.get("board_members")
+    if not isinstance(bm, list):
+        fail("config.yml: board_members must be a list")
+    else:
+        for b in bm:
+            if not isinstance(b, str) or not LOGIN_RE.match(b):
+                fail(f"config.yml: invalid board_member {b!r}")
+    for k in ("season", "vw_counter", "vote_threshold", "overlap_window_days"):
+        if k in cfg and not isinstance(cfg[k], int):
+            fail(f"config.yml: {k} must be an integer")
+
+
 def main() -> int:
     speakers = load(SPEAKERS)
-    events = load(EVENTS)
+    events = load(EVENTS) if EVENTS.exists() else None
+    config = load(CONFIG) if CONFIG.exists() else None
     if speakers is not None:
         check_speakers(speakers)
     if events is not None:
         check_events(events)
+    if config is not None:
+        check_config(config)
     if errors:
         print("Data validation FAILED:")
         for e in errors:
             print(f"  - {e}")
         return 1
-    print(f"Data OK — {len(speakers or [])} speakers, {len(events or [])} events")
+    nevents = len(events) if events else 0
+    print(f"Data OK — {len(speakers or [])} speakers, {nevents} events, config={'ok' if config else 'missing'}")
     return 0
 
 
