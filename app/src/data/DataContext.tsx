@@ -28,22 +28,58 @@ const DEFAULT_CONFIG: Config = {
   vw_counter: 1,
   vote_threshold: 3,
   overlap_window_days: 7,
+  seminar_duration_minutes: 90,
   board_members: [],
 };
 
-function autoSweep(speakers: Speaker[], today: string): { swept: Speaker[]; changed: boolean } {
+/**
+ * Convert a wall-time in Europe/Paris (DST-aware) to a UTC epoch.
+ * dateStr: YYYY-MM-DD; timeStr: HH:MM.
+ */
+function parisWallTimeToEpoch(dateStr: string, timeStr: string): number {
+  const iso = `${dateStr}T${timeStr}:00`;
+  const probe = new Date(`${iso}Z`);
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(probe);
+  const map: Record<string, string> = {};
+  for (const p of parts) if (p.type !== 'literal') map[p.type] = p.value;
+  const hour = map.hour === '24' ? '00' : map.hour;
+  const parisIso = `${map.year}-${map.month}-${map.day}T${hour}:${map.minute}:${map.second}Z`;
+  const offsetMs = Date.parse(parisIso) - probe.getTime();
+  return probe.getTime() - offsetMs;
+}
+
+function autoSweep(
+  speakers: Speaker[],
+  config: Config | null,
+  now: Date,
+): { swept: Speaker[]; changed: boolean } {
+  const duration = (config?.seminar_duration_minutes ?? 90) * 60_000;
   let changed = false;
   const swept = speakers.map(s => {
-    if (s.status === 'scheduled' && s.date && s.date < today) {
+    if (s.status !== 'scheduled' || !s.date) return s;
+    if (s.time) {
+      const startEpoch = parisWallTimeToEpoch(s.date, s.time);
+      if (now.getTime() >= startEpoch + duration) {
+        changed = true;
+        return { ...s, status: 'delivered' as const };
+      }
+      return s;
+    }
+    // Legacy fallback: no time — flip the day after.
+    const todayStr = now.toISOString().slice(0, 10);
+    if (s.date < todayStr) {
       changed = true;
       return { ...s, status: 'delivered' as const };
-    }
-    if (s.status === 'wrapped' && s.date) {
-      const archiveAt = Date.parse(s.date) + 30 * 86400000;
-      if (archiveAt < Date.parse(today)) {
-        changed = true;
-        return { ...s, status: 'archived' as const };
-      }
     }
     return s;
   });
@@ -80,10 +116,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         getFile('data/speakers.yml', token),
         getFile('data/config.yml', token),
       ]);
-      const today = new Date().toISOString().slice(0, 10);
       const parsed = parseSpeakers(spk.text);
-      const { swept, changed } = autoSweep(parsed, today);
       const config = parseConfig(cfg.text) ?? DEFAULT_CONFIG;
+      const { swept, changed } = autoSweep(parsed, config, new Date());
       setS({
         loading: false,
         error: null,
@@ -94,13 +129,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
       if (changed) {
         const text =
-          '# Speakers (unified schema — see docs/reference/schema.md)\n' +
+          '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
           serializeSpeakers(swept);
         const res: any = await putFile(
           'data/speakers.yml',
           text,
           spk.sha,
-          'data: auto-sweep status by date',
+          'data: auto-sweep scheduled→delivered',
           token,
         );
         setS(p => ({ ...p, spkSha: res.content.sha }));
@@ -117,7 +152,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return;
     }
     const text =
-      '# Speakers (unified schema — see docs/reference/schema.md)\n' +
+      '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
       serializeSpeakers(next);
     const res: any = await putFile('data/speakers.yml', text, s.spkSha, message, token);
     setS(p => ({ ...p, speakers: next, spkSha: res.content.sha }));

@@ -49,12 +49,7 @@ export function ActionButtons({ speaker, role }: Props) {
   ) {
     if (!canTransition(speaker, t, role)) return null;
     return (
-      <button
-        key={label}
-        disabled={busy}
-        onClick={() => fire(t)}
-        className={btnCls(variant)}
-      >
+      <button key={label} disabled={busy} onClick={() => fire(t)} className={btnCls(variant)}>
         {label}
       </button>
     );
@@ -77,9 +72,19 @@ export function ActionButtons({ speaker, role }: Props) {
         );
       }
       break;
-    case 'approved':
-      buttons.push(btn('Mark invitation sent', 'send-invitation'));
+    case 'approved': {
+      const hostsSet = !!speaker.host_1 && !!speaker.host_2;
+      if (!hostsSet) {
+        buttons.push(
+          <span className="text-sm text-ink-muted" key="msg">
+            Assign Host 1 and Host 2 in the form below before sending the invitation.
+          </span>,
+        );
+      } else {
+        buttons.push(btn('Mark invitation sent →', 'send-invitation'));
+      }
       break;
+    }
     case 'invited':
       buttons.push(btn('Speaker accepted', 'invited-accept'));
       buttons.push(btn('Speaker declined', 'invited-decline', 'danger'));
@@ -90,16 +95,13 @@ export function ActionButtons({ speaker, role }: Props) {
           key="lock"
           speaker={speaker}
           disabled={busy}
-          onSubmit={(d, e) => fire('lock-date', { date: d, edition_code: e })}
+          onSubmit={(d, e, t) => fire('lock-date', { date: d, edition_code: e, time: t })}
         />,
       );
       break;
     case 'parked':
     case 'decline-board':
       if (role === 'board') buttons.push(btn('Reactivate', 'reactivate'));
-      break;
-    case 'delivered':
-      buttons.push(btn('Mark wrapped', 'mark-wrapped'));
       break;
     default:
       break;
@@ -113,11 +115,12 @@ function LockDateForm({
   disabled,
 }: {
   speaker: Speaker;
-  onSubmit: (d: string, e: string) => void;
+  onSubmit: (date: string, edition: string, time: string) => void;
   disabled: boolean;
 }) {
   const { speakers, config } = useData();
   const [date, setDate] = useState('');
+  const [time, setTime] = useState('12:30');
   const [edition, setEdition] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
@@ -128,7 +131,7 @@ function LockDateForm({
 
   function attempt() {
     setErr(null);
-    if (!date || !edition || !config) return;
+    if (!date || !edition || !time || !config) return;
     const hits = findOverlaps(date, speakers, config.overlap_window_days, speaker.id);
     if (hits.length) {
       const h = hits[0];
@@ -137,37 +140,54 @@ function LockDateForm({
       );
       return;
     }
-    onSubmit(date, edition);
+    onSubmit(date, edition, time);
   }
+
+  const titleMissing = !speaker.title || !speaker.abstract;
 
   return (
     <div className="space-y-2 w-full">
       <div className="flex gap-2 items-center flex-wrap">
-        <input
-          type="date"
-          value={date}
-          onChange={e => setDate(e.target.value)}
-          className="px-2 py-1 border border-border rounded text-sm"
-        />
-        <input
-          type="text"
-          placeholder="MRG-N"
-          value={edition}
-          onChange={e => setEdition(e.target.value)}
-          className="px-2 py-1 border border-border rounded text-sm font-mono w-24"
-        />
-        <button onClick={suggestEdition} className="text-xs text-primary underline" type="button">
+        <label className="flex items-center gap-1.5">
+          <span className="text-xs font-mono uppercase text-ink-muted">Date</span>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="px-2 py-1 text-sm" />
+        </label>
+        <label className="flex items-center gap-1.5">
+          <span className="text-xs font-mono uppercase text-ink-muted">Time (Paris)</span>
+          <input
+            type="time"
+            value={time}
+            onChange={e => setTime(e.target.value)}
+            className="px-2 py-1 text-sm font-mono w-24"
+          />
+        </label>
+        <label className="flex items-center gap-1.5">
+          <span className="text-xs font-mono uppercase text-ink-muted">№</span>
+          <input
+            type="text"
+            placeholder="MRG-N"
+            value={edition}
+            onChange={e => setEdition(e.target.value)}
+            className="px-2 py-1 text-sm font-mono w-20"
+          />
+        </label>
+        <button onClick={suggestEdition} className="text-xs text-primary-hover underline" type="button">
           suggest
         </button>
         <button
-          disabled={disabled || !date || !edition}
+          disabled={disabled || !date || !edition || !time}
           onClick={attempt}
-          className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          className="px-3 py-1.5 text-sm font-display font-bold tracking-widest uppercase bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50"
           type="button"
         >
-          Lock date
+          Lock date →
         </button>
       </div>
+      {titleMissing && (
+        <p className="text-xs text-ink-muted italic">
+          Title or abstract still empty — recommended before locking the date.
+        </p>
+      )}
       {err && <p className="text-danger text-xs">{err}</p>}
     </div>
   );

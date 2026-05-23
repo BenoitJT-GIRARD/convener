@@ -11,7 +11,7 @@ export function SpeakerCard({ s }: { s: Speaker }) {
       <div className="font-medium text-sm">{s.name || '(no name)'}</div>
       {subtitle && <div className="text-xs text-ink-muted mt-1 line-clamp-2">{subtitle}</div>}
       <div className="flex justify-between mt-2 text-xs text-ink-muted">
-        <span>{s.edition_code || s.host || '— no host'}</span>
+        <span>{s.edition_code || s.host_1 || '— no host'}</span>
         <span className="font-mono">{s.id}</span>
       </div>
     </Link>

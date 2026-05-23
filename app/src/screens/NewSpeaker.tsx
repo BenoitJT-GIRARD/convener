@@ -29,10 +29,21 @@ export function NewSpeaker() {
     abstract: '',
     links: '',
     notes: '',
+    conflicts_of_interest: '',
+    source: 'organizer' as Speaker['source'],
+    proposed_by: login ?? '',
   });
 
   function up<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm(f => ({ ...f, [k]: v }));
+  }
+
+  function onSource(v: Speaker['source']) {
+    setForm(f => ({
+      ...f,
+      source: v,
+      proposed_by: v === 'organizer' ? login ?? f.proposed_by : f.proposed_by,
+    }));
   }
 
   async function submit(e: React.FormEvent) {
@@ -50,28 +61,22 @@ export function NewSpeaker() {
         country: form.country.trim(),
         title: form.title.trim(),
         abstract: form.abstract.trim(),
-        source: 'organizer',
-        proposed_by: login,
-        links: form.links
-          .split(/[\s,]+/)
-          .map(s => s.trim())
-          .filter(Boolean),
-        host: '',
-        co_hosts: [],
+        conflicts_of_interest: form.conflicts_of_interest.trim(),
+        source: form.source,
+        proposed_by: form.proposed_by.trim(),
+        links: form.links.split(/[\s,]+/).map(s => s.trim()).filter(Boolean),
+        host_1: '',
+        host_2: '',
         status: 'lead',
         selection: { votes_for: [], decided_on: '' },
         edition_code: '',
         date: '',
+        time: '',
         zoom_link: '',
         youtube_url: '',
         forum_thread: '',
         runbook_progress: {},
-        metrics: {
-          registrations: null,
-          live_peak: null,
-          youtube_views_30d: null,
-          forum_replies: null,
-        },
+        metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
         notes: form.notes.trim(),
       };
       await saveSpeakers([...speakers, lead], `data: add lead ${id} (${lead.name})`);
@@ -81,15 +86,14 @@ export function NewSpeaker() {
     }
   }
 
-  const inputCls =
-    'w-full px-3 py-2 border border-border rounded-md bg-surface text-sm';
+  const inputCls = 'w-full px-3 py-2 text-sm';
 
   return (
     <div className="max-w-xl">
       <h1 className="font-serif text-3xl mb-2">New speaker</h1>
       <p className="text-ink-muted text-sm mb-6">
-        Add a lead manually. The Tally form does the same for public submissions. The
-        board will vote next.
+        Add a lead manually. The Tally public form does the same with{' '}
+        <code className="font-mono">source: 'form'</code>. The board will vote next.
       </p>
 
       <form onSubmit={submit} className="space-y-4">
@@ -104,6 +108,32 @@ export function NewSpeaker() {
             autoFocus
           />
         </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">Source</span>
+            <select
+              className={`${inputCls} mt-1`}
+              value={form.source}
+              onChange={e => onSource(e.target.value as Speaker['source'])}
+            >
+              <option value="organizer">organizer (added by team member)</option>
+              <option value="outreach">outreach (contacted by email)</option>
+              <option value="form">form (Tally public submission)</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">Proposed by</span>
+            <input
+              type="text"
+              value={form.proposed_by}
+              onChange={e => up('proposed_by', e.target.value)}
+              className={`${inputCls} mt-1`}
+              placeholder={form.source === 'organizer' ? 'your login' : 'name'}
+            />
+          </label>
+        </div>
+
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-ink-muted">Email</span>
           <input
@@ -113,6 +143,7 @@ export function NewSpeaker() {
             className={`${inputCls} mt-1`}
           />
         </label>
+
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-xs uppercase tracking-wider text-ink-muted">Affiliation</span>
@@ -133,6 +164,7 @@ export function NewSpeaker() {
             />
           </label>
         </div>
+
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-ink-muted">Gender</span>
           <select
@@ -146,6 +178,7 @@ export function NewSpeaker() {
             <option value="NB">NB</option>
           </select>
         </label>
+
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-ink-muted">
             Title (preliminary)
@@ -164,6 +197,18 @@ export function NewSpeaker() {
             onChange={e => up('abstract', e.target.value)}
             rows={4}
             className={`${inputCls} mt-1 font-sans`}
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs uppercase tracking-wider text-ink-muted">
+            Conflicts of interest
+          </span>
+          <textarea
+            value={form.conflicts_of_interest}
+            onChange={e => up('conflicts_of_interest', e.target.value)}
+            rows={2}
+            className={`${inputCls} mt-1 font-sans`}
+            placeholder="Disclosed conflicts (visible to all)"
           />
         </label>
         <label className="block">
@@ -192,14 +237,14 @@ export function NewSpeaker() {
           <button
             type="submit"
             disabled={busy || !form.name.trim()}
-            className="px-4 py-2 rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+            className="px-4 py-2 bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 font-display font-bold tracking-widest uppercase text-sm"
           >
             {busy ? 'Creating…' : 'Create lead'}
           </button>
           <button
             type="button"
             onClick={() => nav(-1)}
-            className="px-4 py-2 rounded border border-border text-ink-muted hover:text-ink"
+            className="px-4 py-2 border-2 border-border text-ink-muted hover:text-ink font-display font-bold tracking-widest uppercase text-sm"
           >
             Cancel
           </button>

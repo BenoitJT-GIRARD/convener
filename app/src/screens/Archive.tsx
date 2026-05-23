@@ -17,8 +17,8 @@ const CATEGORIES: Category[] = [
     key: 'past',
     num: '01',
     label: 'Past webinars',
-    hint: 'Delivered, wrapped, archived',
-    statuses: ['delivered', 'wrapped', 'archived'],
+    hint: 'Archived events',
+    statuses: ['archived', 'delivered'],
     sortDesc: true,
   },
   {
@@ -59,7 +59,10 @@ export function Archive() {
       return hay.includes(q.toLowerCase());
     };
     const result: Record<Category['key'], Speaker[]> = {
-      past: [], parked: [], 'declined-board': [], 'declined-speaker': [],
+      past: [],
+      parked: [],
+      'declined-board': [],
+      'declined-speaker': [],
     };
     for (const s of speakers) {
       for (const c of CATEGORIES) {
@@ -90,9 +93,7 @@ export function Archive() {
           <span className="h-0.5 bg-accent w-8" />
           History
         </p>
-        <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">
-          Archive
-        </h1>
+        <h1 className="font-display font-extrabold text-3xl uppercase tracking-tight">Archive</h1>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-8 pb-6 border-b border-border">
@@ -113,8 +114,7 @@ export function Archive() {
               active={active === c.key}
               onClick={() => setActive(c.key)}
             >
-              {c.label}{' '}
-              <span className="font-mono opacity-70 ml-1">{grouped[c.key].length}</span>
+              {c.label} <span className="font-mono opacity-70 ml-1">{grouped[c.key].length}</span>
             </FilterChip>
           ))}
         </div>
@@ -131,8 +131,14 @@ export function Archive() {
 }
 
 function FilterChip({
-  active, onClick, children,
-}: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
@@ -147,7 +153,13 @@ function FilterChip({
   );
 }
 
-function CategorySection({ category, speakers }: { category: Category; speakers: Speaker[] }) {
+function CategorySection({
+  category,
+  speakers,
+}: {
+  category: Category;
+  speakers: Speaker[];
+}) {
   return (
     <section className="mb-10">
       <header className="flex items-baseline gap-3 mb-4">
@@ -174,38 +186,148 @@ function CategorySection({ category, speakers }: { category: Category; speakers:
   );
 }
 
-function ArchiveRow({ speaker: s, category }: { speaker: Speaker; category: Category }) {
+function ArchiveRow({
+  speaker: s,
+  category,
+}: {
+  speaker: Speaker;
+  category: Category;
+}) {
+  const [editing, setEditing] = useState(false);
+  const showMetricsEdit =
+    category.key === 'past' &&
+    s.status === 'archived' &&
+    (s.metrics.youtube_views_30d === null ||
+      s.metrics.forum_replies === null ||
+      !s.youtube_url ||
+      !s.forum_thread);
   return (
     <li>
-      <Link
-        to={`/speakers/${s.id}`}
-        className="grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2 hover:bg-primary-soft transition-colors"
-      >
-        <span className="font-mono text-xs text-accent uppercase tracking-wider truncate">
+      <div className="grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2 hover:bg-primary-soft transition-colors">
+        <Link
+          to={`/speakers/${s.id}`}
+          className="font-mono text-xs text-accent uppercase tracking-wider truncate no-underline"
+        >
           {s.edition_code || s.id}
-        </span>
+        </Link>
         <div className="min-w-0">
-          <p className="font-medium text-sm text-ink truncate">
-            {s.title || s.name}
-          </p>
-          <p className="text-xs text-ink-muted truncate">
-            <strong className="font-semibold">{s.name}</strong>
-            {s.affiliation && ` · ${s.affiliation}`}
-            {s.country && ` · ${s.country}`}
-          </p>
+          <Link to={`/speakers/${s.id}`} className="block min-w-0 no-underline">
+            <p className="font-medium text-sm text-ink truncate">{s.title || s.name}</p>
+            <p className="text-xs text-ink-muted truncate">
+              <strong className="font-semibold">{s.name}</strong>
+              {s.affiliation && ` · ${s.affiliation}`}
+              {s.country && ` · ${s.country}`}
+            </p>
+          </Link>
         </div>
-        <div className="text-right">
+        <div className="text-right flex items-center justify-end gap-3">
           {category.key === 'past' && s.date ? (
-            <span className="font-mono text-xs text-ink-muted">{s.date.replace(/-/g, ' / ')}</span>
+            <span className="font-mono text-xs text-ink-muted">
+              {s.date.replace(/-/g, ' / ')}
+            </span>
           ) : s.notes ? (
             <span className="font-mono text-[11px] text-ink-faint italic line-clamp-1 max-w-[20ch]">
               {s.notes.slice(0, 60)}
             </span>
-          ) : (
-            <span className="font-mono text-[11px] text-ink-faint">View →</span>
+          ) : null}
+          {showMetricsEdit && (
+            <button
+              onClick={() => setEditing(!editing)}
+              className="font-display font-bold text-[10px] tracking-widest uppercase text-primary-hover border border-border px-2 py-0.5 hover:bg-primary-soft"
+            >
+              {editing ? 'Hide' : 'Edit metrics'}
+            </button>
           )}
         </div>
-      </Link>
+      </div>
+      {editing && <ArchiveMetricsEdit speaker={s} />}
     </li>
+  );
+}
+
+function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
+  const { speakers, saveSpeakers } = useData();
+  const [yt30, setYt30] = useState<string | number>(speaker.metrics.youtube_views_30d ?? '');
+  const [fr, setFr] = useState<string | number>(speaker.metrics.forum_replies ?? '');
+  const [ytUrl, setYtUrl] = useState(speaker.youtube_url);
+  const [forum, setForum] = useState(speaker.forum_thread);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    try {
+      const next: Speaker = {
+        ...speaker,
+        youtube_url: ytUrl,
+        forum_thread: forum,
+        metrics: {
+          ...speaker.metrics,
+          youtube_views_30d: yt30 === '' ? null : Number(yt30),
+          forum_replies: fr === '' ? null : Number(fr),
+        },
+      };
+      await saveSpeakers(
+        speakers.map(s => (s.id === speaker.id ? next : s)),
+        `data: ${speaker.id} update post-archive metrics`,
+      );
+      setSaved(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const input = 'w-full px-2 py-1.5 text-sm';
+  return (
+    <div className="ml-[7.25rem] mr-2 my-2 p-3 bg-surface border border-border grid grid-cols-1 md:grid-cols-2 gap-3">
+      <label className="block">
+        <span className="font-display font-bold text-[11px] uppercase tracking-widest text-ink-muted">
+          YouTube URL
+        </span>
+        <input className={`${input} mt-1`} value={ytUrl} onChange={e => setYtUrl(e.target.value)} />
+      </label>
+      <label className="block">
+        <span className="font-display font-bold text-[11px] uppercase tracking-widest text-ink-muted">
+          YouTube views (30d)
+        </span>
+        <input
+          className={`${input} mt-1`}
+          type="number"
+          value={yt30}
+          onChange={e => setYt30(e.target.value)}
+        />
+      </label>
+      <label className="block">
+        <span className="font-display font-bold text-[11px] uppercase tracking-widest text-ink-muted">
+          Forum thread URL
+        </span>
+        <input
+          className={`${input} mt-1`}
+          value={forum}
+          onChange={e => setForum(e.target.value)}
+        />
+      </label>
+      <label className="block">
+        <span className="font-display font-bold text-[11px] uppercase tracking-widest text-ink-muted">
+          Forum replies
+        </span>
+        <input
+          className={`${input} mt-1`}
+          type="number"
+          value={fr}
+          onChange={e => setFr(e.target.value)}
+        />
+      </label>
+      <div className="md:col-span-2 flex gap-3 items-center">
+        <button
+          onClick={save}
+          disabled={busy}
+          className="font-display font-bold tracking-widest uppercase text-xs bg-ink text-white border-2 border-ink px-3 py-1.5 disabled:opacity-50"
+        >
+          {busy ? 'Saving…' : 'Save metrics'}
+        </button>
+        {saved && <span className="text-xs text-primary-hover">✓ saved</span>}
+      </div>
+    </div>
   );
 }
