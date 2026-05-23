@@ -3,6 +3,7 @@ import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { ActionButtons } from '../components/ActionButtons';
+import { AdminOverride } from '../components/AdminOverride';
 import { Checklist } from '../components/Checklist';
 import { phaseOf, gatesComplete } from '../state/phases';
 
@@ -92,6 +93,13 @@ export function SpeakerPage() {
           <h2 className="font-serif text-xl mb-2">Notes</h2>
           <p className="text-ink-muted whitespace-pre-wrap text-sm">{s.notes}</p>
         </div>
+      )}
+
+      {role === 'board' && (
+        <details className="mt-12 border-t border-border pt-6">
+          <summary className="cursor-pointer text-sm text-danger">Admin override</summary>
+          <AdminOverride speaker={s} />
+        </details>
       )}
 
       <div className="mt-12 pt-6 border-t border-border text-sm">
