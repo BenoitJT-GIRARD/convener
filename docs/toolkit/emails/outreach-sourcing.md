@@ -6,7 +6,7 @@
 
 **Subject:** Suggest a speaker — The Example Collective Workshop Series
 
-Dear {{contact_first}},
+Dear {{ speaker.first_name }},
 
 The Example Collective runs a community **Monthly Reading Group** — online seminars on behavioural science, with discussion before and after each talk. This season we are especially interested in **{{season_themes}}**.
 
@@ -17,5 +17,5 @@ We particularly welcome early-career researchers. It takes two minutes, and it h
 Thank you for helping the community grow!
 
 Best regards,
-{{your_name}}
+{{ host_1.name }}
 *for The Example Collective team*

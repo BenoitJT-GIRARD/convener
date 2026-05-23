@@ -6,7 +6,7 @@
 
 **Subject:** Thank you for your TEC talk!
 
-Dear {{speaker_first}},
+Dear {{ speaker.first_name }},
 
 Thank you so much for your talk — we, and the audience, really enjoyed it. There was strong engagement and a rich discussion, with around {{live_peak}} people joining live.
 
@@ -15,5 +15,5 @@ We are summarising the discussion on the forum, and the recording will go up on 
 It was a real pleasure to host you. We hope to stay in touch, and the conversation can continue any time on The Example Collective.
 
 Warm regards,
-{{your_name}}
+{{ host_1.name }}
 *for The Example Collective team*

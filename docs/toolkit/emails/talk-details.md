@@ -4,11 +4,11 @@
 
 ---
 
-**Subject:** Your TEC talk on {{date}} — a few details
+**Subject:** Your TEC talk on {{ speaker.date }} — a few details
 
-Dear {{speaker_first}},
+Dear {{ speaker.first_name }},
 
-Wonderful — we are very glad you will join us on **{{date}}**!
+Wonderful — we are very glad you will join us on **{{ speaker.date }}**!
 
 To prepare the announcement, could you please send us:
 
@@ -23,4 +23,4 @@ A couple of practical points: everyone — including you and the hosts — regis
 Looking forward to it!
 
 Best regards,
-{{your_name}}
+{{ host_1.name }}
