@@ -1,4 +1,5 @@
 """Command-line entry points. This is the only module that touches the disk."""
+
 from __future__ import annotations
 
 import sys

@@ -1,4 +1,5 @@
 """Locate the repository root without depending on this file's own depth."""
+
 from __future__ import annotations
 
 import os

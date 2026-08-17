@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from conftest import config, speaker
+
 from convener_ops.validate import validate_config, validate_speakers
 
 

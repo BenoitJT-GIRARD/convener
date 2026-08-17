@@ -3,6 +3,7 @@
 Every function takes already-parsed data and returns a list of human-readable
 errors. Nothing here touches the filesystem — that belongs to cli.py.
 """
+
 from __future__ import annotations
 
 import re
@@ -94,9 +95,7 @@ def validate_speakers(speakers: Any) -> list[str]:
         edition = entry.get("edition_code")
         if edition:
             if not EDITION_RE.match(str(edition)):
-                errors.append(
-                    f"{where}: edition_code must match MRG-N, got {edition!r}"
-                )
+                errors.append(f"{where}: edition_code must match MRG-N, got {edition!r}")
             elif edition in seen_editions:
                 errors.append(f"{where}: duplicate edition_code {edition!r}")
             else:
