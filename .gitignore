@@ -11,6 +11,11 @@ public-data/
 # Python
 __pycache__/
 *.pyc
+.venv/
+tools/.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # OS
 .DS_Store
