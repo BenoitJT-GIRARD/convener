@@ -1,5 +1,14 @@
-# Every external dependency of the system, and what happens without it.
-# Absent is a normal state: the feature degrades visibly, nothing breaks.
+# Every external dependency the *application code* (tools/convener_ops and
+# app/src) reads at runtime, and what happens without it. Absent is a normal
+# state: the feature degrades visibly, nothing breaks.
+#
+# This deliberately excludes secrets that only CI ever reads (a workflow
+# step's `env:`, never something convener-check-config's own process sees) --
+# TALLY_WEBHOOK_SECRET, VITRINE_DEPLOY_TOKEN, CLOUDFLARE_API_TOKEN. Declaring
+# them here would make `convener-check-config` report them permanently "absent"
+# on every machine that isn't the CI runner, which is noise, not
+# information. They are documented instead in docs/reference/operations.md,
+# with what each is for and where it is set.
 integrations:
   - name: auth_proxy
     label: Authentication relay

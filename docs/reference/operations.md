@@ -1,10 +1,16 @@
 # Operations
 
-Everything the system needs from the outside world. Each integration is
-optional: without it the feature degrades visibly and nothing breaks.
+Everything the *application code* needs from the outside world. Each
+integration is optional: without it the feature degrades visibly and
+nothing breaks.
 
 Run `cd tools && uv run convener-check-config` at any time to see what is
-configured and what is still waiting.
+configured and what is still waiting. That declaration
+(`config/integrations.yml`) covers only what `tools/convener_ops` and `app/src`
+themselves read at runtime — three further secrets exist to gate CI
+workflow behaviour and are documented in their own section below instead,
+since `convener-check-config` running on a laptop would otherwise report them
+as permanently missing.
 
 ## Before anything else
 
@@ -113,3 +119,27 @@ with the organisation address, and record its id.
 
 **To verify:** run `cd tools && uv run convener-check-config`; *Video channel*
 moves from `absent` to `production`.
+
+## CI-only secrets
+
+These gate GitHub Actions workflow behaviour rather than anything the
+application itself reads, so they never appear in `convener-check-config` (see
+the note at the top of this document) — but a successor inheriting this
+repository still needs to know they exist and where they live.
+
+- **`TALLY_WEBHOOK_SECRET`** — verifies that a `proposal-submitted`
+  `repository_dispatch` reaching *Handle proposal*
+  (`.github/workflows/candidate-form.yml`) really came from the public
+  Tally form and not a forged request. Set as a repository secret; its
+  value is the signing secret Tally shows when the webhook is configured.
+- **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
+  scoped to the separate `example-instance/example-showcase` repository
+  (contents: read & write only), that *Publish vitrine data*
+  (`.github/workflows/publish-vitrine.yml`) uses to push the public events
+  feed there. Without it the workflow logs a message and exits cleanly —
+  no vitrine publish happens, nothing else breaks. Set as a repository
+  secret on `workshop-series`.
+- **`CLOUDFLARE_API_TOKEN`** — already introduced above under
+  *Authentication relay*: used by *Deploy auth relay* to deploy the
+  worker in `services/auth-proxy/`. Listed again here because it is the
+  same kind of CI-only, cross-account credential as the other two.
