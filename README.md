@@ -40,6 +40,15 @@ Validate data:
 python .github/scripts/validate_data.py
 ```
 
+### Local checks (optional)
+
+```bash
+uvx pre-commit install
+```
+
+Runs formatting, linting, secret detection and British-English spelling before
+each commit. It is a convenience, not a gate — CI remains the authority.
+
 ## Architecture
 
 - **One entity per speaker.** `data/speakers.yml` carries the whole lifecycle: lead → approved → invited → confirmed → scheduled → delivered → wrapped → archived (plus `parked`, `decline-board`, `decline-speaker`).
