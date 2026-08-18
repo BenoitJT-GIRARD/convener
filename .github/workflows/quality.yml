@@ -57,12 +57,12 @@ jobs:
           # Only the commits under review. Phase 1 is already written and does
           # not follow this grammar; a check that demanded the past be
           # rewritten would be turned off instead of obeyed.
-          from="${BASE:-$BEFORE}"
-          if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ]; then
-            range="$HEAD -1"
-          else
-            range="$from..$HEAD"
-          fi
+          #
+          # The range is computed by `commit_format.log_range` rather than
+          # here, because a range that quietly resolves to nothing is a green
+          # check that read no commit, and shell in a workflow file is the one
+          # place nothing can test.
+          range="$(uv run convener-commit-range)"
           git log --format=%B%x00 $range | uv run convener-check-commits
       - name: Decision register
         working-directory: tools

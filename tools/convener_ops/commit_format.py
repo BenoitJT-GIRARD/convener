@@ -30,6 +30,7 @@ every commit an obstacle would be abandoned inside a week.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -354,4 +355,54 @@ def check_commits() -> int:
         print(f"{len(problems)} commit message(s) to fix.")
         return 1
     print(f"{len(messages)} commit message(s) OK.")
+    return 0
+
+
+#: The all-zero object name GitHub sends as `github.event.before` for the first
+#: push to a branch. It names no commit: there is no "before" to start from.
+NO_PARENT: Final = "0" * 40
+
+
+def log_range(base: str, before: str, head: str) -> list[str]:
+    """The `git log` arguments naming exactly the commits under review.
+
+    Three shapes, because a run knows its starting point in three ways. A
+    pull request gives the base it would merge into (`base`); a push gives the
+    branch tip it moved from (`before`); the first push to a branch gives the
+    all-zero name, which is no commit at all, and neither is an absent value.
+    In that last case the head alone is checked, because there is nothing to
+    subtract it from.
+
+    Erring towards too few commits is deliberate -- a check that demanded phase
+    1 be rewritten would be turned off rather than obeyed -- but "too few" must
+    never quietly become "none", which is a green result that verified nothing.
+    That is what `tests/test_commit_range.py` exercises against a real
+    repository: the arguments are handed to `git log` and the commits that come
+    back are counted, so a range that resolves to nothing fails there rather
+    than passing in CI.
+    """
+    head = head.strip() or "HEAD"
+    start = base.strip() or before.strip()
+    if not start or not start.strip("0"):
+        return ["-1", head]
+    return [f"{start}..{head}"]
+
+
+def commit_range() -> int:
+    """`convener-commit-range`: print the arguments, for the shell to expand.
+
+    The workflow reads them unquoted into `git log`, so this prints one line
+    and nothing else. Reading the three values from the environment rather
+    than from `sys.argv` keeps the workflow's `env:` block the single place
+    the GitHub event is named.
+    """
+    print(
+        " ".join(
+            log_range(
+                os.environ.get("BASE", ""),
+                os.environ.get("BEFORE", ""),
+                os.environ.get("HEAD", ""),
+            )
+        )
+    )
     return 0
