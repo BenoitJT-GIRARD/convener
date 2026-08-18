@@ -1,0 +1,32 @@
+name: Sweep elapsed events
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Sweep
+        working-directory: tools
+        run: uv run convener-sweep
+      - name: Commit
+        run: |
+          set -e
+          git config user.name "convener-sweep"
+          git config user.email "convener-sweep@users.noreply.github.com"
+          git add data/speakers.yml
+          if git diff --staged --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "data: sweep elapsed events to delivered"
+          git push

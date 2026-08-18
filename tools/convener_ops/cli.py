@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 from collections import Counter
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ import yaml
 
 from convener_ops.integrations import Integration, load_declaration, resolve_states
 from convener_ops.paths import repo_root
+from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
 
 
@@ -74,6 +76,38 @@ def check_config() -> int:
     declaration = repo_root() / "config" / "integrations.yml"
     integrations = resolve_states(load_declaration(declaration), env=os.environ)
     print(render_check(integrations))
+    return 0
+
+
+def sweep() -> int:
+    root = repo_root()
+    speakers_path = root / "data" / "speakers.yml"
+    speakers, errors = _load(speakers_path)
+    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    if errors or cfg_errors:
+        for error in errors + cfg_errors:
+            print(f"  - {error}")
+        return 1
+
+    swept, changes = sweep_speakers(speakers or [], cfg or {}, datetime.now(UTC))
+    if not changes:
+        print("Nothing to sweep.")
+        return 0
+
+    header = "# Speakers (unified schema v2 — see docs/reference/schema.md)\n"
+    speakers_path.write_text(
+        header
+        + yaml.safe_dump(
+            swept,
+            allow_unicode=True,
+            sort_keys=False,
+            default_flow_style=False,
+            width=1000,
+        ),
+        encoding="utf-8",
+    )
+    for change in changes:
+        print(change)
     return 0
 
 
