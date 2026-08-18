@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+
+# One fixed git invocation, in `_git_log` and nowhere else; see its docstring.
+import subprocess  # nosec B404
 import sys
 from collections import Counter
 from datetime import UTC, datetime
@@ -17,6 +20,12 @@ from convener_ops.integrations import Integration, load_declaration, resolve_sta
 from convener_ops.paths import repo_root
 from convener_ops.proposal import skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
+from convener_ops.register import (
+    LOG_FORMAT,
+    REGISTER_PATH,
+    entries_from_log,
+    render_register,
+)
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
@@ -247,6 +256,63 @@ def handle_proposal() -> int:
     speakers.append(lead)
     speakers_path.write_text(dump_speakers(speakers), encoding="utf-8", newline="")
     print(f"created {lead['id']} from form proposal")
+    return 0
+
+
+def _git_log(root: Path) -> tuple[str, str]:
+    """The whole history in `register.LOG_FORMAT`, oldest commit first.
+
+    The one subprocess in this package, and it is why it lives in `cli`: the
+    rest of `convener_ops` stays a pure library that a test can drive without a
+    checkout. Fixed argv, no shell, no interpolated value -- there is nothing
+    here for a commit message to escape into, because no commit message is
+    passed in; only read out.
+    """
+    # Fixed argv, shell=False, nothing interpolated: B603 and B607 both
+    # describe a risk this call does not carry.
+    result = subprocess.run(  # nosec B603 B607
+        ["git", "log", "--reverse", f"--format={LOG_FORMAT}"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        return "", result.stderr.strip() or "git log failed"
+    return result.stdout, ""
+
+
+def register() -> int:
+    """`convener-register`: rewrite the decision register from the commits.
+
+    Rewrite, not append. The file is a function of the history and of nothing
+    else, so the safe thing to do with whatever is on disk is to replace it --
+    which is also what makes a hand-written row impossible to keep. `--dry-run`
+    prints the same bytes and touches nothing.
+    """
+    dry_run = "--dry-run" in sys.argv[1:]
+    root = repo_root()
+    log, error = _git_log(root)
+    if error:
+        print(f"cannot read the commit history: {error}", file=sys.stderr)
+        return 1
+
+    entries = entries_from_log(log)
+    rendered = render_register(entries)
+    if dry_run:
+        sys.stdout.write(rendered)
+        return 0
+
+    path = root / REGISTER_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    current = path.read_text(encoding="utf-8") if path.exists() else ""
+    if current == rendered:
+        print(f"register unchanged - {len(entries)} decision(s)")
+        return 0
+    path.write_text(rendered, encoding="utf-8", newline="")
+    print(f"wrote {REGISTER_PATH.as_posix()} - {len(entries)} decision(s)")
     return 0
 
 
