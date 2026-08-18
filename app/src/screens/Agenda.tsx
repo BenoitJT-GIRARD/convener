@@ -6,7 +6,6 @@ import type { Speaker } from '../data/types';
 const STATUS_COLOR: Record<string, string> = {
   scheduled: 'bg-primary/20 border-primary text-ink',
   delivered: 'bg-accent/20 border-accent text-ink',
-  wrapped: 'bg-paper border-border text-ink-muted',
   archived: 'bg-paper border-border text-ink-muted opacity-60',
 };
 
@@ -17,7 +16,7 @@ export function Agenda() {
   const now = new Date();
 
   const dated = speakers
-    .filter(s => s.date && ['scheduled', 'delivered', 'wrapped', 'archived'].includes(s.status))
+    .filter(s => s.date && ['scheduled', 'delivered', 'archived'].includes(s.status))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const groups: Record<string, Speaker[]> = {};

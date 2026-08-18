@@ -5,7 +5,7 @@ export interface OverlapHit {
   daysApart: number;
 }
 
-const PUBLIC_STATUSES = new Set(['scheduled', 'delivered', 'wrapped', 'archived']);
+const PUBLIC_STATUSES = new Set(['scheduled', 'delivered', 'archived']);
 
 export function findOverlaps(
   candidateDate: string,
