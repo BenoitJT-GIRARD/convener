@@ -146,6 +146,15 @@ def _validate_ballots(
             f"{where}.selection: opened_on must be YYYY-MM-DD, got {opened_on!r}"
         )
 
+    # decided_on gets copied into every generated ballot's date by the
+    # migration (scripts/migrate_v3.py, Task 5) - a malformed value here
+    # would propagate into every ballot it touches, not stay in one field.
+    decided_on = selection.get("decided_on")
+    if decided_on and not DATE_RE.match(str(decided_on)):
+        errors.append(
+            f"{where}.selection: decided_on must be YYYY-MM-DD, got {decided_on!r}"
+        )
+
     ballots = selection.get("ballots")
     if not isinstance(ballots, list):
         return errors

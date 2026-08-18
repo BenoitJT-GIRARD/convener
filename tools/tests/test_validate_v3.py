@@ -288,3 +288,51 @@ def test_ballot_from_non_member_fires_even_when_board_is_empty() -> None:
     )
     errors = validate_speakers([s], board_logins=frozenset())
     assert any("ballot from a non-member" in e for e in errors)
+
+
+# --- Fix round 2 (coordinator review) -------------------------------------
+
+
+def test_selection_decided_on_must_be_a_date() -> None:
+    # The migration copies decided_on into every generated ballot's date
+    # (scripts/migrate_v3.py, Task 5): a malformed value here would
+    # propagate into every ballot it touches, not stay in one field.
+    s = speaker(selection={"ballots": [], "opened_on": "", "decided_on": "not-a-date"})
+    errors = validate_speakers([s])
+    assert any("decided_on must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_nominations_must_be_a_list() -> None:
+    errors = validate_config(config(nominations="not-a-list"))
+    assert any("nominations must be a list" in e for e in errors)
+
+
+def test_nomination_entry_must_be_a_mapping() -> None:
+    errors = validate_config(config(nominations=["not-a-mapping"]))
+    nomination_errors = [e for e in errors if e.startswith("config.yml: nominations")]
+    assert any("not a mapping" in e for e in nomination_errors)
+
+
+def test_publication_must_be_a_mapping() -> None:
+    s = speaker(publication="not-a-mapping")
+    errors = validate_speakers([s])
+    assert any(".publication: not a mapping" in e for e in errors)
+
+
+def test_nomination_objections_must_be_a_list() -> None:
+    errors = validate_config(config(nominations=[nomination(objections="not-a-list")]))
+    assert any(".objections: must be a list" in e for e in errors)
+
+
+def test_nomination_objection_entry_must_be_a_mapping() -> None:
+    errors = validate_config(
+        config(nominations=[nomination(objections=["not-a-mapping"])])
+    )
+    assert any(".objections[0]: not a mapping" in e for e in errors)
+
+
+def test_nomination_objection_date_must_be_a_date() -> None:
+    errors = validate_config(
+        config(nominations=[nomination(objections=[objection(date="not-a-date")])])
+    )
+    assert any("objections[0]: date must be YYYY-MM-DD" in e for e in errors)
