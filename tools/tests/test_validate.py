@@ -20,8 +20,8 @@ def test_duplicate_id_is_rejected() -> None:
 
 
 def test_unknown_status_is_rejected() -> None:
-    errors = validate_speakers([speaker(status="wrapped")])
-    assert any("invalid status 'wrapped'" in e for e in errors)
+    errors = validate_speakers([speaker(status="bogus-status")])
+    assert any("invalid status 'bogus-status'" in e for e in errors)
 
 
 def test_scheduled_requires_edition_date_and_two_hosts() -> None:

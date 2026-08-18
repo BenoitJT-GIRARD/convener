@@ -57,13 +57,13 @@ def test_validate_reports_ok_and_returns_0(
 def test_validate_reports_errors_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_data(tmp_path, [speaker(status="wrapped")], config())
+    _write_data(tmp_path, [speaker(status="bogus-status")], config())
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
 
     assert validate() == 1
     out = capsys.readouterr().out
     assert "Data validation FAILED" in out
-    assert "invalid status 'wrapped'" in out
+    assert "invalid status 'bogus-status'" in out
 
 
 def test_sweep_reports_nothing_to_sweep_when_no_change(

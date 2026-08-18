@@ -11,8 +11,10 @@ events. Everything a volunteer needs sits inside the app.
 | `app/` | The React app (Vite + TypeScript). Deployed to GitHub Pages. |
 | `data/` | `speakers.yml` (unified entity), `config.yml` (board, threshold, season). |
 | `docs/` | Handbook content as Markdown — rendered *inside* the app at the point of action and in the Handbook tab. Not a separate site. |
+| `tools/` | The `convener-ops` package: data validation, integration status, the sweep, the public-data filter, and the form-proposal handler. |
 | `scripts/` | One-shot scripts (e.g. schema migration). |
-| `.github/` | CI: data validation, Tally proposal handler, public-data filter, vitrine sync. |
+| `services/auth-proxy/` | The Cloudflare Worker that relays the GitHub device-flow sign-in. |
+| `.github/` | CI: data validation, Tally proposal handler, public-data filter, vitrine sync, quality and security gates. |
 
 ## How to work on it
 
@@ -37,8 +39,17 @@ npm run build
 Validate data:
 
 ```bash
-python .github/scripts/validate_data.py
+cd tools && uv run convener-validate
 ```
+
+Check which external integrations are configured:
+
+```bash
+cd tools && uv run convener-check-config
+```
+
+See `docs/reference/operations.md` for what each integration needs, and what
+happens without it.
 
 ### Local checks (optional)
 
@@ -46,12 +57,14 @@ python .github/scripts/validate_data.py
 uvx pre-commit install
 ```
 
-Runs formatting, linting, secret detection and British-English spelling before
-each commit. It is a convenience, not a gate — CI remains the authority.
+Runs formatting, linting, secret detection and British-English spelling
+before each commit — the same checks the `quality.yml` and `security.yml`
+workflows run in CI. It is a convenience, not a gate — CI remains the
+authority.
 
 ## Architecture
 
-- **One entity per speaker.** `data/speakers.yml` carries the whole lifecycle: lead → approved → invited → confirmed → scheduled → delivered → wrapped → archived (plus `parked`, `decline-board`, `decline-speaker`).
+- **One entity per speaker.** `data/speakers.yml` carries the whole lifecycle: lead → approved → invited → confirmed → scheduled → delivered → archived (plus `parked`, `decline-board`, `decline-speaker`).
 - **State machine.** Status changes are a consequence of explicit gestures (vote, send invitation, log reply, lock date). The free-form status field is gone (except a board-only admin override).
 - **Two personas.** Active organizer and board member, served at parity. The inbox adapts to the role.
 - **Handbook content rendered inline.** Each runbook step links to the relevant Markdown chunk (template email, instructions) which renders next to the action. No back-and-forth with a separate doc site.
