@@ -28,7 +28,7 @@ jobs:
             echo "nothing to commit"
             exit 0
           fi
-          git commit -m "data: sweep elapsed events to delivered"
+          git commit -m "data: sweep elapsed events and expired vote windows"
           for attempt in 1 2 3; do
             if git push; then
               exit 0

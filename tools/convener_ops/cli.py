@@ -16,6 +16,7 @@ from convener_ops.integrations import Integration, load_declaration, resolve_sta
 from convener_ops.paths import repo_root
 from convener_ops.proposal import skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
+from convener_ops.sweep import expire_votes
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
 from convener_ops.yaml_safe import safe_load as yaml_safe_load
@@ -103,7 +104,10 @@ def sweep() -> int:
             print(f"  - {error}")
         return 1
 
-    swept, changes = sweep_speakers(speakers or [], cfg or {}, datetime.now(UTC))
+    now = datetime.now(UTC)
+    swept, changes = sweep_speakers(speakers or [], cfg or {}, now)
+    swept, vote_changes = expire_votes(swept, cfg or {}, now)
+    changes += vote_changes
     if not changes:
         print("Nothing to sweep.")
         return 0
