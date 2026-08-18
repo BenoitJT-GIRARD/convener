@@ -20,6 +20,7 @@ from convener_ops.governance import (
     threshold_for,
     working_days_elapsed,
 )
+from convener_ops.notify import due_date, overdue, overdue_text, waiting_since
 
 CASES = json.loads(
     (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
@@ -87,3 +88,42 @@ def test_elapsed_inverts_add_on_every_shared_case(case: dict[str, Any]) -> None:
     also pin `working_days_elapsed`: a window opened on `from` has run exactly
     when this many working days have elapsed."""
     assert working_days_elapsed(case["from"], case["expected"]) == case["days"]
+
+
+@pytest.mark.parametrize("case", CASES["lateness_cases"], ids=lambda c: c["name"])
+def test_overdue_wording_matches_the_shared_fixture(case: dict[str, Any]) -> None:
+    """The sentences the daily digest carries are the screens' sentences.
+
+    Spec section 7 puts the overdue list in the digest, and task 19 had already
+    written that wording for `app/src/state/sla.ts`. A digest that reworded it
+    would be the fifth cross-language divergence in this repository, so both
+    halves read these cases: `app/tests/governance-fixture.test.ts` runs them
+    through `lateness`, `overdueText` and `waitingSince`.
+
+    `days`, `overdue_text` and `waiting_since` are asserted only on the
+    `overdue` arm, because on the other two arms they do not exist to assert --
+    `notify.overdue` returns `None` and `Lateness` carries no count.
+    """
+    speaker = case["speaker"]
+    sla_days = case["sla_days"]
+    late = overdue(speaker, sla_days, case["today"])
+    deadline = due_date(speaker, sla_days)
+
+    if case["state"] == "none":
+        assert deadline is None
+        assert late is None
+        return
+
+    assert deadline is not None
+    assert deadline.step == case["step"]
+    assert deadline.due == case["due"]
+    assert deadline.since == case["since"]
+
+    if case["state"] == "due":
+        assert late is None
+        return
+
+    assert late is not None
+    assert late.days == case["days"]
+    assert overdue_text(late) == case["overdue_text"]
+    assert waiting_since(late) == case["waiting_since"]

@@ -621,5 +621,259 @@
       "name": "an empty message is not the grammar's problem",
       "message": ""
     }
+  ],
+
+  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
+  "lateness_cases": [
+    {
+      "name": "a lead past its board-decision deadline is overdue by whole calendar days",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "overdue",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01",
+      "days": 3,
+      "overdue_text": "Board decision is 3 days overdue",
+      "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "one day late reads in the singular",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-16",
+      "state": "overdue",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01",
+      "days": 1,
+      "overdue_text": "Board decision is 1 day overdue",
+      "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "the due day itself is still within the target, not yet late",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-15",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01"
+    },
+    {
+      "name": "fourteen calendar days, so a window spanning two weekends still falls due on the same Friday",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-04-17",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-05-01",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-05-01",
+      "since": "2026-04-17"
+    },
+    {
+      "name": "a lead with no recorded opening day has no deadline rather than a guessed one",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "an invited record counts thirty days from the day the decision was recorded",
+      "speaker": {
+        "status": "invited",
+        "selection": {
+          "opened_on": "2026-05-01",
+          "decided_on": "2026-06-01"
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-07-05",
+      "state": "overdue",
+      "step": "Invitation follow-up",
+      "due": "2026-07-01",
+      "since": "2026-06-01",
+      "days": 4,
+      "overdue_text": "Invitation follow-up is 4 days overdue",
+      "waiting_since": "waiting since 2026-06-01"
+    },
+    {
+      "name": "a delivered talk missing both artefacts reports the earlier of the two deadlines",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-02-01",
+      "state": "overdue",
+      "step": "Forum summary",
+      "due": "2026-01-17",
+      "since": "2026-01-10",
+      "days": 15,
+      "overdue_text": "Forum summary is 15 days overdue",
+      "waiting_since": "waiting since 2026-01-10"
+    },
+    {
+      "name": "once the summary is in, its deadline stops existing and the recording is what is waiting",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "",
+        "runbook_progress": {
+          "delivered/forum-summary": true
+        }
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-02-01",
+      "state": "overdue",
+      "step": "Recording",
+      "due": "2026-01-24",
+      "since": "2026-01-10",
+      "days": 8,
+      "overdue_text": "Recording is 8 days overdue",
+      "waiting_since": "waiting since 2026-01-10"
+    },
+    {
+      "name": "a delivered talk with both artefacts in has no deadline left at all",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "https://example.org/watch",
+        "runbook_progress": {
+          "delivered/forum-summary": true
+        }
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-02-01",
+      "state": "none"
+    },
+    {
+      "name": "a confirmed record is waiting on no policy deadline",
+      "speaker": {
+        "status": "confirmed",
+        "selection": {
+          "opened_on": "2026-01-01",
+          "decided_on": "2026-01-05"
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    }
   ]
 }

@@ -45,3 +45,17 @@ integrations:
     absent_behaviour: >-
       Recording URLs are entered by hand after publishing. No upload is
       attempted.
+
+  - name: board_notifications
+    label: Board notifications
+    secrets:
+      - CONVENER_NOTIFY_THREAD
+      - CONVENER_NOTIFY_MENTION
+    absent_behaviour: >-
+      Nothing is sent. The digest and the immediate events are still composed
+      and printed to the job log, where any volunteer can read them, but they
+      are addressed to nobody: a message needs both a thread to be posted on
+      and a team to mention, and without them no postable message is
+      constructed at all. Both are needed because a thread with no mention
+      posts into a page nobody is watching, and a mention with no thread has
+      nowhere to be written.

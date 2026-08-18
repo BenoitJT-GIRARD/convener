@@ -11,12 +11,13 @@ import sys
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import yaml
 
 from convener_ops.governance import paris_today
 from convener_ops.integrations import Integration, load_declaration, resolve_states
+from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
 from convener_ops.proposal import skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
@@ -257,6 +258,127 @@ def handle_proposal() -> int:
     speakers_path.write_text(dump_speakers(speakers), encoding="utf-8", newline="")
     print(f"created {lead['id']} from form proposal")
     return 0
+
+
+#: Where a message that has somewhere to go is left for the workflow to post.
+#:
+#: The file's *existence* is the whole signal: it is written only when
+#: `notify.dispatch` returned a `Dispatch`, which cannot happen without a
+#: configured channel. `.github/workflows/notify.yml` posts what it finds here
+#: and does nothing at all when it finds nothing -- so there is no
+#: "notifications on/off" switch anywhere in the chain, only a message that
+#: either has an address or was never composed with one. Git-ignored: it is a
+#: run artefact, never a file anybody edits.
+NOTIFY_BODY: Final = "notify-body.md"
+
+#: The previous revision of the speaker file, as a fixed `git show` argument.
+#: Held as a constant rather than assembled from a ref and a path so that
+#: `_git_show` interpolates nothing at all -- the same discipline as `_git_log`.
+PREVIOUS_SPEAKERS: Final = "HEAD~1:data/speakers.yml"
+
+
+def _git_show(root: Path) -> tuple[str, str]:
+    """`data/speakers.yml` as of the previous commit, or an explanation.
+
+    A shallow clone, an initial commit, or a repository with no parent for
+    HEAD all land in the error half, and the caller turns that into "nothing
+    to compare, so nothing to say" -- never into a message.
+    """
+    # Fixed argv, shell=False, nothing interpolated: B603 and B607 both
+    # describe a risk this call does not carry.
+    result = subprocess.run(  # nosec B603 B607
+        ["git", "show", PREVIOUS_SPEAKERS],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        first = next(iter(result.stderr.strip().splitlines()), "")
+        return "", first or "no parent commit"
+    return result.stdout, ""
+
+
+def _notify(message: str | None) -> int:
+    """Print what was composed, and leave it for the workflow only if it has
+    somewhere to go.
+
+    Always exits 0. Nothing to say, no channel configured, and both at once are
+    the same outcome here, and none of them is a failure: an absent integration
+    is a normal state (D-13), and a quiet day is the point of the digest.
+
+    The composed text is printed to the job log either way, so a repository
+    with no channel yet still lets a volunteer read what *would* have been
+    sent -- the same "written to an inspectable log instead of being sent"
+    behaviour `config/integrations.yml` promises for outbound email.
+    """
+    if message is None:
+        print("nothing to notify")
+        return 0
+
+    print(message)
+    if "--dry-run" in sys.argv[1:]:
+        print("")
+        print("[dry run] nothing was written and nothing was addressed")
+        return 0
+
+    addressed = dispatch(message, os.environ)
+    if addressed is None:
+        print("")
+        print("no notification channel is configured - nothing was addressed")
+        return 0
+
+    path = repo_root() / NOTIFY_BODY
+    path.write_text(addressed.body, encoding="utf-8", newline="")
+    print("")
+    print(f"addressed to thread {addressed.channel.thread}; left in {NOTIFY_BODY}")
+    return 0
+
+
+def notify_immediate() -> int:
+    """`convener-notify-immediate`: the three events spec section 7 interrupts for.
+
+    Compares the working tree's speaker file against the previous commit's.
+    With no previous commit to read there is no change to describe, so this
+    says nothing rather than treating the whole file as new -- which on a fresh
+    clone would announce every lead in it at once.
+    """
+    root = repo_root()
+    after, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"  - {error}")
+        return 1
+
+    text, error = _git_show(root)
+    if error:
+        print(f"no previous revision to compare against ({error}); nothing to notify")
+        return 0
+    try:
+        before = yaml_safe_load(text)
+    except yaml.YAMLError as exc:
+        print(f"previous speakers.yml is not readable ({exc}); nothing to notify")
+        return 0
+
+    return _notify(render_events(immediate_events(before or [], after or [])))
+
+
+def notify_digest() -> int:
+    """`convener-notify-digest`: one message for the day, or none at all.
+
+    `--dry-run` composes and prints, and writes nothing.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    if errors or cfg_errors:
+        for error in errors + cfg_errors:
+            print(f"  - {error}")
+        return 1
+
+    return _notify(daily_digest(speakers or [], cfg or {}, datetime.now(UTC)))
 
 
 def _git_log(root: Path) -> tuple[str, str]:

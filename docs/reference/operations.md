@@ -120,6 +120,43 @@ with the organisation address, and record its id.
 **To verify:** run `cd tools && uv run convener-check-config`; *Video channel*
 moves from `absent` to `production`.
 
+## Board notifications
+
+**Without it:** nothing is sent. The digest and the immediate events are
+still composed and printed to the *Notify the board* job log, where any
+volunteer can read exactly what would have gone out, but they are addressed
+to nobody and no comment is posted.
+
+This is structural rather than a setting. A message needs both a thread to
+be posted on and a team to mention; without both, no addressed message is
+built at all, so the workflow's posting step finds nothing to post. There is
+no notifications on/off switch anywhere in the chain, and a quiet day and an
+unconfigured repository behave identically.
+
+**To create:** no external service and no account — GitHub itself is the
+delivery mechanism.
+
+1. Open an issue in this repository to serve as the standing notification
+   thread (for example *Board notifications*), and note its number.
+2. Create an organisation team for the editorial board (for example
+   `@example-instance/editorial`) and add the Board members to it. A team,
+   never a person: the channel must keep working when any one volunteer
+   stops reading.
+3. Ask each member to watch the thread, so GitHub emails them its comments.
+
+**Secrets to set:** `CONVENER_NOTIFY_THREAD` (the issue number) and
+`CONVENER_NOTIFY_MENTION` (the team handle, `@org/team`).
+
+**What travels:** record identifiers (`spk-014`), stored calendar days,
+`nomination N` labels and the four fixed step names. No speaker name, email
+address, affiliation, country, talk title or board login is ever included —
+`tools/convener_ops/notify.py` reads none of those fields.
+
+**To verify:** run `cd tools && uv run convener-check-config`; *Board
+notifications* moves from `absent` to `production`. Run
+`uv run convener-notify-digest --dry-run` to read the day's message without
+sending anything.
+
 ## CI-only secrets
 
 These gate GitHub Actions workflow behaviour rather than anything the
