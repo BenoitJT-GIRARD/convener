@@ -68,4 +68,56 @@ describe('auth proxy', () => {
     const res = await handle(post('/login/oauth/access_token', {}), env);
     expect(res.status).toBe(422);
   });
+
+  it('sources Access-Control-Allow-Origin from config, not from the request, at every write site', async () => {
+    // env.ALLOWED_ORIGIN is a getter so we can count how many times the code
+    // reads *configuration* to build the header. The old implementation
+    // (`corsHeaders(origin)`, where `origin` is the closed-over request
+    // header) reads env.ALLOWED_ORIGIN exactly once — for the initial gate
+    // comparison — and then reuses the request-derived variable for every
+    // header it writes. The fixed implementation (`corsHeaders(env.ALLOWED_ORIGIN)`)
+    // reads it again at each write site. A single successful POST touches the
+    // gate once and the response header once, so the fixed code must read at
+    // least twice; the old code would read exactly once and this assertion
+    // would fail against it.
+    let reads = 0;
+    const trackedEnv = {
+      get ALLOWED_ORIGIN() {
+        reads += 1;
+        return 'https://example-instance.github.io';
+      },
+    };
+    const res = await handle(
+      post('/login/device/code', { client_id: 'Iv1.x' }, 'https://example-instance.github.io'),
+      trackedEnv,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://example-instance.github.io');
+    expect(reads).toBeGreaterThanOrEqual(2);
+  });
+
+  it('refuses an origin that differs from config only by case or a trailing slash', async () => {
+    const upper = await handle(
+      post('/login/device/code', {}, 'https://THE EXAMPLE COLLECTIVE.github.io'),
+      env,
+    );
+    expect(upper.status).toBe(403);
+    expect(upper.headers.get('Access-Control-Allow-Origin')).toBeNull();
+
+    const trailingSlash = await handle(post('/login/device/code', {}, `${env.ALLOWED_ORIGIN}/`), env);
+    expect(trailingSlash.status).toBe(403);
+    expect(trailingSlash.headers.get('Access-Control-Allow-Origin')).toBeNull();
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a preflight for a path that is not an OAuth endpoint', async () => {
+    const req = new Request('https://relay.example/user/repos', {
+      method: 'OPTIONS',
+      headers: { Origin: env.ALLOWED_ORIGIN },
+    });
+    const res = await handle(req, env);
+    expect(res.status).toBe(404);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
 });

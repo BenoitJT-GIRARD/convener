@@ -25,20 +25,20 @@ export async function handle(request, env) {
     return new Response('Forbidden', { status: 403 });
   }
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders(origin) });
-  }
-
-  if (request.method !== 'POST') {
+  if (request.method !== 'OPTIONS' && request.method !== 'POST') {
     return new Response('Method Not Allowed', {
       status: 405,
-      headers: corsHeaders(origin),
+      headers: corsHeaders(env.ALLOWED_ORIGIN),
     });
   }
 
   const { pathname } = new URL(request.url);
   if (!ALLOWED_PATHS.has(pathname)) {
-    return new Response('Not Found', { status: 404, headers: corsHeaders(origin) });
+    return new Response('Not Found', { status: 404, headers: corsHeaders(env.ALLOWED_ORIGIN) });
+  }
+
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders(env.ALLOWED_ORIGIN) });
   }
 
   const upstream = await fetch(`${UPSTREAM}${pathname}`, {
@@ -50,7 +50,7 @@ export async function handle(request, env) {
   return new Response(upstream.body, {
     status: upstream.status,
     headers: {
-      ...corsHeaders(origin),
+      ...corsHeaders(env.ALLOWED_ORIGIN),
       'Content-Type': upstream.headers.get('Content-Type') ?? 'application/json',
     },
   });
