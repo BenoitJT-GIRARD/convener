@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider } from '../src/data/DataContext';
 import { AdminOverride } from '../src/components/AdminOverride';
@@ -75,6 +75,28 @@ function makeSpeakersBackend(initial: Speaker[]) {
   };
 }
 
+/** Every PUT is rejected as stale, no matter the sha sent — `mutate` exhausts
+ *  its retries and the caller's `mutateSpeakers` resolves `false`. */
+function makeAlwaysConflictingBackend(initial: Speaker[]) {
+  const cfgYaml = 'season: 2026\nboard_members: []\n';
+  const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
+    if (url.includes('/user')) {
+      return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+    }
+    if (url.includes('speakers.yml')) {
+      if (opts?.method === 'PUT') {
+        return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ content: encodeUtf8(serializeSpeakers(initial)), sha: 'sha-0' }),
+      });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({ content: encodeUtf8(cfgYaml), sha: 'cfgsha' }) });
+  });
+  return { fetchMock };
+}
+
 describe('AdminOverride EditFields', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
@@ -115,5 +137,71 @@ describe('AdminOverride EditFields', () => {
     expect(backend.current()[0].status).toBe('approved');
     // ...and this form's own edit must still have been applied.
     expect(backend.current()[0].name).toBe('Edited Name');
+  });
+
+  it('does not show "saved" when the write fails', async () => {
+    const original = speaker();
+    const backend = makeAlwaysConflictingBackend([original]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <AdminOverride speaker={original} />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByDisplayValue('Original Name');
+    fireEvent.change(nameInput, { target: { value: 'Edited Name' } });
+    fireEvent.click(screen.getByText('Save changes'));
+
+    // Wait for the save attempt to finish (button re-enables via `finally`).
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeInTheDocument());
+
+    expect(screen.queryByText('✓ saved')).not.toBeInTheDocument();
+  });
+});
+
+describe('AdminOverride DeleteSpeaker', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    localStorage.setItem('convener.token', 'tok');
+  });
+
+  it('does not navigate away when the delete write fails', async () => {
+    const original = speaker();
+    const backend = makeAlwaysConflictingBackend([original]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/speakers/spk-001']}>
+        <AuthProvider>
+          <DataProvider>
+            <Routes>
+              <Route path="/pipeline" element={<div>PIPELINE PAGE</div>} />
+              <Route path="/speakers/:id" element={<AdminOverride speaker={original} />} />
+            </Routes>
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    // Type the exact name to arm the delete button.
+    const confirmInput = await screen.findByPlaceholderText(original.name);
+    fireEvent.change(confirmInput, { target: { value: original.name } });
+    await waitFor(() => expect(screen.getByText('Delete permanently')).not.toBeDisabled());
+
+    fireEvent.click(screen.getByText('Delete permanently'));
+
+    // Give the (failing) write a chance to resolve — the button re-enables
+    // via `finally` once `mutateSpeakers` settles.
+    await waitFor(() => expect(screen.getByText('Delete permanently')).not.toBeDisabled());
+
+    expect(screen.queryByText('PIPELINE PAGE')).not.toBeInTheDocument();
+    expect(screen.getByText('Delete permanently')).toBeInTheDocument();
   });
 });

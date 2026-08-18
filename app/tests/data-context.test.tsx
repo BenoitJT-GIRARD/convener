@@ -204,9 +204,11 @@ describe('DataProvider (real GitHub backend)', () => {
     );
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
+    let ok: boolean | undefined;
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 7 }), 'msg');
+      ok = await result.current.mutateConfig(current => ({ ...current, vote_threshold: 7 }), 'msg');
     });
+    expect(ok).toBe(true);
     expect(result.current.cfgSha).toBe('newcfgsha');
     expect(result.current.config?.vote_threshold).toBe(7);
   });
@@ -231,12 +233,14 @@ describe('DataProvider (real GitHub backend)', () => {
     );
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
+    let ok: boolean | undefined;
     await act(async () => {
-      await result.current.mutateSpeakers(
+      ok = await result.current.mutateSpeakers(
         current => current.map(s => ({ ...s, notes: 'changed' })),
         'msg',
       );
     });
+    expect(ok).toBe(true);
     expect(result.current.spkSha).toBe('newsha');
     expect(result.current.speakers[0].notes).toBe('changed');
   });
@@ -265,13 +269,15 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.error).toBeNull();
 
     // Must not throw / reject unhandled — the whole point of the fix.
+    let ok: boolean | undefined;
     await act(async () => {
-      await result.current.mutateSpeakers(
+      ok = await result.current.mutateSpeakers(
         current => current.map(s => ({ ...s, notes: 'will never land' })),
         'msg',
       );
     });
 
+    expect(ok).toBe(false);
     expect(result.current.error).toMatch(/someone else is editing/);
   });
 
@@ -297,10 +303,12 @@ describe('DataProvider (real GitHub backend)', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBeNull();
 
+    let ok: boolean | undefined;
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 9 }), 'msg');
+      ok = await result.current.mutateConfig(current => ({ ...current, vote_threshold: 9 }), 'msg');
     });
 
+    expect(ok).toBe(false);
     expect(result.current.error).toMatch(/someone else is editing/);
   });
 });

@@ -84,11 +84,11 @@ export function NewSpeaker() {
       // records whatever id the transform that actually got written used,
       // for navigation below.
       let assignedId = '';
-      await mutateSpeakers(current => {
+      const ok = await mutateSpeakers(current => {
         assignedId = nextSpeakerId(current);
         return [...current, { ...fields, id: assignedId }];
       }, `data: add lead ${fields.name}`);
-      nav(`/speakers/${assignedId}`);
+      if (ok) nav(`/speakers/${assignedId}`);
     } finally {
       setBusy(false);
     }

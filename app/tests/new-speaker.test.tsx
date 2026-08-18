@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider } from '../src/data/DataContext';
 import { NewSpeaker } from '../src/screens/NewSpeaker';
@@ -74,6 +74,28 @@ function makeSpeakersBackend(initial: Speaker[]) {
   };
 }
 
+/** Every PUT is rejected as stale, no matter the sha sent — `mutate` exhausts
+ *  its retries and `mutateSpeakers` resolves `false`. */
+function makeAlwaysConflictingBackend(initial: Speaker[]) {
+  const cfgYaml = 'season: 2026\nboard_members: []\n';
+  const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
+    if (url.includes('/user')) {
+      return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+    }
+    if (url.includes('speakers.yml')) {
+      if (opts?.method === 'PUT') {
+        return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ content: encodeUtf8(serializeSpeakers(initial)), sha: 'sha-0' }),
+      });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({ content: encodeUtf8(cfgYaml), sha: 'cfgsha' }) });
+  });
+  return { fetchMock };
+}
+
 describe('NewSpeaker', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
@@ -113,5 +135,36 @@ describe('NewSpeaker', () => {
     const ids = backend.current().map(s => s.id);
     expect(new Set(ids).size).toBe(4); // all distinct — no collision with spk-003
     expect(ids).toContain('spk-004');
+  });
+
+  it('does not navigate to a speaker page for a record that failed to write', async () => {
+    const backend = makeAlwaysConflictingBackend([speaker('spk-001')]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthProvider>
+          <DataProvider>
+            <Routes>
+              <Route path="/speakers/:id" element={<div>SPEAKER PAGE</div>} />
+              <Route path="/" element={<NewSpeaker />} />
+            </Routes>
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByLabelText(/Name \*/);
+    fireEvent.change(nameInput, { target: { value: 'Doomed Lead' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+
+    // Wait for the (failing) submit to finish — the button re-enables via
+    // `finally` once `mutateSpeakers` settles.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
+
+    expect(screen.queryByText('SPEAKER PAGE')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
   });
 });

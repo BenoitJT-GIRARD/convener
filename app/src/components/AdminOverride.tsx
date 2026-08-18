@@ -82,11 +82,11 @@ function EditFields({ speaker }: { speaker: Speaker }) {
     if (!login) return;
     setBusy(true);
     try {
-      await mutateSpeakers(
+      const ok = await mutateSpeakers(
         current => current.map(s => (s.id === draft.id ? { ...s, ...pickEdited(draft) } : s)),
         `data: ${draft.id} admin edit by ${login}`,
       );
-      setSaved(true);
+      if (ok) setSaved(true);
     } finally {
       setBusy(false);
     }
@@ -326,11 +326,11 @@ function DeleteSpeaker({ speaker }: { speaker: Speaker }) {
     if (!login || !armed) return;
     setBusy(true);
     try {
-      await mutateSpeakers(
+      const ok = await mutateSpeakers(
         current => current.filter(s => s.id !== speaker.id),
         `data: deleted ${speaker.id} (${speaker.name}) by ${login}`,
       );
-      nav('/pipeline');
+      if (ok) nav('/pipeline');
     } finally {
       setBusy(false);
     }

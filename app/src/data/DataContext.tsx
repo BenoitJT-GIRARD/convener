@@ -25,8 +25,18 @@ interface State {
 
 interface Ctx extends State {
   reload: () => Promise<void>;
-  mutateSpeakers: (transform: (current: Speaker[]) => Speaker[], message: string) => Promise<void>;
-  mutateConfig: (transform: (current: Config) => Config, message: string) => Promise<void>;
+  /** Resolves `true` if the write went through, `false` if it was caught and
+   *  surfaced via `error` — callers whose code after the write has a
+   *  user-visible success side effect (a confirmation, a navigation) must
+   *  guard it on this, so a failed write never reports success. */
+  mutateSpeakers: (
+    transform: (current: Speaker[]) => Speaker[],
+    message: string,
+  ) => Promise<boolean>;
+  mutateConfig: (
+    transform: (current: Config) => Config,
+    message: string,
+  ) => Promise<boolean>;
 }
 
 const C = createContext<Ctx | null>(null);
@@ -155,11 +165,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   async function mutateSpeakers(
     transform: (current: Speaker[]) => Speaker[],
     message: string,
-  ) {
-    if (!token) return;
+  ): Promise<boolean> {
+    if (!token) return false;
     if (isDemoMode()) {
       setS(p => ({ ...p, speakers: transform(p.speakers) }));
-      return;
+      return true;
     }
     try {
       const result = await mutate({
@@ -171,20 +181,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message,
       });
       setS(p => ({ ...p, speakers: result.value, spkSha: result.sha }));
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setS(p => ({ ...p, error: msg }));
+      return false;
     }
   }
 
   async function mutateConfig(
     transform: (current: Config) => Config,
     message: string,
-  ) {
-    if (!token) return;
+  ): Promise<boolean> {
+    if (!token) return false;
     if (isDemoMode()) {
       setS(p => ({ ...p, config: p.config ? transform(p.config) : p.config }));
-      return;
+      return true;
     }
     try {
       const result = await mutate({
@@ -196,9 +208,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         message,
       });
       setS(p => ({ ...p, config: result.value, cfgSha: result.sha }));
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setS(p => ({ ...p, error: msg }));
+      return false;
     }
   }
 
