@@ -30,10 +30,14 @@ export function deriveInbox(
     const phase = phaseOf(s.status);
     if (!phase) continue;
 
+    // `assigned_to`, not `proposed_by`: the submitter is often someone
+    // outside the team who self-reported a name through the public form, so
+    // matching on it made "my leads" mean nothing. Ownership is what this
+    // filter is about.
     const mine =
       s.host_1 === login ||
       s.host_2 === login ||
-      s.proposed_by === login;
+      s.assigned_to === login;
 
     // ── votes (board only)
     if (s.status === 'lead' && role === 'board') {

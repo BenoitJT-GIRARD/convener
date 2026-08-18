@@ -46,10 +46,19 @@ describe('deriveInbox v2', () => {
     expect(rows.some(r => r.kind === 'vote')).toBe(false);
   });
 
-  it('proposer sees their lead through approved/invited even if not host', () => {
-    const s = mk({ status: 'approved', host_1: '', host_2: '', proposed_by: 'alice' });
+  it('the assigned owner sees their lead through approved/invited even if not host', () => {
+    const s = mk({ status: 'approved', host_1: '', host_2: '', assigned_to: 'alice' });
     const rows = deriveInbox([s], 'alice', 'organizer', '2026-05-23');
     expect(rows.some(r => r.label === 'Assign Host 1')).toBe(true);
+  });
+
+  it('does not treat a self-reported proposer as the owner', () => {
+    // `proposed_by` holds whatever the public form's submitter typed, which
+    // may coincide with a login without meaning this is that person's lead.
+    // Ownership lives in `assigned_to` alone.
+    const s = mk({ status: 'approved', host_1: '', host_2: '', proposed_by: 'alice', assigned_to: '' });
+    const rows = deriveInbox([s], 'alice', 'organizer', '2026-05-23');
+    expect(rows).toEqual([]);
   });
 
   it('approved surfaces host_1 then host_2 then invitation (board sees all)', () => {
