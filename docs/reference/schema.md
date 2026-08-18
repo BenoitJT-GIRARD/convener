@@ -22,6 +22,7 @@ describe the workshop they deliver.
 | `id` | string | Immutable identifier, e.g. `spk-001`. Generated at creation. |
 | `name` | string | Required. |
 | `gender` | enum | `M`, `F`, `NB`, or `undisclosed`. |
+| `career_stage` | enum | `phd`, `postdoc`, `independent`, `group-leader`, `other`, or `undisclosed`. Used for the programme balance report. |
 | `email` | string | Speaker contact. |
 | `affiliation` | string | Institution. |
 | `country` | string | Two-letter code or full name. |
@@ -29,12 +30,19 @@ describe the workshop they deliver.
 | `abstract` | string | Talk abstract (multi-line). |
 | `conflicts_of_interest` | string | Declared by the speaker or noted by the Board. |
 | `source` | enum | `form` (Tally), `outreach` (team email), or `organizer` (added by hand). |
-| `proposed_by` | string | Team member who proposed this speaker. |
+| `proposed_by` | string | Whoever put this speaker forward, self-reported at submission and kept verbatim — often someone outside the team, since most leads arrive through the public form. It is the only record of who has to be told if the Board declines, so it is never overwritten by an assignment. |
+| `assigned_to` | string | Login of the Board member who owns this lead and does the following up. Set by the rotation rule (G-17, `app/src/state/board.ts::assignLead`), empty while nobody owns it. Distinct from `proposed_by`: one says who suggested the speaker, the other who is handling them. |
 | `links` | list&lt;string&gt; | URLs (ORCID, lab page, paper). |
 | `host_1`, `host_2` | string | The two Event Hosts. Both required for `scheduled` and later statuses. |
 | `status` | enum | State-machine managed. See below. |
-| `selection.votes_for` | list&lt;string&gt; | Logins of board members who voted yes on this lead. |
-| `selection.decided_on` | string | YYYY-MM-DD when the vote threshold was reached. |
+| `selection.ballots` | list&lt;ballot&gt; | One entry per voting Board member — see the ballot fields below. Replaces the former `votes_for` list of logins. |
+| `selection.opened_on` | string | YYYY-MM-DD the vote opened. The vote window (`vote_window_days`) is counted from here; an empty value means `convener-sweep` can never expire the lead. |
+| `selection.decided_on` | string | YYYY-MM-DD the threshold was reached. Empty while the lead is still open. |
+| `publication.consent` | enum | `granted`, `refused`, or `pending` — the speaker's consent to publish the recording. |
+| `publication.approved_by` | string | Login of the Board member who recorded the approval. |
+| `publication.approved_on` | string | YYYY-MM-DD of that approval. |
+| `publication.objections` | list&lt;objection&gt; | `member`, `reason`, `date` — objections raised during the objection window. |
+| `publication.outcome` | enum | `published`, `withheld`, or empty while undecided. |
 | `edition_code` | string | `MRG-N` (assigned at `confirmed → scheduled`). Empty for non-scheduled. |
 | `date` | string | YYYY-MM-DD (assigned at scheduling). |
 | `time` | string | HH:MM, Paris local time (assigned at scheduling). |
@@ -47,6 +55,24 @@ describe the workshop they deliver.
 | `metrics.youtube_views_30d` | int \| null | 30-day YouTube views. |
 | `metrics.forum_replies` | int \| null | Replies on the forum thread. |
 | `notes` | string | Free-form. |
+
+### `selection.ballots` entries
+
+| Field | Type | Notes |
+|---|---|---|
+| `voter` | string | Login of the Board member casting the ballot. One ballot per member: re-voting replaces the earlier entry in place rather than adding a second. |
+| `value` | enum | `yes`, `abstain`, or `recused`. |
+| `comment` | string | Optional on any ballot. Asked for by the Board so a decision can be read years later without having to ask whoever cast it. |
+| `coi_reason` | string | Required when `value` is `recused` — a recusal with no written reason is refused, not recorded. Empty otherwise. |
+| `date` | string | YYYY-MM-DD the ballot was cast. |
+
+There is no stored vote threshold. It is computed from the eligible Board —
+active members, minus those who declared an absence, minus those recused on
+this lead — as two thirds rounded up, never fewer than three yes ballots. Below
+three eligible members the vote is suspended rather than decided on a bar that
+has stopped meaning anything. The rule lives in `app/src/state/governance.ts`
+and `tools/convener_ops/governance.py`, pinned in both languages by
+`tools/tests/fixtures/governance-cases.json`.
 
 ### Status values
 
@@ -72,19 +98,38 @@ Checking the last gate of a phase auto-advances the speaker to the next status.
 ## `data/config.yml`
 
 ```yaml
-season: 2026                 # current season number
-vw_counter: 5                # next MRG-N to assign
-vote_threshold: 3            # majority of board for lead → approved
-overlap_window_days: 7       # forbidden window around each scheduled date
-board_members:               # GitHub logins with board role
-  - Anonymous
-  - alice
-  - bob
+season: 2026                       # current season number
+vw_counter: 5                      # next MRG-N to assign
+overlap_window_days: 7             # forbidden window around each scheduled date
+seminar_duration_minutes: 90
+board:                             # replaces the flat board_members list
+  - login: Anonymous
+    joined_on: 2024-01-01
+    status: active                 # active | inactive
+    unavailable_until: ''          # inclusive last day of a declared absence
+nominations: []                    # candidate, sponsor, opened_on, objections, outcome
+board_min: 3
+board_max: 9
+vote_window_days: 14               # counted from selection.opened_on
+objection_window_working_days: 5
+inactivity_months: 6
+balance_window_months: 12
+sla_days:
+  lead_decision: 14
+  invitation_follow_up: 7
+  summary_after_delivery: 5
+  recording_after_delivery: 10
 ```
 
-`board_members` is used as fallback when the GitHub team API call (for role
-detection) fails or returns no membership info. The authoritative source is
-the org's `editorial-board` team; the config is a safety net.
+`board` replaces the former flat `board_members` list of logins: a member now
+carries the date they joined, whether they are still active, and any declared
+absence, because all three feed the vote threshold. There is no
+`vote_threshold` key — see the ballot section above for why it is computed
+rather than stored.
+
+The `board` entries are used as fallback when the GitHub team API call (for
+role detection) fails or returns no membership info. The authoritative source
+is the org's `editorial-board` team; the config is a safety net.
 
 ## History
 

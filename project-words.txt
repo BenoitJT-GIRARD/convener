@@ -24,3 +24,5 @@ Neuroinformatics
 Wellcome
 kdbx
 inspectable
+recused
+recusal
