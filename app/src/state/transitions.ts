@@ -256,18 +256,31 @@ export function applyTransition(
     }
     case 'consent-set': {
       const p = payload as ConsentPayload;
-      // A refusal is not only a block, it is a takedown (G-15): it writes
-      // `withheld` on the spot, so the pair (refused, published) cannot exist
-      // even for an instant, on any ordering of events. Granting consent
-      // publishes nothing by itself -- it clears one of two permissions, and
-      // `finalize-archive` still has to be run by a person.
+      // A refusal is not only a block, it is a takedown (G-15): it
+      // *un-publishes* on the spot, so the pair (refused, published) cannot
+      // exist even for an instant, on any ordering of events.
+      //
+      // Un-published, not `withheld`. `withheld` is the board resolving to
+      // hold a recording back, and the board resolves nothing when a speaker
+      // withdraws their permission -- writing it here made `boardBlocker`
+      // tell a volunteer "The board decided to withhold this recording"
+      // about a decision nobody took, and left the record stuck there when
+      // the speaker changed their mind again: clearing it would have meant
+      // resolving objections that do not exist. The takedown belongs to the
+      // consent field, which is where it is now read from
+      // (`tools/convener_ops/public_data.py::recording_withheld`).
+      //
+      // Granting consent publishes nothing by itself -- it clears one of two
+      // permissions, and `finalize-archive` still has to be run by a person,
+      // which asks the whole gate again.
       const refused = p.consent === 'refused';
       return {
         ...s,
         publication: {
           ...s.publication,
           consent: p.consent,
-          outcome: refused ? 'withheld' : s.publication.outcome,
+          outcome:
+            refused && s.publication.outcome === 'published' ? '' : s.publication.outcome,
         },
       };
     }
@@ -303,7 +316,14 @@ export function applyTransition(
           // down while the objection is examined. This is what keeps
           // (published, objection standing) out of reach in the one ordering
           // the gate cannot cover, publication first and objection after.
-          outcome: s.publication.outcome === 'published' ? 'withheld' : s.publication.outcome,
+          //
+          // Un-published, not `withheld`, for the same reason as above: one
+          // member objecting is not the board resolving anything, and the
+          // objection recorded just above is what says why the recording is
+          // offline. `publication-resolve` is reachable on a standing
+          // objection, so lifting it is a matter of resolving the objection
+          // that actually exists.
+          outcome: s.publication.outcome === 'published' ? '' : s.publication.outcome,
         },
       };
     }

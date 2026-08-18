@@ -334,8 +334,14 @@ describe('publication transitions', () => {
     const next = applyTransition(s, 'publication-object', 'carol', cfg, '2026-08-18', {
       reason: 'the speaker asked me to check something',
     });
-    expect(next.publication.outcome).toBe('withheld');
-    expect(canArchive(next, cfg, '2026-08-18').allowed).toBe(false);
+    // Un-published, not `withheld`: one member objecting is not the board
+    // resolving to hold a recording back, and the objection recorded
+    // alongside is what says why it is offline.
+    expect(next.publication.outcome).toBe('');
+    const gate = canArchive(next, cfg, '2026-08-18');
+    expect(gate.allowed).toBe(false);
+    expect(gate.reason).toContain('carol objected');
+    expect(gate.reason).not.toContain('The board decided');
   });
 
   it('keeps the original objection wording when resolving, and stamps the day', () => {
@@ -404,10 +410,59 @@ describe('publication transitions', () => {
     // would leave the file saying the recording is online with the speaker's
     // blessing. It takes it down, and the gate says so out loud.
     expect(withdrawn.publication.consent).toBe('refused');
-    expect(withdrawn.publication.outcome).toBe('withheld');
+    expect(withdrawn.publication.outcome).toBe('');
     const gate = canArchive(withdrawn, cfg, '2026-08-19');
     expect(gate.allowed).toBe(false);
     expect(gate.reason).toMatch(/taken down/);
+    // And it does not put words in the board's mouth: the board decided
+    // nothing here, so nothing this screen says may claim it did.
+    expect(gate.reason).not.toContain('The board decided');
+  });
+
+  it('lets a speaker change their mind back without the board having to act', () => {
+    // Refusal, then a later grant. The record has to return to the gate, not
+    // sit behind a board decision nobody took: `publication-resolve` is the
+    // only way to clear a `withheld`, its vocabulary is "resolve the
+    // objections", and there are no objections here to resolve.
+    const archived = applyTransition(
+      speaker({
+        publication: publication({ consent: 'granted', approved_by: 'alice', approved_on: LONG_AGO }),
+      }),
+      'finalize-archive',
+      'alice',
+      cfg,
+      '2026-08-18',
+    );
+    const withdrawn = applyTransition(archived, 'consent-set', 'alice', cfg, '2026-08-19', {
+      consent: 'refused',
+    });
+    const regranted = applyTransition(withdrawn, 'consent-set', 'alice', cfg, '2026-08-20', {
+      consent: 'granted',
+    });
+    expect(regranted.publication.outcome).toBe('');
+    const gate = canArchive(regranted, cfg, '2026-08-20');
+    expect(gate.reason).not.toContain('The board decided');
+    expect(gate.allowed).toBe(true);
+    const republished = applyTransition(regranted, 'finalize-archive', 'alice', cfg, '2026-08-20');
+    expect(republished.publication.outcome).toBe('published');
+  });
+
+  it('says the board decided only where the board actually decided', () => {
+    // `withheld` has one writer left: a board member resolving to withhold.
+    const objected = speaker({
+      publication: publication({
+        consent: 'granted',
+        approved_by: 'alice',
+        approved_on: LONG_AGO,
+        objections: [{ member: 'carol', reason: 'unpublished data', date: LONG_AGO, resolved_on: '' }],
+      }),
+    });
+    const withheld = applyTransition(objected, 'publication-resolve', 'carol', cfg, '2026-08-18', {
+      resolution: 'withhold',
+      note: 'the board agreed to keep this offline',
+    });
+    expect(withheld.publication.outcome).toBe('withheld');
+    expect(canArchive(withheld, cfg, '2026-08-18').reason).toContain('The board decided');
   });
 
   it('keeps consent-set, approval, objection and resolution off the organizer path', () => {

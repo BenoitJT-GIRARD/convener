@@ -167,6 +167,13 @@ function consentBlocker(p: Publication): string {
  * it has. The only half that reads the clock.
  */
 function boardBlocker(p: Publication, config: Config, today: string): string {
+  // `withheld` has exactly one writer: `publication-resolve` with the
+  // `withhold` resolution, which only a signed-in board member can apply. So
+  // this sentence is true whenever it is shown. Neither of the other two
+  // takedowns writes it -- a speaker withdrawing consent and a member
+  // objecting both simply un-publish -- because neither is the board
+  // deciding anything, and a volunteer must never be told about a decision
+  // that was not taken.
   if (p.outcome === 'withheld') {
     return (
       'The board decided to withhold this recording. A board member has to lift ' +
