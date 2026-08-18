@@ -79,9 +79,63 @@ def test_a_new_record_that_is_not_a_lead_is_not_an_immediate_event() -> None:
 
 
 def test_a_vote_reaching_its_threshold_is_an_immediate_event() -> None:
-    before = [lead(id="spk-001", status="lead")]
-    after = [lead(id="spk-001", status="approved")]
+    before = [
+        lead(
+            id="spk-001",
+            status="lead",
+            selection={"ballots": [], "opened_on": "2026-08-01", "decided_on": ""},
+        )
+    ]
+    after = [
+        lead(
+            id="spk-001",
+            status="approved",
+            selection={
+                "ballots": [],
+                "opened_on": "2026-08-01",
+                "decided_on": "2026-08-18",
+            },
+        )
+    ]
     assert kinds(immediate_events(before, after)) == [THRESHOLD_REACHED]
+
+
+def test_an_administrative_override_is_not_announced_as_a_vote() -> None:
+    """The sentence this event carries is "the vote reached its threshold and
+    the lead is approved".
+
+    `AdminOverride`'s force-status control writes `status` and nothing else --
+    no ballot, no `decided_on` -- so a record moved that way reached no
+    threshold. Sending that sentence to the board would be a false statement
+    about a governance decision, on the channel reserved for what calls for a
+    quick reaction. The override is a deliberate act by a named person and the
+    decision register records it; it is not news of a vote.
+    """
+    before = [
+        lead(
+            id="spk-001",
+            status="lead",
+            selection={"ballots": [], "opened_on": "2026-08-01", "decided_on": ""},
+        )
+    ]
+    after = [
+        lead(
+            id="spk-001",
+            status="approved",
+            selection={"ballots": [], "opened_on": "2026-08-01", "decided_on": ""},
+        )
+    ]
+    assert immediate_events(before, after) == []
+
+
+def test_a_decision_already_recorded_is_not_announced_a_second_time() -> None:
+    """A record that was already decided and is moved back to `lead` and
+    forward again by a reopening carries its old `decided_on`; only a
+    freshly-stamped one is news."""
+    decided = {"ballots": [], "opened_on": "2026-08-01", "decided_on": "2026-08-10"}
+    before = [lead(id="spk-001", status="lead", selection=decided)]
+    after = [lead(id="spk-001", status="approved", selection=decided)]
+    assert immediate_events(before, after) == []
 
 
 def test_an_objection_lodged_on_a_publication_is_an_immediate_event() -> None:

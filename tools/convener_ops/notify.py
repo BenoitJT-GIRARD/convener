@@ -322,6 +322,14 @@ def _event(kind: str, record: str) -> Event:
     return Event(kind=kind, record=record, text=f"{record}: {_EVENT_PHRASE[kind]}")
 
 
+def _selection_day(entry: Mapping[str, Any], key: str) -> str:
+    selection = entry.get("selection")
+    if not isinstance(selection, Mapping):
+        return ""
+    value = selection.get(key)
+    return value if isinstance(value, str) else ""
+
+
 def _record_id(entry: Any) -> str:
     if not isinstance(entry, Mapping):
         return ""
@@ -407,7 +415,21 @@ def immediate_events(before: Any, after: Any) -> list[Event]:
             # of the three.
             continue
 
-        if old.get("status") == "lead" and entry.get("status") == "approved":
+        if (
+            old.get("status") == "lead"
+            and entry.get("status") == "approved"
+            and _selection_day(entry, "decided_on")
+            and not _selection_day(old, "decided_on")
+        ):
+            # The recorded decision, not merely the new status. `ballot-cast`
+            # is the only writer of `approved` that also stamps `decided_on`
+            # (`app/src/state/transitions.ts`); an administrative override
+            # moves the status and leaves the selection untouched, and the
+            # sentence below -- "the vote reached its threshold" -- would then
+            # be a false statement about a governance decision, sent to the
+            # board, on the channel reserved for what calls for a quick
+            # reaction. An override is a deliberate act by a named person and
+            # the register records it; it is not news of a vote.
             events.append(_event(THRESHOLD_REACHED, rid))
 
         was = _standing_objections(old)
@@ -427,14 +449,6 @@ def immediate_events(before: Any, after: Any) -> list[Event]:
 # The digest is composed only of facts the record itself dates -- there is no
 # diff here, and no clock beyond the day being rendered for, so running it
 # twice for the same day gives the same text.
-
-
-def _selection_day(entry: Mapping[str, Any], key: str) -> str:
-    selection = entry.get("selection")
-    if not isinstance(selection, Mapping):
-        return ""
-    value = selection.get(key)
-    return value if isinstance(value, str) else ""
 
 
 def _publication_day(entry: Mapping[str, Any], key: str) -> str:
