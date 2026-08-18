@@ -402,8 +402,15 @@ export function applyTransition(
       };
     }
     case 'override': {
+      // The escape hatch, and deliberately a narrow one: it writes `status`
+      // and touches nothing else. Forcing `archived` therefore skips
+      // `canArchive` -- that is the point of an override -- but it leaves
+      // `publication` exactly as it was, so it cannot produce
+      // `outcome: 'published'`, and `public_data.recording_withheld` reads
+      // that outcome rather than the status. An override moves a record; it
+      // is not a way to put a recording on the open web.
       const p = payload as OverridePayload;
-      return { ...s, status: p.status };
+      return { ...s, status: p.status, publication: s.publication };
     }
   }
 }

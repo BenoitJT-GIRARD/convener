@@ -10,7 +10,16 @@ from __future__ import annotations
 from typing import Any
 
 PUBLIC_STATUSES = frozenset({"scheduled", "delivered", "archived"})
-RECORDING_STATUSES = frozenset({"delivered", "archived"})
+
+#: The statuses at which a recording may be linked. `archived` and nothing
+#: else, because `archived` is what the publication gate itself writes:
+#: `finalize-archive` is the single writer of `outcome: published` and it
+#: sets this status in the same expression. A `delivered` record with a URL
+#: typed into the wrap-up checklist is a recording that exists, not a
+#: recording anyone cleared -- the checklist field records where the file
+#: is, the gate decides whether it is linked. Keeping `delivered` here made
+#: the checklist a second door into the feed.
+RECORDING_STATUSES = frozenset({"archived"})
 
 PUBLIC_FIELDS = frozenset(
     {

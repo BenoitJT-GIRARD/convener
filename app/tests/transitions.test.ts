@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { canTransition, applyTransition } from '../src/state/transitions';
+import type { Transition, TransitionPayload } from '../src/state/transitions';
 import { BallotRejected } from '../src/state/ballots';
 import type { Ballot, BallotValue, Config, Speaker } from '../src/data/types';
 
@@ -261,6 +262,78 @@ describe('transitions v2', () => {
   it('override forces an arbitrary status', () => {
     const next = applyTransition(base, 'override', '', cfg, '2026-05-23', { status: 'archived' });
     expect(next.status).toBe('archived');
+  });
+
+  it('forcing a status to archived is not a way to publish a recording', () => {
+    // The override skips `canArchive` -- that is what an override is for --
+    // but it must not become a second door onto the open web. It writes
+    // `status` and leaves `publication` alone, and `publication.outcome` is
+    // what the public feed reads (`tools/convener_ops/public_data.py`).
+    const delivered: Speaker = {
+      ...base,
+      status: 'delivered',
+      youtube_url: 'https://youtu.be/abc',
+      publication: { ...base.publication, consent: 'pending' },
+    };
+    const next = applyTransition(delivered, 'override', 'a', cfg, '2026-05-23', {
+      status: 'archived',
+    });
+    expect(next.status).toBe('archived');
+    expect(next.publication).toEqual(delivered.publication);
+    expect(next.publication.outcome).not.toBe('published');
+  });
+
+  it('finalize-archive is the only transition that writes a published outcome', () => {
+    const every: Transition[] = [
+      'ballot-cast',
+      'ballot-withdraw',
+      'lead-park',
+      'lead-decline',
+      'reactivate',
+      'send-invitation',
+      'invited-accept',
+      'invited-decline',
+      'lock-date',
+      'consent-set',
+      'publication-approve',
+      'publication-object',
+      'publication-resolve',
+      'vote-reopen',
+      'override',
+    ];
+    const payloads: Partial<Record<Transition, TransitionPayload>> = {
+      'ballot-cast': cast(),
+      'lock-date': { date: '2026-06-01', edition_code: 'MRG-09', time: '12:30' },
+      'consent-set': { consent: 'granted' },
+      'publication-object': { reason: 'wait' },
+      'publication-resolve': { resolution: 'lift', note: 'ok' },
+      'vote-reopen': { member: 'a', reason: 'undeclared' },
+      override: { status: 'archived' },
+    };
+    const ready: Speaker = {
+      ...base,
+      status: 'delivered',
+      youtube_url: 'https://youtu.be/abc',
+      publication: {
+        consent: 'granted',
+        approved_by: 'a',
+        approved_on: '2026-05-01',
+        objections: [],
+        outcome: '',
+      },
+    };
+    for (const t of every) {
+      let next: Speaker;
+      try {
+        next = applyTransition(ready, t, 'a', cfg, '2026-05-23', payloads[t]);
+      } catch {
+        continue;
+      }
+      expect(next.publication.outcome, t).not.toBe('published');
+    }
+    const archived = applyTransition(ready, 'finalize-archive', 'a', cfg, '2026-05-23');
+    expect(archived.publication.outcome).toBe('published');
+    expect(archived.status).toBe('archived');
   });
 
   it('invited-accept/invited-decline are only allowed from invited', () => {

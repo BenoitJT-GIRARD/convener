@@ -254,3 +254,27 @@ def test_no_recording_in_the_real_feed_lacks_recorded_consent() -> None:
             entry = by_code[row["id"]]
             assert entry["publication"]["outcome"] == "published"
             assert entry["publication"]["consent"] == "granted"
+
+
+def test_the_wrap_up_checklist_is_not_a_second_door_into_the_feed() -> None:
+    # `phases.ts` offers a free `youtube_url` field on the delivered
+    # checklist. Filling it in records where the recording is; it does not
+    # publish it. Both locks are asserted: the status is not one at which a
+    # recording is linked, and the gate never ran.
+    from convener_ops.public_data import RECORDING_STATUSES
+
+    assert "delivered" not in RECORDING_STATUSES
+    out = to_public([_published(), _published()])
+    filled_in = _published()
+    filled_in["status"] = "delivered"
+    assert to_public([filled_in])[0]["youtube_url"] == ""
+    assert out[0]["youtube_url"] != ""
+
+
+def test_a_forced_status_is_not_a_path_to_publication() -> None:
+    # `AdminOverride`'s force-status control writes `status` and nothing
+    # else, so a record forced to `archived` keeps the untouched
+    # publication block it had -- and that block is what this reads.
+    forced = _scheduled(status="archived")
+    assert forced["publication"]["outcome"] == ""
+    assert to_public([forced])[0]["youtube_url"] == ""
