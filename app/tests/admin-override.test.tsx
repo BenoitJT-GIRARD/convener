@@ -139,6 +139,109 @@ describe('AdminOverride EditFields', () => {
     expect(backend.current()[0].name).toBe('Edited Name');
   });
 
+  it('does not revert a concurrent change to a metrics subfield the user did not touch', async () => {
+    const original = speaker();
+    const backend = makeSpeakersBackend([original]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <AdminOverride speaker={original} />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByDisplayValue('Original Name');
+
+    // Concurrent writer (e.g. Archive's metrics editor) sets
+    // metrics.youtube_views_30d directly on the remote. This form's `draft`
+    // has no idea it happened, and the user never touches that input.
+    backend.interlope(
+      backend.current().map(s =>
+        s.id === original.id
+          ? { ...s, metrics: { ...s.metrics, youtube_views_30d: 500 } }
+          : s,
+      ),
+    );
+
+    fireEvent.change(nameInput, { target: { value: 'Edited Name' } });
+    fireEvent.click(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(screen.getByText('✓ saved')).toBeInTheDocument());
+
+    // The concurrent metrics change must survive this form's save...
+    expect(backend.current()[0].metrics.youtube_views_30d).toBe(500);
+    // ...and this form's own edit must still have been applied.
+    expect(backend.current()[0].name).toBe('Edited Name');
+  });
+
+  it('does not revert a concurrent change to youtube_url the user did not touch', async () => {
+    const original = speaker();
+    const backend = makeSpeakersBackend([original]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <AdminOverride speaker={original} />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByDisplayValue('Original Name');
+
+    // Concurrent writer sets youtube_url directly on the remote — a field
+    // this form has an input for, but the user never touches it here.
+    backend.interlope(
+      backend.current().map(s =>
+        s.id === original.id ? { ...s, youtube_url: 'https://youtu.be/concurrent' } : s,
+      ),
+    );
+
+    fireEvent.change(nameInput, { target: { value: 'Edited Name' } });
+    fireEvent.click(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(screen.getByText('✓ saved')).toBeInTheDocument());
+
+    expect(backend.current()[0].youtube_url).toBe('https://youtu.be/concurrent');
+    expect(backend.current()[0].name).toBe('Edited Name');
+  });
+
+  it('still persists a metrics subfield the user actually changed, alongside other edits', async () => {
+    const original = speaker();
+    const backend = makeSpeakersBackend([original]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <AdminOverride speaker={original} />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByDisplayValue('Original Name');
+    const ytViewsInput = screen.getByLabelText('YouTube views (30d)');
+
+    fireEvent.change(nameInput, { target: { value: 'Edited Name' } });
+    fireEvent.change(ytViewsInput, { target: { value: '250' } });
+    fireEvent.click(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(screen.getByText('✓ saved')).toBeInTheDocument());
+
+    // Dirty tracking must not silently drop a real edit — the failure mode
+    // opposite to the ones above.
+    expect(backend.current()[0].name).toBe('Edited Name');
+    expect(backend.current()[0].metrics.youtube_views_30d).toBe(250);
+  });
+
   it('does not show "saved" when the write fails', async () => {
     const original = speaker();
     const backend = makeAlwaysConflictingBackend([original]);

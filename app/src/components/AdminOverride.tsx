@@ -19,26 +19,15 @@ const ALL_STATUSES: SpeakerStatus[] = [
 const GENDERS: Gender[] = ['M', 'F', 'NB', 'undisclosed'];
 
 /**
- * Fields this form's inputs actually write (see the `up`/`upMetrics` calls
- * below). Status, selection, runbook_progress, and links are edited by other
- * writers (ForceStatus, ActionButtons, the checklist, the archive metrics
- * editor) and must never be overwritten by this form's stale snapshot — see
- * `pickEdited`.
+ * Projects `obj` down to the given keys. Used to build a save patch from
+ * only the fields the user actually touched (see `EditFields`) — an
+ * allowlist of "fields this form knows about" isn't narrow enough, because
+ * other writers (Archive's metrics editor, in particular) can change a
+ * subset of those same fields concurrently. Tracking which keys were
+ * *actually edited*, and writing only those, is what avoids reverting them.
  */
-const EDITABLE_FIELDS = [
-  'name', 'gender', 'email', 'affiliation', 'country', 'title', 'abstract',
-  'conflicts_of_interest', 'source', 'proposed_by', 'host_1', 'host_2',
-  'edition_code', 'date', 'time', 'zoom_link', 'youtube_url', 'forum_thread',
-  'notes', 'metrics',
-] as const satisfies readonly (keyof Speaker)[];
-
-/** Extracts only the fields this form edits, so a save can merge them onto a
- *  freshly-read record instead of overwriting fields other writers own. */
-function pickEdited(draft: Speaker): Pick<Speaker, (typeof EDITABLE_FIELDS)[number]> {
-  return Object.fromEntries(EDITABLE_FIELDS.map(k => [k, draft[k]])) as Pick<
-    Speaker,
-    (typeof EDITABLE_FIELDS)[number]
-  >;
+function pick<T extends object, K extends keyof T>(obj: T, keys: Iterable<K>): Pick<T, K> {
+  return Object.fromEntries(Array.from(keys, k => [k, obj[k]])) as Pick<T, K>;
 }
 
 export function AdminOverride({ speaker }: { speaker: Speaker }) {
@@ -68,13 +57,21 @@ function EditFields({ speaker }: { speaker: Speaker }) {
   const [draft, setDraft] = useState<Speaker>(speaker);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Dirty tracking: which top-level fields, and which `metrics` subfields,
+  // the user actually changed. Only these are written on save — everything
+  // else comes from whatever `mutate` reads fresh at write time, so a
+  // concurrent writer's change to a field this form didn't touch survives.
+  const [editedFields, setEditedFields] = useState<Set<keyof Speaker>>(new Set());
+  const [editedMetrics, setEditedMetrics] = useState<Set<keyof Speaker['metrics']>>(new Set());
 
   function up<K extends keyof Speaker>(k: K, v: Speaker[K]) {
     setDraft(d => ({ ...d, [k]: v }));
+    setEditedFields(prev => new Set(prev).add(k));
     setSaved(false);
   }
   function upMetrics<K extends keyof Speaker['metrics']>(k: K, v: Speaker['metrics'][K]) {
     setDraft(d => ({ ...d, metrics: { ...d.metrics, [k]: v } }));
+    setEditedMetrics(prev => new Set(prev).add(k));
     setSaved(false);
   }
 
@@ -83,7 +80,16 @@ function EditFields({ speaker }: { speaker: Speaker }) {
     setBusy(true);
     try {
       const ok = await mutateSpeakers(
-        current => current.map(s => (s.id === draft.id ? { ...s, ...pickEdited(draft) } : s)),
+        current =>
+          current.map(s =>
+            s.id === draft.id
+              ? {
+                  ...s,
+                  ...pick(draft, editedFields),
+                  metrics: { ...s.metrics, ...pick(draft.metrics, editedMetrics) },
+                }
+              : s,
+          ),
         `data: ${draft.id} admin edit by ${login}`,
       );
       if (ok) setSaved(true);
