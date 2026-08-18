@@ -21,6 +21,36 @@ from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
 from convener_ops.yaml_safe import safe_load as yaml_safe_load
 
+#: The header line each data file carries. `app/src/data/yaml.ts` holds the
+#: same two strings: it is the browser's half of this file format, and the
+#: YAML-boundary fixture is written by one side and read by the other.
+SPEAKERS_HEADER = "# Speakers (unified schema v3 — see docs/reference/schema.md)\n"
+CONFIG_HEADER = "# Repo-wide config for the Convener app\n"
+
+
+def _dump(data: Any) -> str:
+    """The one YAML writer of this package.
+
+    Every writer -- the sweep, the form handler, the v3 migration -- goes
+    through it, so a file written by any of them keeps the same shape and
+    stays readable by the browser.
+    """
+    return yaml.safe_dump(
+        data,
+        allow_unicode=True,
+        sort_keys=False,
+        default_flow_style=False,
+        width=1000,
+    )
+
+
+def dump_speakers(speakers: Any) -> str:
+    return SPEAKERS_HEADER + _dump(speakers)
+
+
+def dump_config(config: Any) -> str:
+    return CONFIG_HEADER + _dump(config)
+
 
 def _load(path: Path) -> tuple[Any, list[str]]:
     if not path.exists():
@@ -112,18 +142,7 @@ def sweep() -> int:
         print("Nothing to sweep.")
         return 0
 
-    header = "# Speakers (unified schema v2 — see docs/reference/schema.md)\n"
-    speakers_path.write_text(
-        header
-        + yaml.safe_dump(
-            swept,
-            allow_unicode=True,
-            sort_keys=False,
-            default_flow_style=False,
-            width=1000,
-        ),
-        encoding="utf-8",
-    )
+    speakers_path.write_text(dump_speakers(swept), encoding="utf-8", newline="")
     for change in changes:
         print(change)
     return 0
@@ -191,18 +210,7 @@ def handle_proposal() -> int:
         return 0
 
     speakers.append(lead)
-    header = "# Speakers (unified schema v2 — see docs/reference/schema.md)\n"
-    speakers_path.write_text(
-        header
-        + yaml.safe_dump(
-            speakers,
-            allow_unicode=True,
-            sort_keys=False,
-            default_flow_style=False,
-            width=1000,
-        ),
-        encoding="utf-8",
-    )
+    speakers_path.write_text(dump_speakers(speakers), encoding="utf-8", newline="")
     print(f"created {lead['id']} from form proposal")
     return 0
 

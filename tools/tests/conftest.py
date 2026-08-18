@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
+
+#: `scripts/` holds the one-shot migrations. They live outside the installed
+#: package (they are run once, not shipped) but are tested with it, so their
+#: directory joins the import path here rather than in each test module.
+_SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
 
 
 def ballot(**overrides: Any) -> dict[str, Any]:
@@ -67,6 +76,7 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "conflicts_of_interest": "",
         "source": "organizer",
         "proposed_by": "someone",
+        "assigned_to": "",
         "links": [],
         "host_1": "",
         "host_2": "",

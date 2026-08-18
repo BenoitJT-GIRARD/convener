@@ -51,6 +51,9 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 python_version = "3.12"
 strict = true
 files = ["convener_ops", "tests"]
+# The one-shot migrations under scripts/ are outside the package but are
+# imported by their tests, and are held to the same strictness.
+mypy_path = "../scripts"
 
 [tool.coverage.report]
 fail_under = 85
