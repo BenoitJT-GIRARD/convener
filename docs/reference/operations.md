@@ -35,13 +35,21 @@ fully usable; onboarding is simply slower.
 **Secrets to set:**
 - Repository secret `CLOUDFLARE_API_TOKEN` (used by *Deploy auth relay* to
   deploy the worker).
-- Build variables `VITE_AUTH_PROXY_URL` and `VITE_GITHUB_APP_CLIENT_ID`
-  (baked into the app at build time; see `app/.env.example`).
+- Repository **variables** `VITE_AUTH_PROXY_URL` and
+  `VITE_GITHUB_APP_CLIENT_ID` (Settings → Secrets and variables → Actions →
+  Variables). Both are public by construction — a relay URL and an OAuth
+  client id ship inside the bundle — so they belong in Variables, not
+  Secrets.
 
 Whether the worker also needs a client secret depends on whether the GitHub
 application is registered as a GitHub App or an OAuth App — confirm before
 first deployment (recorded as an open question in
 `services/auth-proxy/README.md`).
+
+These variables are read only at build time (Vite requires the `VITE_`
+prefix to expose a variable to the browser bundle at all). Setting or
+changing them has no effect until the application is rebuilt — push to
+`main` or run the *Deploy app* workflow manually.
 
 **To verify:** sign out, reload; the screen should offer a short code rather
 than a token field.

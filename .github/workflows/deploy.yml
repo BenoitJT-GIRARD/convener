@@ -30,6 +30,9 @@ jobs:
         run: npm test -- --run
       - name: Build
         working-directory: app
+        env:
+          VITE_AUTH_PROXY_URL: ${{ vars.VITE_AUTH_PROXY_URL }}
+          VITE_GITHUB_APP_CLIENT_ID: ${{ vars.VITE_GITHUB_APP_CLIENT_ID }}
         run: npm run build
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:

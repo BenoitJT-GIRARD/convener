@@ -4,8 +4,8 @@ integrations:
   - name: auth_proxy
     label: Authentication relay
     secrets:
-      - CONVENER_AUTH_PROXY_URL
-      - CONVENER_GITHUB_APP_CLIENT_ID
+      - VITE_AUTH_PROXY_URL
+      - VITE_GITHUB_APP_CLIENT_ID
     absent_behaviour: >-
       Sign-in falls back to a personal access token. The team app stays fully
       usable; onboarding is simply slower.
