@@ -1,0 +1,38 @@
+# Every external dependency of the system, and what happens without it.
+# Absent is a normal state: the feature degrades visibly, nothing breaks.
+integrations:
+  - name: auth_proxy
+    label: Authentication relay
+    secrets:
+      - CONVENER_AUTH_PROXY_URL
+      - CONVENER_GITHUB_APP_CLIENT_ID
+    absent_behaviour: >-
+      Sign-in falls back to a personal access token. The team app stays fully
+      usable; onboarding is simply slower.
+
+  - name: meeting_provider
+    label: Meeting platform
+    secrets:
+      - CONVENER_MEETING_API_TOKEN
+    absent_behaviour: >-
+      The manual adapter is used: room links are typed by hand and attendance
+      is imported from a file. No room link is published automatically.
+
+  - name: email_transport
+    label: Outbound email
+    secrets:
+      - CONVENER_SMTP_HOST
+      - CONVENER_SMTP_USER
+      - CONVENER_SMTP_PASSWORD
+      - CONVENER_SMTP_FROM
+    absent_behaviour: >-
+      Outbound messages are written to an inspectable log instead of being
+      sent, and the interface says so. Nothing is silently dropped.
+
+  - name: video_publishing
+    label: Video channel
+    secrets:
+      - CONVENER_VIDEO_CHANNEL_ID
+    absent_behaviour: >-
+      Recording URLs are entered by hand after publishing. No upload is
+      attempted.
