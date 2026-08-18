@@ -17,6 +17,10 @@ describe the workshop they deliver.
 
 ### Fields
 
+Every field below is a key each entry carries. A key left out is an
+incomplete record and both readers refuse the file; an empty value is an
+answer -- "none given" -- and is well formed.
+
 | Field | Type | Notes |
 |---|---|---|
 | `id` | string | Immutable identifier, e.g. `spk-001`. Generated at creation. |
@@ -26,8 +30,12 @@ describe the workshop they deliver.
 | `email` | string | Speaker contact. |
 | `affiliation` | string | Institution. |
 | `country` | string | Two-letter code or full name. |
+| `photo_url` | string | Link to the speaker's portrait, used by the announcement visual. Empty when none has been sent; the key is always present. |
+| `bio` | string | Short biography, in the speaker's own words, which the introduction script is built from. Multi-line. Empty means none given. |
+| `linkedin` | string | LinkedIn handle, used to mention the speaker in the promotion posts. |
 | `title` | string | Talk title. |
 | `abstract` | string | Talk abstract (multi-line). |
+| `seed_questions` | string | A few sentences from the speaker to open the forum discussion with. Free text, not a list this app parses. |
 | `conflicts_of_interest` | string | Declared by the speaker or noted by the Board. |
 | `source` | enum | `form` (Tally), `outreach` (team email), or `organizer` (added by hand). |
 | `proposed_by` | string | Whoever put this speaker forward, self-reported at submission and kept verbatim — often someone outside the team, since most leads arrive through the public form. It is the only record of who has to be told if the Board declines, so it is never overwritten by an assignment. |
@@ -44,6 +52,7 @@ describe the workshop they deliver.
 | `publication.objections` | list&lt;objection&gt; | `member`, `reason`, `date`, `resolved_on` — objections raised during the objection window. An empty or missing `resolved_on` means the objection still stands and publication is blocked. Nomination objections (G-08) carry no `resolved_on`: they defer the candidate to the annual meeting rather than being resolved. |
 | `publication.outcome` | enum | `published`, `withheld`, or empty while undecided. `published` is written in exactly one place, the gated archiving transition, so it cannot coexist with a refused consent, a standing objection, a missing approval, or an objection window that has not run. |
 | `edition_code` | string | `MRG-N` (assigned at `confirmed → scheduled`). Empty for non-scheduled. |
+| `candidate_dates` | list&lt;slot&gt; | The slots put to the speaker with the invitation: `date` (YYYY-MM-DD), `time` (HH:MM) and `answer`. Kept after the date is locked in, because which slots were offered and which were refused is the record of how the chosen one was chosen. |
 | `date` | string | YYYY-MM-DD (assigned at scheduling). |
 | `time` | string | HH:MM, Paris local time (assigned at scheduling). |
 | `zoom_link` | string | Set during runbook step. |
@@ -55,6 +64,14 @@ describe the workshop they deliver.
 | `metrics.youtube_views_30d` | int \| null | 30-day YouTube views. |
 | `metrics.forum_replies` | int \| null | Replies on the forum thread. |
 | `notes` | string | Free-form. |
+
+### `candidate_dates` entries
+
+| Field | Type | Notes |
+|---|---|---|
+| `date` | string | YYYY-MM-DD of the slot offered. Required. |
+| `time` | string | HH:MM, Paris local time. Required. |
+| `answer` | enum | `accepted`, `declined`, or empty. Empty is the answer that has not come back yet; there is no value for a soft yes, so the transition that locks the date in never has to interpret one. |
 
 ### `selection.ballots` entries
 
