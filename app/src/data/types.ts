@@ -90,7 +90,15 @@ export interface Speaker {
   conflicts_of_interest: string;
 
   source: 'form' | 'outreach' | 'organizer';
+  /** Who suggested this speaker, as self-reported at submission time -- often
+   *  someone outside the team. Kept verbatim: it is the only record of who to
+   *  tell if the Board declines the lead. Never overwritten by assignment. */
   proposed_by: string;
+  /** Which board member currently looks after this lead, assigned by rotation
+   *  (see `state/board.ts::assignLead`). Distinct from `proposed_by` -- do not
+   *  merge the two: one is who nominated the speaker, the other is who is
+   *  handling the follow-up. Empty until an assignment is made. */
+  assigned_to: string;
   links: string[];
 
   host_1: string;

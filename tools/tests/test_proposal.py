@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from conftest import board_member, config, speaker
@@ -87,23 +88,27 @@ def test_a_comma_separated_links_string_becomes_a_stripped_list() -> None:
     assert lead["links"] == ["a@example.org", "b@example.org"]
 
 
-def test_a_form_lead_is_assigned_to_a_board_member_not_the_visitor() -> None:
-    # source: form leads never carry a member proposer -- the visitor's own
-    # name is not a valid `proposed_by` (schema: "team member who proposed
-    # this speaker"). assign_lead fills it instead.
+def test_a_form_lead_keeps_the_submitters_name_and_assigns_a_board_member() -> None:
+    # A form submission is self-reported by a visitor, not a team member.
+    # `proposed_by` keeps that name verbatim -- it is the only record of who
+    # to tell if the Board declines the lead. `assigned_to` is a separate
+    # field: the board member who will look after the lead, filled by
+    # assign_lead (G-17). Both facts are asserted in one test so they cannot
+    # drift apart again.
     fields = _fields(("Name", "Grace Hopper"), ("Your name", "Grace Hopper"))
     lead = to_lead(fields, [], config(), TODAY)
     assert lead is not None
-    assert lead["proposed_by"] == assign_lead([], config(), TODAY)
-    assert lead["proposed_by"] != "Grace Hopper"
+    assert lead["proposed_by"] == "Grace Hopper"
+    assert lead["assigned_to"] == assign_lead([], config(), TODAY)
+    assert lead["assigned_to"] != "Grace Hopper"
 
 
 def test_assign_lead_prefers_the_member_carrying_fewer_open_leads() -> None:
     cfg = config(board=[board_member(login="ada"), board_member(login="grace")])
     existing = [
-        speaker(id="spk-001", status="lead", proposed_by="ada"),
-        speaker(id="spk-002", status="lead", proposed_by="ada"),
-        speaker(id="spk-003", status="lead", proposed_by="grace"),
+        speaker(id="spk-001", status="lead", assigned_to="ada"),
+        speaker(id="spk-002", status="lead", assigned_to="ada"),
+        speaker(id="spk-003", status="lead", assigned_to="grace"),
     ]
     assert assign_lead(existing, cfg, TODAY) == "grace"
 
@@ -126,8 +131,8 @@ def test_assign_lead_returns_an_empty_string_rather_than_raising() -> None:
 def test_assign_lead_tie_break_is_reproducible_across_calls() -> None:
     cfg = config(board=[board_member(login="ada"), board_member(login="grace")])
     existing = [
-        speaker(id="spk-001", status="lead", proposed_by="ada"),
-        speaker(id="spk-002", status="lead", proposed_by="grace"),
+        speaker(id="spk-001", status="lead", assigned_to="ada"),
+        speaker(id="spk-002", status="lead", assigned_to="grace"),
     ]
     first = assign_lead(existing, cfg, TODAY)
     second = assign_lead(existing, cfg, TODAY)
@@ -135,7 +140,7 @@ def test_assign_lead_tie_break_is_reproducible_across_calls() -> None:
 
 
 @pytest.mark.parametrize("case", ASSIGN_LEAD_CASES, ids=lambda c: c["name"])
-def test_assign_lead_matches_the_shared_fixture(case: dict) -> None:
+def test_assign_lead_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     assert (
         assign_lead(case["speakers"], {"board": case["board"]}, case["on"])
         == (case["expected"])

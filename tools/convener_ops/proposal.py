@@ -93,9 +93,10 @@ def _id_order(speaker_id: str) -> int:
 def assign_lead(
     speakers: Sequence[dict[str, Any]], config: dict[str, Any], on: str
 ) -> str:
-    """The active, available board member to whom a new lead with no member
-    proposer falls (G-17): whoever carries the fewest open leads (status
-    ``lead``, ``proposed_by`` that member).
+    """The active, available board member to whom a new lead falls (G-17):
+    whoever carries the fewest open leads (status ``lead``, ``assigned_to``
+    that member -- *not* ``proposed_by``, which stays the submitter's
+    self-reported name and is never counted here).
 
     A tie goes to whoever's most recent open lead is the oldest, using the
     id's numeric suffix as a stand-in for creation order (ids are assigned
@@ -119,8 +120,8 @@ def assign_lead(
     for s in speakers:
         if not isinstance(s, dict) or s.get("status") != "lead":
             continue
-        proposer = s.get("proposed_by")
-        ids = open_lead_ids.get(proposer) if isinstance(proposer, str) else None
+        assignee = s.get("assigned_to")
+        ids = open_lead_ids.get(assignee) if isinstance(assignee, str) else None
         if ids is not None:
             ids.append(_id_order(s.get("id", "")))
 
@@ -143,9 +144,10 @@ def to_lead(
     record that is still in ``lead`` status (a duplicate submission). See
     ``skip_reason`` to tell the two cases apart.
 
-    A public-form submission never carries a member proposer, so
-    ``proposed_by`` is filled by ``assign_lead`` (G-17) rather than by
-    whatever name the visitor typed into the form.
+    ``proposed_by`` keeps the submitter's self-reported name exactly as typed
+    into the form -- it is the only record of who to tell if the Board
+    declines the lead. ``assigned_to`` is a separate field: the board member
+    who will look after the lead, chosen by ``assign_lead`` (G-17).
     """
     if skip_reason(fields, existing) is not None:
         return None
@@ -179,7 +181,8 @@ def to_lead(
         "abstract": _get(fields, "Short abstract", "Summary", "Abstract"),
         "conflicts_of_interest": _get(fields, "Conflicts of interest"),
         "source": "form",
-        "proposed_by": assign_lead(existing, config, today),
+        "proposed_by": _get(fields, "Your name", "Who are you", "How you propose"),
+        "assigned_to": assign_lead(existing, config, today),
         "links": links,
         "host_1": "",
         "host_2": "",

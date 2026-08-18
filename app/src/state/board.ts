@@ -64,12 +64,13 @@ function idOrder(id: string): number {
 }
 
 /**
- * The active, available board member to whom a new lead with no member
- * proposer falls (G-17): whoever carries the fewest open leads (status
- * `lead`, `proposed_by` that member). A tie goes to whoever's most recent
- * open lead is the oldest -- i.e. whoever has gone longest without a new
- * one -- using the id's numeric suffix as a stand-in for creation order,
- * since ids are assigned in strictly increasing order (see
+ * The active, available board member to whom a new lead falls (G-17):
+ * whoever carries the fewest open leads (status `lead`, `assigned_to` that
+ * member -- *not* `proposed_by`, which stays the submitter's self-reported
+ * name and is never counted here). A tie goes to whoever's most recent open
+ * lead is the oldest -- i.e. whoever has gone longest without a new one --
+ * using the id's numeric suffix as a stand-in for creation order, since ids
+ * are assigned in strictly increasing order (see
  * `tools/convener_ops/proposal.py::to_lead`). Any further tie (including "never
  * assigned") falls back to alphabetical login order, so the result never
  * depends on `config.board`'s incidental ordering and repeated calls with
@@ -77,7 +78,8 @@ function idOrder(id: string): number {
  *
  * Returns `''` -- never throws -- when no member is both active and
  * available: the caller displays that the assignment is pending rather than
- * surfacing a raw error to a volunteer.
+ * surfacing a raw error to a volunteer. The caller is responsible for
+ * writing the returned login into the speaker's `assigned_to` field.
  */
 export function assignLead(speakers: Speaker[], config: Config, on: string): string {
   const { logins, unavailable } = activeBoard(config, on);
@@ -88,7 +90,7 @@ export function assignLead(speakers: Speaker[], config: Config, on: string): str
   const openLeadIds = new Map<string, number[]>(eligible.map(login => [login, []]));
   for (const s of speakers) {
     if (s.status !== 'lead') continue;
-    const ids = openLeadIds.get(s.proposed_by);
+    const ids = openLeadIds.get(s.assigned_to);
     if (ids) ids.push(idOrder(s.id));
   }
 

@@ -85,9 +85,9 @@
         { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "proposed_by": "alice" },
-        { "id": "spk-002", "status": "lead", "proposed_by": "alice" },
-        { "id": "spk-003", "status": "lead", "proposed_by": "bob" }
+        { "id": "spk-001", "status": "lead", "assigned_to": "alice" },
+        { "id": "spk-002", "status": "lead", "assigned_to": "alice" },
+        { "id": "spk-003", "status": "lead", "assigned_to": "bob" }
       ],
       "on": "2026-08-18",
       "expected": "bob"
@@ -99,8 +99,8 @@
         { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "proposed_by": "alice" },
-        { "id": "spk-005", "status": "lead", "proposed_by": "bob" }
+        { "id": "spk-001", "status": "lead", "assigned_to": "alice" },
+        { "id": "spk-005", "status": "lead", "assigned_to": "bob" }
       ],
       "on": "2026-08-18",
       "expected": "alice"
@@ -112,7 +112,7 @@
         { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "proposed_by": "bob" }
+        { "id": "spk-001", "status": "lead", "assigned_to": "bob" }
       ],
       "on": "2026-08-18",
       "expected": "bob"
@@ -124,7 +124,7 @@
         { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "proposed_by": "bob" }
+        { "id": "spk-001", "status": "lead", "assigned_to": "bob" }
       ],
       "on": "2026-08-18",
       "expected": "bob"

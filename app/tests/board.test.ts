@@ -50,6 +50,7 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     conflicts_of_interest: '',
     source: 'organizer',
     proposed_by: '',
+    assigned_to: '',
     links: [],
     host_1: '',
     host_2: '',
@@ -143,9 +144,9 @@ describe('assignLead', () => {
   it('chooses the eligible member carrying the fewest open leads', () => {
     const cfg = config([member({ login: 'alice' }), member({ login: 'bob' })]);
     const speakers = [
-      speaker({ id: 'spk-001', status: 'lead', proposed_by: 'alice' }),
-      speaker({ id: 'spk-002', status: 'lead', proposed_by: 'alice' }),
-      speaker({ id: 'spk-003', status: 'lead', proposed_by: 'bob' }),
+      speaker({ id: 'spk-001', status: 'lead', assigned_to: 'alice' }),
+      speaker({ id: 'spk-002', status: 'lead', assigned_to: 'alice' }),
+      speaker({ id: 'spk-003', status: 'lead', assigned_to: 'bob' }),
     ];
     expect(assignLead(speakers, cfg, '2026-08-18')).toBe('bob');
   });
@@ -153,8 +154,8 @@ describe('assignLead', () => {
   it('breaks a tie reproducibly across repeated calls with the same input', () => {
     const cfg = config([member({ login: 'alice' }), member({ login: 'bob' })]);
     const speakers = [
-      speaker({ id: 'spk-001', status: 'lead', proposed_by: 'alice' }),
-      speaker({ id: 'spk-002', status: 'lead', proposed_by: 'bob' }),
+      speaker({ id: 'spk-001', status: 'lead', assigned_to: 'alice' }),
+      speaker({ id: 'spk-002', status: 'lead', assigned_to: 'bob' }),
     ];
     const first = assignLead(speakers, cfg, '2026-08-18');
     const second = assignLead(speakers, cfg, '2026-08-18');
@@ -166,7 +167,7 @@ describe('assignLead', () => {
       member({ login: 'alice', unavailable_until: '2026-08-18' }),
       member({ login: 'bob' }),
     ]);
-    const speakers = [speaker({ id: 'spk-001', status: 'lead', proposed_by: 'bob' })];
+    const speakers = [speaker({ id: 'spk-001', status: 'lead', assigned_to: 'bob' })];
     expect(assignLead(speakers, cfg, '2026-08-18')).toBe('bob');
   });
 
@@ -176,10 +177,22 @@ describe('assignLead', () => {
     expect(assignLead([], cfg, '2026-08-18')).toBe('');
   });
 
+  it('loads leads by assigned_to, not proposed_by -- the two are independent fields', () => {
+    // A form submission's proposed_by carries the visitor's own name, which
+    // never matches a board login. If assignLead counted by proposed_by it
+    // would see no open leads for anyone and could not load-balance at all.
+    const cfg = config([member({ login: 'alice' }), member({ login: 'bob' })]);
+    const speakers = [
+      speaker({ id: 'spk-001', status: 'lead', proposed_by: 'A community member', assigned_to: 'alice' }),
+      speaker({ id: 'spk-002', status: 'lead', proposed_by: 'Another visitor', assigned_to: 'alice' }),
+    ];
+    expect(assignLead(speakers, cfg, '2026-08-18')).toBe('bob');
+  });
+
   interface AssignLeadCase {
     name: string;
     board: BoardMember[];
-    speakers: Array<Pick<Speaker, 'id' | 'status' | 'proposed_by'>>;
+    speakers: Array<Pick<Speaker, 'id' | 'status' | 'assigned_to'>>;
     on: string;
     expected: string;
   }
