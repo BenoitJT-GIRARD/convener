@@ -1,0 +1,56 @@
+# Repo-wide config for the Convener app
+season: 2026
+vw_counter: 12
+overlap_window_days: 7
+seminar_duration_minutes: 90
+board:
+- login: alice
+  joined_on: '2025-01-06'
+  status: active
+  unavailable_until: ''
+- login: bob
+  joined_on: '2025-03-10'
+  status: active
+  unavailable_until: '2026-09-01'
+- login: carol
+  joined_on: '2025-03-10'
+  status: active
+  unavailable_until: ''
+- login: dave
+  joined_on: '2025-11-02'
+  status: active
+  unavailable_until: ''
+- login: erin
+  joined_on: '2024-02-14'
+  status: inactive
+  unavailable_until: ''
+nominations:
+- candidate: frank
+  sponsor: alice
+  opened_on: '2026-02-01'
+  objections:
+  - member: bob
+    reason: Deux co-animations manquent encore.
+    date: '2026-02-03'
+  outcome: deferred
+- candidate: grace
+  sponsor: carol
+  opened_on: '2026-03-01'
+  objections: []
+  outcome: waiting
+- candidate: dave
+  sponsor: alice
+  opened_on: '2025-10-20'
+  objections: []
+  outcome: accepted
+board_min: 3
+board_max: 9
+vote_window_days: 14
+objection_window_working_days: 3
+inactivity_months: 6
+balance_window_months: 24
+sla_days:
+  lead_decision: 14
+  invitation_follow_up: 30
+  summary_after_delivery: 7
+  recording_after_delivery: 14

@@ -403,6 +403,58 @@ def test_a_member_the_board_is_still_admitting_is_left_alone() -> None:
     assert prompts == []
 
 
+def test_a_member_the_board_is_arguing_about_is_left_alone_too() -> None:
+    """A deferred nomination with a standing objection is not a settled one.
+
+    `board.ts::isUnsettled` has always read it that way -- it refuses a second
+    nomination for the candidate until the objection is withdrawn -- but this
+    sweep mirrored the narrower `isPending` and read only the outcome. A
+    member seated years ago, nominated again and deferred over a written
+    objection, could therefore be proposed inactive by the nightly job out of
+    the very file that recorded the objection: two contradictory papers about
+    one person, in front of the same annual meeting. The pair is pinned by
+    `fixtures/governance-cases.json::unsettled_nomination_cases`.
+    """
+    cfg = config(
+        inactivity_months=6,
+        board=with_three_recent(board_member(joined_on="2019-05-04")),
+        nominations=[
+            nomination(
+                candidate="Anonymous",
+                outcome="deferred",
+                objections=[
+                    {
+                        "member": "grace",
+                        "reason": "I want to hear from them at the meeting.",
+                        "date": "2026-02-03",
+                    }
+                ],
+            )
+        ],
+    )
+    proposed, prompts = sweep_inactive_members(cfg, [], NOW)
+
+    assert statuses(proposed)["Anonymous"] == "active"
+    assert prompts == []
+
+
+def test_a_deferral_nobody_still_objects_to_does_not_shield_a_member() -> None:
+    """The other side of the same rule, and the reason it is not just
+    "deferred is unsettled": an objection that has been withdrawn is removed,
+    not flagged, so a `deferred` carrying none is a question with nothing left
+    to answer. Shielding on the outcome alone would let a hand-edited word in
+    `config.yml` put a member permanently beyond the inactivity rule."""
+    cfg = config(
+        inactivity_months=6,
+        board=with_three_recent(board_member(joined_on="2019-05-04")),
+        nominations=[nomination(candidate="Anonymous", outcome="deferred")],
+    )
+    proposed, prompts = sweep_inactive_members(cfg, [], NOW)
+
+    assert statuses(proposed)["Anonymous"] == "inactive"
+    assert len(prompts) == 1
+
+
 def test_an_already_inactive_member_is_never_proposed_twice() -> None:
     cfg = config(
         inactivity_months=6,

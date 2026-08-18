@@ -21,6 +21,7 @@ from convener_ops.governance import (
     working_days_elapsed,
 )
 from convener_ops.notify import due_date, overdue, overdue_text, waiting_since
+from convener_ops.sweep import _unsettled_candidates
 
 CASES = json.loads(
     (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
@@ -127,3 +128,35 @@ def test_overdue_wording_matches_the_shared_fixture(case: dict[str, Any]) -> Non
     assert late.days == case["days"]
     assert overdue_text(late) == case["overdue_text"]
     assert waiting_since(late) == case["waiting_since"]
+
+
+@pytest.mark.parametrize(
+    "case", CASES["unsettled_nomination_cases"], ids=lambda c: c["name"]
+)
+def test_unsettled_nominations_match_the_shared_fixture(case: dict[str, Any]) -> None:
+    """The nomination question, pinned across the two languages.
+
+    `board.ts::isUnsettled` refuses a second nomination while this is true;
+    `sweep.py::_unsettled_candidates` keeps the same candidate off the
+    inactivity proposal. This module reads the cases through the Python one,
+    `app/tests/nominations.test.ts` through the browser's. The Python copy
+    mirrored the narrower `isPending` before these cases existed -- it read
+    only the outcome -- so a member with a deferred nomination standing
+    against them could be proposed inactive by the nightly sweep.
+    """
+    candidates = _unsettled_candidates({"nominations": [case["nomination"]]})
+    expected = {case["nomination"]["candidate"]} if case["unsettled"] else set()
+    assert candidates == expected
+
+
+def test_the_unsettled_fixture_still_covers_both_kinds_of_deferral() -> None:
+    """Guards the cases themselves: a deferral whose objection stands and one
+    whose objections have all been withdrawn answer differently, and a fixture
+    that lost either would pass on an implementation reading only the outcome
+    -- which is exactly the implementation this pair replaced."""
+    deferred = [
+        case
+        for case in CASES["unsettled_nomination_cases"]
+        if case["nomination"]["outcome"] == "deferred"
+    ]
+    assert sorted(case["unsettled"] for case in deferred) == [False, True]

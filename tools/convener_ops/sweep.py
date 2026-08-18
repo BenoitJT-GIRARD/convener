@@ -190,13 +190,26 @@ def _months_before(day: date, months: int) -> date:
     return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
 
 
-def _pending_candidates(config: dict[str, Any]) -> set[str]:
-    """Logins carrying a nomination the board has not settled.
+def _unsettled_candidates(config: dict[str, Any]) -> set[str]:
+    """Logins carrying a nomination the board has not finished with.
 
-    The empty outcome and `waiting` are the two `board.ts::isPending` leaves
-    open. A login the board is in the middle of admitting is already a live
-    question; proposing the same person as inactive out of the same file would
-    hand the annual meeting two contradictory papers about one person.
+    The same question `board.ts::isUnsettled` answers, and pinned to it by
+    `tests/fixtures/governance-cases.json`'s `unsettled_nomination_cases`,
+    read by both languages. A login the board is in the middle of admitting
+    -- or in the middle of arguing about -- is already a live question;
+    proposing the same person as inactive out of the same file would hand the
+    annual meeting two contradictory papers about one person.
+
+    Two ways a nomination is unsettled, and the second is the one this used
+    to miss. It is *pending* while its outcome is empty or `waiting`: the
+    automated path may still settle it. It is also unsettled while any
+    objection stands on it, whatever the outcome says -- a `deferred`
+    nomination is not a closed question, it is a question moved to the annual
+    meeting, and "stands" is simply "is in the list", because a nomination
+    objection is never marked resolved and the only thing that ends one is
+    its author withdrawing it (`board.ts::withdrawObjection`). A hand-edited
+    `deferred` carrying no objection at all is therefore settled here too:
+    there would be nothing left to withdraw.
     """
     nominations = config.get("nominations")
     if not isinstance(nominations, list):
@@ -206,7 +219,10 @@ def _pending_candidates(config: dict[str, Any]) -> set[str]:
         for nomination in nominations
         if isinstance(nomination, dict)
         and isinstance(nomination.get("candidate"), str)
-        and nomination.get("outcome") in ("", "waiting")
+        and (
+            nomination.get("outcome") in ("", "waiting")
+            or bool(nomination.get("objections"))
+        )
     }
 
 
@@ -275,7 +291,9 @@ def sweep_inactive_members(
       `board.ts::declareUnavailability` only ever marks an *active* member
       away, so "inactive with an absence still running" would be a state no
       screen could produce and none could clear;
-    * no unsettled nomination names them (`_pending_candidates`).
+    * no unsettled nomination names them (`_unsettled_candidates`),
+      including one deferred to the annual meeting over an objection that
+      still stands -- the board is already arguing about that member;
 
     Whatever remains is applied longest-silence-first and stops as soon as one
     more would leave fewer than `MINIMUM_ELIGIBLE` distinct active logins --
@@ -296,7 +314,7 @@ def sweep_inactive_members(
 
     today = paris_today(now)
     cutoff = _months_before(today, months)
-    pending = _pending_candidates(proposed)
+    unsettled = _unsettled_candidates(proposed)
     speaker_list = speakers if isinstance(speakers, list) else []
 
     # Grouped by login, not by entry: a login the config lists twice is one
@@ -312,7 +330,7 @@ def sweep_inactive_members(
 
     silent: list[tuple[date, str]] = []
     for login, members in entries.items():
-        if login in pending or any(_is_away(member, today) for member in members):
+        if login in unsettled or any(_is_away(member, today) for member in members):
             continue
         starts = [
             since

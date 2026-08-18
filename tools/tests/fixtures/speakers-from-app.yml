@@ -1,57 +1,160 @@
 # Speakers (unified schema v3 — see docs/reference/schema.md)
-- id: spk-test
-  name: Test Person
+- id: spk-101
+  name: Bénédicte Ångström
   gender: F
-  career_stage: postdoc
-  email: someone@example.test
-  affiliation: X
-  country: FR
-  title: Talk title
-  abstract: Abstract.
+  career_stage: group-leader
+  email: b.angstrom@example.org
+  affiliation: Université de Genève
+  country: Suisse
+  title: Réponses sociales chez le campagnol
+  abstract: |-
+    First paragraph of the abstract.
+    Second paragraph, after a break.
   conflicts_of_interest: ''
-  source: organizer
-  proposed_by: alice
-  assigned_to: bob
-  links: []
+  source: form
+  proposed_by: Émilie Dupré
+  assigned_to: alice
+  links:
+  - https://example.org/lab
+  - https://example.org/preprint
   host_1: alice
   host_2: bob
-  status: scheduled
+  status: delivered
   selection:
     ballots:
-      - voter: alice
-        value: 'yes'
-        comment: ''
-        coi_reason: ''
-        date: '2026-01-01'
-      - voter: bob
-        value: 'yes'
-        comment: happy to host
-        coi_reason: ''
-        date: '2026-01-01'
-      - voter: carol
-        value: recused
-        comment: ''
-        coi_reason: co-author
-        date: '2026-01-01'
+    - voter: alice
+      value: 'yes'
+      comment: Sujet très proche du nôtre.
+      coi_reason: ''
+      date: '2026-01-05'
+    - voter: bob
+      value: abstain
+      comment: ''
+      coi_reason: ''
+      date: '2026-01-06'
+    - voter: carol
+      value: recused
+      comment: ''
+      coi_reason: Co-auteure sur un article en révision
+      date: '2026-01-06'
+    - voter: dave
+      value: 'yes'
+      comment: ''
+      coi_reason: ''
+      date: '2026-01-07'
     opened_on: '2025-12-20'
-    decided_on: '2026-01-01'
+    decided_on: '2026-01-07'
   publication:
-    consent: pending
+    consent: granted
+    approved_by: alice
+    approved_on: '2026-06-08'
+    objections:
+    - member: bob
+      reason: Une diapositive non publiée y figure.
+      date: '2026-06-09'
+      resolved_on: '2026-06-12'
+    - member: carol
+      reason: Attendre la parution de l article.
+      date: '2026-06-10'
+      resolved_on: ''
+    outcome: ''
+  edition_code: MRG-11
+  date: '2026-06-01'
+  time: '12:30'
+  zoom_link: https://example.org/zoom/11
+  youtube_url: https://example.org/watch/11
+  forum_thread: https://example.org/forum/11
+  runbook_progress:
+    approved/invitation-sent: true
+    delivered/summary-posted: false
+  metrics:
+    registrations: 0
+    live_peak: 60
+    youtube_views_30d: 148
+    forum_replies: 3
+  notes: 'TEC review: Y'
+- id: spk-102
+  name: Anonymous
+  gender: undisclosed
+  career_stage: undisclosed
+  email: ''
+  affiliation: ''
+  country: ''
+  title: ''
+  abstract: ''
+  conflicts_of_interest: ''
+  source: organizer
+  proposed_by: ''
+  assigned_to: ''
+  links: []
+  host_1: ''
+  host_2: ''
+  status: lead
+  selection:
+    ballots: []
+    opened_on: ''
+    decided_on: ''
+  publication:
+    consent: ''
     approved_by: ''
     approved_on: ''
     objections: []
     outcome: ''
-  edition_code: MRG-10
-  date: '2026-06-01'
-  time: '12:30'
+  edition_code: ''
+  date: ''
+  time: ''
   zoom_link: ''
   youtube_url: ''
   forum_thread: ''
-  runbook_progress:
-    approved/invitation-sent: true
+  runbook_progress: {}
   metrics:
     registrations: null
     live_peak: null
     youtube_views_30d: null
     forum_replies: null
   notes: ''
+- id: spk-103
+  name: 'True'
+  gender: NB
+  career_stage: phd
+  email: no@example.org
+  affiliation: '0123'
+  country: 'NO'
+  title: 'yes'
+  abstract: 'null'
+  conflicts_of_interest: 'off'
+  source: outreach
+  proposed_by: 'on'
+  assigned_to: bob
+  links: []
+  host_1: ''
+  host_2: ''
+  status: approved
+  selection:
+    ballots:
+    - voter: erin
+      value: 'yes'
+      comment: '~'
+      coi_reason: ''
+      date: '2026-02-11'
+    opened_on: '2026-02-01'
+    decided_on: '2026-02-11'
+  publication:
+    consent: pending
+    approved_by: ''
+    approved_on: ''
+    objections: []
+    outcome: ''
+  edition_code: MRG-12
+  date: '2026-07-02'
+  time: '09:05'
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  runbook_progress: {}
+  metrics:
+    registrations: 0
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: '3.14'

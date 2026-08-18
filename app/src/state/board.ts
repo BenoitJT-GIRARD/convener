@@ -182,8 +182,17 @@ function isPending(n: Nomination): boolean {
  * hand-edited `deferred` carrying no objection at all is *not* unsettled --
  * there would be nothing to withdraw, and a state with no way out of it is
  * worse than the one this rule exists to prevent.
+ *
+ * Exported because this rule crosses the language boundary:
+ * `tools/convener_ops/sweep.py::_unsettled_candidates` asks the same question of
+ * the same file, to keep a member the board is arguing about off the
+ * inactivity proposal. The pair is pinned by
+ * `tools/tests/fixtures/governance-cases.json`'s `unsettled_nomination_cases`,
+ * read by both languages -- the Python copy mirrored `isPending` for a while,
+ * and a seated member carrying a deferred nomination could be proposed
+ * inactive out of the very file that recorded the objection.
  */
-function isUnsettled(n: Nomination): boolean {
+export function isUnsettled(n: Nomination): boolean {
   return isPending(n) || n.objections.length > 0;
 }
 

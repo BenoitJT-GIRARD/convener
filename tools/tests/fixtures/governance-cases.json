@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared truth for the board mapping, the vote threshold and the working-day windows. Read by app/tests/governance-fixture.test.ts, app/tests/board.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
+  "_comment": "Shared truth for the board mapping, the vote threshold and the working-day windows. Read by app/tests/governance-fixture.test.ts, app/tests/board.test.ts, app/tests/nominations.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
   "active_board_cases": [
     {
       "name": "an active member with no declared absence is eligible",
@@ -226,6 +226,44 @@
       "speakers": [],
       "on": "2026-08-18",
       "expected": ""
+    }
+  ],
+  "_unsettled_comment": "Whether the board still has a nomination in front of it. app/src/state/board.ts::isUnsettled refuses a second nomination for the candidate while this is true, and tools/convener_ops/sweep.py::_unsettled_candidates keeps that same candidate off the inactivity proposal. One rule, two implementations, so both read these cases: the Python copy mirrored the narrower isPending until this fixture was written, and a seated member carrying a deferred nomination could be proposed inactive out of the very file that recorded the objection against them. `unsettled` is what isUnsettled returns for `nomination`; the Python side reads the same cases through _unsettled_candidates, which is this predicate applied to a list.",
+  "unsettled_nomination_cases": [
+    {
+      "name": "a nomination with no outcome yet is unsettled: the board has not answered",
+      "nomination": { "candidate": "frank", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "" },
+      "unsettled": true
+    },
+    {
+      "name": "a waiting nomination is unsettled: the rule is met and only a seat is missing",
+      "nomination": { "candidate": "grace", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "waiting" },
+      "unsettled": true
+    },
+    {
+      "name": "an accepted nomination is settled for good",
+      "nomination": { "candidate": "dave", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "accepted" },
+      "unsettled": false
+    },
+    {
+      "name": "a deferred nomination whose objection still stands is unsettled",
+      "nomination": { "candidate": "frank", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [{ "member": "bob", "reason": "Two co-hostings are still missing.", "date": "2026-02-03" }], "outcome": "deferred" },
+      "unsettled": true
+    },
+    {
+      "name": "a deferred nomination with no objection left on it is settled: there is nothing to withdraw",
+      "nomination": { "candidate": "frank", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "deferred" },
+      "unsettled": false
+    },
+    {
+      "name": "an objection standing on a nomination with no outcome keeps it unsettled",
+      "nomination": { "candidate": "heidi", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [{ "member": "carol", "reason": "I want to write to the candidate first.", "date": "2026-02-03" }], "outcome": "" },
+      "unsettled": true
+    },
+    {
+      "name": "a waiting nomination carrying an objection is unsettled twice over",
+      "nomination": { "candidate": "grace", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [{ "member": "bob", "reason": "Not while the seat question is open.", "date": "2026-02-03" }], "outcome": "waiting" },
+      "unsettled": true
     }
   ],
   "working_day_cases": {

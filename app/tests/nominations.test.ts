@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import cases from '../../tools/tests/fixtures/governance-cases.json';
 import {
   NOMINATION_MIN_CO_HOSTED,
+  isUnsettled,
   activeBoard,
   declareUnavailability,
   NOMINATION_WINDOW_DAYS,
@@ -620,5 +622,28 @@ describe('the rule as a whole', () => {
     }
     expect(message).toContain('co-hosted');
     expect(message).not.toContain('GitHub is not responding');
+  });
+});
+
+
+/**
+ * `isUnsettled` is one half of a rule implemented twice: the other half is
+ * `tools/convener_ops/sweep.py::_unsettled_candidates`, which keeps a candidate the
+ * board is still arguing about off the inactivity proposal. The Python copy
+ * mirrored the narrower `isPending` until these cases were written, so a
+ * seated member carrying a deferred nomination could be named by the very
+ * sweep that read the objection against them. `tools/tests/
+ * test_governance_fixture.py` runs the same list.
+ */
+describe('the shared unsettled-nomination fixture', () => {
+  it.each(cases.unsettled_nomination_cases)('$name', c => {
+    expect(isUnsettled(c.nomination as Nomination)).toBe(c.unsettled);
+  });
+
+  it('covers both a settled and an unsettled deferral, not just one', () => {
+    const deferred = cases.unsettled_nomination_cases.filter(
+      c => c.nomination.outcome === 'deferred',
+    );
+    expect(deferred.map(c => c.unsettled).sort()).toEqual([false, true]);
   });
 });
