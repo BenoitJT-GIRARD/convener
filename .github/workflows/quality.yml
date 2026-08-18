@@ -36,6 +36,9 @@ jobs:
       - name: Tests
         working-directory: tools
         run: uv run pytest --cov=convener_ops --cov-report=term-missing
+      - name: Integration status
+        working-directory: tools
+        run: uv run convener-check-config
 
   typescript:
     runs-on: ubuntu-latest

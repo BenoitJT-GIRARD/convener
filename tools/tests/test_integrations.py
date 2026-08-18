@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+import yaml
+
 from convener_ops.integrations import load_declaration, resolve_states
 
 DECLARATION = """
@@ -70,3 +73,10 @@ def test_empty_string_counts_as_unset(tmp_path: Path) -> None:
     env = {"CONVENER_AUTH_PROXY_URL": "  ", "CONVENER_GITHUB_APP_CLIENT_ID": ""}
     resolved = resolve_states(load_declaration(_write(tmp_path)), env=env)
     assert {i.name: i.state for i in resolved}["auth_proxy"] == "absent"
+
+
+def test_malformed_yaml_raises(tmp_path: Path) -> None:
+    path = tmp_path / "integrations.yml"
+    path.write_text("integrations: [unterminated", encoding="utf-8")
+    with pytest.raises(yaml.YAMLError):
+        load_declaration(path)
