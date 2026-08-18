@@ -7,14 +7,15 @@ and that no personal data can travel even when a message does go out.
 
 from __future__ import annotations
 
+import ast
 import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import ballot, nomination, objection, speaker
 from conftest import config as make_config
-from conftest import nomination, objection, speaker
 
 from convener_ops import cli, notify
 from convener_ops.commit_format import judgemental_terms
@@ -595,6 +596,14 @@ def test_malformed_nominations_contribute_nothing() -> None:
 # ------------------------------------------------------------------ #
 
 #: Every field of a record that names or identifies a human being.
+#: The two free-prose fields that do not live at the top level of a record.
+#: They are the most sensitive text in the repository -- one says why a named
+#: board member has a conflict of interest, the other why a named member wants
+#: a named researcher's talk kept offline -- so they belong in `PERSONAL`, and
+#: `loaded` puts them where they actually live rather than passing them to
+#: `conftest.speaker`, which takes top-level fields only.
+NESTED = ("coi_reason", "objection_reason")
+
 PERSONAL = {
     "name": "Ada Lovelace",
     "email": "ada.lovelace@example.ac.uk",
@@ -607,12 +616,28 @@ PERSONAL = {
     "host_1": "Katherine Johnson",
     "host_2": "Dorothy Vaughan",
     "notes": "private note",
+    "coi_reason": "a co-authorship nobody outside the board knows about",
+    "objection_reason": "the slides carry a colleague's unpublished data",
 }
 
 
 def loaded(**over: Any) -> dict[str, Any]:
-    """A record whose every personal field carries a distinctive value."""
-    return speaker(**PERSONAL) | over
+    """A record whose every personal field carries a distinctive value.
+
+    Including the nested ones: every ballot carries the conflict-of-interest
+    reason and every publication objection carries its own, and a ballot is
+    seeded where the caller left none, so the two most sensitive fields in the
+    schema are actually present in the records `every_rendering` runs over. A
+    record that never carries them would let a leak on either pass.
+    """
+    entry = speaker(**{k: v for k, v in PERSONAL.items() if k not in NESTED}) | over
+    selection = entry["selection"]
+    selection["ballots"] = selection.get("ballots") or [ballot()]
+    for cast in selection["ballots"]:
+        cast["coi_reason"] = PERSONAL["coi_reason"]
+    for raw in entry["publication"].get("objections") or []:
+        raw["reason"] = PERSONAL["objection_reason"]
+    return entry
 
 
 def every_rendering() -> list[str]:
@@ -826,18 +851,50 @@ def test_a_dispatch_always_carries_the_address_it_was_built_from() -> None:
     assert "a real message" in addressed.body
 
 
+#: Everything `notify.py` is allowed to import. An allowlist rather than a
+#: denylist, for the same reason `public_data.PUBLIC_FIELDS` is one: a new
+#: dependency has to be added here deliberately, where a denylist only ever
+#: catches the transports somebody thought of.
+ALLOWED_IMPORTS = frozenset(
+    {"__future__", "re", "collections", "dataclasses", "datetime", "typing", "convener_ops"}
+)
+
+#: Calls that would fetch a module the import statements do not name.
+DYNAMIC_IMPORT_CALLS = frozenset({"__import__", "import_module", "eval", "exec"})
+
+
 def test_the_notification_module_holds_no_transport() -> None:
     """This package cannot send, whatever anybody configures.
 
-    Read from the module's own source, so a future import of a transport
-    fails here rather than at three in the morning against a live mailbox.
+    Parsed from the module's own source rather than read line by line: a
+    function-local `import urllib.request`, an import nested in a `try`, or an
+    `__import__("smtplib")` are all invisible to a check that only looks at
+    lines beginning `import ` or `from `, and each would give this module a
+    transport. `ast.walk` reaches every one of them wherever it sits.
     """
-    source = Path(notify.__file__).read_text(encoding="utf-8")
-    code = "\n".join(
-        line for line in source.splitlines() if line.startswith(("import ", "from "))
-    )
+    tree = ast.parse(Path(notify.__file__).read_text(encoding="utf-8"))
+
+    imported: set[str] = set()
+    dynamic: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:  # a relative import: `from . import x`
+                imported.add("convener_ops")
+            elif node.module:
+                imported.add(node.module.split(".")[0])
+        elif isinstance(node, ast.Call):
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+            if name in DYNAMIC_IMPORT_CALLS:
+                dynamic.append(name)
+
+    assert dynamic == [], f"the module fetches a module at runtime: {dynamic}"
+    undeclared = imported - ALLOWED_IMPORTS
+    assert not undeclared, f"undeclared import: {undeclared}"
     for banned in ("smtplib", "urllib", "http", "socket", "subprocess", "requests"):
-        assert banned not in code
+        assert banned not in imported
 
 
 # ------------------------------------------------------------------ #
