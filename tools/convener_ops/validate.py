@@ -37,6 +37,9 @@ CAREER_STAGES = frozenset(
 #: '' is a legal consent: the migration sets it for any speaker whose status
 #: never reached a publishable state (see scripts/migrate_v3.py, Task 5).
 PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
+PUBLICATION_OUTCOMES = frozenset({"published", "withheld", ""})
+NOMINATION_OUTCOMES = frozenset({"accepted", "deferred", "waiting", ""})
+BOARD_STATUSES = frozenset({"active", "inactive"})
 
 CONFIG_REQUIRED = frozenset(
     {
@@ -83,10 +86,44 @@ EDITION_RE = re.compile(r"^MRG-\d+$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
 
 
+def _validate_objections(objections: Any, where: str) -> list[str]:
+    """Validate a PublicationObjection[] - shared by Publication and Nomination.
+
+    Both `Speaker.publication.objections` and `Config.nominations[].objections`
+    are typed as `PublicationObjection[]` (app/src/data/types.ts): a list of
+    {member, reason, date}. One helper, one place to get the shape right.
+    """
+    errors: list[str] = []
+    if objections is None:
+        return errors
+    if not isinstance(objections, list):
+        errors.append(f"{where}.objections: must be a list")
+        return errors
+
+    for oindex, objection in enumerate(objections):
+        owhere = f"{where}.objections[{oindex}]"
+        if not isinstance(objection, dict):
+            errors.append(f"{owhere}: not a mapping")
+            continue
+
+        member = objection.get("member")
+        if member is not None and (
+            not isinstance(member, str) or not LOGIN_RE.match(member)
+        ):
+            errors.append(f"{owhere}: invalid objection member {member!r}")
+
+        date = objection.get("date")
+        if date and not DATE_RE.match(str(date)):
+            errors.append(f"{owhere}: date must be YYYY-MM-DD, got {date!r}")
+
+    return errors
+
+
 def _validate_ballots(
     entry: dict[str, Any], where: str, board_logins: Collection[str]
 ) -> list[str]:
-    """Validate one speaker's selection.ballots against the governance model.
+    """Validate one speaker's selection (opened_on and ballots) against the
+    governance model.
 
     Note on scope: this deliberately duplicates none of governance.py's
     eligibility math (threshold_for, eligible_voters, decide) - those answer
@@ -100,7 +137,16 @@ def _validate_ballots(
     """
     errors: list[str] = []
     selection = entry.get("selection")
-    ballots = selection.get("ballots") if isinstance(selection, dict) else None
+    if not isinstance(selection, dict):
+        return errors
+
+    opened_on = selection.get("opened_on")
+    if opened_on and not DATE_RE.match(str(opened_on)):
+        errors.append(
+            f"{where}.selection: opened_on must be YYYY-MM-DD, got {opened_on!r}"
+        )
+
+    ballots = selection.get("ballots")
     if not isinstance(ballots, list):
         return errors
 
@@ -118,13 +164,21 @@ def _validate_ballots(
         if value == "recused" and not raw_ballot.get("coi_reason"):
             errors.append(f"{bwhere}: recusal requires coi_reason")
 
+        date = raw_ballot.get("date")
+        if date and not DATE_RE.match(str(date)):
+            errors.append(f"{bwhere}: date must be YYYY-MM-DD, got {date!r}")
+
         voter = raw_ballot.get("voter")
         if voter in seen_voters:
             errors.append(f"{bwhere}: duplicate ballot from {voter!r}")
         else:
             seen_voters.add(voter)
 
-        if board_logins and voter not in board_logins:
+        # Membership is checked unconditionally, including against an empty
+        # board_logins: a config with no board (or an unmigrated one) must
+        # not silently disable this check - it should fail loudly instead,
+        # same as every ballot in that case would (nobody is a member yet).
+        if voter not in board_logins:
             errors.append(f"{bwhere}: ballot from a non-member ({voter!r})")
 
     return errors
@@ -207,11 +261,42 @@ def validate_speakers(
 
         publication = entry.get("publication")
         if publication is not None:
-            consent = (
-                publication.get("consent") if isinstance(publication, dict) else None
-            )
-            if consent not in PUBLICATION_CONSENTS:
-                errors.append(f"{where}: invalid publication consent {consent!r}")
+            pub_where = f"{where}.publication"
+            if not isinstance(publication, dict):
+                errors.append(f"{pub_where}: not a mapping")
+            else:
+                consent = publication.get("consent")
+                if consent not in PUBLICATION_CONSENTS:
+                    errors.append(
+                        f"{pub_where}: invalid publication consent {consent!r}"
+                    )
+
+                outcome = publication.get("outcome")
+                if outcome not in PUBLICATION_OUTCOMES:
+                    errors.append(
+                        f"{pub_where}: invalid publication outcome {outcome!r}"
+                    )
+
+                approved_on = publication.get("approved_on")
+                if approved_on and not DATE_RE.match(str(approved_on)):
+                    errors.append(
+                        f"{pub_where}: approved_on must be YYYY-MM-DD, "
+                        f"got {approved_on!r}"
+                    )
+
+                errors.extend(
+                    _validate_objections(publication.get("objections"), pub_where)
+                )
+
+                # Cross-field backstop (coordinator ruling, phase 2): consent
+                # and outcome can express a contradictory state that no type
+                # can forbid. The transformations meant to prevent this ship
+                # in later tasks; this check is the backstop for a file
+                # hand-edited outside them.
+                if consent == "refused" and outcome == "published":
+                    errors.append(
+                        f"{pub_where}: refused consent cannot have outcome published"
+                    )
 
         errors.extend(_validate_ballots(entry, where, board_logins))
 
@@ -229,7 +314,10 @@ def validate_config(cfg: Any) -> list[str]:
     # here is far cheaper than a reader discovering it from a downstream
     # KeyError or, worse, from silently-ignored governance data.
     if "vote_threshold" in cfg:
-        errors.append("config.yml: vote_threshold is obsolete, migrate to sla_days")
+        errors.append(
+            "config.yml: vote_threshold is obsolete, the threshold is now "
+            "computed from the eligible board size (see governance.py), not stored"
+        )
     if "board_members" in cfg:
         errors.append("config.yml: board_members is obsolete, migrate to board")
 
@@ -242,9 +330,25 @@ def validate_config(cfg: Any) -> list[str]:
         errors.append("config.yml: board must be a list")
     elif isinstance(board, list):
         for member in board:
-            login = member.get("login") if isinstance(member, dict) else None
+            if not isinstance(member, dict):
+                errors.append(f"config.yml: invalid board member {member!r}")
+                continue
+
+            login = member.get("login")
             if not isinstance(login, str) or not LOGIN_RE.match(login):
                 errors.append(f"config.yml: invalid board member {login!r}")
+
+            status = member.get("status")
+            if status is not None and status not in BOARD_STATUSES:
+                errors.append(f"config.yml: invalid board member status {status!r}")
+
+            for date_field in ("joined_on", "unavailable_until"):
+                value = member.get(date_field)
+                if value and not DATE_RE.match(str(value)):
+                    errors.append(
+                        f"config.yml: board member {date_field} must be "
+                        f"YYYY-MM-DD, got {value!r}"
+                    )
 
     board_min = cfg.get("board_min")
     board_max = cfg.get("board_max")
@@ -254,6 +358,58 @@ def validate_config(cfg: Any) -> list[str]:
         and board_min > board_max
     ):
         errors.append("config.yml: board_min cannot exceed board_max")
+
+    # Ordering alone (above) doesn't catch an actual board that has drifted
+    # outside its own declared bounds - check the real headcount too.
+    if (
+        isinstance(board, list)
+        and isinstance(board_min, int)
+        and isinstance(board_max, int)
+        and not (board_min <= len(board) <= board_max)
+    ):
+        errors.append(
+            f"config.yml: board has {len(board)} members, outside "
+            f"board_min..board_max ({board_min}..{board_max})"
+        )
+
+    nominations = cfg.get("nominations")
+    if "nominations" in cfg and not isinstance(nominations, list):
+        errors.append("config.yml: nominations must be a list")
+    elif isinstance(nominations, list):
+        for nindex, nomination in enumerate(nominations):
+            nwhere = f"config.yml: nominations[{nindex}]"
+            if not isinstance(nomination, dict):
+                errors.append(f"{nwhere}: not a mapping")
+                continue
+
+            candidate = nomination.get("candidate")
+            if not isinstance(candidate, str) or not LOGIN_RE.match(candidate):
+                errors.append(f"{nwhere}: invalid nomination candidate {candidate!r}")
+
+            sponsor = nomination.get("sponsor")
+            if not isinstance(sponsor, str) or not LOGIN_RE.match(sponsor):
+                errors.append(f"{nwhere}: invalid nomination sponsor {sponsor!r}")
+
+            opened_on = nomination.get("opened_on")
+            if opened_on and not DATE_RE.match(str(opened_on)):
+                errors.append(
+                    f"{nwhere}: opened_on must be YYYY-MM-DD, got {opened_on!r}"
+                )
+
+            outcome = nomination.get("outcome")
+            if outcome not in NOMINATION_OUTCOMES:
+                errors.append(f"{nwhere}: invalid nomination outcome {outcome!r}")
+
+            objections = nomination.get("objections")
+            errors.extend(_validate_objections(objections, nwhere))
+
+            # Cross-field backstop (coordinator ruling, phase 2): outcome and
+            # objections can express a contradictory state that no type can
+            # forbid. The transformations meant to prevent this ship in
+            # later tasks; this check is the backstop for a file hand-edited
+            # outside them.
+            if outcome == "accepted" and isinstance(objections, list) and objections:
+                errors.append(f"{nwhere}: accepted nomination has open objections")
 
     sla_days = cfg.get("sla_days")
     if "sla_days" in cfg and not isinstance(sla_days, dict):

@@ -8,7 +8,7 @@ task's decision 2, which is not itself in the brief's table.
 
 from __future__ import annotations
 
-from conftest import ballot, board_member, config, speaker
+from conftest import ballot, board_member, config, nomination, objection, speaker
 
 from convener_ops.validate import validate_config, validate_speakers
 
@@ -121,3 +121,170 @@ def test_valid_config_and_speakers_produce_no_errors() -> None:
     )
     assert validate_speakers([s], board_logins=board_logins) == []
     assert validate_config(config()) == []
+
+
+# --- Fix round 1 (coordinator review) ------------------------------------
+
+
+def test_vote_threshold_message_points_to_the_computed_threshold() -> None:
+    # Finding 1: the old message ("migrate to sla_days") sent the reader to
+    # the wrong place - vote_threshold is deleted, not moved. The corrected
+    # message must say where the value now comes from, and must not still
+    # claim sla_days is its destination.
+    errors = validate_config(config(vote_threshold=3))
+    joined = " | ".join(errors)
+    assert "vote_threshold is obsolete" in joined
+    assert "computed from the eligible board" in joined
+    assert "migrate to sla_days" not in joined
+
+
+def test_nomination_candidate_must_look_like_a_login() -> None:
+    errors = validate_config(config(nominations=[nomination(candidate="not a login!")]))
+    assert any("invalid nomination candidate" in e for e in errors)
+
+
+def test_nomination_sponsor_must_look_like_a_login() -> None:
+    errors = validate_config(config(nominations=[nomination(sponsor="not a login!")]))
+    assert any("invalid nomination sponsor" in e for e in errors)
+
+
+def test_nomination_opened_on_must_be_a_date() -> None:
+    errors = validate_config(config(nominations=[nomination(opened_on="01/01/2026")]))
+    nomination_errors = [e for e in errors if e.startswith("config.yml: nominations")]
+    assert any("opened_on must be YYYY-MM-DD" in e for e in nomination_errors)
+
+
+def test_nomination_outcome_must_be_valid() -> None:
+    errors = validate_config(config(nominations=[nomination(outcome="bogus")]))
+    assert any("invalid nomination outcome" in e for e in errors)
+
+
+def test_nomination_objection_member_must_look_like_a_login() -> None:
+    errors = validate_config(
+        config(nominations=[nomination(objections=[objection(member="not a login!")])])
+    )
+    assert any("invalid objection member" in e for e in errors)
+
+
+def test_accepted_nomination_with_open_objections_is_rejected() -> None:
+    # Cross-field backstop: outcome and objections can disagree, and no type
+    # forbids it. This is the backstop for a hand-edited file, ahead of the
+    # transformations (later tasks) that are meant to prevent it in the app.
+    errors = validate_config(
+        config(nominations=[nomination(outcome="accepted", objections=[objection()])])
+    )
+    assert any("accepted nomination has open objections" in e for e in errors)
+
+
+def test_board_member_status_must_be_valid() -> None:
+    errors = validate_config(config(board=[board_member(status="bogus")]))
+    assert any("invalid board member status" in e for e in errors)
+
+
+def test_board_member_joined_on_must_be_a_date() -> None:
+    errors = validate_config(config(board=[board_member(joined_on="01/01/2024")]))
+    assert any("board member joined_on must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_board_member_unavailable_until_must_be_a_date() -> None:
+    errors = validate_config(
+        config(board=[board_member(unavailable_until="not-a-date")])
+    )
+    assert any("board member unavailable_until must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_publication_approved_on_must_be_a_date() -> None:
+    s = speaker(
+        publication={
+            "consent": "granted",
+            "approved_by": "Anonymous",
+            "approved_on": "not-a-date",
+            "objections": [],
+            "outcome": "",
+        }
+    )
+    errors = validate_speakers([s])
+    assert any("approved_on must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_publication_outcome_must_be_valid() -> None:
+    s = speaker(
+        publication={
+            "consent": "",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [],
+            "outcome": "bogus",
+        }
+    )
+    errors = validate_speakers([s])
+    assert any("invalid publication outcome" in e for e in errors)
+
+
+def test_publication_objection_member_must_look_like_a_login() -> None:
+    s = speaker(
+        publication={
+            "consent": "",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [objection(member="not a login!")],
+            "outcome": "",
+        }
+    )
+    errors = validate_speakers([s])
+    assert any("invalid objection member" in e for e in errors)
+
+
+def test_refused_consent_with_published_outcome_is_rejected() -> None:
+    # Cross-field backstop: consent and outcome can disagree, and no type
+    # forbids it. This is the backstop for a hand-edited file, ahead of the
+    # transformations (later tasks) that are meant to prevent it in the app.
+    s = speaker(
+        publication={
+            "consent": "refused",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [],
+            "outcome": "published",
+        }
+    )
+    errors = validate_speakers([s])
+    assert any("refused consent cannot have outcome published" in e for e in errors)
+
+
+def test_ballot_date_must_be_a_date() -> None:
+    s = speaker(
+        selection={
+            "ballots": [ballot(date="not-a-date")],
+            "opened_on": "",
+            "decided_on": "",
+        }
+    )
+    errors = validate_speakers([s], board_logins={"Anonymous"})
+    assert any("date must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_selection_opened_on_must_be_a_date() -> None:
+    s = speaker(selection={"ballots": [], "opened_on": "not-a-date", "decided_on": ""})
+    errors = validate_speakers([s])
+    assert any("opened_on must be YYYY-MM-DD" in e for e in errors)
+
+
+def test_board_size_outside_bounds_is_rejected() -> None:
+    errors = validate_config(config(board=[board_member()]))
+    assert any("outside board_min..board_max" in e for e in errors)
+
+
+def test_ballot_from_non_member_fires_even_when_board_is_empty() -> None:
+    # Minor 2: an empty board must not silently disable the non-member
+    # check - it must fail loudly, the same as any ballot would in a config
+    # with no board yet.
+    s = speaker(
+        selection={
+            "ballots": [ballot(voter="anyone")],
+            "opened_on": "",
+            "decided_on": "",
+        }
+    )
+    errors = validate_speakers([s], board_logins=frozenset())
+    assert any("ballot from a non-member" in e for e in errors)

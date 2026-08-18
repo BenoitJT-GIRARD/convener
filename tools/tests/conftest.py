@@ -28,6 +28,31 @@ def board_member(**overrides: Any) -> dict[str, Any]:
     return base
 
 
+def objection(**overrides: Any) -> dict[str, Any]:
+    """A minimal valid PublicationObjection (schema v3); shared by
+    Publication and Nomination."""
+    base: dict[str, Any] = {
+        "member": "Anonymous",
+        "reason": "",
+        "date": "",
+    }
+    base.update(overrides)
+    return base
+
+
+def nomination(**overrides: Any) -> dict[str, Any]:
+    """A minimal valid nomination (schema v3); override any field per test."""
+    base: dict[str, Any] = {
+        "candidate": "grace",
+        "sponsor": "Anonymous",
+        "opened_on": "2026-01-01",
+        "objections": [],
+        "outcome": "",
+    }
+    base.update(overrides)
+    return base
+
+
 def speaker(**overrides: Any) -> dict[str, Any]:
     """A minimal valid speaker (schema v3); override any field per test."""
     base: dict[str, Any] = {
@@ -81,7 +106,11 @@ def config(**overrides: Any) -> dict[str, Any]:
         "vw_counter": 5,
         "overlap_window_days": 7,
         "seminar_duration_minutes": 90,
-        "board": [board_member()],
+        "board": [
+            board_member(login="Anonymous"),
+            board_member(login="grace"),
+            board_member(login="ada"),
+        ],
         "nominations": [],
         "board_min": 3,
         "board_max": 9,
