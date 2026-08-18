@@ -31,6 +31,24 @@ describe('requestDeviceCode', () => {
     globalThis.fetch = vi.fn(async () => { throw new TypeError('failed to fetch'); });
     await expect(requestDeviceCode(PROXY, CLIENT)).rejects.toBeInstanceOf(DeviceFlowError);
   });
+
+  it('throws a readable DeviceFlowError when the relay returns an HTTP error', async () => {
+    globalThis.fetch = vi.fn(async () => new Response('server error', { status: 502 }));
+    await expect(requestDeviceCode(PROXY, CLIENT)).rejects.toMatchObject({
+      code: 'http_error_502',
+      message: 'Sign-in is not working right now. Please try again in a moment.',
+    });
+  });
+
+  it('throws a readable DeviceFlowError when the relay returns malformed JSON', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      new Response('not json', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+    await expect(requestDeviceCode(PROXY, CLIENT)).rejects.toMatchObject({
+      code: 'bad_response',
+      message: 'Sign-in is not working right now. Please try again in a moment.',
+    });
+  });
 });
 
 describe('pollForToken', () => {
@@ -48,6 +66,25 @@ describe('pollForToken', () => {
     expect(tokens.access_token).toBe('gho_x');
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
     expect(sleep).toHaveBeenNthCalledWith(1, 5000);
+  });
+
+  it('sleeps before each request, not after', async () => {
+    const order: string[] = [];
+    const responses = [
+      jsonResponse({ error: 'authorization_pending' }),
+      jsonResponse({ access_token: 'gho_x' }),
+    ];
+    globalThis.fetch = vi.fn(async () => {
+      order.push('fetch');
+      return responses.shift()!;
+    });
+    const sleep = vi.fn(async () => {
+      order.push('sleep');
+    });
+
+    await pollForToken(PROXY, CLIENT, 'dev-1', { interval: 5, sleep });
+
+    expect(order).toEqual(['sleep', 'fetch', 'sleep', 'fetch']);
   });
 
   it('lengthens the interval when told to slow down', async () => {

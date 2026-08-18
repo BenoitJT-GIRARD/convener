@@ -43,12 +43,25 @@ async function postJson(url: string, body: unknown): Promise<Record<string, unkn
       body: JSON.stringify(body),
     });
   } catch {
-    throw new DeviceFlowError('unreachable', 'The sign-in relay is unreachable.');
+    throw new DeviceFlowError(
+      'unreachable',
+      'Could not reach GitHub. Please check your internet connection and try again.',
+    );
   }
   if (!response.ok) {
-    throw new DeviceFlowError('http_error', `Sign-in relay returned ${response.status}.`);
+    throw new DeviceFlowError(
+      `http_error_${response.status}`,
+      'Sign-in is not working right now. Please try again in a moment.',
+    );
   }
-  return (await response.json()) as Record<string, unknown>;
+  try {
+    return (await response.json()) as Record<string, unknown>;
+  } catch {
+    throw new DeviceFlowError(
+      'bad_response',
+      'Sign-in is not working right now. Please try again in a moment.',
+    );
+  }
 }
 
 export async function requestDeviceCode(
@@ -116,7 +129,10 @@ export async function pollForToken(
       interval = Number(data.interval ?? interval + 5);
       continue;
     }
-    throw new DeviceFlowError(error, MESSAGES[error] ?? `Sign-in failed: ${error}`);
+    throw new DeviceFlowError(
+      error,
+      MESSAGES[error] ?? 'Sign-in failed. Please try again.',
+    );
   }
 
   throw new DeviceFlowError('timeout', MESSAGES.timeout);
