@@ -9,16 +9,23 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 const KEY = 'convener.token';
 
+/** Synchronous part of the initial auth state: demo mode and "no stored token"
+ *  can be resolved immediately, so they're computed in the useState initialiser
+ *  instead of being set from inside the effect below. */
+function initialAuthState(): AuthState {
+  if (isDemoMode()) return { token: 'demo', login: DEMO_USER.login, ready: true };
+  const stored = localStorage.getItem(KEY);
+  if (!stored) return { token: null, login: null, ready: true };
+  return { token: stored, login: null, ready: false };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [s, setS] = useState<AuthState>({ token: null, login: null, ready: false });
+  const [s, setS] = useState<AuthState>(initialAuthState);
 
   useEffect(() => {
-    if (isDemoMode()) {
-      setS({ token: 'demo', login: DEMO_USER.login, ready: true });
-      return;
-    }
+    if (isDemoMode()) return;
     const stored = localStorage.getItem(KEY);
-    if (!stored) { setS({ token: null, login: null, ready: true }); return; }
+    if (!stored) return;
     validateToken(stored).then(u =>
       setS({ token: u ? stored : null, login: u?.login ?? null, ready: true })
     );

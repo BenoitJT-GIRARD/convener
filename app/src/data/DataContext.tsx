@@ -131,7 +131,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const text =
           '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
           serializeSpeakers(swept);
-        const res: any = await putFile(
+        const res = await putFile(
           'data/speakers.yml',
           text,
           spk.sha,
@@ -140,8 +140,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         );
         setS(p => ({ ...p, spkSha: res.content.sha }));
       }
-    } catch (e: any) {
-      setS(p => ({ ...p, loading: false, error: e.message }));
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setS(p => ({ ...p, loading: false, error: message }));
     }
   }
 
@@ -154,7 +155,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const text =
       '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
       serializeSpeakers(next);
-    const res: any = await putFile('data/speakers.yml', text, s.spkSha, message, token);
+    const res = await putFile('data/speakers.yml', text, s.spkSha, message, token);
     setS(p => ({ ...p, speakers: next, spkSha: res.content.sha }));
   }
 
@@ -165,12 +166,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return;
     }
     const text = '# Repo-wide config for the Convener app\n' + serializeConfig(next);
-    const res: any = await putFile('data/config.yml', text, s.cfgSha, message, token);
+    const res = await putFile('data/config.yml', text, s.cfgSha, message, token);
     setS(p => ({ ...p, config: next, cfgSha: res.content.sha }));
   }
 
   useEffect(() => {
+    // `reload` sets state synchronously before its first `await` (the demo-mode
+    // branch, and the initial `loading: true` flag). Deferring those updates
+    // would require reworking the whole load/save state machine in this file,
+    // which Task 12 does as a dedicated rewrite — narrowly disabling here avoids
+    // a throwaway restructuring that would just be redone.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
+    // `reload` is redefined every render (it closes over `s`); adding it here
+    // would re-run the effect on every render and loop. Task 12 rewrites this
+    // block (state machine refactor) and will fix the dependency properly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 

@@ -36,3 +36,27 @@ jobs:
       - name: Tests
         working-directory: tools
         run: uv run pytest --cov=convener_ops --cov-report=term-missing
+
+  typescript:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      - name: Install
+        working-directory: app
+        run: npm ci
+      - name: Lint
+        working-directory: app
+        run: npm run lint
+      - name: Types
+        working-directory: app
+        run: npm run typecheck
+      - name: Tests and coverage
+        working-directory: app
+        run: npm run test:cov

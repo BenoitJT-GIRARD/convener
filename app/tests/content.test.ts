@@ -1,11 +1,44 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchContent, invalidateContent } from '../src/content/fetch';
 import { substitute } from '../src/content/render';
+import type { Speaker } from '../src/data/types';
 
 beforeEach(() => {
   invalidateContent();
   vi.unstubAllGlobals();
 });
+
+const BASE_SPEAKER: Speaker = {
+  id: 'sp-1',
+  name: '',
+  gender: 'undisclosed',
+  email: '',
+  affiliation: '',
+  country: '',
+  title: '',
+  abstract: '',
+  conflicts_of_interest: '',
+  source: 'form',
+  proposed_by: '',
+  links: [],
+  host_1: '',
+  host_2: '',
+  status: 'lead',
+  selection: { votes_for: [], decided_on: '' },
+  edition_code: '',
+  date: '',
+  time: '',
+  zoom_link: '',
+  youtube_url: '',
+  forum_thread: '',
+  runbook_progress: {},
+  metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
+  notes: '',
+};
+
+function makeSpeaker(overrides: Partial<Speaker>): Speaker {
+  return { ...BASE_SPEAKER, ...overrides };
+}
 
 describe('fetchContent', () => {
   it('returns missing marker for unknown key', async () => {
@@ -40,7 +73,7 @@ describe('fetchContent', () => {
 
 describe('substitute', () => {
   it('replaces {{ speaker.name }}', () => {
-    const out = substitute('Dear {{ speaker.name }},', { speaker: { name: 'Mei' } as any });
+    const out = substitute('Dear {{ speaker.name }},', { speaker: makeSpeaker({ name: 'Mei' }) });
     expect(out).toMatch(/Dear Mei/);
   });
 
@@ -55,15 +88,15 @@ describe('substitute', () => {
 
 describe('substitute v2 context', () => {
   it('derives speaker.first_name from speaker.name', () => {
-    const s: any = { name: 'Mei Tanaka' };
+    const s = makeSpeaker({ name: 'Mei Tanaka' });
     expect(substitute('{{ speaker.first_name }}', { speaker: s })).toBe('Mei');
   });
   it('resolves host_1.name from speaker.host_1', () => {
-    const s: any = { name: 'X', host_1: 'alice', host_2: 'bob' };
+    const s = makeSpeaker({ name: 'X', host_1: 'alice', host_2: 'bob' });
     expect(substitute('{{ host_1.name }}', { speaker: s })).toBe('alice');
   });
   it('resolves speaker.time', () => {
-    const s: any = { name: 'X', time: '14:30' };
+    const s = makeSpeaker({ name: 'X', time: '14:30' });
     expect(substitute('starts at {{ speaker.time }}', { speaker: s })).toBe('starts at 14:30');
   });
 });

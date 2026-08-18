@@ -7,17 +7,24 @@ import { isDemoMode } from '../data/demo';
 export function useRole(): 'board' | 'organizer' | null {
   const { token, login } = useAuth();
   const { config } = useData();
-  const [role, setRole] = useState<'board' | 'organizer' | null>(null);
+  // Only the async lookup (`detectRole`) needs state: the "no session" and
+  // "demo mode" cases are pure, synchronous derivations of the current props,
+  // so they're computed directly during render instead of via setState in an
+  // effect.
+  const [detectedRole, setDetectedRole] = useState<'board' | 'organizer' | null>(null);
+
   useEffect(() => {
-    if (!token || !login) {
-      setRole(null);
-      return;
-    }
-    if (isDemoMode()) {
-      setRole('board');
-      return;
-    }
-    detectRole(login, token, config).then(setRole);
+    if (!token || !login || isDemoMode()) return;
+    let cancelled = false;
+    detectRole(login, token, config).then(r => {
+      if (!cancelled) setDetectedRole(r);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [token, login, config]);
-  return role;
+
+  if (!token || !login) return null;
+  if (isDemoMode()) return 'board';
+  return detectedRole;
 }

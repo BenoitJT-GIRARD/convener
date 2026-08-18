@@ -1,5 +1,9 @@
 import { gh } from './client';
 
+export interface PutFileResponse {
+  content: { sha: string };
+}
+
 export async function getFile(path: string, token: string): Promise<{ text: string; sha: string }> {
   const data = await gh(`/contents/${path}`, { token, method: 'GET' });
   // base64 -> utf-8 (handle non-ASCII like accents in YAML notes)
@@ -11,7 +15,7 @@ export async function getFile(path: string, token: string): Promise<{ text: stri
 
 export async function putFile(
   path: string, text: string, sha: string, message: string, token: string
-) {
+): Promise<PutFileResponse> {
   // utf-8 -> base64
   const bytes = new TextEncoder().encode(text);
   let bin = '';
