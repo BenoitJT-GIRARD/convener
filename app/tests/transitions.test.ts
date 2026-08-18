@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { canTransition, applyTransition } from '../src/state/transitions';
+import { BallotRejected } from '../src/state/ballots';
 import type { Ballot, BallotValue, Config, Speaker } from '../src/data/types';
 
 /** Four active board members, so `thresholdFor(4)` is 3 — the same bar the
@@ -32,6 +33,11 @@ const cfg: Config = {
 
 function ballot(voter: string, value: BallotValue = 'yes'): Ballot {
   return { voter, value, comment: '', coi_reason: '', date: '2026-05-20' };
+}
+
+/** A plain yes ballot payload, the shape `ballot-cast` expects. */
+function cast(value: BallotValue = 'yes', coiReason = '', comment = '') {
+  return { value, comment, coiReason };
 }
 
 const base: Speaker = {
@@ -73,13 +79,13 @@ const base: Speaker = {
 
 describe('transitions v2', () => {
   it('allows board to vote on a lead; refuses organizer', () => {
-    expect(canTransition(base, 'lead-vote', 'board')).toBe(true);
-    expect(canTransition(base, 'lead-vote', 'organizer')).toBe(false);
+    expect(canTransition(base, 'ballot-cast', 'board')).toBe(true);
+    expect(canTransition(base, 'ballot-cast', 'organizer')).toBe(false);
   });
 
   it('promotes lead to approved when vote threshold reached', () => {
     const s: Speaker = { ...base, selection: { ...base.selection, ballots: [ballot('a'), ballot('b')] } };
-    const next = applyTransition(s, 'lead-vote', 'c', cfg, '2026-05-23');
+    const next = applyTransition(s, 'ballot-cast', 'c', cfg, '2026-05-23', cast());
     expect(next.status).toBe('approved');
     expect(next.selection.ballots.map(b => b.voter)).toContain('c');
     expect(next.selection.decided_on).toBe('2026-05-23');
@@ -87,14 +93,15 @@ describe('transitions v2', () => {
 
   it('does not promote below threshold', () => {
     const s: Speaker = { ...base, selection: { ...base.selection, ballots: [ballot('a')] } };
-    const next = applyTransition(s, 'lead-vote', 'b', cfg, '2026-05-23');
+    const next = applyTransition(s, 'ballot-cast', 'b', cfg, '2026-05-23', cast());
     expect(next.status).toBe('lead');
+    expect(next.selection.decided_on).toBe('');
     expect(next.selection.ballots.map(b => b.voter)).toEqual(['a', 'b']);
   });
 
   it('does not double-count repeat votes from same actor', () => {
     const s: Speaker = { ...base, selection: { ...base.selection, ballots: [ballot('a'), ballot('b')] } };
-    const next = applyTransition(s, 'lead-vote', 'a', cfg, '2026-05-23');
+    const next = applyTransition(s, 'ballot-cast', 'a', cfg, '2026-05-23', cast());
     expect(next.selection.ballots.map(b => b.voter)).toEqual(['a', 'b']);
     expect(next.status).toBe('lead');
   });
@@ -109,14 +116,70 @@ describe('transitions v2', () => {
     };
     // Eligible drops from 4 to 2, but MINIMUM_ELIGIBLE suspends the vote there
     // rather than letting two voices approve a speaker.
-    const next = applyTransition(s, 'lead-vote', 'b', cfg, '2026-05-23');
+    const next = applyTransition(s, 'ballot-cast', 'b', cfg, '2026-05-23', cast());
     expect(next.status).toBe('lead');
+    expect(next.selection.decided_on).toBe('');
   });
 
   it('withdraw vote removes login', () => {
     const s: Speaker = { ...base, selection: { ...base.selection, ballots: [ballot('a'), ballot('b')] } };
-    const next = applyTransition(s, 'lead-vote-withdraw', 'a', cfg, '2026-05-23');
+    const next = applyTransition(s, 'ballot-withdraw', 'a', cfg, '2026-05-23');
     expect(next.selection.ballots.map(b => b.voter)).toEqual(['b']);
+  });
+
+  it('an abstention counts as no yes, and does not lower the bar the way a recusal does', () => {
+    const s: Speaker = { ...base, selection: { ...base.selection, ballots: [ballot('a'), ballot('b')] } };
+    // Three yes out of four eligible would decide; two yes and one abstain
+    // does not, because the abstainer stays in the denominator.
+    const next = applyTransition(s, 'ballot-cast', 'c', cfg, '2026-05-23', cast('abstain'));
+    expect(next.selection.ballots.find(b => b.voter === 'c')?.value).toBe('abstain');
+    expect(next.status).toBe('lead');
+  });
+
+  it('records a recusal with its written reason', () => {
+    const next = applyTransition(base, 'ballot-cast', 'a', cfg, '2026-05-23', cast('recused', 'co-author'));
+    const mine = next.selection.ballots.find(b => b.voter === 'a');
+    expect(mine?.value).toBe('recused');
+    expect(mine?.coi_reason).toBe('co-author');
+  });
+
+  it('refuses a recusal with no written reason', () => {
+    expect(() =>
+      applyTransition(base, 'ballot-cast', 'a', cfg, '2026-05-23', cast('recused')),
+    ).toThrow(BallotRejected);
+  });
+
+  it('withdrawing a ballot never undoes a decision already taken', () => {
+    // The business rule a reader could believe is missing: three yes votes
+    // approved this speaker, and one of them steps back afterwards. The count
+    // drops below the threshold, but the speaker stays `approved` and
+    // `decided_on` stands -- a decision announced is not silently reversed.
+    // Only the concealed-conflict procedure (task 9) reopens a vote.
+    const decided: Speaker = {
+      ...base,
+      status: 'approved',
+      selection: {
+        ...base.selection,
+        ballots: [ballot('a'), ballot('b'), ballot('c')],
+        decided_on: '2026-05-23',
+      },
+    };
+    const next = applyTransition(decided, 'ballot-withdraw', 'c', cfg, '2026-05-30');
+    expect(next.selection.ballots.map(b => b.voter)).toEqual(['a', 'b']);
+    expect(next.status).toBe('approved');
+    expect(next.selection.decided_on).toBe('2026-05-23');
+  });
+
+  it('a suspended vote never decides, however many yes ballots it holds', () => {
+    // Two active members: below MINIMUM_ELIGIBLE, so there is no bar to clear.
+    const tiny: Config = {
+      ...cfg,
+      board: cfg.board.slice(0, 2),
+    };
+    const s: Speaker = { ...base, selection: { ...base.selection, ballots: [ballot('a')] } };
+    const next = applyTransition(s, 'ballot-cast', 'b', tiny, '2026-05-23', cast());
+    expect(next.status).toBe('lead');
+    expect(next.selection.decided_on).toBe('');
   });
 
   it('park / decline-board are board only and only from lead', () => {

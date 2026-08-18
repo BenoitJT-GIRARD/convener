@@ -23,6 +23,12 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
   // naming the actual cause -- pass it through rather than flattening it.
   if (e instanceof Error && e.name === 'ConflictError') return e.message;
 
+  // BallotRejected (state/ballots.ts) is likewise already a plain sentence
+  // telling the volunteer what to add. The forms ask for the missing piece
+  // before writing, so this is a backstop -- but a governance rule must never
+  // surface as "GitHub is not responding".
+  if (e instanceof Error && e.name === 'BallotRejected') return e.message;
+
   // Anything else (a rejected fetch: offline, DNS failure, captive portal)
   // reaches here as a bare TypeError with no useful message to show.
   return 'GitHub is not responding. Try again in a moment.';
