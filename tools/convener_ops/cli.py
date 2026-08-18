@@ -177,13 +177,15 @@ def handle_proposal() -> int:
     root = repo_root()
     speakers_path = root / "data" / "speakers.yml"
     speakers, errors = _load(speakers_path)
-    if errors:
-        for error in errors:
+    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    if errors or cfg_errors:
+        for error in errors + cfg_errors:
             print(f"  - {error}")
         return 1
     speakers = speakers or []
 
-    lead = to_lead(fields, speakers)
+    today = datetime.now(UTC).date().isoformat()
+    lead = to_lead(fields, speakers, cfg or {}, today)
     if lead is None:
         print(f"skipping: {skip_reason(fields, speakers)}")
         return 0

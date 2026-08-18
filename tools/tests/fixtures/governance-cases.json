@@ -76,5 +76,67 @@
       ],
       "eligible": 6, "threshold": 4, "yes": 3, "decided": false, "suspended": false
     }
+  ],
+  "assign_lead_cases": [
+    {
+      "name": "the eligible member carrying fewer open leads is chosen",
+      "board": [
+        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
+        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+      ],
+      "speakers": [
+        { "id": "spk-001", "status": "lead", "proposed_by": "alice" },
+        { "id": "spk-002", "status": "lead", "proposed_by": "alice" },
+        { "id": "spk-003", "status": "lead", "proposed_by": "bob" }
+      ],
+      "on": "2026-08-18",
+      "expected": "bob"
+    },
+    {
+      "name": "a tie on open leads goes to whichever member's most recent assignment is oldest",
+      "board": [
+        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
+        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+      ],
+      "speakers": [
+        { "id": "spk-001", "status": "lead", "proposed_by": "alice" },
+        { "id": "spk-005", "status": "lead", "proposed_by": "bob" }
+      ],
+      "on": "2026-08-18",
+      "expected": "alice"
+    },
+    {
+      "name": "a member who declared an absence covering today is skipped for one who did not",
+      "board": [
+        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-08-18" },
+        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+      ],
+      "speakers": [
+        { "id": "spk-001", "status": "lead", "proposed_by": "bob" }
+      ],
+      "on": "2026-08-18",
+      "expected": "bob"
+    },
+    {
+      "name": "an inactive member is skipped even while carrying no leads",
+      "board": [
+        { "login": "alice", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": "" },
+        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+      ],
+      "speakers": [
+        { "id": "spk-001", "status": "lead", "proposed_by": "bob" }
+      ],
+      "on": "2026-08-18",
+      "expected": "bob"
+    },
+    {
+      "name": "a board with no available member returns an empty string rather than throwing",
+      "board": [
+        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-08-18" }
+      ],
+      "speakers": [],
+      "on": "2026-08-18",
+      "expected": ""
+    }
   ]
 }

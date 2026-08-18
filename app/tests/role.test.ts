@@ -5,10 +5,22 @@ import type { Config } from '../src/data/types';
 const cfg: Config = {
   season: 2026,
   vw_counter: 1,
-  vote_threshold: 3,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
-  board_members: ['alice'],
+  board: [{ login: 'alice', joined_on: '2024-01-01', status: 'active', unavailable_until: '' }],
+  nominations: [],
+  board_min: 3,
+  board_max: 9,
+  vote_window_days: 10,
+  objection_window_working_days: 5,
+  inactivity_months: 6,
+  balance_window_months: 12,
+  sla_days: {
+    lead_decision: 14,
+    invitation_follow_up: 7,
+    summary_after_delivery: 5,
+    recording_after_delivery: 10,
+  },
 };
 
 describe('detectRole', () => {
@@ -40,9 +52,9 @@ describe('detectRole', () => {
     expect(await detectRole('alice', 'tok', cfg)).toBe('organizer');
   });
 
-  it('returns organizer on a 404 for a login that is in board_members -- the API wins', async () => {
+  it('returns organizer on a 404 for a login on the active board -- the API wins', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
-    // 'alice' is in cfg.board_members, but the API gave an authoritative no.
+    // 'alice' is on cfg.board, but the API gave an authoritative no.
     expect(await detectRole('alice', 'tok', cfg)).toBe('organizer');
   });
 
