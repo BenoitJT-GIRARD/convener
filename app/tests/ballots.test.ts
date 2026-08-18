@@ -44,6 +44,13 @@ describe('castBallot', () => {
     castBallot(empty, 'alice', 'yes', '', '', '2026-01-05');
     expect(JSON.stringify(empty)).toBe(before);
   });
+
+  it('keeps a re-cast ballot in its original position', () => {
+    let s = castBallot(empty, 'alice', 'yes', '', '', '2026-01-05');
+    s = castBallot(s, 'bob', 'yes', '', '', '2026-01-05');
+    s = castBallot(s, 'alice', 'abstain', '', '', '2026-01-06');
+    expect(s.ballots.map(b => b.voter)).toEqual(['alice', 'bob']);
+  });
 });
 
 describe('withdrawBallot', () => {
