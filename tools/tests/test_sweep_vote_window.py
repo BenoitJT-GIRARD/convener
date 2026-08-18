@@ -10,10 +10,18 @@ contained (only the minimal fields this module's tests actually exercise).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
-from convener_ops.sweep import expire_votes
+import pytest
+
+from convener_ops.sweep import (
+    DEFAULT_VOTE_WINDOW_DAYS,
+    PARIS,
+    _active_board,
+    _vote_window_days,
+    expire_votes,
+)
 
 
 def ballot(**overrides: Any) -> dict[str, Any]:
@@ -99,14 +107,31 @@ def test_a_lead_still_inside_its_window_is_untouched() -> None:
 def test_no_lead_ever_reaches_decline_board_by_expiry() -> None:
     """Protects the handbook rule that a refusal is always a deliberate act.
 
-    Written as its own assertion (not folded into the "parked" test above) so
-    that a future refactor changing the target status cannot silently start
-    declining leads by expiry without a test noticing.
+    The input is the state where a naive implementation would write a
+    rejection: the window has elapsed on a deliberating board (5 eligible,
+    threshold 4) that cast real ballots and stopped one short - a vote the
+    board effectively did not carry. The answer is still `parked`, and no
+    terminal rejection value appears anywhere in the result.
     """
-    row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
-    now = datetime(2026, 1, 20, tzinfo=UTC)
-    swept, _ = expire_votes([row], config(), now)
-    assert swept[0]["status"] != "decline-board"
+    row = lead(
+        selection={
+            "ballots": [ballot(voter="Anonymous", value="yes")],
+            "opened_on": "2026-01-01",
+            "decided_on": "",
+        }
+    )
+    cfg = config(
+        board=[
+            board_member(login=name)
+            for name in ("Anonymous", "grace", "ada", "linus", "edsger")
+        ]
+    )
+    now = datetime(2026, 1, 20, 12, tzinfo=UTC)
+    swept, changes = expire_votes([row], cfg, now)
+    assert swept[0]["status"] == "parked"
+    trace = repr(swept) + repr(changes)
+    assert "decline-board" not in trace
+    assert "decline-speaker" not in trace
 
 
 def test_a_suspended_vote_does_not_expire() -> None:
@@ -135,3 +160,153 @@ def test_other_statuses_are_never_touched() -> None:
     swept, changes = expire_votes(rows, config(), datetime(2026, 1, 20, tzinfo=UTC))
     assert changes == []
     assert [r["status"] for r in swept] == ["scheduled", "archived"]
+
+
+# --- The vote window itself -------------------------------------------------
+
+
+def test_the_closing_day_of_the_window_is_still_the_board_s_to_use() -> None:
+    # Opened on the 1st with a 10-day window: the 11th is the last day the
+    # board may still vote, so nothing may happen to the lead that day.
+    row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
+    now = datetime(2026, 1, 11, 23, tzinfo=PARIS)
+    swept, changes = expire_votes([row], config(), now)
+    assert swept[0]["status"] == "lead"
+    assert changes == []
+
+
+def test_the_day_after_the_window_closes_parks_the_lead() -> None:
+    row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
+    now = datetime(2026, 1, 12, 9, tzinfo=PARIS)
+    swept, changes = expire_votes([row], config(), now)
+    assert swept[0]["status"] == "parked"
+    assert changes == ["spk-001: lead -> parked (vote window expired)"]
+
+
+def test_the_window_closes_on_the_paris_calendar_not_the_utc_one() -> None:
+    # 00:30 Paris on the 12th is still 23:30 UTC on the 11th. Reading the
+    # UTC date would leave this lead inside its window for two more hours.
+    row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
+    now = datetime(2026, 1, 11, 23, 30, tzinfo=UTC)
+    assert now.astimezone(PARIS).day == 12
+    swept, changes = expire_votes([row], config(), now)
+    assert swept[0]["status"] == "parked"
+    assert changes == ["spk-001: lead -> parked (vote window expired)"]
+
+
+# --- The default window -----------------------------------------------------
+
+
+def test_the_default_window_is_fourteen_days() -> None:
+    assert DEFAULT_VOTE_WINDOW_DAYS == 14
+    assert _vote_window_days({}) == 14
+
+
+@pytest.mark.parametrize("value", [0, -1, "10", 10.5, None, True, [10]])
+def test_an_unusable_window_falls_back_to_the_default(value: object) -> None:
+    # A missing or nonsensical value must degrade to "do nothing yet", never
+    # to "act on everything": a window of 0 would park every open lead the
+    # day after it opened, and the scheduled job runs with no validation pass.
+    assert _vote_window_days({"vote_window_days": value}) == DEFAULT_VOTE_WINDOW_DAYS
+
+
+def test_a_configured_window_is_honoured() -> None:
+    assert _vote_window_days({"vote_window_days": 21}) == 21
+
+
+def test_a_config_without_the_key_uses_fourteen_days_end_to_end() -> None:
+    row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
+    cfg = config()
+    del cfg["vote_window_days"]
+    # Day 14 is still inside the window; only day 15 expires it.
+    inside, changes = expire_votes([row], cfg, datetime(2026, 1, 15, tzinfo=PARIS))
+    assert inside[0]["status"] == "lead"
+    assert changes == []
+    outside, changes = expire_votes([row], cfg, datetime(2026, 1, 16, tzinfo=PARIS))
+    assert outside[0]["status"] == "parked"
+
+
+# --- The mapping from config to the eligible-voter count N ------------------
+
+
+def test_an_inactive_member_leaves_the_board_entirely() -> None:
+    cfg = config(
+        board=[
+            board_member(login="Anonymous"),
+            board_member(login="grace"),
+            board_member(login="ada", status="inactive"),
+        ]
+    )
+    logins, unavailable = _active_board(cfg, date(2026, 1, 20))
+    assert logins == ["Anonymous", "grace"]
+    assert unavailable == []
+
+
+def test_a_member_away_until_a_future_date_is_unavailable() -> None:
+    cfg = config(board=[board_member(login="ada", unavailable_until="2026-02-01")])
+    logins, unavailable = _active_board(cfg, date(2026, 1, 20))
+    assert logins == ["ada"]
+    assert unavailable == ["ada"]
+
+
+def test_a_member_whose_absence_has_lapsed_is_available_again() -> None:
+    cfg = config(board=[board_member(login="ada", unavailable_until="2026-01-19")])
+    logins, unavailable = _active_board(cfg, date(2026, 1, 20))
+    assert logins == ["ada"]
+    assert unavailable == []
+
+
+def test_the_last_day_of_an_absence_is_still_an_absence() -> None:
+    # `unavailable_until` is inclusive, matching app/src/state/board.ts.
+    cfg = config(board=[board_member(login="ada", unavailable_until="2026-01-20")])
+    _, unavailable = _active_board(cfg, date(2026, 1, 20))
+    assert unavailable == ["ada"]
+
+
+def test_an_empty_unavailable_until_declares_no_absence() -> None:
+    cfg = config(board=[board_member(login="ada", unavailable_until="")])
+    _, unavailable = _active_board(cfg, date(2026, 1, 20))
+    assert unavailable == []
+
+
+def test_a_malformed_board_yields_no_voters_rather_than_raising() -> None:
+    assert _active_board({}, date(2026, 1, 20)) == ([], [])
+    assert _active_board({"board": "nope"}, date(2026, 1, 20)) == ([], [])
+    assert _active_board({"board": ["nope", {}]}, date(2026, 1, 20)) == ([], [])
+    nameless = {"board": [board_member(login="")]}
+    assert _active_board(nameless, date(2026, 1, 20)) == ([], [])
+
+
+def test_an_inactive_member_shrinks_n_enough_to_suspend_an_expiry() -> None:
+    # Three declared members, one of them gone for good: N drops to 2, below
+    # MINIMUM_ELIGIBLE, so the lead waits for a board able to deliberate
+    # rather than being parked for a staffing problem.
+    row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
+    cfg = config(
+        board=[
+            board_member(login="Anonymous"),
+            board_member(login="grace"),
+            board_member(login="ada", status="inactive"),
+        ]
+    )
+    swept, changes = expire_votes([row], cfg, datetime(2026, 1, 20, tzinfo=PARIS))
+    assert swept[0]["status"] == "lead"
+    assert changes == []
+
+
+def test_a_lead_without_a_selection_block_is_left_alone() -> None:
+    # A hand-edited file can lose the block entirely; there is no window to
+    # measure, so the job must not invent one.
+    row = lead(selection=None)
+    swept, changes = expire_votes([row], config(), datetime(2026, 1, 20, tzinfo=PARIS))
+    assert swept[0]["status"] == "lead"
+    assert changes == []
+
+
+def test_a_malformed_ballot_list_reads_as_no_ballots_cast() -> None:
+    row = lead(
+        selection={"ballots": "none", "opened_on": "2026-01-01", "decided_on": ""}
+    )
+    swept, changes = expire_votes([row], config(), datetime(2026, 1, 20, tzinfo=PARIS))
+    assert swept[0]["status"] == "parked"
+    assert changes == ["spk-001: lead -> parked (vote window expired)"]

@@ -16,6 +16,10 @@ from convener_ops.governance import decide
 
 PARIS = ZoneInfo("Europe/Paris")
 
+#: Spec default for the vote window when `config.vote_window_days` is absent
+#: or unusable. Days, counted from `selection.opened_on`.
+DEFAULT_VOTE_WINDOW_DAYS = 14
+
 
 def _start(date: str, time: str) -> datetime:
     naive = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
@@ -59,33 +63,56 @@ def _parse_date(value: str) -> date | None:
         return None
 
 
-def _active_board_logins(config: dict[str, Any]) -> list[str]:
-    board = config.get("board")
-    if not isinstance(board, list):
-        return []
-    return [
-        str(member["login"])
-        for member in board
-        if isinstance(member, dict)
-        and member.get("status") != "inactive"
-        and member.get("login")
-    ]
+def _paris_today(now: datetime) -> date:
+    """The calendar day `now` falls on in Paris.
+
+    Every other date in this module is a Paris local date; a caller passing a
+    UTC clock would otherwise still be on the previous day between 00:00 and
+    02:00 Paris, and the vote window would close a day late.
+    """
+    return now.astimezone(PARIS).date()
 
 
-def _unavailable_logins(config: dict[str, Any], today: date) -> list[str]:
-    """Logins declared away as of `today` (a temporary absence, distinct from
-    the permanent `status: inactive` filtered in `_active_board_logins`)."""
+def _active_board(config: dict[str, Any], on: date) -> tuple[list[str], list[str]]:
+    """Active board logins as of `on`, and the subset of them unavailable that
+    day (`unavailable_until` is inclusive: away *on* that date, back the day
+    after; an empty value means no declared absence).
+
+    Mirrors `app/src/state/board.ts::activeBoard` and its Python twin
+    `convener_ops.proposal._active_board`, which supply exactly this pair to
+    `decide`. `status: inactive` is a permanent departure and leaves the board
+    entirely; an unavailable member is still a member, only out of `N`.
+    """
     board = config.get("board")
     if not isinstance(board, list):
-        return []
-    away: list[str] = []
+        return [], []
+    logins: list[str] = []
+    unavailable: list[str] = []
     for member in board:
-        if not isinstance(member, dict):
+        if not isinstance(member, dict) or member.get("status") != "active":
             continue
-        until = _parse_date(str(member.get("unavailable_until") or ""))
-        if until is not None and until >= today:
-            away.append(str(member.get("login")))
-    return away
+        login = member.get("login")
+        if not login:
+            continue
+        logins.append(str(login))
+        until = str(member.get("unavailable_until") or "")
+        if until and until >= on.isoformat():
+            unavailable.append(str(login))
+    return logins, unavailable
+
+
+def _vote_window_days(config: dict[str, Any]) -> int:
+    """The configured vote window, or the spec's 14-day default.
+
+    Absent, zero, negative or non-integer: all fall back to the default rather
+    than to zero. A config that never mentions the key must degrade to "do
+    nothing today", never to "park every open lead tomorrow" - the scheduled
+    job runs without a validation pass, so an unchecked config reaches here.
+    """
+    raw = config.get("vote_window_days")
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 1:
+        return DEFAULT_VOTE_WINDOW_DAYS
+    return raw
 
 
 def expire_votes(
@@ -100,9 +127,15 @@ def expire_votes(
     the vote is decided or suspended. This function only adds the "the clock
     ran out" condition on top and never distinguishes decline from parking -
     a refusal is always a deliberate act, so expiry can only ever park.
+
+    Eligibility (`N`) is read as of the sweep day, the same way the display
+    side reads it as of the day it renders: `activeBoard(config, today)`.
+    Neither side keeps a per-ballot roster, so "the vote date" of a window
+    open for two weeks can only be the day the question is asked.
     """
-    window_days = int(config.get("vote_window_days") or 0)
-    board_logins = _active_board_logins(config)
+    window_days = _vote_window_days(config)
+    today = _paris_today(now)
+    board_logins, unavailable = _active_board(config, today)
     swept = copy.deepcopy(speakers)
     changes: list[str] = []
     for entry in swept:
@@ -114,14 +147,15 @@ def expire_votes(
         opened_on = _parse_date(str(selection.get("opened_on") or ""))
         if opened_on is None:
             continue
+        # The window is the candidate's in full: the closing day is still a day
+        # on which the board may vote, so expiry can only bite the day after.
         deadline = opened_on + timedelta(days=window_days)
-        if now.date() <= deadline:
+        if today <= deadline:
             continue
 
         ballots = selection.get("ballots")
         if not isinstance(ballots, list):
             ballots = []
-        unavailable = _unavailable_logins(config, now.date())
         outcome = decide(board_logins, unavailable, ballots)
         if outcome.suspended or outcome.decided:
             continue
