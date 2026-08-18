@@ -120,7 +120,13 @@ def expire_votes(
 #
 # A member who has cast no ballot for `inactivity_months` stops counting
 # toward `N`, so a board of five that has really been four for a year stops
-# needing four voices to agree. That is the whole purpose of the rule, and it
+# needing four voices to agree. G-09 sets that window at twelve months and
+# the code reads whatever `config.yml` declares: the series runs roughly
+# monthly, so half a year of silence is a heavy teaching year, a sabbatical
+# or a leave, and the rule has to be impossible to trigger by accident
+# because the line it prints carries a real volunteer's login.
+#
+# Dropping out of `N` is the whole purpose of the rule, and it
 # is also why the rule is not a departure: the entry stays in `config.yml`
 # with its `login` and `joined_on` intact, `board.ts::seat` reactivates that
 # same entry rather than adding a second one, and the annual meeting is what
@@ -284,11 +290,16 @@ def sweep_inactive_members(
     the point below which `governance.decide` suspends every vote instead of
     deciding it. The held-back members still get a line, so the annual meeting
     reads the same list either way. That floor is `MINIMUM_ELIGIBLE` and not
-    `board_min`: the live board is knowingly mis-declared (five entries for
-    four people, `board_min: 5` pending the September merge to 3 -- see
-    `docs/reference/operations.md`), and a rule keyed on that number would
-    either do nothing at all on a wrong board or shrink it past the point
-    where it can decide anything.
+    `board_min`, and it would be whatever any file happened to declare:
+    `board_min` is the size the board aims to be -- a target the tools
+    report on and nothing enforces -- while `MINIMUM_ELIGIBLE` is the size
+    below which `governance.decide` suspends every vote instead of deciding
+    it. A rule that removes members must never be the thing that takes the
+    board past the point where it can decide anything, including the
+    decision to let those members go. A target cannot serve as that floor in
+    either direction: keyed on `board_min`, this rule would decline to act
+    on a board aiming high, and would strip one aiming low of the members a
+    vote needs.
     """
     proposed: dict[str, Any] = copy.deepcopy(config) if isinstance(config, dict) else {}
     months = _inactivity_months(proposed)

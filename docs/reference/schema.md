@@ -112,7 +112,7 @@ board_min: 3
 board_max: 9
 vote_window_days: 14               # counted from selection.opened_on
 objection_window_working_days: 3    # working days, not calendar days (G-10)
-inactivity_months: 6
+inactivity_months: 12              # G-09: twelve months without a ballot
 balance_window_months: 12
 sla_days:
   lead_decision: 14

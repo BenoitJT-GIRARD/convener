@@ -53,7 +53,7 @@ export const DEMO_CONFIG: Config = {
   board_max: 9,
   vote_window_days: 14,
   objection_window_working_days: 3,
-  inactivity_months: 6,
+  inactivity_months: 12,
   balance_window_months: 12,
   sla_days: {
     lead_decision: 14,
