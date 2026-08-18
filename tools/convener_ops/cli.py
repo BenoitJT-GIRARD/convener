@@ -17,7 +17,7 @@ from convener_ops.integrations import Integration, load_declaration, resolve_sta
 from convener_ops.paths import repo_root
 from convener_ops.proposal import skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
-from convener_ops.sweep import expire_votes
+from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
 from convener_ops.yaml_safe import safe_load as yaml_safe_load
@@ -125,6 +125,35 @@ def check_config() -> int:
     return 0
 
 
+def _report_inactivity(
+    cfg: dict[str, Any], speakers: list[dict[str, Any]], now: datetime
+) -> None:
+    """Print the board-inactivity proposals (G-09) and discard them.
+
+    Detection is what the scheduled task operates; applying a proposal stays a
+    human act on the Board screen. So the config `sweep_inactive_members`
+    returns -- the file as it would read once a proposal were applied -- is
+    bound to `_` and dropped right here, deliberately: it reaches no writer, and
+    nothing downstream of this function can see it. A scheduled job has no
+    author to record, and no automated path may write a terminal outcome about
+    a person.
+
+    On the live data this prints nothing today: every `joined_on` in
+    `data/config.yml` is empty pending the September merge, so no silence has a
+    countable start. That is the rule declining to speak without evidence, not
+    a failure.
+
+    Each line's subject is the ballot record, never the person.
+    """
+    _, prompts = sweep_inactive_members(cfg, speakers, now)
+    if not prompts:
+        return
+    print("")
+    print("Board inactivity (G-09) - proposed, not applied; a human decides:")
+    for prompt in prompts:
+        print(f"  - {prompt}")
+
+
 def sweep() -> int:
     root = repo_root()
     speakers_path = root / "data" / "speakers.yml"
@@ -139,13 +168,14 @@ def sweep() -> int:
     swept, changes = sweep_speakers(speakers or [], cfg or {}, now)
     swept, vote_changes = expire_votes(swept, cfg or {}, now)
     changes += vote_changes
-    if not changes:
+    if changes:
+        speakers_path.write_text(dump_speakers(swept), encoding="utf-8", newline="")
+        for change in changes:
+            print(change)
+    else:
         print("Nothing to sweep.")
-        return 0
 
-    speakers_path.write_text(dump_speakers(swept), encoding="utf-8", newline="")
-    for change in changes:
-        print(change)
+    _report_inactivity(cfg or {}, swept, now)
     return 0
 
 

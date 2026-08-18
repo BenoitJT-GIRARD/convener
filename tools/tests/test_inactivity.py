@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import copy
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from conftest import ballot, board_member, config, nomination, speaker
 
+from convener_ops import cli
 from convener_ops.governance import MINIMUM_ELIGIBLE, active_board, last_ballot_on
 from convener_ops.sweep import (
     _inactivity_months,
@@ -279,15 +282,78 @@ def test_the_prompts_stay_ascii_so_a_terminal_can_print_them() -> None:
         line.encode("ascii")
 
 
-def test_no_entry_point_of_the_scheduled_job_applies_the_proposal() -> None:
-    # The guarantee is an absence, the way the nomination vocabulary has no
-    # `rejected` value: `convener-sweep` must be unable to change a volunteer's
-    # standing overnight, so no caller in the package may reach this rule.
-    import inspect
+def _repo(tmp_path: Path, cfg: dict[str, Any], speakers: list[dict[str, Any]]) -> Path:
+    """A repository root holding the two data files, for `cli.sweep`."""
+    data = tmp_path / "data"
+    data.mkdir(parents=True)
+    (data / "speakers.yml").write_text(yaml.safe_dump(speakers), encoding="utf-8")
+    (data / "config.yml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    return tmp_path
 
-    from convener_ops import cli
 
-    assert "sweep_inactive_members" not in inspect.getsource(cli)
+def _speaking_case() -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """A board with one member long silent and three seated too recently to
+    be, plus the ballot that dates the silence. Enough for the rule to speak."""
+    cfg = config(
+        inactivity_months=6,
+        board=with_three_recent(board_member(joined_on="2019-05-04")),
+    )
+    return cfg, [voted("Anonymous", "2024-01-05")]
+
+
+def test_the_scheduled_job_reports_the_proposal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # G-09 says the rule is operated by the scheduled task. Detection is the
+    # half it operates: `convener-sweep` prints the lines.
+    cfg, speakers = _speaking_case()
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(_repo(tmp_path, cfg, speakers)))
+
+    assert cli.sweep() == 0
+    out = capsys.readouterr().out
+    assert "Anonymous: no ballot since 2024-01-05;" in out
+    # The wording rule holds wherever the lines are printed, heading included.
+    for verdict in ("removed", "expelled", "dropped", "failed", "negligent", "left"):
+        assert verdict not in out.lower()
+    out.encode("ascii")
+
+
+def test_the_scheduled_job_never_writes_an_inactivity_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The other half is not the scheduled task's: applying a proposal is a human
+    # act on the Board screen, because a job with nobody's name on it must not
+    # be able to change a volunteer's standing overnight. So the proposed config
+    # must reach no writer -- what the sweep writes is byte-identical whether or
+    # not the rule had anything to propose.
+    speaking, speakers = _speaking_case()
+    # The same data, with the rule not adopted: nothing to propose, everything
+    # else about the run unchanged.
+    silent = copy.deepcopy(speaking)
+    del silent["inactivity_months"]
+
+    written: list[bytes] = []
+    for index, cfg in enumerate((speaking, silent)):
+        root = _repo(tmp_path / str(index), cfg, copy.deepcopy(speakers))
+        monkeypatch.setenv("CONVENER_REPO_ROOT", str(root))
+        assert cli.sweep() == 0
+        prompted = "no ballot since" in capsys.readouterr().out
+        assert prompted is (cfg is speaking)
+        written.append((root / "data" / "speakers.yml").read_bytes())
+        # The config file is not a thing this command writes at all.
+        assert yaml.safe_load(
+            (root / "data" / "config.yml").read_text(encoding="utf-8")
+        ) == yaml.safe_load(yaml.safe_dump(cfg))
+
+    # Non-trivially so: both runs really did write a swept file.
+    assert b"status: parked" in written[0]
+    assert written[0] == written[1]
+    # And the board on disk is untouched: every member still reads `active`.
+    for index in (0, 1):
+        on_disk = yaml.safe_load(
+            (tmp_path / str(index) / "data" / "config.yml").read_text(encoding="utf-8")
+        )
+        assert {m["status"] for m in on_disk["board"]} == {"active"}
 
 
 # --------------------------------------------------------------- #

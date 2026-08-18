@@ -143,14 +143,15 @@ def expire_votes(
 # same entry rather than adding a second one, and the annual meeting is what
 # settles the question (G-09). Coming back costs one word in one field.
 #
-# `sweep_inactive_members` is a pure function and nothing in `cli.sweep`
-# calls it. That absence is the design, not an oversight, and it has the same
-# shape as the nomination vocabulary having no `rejected` value: a scheduled
-# job with nobody's name on it must not be able to change a volunteer's
-# standing overnight. What comes back is a *proposal* -- the config as it
-# would read, and one line per member for a human to read, weigh and apply.
-# The lines describe a silence in the ballot record; they do not describe a
-# person.
+# `sweep_inactive_members` is a pure function. `cli._report_inactivity` calls
+# it -- detection is what the scheduled task operates (G-09) -- and prints the
+# lines only: the config it returns is dropped there and reaches no writer.
+# That split is the design, not an oversight, and it has the same shape as the
+# nomination vocabulary having no `rejected` value: a scheduled job with
+# nobody's name on it must not be able to change a volunteer's standing
+# overnight. What comes back is a *proposal* -- the config as it would read,
+# and one line per member for a human to read, weigh and apply. The lines
+# describe a silence in the ballot record; they do not describe a person.
 # ------------------------------------------------------------------ #
 
 
@@ -256,7 +257,8 @@ def sweep_inactive_members(
     Returns the config as it would read once the proposal is applied -- a deep
     copy, the argument is never touched -- and one plain line per member for a
     human to read. Nothing here reaches disk and nothing in this package
-    applies the result: see the note above.
+    applies the result: its only caller prints the lines and drops the config,
+    see the note above.
 
     A member is proposed only when every one of these holds, and each of them
     is there to keep a contradictory pair out of the file rather than to be
