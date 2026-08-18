@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { SpeakerCard } from '../components/Card';
-import { effectiveStatus } from '../state/derived';
+import { effectiveStatus, parisToday } from '../state/derived';
+import { byUrgency, lateness } from '../state/sla';
 import { LoadError } from '../components/LoadError';
 import type { SpeakerStatus } from '../data/types';
 
@@ -18,6 +19,7 @@ export function Pipeline() {
   if (loading) return <p className="text-ink-muted">Loading…</p>;
   if (error) return <LoadError message={error} />;
   const now = new Date();
+  const today = parisToday();
   return (
     <div>
       <div className="flex items-baseline justify-between mb-8 flex-wrap gap-3">
@@ -40,7 +42,14 @@ export function Pipeline() {
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {ACTIVE_COLUMNS.map(col => {
-          const items = speakers.filter(s => s.status === col.key);
+          // Each column is ordered by how long its step has been waiting:
+          // longest first, and records whose step has no applicable turnaround
+          // time -- or no recorded day to count one from -- last, so they can
+          // never push what is genuinely waiting off the top of the column.
+          const items = speakers
+            .filter(s => s.status === col.key)
+            .map(s => ({ s, late: config ? lateness(s, config, today) : ({ state: 'none' } as const) }))
+            .sort((a, b) => byUrgency(a.late, b.late));
           return (
             <div key={col.key} className="min-w-[240px] flex-1">
               <div className="flex items-baseline gap-2 mb-3 pb-2 border-b-2 border-ink">
@@ -50,11 +59,12 @@ export function Pipeline() {
                 <span className="font-mono text-xs text-ink-faint ml-auto">{items.length}</span>
               </div>
               <div className="flex flex-col gap-2">
-                {items.map(s => (
+                {items.map(({ s, late }) => (
                   <SpeakerCard
                     key={s.id}
                     s={s}
                     displayStatus={config ? effectiveStatus(s, config, now) : undefined}
+                    lateness={late}
                   />
                 ))}
                 {items.length === 0 && (

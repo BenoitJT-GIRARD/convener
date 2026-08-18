@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { boardYaml, configYaml } from './data-doubles';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -9,10 +10,17 @@ import type { Speaker } from '../src/data/types';
 
 function speaker(id: string): Speaker {
   return {
-    id, name: `Speaker ${id}`, gender: 'undisclosed', email: '', affiliation: '',
+    id, name: `Speaker ${id}`, gender: 'undisclosed', career_stage: 'undisclosed',
+    email: '', affiliation: '',
     country: '', title: '', abstract: '', conflicts_of_interest: '',
-    source: 'organizer', proposed_by: '', links: [], host_1: '', host_2: '',
-    status: 'lead', selection: { votes_for: [], decided_on: '' }, edition_code: '',
+    source: 'organizer', proposed_by: '', assigned_to: '', links: [], host_1: '', host_2: '',
+    status: 'lead',
+    selection: { ballots: [], opened_on: '', decided_on: '' },
+    publication: {
+      consent: 'pending', approved_by: '', approved_on: '',
+      objections: [], outcome: '',
+    },
+    edition_code: '',
     date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
     runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
@@ -34,11 +42,10 @@ function decodeUtf8(b64: string): string {
 
 /** A minimal stand-in for the GitHub Contents API that enforces the sha
  *  precondition, like the real API does, so a stale write is rejected. */
-function makeSpeakersBackend(initial: Speaker[]) {
+function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
-  const cfgYaml = 'season: 2026\nboard_members: []\n';
 
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
@@ -77,7 +84,7 @@ function makeSpeakersBackend(initial: Speaker[]) {
 /** Every PUT is rejected as stale, no matter the sha sent — `mutate` exhausts
  *  its retries and `mutateSpeakers` resolves `false`. */
 function makeAlwaysConflictingBackend(initial: Speaker[]) {
-  const cfgYaml = 'season: 2026\nboard_members: []\n';
+  const cfgYaml = configYaml();
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
       return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
@@ -120,6 +127,11 @@ describe('NewSpeaker', () => {
     const nameInput = await screen.findByLabelText(/Name \*/);
 
     fireEvent.change(nameInput, { target: { value: 'First Lead' } });
+    // The submit button stays disabled until config.yml has arrived, since
+    // the new lead's owner is computed from the board it holds.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
     await waitFor(() => expect(backend.current()).toHaveLength(2));
     expect(backend.current().map(s => s.id)).toEqual(['spk-001', 'spk-002']);
@@ -129,12 +141,93 @@ describe('NewSpeaker', () => {
     backend.interlope([...backend.current(), speaker('spk-003')]);
 
     fireEvent.change(nameInput, { target: { value: 'Second Lead' } });
+    // The submit button stays disabled until config.yml has arrived, since
+    // the new lead's owner is computed from the board it holds.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
     await waitFor(() => expect(backend.current()).toHaveLength(4));
 
     const ids = backend.current().map(s => s.id);
     expect(new Set(ids).size).toBe(4); // all distinct — no collision with spk-003
     expect(ids).toContain('spk-004');
+  });
+
+  it('gives a lead created in the app an owner, by the same rotation the public form uses', async () => {
+    const board = boardYaml(['alice', 'bob']);
+    const backend = makeSpeakersBackend([], board);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <NewSpeaker />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByLabelText(/Name \*/);
+    const proposedBy = screen.getByLabelText('Proposed by');
+
+    fireEvent.change(nameInput, { target: { value: 'First Lead' } });
+    fireEvent.change(proposedBy, { target: { value: 'a colleague at the conference' } });
+    // The submit button stays disabled until config.yml has arrived, since
+    // the new lead's owner is computed from the board it holds.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+    await waitFor(() => expect(backend.current()).toHaveLength(1));
+
+    // Nobody carries an open lead yet, so the rotation falls to the first
+    // eligible member alphabetically.
+    expect(backend.current()[0].assigned_to).toBe('alice');
+    // ...and the submitter's self-reported name survives untouched: it is the
+    // record of who to tell if the board declines.
+    expect(backend.current()[0].proposed_by).toBe('a colleague at the conference');
+
+    fireEvent.change(nameInput, { target: { value: 'Second Lead' } });
+    // The submit button stays disabled until config.yml has arrived, since
+    // the new lead's owner is computed from the board it holds.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+    await waitFor(() => expect(backend.current()).toHaveLength(2));
+
+    // Alice now carries one open lead, so the next one goes to Bob — counted
+    // from the list read at write time, not from a render-time snapshot.
+    expect(backend.current()[1].assigned_to).toBe('bob');
+  });
+
+  it('leaves a lead unassigned when the board is empty rather than failing the creation', async () => {
+    const backend = makeSpeakersBackend([]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <NewSpeaker />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByLabelText(/Name \*/);
+    fireEvent.change(nameInput, { target: { value: 'Ownerless Lead' } });
+    // The submit button stays disabled until config.yml has arrived, since
+    // the new lead's owner is computed from the board it holds.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+    await waitFor(() => expect(backend.current()).toHaveLength(1));
+
+    expect(backend.current()[0].assigned_to).toBe('');
   });
 
   it('does not navigate to a speaker page for a record that failed to write', async () => {
@@ -156,6 +249,11 @@ describe('NewSpeaker', () => {
 
     const nameInput = await screen.findByLabelText(/Name \*/);
     fireEvent.change(nameInput, { target: { value: 'Doomed Lead' } });
+    // The submit button stays disabled until config.yml has arrived, since
+    // the new lead's owner is computed from the board it holds.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
 
     // Wait for the (failing) submit to finish — the button re-enables via

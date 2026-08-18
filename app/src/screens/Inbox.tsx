@@ -3,20 +3,39 @@ import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { deriveInbox, type InboxRow } from '../state/inbox';
+import { parisToday } from '../state/derived';
+import { byUrgency, lateness, overdueText, waitingSince, type Lateness } from '../state/sla';
 import { LoadError } from '../components/LoadError';
+import type { Config } from '../data/types';
+
+/**
+ * One row's standing, so the inbox can sort by it and label it.
+ *
+ * A row with no config loaded, or whose record has no applicable turnaround
+ * time, reads as `none` -- which `byUrgency` sorts last. The runbook rows of a
+ * scheduled talk are in that group: their T-window is a nudge inside the
+ * runbook, not one of the four turnaround times the series commits to, and
+ * `deriveInbox` has already ordered them among themselves. `Array.sort` is
+ * stable, so that ordering survives underneath this one.
+ */
+function rowLateness(r: InboxRow, config: Config | null, today: string): Lateness {
+  return config ? lateness(r.speaker, config, today) : { state: 'none' };
+}
 
 export function Inbox() {
-  const { speakers, loading, error } = useData();
+  const { speakers, loading, error, config } = useData();
   const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
   if (error) return <LoadError message={error} />;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const rows = deriveInbox(speakers, login, role, today);
-  const votes = rows.filter(r => r.kind === 'vote');
-  const actions = rows.filter(r => r.kind === 'action');
-  const awareness = rows.filter(r => r.kind === 'awareness');
+  const today = parisToday();
+  const rows = deriveInbox(speakers, config, login, role, today)
+    .map(r => ({ r, late: rowLateness(r, config, today) }))
+    .sort((a, b) => byUrgency(a.late, b.late));
+  const votes = rows.filter(x => x.r.kind === 'vote');
+  const actions = rows.filter(x => x.r.kind === 'action');
+  const awareness = rows.filter(x => x.r.kind === 'awareness');
 
   return (
     <div>
@@ -58,7 +77,7 @@ export function Inbox() {
 interface SectionProps {
   num: string;
   label: string;
-  rows: InboxRow[];
+  rows: { r: InboxRow; late: Lateness }[];
   variant: 'vote' | 'action' | 'awareness';
   empty?: string;
 }
@@ -79,8 +98,8 @@ function Section({ num, label, rows, variant, empty }: SectionProps) {
         <p className="text-ink-muted text-sm pl-7">{empty}</p>
       ) : (
         <ol className="divide-y divide-border border-y border-border">
-          {rows.map((r, i) => (
-            <Row key={i} r={r} variant={variant} />
+          {rows.map(({ r, late }, i) => (
+            <Row key={i} r={r} late={late} variant={variant} />
           ))}
         </ol>
       )}
@@ -88,7 +107,15 @@ function Section({ num, label, rows, variant, empty }: SectionProps) {
   );
 }
 
-function Row({ r, variant }: { r: InboxRow; variant: 'vote' | 'action' | 'awareness' }) {
+function Row({
+  r,
+  late,
+  variant,
+}: {
+  r: InboxRow;
+  late: Lateness;
+  variant: 'vote' | 'action' | 'awareness';
+}) {
   const pastDue = r.daysUntil !== undefined && r.daysUntil < 0;
   return (
     <li>
@@ -107,6 +134,16 @@ function Row({ r, variant }: { r: InboxRow; variant: 'vote' | 'action' | 'awaren
             {r.speaker.name}
             {r.speaker.affiliation && ` · ${r.speaker.affiliation}`}
           </p>
+          {late.state === 'overdue' && (
+            // What is late is the step, and the sentence has no room for
+            // anyone's name -- see src/state/sla.ts. The day it has been
+            // waiting since is shown alongside so a row that appears at the
+            // same moment as twenty others is readable as one shared start.
+            <p className="text-xs truncate">
+              <span className="font-medium text-danger">{overdueText(late)}</span>
+              <span className="text-ink-faint"> · {waitingSince(late)}</span>
+            </p>
+          )}
         </div>
         <span className="font-mono text-[11px] tracking-wider uppercase text-ink-faint">
           {variant === 'vote' && 'Vote →'}

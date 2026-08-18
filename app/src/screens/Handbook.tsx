@@ -13,6 +13,7 @@ const SECTIONS = [
   { key: 'handbook/after', label: '4 · After the webinar' },
   { key: 'governance/editorial-line', label: 'Editorial line' },
   { key: 'governance/editorial-board', label: 'The editorial board' },
+  { key: 'governance/board-rules', label: "The Board's rules" },
   { key: 'governance/selection-criteria', label: 'How we validate speakers' },
   { key: 'governance/conflict-of-interest', label: 'Conflicts of interest' },
   { key: 'governance/decisions', label: 'Decision log' },

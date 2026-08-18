@@ -1,4 +1,6 @@
-import type { Speaker } from '../data/types';
+import type { Config, Speaker } from '../data/types';
+import { activeBoard } from './board';
+import { decide } from './governance';
 import { phaseOf, fieldValue } from './phases';
 
 export type InboxKind = 'vote' | 'action' | 'awareness';
@@ -17,27 +19,64 @@ function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(to) - Date.parse(from)) / 86400000);
 }
 
+/**
+ * What each person still has to do, today.
+ *
+ * `config` is read for one thing only: whether a lead's ballots already clear
+ * the threshold. The migration to schema v3 produced six leads carrying
+ * enough yes ballots to be approved but stuck at `status: lead`, and nothing
+ * downstream could move them -- `sweep.expire_votes` skips a lead whose vote
+ * is decided, so they never park, and `ballot-cast` is the only writer of
+ * `approved`, so they never advance either. They simply sat in the pipeline.
+ *
+ * The fix is to *show* them, not to settle them: this adds a row, and a
+ * board member recording their own ballot on it is what moves the record. No
+ * decision is taken on the board's behalf anywhere in this module -- nothing
+ * here writes at all.
+ */
 export function deriveInbox(
   speakers: Speaker[],
+  config: Config | null,
   login: string | null,
   role: 'board' | 'organizer' | null,
   today: string,
 ): InboxRow[] {
   if (!login || !role) return [];
   const rows: InboxRow[] = [];
+  const board = config ? activeBoard(config, today) : null;
 
   for (const s of speakers) {
     const phase = phaseOf(s.status);
     if (!phase) continue;
 
+    // `assigned_to`, not `proposed_by`: the submitter is often someone
+    // outside the team who self-reported a name through the public form, so
+    // matching on it made "my leads" mean nothing. Ownership is what this
+    // filter is about.
     const mine =
       s.host_1 === login ||
       s.host_2 === login ||
-      s.proposed_by === login;
+      s.assigned_to === login;
 
     // ── votes (board only)
     if (s.status === 'lead' && role === 'board') {
-      if (!s.selection.votes_for.includes(login)) {
+      const settled =
+        board !== null &&
+        decide({
+          board: board.logins,
+          unavailable: board.unavailable,
+          ballots: s.selection.ballots,
+        }).decided;
+      if (settled) {
+        // Above every other vote: the board has already agreed and the record
+        // does not say so. Recording a ballot here is what writes `approved`.
+        rows.push({
+          kind: 'vote',
+          speaker: s,
+          label: `Threshold already reached, still open: ${s.name}`,
+          urgency: -200,
+        });
+      } else if (!s.selection.ballots.some(b => b.voter === login)) {
         rows.push({ kind: 'vote', speaker: s, label: `Vote on lead: ${s.name}`, urgency: -100 });
       }
     }

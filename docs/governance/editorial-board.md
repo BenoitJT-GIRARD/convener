@@ -12,15 +12,13 @@ The Editorial Board is the small group that **steers the series**: it validates 
 
 Takes part in validating speakers; may approve recordings for publishing; reviews edits to the handbook; welcomes and confirms new Event Hosts; helps shape the editorial line and the rules.
 
-## 🚪 Validating a speaker
+## 🚪 The two gates, in one paragraph each
 
-- A suggested speaker is put to a vote. Each Board member votes yes, or abstains.
-- **Two-thirds of the Board must say yes** for the speaker to be validated (a board of 6 → 4 yes; of 9 → 6).
-- The vote runs over about **two weeks**. Enough yes votes → validated. Not enough → kept for later, or declined.
+**Validating a speaker.** A suggested speaker is put to a vote; each Board member votes yes, abstains, or recuses themselves. Two-thirds of the eligible Board must say yes (a board of 6 → 4 yes; of 9 → 6), and the vote runs over about two weeks. Enough yes votes → validated. Not enough by the end of the window → kept for later. Never an automatic refusal.
 
-## 🚪 Publishing a recording
+**Publishing a recording.** A quick check (conflicts of interest, commercial content): one Board member approves, and it is done unless another member objects within three working days. That green light is only half of it — the speaker's own agreement is the other half, it is asked for separately, and silence is never taken for it. See [after the webinar](../workflow/4-after.md).
 
-A quick check (conflicts of interest, commercial content): one Board member approves, and it is done unless another member objects within **three days**.
+The exact mechanics of both — who counts, how the bar is computed, what a recusal does, how an objection is closed — are in **[the Board's rules, in detail](board-rules.md)**. Read that page once when you join; it is the whole of what binds you.
 
 ## Once a year — the start-of-season meeting
 
@@ -35,4 +33,4 @@ Each year the Board meets to:
 
 ## Other Board decisions
 
-Changing a rule, adding a member, replacing an inactive one: one member proposes it, and it is done unless someone objects within three days — or it waits for the yearly meeting.
+Changing a rule, adding a member, standing back from the Board: one member proposes it, and it is done unless someone objects in writing — or it waits for the yearly meeting. Joining and stepping back have their own windows and their own safeguards, all set out in [the Board's rules, in detail](board-rules.md).

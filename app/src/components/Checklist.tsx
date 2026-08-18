@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Speaker } from '../data/types';
 import { phaseOf, fieldValue, type RunbookItem, type FieldKey } from '../state/phases';
+import { parisToday } from '../state/derived';
 import { InlineContent } from '../content/InlineContent';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 export function Checklist({ speaker, onToggle, onField, disabled, today }: Props) {
   const phase = phaseOf(speaker.status);
   if (!phase) return null;
-  const todayStr = today ?? new Date().toISOString().slice(0, 10);
+  const todayStr = today ?? parisToday();
   const targetDate = speaker.date ? Date.parse(speaker.date) : null;
   const daysUntil =
     targetDate !== null
@@ -71,7 +72,7 @@ function Row({ item, speaker, inWindow, disabled, onToggle, onField }: RowProps)
 
 function ContentRow({ item, speaker }: { item: RunbookItem; speaker: Speaker }) {
   if (!item.contentKey) return null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisToday();
   return (
     <details className="border border-border rounded p-3 open:bg-surface-mute" open>
       <summary className="cursor-pointer font-display font-bold text-xs uppercase tracking-widest text-accent">
@@ -150,7 +151,7 @@ function CheckboxRow({
   const [expanded, setExpanded] = useState(false);
   const checked = !!speaker.runbook_progress[item.key];
   const label = item.window !== undefined ? `${item.label} (T-${item.window})` : item.label;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisToday();
   return (
     <div className={`border border-border rounded p-2 ${inWindow ? '' : 'opacity-50'}`}>
       <div className="flex items-start gap-2">

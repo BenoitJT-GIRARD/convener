@@ -1,0 +1,400 @@
+import { useState } from 'react';
+import { useData } from '../data/DataContext';
+import { useAuth } from '../auth/AuthContext';
+import { parisToday } from '../state/derived';
+import { formatDecision, identifier, transitionDecision } from '../state/decisions';
+import { canArchive, objectionWindowCloses, standingObjections } from '../state/governance';
+import { canFinalize } from '../state/phases';
+import {
+  applyTransition,
+  canTransition,
+  type ConsentPayload,
+  type ObjectionPayload,
+  type ResolutionPayload,
+  type Role,
+  type Transition,
+} from '../state/transitions';
+import type { ConsentDecision, ObjectionResolution, Speaker } from '../data/types';
+
+/**
+ * The second gate (G-10, G-15): what has to be true before a seminar
+ * recording goes online.
+ *
+ * Two permissions, from two parties, kept visibly apart on the screen
+ * because they are kept apart in the rule. The speaker's block asks a
+ * question and records an answer; the board's block records an approval and
+ * counts a window. Neither block ever fills in the other's field, and no
+ * control here writes `outcome: 'published'` -- only the archiving button
+ * does, and only when `canArchive` allows it.
+ *
+ * Every rule the volunteer cannot satisfy leaves the control disabled with
+ * the reason beside it, rather than failing on submit.
+ */
+export function PublicationGate({ speaker, role }: { speaker: Speaker; role: Role }) {
+  const { config, mutateSpeakers } = useData();
+  const { login } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const locked = busy || !config;
+  const today = parisToday();
+
+  const p = speaker.publication;
+  const gate = config
+    ? canArchive(speaker, config, today)
+    : { allowed: false, reason: 'Waiting for the configuration to load.' };
+  const standing = standingObjections(p);
+  const published = p.outcome === 'published';
+
+  async function fire(t: Transition, payload?: ConsentPayload | ObjectionPayload | ResolutionPayload) {
+    if (!login || !config || !canTransition(speaker, t, role)) return;
+    setBusy(true);
+    try {
+      // The transformation reads `current`, never the `speaker` prop this
+      // component rendered with: between the read and the write another
+      // member may have objected, or the speaker may have withdrawn their
+      // consent. Re-running `applyTransition` -- and with it `canArchive` --
+      // against the freshly-read row is what makes that objection count.
+      await mutateSpeakers(
+        current =>
+          current.map(sp =>
+            sp.id === speaker.id ? applyTransition(sp, t, login, config, today, payload) : sp,
+          ),
+        formatDecision(transitionDecision(t, identifier(speaker.id), identifier(login), payload)),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-8 border border-border p-4 space-y-6">
+      <div>
+        <h2 className="font-display font-extrabold text-xs uppercase tracking-[0.16em] text-ink">
+          Publishing the recording
+        </h2>
+        <p className="text-sm text-ink-muted mt-1">
+          Two separate permissions are needed: the speaker&apos;s, and the board&apos;s.
+        </p>
+      </div>
+
+      {published && !gate.allowed && (
+        <p className="p-3 border-l-2 border-danger bg-danger/5 text-sm text-danger">
+          <strong>This recording is online and should not be.</strong> {gate.reason} Take the
+          recording down, then resolve this below.
+        </p>
+      )}
+
+      <ConsentBlock speaker={speaker} role={role} disabled={locked} onSet={c => fire('consent-set', { consent: c })} />
+
+      <BoardBlock
+        speaker={speaker}
+        role={role}
+        disabled={locked}
+        windowCloses={config && p.approved_on ? objectionWindowCloses(p, config) : ''}
+        onApprove={() => fire('publication-approve')}
+        onObject={reason => fire('publication-object', { reason })}
+        onResolve={(resolution, note) => fire('publication-resolve', { resolution, note })}
+      />
+
+      {standing.length > 0 && (
+        <div>
+          <p className="font-display font-bold uppercase tracking-widest text-[11px] text-ink-muted mb-1">
+            Objections standing
+          </p>
+          <ul className="text-sm space-y-1">
+            {standing.map(o => (
+              <li key={`${o.member}-${o.date}`}>
+                <strong>{o.member}</strong> on {o.date}: {o.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <ArchiveBlock
+        speaker={speaker}
+        role={role}
+        disabled={locked}
+        reason={gate.reason}
+        allowed={gate.allowed}
+        onArchive={() => fire('finalize-archive')}
+      />
+    </section>
+  );
+}
+
+const CONSENT_CHOICES: { value: ConsentDecision; label: string; help: string }[] = [
+  {
+    value: 'granted',
+    label: 'They agreed',
+    help: 'The speaker told you, in writing, that the recording may be published.',
+  },
+  {
+    value: 'refused',
+    label: 'They refused, or withdrew their agreement',
+    help: 'The recording must not be published, and any copy already online has to come down.',
+  },
+];
+
+/**
+ * The speaker's permission (G-15).
+ *
+ * There is no control here for "no answer yet", and that is deliberate:
+ * `pending` is where the record starts, and leaving it alone is exactly what
+ * a volunteer who has not heard back should do. A button that wrote it back
+ * would be a button for turning a silence into a record of a silence -- one
+ * step from a record of an agreement.
+ */
+function ConsentBlock({
+  speaker,
+  role,
+  disabled,
+  onSet,
+}: {
+  speaker: Speaker;
+  role: Role;
+  disabled: boolean;
+  onSet: (consent: ConsentDecision) => void;
+}) {
+  const p = speaker.publication;
+  const [choice, setChoice] = useState<ConsentDecision | ''>('');
+  const editable = role === 'board' && canTransition(speaker, 'consent-set', role);
+
+  return (
+    <div>
+      <p className="font-display font-bold uppercase tracking-widest text-[11px] text-ink-muted mb-1">
+        The speaker&apos;s permission
+      </p>
+      <p className="text-sm">
+        Recorded answer: <strong>{p.consent === '' ? 'not asked' : p.consent}</strong>
+      </p>
+      {!editable ? null : (
+        <div className="mt-2 space-y-2">
+          <fieldset className="space-y-1.5">
+            <legend className="text-xs uppercase tracking-wider text-ink-muted">
+              Record what the speaker told you
+            </legend>
+            {CONSENT_CHOICES.map(c => (
+              <label key={c.value} className="flex gap-2 items-start text-sm">
+                <input
+                  type="radio"
+                  name={`consent-${speaker.id}`}
+                  value={c.value}
+                  checked={choice === c.value}
+                  onChange={() => setChoice(c.value)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-bold">{c.label}</span>{' '}
+                  <span className="text-ink-muted">{c.help}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <p className="text-xs text-ink-muted">
+            If they have not answered, leave this alone. Not hearing back is not an agreement, and
+            no amount of waiting turns it into one.
+          </p>
+          <button
+            type="button"
+            disabled={disabled || choice === ''}
+            onClick={() => choice !== '' && onSet(choice)}
+            className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          >
+            Record the speaker&apos;s answer
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const RESOLUTION_CHOICES: { value: ObjectionResolution; label: string; help: string }[] = [
+  {
+    value: 'lift',
+    label: 'Lift the objection',
+    help: 'The concern was addressed. The recording goes back to the gate; it is not published by this.',
+  },
+  {
+    value: 'withhold',
+    label: 'Withhold the recording',
+    help: 'The board decides not to publish. This can be lifted later, by a board member.',
+  },
+];
+
+/** The board's half: an approval, an objection window counted in working
+ *  days, and the objections themselves. */
+function BoardBlock({
+  speaker,
+  role,
+  disabled,
+  windowCloses,
+  onApprove,
+  onObject,
+  onResolve,
+}: {
+  speaker: Speaker;
+  role: Role;
+  disabled: boolean;
+  windowCloses: string;
+  onApprove: () => void;
+  onObject: (reason: string) => void;
+  onResolve: (resolution: ObjectionResolution, note: string) => void;
+}) {
+  const p = speaker.publication;
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
+  const [resolution, setResolution] = useState<ObjectionResolution>('lift');
+  const canApprove = canTransition(speaker, 'publication-approve', role);
+  const canObject = canTransition(speaker, 'publication-object', role);
+  const canResolve = canTransition(speaker, 'publication-resolve', role);
+
+  return (
+    <div className="space-y-3">
+      <p className="font-display font-bold uppercase tracking-widest text-[11px] text-ink-muted mb-1">
+        The board&apos;s approval
+      </p>
+      <p className="text-sm">
+        {p.approved_on ? (
+          <>
+            Approved by <strong>{p.approved_by}</strong> on {p.approved_on}
+            {windowCloses && ` · objection window closes ${windowCloses}`}
+          </>
+        ) : (
+          'Not approved yet.'
+        )}
+      </p>
+
+      {canApprove && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onApprove}
+          className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {p.approved_on ? 'Approve again (restarts the window)' : 'Approve for publication'}
+        </button>
+      )}
+
+      {canObject && (
+        <div className="space-y-1.5">
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">
+              Reason for objecting to publishing this recording
+            </span>
+            <textarea
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              rows={2}
+              className="w-full px-2 py-1 text-sm mt-1"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={disabled || reason.trim() === ''}
+            onClick={() => onObject(reason)}
+            className="px-3 py-1.5 text-sm rounded border border-danger text-danger hover:bg-danger hover:text-white disabled:opacity-50"
+          >
+            Object
+          </button>
+          <span className="block text-xs text-ink-muted">
+            Required: an objection stops a named researcher&apos;s talk being published, so the
+            register has to say why.
+          </span>
+        </div>
+      )}
+
+      {canResolve && (
+        <div className="space-y-1.5 border-t border-border pt-3">
+          <fieldset className="space-y-1.5">
+            <legend className="text-xs uppercase tracking-wider text-ink-muted">
+              Resolve the objections
+            </legend>
+            {RESOLUTION_CHOICES.map(c => (
+              <label key={c.value} className="flex gap-2 items-start text-sm">
+                <input
+                  type="radio"
+                  name={`resolution-${speaker.id}`}
+                  value={c.value}
+                  checked={resolution === c.value}
+                  onChange={() => setResolution(c.value)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-bold">{c.label}</span>{' '}
+                  <span className="text-ink-muted">{c.help}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">
+              What was decided
+            </span>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={2}
+              className="w-full px-2 py-1 text-sm mt-1"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={disabled || note.trim() === ''}
+            onClick={() => onResolve(resolution, note)}
+            className="px-3 py-1.5 text-sm rounded bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          >
+            Resolve
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The one control that publishes.
+ *
+ * Disabled with the reason beside it whenever the gate is shut, or whenever
+ * the delivered-phase checklist is still incomplete -- a volunteer meets both
+ * rules as a sentence to read, never as a failed save.
+ */
+function ArchiveBlock({
+  speaker,
+  role,
+  disabled,
+  allowed,
+  reason,
+  onArchive,
+}: {
+  speaker: Speaker;
+  role: Role;
+  disabled: boolean;
+  allowed: boolean;
+  reason: string;
+  onArchive: () => void;
+}) {
+  if (!canTransition(speaker, 'finalize-archive', role)) return null;
+  const checklistDone = speaker.status !== 'delivered' || canFinalize(speaker);
+  const blocked = !allowed || !checklistDone;
+  const message = !allowed
+    ? reason
+    : checklistDone
+      ? ''
+      : 'Fill in the required fields of the delivered checklist above first.';
+
+  return (
+    <div className="border-t border-border pt-4 space-y-2">
+      <button
+        type="button"
+        disabled={disabled || blocked}
+        onClick={onArchive}
+        className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-5 py-3 hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {speaker.publication.outcome === 'published'
+          ? 'Publish the recording again'
+          : 'Publish the recording and archive'}
+      </button>
+      {blocked && <p className="text-sm text-danger">{message}</p>}
+    </div>
+  );
+}

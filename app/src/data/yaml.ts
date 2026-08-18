@@ -1,26 +1,55 @@
 import yaml from 'js-yaml';
+import { readConfig, readSpeakers } from './validate';
 import type { Speaker, Config } from './types';
 
+/**
+ * The one set of dump options this app writes YAML with, chosen so that the
+ * bytes match what `tools/convener_ops/cli.py::_dump` writes for the same data.
+ *
+ * The two languages write the same two files -- the browser on every save,
+ * the scheduled jobs on every sweep -- so a difference in *formatting* is a
+ * difference in the file, and every alternating write would rewrite lines
+ * neither side meant to touch. `noArrayIndent` is the one that mattered:
+ * PyYAML puts a block sequence at its parent key's indentation, js-yaml
+ * indented it by two, and `data/speakers.yml` on disk is in PyYAML's shape.
+ * `tools/tests/fixtures/speakers-from-app.yml` pins the agreement byte for
+ * byte, from both sides.
+ */
+const DUMP = { lineWidth: 1000, noRefs: true, sortKeys: false, noArrayIndent: true };
+
+/**
+ * Read `data/speakers.yml`.
+ *
+ * Every field is checked against the model on the way in (`./validate.ts`);
+ * a file that does not match stops the read with a `DataShapeError` naming
+ * the file and the field, rather than being cast into a `Speaker[]` the
+ * screens will then read `undefined` out of.
+ */
 export function parseSpeakers(text: string): Speaker[] {
-  const data = yaml.load(text);
-  return Array.isArray(data) ? (data as Speaker[]) : [];
+  return readSpeakers(yaml.load(text));
 }
 
 export function serializeSpeakers(items: Speaker[]): string {
-  return yaml.dump(items, { lineWidth: 1000, noRefs: true, sortKeys: false });
+  return yaml.dump(items, DUMP);
 }
 
-export function parseConfig(text: string): Config | null {
-  const data = yaml.load(text);
-  return data && typeof data === 'object' ? (data as Config) : null;
+/**
+ * Read `data/config.yml`.
+ *
+ * Throws rather than returning `null` for a file it cannot read: the caller
+ * used to substitute a constant default, which meant a malformed config
+ * showed the board a governance model nobody had adopted.
+ */
+export function parseConfig(text: string): Config {
+  return readConfig(yaml.load(text));
 }
 
 export function serializeConfig(cfg: Config): string {
-  return yaml.dump(cfg, { lineWidth: 1000, noRefs: true, sortKeys: false });
+  return yaml.dump(cfg, DUMP);
 }
 
 export const SPEAKERS_HEADER =
-  '# Speakers (unified schema v2 — see docs/reference/schema.md)\n';
+  '# Speakers (unified schema v3 — see docs/reference/schema.md)\n';
 export const CONFIG_HEADER = '# Repo-wide config for the Convener app\n';
 
 export function withSpeakersHeader(body: string): string {

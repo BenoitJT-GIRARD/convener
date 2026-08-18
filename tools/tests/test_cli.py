@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, tzinfo
 from pathlib import Path
 
 import pytest
 import yaml
-from conftest import config, speaker
+from conftest import board_member, config, speaker
 
 from convener_ops.cli import _load, handle_proposal, sweep, validate
 
@@ -66,6 +67,29 @@ def test_validate_reports_errors_and_returns_1(
     assert "invalid status 'bogus-status'" in out
 
 
+def test_validate_reports_a_board_under_its_target_without_failing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The target is said out loud, and saying it changes no verdict.
+
+    A board short of `board_min` is the state in which every act that would
+    fix it has to stay available, so `convener-validate` reports and exits 0. The
+    line is ASCII, like everything this package prints to a terminal.
+    """
+    cfg = config(
+        board=[board_member(login="a"), board_member(login="b")],
+        board_min=5,
+    )
+    _write_data(tmp_path, [speaker()], cfg)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 0
+    out = capsys.readouterr().out
+    assert "Note: config.yml: board has 2 active members, below its target of 5" in out
+    assert "Data OK" in out
+    assert out.isascii()
+
+
 def test_sweep_reports_nothing_to_sweep_when_no_change(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -95,7 +119,7 @@ def test_sweep_rewrites_the_file_and_keeps_the_header(
     assert "spk-001: scheduled -> delivered" in out
 
     text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
-    assert text.startswith("# Speakers (unified schema v2")
+    assert text.startswith("# Speakers (unified schema v3")
     assert "status: delivered" in text
 
 
@@ -136,6 +160,40 @@ def test_handle_proposal_writes_a_new_lead(
     text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
     assert "spk-002" in text
     assert "Grace Hopper" in text
+
+
+class _FrozenClock:
+    """`datetime` with `now` pinned to one instant, for the intake date."""
+
+    #: 23:30 UTC on 11 January 2026 is 00:30 Paris on the 12th: the two zones
+    #: name different calendar days at this instant.
+    INSTANT = datetime(2026, 1, 11, 23, 30, tzinfo=UTC)
+
+    @staticmethod
+    def now(tz: tzinfo | None = None) -> datetime:
+        return (
+            _FrozenClock.INSTANT if tz is None else _FrozenClock.INSTANT.astimezone(tz)
+        )
+
+
+def test_handle_proposal_stamps_the_paris_day_not_the_utc_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `opened_on` seeds the vote window, so an intake between 00:00 and 02:00
+    # Paris must not be dated on the UTC day that is still yesterday.
+    _write_data(tmp_path, [], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setattr("convener_ops.cli.datetime", _FrozenClock)
+    payload = json.dumps({"fields": [{"label": "Name", "value": "Grace Hopper"}]})
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+    capsys.readouterr()
+
+    written = yaml.safe_load((tmp_path / "data" / "speakers.yml").read_text("utf-8"))
+    assert written[0]["selection"]["opened_on"] == "2026-01-12"
 
 
 def test_handle_proposal_with_an_invalid_signature_returns_1(

@@ -12,7 +12,13 @@ Turn the transcript into a short, readable summary and post it under the announc
 
 ## 🚪 The gate — publishing the recording
 
-Before the recording goes public, a member of the **Editorial Board** gives a green light. It is a quick check — conflicts of interest, commercial content — approved unless someone objects within three days. Some talks may be kept off YouTube.
+Two separate permissions are needed, and neither stands in for the other.
+
+**The speaker's.** Ask them, in writing, whether the recording may be published, and record their answer in the app. Not hearing back is not a yes: with no answer, the recording stays offline. They may withdraw their agreement later, at any time, and the recording then comes down.
+
+**The Board's.** A member of the **Editorial Board** gives a green light — a quick check on conflicts of interest and commercial content. It becomes final unless another member objects within **three working days** (weekends do not count). An objection stops publication until a Board member resolves it, either lifting it or deciding the talk is kept off YouTube.
+
+The app will not let a recording be archived until both are in hand, and says which one is missing. The full mechanics — how the three working days are counted, how an objection is closed — are in [the Board's rules](../governance/board-rules.md).
 
 Once cleared, send the recording to the YouTube contact for the TEATIME channel, and announce it on the forum.
 

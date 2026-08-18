@@ -12,6 +12,13 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The commit-message check reads the range under review, so it needs
+          # the commits themselves, not just the merge result. The register
+          # check needs more than that: it derives the file from the whole
+          # history, so against a shallow clone it would compare the committed
+          # register with a truncated derivation and fail for the wrong reason.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
@@ -39,6 +46,34 @@ jobs:
       - name: Integration status
         working-directory: tools
         run: uv run convener-check-config
+      - name: Commit messages
+        working-directory: tools
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -e
+          # Only the commits under review. Phase 1 is already written and does
+          # not follow this grammar; a check that demanded the past be
+          # rewritten would be turned off instead of obeyed.
+          #
+          # The range is computed by `commit_format.log_range` rather than
+          # here, because a range that quietly resolves to nothing is a green
+          # check that read no commit, and shell in a workflow file is the one
+          # place nothing can test.
+          range="$(uv run convener-commit-range)"
+          git log --format=%B%x00 $range | uv run convener-check-commits
+      - name: Decision register
+        working-directory: tools
+        # `docs/governance/register.md` is derived from the commit history and
+        # rewritten in full by the scheduled job, so a row typed by hand is
+        # undone on the next push -- but it is wrong in the repository until
+        # then. This is the same derivation run as an assertion: it writes
+        # nothing and fails if the committed file is not what the history
+        # gives. Byte-comparable because the rendering reads no clock and no
+        # data file, only the commits.
+        run: uv run convener-register --check
 
   typescript:
     runs-on: ubuntu-latest

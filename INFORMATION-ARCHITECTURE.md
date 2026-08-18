@@ -10,7 +10,8 @@ Each concept, term, rule, step has exactly one home file. If two places talk abo
 |---|---|
 | Editorial line | `docs/governance/editorial-line.md` |
 | Roles | `docs/roles.md` |
-| The two gates (mechanics) | `docs/governance/editorial-board.md` |
+| The two gates (mechanics) | `docs/governance/board-rules.md` |
+| What the Board is, and its yearly meeting | `docs/governance/editorial-board.md` |
 | Selection criteria | `docs/governance/selection-criteria.md` |
 | Conflict-of-interest policy | `docs/governance/conflict-of-interest.md` |
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |

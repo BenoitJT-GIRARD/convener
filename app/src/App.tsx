@@ -7,6 +7,8 @@ import { Inbox } from './screens/Inbox';
 import { Pipeline } from './screens/Pipeline';
 import { Agenda } from './screens/Agenda';
 import { Archive } from './screens/Archive';
+import { Board } from './screens/Board';
+import { Diversity } from './screens/Diversity';
 import { Handbook } from './screens/Handbook';
 import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
@@ -24,6 +26,8 @@ function Shell() {
           <Route path="pipeline" element={<Pipeline />} />
           <Route path="agenda" element={<Agenda />} />
           <Route path="archive" element={<Archive />} />
+          <Route path="board" element={<Board />} />
+          <Route path="diversity" element={<Diversity />} />
           <Route path="handbook" element={<Handbook />} />
           <Route path="templates" element={<Templates />} />
           <Route path="speakers/new" element={<NewSpeaker />} />

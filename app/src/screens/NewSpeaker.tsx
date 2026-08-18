@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../data/DataContext';
+import { assignLead } from '../state/board';
+import { parisToday } from '../state/derived';
 import { useAuth } from '../auth/AuthContext';
-import type { Speaker, Gender } from '../data/types';
+import { CAREER_STAGES } from '../data/types';
+import type { Speaker, Gender, CareerStage } from '../data/types';
 
 function nextSpeakerId(speakers: Speaker[]): string {
   const nums = speakers
@@ -14,7 +17,7 @@ function nextSpeakerId(speakers: Speaker[]): string {
 }
 
 export function NewSpeaker() {
-  const { mutateSpeakers } = useData();
+  const { config, mutateSpeakers } = useData();
   const { login } = useAuth();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -25,6 +28,7 @@ export function NewSpeaker() {
     affiliation: '',
     country: '',
     gender: 'undisclosed' as Gender,
+    career_stage: 'undisclosed' as CareerStage,
     title: '',
     abstract: '',
     links: '',
@@ -48,12 +52,14 @@ export function NewSpeaker() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim() || !login) return;
+    if (!form.name.trim() || !login || !config) return;
     setBusy(true);
+    const today = parisToday();
     try {
       const fields: Omit<Speaker, 'id'> = {
         name: form.name.trim(),
         gender: form.gender,
+        career_stage: form.career_stage,
         email: form.email.trim(),
         affiliation: form.affiliation.trim(),
         country: form.country.trim(),
@@ -62,11 +68,25 @@ export function NewSpeaker() {
         conflicts_of_interest: form.conflicts_of_interest.trim(),
         source: form.source,
         proposed_by: form.proposed_by.trim(),
+        // Who submitted the lead, not who will handle it. The owner is
+        // computed inside the transform below and overwrites this placeholder;
+        // `proposed_by` is never touched by that, because it is the only
+        // record of who has to be told if the board declines.
+        assigned_to: '',
         links: form.links.split(/[\s,]+/).map(s => s.trim()).filter(Boolean),
         host_1: '',
         host_2: '',
         status: 'lead',
-        selection: { votes_for: [], decided_on: '' },
+        // The vote window runs from `opened_on` (see tools/convener_ops/sweep.py), and
+        // it opens the day the lead is recorded.
+        selection: { ballots: [], opened_on: today, decided_on: '' },
+        publication: {
+          consent: 'pending',
+          approved_by: '',
+          approved_on: '',
+          objections: [],
+          outcome: '',
+        },
         edition_code: '',
         date: '',
         time: '',
@@ -86,7 +106,18 @@ export function NewSpeaker() {
       let assignedId = '';
       const ok = await mutateSpeakers(current => {
         assignedId = nextSpeakerId(current);
-        return [...current, { ...fields, id: assignedId }];
+        // A lead created here gets an owner by the same rotation the public
+        // form uses (`tools/convener_ops/proposal.py::to_lead`), so the two intake
+        // routes cannot produce differently-owned leads. Computed from
+        // `current`, since the rotation counts the open leads that exist at
+        // write time -- not the ones a stale render remembered. `config` is
+        // read from the load cycle instead: the board lives in config.yml and
+        // `mutate` operates on speakers.yml alone, and board composition
+        // changes a handful of times a year. `assignLead` returns '' when no
+        // member is available, which leaves the lead unassigned rather than
+        // failing the creation.
+        const owner = assignLead(current, config, today);
+        return [...current, { ...fields, id: assignedId, assigned_to: owner }];
       }, `data: add lead ${fields.name}`);
       if (ok) nav(`/speakers/${assignedId}`);
     } finally {
@@ -173,19 +204,35 @@ export function NewSpeaker() {
           </label>
         </div>
 
-        <label className="block">
-          <span className="text-xs uppercase tracking-wider text-ink-muted">Gender</span>
-          <select
-            value={form.gender}
-            onChange={e => up('gender', e.target.value as Gender)}
-            className={`${inputCls} mt-1`}
-          >
-            <option value="undisclosed">undisclosed</option>
-            <option value="F">F</option>
-            <option value="M">M</option>
-            <option value="NB">NB</option>
-          </select>
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">Gender</span>
+            <select
+              value={form.gender}
+              onChange={e => up('gender', e.target.value as Gender)}
+              className={`${inputCls} mt-1`}
+            >
+              <option value="undisclosed">undisclosed</option>
+              <option value="F">F</option>
+              <option value="M">M</option>
+              <option value="NB">NB</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">Career stage</span>
+            <select
+              value={form.career_stage}
+              onChange={e => up('career_stage', e.target.value as CareerStage)}
+              className={`${inputCls} mt-1`}
+            >
+              {CAREER_STAGES.map(stage => (
+                <option key={stage} value={stage}>
+                  {stage}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-ink-muted">
@@ -241,10 +288,14 @@ export function NewSpeaker() {
           />
         </label>
 
+        {/* Submitting waits for `config`: the owner of a new lead comes from
+            the board in config.yml, and creating the lead before that file has
+            arrived would write an unowned lead for no better reason than the
+            volunteer being quick off the mark. */}
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={busy || !form.name.trim()}
+            disabled={busy || !config || !form.name.trim()}
             className="px-4 py-2 bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 font-display font-bold tracking-widest uppercase text-sm"
           >
             {busy ? 'Creating…' : 'Create lead'}

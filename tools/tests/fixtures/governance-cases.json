@@ -1,0 +1,1869 @@
+{
+  "_comment": "Shared truth for the board mapping, the vote threshold and the working-day windows. Read by app/tests/governance-fixture.test.ts, app/tests/board.test.ts, app/tests/nominations.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
+  "active_board_cases": [
+    {
+      "name": "an active member with no declared absence is eligible",
+      "board": [
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [],
+      "eligible": [
+        "ada"
+      ]
+    },
+    {
+      "name": "an inactive member leaves the board entirely, not merely the eligible set",
+      "board": [
+        {
+          "login": "Anonymous",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "Anonymous"
+      ],
+      "unavailable": [],
+      "eligible": [
+        "Anonymous"
+      ]
+    },
+    {
+      "name": "a member away until a future date is unavailable but stays on the board",
+      "board": [
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-02-01"
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [
+        "ada"
+      ],
+      "eligible": []
+    },
+    {
+      "name": "a member whose absence has lapsed is available again the day after",
+      "board": [
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-19"
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [],
+      "eligible": [
+        "ada"
+      ]
+    },
+    {
+      "name": "the boundary day itself is still an absence - unavailable_until is inclusive",
+      "board": [
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-20"
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [
+        "ada"
+      ],
+      "eligible": []
+    },
+    {
+      "name": "an empty unavailable_until declares no absence at all",
+      "board": [
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "grace",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-20"
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "ada",
+        "grace"
+      ],
+      "unavailable": [
+        "grace"
+      ],
+      "eligible": [
+        "ada"
+      ]
+    },
+    {
+      "name": "a malformed unavailable_until reads as an absence rather than as availability",
+      "board": [
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "not-a-date"
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [
+        "ada"
+      ],
+      "eligible": []
+    },
+    {
+      "name": "a whole board at once: active, inactive, future, lapsed, boundary, empty, malformed",
+      "board": [
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "Anonymous",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "carol",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-02-01"
+        },
+        {
+          "login": "dan",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-19"
+        },
+        {
+          "login": "erin",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-20"
+        },
+        {
+          "login": "grace",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "not-a-date"
+        }
+      ],
+      "on": "2026-01-20",
+      "logins": [
+        "ada",
+        "carol",
+        "dan",
+        "erin",
+        "grace"
+      ],
+      "unavailable": [
+        "carol",
+        "erin",
+        "grace"
+      ],
+      "eligible": [
+        "ada",
+        "dan"
+      ]
+    }
+  ],
+  "threshold_cases": [
+    {
+      "name": "board of 3 needs 3 - the floor overrides the ratio",
+      "eligible": 3,
+      "expected": 3
+    },
+    {
+      "name": "board of 4 needs 3",
+      "eligible": 4,
+      "expected": 3
+    },
+    {
+      "name": "board of 5 needs 4",
+      "eligible": 5,
+      "expected": 4
+    },
+    {
+      "name": "board of 6 needs 4 - the handbook's own example",
+      "eligible": 6,
+      "expected": 4
+    },
+    {
+      "name": "board of 7 needs 5",
+      "eligible": 7,
+      "expected": 5
+    },
+    {
+      "name": "board of 8 needs 6",
+      "eligible": 8,
+      "expected": 6
+    },
+    {
+      "name": "board of 9 needs 6 - the handbook's other example",
+      "eligible": 9,
+      "expected": 6
+    }
+  ],
+  "decision_cases": [
+    {
+      "name": "four yes on a board of six is decided",
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "unavailable": [],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        },
+        {
+          "voter": "d",
+          "value": "yes"
+        }
+      ],
+      "eligible": 6,
+      "threshold": 4,
+      "yes": 4,
+      "decided": true,
+      "suspended": false
+    },
+    {
+      "name": "abstentions stay in the denominator, so three yes is not enough",
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "unavailable": [],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        },
+        {
+          "voter": "d",
+          "value": "abstain"
+        },
+        {
+          "voter": "e",
+          "value": "abstain"
+        },
+        {
+          "voter": "f",
+          "value": "abstain"
+        }
+      ],
+      "eligible": 6,
+      "threshold": 4,
+      "yes": 3,
+      "decided": false,
+      "suspended": false
+    },
+    {
+      "name": "recusals leave the denominator, lowering the bar",
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "unavailable": [],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "recused"
+        },
+        {
+          "voter": "b",
+          "value": "recused"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        },
+        {
+          "voter": "d",
+          "value": "yes"
+        },
+        {
+          "voter": "e",
+          "value": "yes"
+        }
+      ],
+      "eligible": 4,
+      "threshold": 3,
+      "yes": 3,
+      "decided": true,
+      "suspended": false
+    },
+    {
+      "name": "declared unavailability leaves the denominator too",
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "unavailable": [
+        "e",
+        "f"
+      ],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        }
+      ],
+      "eligible": 4,
+      "threshold": 3,
+      "yes": 3,
+      "decided": true,
+      "suspended": false
+    },
+    {
+      "name": "too few eligible members suspends the vote instead of lowering the bar",
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "unavailable": [
+        "c",
+        "d"
+      ],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        }
+      ],
+      "eligible": 2,
+      "threshold": 3,
+      "yes": 2,
+      "decided": false,
+      "suspended": true
+    },
+    {
+      "name": "the absolute floor of three yes holds even when the ratio is met",
+      "board": [
+        "a",
+        "b",
+        "c"
+      ],
+      "unavailable": [],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        }
+      ],
+      "eligible": 3,
+      "threshold": 3,
+      "yes": 2,
+      "decided": false,
+      "suspended": false
+    },
+    {
+      "name": "a repeated yes ballot from the same voter counts once, not twice",
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "unavailable": [],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        }
+      ],
+      "eligible": 6,
+      "threshold": 4,
+      "yes": 3,
+      "decided": false,
+      "suspended": false
+    }
+  ],
+  "assign_lead_cases": [
+    {
+      "name": "the eligible member carrying fewer open leads is chosen",
+      "board": [
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "speakers": [
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "alice"
+        },
+        {
+          "id": "spk-002",
+          "status": "lead",
+          "assigned_to": "alice"
+        },
+        {
+          "id": "spk-003",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
+      ],
+      "on": "2026-08-18",
+      "expected": "bob"
+    },
+    {
+      "name": "a tie on open leads goes to whichever member's most recent assignment is oldest",
+      "board": [
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "speakers": [
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "alice"
+        },
+        {
+          "id": "spk-005",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
+      ],
+      "on": "2026-08-18",
+      "expected": "alice"
+    },
+    {
+      "name": "a member who declared an absence covering today is skipped for one who did not",
+      "board": [
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-08-18"
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "speakers": [
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
+      ],
+      "on": "2026-08-18",
+      "expected": "bob"
+    },
+    {
+      "name": "an inactive member is skipped even while carrying no leads",
+      "board": [
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "speakers": [
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
+      ],
+      "on": "2026-08-18",
+      "expected": "bob"
+    },
+    {
+      "name": "a board with no available member returns an empty string rather than throwing",
+      "board": [
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-08-18"
+        }
+      ],
+      "speakers": [],
+      "on": "2026-08-18",
+      "expected": ""
+    }
+  ],
+  "_unsettled_comment": "Whether the board still has a nomination in front of it. app/src/state/board.ts::isUnsettled refuses a second nomination for the candidate while this is true, and tools/convener_ops/sweep.py::_unsettled_candidates keeps that same candidate off the inactivity proposal. One rule, two implementations, so both read these cases: the Python copy mirrored the narrower isPending until this fixture was written, and a seated member carrying a deferred nomination could be proposed inactive out of the very file that recorded the objection against them. `unsettled` is what isUnsettled returns for `nomination`; the Python side reads the same cases through _unsettled_candidates, which is this predicate applied to a list.",
+  "unsettled_nomination_cases": [
+    {
+      "name": "a nomination with no outcome yet is unsettled: the board has not answered",
+      "nomination": {
+        "candidate": "frank",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": ""
+      },
+      "unsettled": true
+    },
+    {
+      "name": "a waiting nomination is unsettled: the rule is met and only a seat is missing",
+      "nomination": {
+        "candidate": "grace",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": "waiting"
+      },
+      "unsettled": true
+    },
+    {
+      "name": "an accepted nomination is settled for good",
+      "nomination": {
+        "candidate": "dave",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": "accepted"
+      },
+      "unsettled": false
+    },
+    {
+      "name": "a deferred nomination whose objection still stands is unsettled",
+      "nomination": {
+        "candidate": "frank",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [
+          {
+            "member": "bob",
+            "reason": "Two co-hostings are still missing.",
+            "date": "2026-02-03"
+          }
+        ],
+        "outcome": "deferred"
+      },
+      "unsettled": true
+    },
+    {
+      "name": "a deferred nomination with no objection left on it is settled: there is nothing to withdraw",
+      "nomination": {
+        "candidate": "frank",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": "deferred"
+      },
+      "unsettled": false
+    },
+    {
+      "name": "an objection standing on a nomination with no outcome keeps it unsettled",
+      "nomination": {
+        "candidate": "heidi",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [
+          {
+            "member": "carol",
+            "reason": "I want to write to the candidate first.",
+            "date": "2026-02-03"
+          }
+        ],
+        "outcome": ""
+      },
+      "unsettled": true
+    },
+    {
+      "name": "a waiting nomination carrying an objection is unsettled twice over",
+      "nomination": {
+        "candidate": "grace",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [
+          {
+            "member": "bob",
+            "reason": "Not while the seat question is open.",
+            "date": "2026-02-03"
+          }
+        ],
+        "outcome": "waiting"
+      },
+      "unsettled": true
+    }
+  ],
+  "working_day_cases": {
+    "_comment": "Working-day arithmetic, pinned across app/src/state/working-days.ts and tools/convener_ops/governance.py. Weekends are Saturday and Sunday. PUBLIC HOLIDAYS ARE DELIBERATELY NOT MODELLED: the board's members do not share one national calendar, so a holiday list right for France would be wrong for the others, and an unmodelled holiday only ever makes a window longer, which is the prudent direction. The 1 May 2026 cases below pin that as a decision rather than an oversight. The count is of the days AFTER the start day, and `elapsed` is the exact inverse of `add`.",
+    "add": [
+      {
+        "name": "three working days from a Monday land on the Thursday",
+        "from": "2026-08-17",
+        "days": 3,
+        "expected": "2026-08-20"
+      },
+      {
+        "name": "three working days from a Thursday cross the weekend and land on the Tuesday",
+        "from": "2026-08-20",
+        "days": 3,
+        "expected": "2026-08-25"
+      },
+      {
+        "name": "three working days from a Friday land on the Wednesday",
+        "from": "2026-08-21",
+        "days": 3,
+        "expected": "2026-08-26"
+      },
+      {
+        "name": "three working days from a Saturday land on the same Wednesday as from the Friday",
+        "from": "2026-08-22",
+        "days": 3,
+        "expected": "2026-08-26"
+      },
+      {
+        "name": "three working days from a Sunday land on that Wednesday too",
+        "from": "2026-08-23",
+        "days": 3,
+        "expected": "2026-08-26"
+      },
+      {
+        "name": "one working day from a Friday is the Monday",
+        "from": "2026-08-21",
+        "days": 1,
+        "expected": "2026-08-24"
+      },
+      {
+        "name": "zero working days is the identity",
+        "from": "2026-08-19",
+        "days": 0,
+        "expected": "2026-08-19"
+      },
+      {
+        "name": "zero working days from a Saturday is that Saturday, not the Monday",
+        "from": "2026-08-22",
+        "days": 0,
+        "expected": "2026-08-22"
+      },
+      {
+        "name": "1 May 2026 is counted as an ordinary Friday - holidays are not modelled",
+        "from": "2026-04-30",
+        "days": 3,
+        "expected": "2026-05-05"
+      },
+      {
+        "name": "a start day that is not a date at all yields no day",
+        "from": "soon",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "an empty start day yields no day",
+        "from": "",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a date in another notation is not an ISO day",
+        "from": "17/08/2026",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "an ISO day with a time attached is not an ISO day",
+        "from": "2026-08-17T00:00:00Z",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a day the calendar does not have is not a day",
+        "from": "2026-02-30",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a thirteenth month is not a month",
+        "from": "2026-13-01",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "year zero is not a year",
+        "from": "0000-01-01",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a start day of zero working days is still refused when malformed",
+        "from": "yesterday",
+        "days": 0,
+        "expected": ""
+      }
+    ],
+    "elapsed": [
+      {
+        "name": "Monday to Thursday is three working days",
+        "from": "2026-08-17",
+        "to": "2026-08-20",
+        "expected": 3
+      },
+      {
+        "name": "Thursday to the following Tuesday is three working days, the weekend uncounted",
+        "from": "2026-08-20",
+        "to": "2026-08-25",
+        "expected": 3
+      },
+      {
+        "name": "Friday to Monday is one working day",
+        "from": "2026-08-21",
+        "to": "2026-08-24",
+        "expected": 1
+      },
+      {
+        "name": "Saturday to Monday is one working day",
+        "from": "2026-08-22",
+        "to": "2026-08-24",
+        "expected": 1
+      },
+      {
+        "name": "a span inside the weekend is zero working days",
+        "from": "2026-08-22",
+        "to": "2026-08-23",
+        "expected": 0
+      },
+      {
+        "name": "the same day is zero working days",
+        "from": "2026-08-19",
+        "to": "2026-08-19",
+        "expected": 0
+      },
+      {
+        "name": "a window cannot run backwards",
+        "from": "2026-08-20",
+        "to": "2026-08-17",
+        "expected": 0
+      },
+      {
+        "name": "a full week is five working days",
+        "from": "2026-08-17",
+        "to": "2026-08-24",
+        "expected": 5
+      },
+      {
+        "name": "the 1 May 2026 span counts three working days, holidays included as ordinary days",
+        "from": "2026-04-30",
+        "to": "2026-05-05",
+        "expected": 3
+      },
+      {
+        "name": "a malformed start means no time has passed",
+        "from": "soon",
+        "to": "2026-08-20",
+        "expected": 0
+      },
+      {
+        "name": "a malformed end means no time has passed",
+        "from": "2026-08-17",
+        "to": "tomorrow",
+        "expected": 0
+      },
+      {
+        "name": "two empty days are no time at all",
+        "from": "",
+        "to": "",
+        "expected": 0
+      },
+      {
+        "name": "a day the calendar does not have counts nothing",
+        "from": "2026-02-30",
+        "to": "2026-08-20",
+        "expected": 0
+      }
+    ],
+    "_malformed_comment": "Malformed input, pinned deliberately. app/src/data/validate.ts narrows every field's type and checks no date's shape, so a hand-edited 'soon' reaches these functions from the file. add_working_days answers '' and working_days_elapsed answers 0 -- an unparsable date reads as 'no deadline' and 'no time has passed', which leaves a window standing open rather than closing it on a value nothing could make sense of. JavaScript's Date accepts 2026-02-30 and year zero where date.fromisoformat raises, so those two are here by name."
+  },
+  "_board_headcount_comment": "board_min and board_max count *active* members, on both sides. app/src/state/board.ts::resolveNominations counts them before seating and tools/convener_ops/validate.py::validate_config checks the same number, so the app cannot write a config its own validator rejects. G-07's floor and ceiling are about who can vote, and an inactive entry is out of the denominator.",
+  "board_headcount_cases": [
+    {
+      "name": "a board of three active members sits on its floor",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 9,
+      "active": 3,
+      "within": true
+    },
+    {
+      "name": "an inactive entry does not occupy a seat",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 3,
+      "active": 3,
+      "within": true
+    },
+    {
+      "name": "four inactive entries still leave a board of five on its ceiling",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "e",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "f",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "g",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "h",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "i",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 5,
+      "active": 5,
+      "within": true
+    },
+    {
+      "name": "a tenth active member is over the ceiling",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "e",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "f",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "g",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "h",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "i",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "j",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 9,
+      "active": 10,
+      "within": false
+    },
+    {
+      "name": "two active members are under the floor whatever else is on file",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 9,
+      "active": 2,
+      "within": false
+    },
+    {
+      "name": "an unavailable member still holds their seat",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2099-01-01"
+        }
+      ],
+      "board_min": 3,
+      "board_max": 3,
+      "active": 3,
+      "within": true
+    }
+  ],
+  "_identifier_comment": "What a decision commit may point at. `_TOKEN` in tools/convener_ops/commit_format.py and `TOKEN` in app/src/state/decisions.ts are the same rule, read from both sides here. A record, never a person by name: a commit subject is permanent and unrewritable, so a name typed into a nomination box would be there for good.",
+  "identifier_cases": [
+    {
+      "name": "a speaker reference is an identifier",
+      "value": "spk-001",
+      "identifier": true
+    },
+    {
+      "name": "a github login is an identifier",
+      "value": "Anonymous",
+      "identifier": true
+    },
+    {
+      "name": "the board as a whole is an identifier",
+      "value": "board",
+      "identifier": true
+    },
+    {
+      "name": "a login with a hyphen is an identifier",
+      "value": "ada-lovelace",
+      "identifier": true
+    },
+    {
+      "name": "a login with a dot and an underscore is an identifier",
+      "value": "a.b_c",
+      "identifier": true
+    },
+    {
+      "name": "a digit may open an identifier",
+      "value": "0xdead",
+      "identifier": true
+    },
+    {
+      "name": "a person's name is not an identifier - it is prose about a person",
+      "value": "Jane Doe",
+      "identifier": false
+    },
+    {
+      "name": "a name with an affiliation is not an identifier",
+      "value": "Jane Doe (CNRS)",
+      "identifier": false
+    },
+    {
+      "name": "nothing is not an identifier",
+      "value": "",
+      "identifier": false
+    },
+    {
+      "name": "a leading space is not an identifier",
+      "value": " ada",
+      "identifier": false
+    },
+    {
+      "name": "a trailing space is not an identifier",
+      "value": "ada ",
+      "identifier": false
+    },
+    {
+      "name": "an identifier may not open with punctuation",
+      "value": "-ada",
+      "identifier": false
+    },
+    {
+      "name": "an email address is not an identifier",
+      "value": "jane@example.org",
+      "identifier": false
+    },
+    {
+      "name": "a second line is not an identifier",
+      "value": "ada\nby bob",
+      "identifier": false
+    },
+    {
+      "name": "the word by is not allowed to hide inside one",
+      "value": "ada by bob",
+      "identifier": false
+    }
+  ],
+  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned.",
+  "commit_message_cases": [
+    {
+      "name": "a ballot names the lead, the voter and the value cast",
+      "kind": "ballot-cast",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "recused",
+      "message": "data: record a ballot on spk-007 by ada (recused)"
+    },
+    {
+      "name": "a yes is written out, never left to be inferred from the tally",
+      "kind": "ballot-cast",
+      "entity": "spk-007",
+      "actor": "grace",
+      "detail": "yes",
+      "message": "data: record a ballot on spk-007 by grace (yes)"
+    },
+    {
+      "name": "an abstention is a ballot and reads as one",
+      "kind": "ballot-cast",
+      "entity": "spk-007",
+      "actor": "hopper",
+      "detail": "abstain",
+      "message": "data: record a ballot on spk-007 by hopper (abstain)"
+    },
+    {
+      "name": "a withdrawn ballot takes no qualifier - there is nothing left to qualify",
+      "kind": "ballot-withdraw",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: withdraw a ballot on spk-007 by ada"
+    },
+    {
+      "name": "parking a lead",
+      "kind": "lead-park",
+      "entity": "spk-003",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: park spk-003 by ada"
+    },
+    {
+      "name": "declining a lead names the record and the member, and passes no judgement",
+      "kind": "lead-decline",
+      "entity": "spk-003",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: decline spk-003 by hopper"
+    },
+    {
+      "name": "bringing a parked lead back",
+      "kind": "reactivate",
+      "entity": "spk-003",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: reopen the review of spk-003 by grace"
+    },
+    {
+      "name": "a concealed conflict reopens the vote, over the name of whoever recorded it",
+      "kind": "vote-reopen",
+      "entity": "spk-012",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: reopen the vote on spk-012 by grace"
+    },
+    {
+      "name": "sending the invitation",
+      "kind": "send-invitation",
+      "entity": "spk-004",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: send the invitation for spk-004 by ada"
+    },
+    {
+      "name": "the speaker accepted",
+      "kind": "invited-accept",
+      "entity": "spk-004",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: record an accepted invitation for spk-004 by ada"
+    },
+    {
+      "name": "the speaker declined - the invitation is what declined, not the person",
+      "kind": "invited-decline",
+      "entity": "spk-004",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: record a declined invitation for spk-004 by ada"
+    },
+    {
+      "name": "locking a date",
+      "kind": "lock-date",
+      "entity": "spk-004",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: lock the date of spk-004 by hopper"
+    },
+    {
+      "name": "consent granted is an answer somebody heard, so it carries their name",
+      "kind": "consent-set",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "granted",
+      "message": "data: record the recording consent of spk-009 by ada (granted)"
+    },
+    {
+      "name": "consent refused is recorded exactly like consent granted",
+      "kind": "consent-set",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "refused",
+      "message": "data: record the recording consent of spk-009 by ada (refused)"
+    },
+    {
+      "name": "approving publication starts the objection window and is signed",
+      "kind": "publication-approve",
+      "entity": "spk-009",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: approve publication of spk-009 by grace"
+    },
+    {
+      "name": "an objection to publishing",
+      "kind": "publication-object",
+      "entity": "spk-009",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: record an objection to publishing spk-009 by hopper"
+    },
+    {
+      "name": "objections lifted",
+      "kind": "publication-resolve",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "lift",
+      "message": "data: resolve the objections on spk-009 by ada (lift)"
+    },
+    {
+      "name": "objections closed by withholding",
+      "kind": "publication-resolve",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "withhold",
+      "message": "data: resolve the objections on spk-009 by ada (withhold)"
+    },
+    {
+      "name": "the one commit that puts a recording online",
+      "kind": "finalize-archive",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: publish the recording of spk-009 by ada"
+    },
+    {
+      "name": "a nomination is opened over its sponsor's name",
+      "kind": "nomination-open",
+      "entity": "curie",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: open a nomination for curie by ada"
+    },
+    {
+      "name": "an objection to a nomination",
+      "kind": "nomination-object",
+      "entity": "curie",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: record an objection to the nomination of curie by hopper"
+    },
+    {
+      "name": "an objection is withdrawn by the member who raised it, and reads as their act",
+      "kind": "nomination-withdraw-objection",
+      "entity": "curie",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: withdraw an objection to the nomination of curie by hopper"
+    },
+    {
+      "name": "settling a nomination names the candidate it settles, one row each",
+      "kind": "nomination-resolve",
+      "entity": "curie",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: settle the nomination of curie by grace"
+    },
+    {
+      "name": "an administrative status change is recorded like any other decision",
+      "kind": "override",
+      "entity": "spk-005",
+      "actor": "ada",
+      "detail": "decline-board",
+      "message": "data: override the status of spk-005 by ada (decline-board)"
+    },
+    {
+      "name": "deleting a record names the record, never the person it was about",
+      "kind": "speaker-delete",
+      "entity": "spk-005",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: delete the record of spk-005 by ada"
+    }
+  ],
+  "commit_message_rejects": [
+    {
+      "name": "a decision with no author is not a decision",
+      "message": "data: record a ballot on spk-007"
+    },
+    {
+      "name": "an author slot left empty",
+      "message": "data: reopen the vote on spk-007 by"
+    },
+    {
+      "name": "a qualifier the act does not admit",
+      "message": "data: record a ballot on spk-007 by ada (maybe)"
+    },
+    {
+      "name": "a qualifier on an act that admits none",
+      "message": "data: withdraw a ballot on spk-007 by ada (yes)"
+    },
+    {
+      "name": "a record identifier that is not one",
+      "message": "data: record a ballot on spk 007 by ada"
+    },
+    {
+      "name": "two authors - a decision has exactly one",
+      "message": "data: park spk-003 by ada and grace"
+    },
+    {
+      "name": "a decision that runs to a second line",
+      "message": "data: decline spk-003 by ada\n\nthe topic is out of scope this season"
+    },
+    {
+      "name": "a judgement smuggled into a qualifier",
+      "message": "data: settle the nomination of curie by ada (expelled)"
+    },
+    {
+      "name": "a judgement smuggled into a record name",
+      "message": "data: delete the record of negligent by ada"
+    },
+    {
+      "name": "an attribution trailer, on a decision or anywhere else",
+      "message": "app: tidy the ballot list\n\nCo-authored-by: Someone <someone@example.org>"
+    }
+  ],
+  "commit_message_ordinary": [
+    {
+      "name": "a code commit is not a decision",
+      "message": "app: gate archiving on the publication approval and consent"
+    },
+    {
+      "name": "a docs commit is not a decision",
+      "message": "docs: record that convener-sweep prints the inactivity proposals"
+    },
+    {
+      "name": "the form intake writes data, but decides nothing",
+      "message": "data: new lead from public form"
+    },
+    {
+      "name": "the nightly sweep writes data, but decides nothing",
+      "message": "data: sweep elapsed events and expired vote windows"
+    },
+    {
+      "name": "a member's own diary entry is not a decision about anybody",
+      "message": "data: mark ada unavailable until 2026-02-01"
+    },
+    {
+      "name": "a runbook tick is bookkeeping",
+      "message": "data: spk-001 runbook approved/invitation-sent=true"
+    },
+    {
+      "name": "an ordinary commit may use a word the register would not",
+      "message": "ops: drop the stale public-data cache"
+    },
+    {
+      "name": "and another one",
+      "message": "app: remove the unused helper"
+    },
+    {
+      "name": "a merge commit is left entirely alone",
+      "message": "Merge pull request #12 from tec/phase-2"
+    },
+    {
+      "name": "an empty message is not the grammar's problem",
+      "message": ""
+    }
+  ],
+  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
+  "lateness_cases": [
+    {
+      "name": "a lead past its board-decision deadline is overdue by whole calendar days",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "overdue",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01",
+      "days": 3,
+      "overdue_text": "Board decision is 3 days overdue",
+      "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "one day late reads in the singular",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-16",
+      "state": "overdue",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01",
+      "days": 1,
+      "overdue_text": "Board decision is 1 day overdue",
+      "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "the due day itself is still within the target, not yet late",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-15",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01"
+    },
+    {
+      "name": "fourteen calendar days, so a window spanning two weekends still falls due on the same Friday",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-04-17",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-05-01",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-05-01",
+      "since": "2026-04-17"
+    },
+    {
+      "name": "a lead with no recorded opening day has no deadline rather than a guessed one",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "an invited record counts thirty days from the day the decision was recorded",
+      "speaker": {
+        "status": "invited",
+        "selection": {
+          "opened_on": "2026-05-01",
+          "decided_on": "2026-06-01"
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-07-05",
+      "state": "overdue",
+      "step": "Invitation follow-up",
+      "due": "2026-07-01",
+      "since": "2026-06-01",
+      "days": 4,
+      "overdue_text": "Invitation follow-up is 4 days overdue",
+      "waiting_since": "waiting since 2026-06-01"
+    },
+    {
+      "name": "a delivered talk missing both artefacts reports the earlier of the two deadlines",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-02-01",
+      "state": "overdue",
+      "step": "Forum summary",
+      "due": "2026-01-17",
+      "since": "2026-01-10",
+      "days": 15,
+      "overdue_text": "Forum summary is 15 days overdue",
+      "waiting_since": "waiting since 2026-01-10"
+    },
+    {
+      "name": "once the summary is in, its deadline stops existing and the recording is what is waiting",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "",
+        "runbook_progress": {
+          "delivered/forum-summary": true
+        }
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-02-01",
+      "state": "overdue",
+      "step": "Recording",
+      "due": "2026-01-24",
+      "since": "2026-01-10",
+      "days": 8,
+      "overdue_text": "Recording is 8 days overdue",
+      "waiting_since": "waiting since 2026-01-10"
+    },
+    {
+      "name": "a delivered talk with both artefacts in has no deadline left at all",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "2026-01-10",
+        "youtube_url": "https://example.org/watch",
+        "runbook_progress": {
+          "delivered/forum-summary": true
+        }
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-02-01",
+      "state": "none"
+    },
+    {
+      "name": "a confirmed record is waiting on no policy deadline",
+      "speaker": {
+        "status": "confirmed",
+        "selection": {
+          "opened_on": "2026-01-01",
+          "decided_on": "2026-01-05"
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "a lead whose opened_on is not a date has no deadline rather than a crash",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "soon",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "a lead whose opened_on is a day the calendar does not have has no deadline",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-02-30",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "a delivered record whose date is not a date has no wrap-up deadline",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "sometime",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "an unreadable today cannot make anything late",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "soon",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider, useData } from '../src/data/DataContext';
 import { DEMO_SPEAKERS } from '../src/data/demo';
+import { configYaml, speakersYaml } from './data-doubles';
 
 function Providers({ children }: { children: ReactNode }) {
   return (
@@ -13,10 +14,7 @@ function Providers({ children }: { children: ReactNode }) {
   );
 }
 
-function speakersYaml(entries: unknown[]) {
-  // Minimal hand-rolled YAML sequence, good enough for js-yaml to parse back.
-  return entries.map(e => `- ${JSON.stringify(e)}`).join('\n');
-}
+
 
 describe('DataProvider (demo mode)', () => {
   beforeEach(() => {
@@ -48,9 +46,9 @@ describe('DataProvider (demo mode)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 5 }), 'edit config');
+      await result.current.mutateConfig(current => ({ ...current, vw_counter: 5 }), 'edit config');
     });
-    expect(result.current.config?.vote_threshold).toBe(5);
+    expect(result.current.config?.vw_counter).toBe(5);
   });
 
   it('useData throws when used outside a provider', () => {
@@ -107,7 +105,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('reload fetches speakers and config, decoding base64 content', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nvw_counter: 1\nvote_threshold: 3\noverlap_window_days: 7\nseminar_duration_minutes: 90\nboard_members: []\n';
+    const cfgYaml = configYaml({ vote_window_days: 21 });
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string) => {
@@ -123,12 +121,16 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.speakers).toHaveLength(1);
-    expect(result.current.config?.vote_threshold).toBe(3);
+    expect(result.current.config?.vote_window_days).toBe(21);
     expect(result.current.error).toBeNull();
   });
 
-  it('falls back to the default config when config.yml has no parseable object', async () => {
-    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+  it('refuses to load rather than invent a config when config.yml is empty', async () => {
+    // There used to be a constant default here, and an empty config.yml
+    // loaded silently into it: the Board screen then showed a vote
+    // threshold computed from a board nobody had elected. A repository
+    // whose config cannot be read is an operator problem, and it says so.
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead' }]);
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string) => {
@@ -143,8 +145,34 @@ describe('DataProvider (real GitHub backend)', () => {
     );
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.config?.season).toBe(2026);
-    expect(result.current.config?.vw_counter).toBe(1);
+    expect(result.current.config).toBeNull();
+    expect(result.current.error).toContain('data/config.yml');
+    expect(result.current.error).not.toMatch(/GitHub is not responding/);
+  });
+
+  it('names the file and the setting when config.yml carries one this app dropped', async () => {
+    // The `vote_threshold` case: a setting the governance rule (G-01)
+    // replaced, still sitting in the file, reading to whoever opens it as
+    // though it still governs the vote.
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead' }]);
+    const cfgYaml = configYaml() + 'vote_threshold: 3\n';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/user')) {
+          return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(cfgYaml), sha: 'cfgsha' }) });
+      }),
+    );
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toContain('vote_threshold');
+    expect(result.current.error).toContain('data/config.yml');
+    expect(result.current.config).toBeNull();
   });
 
   it('sets a plain-language error message when the fetch fails, not the raw status/body', async () => {
@@ -167,7 +195,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const spkYaml = speakersYaml([
       { id: 'a', status: 'scheduled', date: '2000-01-01', time: '' },
     ]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     const putSpy = vi.fn();
     vi.stubGlobal(
       'fetch',
@@ -198,7 +226,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const spkYaml = speakersYaml([
       { id: 'a', status: 'scheduled', date: '2000-01-01', time: '12:30' },
     ]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     const putSpy = vi.fn();
     vi.stubGlobal(
       'fetch',
@@ -225,7 +253,7 @@ describe('DataProvider (real GitHub backend)', () => {
   it('does not sweep a scheduled talk with a set time that has not started yet', async () => {
     const farFuture = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
     const spkYaml = speakersYaml([{ id: 'a', status: 'scheduled', date: farFuture, time: '12:30' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     const putSpy = vi.fn();
     vi.stubGlobal(
       'fetch',
@@ -251,7 +279,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('mutateConfig PUTs the serialized config and updates the sha', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, opts?: RequestInit) => {
@@ -271,16 +299,16 @@ describe('DataProvider (real GitHub backend)', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.mutateConfig(current => ({ ...current, vote_threshold: 7 }), 'msg');
+      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 7 }), 'msg');
     });
     expect(ok).toBe(true);
     expect(result.current.cfgSha).toBe('newcfgsha');
-    expect(result.current.config?.vote_threshold).toBe(7);
+    expect(result.current.config?.vw_counter).toBe(7);
   });
 
   it('mutateSpeakers PUTs the serialized YAML computed from current, and updates the sha', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, opts?: RequestInit) => {
@@ -312,7 +340,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('mutateSpeakers surfaces a ConflictError through `saveError` instead of an unhandled rejection', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, opts?: RequestInit) => {
@@ -352,7 +380,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('reload() re-fetches from GitHub without writing anything', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     const putSpy = vi.fn();
     vi.stubGlobal(
       'fetch',
@@ -382,7 +410,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('reload() surfaces a fetch failure through `error`', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     let fail = false;
     vi.stubGlobal(
       'fetch',
@@ -411,7 +439,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('stays loading while a stored credential is still being validated, and never reports an empty result before the data arrives', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
 
     // The /user validation call (triggered by AuthContext re-checking the
     // stored legacy token) is held open until the test explicitly resolves
@@ -459,7 +487,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('mutateConfig surfaces a ConflictError through `saveError` instead of an unhandled rejection', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, opts?: RequestInit) => {
@@ -481,7 +509,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.mutateConfig(current => ({ ...current, vote_threshold: 9 }), 'msg');
+      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), 'msg');
     });
 
     expect(ok).toBe(false);
@@ -491,7 +519,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
   it('clearSaveError dismisses the save-error banner without touching anything else', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
-    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const cfgYaml = configYaml();
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, opts?: RequestInit) => {
@@ -510,7 +538,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 9 }), 'msg');
+      await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), 'msg');
     });
     expect(result.current.saveError).not.toBeNull();
     act(() => result.current.clearSaveError());

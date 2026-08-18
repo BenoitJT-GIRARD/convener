@@ -10,7 +10,16 @@ from __future__ import annotations
 from typing import Any
 
 PUBLIC_STATUSES = frozenset({"scheduled", "delivered", "archived"})
-RECORDING_STATUSES = frozenset({"delivered", "archived"})
+
+#: The statuses at which a recording may be linked. `archived` and nothing
+#: else, because `archived` is what the publication gate itself writes:
+#: `finalize-archive` is the single writer of `outcome: published` and it
+#: sets this status in the same expression. A `delivered` record with a URL
+#: typed into the wrap-up checklist is a recording that exists, not a
+#: recording anyone cleared -- the checklist field records where the file
+#: is, the gate decides whether it is linked. Keeping `delivered` here made
+#: the checklist a second door into the feed.
+RECORDING_STATUSES = frozenset({"archived"})
 
 PUBLIC_FIELDS = frozenset(
     {
@@ -29,6 +38,70 @@ PUBLIC_FIELDS = frozenset(
 )
 
 
+def recording_withheld(entry: dict[str, Any]) -> bool:
+    """Whether this speaker's recording must not appear in the public feed.
+
+    The takedown half of the second gate (G-10, G-15). The app decides
+    whether a recording may be published in the first place
+    (`app/src/state/governance.ts::canArchive`); this decides whether one
+    already in the feed has to come out of it, which is the half an
+    unattended job can reach. The two are different questions, so there is
+    one implementation of each and nothing to pin in
+    `tools/tests/fixtures/governance-cases.json`.
+
+    A recording appears only when two things are recorded, and each is asked
+    for in the affirmative:
+
+    - the speaker's consent is `granted` (G-15). Not "did they refuse" but
+      "did they agree": `pending`, `''` and any value nobody recognises are
+      silence, and silence is never a permission. This is the only path on
+      which anything leaves the repository, so it is the last place an
+      absent answer may be read as a yes;
+    - the publication gate opened: `publication.outcome == "published"`,
+      written by the single transition `finalize-archive`, which refuses
+      unless the board approved and its objection window has run
+      (`app/src/state/governance.ts::canArchive`). `withheld`, `''` and an
+      untouched record are all "the gate was never run".
+
+    Either half turning back to silence is also a takedown, and so is one
+    more thing: a standing objection, i.e. an entry in `objections` with no
+    `resolved_on`. A missing key reads as standing, never as settled, so a
+    hand-edited file errs towards leaving the talk offline.
+
+    Only the recording is conditional. The programme fields -- name,
+    affiliation, country, title, abstract, date -- are published for every
+    speaker at a public status: agreeing to give a public webinar is
+    agreeing to appear in its programme. The recording is the separate
+    artefact the consent model exists for, and it is the only field this
+    function governs.
+
+    Requiring the gate's own verdict can only ever keep a link out of the
+    feed, never put one in, and that is the direction this function is
+    allowed to be wrong in: a recording whose clearance the file does not
+    record stays offline until somebody records it. Whether any particular
+    file has such recordings in it is not part of the argument -- a rule that
+    had to be checked against today's data before it could be called safe
+    would have to be re-checked after every commit.
+    """
+    publication = entry.get("publication")
+    if not isinstance(publication, dict):
+        # An unreadable publication block is not a permission. `validate.py`
+        # reports it; here it simply keeps the recording out.
+        return True
+    if publication.get("consent") != "granted":
+        # Not "did they refuse" but "did they agree": `pending`, `''` and a
+        # hand-written value nobody recognises are all silence.
+        return True
+    if publication.get("outcome") != "published":
+        # Not "is it withheld" but "did the gate open": `withheld` and an
+        # untouched record both land here.
+        return True
+    objections = publication.get("objections")
+    if isinstance(objections, list):
+        return any(isinstance(o, dict) and not o.get("resolved_on") for o in objections)
+    return False
+
+
 def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for entry in speakers:
@@ -44,7 +117,9 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "status": status,
             "abstract": entry.get("abstract", ""),
             "youtube_url": (
-                entry.get("youtube_url", "") if status in RECORDING_STATUSES else ""
+                entry.get("youtube_url", "")
+                if status in RECORDING_STATUSES and not recording_withheld(entry)
+                else ""
             ),
             "registration_link": (
                 entry.get("zoom_link", "") if status == "scheduled" else ""

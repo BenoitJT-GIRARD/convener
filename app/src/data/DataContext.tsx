@@ -51,15 +51,6 @@ interface Ctx extends State {
 
 const C = createContext<Ctx | null>(null);
 
-const DEFAULT_CONFIG: Config = {
-  season: 2026,
-  vw_counter: 1,
-  vote_threshold: 3,
-  overlap_window_days: 7,
-  seminar_duration_minutes: 90,
-  board_members: [],
-};
-
 const DEMO_STATE: State = {
   loading: false,
   error: null,
@@ -97,7 +88,7 @@ async function fetchState(token: string): Promise<State> {
     getFile('data/config.yml', token),
   ]);
   const speakers = parseSpeakers(spk.text);
-  const config = parseConfig(cfg.text) ?? DEFAULT_CONFIG;
+  const config = parseConfig(cfg.text);
   return {
     loading: false,
     error: null,
@@ -216,7 +207,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const result = await mutate({
         store: githubStore(token),
         path: 'data/config.yml',
-        parse: text => parseConfig(text) ?? DEFAULT_CONFIG,
+        parse: parseConfig,
         serialize: v => withConfigHeader(serializeConfig(v)),
         transform,
         message,

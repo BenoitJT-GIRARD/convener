@@ -4,8 +4,9 @@ import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { ActionButtons } from '../components/ActionButtons';
 import { AdminOverride } from '../components/AdminOverride';
+import { PublicationGate } from '../components/PublicationGate';
 import { Checklist } from '../components/Checklist';
-import { canFinalize, setField, phaseOf, type FieldKey } from '../state/phases';
+import { setField, phaseOf, type FieldKey } from '../state/phases';
 import { effectiveStatus } from '../state/derived';
 import { LoadError } from '../components/LoadError';
 import type { Speaker } from '../data/types';
@@ -41,14 +42,6 @@ export function SpeakerPage() {
     await mutateSpeakers(
       current => current.map(sp => (sp.id === id ? setField(sp, k, v) : sp)),
       `data: ${id} set ${k}`,
-    );
-  }
-
-  async function finalize() {
-    if (!login || !id) return;
-    await mutateSpeakers(
-      current => current.map(sp => (sp.id === id ? { ...sp, status: 'archived' as const } : sp)),
-      `data: ${id} finalize-and-archive by ${login}`,
     );
   }
 
@@ -96,18 +89,13 @@ export function SpeakerPage() {
         </div>
       )}
 
-      {s.status === 'delivered' && (
-        <div className="mt-8">
-          <button
-            disabled={!canFinalize(s)}
-            onClick={finalize}
-            className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-5 py-3 hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {canFinalize(s)
-              ? 'Finalize and archive ✓'
-              : 'Finalize and archive (fill required first)'}
-          </button>
-        </div>
+      {/* Archiving publishes a named researcher's recording, so it is no
+          longer a bare button here: it lives behind the second gate (G-10,
+          G-15), which asks for the speaker's permission and the board's
+          separately. Still shown once archived, because a speaker may
+          withdraw their permission afterwards and that has to be actionable. */}
+      {(s.status === 'delivered' || s.status === 'archived') && (
+        <PublicationGate speaker={s} role={role} />
       )}
 
       <SpeakerDetails speaker={s} />
@@ -143,7 +131,8 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
     { label: 'YouTube views (30d)', value: s.metrics.youtube_views_30d },
     { label: 'Forum replies', value: s.metrics.forum_replies },
   ].filter(f => f.value !== null);
-  const hasVotes = s.selection.votes_for.length > 0 || !!s.selection.decided_on;
+  const hasVotes =
+    s.selection.ballots.length > 0 || !!s.selection.opened_on || !!s.selection.decided_on;
 
   return (
     <section className="mt-12 border-t border-border pt-8">
@@ -187,10 +176,22 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
       {hasVotes && (
         <DetailBlock title="Selection vote">
           <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 text-sm">
-            <DetailLine
-              label="Votes for"
-              value={s.selection.votes_for.join(', ') || '(none)'}
-            />
+            {s.selection.opened_on && (
+              <DetailLine label="Opened on" value={s.selection.opened_on} mono />
+            )}
+            {s.selection.ballots.length === 0 && (
+              <DetailLine label="Ballots" value="(none cast yet)" />
+            )}
+            {/* One line per ballot rather than a list of names: a recusal is
+                only meaningful next to the reason given for it, and the
+                comments are what makes the decision readable years later. */}
+            {s.selection.ballots.map(b => (
+              <DetailLine
+                key={b.voter}
+                label={b.voter}
+                value={[b.value, b.coi_reason, b.comment].filter(Boolean).join(' — ')}
+              />
+            ))}
             {s.selection.decided_on && (
               <DetailLine label="Decided on" value={s.selection.decided_on} mono />
             )}

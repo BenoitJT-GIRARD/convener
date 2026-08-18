@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { friendlyError } from '../src/github/errors';
 import { GitHubError } from '../src/github/client';
 import { ConflictError } from '../src/github/mutate';
+import { BallotRejected } from '../src/state/ballots';
 
 describe('friendlyError', () => {
   beforeEach(() => {
@@ -29,6 +30,13 @@ describe('friendlyError', () => {
     expect(friendlyError(e, 'load')).toBe(
       'Your access token does not have permission to load this.',
     );
+  });
+
+  it('relays a rejected ballot as the sentence it already is', () => {
+    // A governance rule refusing a write is not a transport failure: the
+    // volunteer must read what to add, not "GitHub is not responding".
+    const e = new BallotRejected('A recusal needs a written reason.');
+    expect(friendlyError(e, 'save')).toBe('A recusal needs a written reason.');
   });
 
   it('maps 404 to a plain not-found message', () => {

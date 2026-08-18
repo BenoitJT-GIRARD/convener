@@ -1,8 +1,19 @@
 from __future__ import annotations
 
-from conftest import config, speaker
+import json
+from pathlib import Path
+from typing import Any
 
-from convener_ops.validate import validate_config, validate_speakers
+import pytest
+from conftest import board_member, config, speaker
+
+from convener_ops.validate import board_target_report, validate_config, validate_speakers
+
+CASES = json.loads(
+    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+        encoding="utf-8"
+    )
+)
 
 
 def test_a_minimal_lead_is_valid() -> None:
@@ -63,9 +74,79 @@ def test_config_missing_keys_are_reported() -> None:
 
 
 def test_config_board_member_must_look_like_a_login() -> None:
-    errors = validate_config(config(board_members=["not a login!"]))
-    assert any("invalid board_member" in e for e in errors)
+    # Schema v3: board_members (flat login list) was replaced by board
+    # (a list of BoardMember mappings) in Task 1 / Task 4. The rule this
+    # test pins - a malformed login is rejected - is unchanged; only the
+    # shape of the data it is expressed against has moved.
+    errors = validate_config(config(board=[board_member(login="not a login!")]))
+    assert any("invalid board member" in e for e in errors)
 
 
 def test_valid_config_produces_no_error() -> None:
     assert validate_config(config()) == []
+
+
+@pytest.mark.parametrize(
+    "case", CASES["board_headcount_cases"], ids=lambda c: c["name"]
+)
+def test_the_headcount_bounds_count_active_members(case: dict[str, Any]) -> None:
+    """The same table `app/tests/board.test.ts` reads.
+
+    `board.resolveNominations` counts active members before it seats anyone,
+    so counting entries here would let the app write a config this function
+    then rejects in CI - a file rejected by the validator of the very tool
+    that wrote it.
+
+    The two bounds are read apart because they are different kinds of thing:
+    the ceiling is a rule and fails the file, the floor is a target and is
+    reported. The fixture's `within` is the arithmetic both languages agree
+    on; which side of it the case falls on decides which channel speaks.
+    """
+    cfg = config(
+        board=case["board"],
+        board_min=case["board_min"],
+        board_max=case["board_max"],
+    )
+    errors = validate_config(cfg)
+    over = [e for e in errors if "over board_max" in e]
+    assert bool(over) is (case["active"] > case["board_max"]), errors
+    if over:
+        assert f"board has {case['active']} active members" in over[0]
+
+    report = board_target_report(cfg)
+    assert (report is not None) is (case["active"] < case["board_min"]), report
+    if report is not None:
+        assert f"board has {case['active']} active members" in report
+        # And the shortfall is not smuggled back in as an error.
+        assert not [e for e in errors if "active members" in e]
+
+    assert (not over and report is None) is case["within"], (errors, report)
+
+
+def test_a_board_under_its_target_is_reported_and_not_rejected() -> None:
+    """A target that could fail a run would be a rule wearing a softer word.
+
+    A board of two is under any declared target and under the floor a vote
+    needs, and it is still a file the tools accept: the act that fixes it is
+    a nomination, and a validator that refused the file would refuse the
+    commit that carried the fix.
+    """
+    cfg = config(
+        board=[board_member(login="a"), board_member(login="b")],
+        board_min=5,
+        board_max=9,
+    )
+    assert validate_config(cfg) == []
+    report = board_target_report(cfg)
+    assert report is not None
+    assert "below its target of 5" in report
+    assert report.isascii()
+
+
+def test_the_target_report_says_nothing_about_a_file_it_cannot_read() -> None:
+    # A malformed board or a missing target is validate_config's to report;
+    # stating a headcount from a file nobody could parse would invent one.
+    assert board_target_report({"board": "nonsense", "board_min": 5}) is None
+    assert board_target_report(config(board=[board_member()])) is not None
+    assert board_target_report({"board": [], "board_min": "five"}) is None
+    assert board_target_report("nonsense") is None
