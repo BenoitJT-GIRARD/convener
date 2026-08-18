@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 import yaml
 from conftest import config, speaker
 
-from convener_ops.cli import _load, sweep, validate
+from convener_ops.cli import _load, handle_proposal, sweep, validate
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -105,4 +106,85 @@ def test_sweep_reports_load_errors_and_returns_1(
     (tmp_path / "data").mkdir()
 
     assert sweep() == 1
+    assert "file missing" in capsys.readouterr().out
+
+
+def test_handle_proposal_with_no_payload_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.delenv("PROPOSAL_PAYLOAD", raising=False)
+
+    assert handle_proposal() == 1
+    assert "no payload" in capsys.readouterr().err
+
+
+def test_handle_proposal_writes_a_new_lead(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_data(tmp_path, [speaker(id="spk-001")], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    payload = json.dumps(
+        {"fields": [{"label": "Name", "value": "Grace Hopper"}]}
+    )
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+    out = capsys.readouterr().out
+    assert "created spk-002 from form proposal" in out
+
+    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    assert "spk-002" in text
+    assert "Grace Hopper" in text
+
+
+def test_handle_proposal_with_an_invalid_signature_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", '{"fields": []}')
+    monkeypatch.setenv("PROPOSAL_SIGNATURE", "deadbeef")
+    monkeypatch.setenv("TALLY_WEBHOOK_SECRET", "shh")
+
+    assert handle_proposal() == 1
+    assert "invalid signature" in capsys.readouterr().err
+
+
+def test_handle_proposal_skips_a_duplicate_lead(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_data(
+        tmp_path,
+        [speaker(id="spk-001", email="grace@example.org", status="lead")],
+        config(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    payload = json.dumps(
+        {
+            "fields": [
+                {"label": "Name", "value": "Grace Hopper"},
+                {"label": "Email", "value": "grace@example.org"},
+            ]
+        }
+    )
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+    assert "skipping: duplicate or empty name" in capsys.readouterr().out
+
+
+def test_handle_proposal_reports_load_errors_and_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    (tmp_path / "data").mkdir()
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", '{"fields": []}')
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 1
     assert "file missing" in capsys.readouterr().out
