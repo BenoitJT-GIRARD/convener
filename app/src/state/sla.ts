@@ -51,8 +51,9 @@
  *
  * **A deadline that cannot be computed is absent, not guessed** (P2-8). Every
  * clock here starts from a day the record actually holds. Where that day is
- * empty -- and 7 of the 31 speakers carry no `selection.opened_on` at all --
- * `dueDate` returns `null`, and `byUrgency` sorts those items last. There is
+ * empty -- a record migrated from a spreadsheet, or one whose window has not
+ * been opened yet -- `dueDate` returns `null`, and `byUrgency` sorts those
+ * items last. There is
  * no fallback anchor, because inventing one ("assume the lead arrived when the
  * file was created") would manufacture a number a volunteer would then be
  * looking at as if it were recorded.

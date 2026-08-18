@@ -283,8 +283,10 @@ describe('openNomination', () => {
   });
 
   it('does not depend on the declared headcount matching board_min', () => {
-    // The live board is mis-declared (five entries for four people) and
-    // board_min is about to move. Neither may gate a nomination.
+    // `board_min` is a target, and nothing may gate a nomination on it: the
+    // board furthest below its target is the one that most needs to admit
+    // members, so refusing there would forbid the act that closes the gap.
+    // Declared at 9 on a board of three, this must still open.
     const cfg = config({ board_min: 9 });
     expect(nominationBlocker(SPEAKERS, cfg, 'dan', 'alice', '2026-03-01')).toBe('');
   });

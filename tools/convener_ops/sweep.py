@@ -238,10 +238,10 @@ def _silent_since(
     ballots cast before they left, and could be proposed inactive on the very
     day they came back.
 
-    `None` when neither date is usable, which is the live config's case today:
-    every `joined_on` in `data/config.yml` is empty pending the identity merge.
-    A record that cannot say when a silence began does not support a proposal
-    -- inferring a start date would be inventing the evidence for it.
+    `None` when neither date is usable. A record that cannot say when a
+    silence began does not support a proposal -- inferring a start date would
+    be inventing the evidence for it -- and an empty `joined_on` on a member
+    who has never voted is exactly that record, whichever file it sits in.
     """
     days = [
         parsed

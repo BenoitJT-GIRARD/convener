@@ -583,8 +583,11 @@ def test_the_live_config_proposes_nobody_while_joined_on_is_blank() -> None:
 
 
 def test_board_min_is_not_what_holds_the_rule_back() -> None:
-    # board_min is 5 on a board of four real people. Keying the floor on it
-    # would freeze the rule on the live config and unfreeze it in September.
+    # `board_min` is a target and this rule is keyed on `MINIMUM_ELIGIBLE`
+    # instead, so a board declared larger than it is does not switch the rule
+    # off: a target the board has not reached is not a reason to keep counting
+    # a member who has stopped voting, and a target below what a vote needs
+    # would be a licence to strip the board of the members it needs.
     cfg = config(
         inactivity_months=6,
         board_min=5,
