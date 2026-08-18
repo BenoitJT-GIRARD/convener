@@ -31,7 +31,11 @@ from convener_ops.register import (
 )
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
-from convener_ops.validate import validate_config, validate_speakers
+from convener_ops.validate import (
+    board_target_report,
+    validate_config,
+    validate_speakers,
+)
 from convener_ops.yaml_safe import safe_load as yaml_safe_load
 
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
@@ -147,6 +151,14 @@ def validate() -> int:
     if cfg is not None:
         errors += validate_config(cfg)
 
+    # Before the verdict, and regardless of it: `board_min` is a target, so a
+    # board short of it is news the meeting needs, not a fault to fix. It
+    # neither adds to `errors` nor changes the exit code -- a target that
+    # could fail a run would be a rule wearing a softer word.
+    shortfall = board_target_report(cfg)
+    if shortfall:
+        print(f"Note: {shortfall}")
+
     if errors:
         print("Data validation FAILED:")
         for error in errors:
@@ -202,10 +214,12 @@ def _report_inactivity(
     author to record, and no automated path may write a terminal outcome about
     a person.
 
-    On the live data this prints nothing today: every `joined_on` in
-    `data/config.yml` is empty pending the September merge, so no silence has a
-    countable start. That is the rule declining to speak without evidence, not
-    a failure.
+    Printing nothing is an ordinary outcome, not a failure. A member whose
+    silence has no countable start -- no ballot on file, and no `joined_on`
+    to date the silence from -- is one this rule has no evidence about, and
+    it names nobody on a guess. It speaks once the file gives it a day to
+    measure from, and stays quiet until then, however many members the file
+    happens to carry.
 
     Each line's subject is the ballot record, never the person.
     """

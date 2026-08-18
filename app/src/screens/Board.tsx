@@ -52,6 +52,19 @@ export function Board() {
   const iAmMember = isBoardMember(config, me, today);
   const due = dueOutcomes(config, today);
 
+  // `board_min` is a target and nothing enforces it -- no rule in
+  // `state/board.ts` reads it, and `convener-validate` reports it rather than
+  // failing on it. A target nothing states is a decoration, so this is where
+  // it is stated, and it is stated in both directions: a line that appears
+  // only on bad news never teaches anyone what the board is aiming at.
+  const seated = config.board.filter(m => m.status === 'active').length;
+  const seats = `${seated} active member${seated === 1 ? '' : 's'}`;
+  const compositionNote =
+    seated < config.board_min
+      ? `${seats}, below the board's target of ${config.board_min}. Nothing is blocked by that: ` +
+        'the board still votes and still admits members — the target is what recruiting aims at.'
+      : `${seats}. The board aims for ${config.board_min} and seats at most ${config.board_max}.`;
+
   const nominationReason = nominationBlocker(speakers, config, candidate, me, today);
   // The rule is shown as soon as it is knowable, and the control stays
   // disabled -- a volunteer should never have to submit to find out that
@@ -177,6 +190,7 @@ export function Board() {
             ))}
           </tbody>
         </table>
+        <p className="text-sm text-ink-muted mt-3">{compositionNote}</p>
       </section>
 
       {iAmMember && (

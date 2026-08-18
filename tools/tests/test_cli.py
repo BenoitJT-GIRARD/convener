@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from conftest import config, speaker
+from conftest import board_member, config, speaker
 
 from convener_ops.cli import _load, handle_proposal, sweep, validate
 
@@ -65,6 +65,29 @@ def test_validate_reports_errors_and_returns_1(
     out = capsys.readouterr().out
     assert "Data validation FAILED" in out
     assert "invalid status 'bogus-status'" in out
+
+
+def test_validate_reports_a_board_under_its_target_without_failing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The target is said out loud, and saying it changes no verdict.
+
+    A board short of `board_min` is the state in which every act that would
+    fix it has to stay available, so `convener-validate` reports and exits 0. The
+    line is ASCII, like everything this package prints to a terminal.
+    """
+    cfg = config(
+        board=[board_member(login="a"), board_member(login="b")],
+        board_min=5,
+    )
+    _write_data(tmp_path, [speaker()], cfg)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 0
+    out = capsys.readouterr().out
+    assert "Note: config.yml: board has 2 active members, below its target of 5" in out
+    assert "Data OK" in out
+    assert out.isascii()
 
 
 def test_sweep_reports_nothing_to_sweep_when_no_change(

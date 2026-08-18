@@ -10,6 +10,8 @@ import re
 from collections.abc import Collection
 from typing import Any
 
+from .governance import MINIMUM_ELIGIBLE
+
 STATUSES = frozenset(
     {
         "lead",
@@ -351,6 +353,41 @@ def validate_speakers(
     return errors
 
 
+def _active_seats(board: list[Any]) -> int:
+    """How many seats the board actually occupies: active entries, not rows."""
+    return sum(1 for m in board if isinstance(m, dict) and m.get("status") == "active")
+
+
+def board_target_report(cfg: Any) -> str | None:
+    """One plain line when the board sits below `board_min`, else `None`.
+
+    `board_min` is the size the board aims to be, never a rule: no code path
+    anywhere refuses an act because the board is short of it, and the note in
+    `validate_config` says why. What a target is owed is that somebody says it
+    is not met -- a number nothing reads and nothing reports would not be a
+    target, it would be a decoration -- so this is the sentence `convener-validate`
+    prints alongside its verdict without changing that verdict.
+
+    `None` when the board is at or above the target, and `None` when either
+    number is missing or unreadable: this states a fact about a well-formed
+    file, and a malformed one is `validate_config`'s to report.
+    """
+    if not isinstance(cfg, dict):
+        return None
+    board = cfg.get("board")
+    board_min = cfg.get("board_min")
+    if not isinstance(board, list) or not isinstance(board_min, int):
+        return None
+    seated = _active_seats(board)
+    if seated >= board_min:
+        return None
+    return (
+        f"config.yml: board has {seated} active members, below its target of "
+        f"{board_min} (board_min). Reported, not enforced - nothing is blocked "
+        f"by it; the floor a vote needs is {MINIMUM_ELIGIBLE}."
+    )
+
+
 def validate_config(cfg: Any) -> list[str]:
     if not isinstance(cfg, dict):
         return ["config.yml: top-level must be a mapping"]
@@ -412,10 +449,26 @@ def validate_config(cfg: Any) -> list[str]:
         errors.append("config.yml: board_min cannot exceed board_max")
 
     # Ordering alone (above) doesn't catch an actual board that has drifted
-    # outside its own declared bounds - check the real headcount too.
+    # away from its own declared bounds - check the real headcount too. But
+    # the two bounds are not one check, because they are not the same kind of
+    # thing.
     #
-    # *Active* members, not entries. G-07's floor and ceiling are about who
-    # can vote: an `inactive` entry is out of the denominator
+    # `board_max` is a rule, and it is enforced: `board.resolveNominations`
+    # counts the seats before it fills one and parks the candidate it cannot
+    # seat, so a file over the ceiling is a file the app could not have
+    # written. Saying so is exactly what a validator is for.
+    #
+    # `board_min` is a target, and nothing enforces it. A board under its
+    # target still decides - the only floor a vote has is
+    # `governance.MINIMUM_ELIGIBLE` - still admits members, and is the board
+    # that most needs to. Failing here would stop every unrelated act, a data
+    # commit or the nightly sweep included, until somebody edited the target
+    # down to meet the board: the target correcting the board instead of the
+    # board reaching the target. It is reported instead, by
+    # `board_target_report`, which is what a target is owed.
+    #
+    # *Active* members, not entries, on both counts. G-07's ceiling is about
+    # who can vote: an `inactive` entry is out of the denominator
     # (`governance.active_board`), stays in the file with its `login` and
     # `joined_on` intact so coming back costs one word, and must not occupy a
     # seat while it does. The browser reads it the same way -
@@ -423,18 +476,12 @@ def validate_config(cfg: Any) -> list[str]:
     # counting entries here meant the app could write a config this very
     # function then rejected in CI. Pinned by `board_headcount_cases` in
     # tools/tests/fixtures/governance-cases.json.
-    if (
-        isinstance(board, list)
-        and isinstance(board_min, int)
-        and isinstance(board_max, int)
-    ):
-        seated = sum(
-            1 for m in board if isinstance(m, dict) and m.get("status") == "active"
-        )
-        if not (board_min <= seated <= board_max):
+    if isinstance(board, list) and isinstance(board_max, int):
+        seated = _active_seats(board)
+        if seated > board_max:
             errors.append(
-                f"config.yml: board has {seated} active members, outside "
-                f"board_min..board_max ({board_min}..{board_max})"
+                f"config.yml: board has {seated} active members, "
+                f"over board_max ({board_max})"
             )
 
     nominations = cfg.get("nominations")

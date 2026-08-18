@@ -144,6 +144,30 @@ describe('Board screen', () => {
     expect(screen.getByText('inactive')).toBeInTheDocument();
   });
 
+  it('reports the board against its target, and reports it either way', async () => {
+    // `board_min` is enforced nowhere -- see `state/board.ts` -- so the
+    // screen is one of the two places it is said out loud. Said only when
+    // the board is short of it, the number would be invisible on every
+    // healthy board and unlearnable from the screen.
+    renderBoard(makeBackend(config({ board_min: 3, board_max: 9 }), []));
+    expect(
+      await screen.findByText('3 active members. The board aims for 3 and seats at most 9.'),
+    ).toBeInTheDocument();
+  });
+
+  it('says a board under its target is under it, and that nothing is blocked', async () => {
+    const cfg = config({
+      board: [member('alice'), member('bob'), member('carol', { status: 'inactive' })],
+      board_min: 5,
+    });
+    renderBoard(makeBackend(cfg, []));
+
+    // Active members, not entries: the inactive row holds no seat, which is
+    // the same count the validator reports on.
+    const note = await screen.findByText(/2 active members, below the board's target of 5/);
+    expect(note.textContent).toContain('Nothing is blocked by that');
+  });
+
   it('declares an absence for yourself against a freshly-read config', async () => {
     const backend = makeBackend(config(), []);
     renderBoard(backend);

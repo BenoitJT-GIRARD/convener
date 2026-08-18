@@ -353,9 +353,13 @@ def test_selection_opened_on_must_be_a_date() -> None:
     assert any("opened_on must be YYYY-MM-DD" in e for e in errors)
 
 
-def test_board_size_outside_bounds_is_rejected() -> None:
-    errors = validate_config(config(board=[board_member()]))
-    assert any("outside board_min..board_max" in e for e in errors)
+def test_a_board_over_its_ceiling_is_rejected() -> None:
+    # The ceiling is enforced at the moment of seating, so a file above it is
+    # one the app could not have written. The floor is a target and is
+    # reported instead - see test_validate.py.
+    board = [board_member(login=f"m{i}") for i in range(10)]
+    errors = validate_config(config(board=board, board_min=3, board_max=9))
+    assert any("over board_max" in e for e in errors)
 
 
 def test_ballot_from_non_member_fires_even_when_board_is_empty() -> None:
