@@ -164,6 +164,42 @@ function isPending(n: Nomination): boolean {
   return n.outcome === '' || n.outcome === 'waiting';
 }
 
+/**
+ * Whether the board still has this nomination in front of it.
+ *
+ * A narrower question than `isPending`, which asks whether the *automated*
+ * path may settle it; `deferred` is settled there, because only the annual
+ * meeting can move it. But a deferral is not a closed question, it is a
+ * question moved to another room, and while it is open no second nomination
+ * for the same candidate may be opened alongside it -- otherwise an objection
+ * a member wrote in the morning is routed around by re-opening the same
+ * nomination in the afternoon, and the deferral means nothing.
+ *
+ * A nomination is unsettled while it is pending, or while any objection
+ * stands on it. "Stands" is simply "is in the list": nomination objections
+ * are never marked resolved (see `data/types.ts`), and the only thing that
+ * stops one standing is its author withdrawing it, which removes it. So a
+ * hand-edited `deferred` carrying no objection at all is *not* unsettled --
+ * there would be nothing to withdraw, and a state with no way out of it is
+ * worse than the one this rule exists to prevent.
+ */
+function isUnsettled(n: Nomination): boolean {
+  return isPending(n) || n.objections.length > 0;
+}
+
+/** Why a candidate the board is already considering cannot be nominated
+ *  again, naming the members whose objections are the reason when that is
+ *  what is holding it -- the volunteer has to know whom to talk to. */
+function alreadyOpenBlocker(login: string, n: Nomination): string {
+  if (n.objections.length === 0) return `A nomination for ${login} is already open.`;
+  const who = n.objections.map(o => o.member).join(', ');
+  return (
+    `${login}'s nomination was deferred to the annual meeting: ${who} objected in ` +
+    `writing. It cannot be opened again until that objection is withdrawn by the ` +
+    `member who raised it.`
+  );
+}
+
 /** Whole days from `from` to `to`, both ISO `YYYY-MM-DD`. `NaN` when either
  *  is unusable -- callers treat that as "the window has not run", so a
  *  hand-edited nomination with no opening date is never auto-accepted. */
@@ -205,9 +241,8 @@ export function nominationBlocker(
   if (isBoardMember(config, login, on)) {
     return `${login} is already on the board.`;
   }
-  if (config.nominations.some(n => n.candidate === login && isPending(n))) {
-    return `A nomination for ${login} is already open.`;
-  }
+  const unsettled = config.nominations.find(n => n.candidate === login && isUnsettled(n));
+  if (unsettled) return alreadyOpenBlocker(login, unsettled);
 
   const hosted = coHostedCount(speakers, login);
   if (hosted < NOMINATION_MIN_CO_HOSTED) {
@@ -230,10 +265,13 @@ export function nominationBlocker(
  * in the same load cycle, and co-hosting history changes far more slowly
  * than the config being transformed.
  *
- * An earlier `deferred` nomination for the same candidate does not block a
- * new one -- the annual meeting can only arbitrate a nomination somebody
- * brings back -- and it is kept in the list rather than replaced, so the
- * objections that deferred it stay readable next to the new attempt.
+ * A `deferred` nomination for the same candidate *does* block a new one for
+ * as long as the objection that deferred it stands. Re-opening it is not an
+ * act this function can perform on anybody's behalf: the only way back is
+ * `withdrawObjection`, run by the member who objected. An older deferral
+ * whose objections have all been withdrawn is kept in the list rather than
+ * replaced, so the record of what was objected to stays readable next to the
+ * new attempt.
  */
 export function openNomination(
   speakers: Speaker[],
@@ -329,6 +367,94 @@ export function objectToNomination(
         : [...n.objections, objection],
       outcome: 'deferred',
     };
+  });
+  return { ...config, nominations };
+}
+
+/**
+ * Which nomination `member`'s own objection to `candidate` sits on, or `-1`.
+ *
+ * The most recent one carrying an objection of theirs, and never an accepted
+ * one: an accepted nomination holds no standing objection (`resolveNominations`
+ * cannot produce one, and `tools/convener_ops/validate.py` refuses the pair in a
+ * hand-edited file), so a hand-written objection on an accepted nomination
+ * must not become a door back out of a seat that was granted.
+ */
+function withdrawalTarget(config: Config, candidate: string, member: string): number {
+  return config.nominations.reduce(
+    (found, n, i) =>
+      n.candidate === candidate &&
+      n.outcome !== 'accepted' &&
+      n.objections.some(o => o.member === member)
+        ? i
+        : found,
+    -1,
+  );
+}
+
+/**
+ * Why `member` cannot withdraw an objection to `candidate`'s nomination, as a
+ * plain sentence -- or `''` when they can.
+ *
+ * One condition, and deliberately only one: they wrote the objection. Nothing
+ * here asks whether they are still an active board member. A member who has
+ * gone quiet and been moved to `inactive` would otherwise leave an objection
+ * nobody on earth could lift, which is a worse state than the one this whole
+ * rule exists to prevent -- and it would hand a member a way to make a
+ * deferral permanent by stepping back.
+ */
+export function withdrawalBlocker(config: Config, candidate: string, member: string): string {
+  if (withdrawalTarget(config, candidate, member) === -1) {
+    return (
+      `You have no objection on record against ${candidate}'s nomination. ` +
+      'An objection is withdrawn by the member who raised it, and by nobody else.'
+    );
+  }
+  return '';
+}
+
+/**
+ * Withdraw `member`'s own objection to `candidate`'s nomination.
+ *
+ * This is the only transformation in the codebase that turns a `deferred`
+ * nomination back into an open one, and it can only remove the caller's own
+ * objection. There is no act anywhere -- no transition, no scheduled job, no
+ * admin override -- that clears somebody else's, and no delay clears one
+ * either. The annual meeting arbitrates through this same door: a member
+ * whose objection the meeting does not uphold withdraws it. Nothing stored
+ * records that a meeting took place, so nothing here can key on one; a rule
+ * turning on a date nobody writes down would be a rule nobody could rely on.
+ *
+ * The objection is removed rather than flagged: `Objection` has no resolved
+ * field (see `data/types.ts`), and the commit that records this act is where
+ * the withdrawal survives -- the register adds, so the history keeps saying
+ * what the objection said.
+ *
+ * When the last objection goes, the seven days start again from `today`
+ * rather than resuming from the original opening. The rest of the board was
+ * told this nomination had been deferred; most of them will have stopped
+ * looking at it, and letting a spent window carry it the instant the
+ * objection lifts would seat a member on a silence nobody was asked for.
+ *
+ * Returns a new `Config`; never mutates the one it is given, and takes
+ * `today` as an argument, so it runs inside a `mutate` transformation that
+ * may be replayed against a freshly-read config.
+ */
+export function withdrawObjection(
+  config: Config,
+  candidate: string,
+  member: string,
+  today: string,
+): Config {
+  const blocker = withdrawalBlocker(config, candidate, member);
+  if (blocker !== '') throw new NominationRejected(blocker);
+
+  const target = withdrawalTarget(config, candidate, member);
+  const nominations = config.nominations.map((n, i): Nomination => {
+    if (i !== target) return n;
+    const objections = n.objections.filter(o => o.member !== member);
+    if (objections.length > 0) return { ...n, objections };
+    return { ...n, objections, outcome: '', opened_on: today };
   });
   return { ...config, nominations };
 }

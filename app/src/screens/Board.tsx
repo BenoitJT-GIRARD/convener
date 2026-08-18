@@ -12,6 +12,8 @@ import {
   objectionBlocker,
   openNomination,
   resolveNominations,
+  withdrawObjection,
+  withdrawalBlocker,
 } from '../state/board';
 import type { Config, Nomination } from '../data/types';
 import { parisToday } from '../state/derived';
@@ -84,6 +86,12 @@ export function Board() {
     );
     setCandidate('');
   };
+
+  const withdraw = (target: string) =>
+    write(
+      current => withdrawObjection(current, target, me, today),
+      formatDecision({ kind: 'nomination-withdraw-objection', entity: target, actor: me }),
+    );
 
   const object = (target: string) =>
     write(
@@ -184,7 +192,9 @@ export function Board() {
         </h2>
         <p className="text-sm text-ink-muted mb-4">
           A sponsored candidate joins after {NOMINATION_WINDOW_DAYS} days without an objection. An
-          objection does not refuse anyone: it sends the nomination to the annual meeting.
+          objection does not refuse anyone: it sends the nomination to the annual meeting. While it
+          stands, the nomination cannot be opened again — only the member who wrote it can withdraw
+          it, and the {NOMINATION_WINDOW_DAYS} days then start again.
         </p>
 
         {config.nominations.length === 0 ? (
@@ -238,6 +248,14 @@ export function Board() {
                     >
                       Object
                     </Button>
+                    {withdrawalBlocker(config, n.candidate, me) === '' && (
+                      // Offered only to the member whose own objection it is;
+                      // `withdrawObjection` refuses anyone else, so the control
+                      // and the rule cannot disagree.
+                      <Button variant="outline" onClick={() => withdraw(n.candidate)} disabled={busy}>
+                        Withdraw my objection
+                      </Button>
+                    )}
                   </div>
                 )}
               </li>

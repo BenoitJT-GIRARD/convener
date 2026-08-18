@@ -10,6 +10,8 @@ import {
   objectToNomination,
   openNomination,
   resolveNominations,
+  withdrawObjection,
+  withdrawalBlocker,
 } from '../src/state/board';
 import { friendlyError } from '../src/github/errors';
 import type { BoardMember, Config, Nomination, Speaker } from '../src/data/types';
@@ -186,7 +188,10 @@ describe('openNomination', () => {
     ).not.toBe('');
   });
 
-  it('lets a deferred nomination be opened again, keeping the earlier record', () => {
+  it('refuses to re-open a deferred nomination while the objection stands', () => {
+    // The rule this block exists for: an objection written in the morning
+    // must not be routed around by nominating the same person again in the
+    // afternoon, which would empty the deferral of its purpose.
     const deferred: Nomination = {
       candidate: 'dan',
       sponsor: 'alice',
@@ -194,16 +199,56 @@ describe('openNomination', () => {
       objections: [{ member: 'bob', reason: 'too soon', date: '2026-01-02' }],
       outcome: 'deferred',
     };
-    const next = openNomination(
+    const cfg = config({ nominations: [deferred] });
+    const blocker = nominationBlocker(SPEAKERS, cfg, 'dan', 'carol', '2026-03-01');
+    expect(blocker).toContain('bob');
+    expect(blocker).toContain('withdrawn');
+    expect(() => openNomination(SPEAKERS, cfg, 'dan', 'carol', '2026-03-01')).toThrow(
+      NominationRejected,
+    );
+    // Not the objector themselves either, and not on any later date: no
+    // delay clears an objection.
+    expect(nominationBlocker(SPEAKERS, cfg, 'dan', 'bob', '2030-01-01')).not.toBe('');
+  });
+
+  it('names every member whose objection is holding the nomination', () => {
+    const deferred: Nomination = {
+      candidate: 'dan',
+      sponsor: 'alice',
+      opened_on: '2026-01-01',
+      objections: [
+        { member: 'bob', reason: 'too soon', date: '2026-01-02' },
+        { member: 'carol', reason: 'conflict', date: '2026-01-03' },
+      ],
+      outcome: 'deferred',
+    };
+    const blocker = nominationBlocker(
       SPEAKERS,
       config({ nominations: [deferred] }),
       'dan',
-      'carol',
+      'alice',
       '2026-03-01',
     );
+    expect(blocker).toContain('bob');
+    expect(blocker).toContain('carol');
+  });
+
+  it('lets a hand-edited deferral with nothing standing on it be opened again', () => {
+    // A `deferred` carrying no objection cannot be produced by any
+    // transformation here. If one is typed in by hand there is nothing to
+    // withdraw, so locking it would be a state with no way out of it.
+    const stale: Nomination = {
+      candidate: 'dan',
+      sponsor: 'alice',
+      opened_on: '2026-01-01',
+      objections: [],
+      outcome: 'deferred',
+    };
+    const cfg = config({ nominations: [stale] });
+    expect(nominationBlocker(SPEAKERS, cfg, 'dan', 'carol', '2026-03-01')).toBe('');
+    const next = openNomination(SPEAKERS, cfg, 'dan', 'carol', '2026-03-01');
     expect(next.nominations).toHaveLength(2);
-    expect(next.nominations[0]).toEqual(deferred);
-    expect(next.nominations[1].outcome).toBe('');
+    expect(next.nominations[0]).toEqual(stale);
   });
 
   it('refuses a blank candidate', () => {
@@ -300,6 +345,91 @@ describe('objectToNomination', () => {
     objectToNomination(opened, 'dan', 'bob', 'x', '2026-03-02');
     expect(opened.nominations[0].objections).toEqual([]);
     expect(opened.nominations[0].outcome).toBe('');
+  });
+});
+
+describe('withdrawObjection', () => {
+  const opened = openNomination(SPEAKERS, config(), 'dan', 'alice', '2026-03-01');
+  const deferred = objectToNomination(opened, 'dan', 'bob', 'too soon', '2026-03-02');
+
+  it('re-opens the nomination and restarts the seven days from the withdrawal', () => {
+    const next = withdrawObjection(deferred, 'dan', 'bob', '2026-04-01');
+    expect(next.nominations).toHaveLength(1);
+    expect(next.nominations[0]).toEqual({
+      candidate: 'dan',
+      sponsor: 'alice',
+      opened_on: '2026-04-01',
+      objections: [],
+      outcome: '',
+    });
+    // The spent original window does not carry it: a board that was told the
+    // nomination was deferred gets a real window on it again.
+    expect(resolveNominations(next, '2026-04-05').nominations[0].outcome).toBe('');
+    expect(resolveNominations(next, '2026-04-08').nominations[0].outcome).toBe('accepted');
+  });
+
+  it('lets nobody withdraw an objection they did not write', () => {
+    expect(withdrawalBlocker(deferred, 'dan', 'carol')).toContain('no objection on record');
+    expect(() => withdrawObjection(deferred, 'dan', 'carol', '2026-04-01')).toThrow(
+      NominationRejected,
+    );
+    expect(() => withdrawObjection(deferred, 'dan', 'alice', '2026-04-01')).toThrow(
+      NominationRejected,
+    );
+  });
+
+  it('stays deferred while another objection still stands', () => {
+    const two = objectToNomination(deferred, 'dan', 'carol', 'conflict', '2026-03-03');
+    const next = withdrawObjection(two, 'dan', 'bob', '2026-04-01');
+    expect(next.nominations[0].objections).toEqual([
+      { member: 'carol', reason: 'conflict', date: '2026-03-03' },
+    ]);
+    expect(next.nominations[0].outcome).toBe('deferred');
+    expect(next.nominations[0].opened_on).toBe('2026-03-01');
+    expect(nominationBlocker(SPEAKERS, next, 'dan', 'alice', '2026-04-02')).toContain('carol');
+  });
+
+  it('withdraws an objection raised by a member who has since gone inactive', () => {
+    // An objection nobody could ever lift is a worse state than the one the
+    // rule guards against, so board membership is not a condition here.
+    const cfg = {
+      ...deferred,
+      board: deferred.board.map(m =>
+        m.login === 'bob' ? { ...m, status: 'inactive' as const } : m,
+      ),
+    };
+    expect(withdrawalBlocker(cfg, 'dan', 'bob')).toBe('');
+    expect(withdrawObjection(cfg, 'dan', 'bob', '2026-04-01').nominations[0].outcome).toBe('');
+  });
+
+  it('never re-opens a seat that was granted', () => {
+    const handEdited: Nomination = {
+      candidate: 'dan',
+      sponsor: 'alice',
+      opened_on: '2026-01-01',
+      objections: [{ member: 'bob', reason: 'typed in by hand', date: '2026-01-02' }],
+      outcome: 'accepted',
+    };
+    const cfg = config({ nominations: [handEdited] });
+    expect(withdrawalBlocker(cfg, 'dan', 'bob')).not.toBe('');
+    expect(() => withdrawObjection(cfg, 'dan', 'bob', '2026-04-01')).toThrow(NominationRejected);
+  });
+
+  it('never mutates the config it is given', () => {
+    withdrawObjection(deferred, 'dan', 'bob', '2026-04-01');
+    expect(deferred.nominations[0].objections).toHaveLength(1);
+    expect(deferred.nominations[0].outcome).toBe('deferred');
+  });
+
+  it('shows a refusal as an explanation, not as a raw error', () => {
+    let message = '';
+    try {
+      withdrawObjection(deferred, 'dan', 'carol', '2026-04-01');
+    } catch (e) {
+      message = friendlyError(e, 'save');
+    }
+    expect(message).toContain('no objection on record');
+    expect(message).not.toContain('GitHub is not responding');
   });
 });
 

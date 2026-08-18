@@ -176,6 +176,52 @@ def test_accepted_nomination_with_open_objections_is_rejected() -> None:
     assert any("accepted nomination has open objections" in e for e in errors)
 
 
+def test_a_deferred_nomination_and_a_fresh_one_cannot_stand_together() -> None:
+    # G-08's deferral rule. The app refuses the second nomination
+    # (app/src/state/board.ts::nominationBlocker), so this pair can only be
+    # typed in by hand - and left there it routes straight around the
+    # objection the deferral records.
+    errors = validate_config(
+        config(
+            nominations=[
+                nomination(
+                    candidate="hopper", outcome="deferred", objections=[objection()]
+                ),
+                nomination(candidate="hopper", outcome=""),
+            ]
+        )
+    )
+    assert any("already has an unsettled nomination" in e for e in errors)
+
+
+def test_a_nomination_reopened_after_the_objection_was_withdrawn_is_accepted() -> None:
+    # The withdrawal removes the objection and re-opens the very nomination
+    # that was deferred, so only one unsettled entry is ever left behind. An
+    # older deferral with nothing standing on it is history, not a live
+    # question, and must not flag the new attempt.
+    errors = validate_config(
+        config(
+            nominations=[
+                nomination(candidate="hopper", outcome="deferred", objections=[]),
+                nomination(candidate="hopper", outcome=""),
+            ]
+        )
+    )
+    assert not [e for e in errors if "unsettled nomination" in e]
+
+
+def test_two_settled_nominations_for_one_candidate_are_accepted() -> None:
+    errors = validate_config(
+        config(
+            nominations=[
+                nomination(candidate="grace", outcome="accepted"),
+                nomination(candidate="grace", outcome="accepted"),
+            ]
+        )
+    )
+    assert not [e for e in errors if "unsettled nomination" in e]
+
+
 def test_accepted_nomination_without_a_seat_is_rejected() -> None:
     # The app writes the acceptance and the board entry together, so this
     # pair can only disagree in a hand-edited file.

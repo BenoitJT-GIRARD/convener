@@ -218,6 +218,43 @@ describe('Board screen', () => {
     ]);
   });
 
+  it('offers the withdrawal only to the member whose objection it is', async () => {
+    // `alice` is the signed-in member here. The objection is `bob`'s, so
+    // there is no control at all for her to press -- the rule and the screen
+    // cannot disagree, because the screen asks the rule.
+    const deferred: Nomination = {
+      candidate: 'dan',
+      sponsor: 'carol',
+      opened_on: '2026-03-01',
+      objections: [{ member: 'bob', reason: 'too soon', date: '2026-03-02' }],
+      outcome: 'deferred',
+    };
+    const backend = makeBackend(config({ nominations: [deferred] }), []);
+    renderBoard(backend);
+
+    await screen.findByText('dan');
+    expect(screen.queryByRole('button', { name: 'Withdraw my objection' })).toBeNull();
+  });
+
+  it('re-opens the nomination when the objector withdraws, and restarts the window', async () => {
+    const deferred: Nomination = {
+      candidate: 'dan',
+      sponsor: 'carol',
+      opened_on: '2026-03-01',
+      objections: [{ member: 'alice', reason: 'too soon', date: '2026-03-02' }],
+      outcome: 'deferred',
+    };
+    const backend = makeBackend(config({ nominations: [deferred] }), []);
+    renderBoard(backend);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Withdraw my objection' }));
+
+    await waitFor(() => expect(backend.current().nominations[0].outcome).toBe(''));
+    expect(backend.current().nominations[0].objections).toEqual([]);
+    // The seven days run again from today, not from the original opening.
+    expect(backend.current().nominations[0].opened_on).not.toBe('2026-03-01');
+  });
+
   it('shows what is due and records it on demand', async () => {
     const due: Nomination = {
       candidate: 'dan',

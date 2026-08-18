@@ -60,6 +60,7 @@ export type PlainDecisionKind =
   | 'finalize-archive'
   | 'nomination-open'
   | 'nomination-object'
+  | 'nomination-withdraw-objection'
   | 'nomination-resolve'
   | 'speaker-delete';
 
@@ -100,6 +101,7 @@ export const ACTS: Record<DecisionKind, string> = {
   'finalize-archive': 'publish the recording of',
   'nomination-open': 'open a nomination for',
   'nomination-object': 'record an objection to the nomination of',
+  'nomination-withdraw-objection': 'withdraw an objection to the nomination of',
   'nomination-resolve': 'apply the nominations due on',
   override: 'override the status of',
   'speaker-delete': 'delete the record of',

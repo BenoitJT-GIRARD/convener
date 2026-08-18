@@ -514,6 +514,14 @@
       "message": "data: record an objection to the nomination of curie by hopper"
     },
     {
+      "name": "an objection is withdrawn by the member who raised it, and reads as their act",
+      "kind": "nomination-withdraw-objection",
+      "entity": "curie",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: withdraw an objection to the nomination of curie by hopper"
+    },
+    {
       "name": "seating the nominations whose window has run acts on the board itself",
       "kind": "nomination-resolve",
       "entity": "board",

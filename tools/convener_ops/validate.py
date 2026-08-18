@@ -488,6 +488,39 @@ def validate_config(cfg: Any) -> list[str]:
                         f"board seat"
                     )
 
+        # G-08's deferral rule, as a backstop for a hand-edited file. A
+        # nomination the board has not finished with -- still pending, or
+        # carrying an objection that defers it to the annual meeting -- is the
+        # only one open for that candidate: `board.ts::nominationBlocker`
+        # refuses a second one, and `board.ts::withdrawObjection` is the only
+        # way an objection stops standing. A pair can therefore only be typed
+        # in by hand, and left there it would route straight around the
+        # objection, which is the whole thing the deferral exists to prevent.
+        first_open: dict[str, int] = {}
+        for nindex, nomination in enumerate(nominations):
+            if not isinstance(nomination, dict):
+                continue
+            candidate = nomination.get("candidate")
+            if not isinstance(candidate, str) or not candidate:
+                continue
+            outcome = nomination.get("outcome")
+            if outcome == "accepted":
+                # Already reported above if it carries objections; a seat that
+                # was granted is not an open question.
+                continue
+            objections = nomination.get("objections")
+            standing = isinstance(objections, list) and bool(objections)
+            if not (outcome in ("", "waiting") or standing):
+                continue
+            seen_at = first_open.get(candidate)
+            if seen_at is None:
+                first_open[candidate] = nindex
+            else:
+                errors.append(
+                    f"config.yml: nominations[{nindex}]: {candidate!r} already "
+                    f"has an unsettled nomination at nominations[{seen_at}]"
+                )
+
     sla_days = cfg.get("sla_days")
     if "sla_days" in cfg and not isinstance(sla_days, dict):
         errors.append("config.yml: sla_days must be a mapping")
