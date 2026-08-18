@@ -9,15 +9,19 @@ configured and what is still waiting.
 ## Before anything else
 
 1. Create an email address owned by the organisation — never a personal one.
-2. Create the shared password vault (`secrets.kdbx`, committed to this
-   repository) and share the master password out of band with two or three
-   Board members.
+2. Create the shared password vault (`secrets.kdbx`) in the organisation's
+   existing shared Drive, or in a password manager the Board already uses —
+   never committed to this repository — and share the master password out
+   of band with two or three Board members.
 3. Create every account below with that address, and store its credentials
    in the vault.
 
 A service account tied to one person's mailbox defeats the whole point:
 anyone with organisation access must be able to pick this up. Do the vault
 first.
+
+This repository must stay private: `data/speakers.yml` holds personal data
+(names and institutional email addresses of external academics).
 
 ## Authentication relay
 
@@ -62,9 +66,8 @@ is published, not an optional integration.
 **To create:** Settings → Pages → Source = *GitHub Actions*.
 
 If the repository is private and the current GitHub plan does not offer
-private Pages, either make the repository public or fall back to another
-static host (for example Netlify or Cloudflare Pages) pointed at the
-`app/dist` build output.
+private Pages, fall back to another static host (for example Netlify or
+Cloudflare Pages) pointed at the `app/dist` build output.
 
 **To verify:** push to `main`; the *Deploy app* workflow ends green and the
 site answers.
