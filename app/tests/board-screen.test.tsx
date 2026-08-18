@@ -279,4 +279,43 @@ describe('Board screen', () => {
     expect(screen.queryByLabelText('Nominate')).toBeNull();
     expect(screen.queryByLabelText('Away until')).toBeNull();
   });
+
+  it('records who joined the board, one register row per nomination', async () => {
+    // G-12 makes board entry a registrable decision. A single row saying the
+    // nominations were applied records that the board changed without
+    // recording who joined it, and a commit subject is the only place that
+    // survives.
+    const nomination = (candidate: string): Nomination => ({
+      candidate,
+      sponsor: 'alice',
+      opened_on: '2020-01-01',
+      objections: [],
+      outcome: '',
+    });
+    const backend = makeBackend(
+      config({ nominations: [nomination('dan'), nomination('erin')] }),
+      [],
+    );
+    renderBoard(backend);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Record the outcome' }));
+
+    await waitFor(() =>
+      expect(backend.current().board.map(m => m.login)).toEqual([
+        'alice',
+        'bob',
+        'carol',
+        'dan',
+        'erin',
+      ]),
+    );
+
+    const subjects = backend.fetchMock.mock.calls
+      .filter(([, opts]) => (opts as RequestInit | undefined)?.method === 'PUT')
+      .map(([, opts]) => JSON.parse((opts as RequestInit).body as string).message as string);
+    expect(subjects).toEqual([
+      'data: settle the nomination of dan by alice',
+      'data: settle the nomination of erin by alice',
+    ]);
+  });
 });

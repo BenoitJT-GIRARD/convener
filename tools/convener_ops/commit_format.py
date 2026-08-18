@@ -66,7 +66,7 @@ ACTS: Final[dict[str, str]] = {
     "nomination-open": "open a nomination for",
     "nomination-object": "record an objection to the nomination of",
     "nomination-withdraw-objection": "withdraw an objection to the nomination of",
-    "nomination-resolve": "apply the nominations due on",
+    "nomination-resolve": "settle the nomination of",
     # Administrative acts, which the register records exactly like the rest.
     "override": "override the status of",
     "speaker-delete": "delete the record of",

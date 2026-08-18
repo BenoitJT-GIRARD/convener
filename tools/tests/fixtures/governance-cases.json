@@ -1418,12 +1418,12 @@
       "message": "data: withdraw an objection to the nomination of curie by hopper"
     },
     {
-      "name": "seating the nominations whose window has run acts on the board itself",
+      "name": "settling a nomination names the candidate it settles, one row each",
       "kind": "nomination-resolve",
-      "entity": "board",
+      "entity": "curie",
       "actor": "grace",
       "detail": "",
-      "message": "data: apply the nominations due on board by grace"
+      "message": "data: settle the nomination of curie by grace"
     },
     {
       "name": "an administrative status change is recorded like any other decision",
@@ -1473,7 +1473,7 @@
     },
     {
       "name": "a judgement smuggled into a qualifier",
-      "message": "data: apply the nominations due on board by ada (expelled)"
+      "message": "data: settle the nomination of curie by ada (expelled)"
     },
     {
       "name": "a judgement smuggled into a record name",

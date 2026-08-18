@@ -156,14 +156,10 @@ export const ACTS: Record<DecisionKind, string> = {
   'nomination-open': 'open a nomination for',
   'nomination-object': 'record an objection to the nomination of',
   'nomination-withdraw-objection': 'withdraw an objection to the nomination of',
-  'nomination-resolve': 'apply the nominations due on',
+  'nomination-resolve': 'settle the nomination of',
   override: 'override the status of',
   'speaker-delete': 'delete the record of',
 };
-
-/** The board taken as a whole, for the one act that is not about a single
- *  record. Never a person's name -- the register points at records. */
-export const BOARD_ENTITY = identifier('board');
 
 /** The exact line to commit. The `Decision` type admits nothing malformed, so
  *  this is total: every value it can be given produces a line

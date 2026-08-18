@@ -17,7 +17,7 @@ import {
 } from '../state/board';
 import type { Config, Nomination } from '../data/types';
 import { parisToday } from '../state/derived';
-import { BOARD_ENTITY, formatDecision, identifier } from '../state/decisions';
+import { formatDecision, identifier } from '../state/decisions';
 
 const OUTCOME_LABEL: Record<Nomination['outcome'], string> = {
   '': 'Open',
@@ -107,11 +107,23 @@ export function Board() {
       }),
     );
 
-  const applyDue = () =>
-    write(
-      current => resolveNominations(current, today),
-      formatDecision({ kind: 'nomination-resolve', entity: BOARD_ENTITY, actor: identifier(me) }),
-    );
+  // One commit per nomination, not one for the batch. G-12 makes board entry
+  // a registrable decision, and a single row saying "the nominations were
+  // applied" records that something happened to the board without recording
+  // who joined it. Each call re-reads `current`, so the seat counting still
+  // sees the board the previous one left.
+  const applyDue = async () => {
+    for (const n of due) {
+      await write(
+        current => resolveNominations(current, today, n.candidate),
+        formatDecision({
+          kind: 'nomination-resolve',
+          entity: identifier(n.candidate),
+          actor: identifier(me),
+        }),
+      );
+    }
+  };
 
   return (
     <div>
