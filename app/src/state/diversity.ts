@@ -273,3 +273,75 @@ export function distribution(speakers: Speaker[], window: number, on: string): D
     selected: countsOf(inWindow.filter(s => SELECTED_STATUSES.includes(s.status))),
   };
 }
+
+/** A share that is reportable. Its existence is the only licence a screen has
+ *  to print a proportion at all; there is no other way to obtain one. */
+export type CountedShare = Extract<Share, { kind: 'counted' }>;
+
+/** One bucket a screen may draw, with the share already proved reportable. */
+export interface ReportRow<K extends string> {
+  key: K;
+  count: number;
+  share: CountedShare;
+}
+
+/**
+ * What a screen is allowed to draw for one dimension.
+ *
+ * This exists because the guard belongs here rather than in JSX. A component
+ * handed a `Tally` has to decide for itself whether the basis holds, and the
+ * two ways it can get that wrong -- drawing a `too-few` share as a zero, and
+ * dividing `count` by `of` to get a percentage -- are both one line away. So
+ * the decision is taken here and the *result* is what crosses the boundary:
+ * below the basis there are **no rows at all**, so there is nothing for a
+ * screen to render as a zero or an empty bar. The misleading state is absent,
+ * not guarded (P2-8).
+ *
+ * `too-few` carries `declared` and `total` so the screen can say what is
+ * missing -- "none of the twenty-four told us" -- which is a sentence, not a
+ * number on a scale. `empty` is a population nobody is in: measuring it would
+ * be a category error, not a small sample.
+ */
+export type DimensionReport<K extends string> =
+  | { kind: 'empty' }
+  | { kind: 'too-few'; declared: number; total: number }
+  | { kind: 'reportable'; total: number; undisclosed: number; rows: ReportRow<K>[] };
+
+/**
+ * Turn one `Tally` into the shapes a screen may draw.
+ *
+ * The threshold is not restated here: every row's share comes from `share`,
+ * and one row failing means all of them do, since they share a denominator.
+ * `undisclosed` never becomes a row -- its count is not a share of `declared`,
+ * which excludes it, so "twenty of four" is unrepresentable rather than
+ * merely unlikely. It is returned as a plain count instead, because the
+ * number of people who did not answer is the most important thing on the
+ * screen and hiding it would flatter the measure.
+ */
+export function reportOn<K extends string>(tally: Tally<K>): DimensionReport<K> {
+  if (tally.total === 0) return { kind: 'empty' };
+  // Asked once, of `share` itself, rather than restated here: every bucket in
+  // a tally is divided by the same `declared`, so whether one share is
+  // reportable is whether all of them are. Asking per bucket instead would
+  // report a dimension whose only bucket is `undisclosed` -- country, today --
+  // as an empty table rather than as a basis too thin to read.
+  const basis = share(tally.declared, tally);
+  if (basis.kind !== 'counted') {
+    return { kind: 'too-few', declared: tally.declared, total: tally.total };
+  }
+  const rows: ReportRow<K>[] = [];
+  for (const key of Object.keys(tally.counts) as K[]) {
+    if (key === UNDISCLOSED) continue;
+    const count = tally.counts[key];
+    const s = share(count, tally);
+    // Narrowing, not a second guard: `basis` above already proved this
+    // denominator reportable, and every bucket shares it.
+    if (s.kind === 'counted') rows.push({ key, count, share: s });
+  }
+  return {
+    kind: 'reportable',
+    total: tally.total,
+    undisclosed: tally.counts[UNDISCLOSED as K] ?? 0,
+    rows,
+  };
+}
