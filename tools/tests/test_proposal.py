@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from conftest import speaker
 
-from convener_ops.proposal import to_lead, verify_signature
+from convener_ops.proposal import skip_reason, to_lead, verify_signature
 
 
 def _fields(*pairs: tuple[str, str]) -> dict[str, str]:
@@ -46,6 +46,17 @@ def test_a_submission_matching_a_lead_by_email_is_ignored_as_duplicate() -> None
 def test_a_submission_with_an_empty_name_is_ignored() -> None:
     fields = _fields(("Name", ""), ("Email", "grace@example.org"))
     assert to_lead(fields, []) is None
+
+
+def test_skip_reason_distinguishes_empty_name_from_duplicate() -> None:
+    existing = [speaker(id="spk-001", email="grace@example.org", status="lead")]
+    empty_name = _fields(("Name", ""), ("Email", "grace@example.org"))
+    duplicate = _fields(("Name", "Grace Hopper"), ("Email", "grace@example.org"))
+    fresh = _fields(("Name", "Grace Hopper"), ("Email", "new@example.org"))
+
+    assert skip_reason(empty_name, existing) == "empty name"
+    assert skip_reason(duplicate, existing) == "duplicate email"
+    assert skip_reason(fresh, existing) is None
 
 
 def test_an_unrecognised_gender_falls_back_to_undisclosed() -> None:

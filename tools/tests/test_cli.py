@@ -124,9 +124,7 @@ def test_handle_proposal_writes_a_new_lead(
 ) -> None:
     _write_data(tmp_path, [speaker(id="spk-001")], config())
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    payload = json.dumps(
-        {"fields": [{"label": "Name", "value": "Grace Hopper"}]}
-    )
+    payload = json.dumps({"fields": [{"label": "Name", "value": "Grace Hopper"}]})
     monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
     monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
     monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
@@ -174,7 +172,21 @@ def test_handle_proposal_skips_a_duplicate_lead(
     monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
 
     assert handle_proposal() == 0
-    assert "skipping: duplicate or empty name" in capsys.readouterr().out
+    assert "skipping: duplicate email" in capsys.readouterr().out
+
+
+def test_handle_proposal_skips_an_empty_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_data(tmp_path, [speaker(id="spk-001")], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    payload = json.dumps({"fields": [{"label": "Name", "value": ""}]})
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+    assert "skipping: empty name" in capsys.readouterr().out
 
 
 def test_handle_proposal_reports_load_errors_and_returns_1(

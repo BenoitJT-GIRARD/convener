@@ -36,24 +36,40 @@ def _get(fields: dict[str, str], *keys: str) -> str:
     return ""
 
 
-def to_lead(
-    fields: dict[str, str], existing: list[dict[str, Any]]
-) -> dict[str, Any] | None:
-    """Build a v2-schema lead from form fields, or None if it should be skipped.
+def skip_reason(fields: dict[str, str], existing: list[dict[str, Any]]) -> str | None:
+    """Why ``to_lead`` would return None for this submission, or None if it wouldn't.
 
-    Skipped when the name is empty, or when the email matches an existing
-    record that is still in ``lead`` status (a duplicate submission).
+    Distinguishes an empty name from a duplicate submission so the caller can
+    log which one happened.
     """
     name = _get(fields, "Name")
     if not name:
-        return None
+        return "empty name"
 
     email = _get(fields, "Email")
     if email and any(
         isinstance(s, dict) and s.get("email") == email and s.get("status") == "lead"
         for s in existing
     ):
+        return "duplicate email"
+
+    return None
+
+
+def to_lead(
+    fields: dict[str, str], existing: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """Build a v2-schema lead from form fields, or None if it should be skipped.
+
+    Skipped when the name is empty, or when the email matches an existing
+    record that is still in ``lead`` status (a duplicate submission). See
+    ``skip_reason`` to tell the two cases apart.
+    """
+    if skip_reason(fields, existing) is not None:
         return None
+
+    name = _get(fields, "Name")
+    email = _get(fields, "Email")
 
     nums: list[int] = []
     for s in existing:

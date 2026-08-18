@@ -14,7 +14,7 @@ import yaml
 
 from convener_ops.integrations import Integration, load_declaration, resolve_states
 from convener_ops.paths import repo_root
-from convener_ops.proposal import to_lead, verify_signature
+from convener_ops.proposal import skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
@@ -170,7 +170,7 @@ def handle_proposal() -> int:
 
     lead = to_lead(fields, speakers)
     if lead is None:
-        print("skipping: duplicate or empty name")
+        print(f"skipping: {skip_reason(fields, speakers)}")
         return 0
 
     speakers.append(lead)
