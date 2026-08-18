@@ -186,6 +186,12 @@ repository still needs to know they exist and where they live.
 A Board member who has cast no ballot for `inactivity_months` stops counting
 toward the vote threshold. Nothing about this happens on its own.
 
+The window is **twelve months** (decision G-09), set in `data/config.yml`.
+The series runs roughly monthly, so six months of silence is an ordinary
+heavy year, a sabbatical or a period of leave; twelve is long enough that a
+proposal cannot be triggered by accident, which matters because every line
+the rule prints names a real volunteer.
+
 `tools/convener_ops/sweep.py::sweep_inactive_members` computes the proposal — the
 config as it would read, and one line per member naming the date of their
 last ballot — and **no command applies it**.
@@ -231,8 +237,35 @@ Three things the rule will not do:
   already.
 - take the Board below three members able to vote (decision G-03). Members
   it holds back for that reason still appear in the output, so the meeting
-  reads the same list either way. The floor is three, never `board_min`,
-  which is knowingly wrong until the September merge above.
+  reads the same list either way. The floor is three, never `board_min`: a
+  rule that removes members must not be free to take the Board past the
+  point where it can decide anything, including the decision to let those
+  members go, and `board_min` is a target rather than a rule (see
+  *The Board's target size* below).
+
+## The Board's target size
+
+`board_min` is a **target**, not a rule. No code refuses anything because the
+Board is short of it: a nomination may be opened
+(`app/src/state/board.ts::nominationBlocker`), a candidate may be seated
+(`resolveNominations`), a vote may be decided, and the inactivity rule uses
+its own floor of three. The reason is that every act a Board below its target
+could be refused is an act that would bring it back up — refusing them would
+lock the shortfall in.
+
+`board_max` is the opposite: it is enforced at the moment of seating, a
+candidate who does not fit becomes `waiting`, and a file above the ceiling is
+one the app could not have written, so `convener-validate` rejects it.
+
+A target nobody states is a decoration, so it is reported in two places, and
+in both directions rather than only on bad news:
+
+- the Board screen, under the composition table — *4 active members, below
+  the board's target of 5* — or *5 active members. The board aims for 5 and
+  seats at most 9.*
+- `convener-validate`, as a `Note:` line printed alongside its verdict. It does
+  not add to the errors and does not change the exit code; a target that
+  could fail a run would be a rule wearing a softer word.
 
 ## The one-shot scripts
 
@@ -273,7 +306,7 @@ data: <act> <record> by <login> (<qualifier>)
 
 for example `data: record a ballot on spk-007 by ada (recused)`,
 `data: reopen the vote on spk-012 by grace`, or
-`data: apply the nominations due on board by ada`. The acts are a closed
+`data: settle the nomination of erin by ada`. The acts are a closed
 list (`tools/convener_ops/commit_format.py`, mirrored in
 `app/src/state/decisions.ts`), each naming a record rather than a person,
 and the qualifier is closed per act. So the register can be read back with
@@ -333,13 +366,16 @@ must not be rewritten. Check that this is still true before starting.
 the two entries, keeping that person's real GitHub login. The Board then
 goes from five members to four, and the threshold from four to three.
 
-`board_min` is `5` in `data/config.yml` and must become `3` in the same
-change, or validation fails with `board has 4 active members, outside
-board_min..board_max`. The count is of *active* members: an entry marked
-`inactive` stays in the file, keeps its `login` and `joined_on`, and does not
-occupy a seat. Three is the floor set by decision G-03: a vote is
-suspended rather than decided below three eligible members, so the Board
-must never be declared smaller than that.
+`board_min` is `5` in `data/config.yml` and should become `3` in the same
+change — not because anything breaks otherwise, but because it is the
+Board's stated target and the Board is choosing a new one. Nothing fails if
+you forget: `convener-validate` prints `board has 4 active members, below its
+target of 5 (board_min)` and still exits `0`. The count is of *active*
+members: an entry marked `inactive` stays in the file, keeps its `login` and
+`joined_on`, and does not occupy a seat. Three is also the floor set by
+decision G-03 — a vote is suspended rather than decided below three eligible
+members — so a target below three would be a target the Board could meet
+and still not be able to decide anything.
 
 Rewrite the ballots of whichever identifier disappears to the surviving
 one. If any lead ends up with two ballots from the merged person, keep one:
@@ -359,8 +395,8 @@ has voted recently.
 
 Ask each member at the meeting when they joined and record it as
 `YYYY-MM-DD`. An approximate month is better than an empty field, because
-the window the rule counts is six months long and a proposal is only ever
-a prompt for the annual meeting to consider — nothing is applied
+the window the rule counts is twelve months long and a proposal is only
+ever a prompt for the annual meeting to consider — nothing is applied
 automatically. Do not fill these in from guesswork beforehand: a date
 nobody confirmed would start a silence the member never had.
 
