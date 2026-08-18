@@ -30,7 +30,7 @@ export function Inbox() {
   if (error) return <LoadError message={error} />;
 
   const today = parisToday();
-  const rows = deriveInbox(speakers, login, role, today)
+  const rows = deriveInbox(speakers, config, login, role, today)
     .map(r => ({ r, late: rowLateness(r, config, today) }))
     .sort((a, b) => byUrgency(a.late, b.late));
   const votes = rows.filter(x => x.r.kind === 'vote');
