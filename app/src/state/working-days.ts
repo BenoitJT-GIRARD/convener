@@ -32,10 +32,35 @@
 
 const MS_PER_DAY = 86_400_000;
 
-/** Midnight UTC of an ISO day. UTC throughout, so the result never depends on
- *  the browser's own timezone. */
+/** An ISO calendar day the calendar actually has.
+ *
+ * The regex alone is not enough, and neither is `Date.parse`: JavaScript
+ * accepts `2026-02-30` and silently rolls it forward to 2 March, while
+ * `date.fromisoformat` in the Python twin raises. So the parsed day is
+ * formatted back and compared, and year zero -- which JavaScript has and the
+ * `datetime` module does not -- is refused outright. `working_day_cases`
+ * pins the pair on exactly these inputs.
+ */
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function parsedDay(day: string): number {
+  if (!ISO_DAY.test(day) || day < '0001-01-01') return Number.NaN;
+  const epoch = Date.parse(`${day}T00:00:00Z`);
+  if (Number.isNaN(epoch)) return Number.NaN;
+  // eslint-disable-next-line no-restricted-syntax -- a fixed epoch, not "now".
+  return new Date(epoch).toISOString().slice(0, 10) === day ? epoch : Number.NaN;
+}
+
+/** Midnight UTC of an ISO day, or `NaN` when the string is not one. UTC
+ *  throughout, so the result never depends on the browser's own timezone.
+ *
+ *  `NaN` rather than a throw: `data/validate.ts` narrows every field's *type*
+ *  and checks no date's *shape*, so `opened_on: 'soon'` reaches here from a
+ *  hand-edited file and used to crash the Pipeline with a bare
+ *  `RangeError: Invalid time value`. The Python twin returns `''`/`0` for the
+ *  same input, and the two are pinned by `working_day_cases`. */
 function epochOf(day: string): number {
-  return Date.parse(`${day}T00:00:00Z`);
+  return parsedDay(day);
 }
 
 /** The inverse of `epochOf`. UTC here is not the P2-9 defect: the epoch being
@@ -65,7 +90,13 @@ function isWeekend(epoch: number): boolean {
  * Saturday forward to the Monday would quietly grant a window nobody voted for.
  */
 export function addWorkingDays(from: string, n: number): string {
+  // `''` -- never a throw -- when `from` is not an ISO day or `n` is not a
+  // whole number, as a hand-edited file may well hold. The caller reads that
+  // as "no deadline can be computed" and leaves the window standing open, so
+  // nothing acts on a date it could not parse. `add_working_days` in
+  // `tools/convener_ops/governance.py` answers `''` to the same input.
   let epoch = epochOf(from);
+  if (Number.isNaN(epoch) || !Number.isInteger(n)) return '';
   for (let counted = 0; counted < n; ) {
     epoch += MS_PER_DAY;
     if (!isWeekend(epoch)) counted += 1;
@@ -82,9 +113,14 @@ export function addWorkingDays(from: string, n: number): string {
  * backwards.
  */
 export function workingDaysElapsed(from: string, to: string): number {
+  // Zero when either end is not an ISO day: an unparsable date reads as "no
+  // time has passed", so a window stays open rather than closing on a value
+  // nothing could make sense of. Same answer as `working_days_elapsed`.
   const end = epochOf(to);
+  const start = epochOf(from);
+  if (Number.isNaN(end) || Number.isNaN(start)) return 0;
   let elapsed = 0;
-  for (let epoch = epochOf(from); epoch < end; ) {
+  for (let epoch = start; epoch < end; ) {
     epoch += MS_PER_DAY;
     if (!isWeekend(epoch)) elapsed += 1;
   }

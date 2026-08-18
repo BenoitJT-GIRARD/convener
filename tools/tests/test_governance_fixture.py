@@ -87,7 +87,14 @@ def test_working_days_elapsed_matches_the_shared_fixture(case: dict[str, Any]) -
 def test_elapsed_inverts_add_on_every_shared_case(case: dict[str, Any]) -> None:
     """The two are one rule read from either end, so the fixture's `add` cases
     also pin `working_days_elapsed`: a window opened on `from` has run exactly
-    when this many working days have elapsed."""
+    when this many working days have elapsed.
+
+    A case that cannot be computed inverts to nothing rather than to its day
+    count: there is no day to count to.
+    """
+    if case["expected"] == "":
+        assert working_days_elapsed(case["from"], case["expected"]) == 0
+        return
     assert working_days_elapsed(case["from"], case["expected"]) == case["days"]
 
 

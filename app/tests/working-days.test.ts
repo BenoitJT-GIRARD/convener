@@ -20,7 +20,9 @@ describe('the shared working-day fixture', () => {
   });
 
   it.each(cases.working_day_cases.add)('inverts: $name', c => {
-    expect(workingDaysElapsed(c.from, c.expected)).toBe(c.days);
+    // A case that cannot be computed inverts to nothing: there is no day to
+    // count to.
+    expect(workingDaysElapsed(c.from, c.expected)).toBe(c.expected === '' ? 0 : c.days);
   });
 });
 

@@ -4,179 +4,520 @@
     {
       "name": "an active member with no declared absence is eligible",
       "board": [
-        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["ada"],
+      "logins": [
+        "ada"
+      ],
       "unavailable": [],
-      "eligible": ["ada"]
+      "eligible": [
+        "ada"
+      ]
     },
     {
       "name": "an inactive member leaves the board entirely, not merely the eligible set",
       "board": [
-        { "login": "Anonymous", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
-        { "login": "ada", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": "" }
+        {
+          "login": "Anonymous",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["Anonymous"],
+      "logins": [
+        "Anonymous"
+      ],
       "unavailable": [],
-      "eligible": ["Anonymous"]
+      "eligible": [
+        "Anonymous"
+      ]
     },
     {
       "name": "a member away until a future date is unavailable but stays on the board",
       "board": [
-        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-02-01" }
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-02-01"
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["ada"],
-      "unavailable": ["ada"],
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [
+        "ada"
+      ],
       "eligible": []
     },
     {
       "name": "a member whose absence has lapsed is available again the day after",
       "board": [
-        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-19" }
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-19"
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["ada"],
+      "logins": [
+        "ada"
+      ],
       "unavailable": [],
-      "eligible": ["ada"]
+      "eligible": [
+        "ada"
+      ]
     },
     {
       "name": "the boundary day itself is still an absence - unavailable_until is inclusive",
       "board": [
-        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-20" }
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-20"
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["ada"],
-      "unavailable": ["ada"],
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [
+        "ada"
+      ],
       "eligible": []
     },
     {
       "name": "an empty unavailable_until declares no absence at all",
       "board": [
-        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
-        { "login": "grace", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-20" }
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "grace",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-20"
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["ada", "grace"],
-      "unavailable": ["grace"],
-      "eligible": ["ada"]
+      "logins": [
+        "ada",
+        "grace"
+      ],
+      "unavailable": [
+        "grace"
+      ],
+      "eligible": [
+        "ada"
+      ]
     },
     {
       "name": "a malformed unavailable_until reads as an absence rather than as availability",
       "board": [
-        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "not-a-date" }
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "not-a-date"
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["ada"],
-      "unavailable": ["ada"],
+      "logins": [
+        "ada"
+      ],
+      "unavailable": [
+        "ada"
+      ],
       "eligible": []
     },
     {
       "name": "a whole board at once: active, inactive, future, lapsed, boundary, empty, malformed",
       "board": [
-        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
-        { "login": "Anonymous", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": "" },
-        { "login": "carol", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-02-01" },
-        { "login": "dan", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-19" },
-        { "login": "erin", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-20" },
-        { "login": "grace", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "not-a-date" }
+        {
+          "login": "ada",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "Anonymous",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "carol",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-02-01"
+        },
+        {
+          "login": "dan",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-19"
+        },
+        {
+          "login": "erin",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-01-20"
+        },
+        {
+          "login": "grace",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "not-a-date"
+        }
       ],
       "on": "2026-01-20",
-      "logins": ["ada", "carol", "dan", "erin", "grace"],
-      "unavailable": ["carol", "erin", "grace"],
-      "eligible": ["ada", "dan"]
+      "logins": [
+        "ada",
+        "carol",
+        "dan",
+        "erin",
+        "grace"
+      ],
+      "unavailable": [
+        "carol",
+        "erin",
+        "grace"
+      ],
+      "eligible": [
+        "ada",
+        "dan"
+      ]
     }
   ],
   "threshold_cases": [
-    { "name": "board of 3 needs 3 - the floor overrides the ratio", "eligible": 3, "expected": 3 },
-    { "name": "board of 4 needs 3", "eligible": 4, "expected": 3 },
-    { "name": "board of 5 needs 4", "eligible": 5, "expected": 4 },
-    { "name": "board of 6 needs 4 - the handbook's own example", "eligible": 6, "expected": 4 },
-    { "name": "board of 7 needs 5", "eligible": 7, "expected": 5 },
-    { "name": "board of 8 needs 6", "eligible": 8, "expected": 6 },
-    { "name": "board of 9 needs 6 - the handbook's other example", "eligible": 9, "expected": 6 }
+    {
+      "name": "board of 3 needs 3 - the floor overrides the ratio",
+      "eligible": 3,
+      "expected": 3
+    },
+    {
+      "name": "board of 4 needs 3",
+      "eligible": 4,
+      "expected": 3
+    },
+    {
+      "name": "board of 5 needs 4",
+      "eligible": 5,
+      "expected": 4
+    },
+    {
+      "name": "board of 6 needs 4 - the handbook's own example",
+      "eligible": 6,
+      "expected": 4
+    },
+    {
+      "name": "board of 7 needs 5",
+      "eligible": 7,
+      "expected": 5
+    },
+    {
+      "name": "board of 8 needs 6",
+      "eligible": 8,
+      "expected": 6
+    },
+    {
+      "name": "board of 9 needs 6 - the handbook's other example",
+      "eligible": 9,
+      "expected": 6
+    }
   ],
   "decision_cases": [
     {
       "name": "four yes on a board of six is decided",
-      "board": ["a", "b", "c", "d", "e", "f"],
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
       "unavailable": [],
       "ballots": [
-        { "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" },
-        { "voter": "c", "value": "yes" }, { "voter": "d", "value": "yes" }
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        },
+        {
+          "voter": "d",
+          "value": "yes"
+        }
       ],
-      "eligible": 6, "threshold": 4, "yes": 4, "decided": true, "suspended": false
+      "eligible": 6,
+      "threshold": 4,
+      "yes": 4,
+      "decided": true,
+      "suspended": false
     },
     {
       "name": "abstentions stay in the denominator, so three yes is not enough",
-      "board": ["a", "b", "c", "d", "e", "f"],
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
       "unavailable": [],
       "ballots": [
-        { "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" },
-        { "voter": "c", "value": "yes" }, { "voter": "d", "value": "abstain" },
-        { "voter": "e", "value": "abstain" }, { "voter": "f", "value": "abstain" }
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        },
+        {
+          "voter": "d",
+          "value": "abstain"
+        },
+        {
+          "voter": "e",
+          "value": "abstain"
+        },
+        {
+          "voter": "f",
+          "value": "abstain"
+        }
       ],
-      "eligible": 6, "threshold": 4, "yes": 3, "decided": false, "suspended": false
+      "eligible": 6,
+      "threshold": 4,
+      "yes": 3,
+      "decided": false,
+      "suspended": false
     },
     {
       "name": "recusals leave the denominator, lowering the bar",
-      "board": ["a", "b", "c", "d", "e", "f"],
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
       "unavailable": [],
       "ballots": [
-        { "voter": "a", "value": "recused" }, { "voter": "b", "value": "recused" },
-        { "voter": "c", "value": "yes" }, { "voter": "d", "value": "yes" },
-        { "voter": "e", "value": "yes" }
+        {
+          "voter": "a",
+          "value": "recused"
+        },
+        {
+          "voter": "b",
+          "value": "recused"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        },
+        {
+          "voter": "d",
+          "value": "yes"
+        },
+        {
+          "voter": "e",
+          "value": "yes"
+        }
       ],
-      "eligible": 4, "threshold": 3, "yes": 3, "decided": true, "suspended": false
+      "eligible": 4,
+      "threshold": 3,
+      "yes": 3,
+      "decided": true,
+      "suspended": false
     },
     {
       "name": "declared unavailability leaves the denominator too",
-      "board": ["a", "b", "c", "d", "e", "f"],
-      "unavailable": ["e", "f"],
-      "ballots": [
-        { "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" },
-        { "voter": "c", "value": "yes" }
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
       ],
-      "eligible": 4, "threshold": 3, "yes": 3, "decided": true, "suspended": false
+      "unavailable": [
+        "e",
+        "f"
+      ],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        }
+      ],
+      "eligible": 4,
+      "threshold": 3,
+      "yes": 3,
+      "decided": true,
+      "suspended": false
     },
     {
       "name": "too few eligible members suspends the vote instead of lowering the bar",
-      "board": ["a", "b", "c", "d"],
-      "unavailable": ["c", "d"],
-      "ballots": [{ "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" }],
-      "eligible": 2, "threshold": 3, "yes": 2, "decided": false, "suspended": true
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "unavailable": [
+        "c",
+        "d"
+      ],
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        }
+      ],
+      "eligible": 2,
+      "threshold": 3,
+      "yes": 2,
+      "decided": false,
+      "suspended": true
     },
     {
       "name": "the absolute floor of three yes holds even when the ratio is met",
-      "board": ["a", "b", "c"],
+      "board": [
+        "a",
+        "b",
+        "c"
+      ],
       "unavailable": [],
-      "ballots": [{ "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" }],
-      "eligible": 3, "threshold": 3, "yes": 2, "decided": false, "suspended": false
+      "ballots": [
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        }
+      ],
+      "eligible": 3,
+      "threshold": 3,
+      "yes": 2,
+      "decided": false,
+      "suspended": false
     },
     {
       "name": "a repeated yes ballot from the same voter counts once, not twice",
-      "board": ["a", "b", "c", "d", "e", "f"],
+      "board": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
       "unavailable": [],
       "ballots": [
-        { "voter": "a", "value": "yes" }, { "voter": "a", "value": "yes" },
-        { "voter": "b", "value": "yes" }, { "voter": "c", "value": "yes" }
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "a",
+          "value": "yes"
+        },
+        {
+          "voter": "b",
+          "value": "yes"
+        },
+        {
+          "voter": "c",
+          "value": "yes"
+        }
       ],
-      "eligible": 6, "threshold": 4, "yes": 3, "decided": false, "suspended": false
+      "eligible": 6,
+      "threshold": 4,
+      "yes": 3,
+      "decided": false,
+      "suspended": false
     }
   ],
   "assign_lead_cases": [
     {
       "name": "the eligible member carrying fewer open leads is chosen",
       "board": [
-        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
-        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "assigned_to": "alice" },
-        { "id": "spk-002", "status": "lead", "assigned_to": "alice" },
-        { "id": "spk-003", "status": "lead", "assigned_to": "bob" }
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "alice"
+        },
+        {
+          "id": "spk-002",
+          "status": "lead",
+          "assigned_to": "alice"
+        },
+        {
+          "id": "spk-003",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
       ],
       "on": "2026-08-18",
       "expected": "bob"
@@ -184,12 +525,30 @@
     {
       "name": "a tie on open leads goes to whichever member's most recent assignment is oldest",
       "board": [
-        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
-        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "assigned_to": "alice" },
-        { "id": "spk-005", "status": "lead", "assigned_to": "bob" }
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "alice"
+        },
+        {
+          "id": "spk-005",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
       ],
       "on": "2026-08-18",
       "expected": "alice"
@@ -197,11 +556,25 @@
     {
       "name": "a member who declared an absence covering today is skipped for one who did not",
       "board": [
-        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-08-18" },
-        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-08-18"
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "assigned_to": "bob" }
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
       ],
       "on": "2026-08-18",
       "expected": "bob"
@@ -209,11 +582,25 @@
     {
       "name": "an inactive member is skipped even while carrying no leads",
       "board": [
-        { "login": "alice", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": "" },
-        { "login": "bob", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "bob",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
       ],
       "speakers": [
-        { "id": "spk-001", "status": "lead", "assigned_to": "bob" }
+        {
+          "id": "spk-001",
+          "status": "lead",
+          "assigned_to": "bob"
+        }
       ],
       "on": "2026-08-18",
       "expected": "bob"
@@ -221,7 +608,12 @@
     {
       "name": "a board with no available member returns an empty string rather than throwing",
       "board": [
-        { "login": "alice", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-08-18" }
+        {
+          "login": "alice",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2026-08-18"
+        }
       ],
       "speakers": [],
       "on": "2026-08-18",
@@ -232,37 +624,97 @@
   "unsettled_nomination_cases": [
     {
       "name": "a nomination with no outcome yet is unsettled: the board has not answered",
-      "nomination": { "candidate": "frank", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "" },
+      "nomination": {
+        "candidate": "frank",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": ""
+      },
       "unsettled": true
     },
     {
       "name": "a waiting nomination is unsettled: the rule is met and only a seat is missing",
-      "nomination": { "candidate": "grace", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "waiting" },
+      "nomination": {
+        "candidate": "grace",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": "waiting"
+      },
       "unsettled": true
     },
     {
       "name": "an accepted nomination is settled for good",
-      "nomination": { "candidate": "dave", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "accepted" },
+      "nomination": {
+        "candidate": "dave",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": "accepted"
+      },
       "unsettled": false
     },
     {
       "name": "a deferred nomination whose objection still stands is unsettled",
-      "nomination": { "candidate": "frank", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [{ "member": "bob", "reason": "Two co-hostings are still missing.", "date": "2026-02-03" }], "outcome": "deferred" },
+      "nomination": {
+        "candidate": "frank",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [
+          {
+            "member": "bob",
+            "reason": "Two co-hostings are still missing.",
+            "date": "2026-02-03"
+          }
+        ],
+        "outcome": "deferred"
+      },
       "unsettled": true
     },
     {
       "name": "a deferred nomination with no objection left on it is settled: there is nothing to withdraw",
-      "nomination": { "candidate": "frank", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [], "outcome": "deferred" },
+      "nomination": {
+        "candidate": "frank",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [],
+        "outcome": "deferred"
+      },
       "unsettled": false
     },
     {
       "name": "an objection standing on a nomination with no outcome keeps it unsettled",
-      "nomination": { "candidate": "heidi", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [{ "member": "carol", "reason": "I want to write to the candidate first.", "date": "2026-02-03" }], "outcome": "" },
+      "nomination": {
+        "candidate": "heidi",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [
+          {
+            "member": "carol",
+            "reason": "I want to write to the candidate first.",
+            "date": "2026-02-03"
+          }
+        ],
+        "outcome": ""
+      },
       "unsettled": true
     },
     {
       "name": "a waiting nomination carrying an objection is unsettled twice over",
-      "nomination": { "candidate": "grace", "sponsor": "alice", "opened_on": "2026-02-01", "objections": [{ "member": "bob", "reason": "Not while the seat question is open.", "date": "2026-02-03" }], "outcome": "waiting" },
+      "nomination": {
+        "candidate": "grace",
+        "sponsor": "alice",
+        "opened_on": "2026-02-01",
+        "objections": [
+          {
+            "member": "bob",
+            "reason": "Not while the seat question is open.",
+            "date": "2026-02-03"
+          }
+        ],
+        "outcome": "waiting"
+      },
       "unsettled": true
     }
   ],
@@ -322,6 +774,54 @@
         "from": "2026-04-30",
         "days": 3,
         "expected": "2026-05-05"
+      },
+      {
+        "name": "a start day that is not a date at all yields no day",
+        "from": "soon",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "an empty start day yields no day",
+        "from": "",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a date in another notation is not an ISO day",
+        "from": "17/08/2026",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "an ISO day with a time attached is not an ISO day",
+        "from": "2026-08-17T00:00:00Z",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a day the calendar does not have is not a day",
+        "from": "2026-02-30",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a thirteenth month is not a month",
+        "from": "2026-13-01",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "year zero is not a year",
+        "from": "0000-01-01",
+        "days": 3,
+        "expected": ""
+      },
+      {
+        "name": "a start day of zero working days is still refused when malformed",
+        "from": "yesterday",
+        "days": 0,
+        "expected": ""
       }
     ],
     "elapsed": [
@@ -378,35 +878,366 @@
         "from": "2026-04-30",
         "to": "2026-05-05",
         "expected": 3
+      },
+      {
+        "name": "a malformed start means no time has passed",
+        "from": "soon",
+        "to": "2026-08-20",
+        "expected": 0
+      },
+      {
+        "name": "a malformed end means no time has passed",
+        "from": "2026-08-17",
+        "to": "tomorrow",
+        "expected": 0
+      },
+      {
+        "name": "two empty days are no time at all",
+        "from": "",
+        "to": "",
+        "expected": 0
+      },
+      {
+        "name": "a day the calendar does not have counts nothing",
+        "from": "2026-02-30",
+        "to": "2026-08-20",
+        "expected": 0
       }
-    ]
+    ],
+    "_malformed_comment": "Malformed input, pinned deliberately. app/src/data/validate.ts narrows every field's type and checks no date's shape, so a hand-edited 'soon' reaches these functions from the file. add_working_days answers '' and working_days_elapsed answers 0 -- an unparsable date reads as 'no deadline' and 'no time has passed', which leaves a window standing open rather than closing it on a value nothing could make sense of. JavaScript's Date accepts 2026-02-30 and year zero where date.fromisoformat raises, so those two are here by name."
   },
   "_board_headcount_comment": "board_min and board_max count *active* members, on both sides. app/src/state/board.ts::resolveNominations counts them before seating and tools/convener_ops/validate.py::validate_config checks the same number, so the app cannot write a config its own validator rejects. G-07's floor and ceiling are about who can vote, and an inactive entry is out of the denominator.",
   "board_headcount_cases": [
-    {"name": "a board of three active members sits on its floor", "board": [{"login": "a", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "b", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "c", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}], "board_min": 3, "board_max": 9, "active": 3, "within": true},
-    {"name": "an inactive entry does not occupy a seat", "board": [{"login": "a", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "b", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "c", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "d", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": ""}], "board_min": 3, "board_max": 3, "active": 3, "within": true},
-    {"name": "four inactive entries still leave a board of five on its ceiling", "board": [{"login": "a", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "b", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "c", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "d", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "e", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "f", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": ""}, {"login": "g", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": ""}, {"login": "h", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": ""}, {"login": "i", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": ""}], "board_min": 3, "board_max": 5, "active": 5, "within": true},
-    {"name": "a tenth active member is over the ceiling", "board": [{"login": "a", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "b", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "c", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "d", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "e", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "f", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "g", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "h", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "i", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "j", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}], "board_min": 3, "board_max": 9, "active": 10, "within": false},
-    {"name": "two active members are under the floor whatever else is on file", "board": [{"login": "a", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "b", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "c", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": ""}, {"login": "d", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": ""}], "board_min": 3, "board_max": 9, "active": 2, "within": false},
-    {"name": "an unavailable member still holds their seat", "board": [{"login": "a", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "b", "joined_on": "2024-01-01", "status": "active", "unavailable_until": ""}, {"login": "c", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2099-01-01"}], "board_min": 3, "board_max": 3, "active": 3, "within": true}
+    {
+      "name": "a board of three active members sits on its floor",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 9,
+      "active": 3,
+      "within": true
+    },
+    {
+      "name": "an inactive entry does not occupy a seat",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 3,
+      "active": 3,
+      "within": true
+    },
+    {
+      "name": "four inactive entries still leave a board of five on its ceiling",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "e",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "f",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "g",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "h",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "i",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 5,
+      "active": 5,
+      "within": true
+    },
+    {
+      "name": "a tenth active member is over the ceiling",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "e",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "f",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "g",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "h",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "i",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "j",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 9,
+      "active": 10,
+      "within": false
+    },
+    {
+      "name": "two active members are under the floor whatever else is on file",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        },
+        {
+          "login": "d",
+          "joined_on": "2024-01-01",
+          "status": "inactive",
+          "unavailable_until": ""
+        }
+      ],
+      "board_min": 3,
+      "board_max": 9,
+      "active": 2,
+      "within": false
+    },
+    {
+      "name": "an unavailable member still holds their seat",
+      "board": [
+        {
+          "login": "a",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "b",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": ""
+        },
+        {
+          "login": "c",
+          "joined_on": "2024-01-01",
+          "status": "active",
+          "unavailable_until": "2099-01-01"
+        }
+      ],
+      "board_min": 3,
+      "board_max": 3,
+      "active": 3,
+      "within": true
+    }
   ],
   "_identifier_comment": "What a decision commit may point at. `_TOKEN` in tools/convener_ops/commit_format.py and `TOKEN` in app/src/state/decisions.ts are the same rule, read from both sides here. A record, never a person by name: a commit subject is permanent and unrewritable, so a name typed into a nomination box would be there for good.",
   "identifier_cases": [
-    {"name": "a speaker reference is an identifier", "value": "spk-001", "identifier": true},
-    {"name": "a github login is an identifier", "value": "Anonymous", "identifier": true},
-    {"name": "the board as a whole is an identifier", "value": "board", "identifier": true},
-    {"name": "a login with a hyphen is an identifier", "value": "ada-lovelace", "identifier": true},
-    {"name": "a login with a dot and an underscore is an identifier", "value": "a.b_c", "identifier": true},
-    {"name": "a digit may open an identifier", "value": "0xdead", "identifier": true},
-    {"name": "a person's name is not an identifier - it is prose about a person", "value": "Jane Doe", "identifier": false},
-    {"name": "a name with an affiliation is not an identifier", "value": "Jane Doe (CNRS)", "identifier": false},
-    {"name": "nothing is not an identifier", "value": "", "identifier": false},
-    {"name": "a leading space is not an identifier", "value": " ada", "identifier": false},
-    {"name": "a trailing space is not an identifier", "value": "ada ", "identifier": false},
-    {"name": "an identifier may not open with punctuation", "value": "-ada", "identifier": false},
-    {"name": "an email address is not an identifier", "value": "jane@example.org", "identifier": false},
-    {"name": "a second line is not an identifier", "value": "ada\nby bob", "identifier": false},
-    {"name": "the word by is not allowed to hide inside one", "value": "ada by bob", "identifier": false}
+    {
+      "name": "a speaker reference is an identifier",
+      "value": "spk-001",
+      "identifier": true
+    },
+    {
+      "name": "a github login is an identifier",
+      "value": "Anonymous",
+      "identifier": true
+    },
+    {
+      "name": "the board as a whole is an identifier",
+      "value": "board",
+      "identifier": true
+    },
+    {
+      "name": "a login with a hyphen is an identifier",
+      "value": "ada-lovelace",
+      "identifier": true
+    },
+    {
+      "name": "a login with a dot and an underscore is an identifier",
+      "value": "a.b_c",
+      "identifier": true
+    },
+    {
+      "name": "a digit may open an identifier",
+      "value": "0xdead",
+      "identifier": true
+    },
+    {
+      "name": "a person's name is not an identifier - it is prose about a person",
+      "value": "Jane Doe",
+      "identifier": false
+    },
+    {
+      "name": "a name with an affiliation is not an identifier",
+      "value": "Jane Doe (CNRS)",
+      "identifier": false
+    },
+    {
+      "name": "nothing is not an identifier",
+      "value": "",
+      "identifier": false
+    },
+    {
+      "name": "a leading space is not an identifier",
+      "value": " ada",
+      "identifier": false
+    },
+    {
+      "name": "a trailing space is not an identifier",
+      "value": "ada ",
+      "identifier": false
+    },
+    {
+      "name": "an identifier may not open with punctuation",
+      "value": "-ada",
+      "identifier": false
+    },
+    {
+      "name": "an email address is not an identifier",
+      "value": "jane@example.org",
+      "identifier": false
+    },
+    {
+      "name": "a second line is not an identifier",
+      "value": "ada\nby bob",
+      "identifier": false
+    },
+    {
+      "name": "the word by is not allowed to hide inside one",
+      "value": "ada by bob",
+      "identifier": false
+    }
   ],
   "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned.",
   "commit_message_cases": [
@@ -695,7 +1526,6 @@
       "message": ""
     }
   ],
-
   "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
   "lateness_cases": [
     {
@@ -947,6 +1777,93 @@
       },
       "today": "2026-08-18",
       "state": "none"
+    },
+    {
+      "name": "a lead whose opened_on is not a date has no deadline rather than a crash",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "soon",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "a lead whose opened_on is a day the calendar does not have has no deadline",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-02-30",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "a delivered record whose date is not a date has no wrap-up deadline",
+      "speaker": {
+        "status": "delivered",
+        "selection": {
+          "opened_on": "",
+          "decided_on": ""
+        },
+        "date": "sometime",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "2026-08-18",
+      "state": "none"
+    },
+    {
+      "name": "an unreadable today cannot make anything late",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "sla_days": {
+        "lead_decision": 14,
+        "invitation_follow_up": 30,
+        "summary_after_delivery": 7,
+        "recording_after_delivery": 14
+      },
+      "today": "soon",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-08-15",
+      "since": "2026-08-01"
     }
   ]
 }

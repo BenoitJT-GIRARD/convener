@@ -109,12 +109,39 @@ export interface Deadline {
 
 const MS_PER_DAY = 86_400_000;
 
-/** Midnight UTC of an ISO day. Both arguments are already Paris-anchored days
- *  supplied by the caller (`parisToday()`), so no clock is read here and there
- *  is no timezone left to get wrong -- the same discipline as
- *  `state/working-days.ts`. */
+/** An ISO calendar day the calendar actually has, written out here rather
+ *  than imported from `state/working-days.ts`: that module is deliberately
+ *  not a dependency of this one (see the header -- these are calendar days,
+ *  and no conversion between the two units may become possible by accident),
+ *  and the Python twins do the same, `notify.py` carrying its own `_DATE_RE`
+ *  beside `governance.py`'s.
+ *
+ *  The round-trip and the year-zero refusal are not belt and braces:
+ *  JavaScript accepts `2026-02-30` and rolls it forward to 2 March where
+ *  `date.fromisoformat` raises, so without them the two languages disagree
+ *  about a date a hand edit can easily produce. */
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function parsedDay(day: string): number {
+  if (!ISO_DAY.test(day) || day < '0001-01-01') return Number.NaN;
+  const epoch = Date.parse(`${day}T00:00:00Z`);
+  if (Number.isNaN(epoch)) return Number.NaN;
+  // eslint-disable-next-line no-restricted-syntax -- a fixed epoch, not "now".
+  return new Date(epoch).toISOString().slice(0, 10) === day ? epoch : Number.NaN;
+}
+
+/** Midnight UTC of an ISO day, or `NaN` when the string is not one. Both
+ *  arguments are already Paris-anchored days supplied by the caller
+ *  (`parisToday()`), so no clock is read here and there is no timezone left to
+ *  get wrong -- the same discipline as `state/working-days.ts`.
+ *
+ *  `data/validate.ts` narrows every field's *type* and checks no date's
+ *  *shape*, so `opened_on: 'soon'` arrives here from a hand-edited file. It
+ *  used to crash the Inbox with a bare `RangeError: Invalid time value`; a
+ *  deadline that cannot be computed is *absent* instead, which is what
+ *  `notify.py::_maybe` already answered to the same record. */
 function epochOf(day: string): number {
-  return Date.parse(`${day}T00:00:00Z`);
+  return parsedDay(day);
 }
 
 /** Whole calendar days from `from` to `to`; negative when `to` is earlier. */
@@ -122,17 +149,26 @@ function calendarDaysBetween(from: string, to: string): number {
   return Math.round((epochOf(to) - epochOf(from)) / MS_PER_DAY);
 }
 
-/** The ISO day `n` calendar days after `from`. Weekends are days. */
-function addCalendarDays(from: string, n: number): string {
+/** The ISO day `n` calendar days after `from`, or `null` when `from` is not
+ *  an ISO day or `n` is not a whole number. */
+function addCalendarDays(from: string, n: number): string | null {
+  const epoch = epochOf(from);
+  if (Number.isNaN(epoch) || !Number.isInteger(n)) return null;
   // A fixed epoch built from an ISO day, never a reading of the clock, so
   // there is no Paris-versus-UTC day to get wrong here; same case as
   // working-days.ts::isoOf.
   // eslint-disable-next-line no-restricted-syntax -- see above.
-  return new Date(epochOf(from) + n * MS_PER_DAY).toISOString().slice(0, 10);
+  return new Date(epoch + n * MS_PER_DAY).toISOString().slice(0, 10);
 }
 
-function deadline(step: SlaStep, since: string, days: number): Deadline {
-  return { step: STEP_LABELS[step], due: addCalendarDays(since, days), since };
+/** `null` when the anchor or the configured number of days is unusable. A
+ *  deadline that cannot be computed is absent, never guessed -- the same
+ *  answer `notify.py::_maybe` gives, and the reason it is `null` here rather
+ *  than a thrown `DataShapeError`: an unreadable field in one record must not
+ *  take the whole screen down. */
+function deadline(step: SlaStep, since: string, days: number): Deadline | null {
+  const due = addCalendarDays(since, days);
+  return due === null ? null : { step: STEP_LABELS[step], due, since };
 }
 
 /** The runbook item (`state/phases.ts`) that records the summary as posted. */
@@ -189,12 +225,14 @@ export function dueDate(s: Speaker, config: Config): Deadline | null {
   if (s.status === 'delivered') {
     if (!s.date) return null;
     const open: Deadline[] = [];
-    if (!s.runbook_progress[SUMMARY_ITEM]) {
-      open.push(deadline('summary_after_delivery', s.date, sla.summary_after_delivery));
-    }
-    if (!s.youtube_url) {
-      open.push(deadline('recording_after_delivery', s.date, sla.recording_after_delivery));
-    }
+    const summary = s.runbook_progress[SUMMARY_ITEM]
+      ? null
+      : deadline('summary_after_delivery', s.date, sla.summary_after_delivery);
+    if (summary) open.push(summary);
+    const recording = s.youtube_url
+      ? null
+      : deadline('recording_after_delivery', s.date, sla.recording_after_delivery);
+    if (recording) open.push(recording);
     if (open.length === 0) return null;
     return open.reduce((soonest, d) => (d.due < soonest.due ? d : soonest));
   }
@@ -212,7 +250,8 @@ export function dueDate(s: Speaker, config: Config): Deadline | null {
 export function overdueDays(s: Speaker, config: Config, today: string): number {
   const d = dueDate(s, config);
   if (!d) return 0;
-  return Math.max(0, calendarDaysBetween(d.due, today));
+  const days = calendarDaysBetween(d.due, today);
+  return Number.isNaN(days) ? 0 : Math.max(0, days);
 }
 
 /**
@@ -233,7 +272,11 @@ export type Overdue = Extract<Lateness, { state: 'overdue' }>;
 export function lateness(s: Speaker, config: Config, today: string): Lateness {
   const d = dueDate(s, config);
   if (!d) return { state: 'none' };
-  const days = Math.max(0, calendarDaysBetween(d.due, today));
+  const between = calendarDaysBetween(d.due, today);
+  // An unreadable `today` cannot make anything late. `notify.overdue` returns
+  // `None` for the same input.
+  if (Number.isNaN(between)) return { state: 'due', ...d };
+  const days = Math.max(0, between);
   return days > 0 ? { state: 'overdue', days, ...d } : { state: 'due', ...d };
 }
 
