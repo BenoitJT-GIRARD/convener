@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from conftest import config, speaker
+from conftest import board_member, config, speaker
 
 from convener_ops.validate import validate_config, validate_speakers
 
@@ -63,8 +63,12 @@ def test_config_missing_keys_are_reported() -> None:
 
 
 def test_config_board_member_must_look_like_a_login() -> None:
-    errors = validate_config(config(board_members=["not a login!"]))
-    assert any("invalid board_member" in e for e in errors)
+    # Schema v3: board_members (flat login list) was replaced by board
+    # (a list of BoardMember mappings) in Task 1 / Task 4. The rule this
+    # test pins - a malformed login is rejected - is unchanged; only the
+    # shape of the data it is expressed against has moved.
+    errors = validate_config(config(board=[board_member(login="not a login!")]))
+    assert any("invalid board member" in e for e in errors)
 
 
 def test_valid_config_produces_no_error() -> None:

@@ -3,8 +3,33 @@ from __future__ import annotations
 from typing import Any
 
 
+def ballot(**overrides: Any) -> dict[str, Any]:
+    """A minimal valid ballot (schema v3); override any field per test."""
+    base: dict[str, Any] = {
+        "voter": "Anonymous",
+        "value": "yes",
+        "comment": "",
+        "coi_reason": "",
+        "date": "2026-01-08",
+    }
+    base.update(overrides)
+    return base
+
+
+def board_member(**overrides: Any) -> dict[str, Any]:
+    """A minimal valid board member (schema v3); override any field per test."""
+    base: dict[str, Any] = {
+        "login": "Anonymous",
+        "joined_on": "2024-01-01",
+        "status": "active",
+        "unavailable_until": "",
+    }
+    base.update(overrides)
+    return base
+
+
 def speaker(**overrides: Any) -> dict[str, Any]:
-    """A minimal valid speaker; override any field per test."""
+    """A minimal valid speaker (schema v3); override any field per test."""
     base: dict[str, Any] = {
         "id": "spk-001",
         "name": "Ada Lovelace",
@@ -21,7 +46,15 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "host_1": "",
         "host_2": "",
         "status": "lead",
-        "selection": {"votes_for": [], "decided_on": ""},
+        "career_stage": "undisclosed",
+        "publication": {
+            "consent": "",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [],
+            "outcome": "",
+        },
+        "selection": {"ballots": [], "opened_on": "", "decided_on": ""},
         "edition_code": "",
         "date": "",
         "time": "",
@@ -42,13 +75,26 @@ def speaker(**overrides: Any) -> dict[str, Any]:
 
 
 def config(**overrides: Any) -> dict[str, Any]:
+    """A minimal valid config (schema v3); override any field per test."""
     base: dict[str, Any] = {
         "season": 2026,
         "vw_counter": 5,
-        "vote_threshold": 3,
         "overlap_window_days": 7,
         "seminar_duration_minutes": 90,
-        "board_members": ["Anonymous"],
+        "board": [board_member()],
+        "nominations": [],
+        "board_min": 3,
+        "board_max": 9,
+        "vote_window_days": 10,
+        "objection_window_working_days": 5,
+        "inactivity_months": 6,
+        "balance_window_months": 12,
+        "sla_days": {
+            "lead_decision": 14,
+            "invitation_follow_up": 7,
+            "summary_after_delivery": 5,
+            "recording_after_delivery": 10,
+        },
     }
     base.update(overrides)
     return base

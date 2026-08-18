@@ -36,8 +36,18 @@ def validate() -> int:
     cfg, cfg_errors = _load(root / "data" / "config.yml")
     errors += cfg_errors
 
+    board_logins: set[str] = set()
+    if isinstance(cfg, dict):
+        board = cfg.get("board")
+        if isinstance(board, list):
+            board_logins = {
+                str(m["login"])
+                for m in board
+                if isinstance(m, dict) and isinstance(m.get("login"), str)
+            }
+
     if speakers is not None:
-        errors += validate_speakers(speakers)
+        errors += validate_speakers(speakers, board_logins)
     if cfg is not None:
         errors += validate_config(cfg)
 
