@@ -182,7 +182,7 @@ def test_accepted_nomination_without_a_seat_is_rejected() -> None:
     errors = validate_config(
         config(nominations=[nomination(candidate="hopper", outcome="accepted")])
     )
-    assert any("is not an active board member" in e for e in errors)
+    assert any("holds no board seat" in e for e in errors)
 
 
 def test_accepted_nomination_of_a_seated_member_is_accepted() -> None:
@@ -192,7 +192,12 @@ def test_accepted_nomination_of_a_seated_member_is_accepted() -> None:
     assert not [e for e in errors if e.startswith("config.yml: nominations")]
 
 
-def test_accepted_nomination_of_a_departed_member_is_rejected() -> None:
+def test_accepted_nomination_of_an_inactive_member_is_accepted() -> None:
+    # G-09 moves a silent member to `inactive` without taking their seat away
+    # (tools/convener_ops/sweep.py::sweep_inactive_members). The nomination records
+    # that the board granted the seat, which stays true; requiring the member
+    # to be active here would make that rule unable to touch anyone the board
+    # itself admitted.
     errors = validate_config(
         config(
             board=[
@@ -203,7 +208,7 @@ def test_accepted_nomination_of_a_departed_member_is_rejected() -> None:
             nominations=[nomination(candidate="grace", outcome="accepted")],
         )
     )
-    assert any("is not an active board member" in e for e in errors)
+    assert not [e for e in errors if e.startswith("config.yml: nominations")]
 
 
 def test_board_member_status_must_be_valid() -> None:

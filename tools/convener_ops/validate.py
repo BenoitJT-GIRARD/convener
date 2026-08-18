@@ -435,21 +435,26 @@ def validate_config(cfg: Any) -> list[str]:
             # The other half of the same pair. An acceptance and the seat it
             # implies are written in one transformation
             # (app/src/state/board.ts::resolveNominations), so an accepted
-            # nomination whose candidate holds no active seat cannot come out
+            # nomination whose candidate holds no seat at all cannot come out
             # of the app - only out of a hand edit, and it would leave the
             # board smaller than the record says it is.
+            #
+            # A seat, not an *active* seat: the nomination attests that the
+            # board granted one, which stays true after G-09 moves the member
+            # to `inactive`. Requiring `active` here would make the inactivity
+            # rule (tools/convener_ops/sweep.py::sweep_inactive_members) unable to
+            # touch anyone the board itself admitted, and would push toward
+            # deleting the nomination - erasing how a member arrived in order
+            # to record that they have gone quiet.
             if outcome == "accepted" and isinstance(candidate, str):
                 members = board if isinstance(board, list) else []
                 seated = any(
-                    isinstance(m, dict)
-                    and m.get("login") == candidate
-                    and m.get("status") == "active"
-                    for m in members
+                    isinstance(m, dict) and m.get("login") == candidate for m in members
                 )
                 if not seated:
                     errors.append(
-                        f"{nwhere}: accepted nomination {candidate!r} is not an "
-                        f"active board member"
+                        f"{nwhere}: accepted nomination {candidate!r} holds no "
+                        f"board seat"
                     )
 
     sla_days = cfg.get("sla_days")
