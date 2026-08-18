@@ -97,7 +97,7 @@ async function fetchState(token: string): Promise<State> {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
+  const { token, ready } = useAuth();
   // The synchronous half of loading (demo mode, or no token yet) is resolved
   // directly in the initialiser, keyed off the token this component mounted
   // with — `Shell` only renders `DataProvider` once a token exists, and
@@ -110,7 +110,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [s, setS] = useState<State>(() => initialState(token));
 
   useEffect(() => {
-    if (isDemoMode() || !token) return;
+    // Nothing to fetch yet (auth still resolving a stored credential) or
+    // ever (no session): `visible` below already reflects both cases
+    // without needing a render just to push that through state.
+    if (isDemoMode() || !ready || !token) return;
     let cancelled = false;
     fetchState(token)
       .then(next => {
@@ -125,7 +128,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, ready]);
+
+  // The state exposed to consumers. While auth hasn't resolved (`ready` is
+  // false -- a stored legacy or refresh token is still validating), whether
+  // there will turn out to be a token is unknown, so this stays loading
+  // rather than reporting "signed out, nothing to load". Once `ready` is
+  // true, a missing token genuinely does mean there is nothing to fetch.
+  // Both cases are fully determined by `ready`/`token` and computed here at
+  // render time -- no extra setState, no extra render.
+  const visible: State =
+    isDemoMode() || (ready && token)
+      ? s
+      : !ready
+        ? { ...s, loading: true }
+        : { ...s, loading: false, speakers: [], config: null, spkSha: '', cfgSha: '' };
 
   async function reload() {
     if (!token) return;
@@ -197,7 +214,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <C.Provider value={{ ...s, reload, mutateSpeakers, mutateConfig }}>{children}</C.Provider>
+    <C.Provider value={{ ...visible, reload, mutateSpeakers, mutateConfig }}>{children}</C.Provider>
   );
 }
 

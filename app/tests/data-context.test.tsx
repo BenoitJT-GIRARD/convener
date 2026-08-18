@@ -403,6 +403,54 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.error).toMatch(/GitHub 500/);
   });
 
+  it('stays loading while a stored credential is still being validated, and never reports an empty result before the data arrives', async () => {
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+    const cfgYaml = 'season: 2026\nboard_members: []\n';
+
+    // The /user validation call (triggered by AuthContext re-checking the
+    // stored legacy token) is held open until the test explicitly resolves
+    // it, to simulate the network round trip a real validation takes.
+    let resolveUser: () => void = () => {};
+    const userGate = new Promise<void>(resolve => {
+      resolveUser = resolve;
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/user')) {
+          return userGate.then(() => ({ ok: true, json: async () => ({ login: 'alice' }) }));
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(cfgYaml), sha: 'cfgsha' }) });
+      }),
+    );
+
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+
+    // Auth hasn't resolved yet: must stay loading, and must not have
+    // concluded "signed out, nothing to load".
+    expect(result.current.loading).toBe(true);
+    expect(result.current.speakers).toHaveLength(0);
+
+    // Let pending microtasks run without resolving the /user call -- still
+    // must not report a confident empty state.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.loading).toBe(true);
+    expect(result.current.speakers).toHaveLength(0);
+
+    await act(async () => {
+      resolveUser();
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.speakers).toHaveLength(1);
+  });
+
   it('mutateConfig surfaces a ConflictError through `error` instead of an unhandled rejection', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
     const cfgYaml = 'season: 2026\nboard_members: []\n';
