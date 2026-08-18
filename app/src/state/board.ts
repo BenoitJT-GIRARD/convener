@@ -482,18 +482,36 @@ export function withdrawObjection(
   return { ...config, nominations };
 }
 
-/** Seat `candidate` as of `on`, reactivating an existing entry rather than
- *  adding a second one for the same login. */
+/**
+ * Seat `candidate` as of `on`, reactivating an existing entry rather than
+ * adding a second one for the same login.
+ *
+ * Only what seating actually decides is written. An entry that is already
+ * `active` is returned untouched, and a reactivated one keeps the
+ * `joined_on` it has always had:
+ *
+ * - `joined_on` is the day the person joined the board, not the day of the
+ *   most recent nomination. It is also what the inactivity rule (G-09) reads
+ *   as the start of its silence window, so rewriting it restarts that clock
+ *   for someone who has been on the board for years.
+ * - `unavailable_until` is an absence that member declared about themselves
+ *   (`declareUnavailability` refuses to write it for anyone else). Nobody
+ *   else's act may clear it, and a nomination resolving is somebody else's
+ *   act.
+ *
+ * Both used to be rewritten unconditionally, which an already-seated member
+ * could reach without a hand edit: they are the candidate of an older
+ * nomination whose last objection is later withdrawn, `resolveNominations`
+ * runs, and their join date resets and their declared absence disappears.
+ */
 function seat(board: BoardMember[], candidate: string, on: string): BoardMember[] {
-  const entry: BoardMember = {
-    login: candidate,
-    joined_on: on,
-    status: 'active',
-    unavailable_until: '',
-  };
   const index = board.findIndex(m => m.login === candidate);
-  if (index === -1) return [...board, entry];
-  return board.map((m, i) => (i === index ? entry : m));
+  if (index === -1) {
+    return [...board, { login: candidate, joined_on: on, status: 'active', unavailable_until: '' }];
+  }
+  const existing = board[index];
+  if (existing.status === 'active') return board;
+  return board.map((m, i) => (i === index ? { ...m, status: 'active' } : m));
 }
 
 /**
@@ -510,17 +528,26 @@ function seat(board: BoardMember[], candidate: string, on: string): BoardMember[
  * is now a statement about hand-edited files, not a live defence.
  *
  * Seats are counted as they are filled, so a run that accepts several
- * nominations cannot overshoot `board_max`; the ones that do not fit become
+ * nominations cannot overshoot `board_max` -- and so does a sequence of
+ * single-candidate calls, because each reads the board the previous one
+ * left; the ones that do not fit become
  * `waiting`, and stay in the running for the next call. Nothing here reads
  * `board_min`: a board below its floor still admits members, and the
  * knowingly mis-declared live board (five entries, four people) can at
  * worst delay a seat -- which the next call gives back once the identity
  * merge lands.
  */
-export function resolveNominations(config: Config, today: string): Config {
+export function resolveNominations(config: Config, today: string, only?: string): Config {
   let board = config.board;
 
   const nominations = config.nominations.map((n): Nomination => {
+    // `only` settles one candidate's nomination and leaves the rest for a
+    // later call. `Board.tsx` uses it to write one commit per nomination, so
+    // the decision register records who joined the board rather than only
+    // that some nominations were applied (G-12). Omitted, every due
+    // nomination is settled at once, which is what the seat counting below
+    // is written for.
+    if (only !== undefined && n.candidate !== only) return n;
     if (!isPending(n)) return n;
     // A hand-edited nomination carrying an objection with no outcome: the
     // objection stands, so the nomination is deferred, never accepted.

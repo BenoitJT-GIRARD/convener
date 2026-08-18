@@ -499,12 +499,62 @@ describe('resolveNominations', () => {
 
   it('reactivates an existing entry rather than adding a second one', () => {
     const cfg = config({
-      board: [member('alice'), member('bob'), member('carol'), member('dan', { status: 'inactive' })],
+      board: [
+        member('alice'),
+        member('bob'),
+        member('carol'),
+        member('dan', { status: 'inactive', joined_on: '2019-04-02' }),
+      ],
+      nominations: opened.nominations,
+    });
+    const next = resolveNominations(cfg, '2026-03-09');
+    // One entry, now active -- and it keeps the day dan actually joined the
+    // board. `joined_on` is not the day of the most recent nomination, and
+    // the inactivity rule (G-09) reads it as the start of its window, so
+    // rewriting it would restart that clock for someone who has been here
+    // since 2019.
+    expect(next.board.filter(m => m.login === 'dan')).toEqual([
+      { login: 'dan', joined_on: '2019-04-02', status: 'active', unavailable_until: '' },
+    ]);
+  });
+
+  it('leaves an already-seated member exactly as they were', () => {
+    // Reachable without a hand edit: an older nomination whose candidate is
+    // already on the board, whose last objection is withdrawn, is resolved
+    // here. Seating them again must not reset the day they joined, and must
+    // not clear an absence only they may declare and only they may lift.
+    const cfg = config({
+      board: [
+        member('alice'),
+        member('bob'),
+        member('dan', { joined_on: '2019-04-02', unavailable_until: '2026-06-30' }),
+      ],
+      nominations: opened.nominations,
+    });
+    const next = resolveNominations(cfg, '2026-03-09');
+    expect(next.nominations[0].outcome).toBe('accepted');
+    expect(next.board.filter(m => m.login === 'dan')).toEqual([
+      { login: 'dan', joined_on: '2019-04-02', status: 'active', unavailable_until: '2026-06-30' },
+    ]);
+  });
+
+  it('does not clear a declared absence when it reactivates a member', () => {
+    const cfg = config({
+      board: [
+        member('alice'),
+        member('bob'),
+        member('carol'),
+        member('dan', {
+          status: 'inactive',
+          joined_on: '2019-04-02',
+          unavailable_until: '2026-06-30',
+        }),
+      ],
       nominations: opened.nominations,
     });
     const next = resolveNominations(cfg, '2026-03-09');
     expect(next.board.filter(m => m.login === 'dan')).toEqual([
-      { login: 'dan', joined_on: '2026-03-09', status: 'active', unavailable_until: '' },
+      { login: 'dan', joined_on: '2019-04-02', status: 'active', unavailable_until: '2026-06-30' },
     ]);
   });
 
