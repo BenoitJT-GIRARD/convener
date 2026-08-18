@@ -1,0 +1,35 @@
+# A config.yml left behind by an earlier schema: it still carries
+# `vote_threshold`, the fixed number G-01 replaced with a threshold computed
+# from the eligible board. Nothing reads it any more, which is exactly the
+# problem -- to whoever opens the file it still looks like the rule.
+# Read from both languages; see hand-edited-speakers.yml.
+season: 2026
+vw_counter: 5
+overlap_window_days: 7
+seminar_duration_minutes: 90
+vote_threshold: 3
+board:
+- login: alice
+  joined_on: '2025-01-06'
+  status: active
+  unavailable_until: ''
+- login: bob
+  joined_on: '2025-01-06'
+  status: active
+  unavailable_until: ''
+- login: carol
+  joined_on: '2025-01-06'
+  status: active
+  unavailable_until: ''
+nominations: []
+board_min: 3
+board_max: 9
+vote_window_days: 14
+objection_window_working_days: 3
+inactivity_months: 6
+balance_window_months: 24
+sla_days:
+  lead_decision: 14
+  invitation_follow_up: 30
+  summary_after_delivery: 7
+  recording_after_delivery: 14

@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import { readConfig, readSpeakers } from './validate';
 import type { Speaker, Config } from './types';
 
 /**
@@ -16,18 +17,31 @@ import type { Speaker, Config } from './types';
  */
 const DUMP = { lineWidth: 1000, noRefs: true, sortKeys: false, noArrayIndent: true };
 
+/**
+ * Read `data/speakers.yml`.
+ *
+ * Every field is checked against the model on the way in (`./validate.ts`);
+ * a file that does not match stops the read with a `DataShapeError` naming
+ * the file and the field, rather than being cast into a `Speaker[]` the
+ * screens will then read `undefined` out of.
+ */
 export function parseSpeakers(text: string): Speaker[] {
-  const data = yaml.load(text);
-  return Array.isArray(data) ? (data as Speaker[]) : [];
+  return readSpeakers(yaml.load(text));
 }
 
 export function serializeSpeakers(items: Speaker[]): string {
   return yaml.dump(items, DUMP);
 }
 
-export function parseConfig(text: string): Config | null {
-  const data = yaml.load(text);
-  return data && typeof data === 'object' ? (data as Config) : null;
+/**
+ * Read `data/config.yml`.
+ *
+ * Throws rather than returning `null` for a file it cannot read: the caller
+ * used to substitute a constant default, which meant a malformed config
+ * showed the board a governance model nobody had adopted.
+ */
+export function parseConfig(text: string): Config {
+  return readConfig(yaml.load(text));
 }
 
 export function serializeConfig(cfg: Config): string {

@@ -102,7 +102,7 @@ describe('mutate', () => {
 
   it('gives up with a ConflictError after the attempt budget', async () => {
     const { store } = makeStore('1');
-    (store.write as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+    vi.mocked(store.write).mockImplementation(async () => {
       const err = new Error('stale sha') as Error & { status: number };
       err.status = 409;
       throw err;
@@ -122,7 +122,7 @@ describe('mutate', () => {
 
   it('rethrows errors that are not conflicts', async () => {
     const { store } = makeStore('1');
-    (store.write as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+    vi.mocked(store.write).mockImplementation(async () => {
       const err = new Error('forbidden') as Error & { status: number };
       err.status = 403;
       throw err;

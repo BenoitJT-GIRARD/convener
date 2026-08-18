@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { boardYaml, configYaml } from './data-doubles';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -43,7 +44,7 @@ function decodeUtf8(b64: string): string {
 
 /** A minimal stand-in for the GitHub Contents API that actually enforces the
  *  sha precondition, so a stale write is rejected like the real API would. */
-function makeSpeakersBackend(initial: Speaker[], cfgYaml = 'season: 2026\nboard: []\n') {
+function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
@@ -88,7 +89,7 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = 'season: 2026\nboard:
 /** Every PUT is rejected as stale, no matter the sha sent — `mutate` exhausts
  *  its retries and the caller's `mutateSpeakers` resolves `false`. */
 function makeAlwaysConflictingBackend(initial: Speaker[]) {
-  const cfgYaml = 'season: 2026\nboard: []\n';
+  const cfgYaml = configYaml();
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
       return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
@@ -327,15 +328,7 @@ describe('AdminOverride DeleteSpeaker', () => {
  * and that nothing it commits names the member it is about.
  */
 describe('AdminOverride undeclared conflict of interest', () => {
-  const BOARD_CFG = [
-    'season: 2026',
-    'board:',
-    '- {login: alice, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
-    '- {login: bob, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
-    '- {login: mallory, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
-    '- {login: dana, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
-    '',
-  ].join('\n');
+  const BOARD_CFG = boardYaml(['alice', 'bob', 'mallory', 'dana']);
 
   /** Approved on three yes ballots, one of them the concealed voter's. */
   function accepted(): Speaker {

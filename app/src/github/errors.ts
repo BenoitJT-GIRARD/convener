@@ -35,6 +35,14 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
   // transformation -- which must still read as the governance rule it is.
   if (e instanceof Error && e.name === 'NominationRejected') return e.message;
 
+  // DataShapeError (data/validate.ts) is a data file that does not match the
+  // model: the app cannot read it, and no amount of retrying will change
+  // that. The sentence names the file and the field, and says who can fix
+  // it -- a malformed repository is an operator problem, and the volunteer
+  // who opened the app must not be left reading a parser error, nor told to
+  // check their connection over a file that needs editing on GitHub.
+  if (e instanceof Error && e.name === 'DataShapeError') return e.message;
+
   // PublicationBlocked (state/governance.ts) is the publication gate (G-10,
   // G-15) refusing to archive. `PublicationGate` keeps the button disabled
   // and shows the same sentence beforehand, so reaching here means the rule

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { boardYaml, configYaml } from './data-doubles';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -41,7 +42,7 @@ function decodeUtf8(b64: string): string {
 
 /** A minimal stand-in for the GitHub Contents API that enforces the sha
  *  precondition, like the real API does, so a stale write is rejected. */
-function makeSpeakersBackend(initial: Speaker[], cfgYaml = 'season: 2026\nboard: []\n') {
+function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
@@ -83,7 +84,7 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = 'season: 2026\nboard:
 /** Every PUT is rejected as stale, no matter the sha sent — `mutate` exhausts
  *  its retries and `mutateSpeakers` resolves `false`. */
 function makeAlwaysConflictingBackend(initial: Speaker[]) {
-  const cfgYaml = 'season: 2026\nboard: []\n';
+  const cfgYaml = configYaml();
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
       return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
@@ -154,18 +155,8 @@ describe('NewSpeaker', () => {
   });
 
   it('gives a lead created in the app an owner, by the same rotation the public form uses', async () => {
-    const boardYaml = `season: 2026
-board:
-  - login: alice
-    joined_on: '2024-01-01'
-    status: active
-    unavailable_until: ''
-  - login: bob
-    joined_on: '2024-01-01'
-    status: active
-    unavailable_until: ''
-`;
-    const backend = makeSpeakersBackend([], boardYaml);
+    const board = boardYaml(['alice', 'bob']);
+    const backend = makeSpeakersBackend([], board);
     vi.stubGlobal('fetch', backend.fetchMock);
 
     render(

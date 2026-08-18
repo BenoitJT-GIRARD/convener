@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { boardYaml } from './data-doubles';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -51,25 +52,7 @@ function lead(ballots: Ballot[] = []): Speaker {
 }
 
 /** Four active members, so `thresholdFor(4)` is 3 yes votes. */
-const BOARD_YAML = `season: 2026
-board:
-  - login: alice
-    joined_on: '2024-01-01'
-    status: active
-    unavailable_until: ''
-  - login: bob
-    joined_on: '2024-01-01'
-    status: active
-    unavailable_until: ''
-  - login: carol
-    joined_on: '2024-01-01'
-    status: active
-    unavailable_until: ''
-  - login: dan
-    joined_on: '2024-01-01'
-    status: active
-    unavailable_until: ''
-`;
+const BOARD_YAML = boardYaml(['alice', 'bob', 'carol', 'dan']);
 
 function encodeUtf8(text: string): string {
   const bytes = new TextEncoder().encode(text);

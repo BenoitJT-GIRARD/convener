@@ -4,25 +4,18 @@ import { describe, it, expect } from 'vitest';
 import { parseSpeakers, serializeSpeakers, parseConfig, serializeConfig } from '../src/data/yaml';
 import { SPEAKERS_HEADER, withSpeakersHeader, withConfigHeader, stripHeader } from '../src/data/yaml';
 import { SPEAKERS, CONFIG } from './boundary-samples';
+import { speaker as blank } from './data-doubles';
 import type { Speaker } from '../src/data/types';
 
+/** A blank record, written in the model's own field order: the reader in
+ *  `data/validate.ts` rebuilds every record in that order, so serialising
+ *  what it returns is stable no matter what order the file used. */
 function speaker(id: string, status: Speaker['status'] = 'lead'): Speaker {
   return {
-    id, name: `Speaker ${id}`, gender: 'undisclosed', career_stage: 'undisclosed',
-    email: '', affiliation: '',
-    country: '', title: '', abstract: '', conflicts_of_interest: '',
-    source: 'organizer', proposed_by: '', assigned_to: '', links: [],
-    host_1: '', host_2: '',
+    ...blank(),
+    id,
+    name: `Speaker ${id}`,
     status,
-    selection: { ballots: [], opened_on: '', decided_on: '' },
-    publication: {
-      consent: 'pending', approved_by: '', approved_on: '',
-      objections: [], outcome: '',
-    },
-    edition_code: '',
-    date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
-    runbook_progress: {}, notes: '',
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
   };
 }
 

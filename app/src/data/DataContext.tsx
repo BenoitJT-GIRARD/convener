@@ -51,31 +51,6 @@ interface Ctx extends State {
 
 const C = createContext<Ctx | null>(null);
 
-/** Only ever used when `data/config.yml` is unreadable as a mapping. An empty
- *  `board` is the honest fallback — inventing members would let the app show a
- *  vote threshold nobody voted against. `governance.decide` suspends the vote
- *  below `MINIMUM_ELIGIBLE`, which is the right outcome here. */
-const DEFAULT_CONFIG: Config = {
-  season: 2026,
-  vw_counter: 1,
-  overlap_window_days: 7,
-  seminar_duration_minutes: 90,
-  board: [],
-  nominations: [],
-  board_min: 3,
-  board_max: 9,
-  vote_window_days: 14,
-  objection_window_working_days: 3,
-  inactivity_months: 6,
-  balance_window_months: 12,
-  sla_days: {
-    lead_decision: 14,
-    invitation_follow_up: 7,
-    summary_after_delivery: 5,
-    recording_after_delivery: 10,
-  },
-};
-
 const DEMO_STATE: State = {
   loading: false,
   error: null,
@@ -113,7 +88,7 @@ async function fetchState(token: string): Promise<State> {
     getFile('data/config.yml', token),
   ]);
   const speakers = parseSpeakers(spk.text);
-  const config = parseConfig(cfg.text) ?? DEFAULT_CONFIG;
+  const config = parseConfig(cfg.text);
   return {
     loading: false,
     error: null,
@@ -232,7 +207,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const result = await mutate({
         store: githubStore(token),
         path: 'data/config.yml',
-        parse: text => parseConfig(text) ?? DEFAULT_CONFIG,
+        parse: parseConfig,
         serialize: v => withConfigHeader(serializeConfig(v)),
         transform,
         message,
