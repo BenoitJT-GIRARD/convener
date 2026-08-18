@@ -43,11 +43,11 @@ function decodeUtf8(b64: string): string {
 
 /** A minimal stand-in for the GitHub Contents API that actually enforces the
  *  sha precondition, so a stale write is rejected like the real API would. */
-function makeSpeakersBackend(initial: Speaker[]) {
+function makeSpeakersBackend(initial: Speaker[], cfgYaml = 'season: 2026\nboard: []\n') {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
-  const cfgYaml = 'season: 2026\nboard: []\n';
+  const messages: string[] = [];
 
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
@@ -59,6 +59,7 @@ function makeSpeakersBackend(initial: Speaker[]) {
         if (body.sha !== sha) {
           return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
         }
+        messages.push(body.message as string);
         server = parseSpeakers(decodeUtf8(body.content));
         sha = `sha-${++counter}`;
         return Promise.resolve({ ok: true, json: async () => ({ content: { sha } }) });
@@ -73,6 +74,8 @@ function makeSpeakersBackend(initial: Speaker[]) {
 
   return {
     fetchMock,
+    /** Every commit message this UI actually sent, in order. */
+    messages,
     /** Simulate a concurrent writer committing directly, bypassing this test's UI. */
     interlope(next: Speaker[]) {
       server = next;
@@ -313,5 +316,163 @@ describe('AdminOverride DeleteSpeaker', () => {
 
     expect(screen.queryByText('PIPELINE PAGE')).not.toBeInTheDocument();
     expect(screen.getByText('Delete permanently')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Recording a conflict of interest that was never declared. The rule itself
+ * (what happens to the ballot, the status and the window) is exercised as a
+ * pure transformation in `hidden-coi.test.ts`; what matters here is that the
+ * form is a human act, that it writes through `mutate` on the fresh value,
+ * and that nothing it commits names the member it is about.
+ */
+describe('AdminOverride undeclared conflict of interest', () => {
+  const BOARD_CFG = [
+    'season: 2026',
+    'board:',
+    '- {login: alice, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
+    '- {login: bob, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
+    '- {login: mallory, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
+    '- {login: dana, joined_on: "2024-01-01", status: active, unavailable_until: ""}',
+    '',
+  ].join('\n');
+
+  /** Approved on three yes ballots, one of them the concealed voter's. */
+  function accepted(): Speaker {
+    return speaker({
+      status: 'approved',
+      selection: {
+        ballots: ['alice', 'bob', 'mallory'].map(voter => ({
+          voter,
+          value: 'yes' as const,
+          comment: '',
+          coi_reason: '',
+          date: '2026-05-20',
+        })),
+        opened_on: '2026-05-01',
+        decided_on: '2026-05-20',
+      },
+    });
+  }
+
+  function renderPanel(s: Speaker) {
+    return render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <AdminOverride speaker={s} />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    localStorage.setItem('convener.token', 'tok');
+  });
+
+  it('cancels the acceptance and folds in a ballot cast while the form was open', async () => {
+    const original = accepted();
+    const backend = makeSpeakersBackend([original], BOARD_CFG);
+    vi.stubGlobal('fetch', backend.fetchMock);
+    renderPanel(original);
+
+    // The member list comes from `config.yml`, so wait for the load to land:
+    // the option has to exist before it can be chosen.
+    await screen.findByRole('option', { name: 'mallory' });
+    const select = screen.getByRole('combobox', { name: /board member concerned/i });
+    fireEvent.change(select, { target: { value: 'mallory' } });
+    fireEvent.change(screen.getByPlaceholderText(/co-author on a paper in review/i), {
+      target: { value: 'Undisclosed grant with the speaker' },
+    });
+
+    // Dana votes from another tab after this page loaded. The transform has
+    // to run against that list, not against the `speaker` prop captured in
+    // React state, or her ballot disappears.
+    backend.interlope(
+      backend.current().map(s =>
+        s.id === original.id
+          ? {
+              ...s,
+              selection: {
+                ...s.selection,
+                ballots: [
+                  ...s.selection.ballots,
+                  { voter: 'dana', value: 'abstain', comment: '', coi_reason: '', date: '2026-06-01' },
+                ],
+              },
+            }
+          : s,
+      ),
+    );
+
+    fireEvent.click(screen.getByText('Record and cancel the acceptance'));
+    await waitFor(() => expect(screen.getByText('✓ vote reopened')).toBeInTheDocument());
+
+    const saved = backend.current()[0];
+    expect(saved.status).toBe('lead');
+    expect(saved.selection.decided_on).toBe('');
+    expect(saved.selection.ballots.find(b => b.voter === 'mallory')?.value).toBe('recused');
+    expect(saved.selection.ballots.find(b => b.voter === 'dana')?.value).toBe('abstain');
+  });
+
+  it('commits under the declarer’s name and never under the member’s', async () => {
+    const original = accepted();
+    const backend = makeSpeakersBackend([original], BOARD_CFG);
+    vi.stubGlobal('fetch', backend.fetchMock);
+    renderPanel(original);
+
+    await screen.findByRole('option', { name: 'mallory' });
+    fireEvent.change(screen.getByRole('combobox', { name: /board member concerned/i }), {
+      target: { value: 'mallory' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/co-author on a paper in review/i), {
+      target: { value: 'Undisclosed grant' },
+    });
+    fireEvent.click(screen.getByText('Record and cancel the acceptance'));
+    await waitFor(() => expect(screen.getByText('✓ vote reopened')).toBeInTheDocument());
+
+    expect(backend.messages).toHaveLength(1);
+    expect(backend.messages[0]).toContain('by alice');
+    expect(backend.messages[0]).not.toContain('mallory');
+    expect(backend.messages[0]).not.toContain('Undisclosed grant');
+  });
+
+  it('will not let a declaration be sent without a member and a reason', async () => {
+    const original = accepted();
+    const backend = makeSpeakersBackend([original], BOARD_CFG);
+    vi.stubGlobal('fetch', backend.fetchMock);
+    renderPanel(original);
+
+    await screen.findByRole('option', { name: 'mallory' });
+    const button = screen.getByText('Record and cancel the acceptance');
+    expect(button).toBeDisabled();
+
+    const select = screen.getByRole('combobox', { name: /board member concerned/i });
+    fireEvent.change(select, { target: { value: 'mallory' } });
+    expect(button).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText(/co-author on a paper in review/i), {
+      target: { value: '   ' },
+    });
+    expect(button).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText(/co-author on a paper in review/i), {
+      target: { value: 'Former co-author' },
+    });
+    expect(button).not.toBeDisabled();
+  });
+
+  it('offers nothing to press once the talk has been given', async () => {
+    const original = speaker({ status: 'archived' });
+    const backend = makeSpeakersBackend([original], BOARD_CFG);
+    vi.stubGlobal('fetch', backend.fetchMock);
+    renderPanel(original);
+
+    await screen.findByText(/undeclared conflict of interest/i);
+    expect(screen.queryByText('Record and cancel the acceptance')).not.toBeInTheDocument();
+    expect(screen.getByText(/no acceptance\s+left to cancel/i)).toBeInTheDocument();
   });
 });

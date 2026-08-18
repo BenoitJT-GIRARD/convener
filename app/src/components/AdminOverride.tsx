@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
+import { activeBoard } from '../state/board';
+import { applyTransition, canTransition } from '../state/transitions';
 import type { Speaker, SpeakerStatus, Gender } from '../data/types';
 
 const ALL_STATUSES: SpeakerStatus[] = [
@@ -35,6 +37,7 @@ export function AdminOverride({ speaker }: { speaker: Speaker }) {
     <div className="space-y-10 mt-4">
       <EditFields speaker={speaker} />
       <ForceStatus speaker={speaker} />
+      <HiddenConflict speaker={speaker} />
       <DeleteSpeaker speaker={speaker} />
     </div>
   );
@@ -316,6 +319,129 @@ function ForceStatus({ speaker }: { speaker: Speaker }) {
         </button>
         <span className="text-xs text-ink-muted">Logged in commit message.</span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Recording a conflict of interest a board member did not declare when they
+ * voted.
+ *
+ * Lives here, behind the admin panel `SpeakerPage` only opens for
+ * `role === 'board'`, because it is rare and it undoes an acceptance the
+ * speaker may already have been told about. The member is picked from the
+ * live board rather than typed: `applyTransition` refuses a login that is
+ * not an active member, and a volunteer should meet that rule as a list to
+ * choose from, not as a failed save.
+ *
+ * Nothing written here reaches the speaker. The member's name goes into the
+ * ballot register (`selection.ballots`), which is internal; the commit
+ * message says a vote was reopened and by whom, not about whom.
+ */
+function HiddenConflict({ speaker }: { speaker: Speaker }) {
+  const { config, mutateSpeakers } = useData();
+  const { login } = useAuth();
+  const [member, setMember] = useState('');
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const board = config ? activeBoard(config, today).logins : [];
+  const allowed = canTransition(speaker, 'vote-reopen', 'board');
+  const armed = allowed && !!login && !!config && member !== '' && reason.trim() !== '' && !busy;
+
+  async function declare() {
+    if (!armed || !login || !config) return;
+    setBusy(true);
+    try {
+      const ok = await mutateSpeakers(
+        // `current`, not the `speaker` prop: another member may have voted
+        // between this page loading and this button being pressed, and the
+        // ballot list this recusal is folded into has to be the one on disk.
+        current =>
+          current.map(s =>
+            s.id === speaker.id
+              ? applyTransition(s, 'vote-reopen', login, config, today, { member, reason })
+              : s,
+          ),
+        `data: ${speaker.id} vote reopened after an undeclared conflict of interest, by ${login}`,
+      );
+      if (ok) {
+        setDone(true);
+        setReason('');
+        setMember('');
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="border-2 border-danger p-4">
+      <h3 className="font-display font-bold uppercase tracking-widest text-xs text-danger mb-3">
+        Undeclared conflict of interest
+      </h3>
+      <p className="text-sm text-ink-muted mb-3">
+        Use this when a board member voted on this speaker without declaring a conflict of
+        interest. Their ballot becomes a recusal, <strong>the acceptance is cancelled</strong>{' '}
+        and the speaker returns to the pipeline with the vote open again from today. It is not
+        re-decided automatically: the board votes afresh.
+      </p>
+      {!allowed && (
+        <p className="text-sm text-ink-muted italic">
+          This talk has already been given, or the speaker withdrew, so there is no acceptance
+          left to cancel.
+        </p>
+      )}
+      {allowed && (
+        <div className="space-y-3">
+          <L label="Board member concerned">
+            <select
+              value={member}
+              onChange={e => {
+                setMember(e.target.value);
+                setDone(false);
+              }}
+              className="px-2 py-1 text-sm"
+            >
+              <option value="">Choose a member…</option>
+              {board.map(l => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </L>
+          <L label="What the conflict was *">
+            <textarea
+              value={reason}
+              onChange={e => {
+                setReason(e.target.value);
+                setDone(false);
+              }}
+              rows={2}
+              className="w-full px-2 py-1 text-sm"
+              placeholder="e.g. co-author on a paper in review, same lab until last year"
+            />
+          </L>
+          <div className="flex gap-3 items-center flex-wrap">
+            <button
+              type="button"
+              disabled={!armed}
+              onClick={declare}
+              className="font-display font-bold tracking-widest uppercase text-xs bg-danger text-white border-2 border-danger px-4 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {busy ? 'Recording…' : 'Record and cancel the acceptance'}
+            </button>
+            {done && <span className="text-xs text-primary-hover">✓ vote reopened</span>}
+          </div>
+          <p className="text-xs text-ink-muted">
+            Recorded in the decision register with your name. Nothing here is sent to the
+            speaker.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

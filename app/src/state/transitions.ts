@@ -1,6 +1,6 @@
 import type { BallotValue, Config, Speaker, SpeakerStatus } from '../data/types';
-import { castBallot, withdrawBallot } from './ballots';
-import { activeBoard } from './board';
+import { BallotRejected, castBallot, withdrawBallot } from './ballots';
+import { activeBoard, isBoardMember } from './board';
 import { decide } from './governance';
 
 export type Role = 'board' | 'organizer';
@@ -16,6 +16,7 @@ export type Transition =
   | 'invited-decline'
   | 'lock-date'
   | 'finalize-archive'
+  | 'vote-reopen'
   | 'override';
 
 export interface LockDatePayload {
@@ -38,12 +39,24 @@ export interface BallotPayload {
   coiReason: string;
 }
 
+/** Recording a conflict of interest a voter did *not* declare when they
+ *  voted -- see `vote-reopen` in `applyTransition`. `member` is the board
+ *  login whose ballot was cast under the concealed conflict; `reason` says
+ *  what the conflict was, and is required for exactly the same reason a
+ *  recusal's is: it changes how many yes votes this lead needs, so the
+ *  register has to say why. */
+export interface HiddenCoiPayload {
+  member: string;
+  reason: string;
+}
+
 const BOARD_ONLY: Transition[] = [
   'ballot-cast',
   'ballot-withdraw',
   'lead-park',
   'lead-decline',
   'reactivate',
+  'vote-reopen',
   'override',
 ];
 
@@ -66,6 +79,16 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
       return s.status === 'confirmed';
     case 'finalize-archive':
       return s.status === 'delivered';
+    case 'vote-reopen':
+      // Everything except the three outcomes a reopening could not undo: a
+      // talk already given (`delivered`, `archived`) is history, and a
+      // speaker who declined (`decline-speaker`) removed themselves, so
+      // there is no board acceptance left to cancel. Anywhere else -- the
+      // vote still open, or the speaker already invited, confirmed or on
+      // the calendar -- the acceptance is still live and can be withdrawn.
+      return (
+        s.status !== 'delivered' && s.status !== 'archived' && s.status !== 'decline-speaker'
+      );
     case 'override':
       return true;
     default:
@@ -86,7 +109,7 @@ export function applyTransition(
   actor: string,
   config: Config,
   today: string,
-  payload?: LockDatePayload | OverridePayload | BallotPayload,
+  payload?: LockDatePayload | OverridePayload | BallotPayload | HiddenCoiPayload,
 ): Speaker {
   switch (t) {
     case 'ballot-cast': {
@@ -145,6 +168,68 @@ export function applyTransition(
     }
     case 'finalize-archive':
       return { ...s, status: 'archived' };
+    case 'vote-reopen': {
+      // A conflict of interest that was never declared comes to light.
+      //
+      // The acceptance this board reached is cancelled, full stop. It was
+      // obtained on a false basis -- the denominator included someone who
+      // should not have been in it -- so it is not re-examined and not put
+      // back to the same people for confirmation: the speaker returns to
+      // `lead` and the window reopens from today. Whether the board approves
+      // them again is a fresh question, answered by fresh ballots.
+      //
+      // This is deliberately NOT re-decided here from the new count, even
+      // when the count would still clear the (now lower) bar. Re-deciding
+      // inside this transition would mean an undeclared conflict could be
+      // recorded and the acceptance survive untouched, which is the opposite
+      // of the rule. The recomputed tally is shown immediately by
+      // `ActionButtons`, and the next `ballot-cast` can carry the vote again.
+      //
+      // Only a signed-in board member reaches this (`BOARD_ONLY`), and
+      // `actor` is written into the register alongside the reason: no
+      // scheduled job has an author, so none can produce this state.
+      const p = payload as HiddenCoiPayload;
+      const reason = p.reason.trim();
+      if (reason === '') {
+        throw new BallotRejected(
+          'Recording an undeclared conflict of interest needs a written reason. ' +
+            'Add a short note explaining the conflict before submitting.',
+        );
+      }
+      if (!isBoardMember(config, p.member, today)) {
+        throw new BallotRejected(
+          `${p.member} is not an active board member, so there is no ballot of theirs ` +
+            'to reopen. Check the name and try again.',
+        );
+      }
+      const existing = s.selection.ballots.find(b => b.voter === p.member);
+      if (existing?.value === 'recused') {
+        throw new BallotRejected(
+          `${p.member} already recused themselves on this lead, so nothing was concealed. ` +
+            'Their ballot is already out of the count.',
+        );
+      }
+      const selection = castBallot(
+        s.selection,
+        p.member,
+        'recused',
+        // Their own comment is kept rather than blanked: the register is a
+        // historical record, and one member's action should not erase
+        // another's words about the same lead.
+        existing?.comment ?? '',
+        `${reason} (not declared when the ballot was cast; recorded by ${actor} on ${today})`,
+        today,
+      );
+      return {
+        ...s,
+        // Cancelled, not re-decided. `date` and `edition_code` are left as
+        // they are: a `lead` is outside `agenda.findOverlaps`' public
+        // statuses, so a stale date blocks nothing, and keeping it records
+        // which slot had been planned if the board approves again.
+        status: 'lead',
+        selection: { ...selection, opened_on: today, decided_on: '' },
+      };
+    }
     case 'override': {
       const p = payload as OverridePayload;
       return { ...s, status: p.status };
