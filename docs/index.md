@@ -9,6 +9,7 @@ Welcome. This handbook holds everything our volunteers need to run The Example C
 - **[Roles](roles.md)** — who does what.
 - **[Templates](toolkit/index.md)** — ready-made emails, posts and scripts.
 - **[Governance](governance/editorial-line.md)** — what the series stands for, and how we decide.
+- **[The Board's rules](governance/board-rules.md)** — for Board members: who votes, what the bar is, what happens if you do nothing.
 
 ## How we work — three ideas
 

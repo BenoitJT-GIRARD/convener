@@ -15,6 +15,7 @@ A Lead moves forward only when the **Editorial Board** validates it:
 - **Yes** → the speaker is **Approved**, ready to be invited.
 - **No** → moved to **Parking Lot** (kept for later) or **Declined**.
 - **What the Board weighs:** quality, diversity, a preference for early-career researchers, and any conflicts of interest. See [how we validate speakers](../governance/selection-criteria.md).
+- **How the vote is counted** — who is in the count, how the bar moves, what happens when the window runs out: [the Board's rules](../governance/board-rules.md).
 
 ## Every candidate gets an answer
 

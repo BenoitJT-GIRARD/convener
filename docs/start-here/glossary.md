@@ -12,4 +12,7 @@
 | **Lead** | A speaker who has been suggested but not yet validated. |
 | **Parking Lot** | A good speaker idea kept for later, for when a slot opens. |
 | **Season** | A year of webinars. |
+| **Recusal** | A Board member standing aside from one vote because of a conflict of interest, with a written reason. They leave the count for that vote. |
+| **Nomination** | A proposal that a Contributor joins the Editorial Board, sponsored by a member. It carries after seven days without an objection. |
+| **Deferred** | A nomination somebody objected to in writing. Not a refusal: the yearly meeting decides. |
 | **The forum** | The Example Collective (forum.example.test) — where discussion happens before and after each talk. |

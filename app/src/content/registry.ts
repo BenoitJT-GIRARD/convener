@@ -10,6 +10,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'governance/selection-criteria': { file: 'governance/selection-criteria.md', anchor: null },
   'governance/editorial-line': { file: 'governance/editorial-line.md', anchor: null },
   'governance/editorial-board': { file: 'governance/editorial-board.md', anchor: null },
+  'governance/board-rules': { file: 'governance/board-rules.md', anchor: null },
   'governance/conflict-of-interest': { file: 'governance/conflict-of-interest.md', anchor: null },
   'governance/decisions': { file: 'governance/decisions.md', anchor: null },
 
