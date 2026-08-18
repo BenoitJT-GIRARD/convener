@@ -144,6 +144,40 @@ repository still needs to know they exist and where they live.
   worker in `services/auth-proxy/`. Listed again here because it is the
   same kind of CI-only, cross-account credential as the other two.
 
+## Inactivity (G-09)
+
+A Board member who has cast no ballot for `inactivity_months` stops counting
+toward the vote threshold. Nothing about this happens on its own.
+
+`tools/convener_ops/sweep.py::sweep_inactive_members` computes the proposal — the
+config as it would read, and one line per member naming the date of their
+last ballot — and **no command applies it**. `convener-sweep` does not call it: a
+scheduled job with nobody's name on it must not be able to change a
+volunteer's standing overnight, the same reason a vote window that runs out
+parks a lead rather than declining it. Applying the proposal is a human
+edit to `data/config.yml`, and the annual meeting is what settles the
+question.
+
+`inactive` is not a departure and not a judgement. The entry stays in the
+file with its `login` and `joined_on` intact; the seat is kept; the only
+effect is that the member leaves the denominator `N`, so a Board that has
+really been four for a year stops needing four voices to agree. Coming back
+is the same one word changed back to `active`, and a member re-seated
+through a nomination is reactivated in place rather than added twice.
+
+Three things the rule will not do:
+
+- name anyone whose record cannot say when the silence began. Every
+  `joined_on` in `data/config.yml` is empty today, so on the live data the
+  proposal is empty — by design, not by accident.
+- name a member who declared an absence covering today, or one carrying a
+  nomination the Board has not settled. Either of those is a live question
+  already.
+- take the Board below three members able to vote (decision G-03). Members
+  it holds back for that reason still appear in the output, so the meeting
+  reads the same list either way. The floor is three, never `board_min`,
+  which is knowingly wrong until the September merge above.
+
 ## After the September collaborators' meeting
 
 Two changes to the governance data are deliberately deferred until the
