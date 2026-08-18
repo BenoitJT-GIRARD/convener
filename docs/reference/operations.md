@@ -45,10 +45,12 @@ fully usable; onboarding is simply slower.
   client id ship inside the bundle — so they belong in Variables, not
   Secrets.
 
-Whether the worker also needs a client secret depends on whether the GitHub
-application is registered as a GitHub App or an OAuth App — confirm before
-first deployment (recorded as an open question in
-`services/auth-proxy/README.md`).
+The worker needs no client secret. Its device-flow login does not require
+one, and the app does not attempt to refresh access tokens — refreshing
+would require a client secret, and putting one into a relay we deliberately
+built stateless and secret-free is a worse trade than re-running the
+30-second device flow each session. Users re-authenticate once per session
+instead.
 
 These variables are read only at build time (Vite requires the `VITE_`
 prefix to expose a variable to the browser bundle at all). Setting or

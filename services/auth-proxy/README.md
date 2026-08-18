@@ -20,6 +20,10 @@ npx wrangler deploy
 ```
 
 Set `ALLOWED_ORIGIN` in `wrangler.toml` to the application's origin.
-Whether a client secret is also required depends on whether the OAuth
-application is registered as a GitHub App or an OAuth App — confirm before
-first deployment.
+
+No client secret is required. The device flow's initial exchange
+(`grant_type=urn:ietf:params:oauth:grant-type:device_code`) does not need
+one for a public GitHub App client. Refreshing a user access token would
+have needed one — this relay is deliberately stateless and secret-free, so
+the app does not attempt to refresh: it re-runs the 30-second device flow
+each session instead. See decision on the refresh path in `operations.md`.

@@ -2,16 +2,19 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { validateToken } from './api';
 import { isDemoMode, exitDemoMode, DEMO_USER } from '../data/demo';
-import { authEnv, availableStrategy } from './strategy';
 
 interface AuthState {
   token: string | null;
   login: string | null;
   ready: boolean;
+  /** Set when startup could not even determine sign-in state (for example a
+   *  network failure while validating a stored token). Distinct from "ready,
+   *  no token", which just means "please sign in". */
+  startupError: string | null;
 }
 interface AuthCtx extends AuthState {
   signIn: (t: string) => Promise<boolean>;
-  signInWithTokens: (accessToken: string, refreshToken?: string) => Promise<boolean>;
+  signInWithTokens: (accessToken: string) => Promise<boolean>;
   signOut: () => void;
 }
 const Ctx = createContext<AuthCtx | null>(null);
@@ -21,24 +24,11 @@ const Ctx = createContext<AuthCtx | null>(null);
 // removed. Never written again.
 const LEGACY_KEY = 'convener.token';
 
-// The access token itself never touches localStorage (it's kept in React
-// state only). Only the longer-lived refresh token, which is useless
-// without the relay's client secret, is persisted here.
-const REFRESH_KEY = 'convener.refresh';
-
 function readLocalStorage(key: string): string | null {
   try {
     return localStorage.getItem(key);
   } catch {
     return null;
-  }
-}
-
-function writeLocalStorage(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* ignore */
   }
 }
 
@@ -58,47 +48,13 @@ function consumeLegacyToken(): string | null {
   return legacy;
 }
 
-interface ExchangedTokens {
-  access_token: string;
-  refresh_token?: string;
-}
-
-/** Trade a stored refresh token for a fresh access token through the relay.
- *  Only meaningful when the device flow is configured; a token-only
- *  instance never issues refresh tokens in the first place. */
-async function exchangeRefreshToken(refreshToken: string): Promise<ExchangedTokens | null> {
-  const env = authEnv();
-  if (availableStrategy(env) !== 'device') return null;
-  try {
-    const response = await fetch(`${env.proxyUrl}/login/oauth/access_token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        client_id: env.clientId,
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-      }),
-    });
-    if (!response.ok) return null;
-    const data = (await response.json()) as Record<string, unknown>;
-    if (typeof data.access_token !== 'string') return null;
-    return {
-      access_token: data.access_token,
-      refresh_token: typeof data.refresh_token === 'string' ? data.refresh_token : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
-
 /** Synchronous part of the initial auth state: demo mode and "nothing
  *  stored" can be resolved immediately, so they're computed in the
  *  useState initialiser instead of being set from inside the effect below. */
 function initialAuthState(): AuthState {
-  if (isDemoMode()) return { token: 'demo', login: DEMO_USER.login, ready: true };
-  if (readLocalStorage(LEGACY_KEY)) return { token: null, login: null, ready: false };
-  if (readLocalStorage(REFRESH_KEY)) return { token: null, login: null, ready: false };
-  return { token: null, login: null, ready: true };
+  if (isDemoMode()) return { token: 'demo', login: DEMO_USER.login, ready: true, startupError: null };
+  if (readLocalStorage(LEGACY_KEY)) return { token: null, login: null, ready: false, startupError: null };
+  return { token: null, login: null, ready: true, startupError: null };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -108,50 +64,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isDemoMode()) return;
 
     const legacy = consumeLegacyToken();
-    if (legacy) {
-      validateToken(legacy).then(u =>
-        setS({ token: u ? legacy : null, login: u?.login ?? null, ready: true }),
+    if (!legacy) return; // initial state was already ready: true
+
+    // validateToken never rejects (see api.ts), but this .catch is defence
+    // in depth: a startup failure must always reach a terminal `ready`
+    // state, never leave the app on a permanent spinner.
+    validateToken(legacy)
+      .then(u =>
+        setS({
+          token: u ? legacy : null,
+          login: u?.login ?? null,
+          ready: true,
+          startupError: u
+            ? null
+            : 'You were signed out. Check your connection, then sign in again.',
+        }),
+      )
+      .catch(() =>
+        setS({
+          token: null,
+          login: null,
+          ready: true,
+          startupError: 'You were signed out. Check your connection, then sign in again.',
+        }),
       );
-      return;
-    }
-
-    const refreshToken = readLocalStorage(REFRESH_KEY);
-    if (!refreshToken) return; // initial state was already ready: true
-
-    exchangeRefreshToken(refreshToken).then(async exchanged => {
-      if (!exchanged) {
-        removeLocalStorage(REFRESH_KEY);
-        setS({ token: null, login: null, ready: true });
-        return;
-      }
-      if (exchanged.refresh_token) writeLocalStorage(REFRESH_KEY, exchanged.refresh_token);
-      const u = await validateToken(exchanged.access_token);
-      setS({ token: u ? exchanged.access_token : null, login: u?.login ?? null, ready: true });
-    });
   }, []);
 
   async function signIn(t: string) {
     const u = await validateToken(t);
     if (!u) return false;
-    setS({ token: t, login: u.login, ready: true });
+    setS({ token: t, login: u.login, ready: true, startupError: null });
     return true;
   }
 
-  /** Used by the device-flow screen: an access token plus, when the relay
-   *  issued one, a refresh token to persist for next time. */
-  async function signInWithTokens(accessToken: string, refreshToken?: string) {
+  /** Used by the device-flow screen: an access token from a completed
+   *  sign-in. There is no refresh token to persist — see operations.md for
+   *  why the refresh path was removed. */
+  async function signInWithTokens(accessToken: string) {
     const u = await validateToken(accessToken);
     if (!u) return false;
-    if (refreshToken) writeLocalStorage(REFRESH_KEY, refreshToken);
-    setS({ token: accessToken, login: u.login, ready: true });
+    setS({ token: accessToken, login: u.login, ready: true, startupError: null });
     return true;
   }
 
   function signOut() {
     removeLocalStorage(LEGACY_KEY);
-    removeLocalStorage(REFRESH_KEY);
     exitDemoMode();
-    setS({ token: null, login: null, ready: true });
+    setS({ token: null, login: null, ready: true, startupError: null });
   }
 
   return (

@@ -90,7 +90,11 @@ function TokenPanel() {
     setErr(null);
     const ok = await signIn(token.trim());
     setBusy(false);
-    if (!ok) setErr('That token did not work. Check the scope and try again.');
+    if (!ok) {
+      setErr(
+        'That did not work. Check the token and your internet connection, then try again.',
+      );
+    }
   }
 
   return (
@@ -170,7 +174,7 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
         interval: code.interval,
         sleep: realSleep,
       });
-      const ok = await signInWithTokens(tokens.access_token, tokens.refresh_token);
+      const ok = await signInWithTokens(tokens.access_token);
       if (!ok) {
         setState({
           step: 'error',
@@ -240,9 +244,11 @@ function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: strin
 export function Login() {
   const env = authEnv();
   const strategy = availableStrategy(env);
+  const { startupError } = useAuth();
 
   return (
     <Shell>
+      {startupError && <p className="text-danger text-sm mb-6">{startupError}</p>}
       {strategy === 'device' ? (
         <DevicePanel proxyUrl={env.proxyUrl as string} clientId={env.clientId as string} />
       ) : (

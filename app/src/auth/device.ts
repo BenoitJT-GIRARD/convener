@@ -15,8 +15,6 @@ export interface DeviceCode {
 
 export interface Tokens {
   access_token: string;
-  refresh_token?: string;
-  expires_in?: number;
 }
 
 export class DeviceFlowError extends Error {
@@ -114,13 +112,7 @@ export async function pollForToken(
     });
 
     if (typeof data.access_token === 'string') {
-      return {
-        access_token: data.access_token,
-        refresh_token:
-          typeof data.refresh_token === 'string' ? data.refresh_token : undefined,
-        expires_in:
-          typeof data.expires_in === 'number' ? data.expires_in : undefined,
-      };
+      return { access_token: data.access_token };
     }
 
     const error = String(data.error ?? '');

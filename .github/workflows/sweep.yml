@@ -29,4 +29,12 @@ jobs:
             exit 0
           fi
           git commit -m "data: sweep elapsed events to delivered"
-          git push
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
+            git pull --rebase
+          done
+          echo "::error::push failed after 3 attempts -- sweep result was not saved"
+          exit 1

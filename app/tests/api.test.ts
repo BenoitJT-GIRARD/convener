@@ -18,4 +18,9 @@ describe('validateToken', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
     expect(await validateToken('bad')).toBeNull();
   });
+
+  it('returns null, not a rejected promise, when the network fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fail')));
+    await expect(validateToken('tok')).resolves.toBeNull();
+  });
 });
