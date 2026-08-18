@@ -905,50 +905,118 @@ def test_a_dispatch_always_carries_the_address_it_was_built_from() -> None:
     assert "a real message" in addressed.body
 
 
-#: Everything `notify.py` is allowed to import. An allowlist rather than a
-#: denylist, for the same reason `public_data.PUBLIC_FIELDS` is one: a new
-#: dependency has to be added here deliberately, where a denylist only ever
-#: catches the transports somebody thought of.
+#: Everything outside this package that anything reachable from `notify.py`
+#: is allowed to import. An allowlist rather than a denylist, for the same
+#: reason `public_data.PUBLIC_FIELDS` is one: a new dependency has to be added
+#: here deliberately, where a denylist only ever catches the transports
+#: somebody thought of. It covers the whole graph below, not one file, so a
+#: dependency added to `governance.py` lands here too.
 ALLOWED_IMPORTS = frozenset(
-    {"__future__", "re", "collections", "dataclasses", "datetime", "typing", "convener_ops"}
+    {
+        "__future__",
+        "collections",
+        "dataclasses",
+        "datetime",
+        "math",
+        "re",
+        "typing",
+        "zoneinfo",
+    }
 )
 
-#: Calls that would fetch a module the import statements do not name.
+#: Calls that would fetch a module the import statements do not name. A
+#: denylist, and knowingly one: see the last paragraph of the test's docstring
+#: for what that does and does not buy.
 DYNAMIC_IMPORT_CALLS = frozenset({"__import__", "import_module", "eval", "exec"})
 
+PACKAGE_DIR = Path(notify.__file__).parent
 
-def test_the_notification_module_holds_no_transport() -> None:
-    """This package cannot send, whatever anybody configures.
 
-    Parsed from the module's own source rather than read line by line: a
-    function-local `import urllib.request`, an import nested in a `try`, or an
-    `__import__("smtplib")` are all invisible to a check that only looks at
-    lines beginning `import ` or `from `, and each would give this module a
-    transport. `ast.walk` reaches every one of them wherever it sits.
+def _reads(module: str) -> tuple[set[str], set[str], list[str]]:
+    """What one module of this package imports: outsiders, siblings, dynamics.
+
+    A sibling is returned by its bare module name (`governance`), whichever of
+    the three spellings reached it -- `from . import x`, `from .x import y` or
+    `import convener_ops.x` -- so the walk below cannot be dodged by choosing a
+    different one.
     """
-    tree = ast.parse(Path(notify.__file__).read_text(encoding="utf-8"))
-
-    imported: set[str] = set()
+    tree = ast.parse((PACKAGE_DIR / f"{module}.py").read_text(encoding="utf-8"))
+    outside: set[str] = set()
+    siblings: set[str] = set()
     dynamic: list[str] = []
+
+    def place(dotted: str) -> None:
+        parts = dotted.split(".")
+        if parts[0] == "convener_ops":
+            siblings.add(parts[1] if len(parts) > 1 else "__init__")
+        else:
+            outside.add(parts[0])
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            imported.update(alias.name.split(".")[0] for alias in node.names)
+            for alias in node.names:
+                place(alias.name)
         elif isinstance(node, ast.ImportFrom):
             if node.level:  # a relative import: `from . import x`
-                imported.add("convener_ops")
+                siblings.add((node.module or "__init__").split(".")[0])
             elif node.module:
-                imported.add(node.module.split(".")[0])
+                place(node.module)
         elif isinstance(node, ast.Call):
             func = node.func
             name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
             if name in DYNAMIC_IMPORT_CALLS:
-                dynamic.append(name)
+                dynamic.append(f"{module}: {name}")
 
-    assert dynamic == [], f"the module fetches a module at runtime: {dynamic}"
-    undeclared = imported - ALLOWED_IMPORTS
+    return outside, siblings, dynamic
+
+
+def test_the_notification_module_holds_no_transport() -> None:
+    """Nothing reachable from this module names a transport.
+
+    Over the package's own import graph, not over this one file. `notify.py`
+    imports `convener_ops.governance`, so an `import urllib.request` added there is
+    reachable from here and would give this module a transport by way of an
+    attribute; a check that read `notify.py` alone would call that clean. Every
+    `convener_ops` module reachable from `notify.py` is parsed, and every import any
+    of them makes has to be on the allowlist above.
+
+    Parsed with `ast.walk` rather than read line by line: a function-local
+    `import urllib.request`, an import nested in a `try`, or an
+    `__import__("smtplib")` sit outside what a check for lines beginning
+    `import ` or `from ` can see, and each would be a transport.
+
+    What this does not prove, and does not claim: that no module can be fetched
+    under a name assembled at runtime. `getattr(__builtins__, "__imp" + "ort__")`
+    names no module a reader can see and none this test can compute, and no
+    static reading of source ever will. The denylist above catches the ordinary
+    spellings and nothing more. The property actually verified is the one in the
+    first line -- that no module on this graph *names* a way to send -- which is
+    a statement about the code as written, not a guarantee against code written
+    to evade it.
+    """
+    seen: set[str] = set()
+    queue = ["notify"]
+    outside: set[str] = set()
+    dynamic: list[str] = []
+    while queue:
+        module = queue.pop()
+        if module in seen:
+            continue
+        seen.add(module)
+        module_outside, siblings, module_dynamic = _reads(module)
+        outside |= module_outside
+        dynamic += module_dynamic
+        queue += [s for s in siblings if s not in seen]
+
+    # The graph is walked, not assumed: if `notify.py` ever stops importing
+    # `governance`, this says so rather than quietly checking one file again.
+    assert seen == {"notify", "governance"}, seen
+
+    assert dynamic == [], f"a module is fetched at runtime: {dynamic}"
+    undeclared = outside - ALLOWED_IMPORTS
     assert not undeclared, f"undeclared import: {undeclared}"
     for banned in ("smtplib", "urllib", "http", "socket", "subprocess", "requests"):
-        assert banned not in imported
+        assert banned not in outside
 
 
 # ------------------------------------------------------------------ #

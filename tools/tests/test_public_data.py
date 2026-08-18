@@ -194,8 +194,16 @@ def test_a_resolved_objection_does_not_pull_the_recording() -> None:
 
 
 def test_an_unreadable_publication_block_is_not_a_permission() -> None:
-    out = to_public([_scheduled(status="delivered", publication="nonsense")])
+    # On an `archived` record, because `archived` is the only status at which
+    # a recording is linked at all (`RECORDING_STATUSES`). Asserted on a
+    # `delivered` one, this passes whatever the gate decides -- that record
+    # has no URL to withhold for a second, unrelated reason -- and the arm
+    # under test would be untested while reading as covered.
+    out = to_public([_scheduled(status="archived", publication="nonsense")])
     assert out[0]["youtube_url"] == ""
+    # The talk itself still appears: an unreadable block says nothing about
+    # the programme, only about the recording.
+    assert out[0]["title"] == "On analytical engines"
 
 
 def test_a_malformed_objections_value_does_not_pull_a_clean_recording() -> None:
