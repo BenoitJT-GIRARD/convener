@@ -200,10 +200,13 @@ export function monthsBefore(day: string, months: number): string {
 }
 
 function stageOf(s: Speaker): CareerStage {
-  // Speakers are cast, not validated, out of YAML (`data/yaml.ts`), so a
-  // hand-edited file can carry anything. An unrecognised value reads as
-  // `undisclosed` rather than opening a bucket of its own: a typo must not
-  // become a career stage the board then reads as a finding.
+  // `data/validate.ts` has checked this field against the model before the
+  // browser saw it (commit 44c5686), so an unrecognised value no longer
+  // reaches here from `data/speakers.yml`. This is kept anyway: it is a
+  // total function on its argument, so a caller building a `Speaker` some
+  // other way still gets a bucket rather than a new category, and an
+  // unrecognised value reads as `undisclosed` -- a typo must not become a
+  // career stage the board then reads as a finding.
   return isCareerStage(s.career_stage) ? s.career_stage : UNDISCLOSED;
 }
 

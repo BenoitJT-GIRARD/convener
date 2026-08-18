@@ -234,6 +234,33 @@ Three things the rule will not do:
   reads the same list either way. The floor is three, never `board_min`,
   which is knowingly wrong until the September merge above.
 
+## The one-shot scripts
+
+`scripts/migrate_v3.py` and `scripts/open_vote_window.py` have both already
+run, and their effects are committed. They are kept, separately, and neither
+is deleted nor merged into the other.
+
+Kept, because each is the record of what was done to the data on a day
+nobody will remember. Both are pure functions with a `main()` that reads,
+transforms and writes, both are idempotent, and each has a test file that
+pins, field by field, what it touched and — more usefully — what it left
+alone: `tools/tests/test_migrate_v3.py` and
+`tools/tests/test_open_vote_window.py`. Deleting the scripts would leave the
+two commits that changed every record in `data/speakers.yml` with no
+statement of what they changed.
+
+Separate, because they are two decisions taken for two reasons. The
+migration moved every record to schema v3; the backfill stamped
+`selection.opened_on` on the leads so the board had a window to vote in.
+Merging them would fuse two acts into one file, and with them the two
+"nothing else was touched" proofs, which are per-act or they prove nothing.
+It would also make re-running the migration re-apply a backfill that was
+never part of it. This repository's argument throughout is that the history
+is the record; merging two executed records is rewriting one of them.
+
+Neither should be run again. If a third one-shot is ever needed, it is a
+third script with a third test, not an edit to either of these.
+
 ## Reading the register (decision commits)
 
 There is no database. The commit history is where a decision's author and
@@ -307,8 +334,10 @@ the two entries, keeping that person's real GitHub login. The Board then
 goes from five members to four, and the threshold from four to three.
 
 `board_min` is `5` in `data/config.yml` and must become `3` in the same
-change, or validation fails with `board has 4 members, outside
-board_min..board_max`. Three is the floor set by decision G-03: a vote is
+change, or validation fails with `board has 4 active members, outside
+board_min..board_max`. The count is of *active* members: an entry marked
+`inactive` stays in the file, keeps its `login` and `joined_on`, and does not
+occupy a seat. Three is the floor set by decision G-03: a vote is
 suspended rather than decided below three eligible members, so the Board
 must never be declared smaller than that.
 
