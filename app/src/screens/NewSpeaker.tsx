@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../data/DataContext';
+import { assignLead } from '../state/board';
 import { useAuth } from '../auth/AuthContext';
 import { CAREER_STAGES } from '../data/types';
 import type { Speaker, Gender, CareerStage } from '../data/types';
@@ -15,7 +16,7 @@ function nextSpeakerId(speakers: Speaker[]): string {
 }
 
 export function NewSpeaker() {
-  const { mutateSpeakers } = useData();
+  const { config, mutateSpeakers } = useData();
   const { login } = useAuth();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -50,7 +51,7 @@ export function NewSpeaker() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim() || !login) return;
+    if (!form.name.trim() || !login || !config) return;
     setBusy(true);
     const today = new Date().toISOString().slice(0, 10);
     try {
@@ -66,10 +67,10 @@ export function NewSpeaker() {
         conflicts_of_interest: form.conflicts_of_interest.trim(),
         source: form.source,
         proposed_by: form.proposed_by.trim(),
-        // Who submitted the lead, not who will handle it. `assigned_to` starts
-        // empty: nobody owns this lead until the board assigns it (G-17), and
-        // filling it with the submitter would lose the record of who has to be
-        // told if the board declines.
+        // Who submitted the lead, not who will handle it. The owner is
+        // computed inside the transform below and overwrites this placeholder;
+        // `proposed_by` is never touched by that, because it is the only
+        // record of who has to be told if the board declines.
         assigned_to: '',
         links: form.links.split(/[\s,]+/).map(s => s.trim()).filter(Boolean),
         host_1: '',
@@ -104,7 +105,18 @@ export function NewSpeaker() {
       let assignedId = '';
       const ok = await mutateSpeakers(current => {
         assignedId = nextSpeakerId(current);
-        return [...current, { ...fields, id: assignedId }];
+        // A lead created here gets an owner by the same rotation the public
+        // form uses (`tools/convener_ops/proposal.py::to_lead`), so the two intake
+        // routes cannot produce differently-owned leads. Computed from
+        // `current`, since the rotation counts the open leads that exist at
+        // write time -- not the ones a stale render remembered. `config` is
+        // read from the load cycle instead: the board lives in config.yml and
+        // `mutate` operates on speakers.yml alone, and board composition
+        // changes a handful of times a year. `assignLead` returns '' when no
+        // member is available, which leaves the lead unassigned rather than
+        // failing the creation.
+        const owner = assignLead(current, config, today);
+        return [...current, { ...fields, id: assignedId, assigned_to: owner }];
       }, `data: add lead ${fields.name}`);
       if (ok) nav(`/speakers/${assignedId}`);
     } finally {
@@ -275,10 +287,14 @@ export function NewSpeaker() {
           />
         </label>
 
+        {/* Submitting waits for `config`: the owner of a new lead comes from
+            the board in config.yml, and creating the lead before that file has
+            arrived would write an unowned lead for no better reason than the
+            volunteer being quick off the mark. */}
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={busy || !form.name.trim()}
+            disabled={busy || !config || !form.name.trim()}
             className="px-4 py-2 bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 font-display font-bold tracking-widest uppercase text-sm"
           >
             {busy ? 'Creating…' : 'Create lead'}
