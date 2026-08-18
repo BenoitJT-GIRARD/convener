@@ -223,7 +223,9 @@ Three things the rule will not do:
 
 - name anyone whose record cannot say when the silence began. Every
   `joined_on` in `data/config.yml` is empty today, so on the live data the
-  proposal is empty — by design, not by accident.
+  proposal is empty — by design, not by accident. Step 3 of the September
+  list below is what ends that, and until it is done this rule cannot say
+  anything at all.
 - name a member who declared an absence covering today, or one carrying a
   nomination the Board has not settled. Either of those is a live question
   already.
@@ -259,13 +261,13 @@ any message.
 
 ## After the September collaborators' meeting
 
-Two changes to the governance data are deliberately deferred until the
+Three changes to the governance data are deliberately deferred until the
 collaborators' meeting in September. They are a deferred configuration in
 the sense of decision D-13 — the state below is normal and expected, not a
 defect to be rediscovered and not something to fix piecemeal beforehand.
-Both changes touch `data/config.yml` and `data/speakers.yml`, and they are
-easiest done together, in one commit, with `cd tools && uv run convener-validate`
-run before it is pushed.
+All three touch `data/config.yml`, the first two `data/speakers.yml` as
+well, and they are easiest done together, in one commit, with
+`cd tools && uv run convener-validate` run before it is pushed.
 
 **What this costs until then:** the Board is declared as five members while
 only four people sit on it (see step 2), so the threshold — two thirds of
@@ -315,3 +317,24 @@ one. If any lead ends up with two ballots from the merged person, keep one:
 one person casts one voice, and a repeated voter is a validation error.
 No lead carries ballots from both identifiers at the time of writing —
 `Anonymous` has never voted — but confirm it rather than assume it.
+
+### 3. Fill in `joined_on` for every Board member
+
+Every `board[].joined_on` in `data/config.yml` is the empty string. The
+field is what the inactivity rule measures silence from: with no start
+date there is no window to count, so the rule proposes nobody and will go
+on proposing nobody for as long as the field stays empty. It is not a rule
+that has been switched off — it runs nightly, reads every member, and
+declines to name anyone, which reads exactly like a Board where everybody
+has voted recently.
+
+Ask each member at the meeting when they joined and record it as
+`YYYY-MM-DD`. An approximate month is better than an empty field, because
+the window the rule counts is six months long and a proposal is only ever
+a prompt for the annual meeting to consider — nothing is applied
+automatically. Do not fill these in from guesswork beforehand: a date
+nobody confirmed would start a silence the member never had.
+
+Once the dates are in, run `cd tools && uv run convener-sweep` and read what it
+prints under `Board inactivity (G-09)`. Nothing there is applied; it is the
+list the meeting discusses.
