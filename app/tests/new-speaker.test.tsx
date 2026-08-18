@@ -1,0 +1,117 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { AuthProvider } from '../src/auth/AuthContext';
+import { DataProvider } from '../src/data/DataContext';
+import { NewSpeaker } from '../src/screens/NewSpeaker';
+import { parseSpeakers, serializeSpeakers } from '../src/data/yaml';
+import type { Speaker } from '../src/data/types';
+
+function speaker(id: string): Speaker {
+  return {
+    id, name: `Speaker ${id}`, gender: 'undisclosed', email: '', affiliation: '',
+    country: '', title: '', abstract: '', conflicts_of_interest: '',
+    source: 'organizer', proposed_by: '', links: [], host_1: '', host_2: '',
+    status: 'lead', selection: { votes_for: [], decided_on: '' }, edition_code: '',
+    date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
+    runbook_progress: {}, notes: '',
+    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
+  };
+}
+
+function encodeUtf8(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function decodeUtf8(b64: string): string {
+  const bin = atob(b64);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+/** A minimal stand-in for the GitHub Contents API that enforces the sha
+ *  precondition, like the real API does, so a stale write is rejected. */
+function makeSpeakersBackend(initial: Speaker[]) {
+  let server = initial;
+  let sha = 'sha-0';
+  let counter = 0;
+  const cfgYaml = 'season: 2026\nboard_members: []\n';
+
+  const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
+    if (url.includes('/user')) {
+      return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+    }
+    if (url.includes('speakers.yml')) {
+      if (opts?.method === 'PUT') {
+        const body = JSON.parse(opts.body as string);
+        if (body.sha !== sha) {
+          return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
+        }
+        server = parseSpeakers(decodeUtf8(body.content));
+        sha = `sha-${++counter}`;
+        return Promise.resolve({ ok: true, json: async () => ({ content: { sha } }) });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ content: encodeUtf8(serializeSpeakers(server)), sha }),
+      });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({ content: encodeUtf8(cfgYaml), sha: 'cfgsha' }) });
+  });
+
+  return {
+    fetchMock,
+    /** Simulate another submitter's write landing directly on the remote,
+     *  bypassing this test's UI and this component's local React state. */
+    interlope(next: Speaker[]) {
+      server = next;
+      sha = `sha-other-${++counter}`;
+    },
+    current: () => server,
+  };
+}
+
+describe('NewSpeaker', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    localStorage.setItem('convener.token', 'tok');
+  });
+
+  it('computes each new id from a fresh read, so a concurrent addition never collides', async () => {
+    const backend = makeSpeakersBackend([speaker('spk-001')]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <NewSpeaker />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByLabelText(/Name \*/);
+
+    fireEvent.change(nameInput, { target: { value: 'First Lead' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+    await waitFor(() => expect(backend.current()).toHaveLength(2));
+    expect(backend.current().map(s => s.id)).toEqual(['spk-001', 'spk-002']);
+
+    // A second submitter's lead lands directly on the remote in between —
+    // this component's own state has no idea a 'spk-003' now exists.
+    backend.interlope([...backend.current(), speaker('spk-003')]);
+
+    fireEvent.change(nameInput, { target: { value: 'Second Lead' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+    await waitFor(() => expect(backend.current()).toHaveLength(4));
+
+    const ids = backend.current().map(s => s.id);
+    expect(new Set(ids).size).toBe(4); // all distinct — no collision with spk-003
+    expect(ids).toContain('spk-004');
+  });
+});

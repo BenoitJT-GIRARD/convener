@@ -240,4 +240,67 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.spkSha).toBe('newsha');
     expect(result.current.speakers[0].notes).toBe('changed');
   });
+
+  it('mutateSpeakers surfaces a ConflictError through `error` instead of an unhandled rejection', async () => {
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, opts?: RequestInit) => {
+        if (url.includes('/user')) {
+          return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+        }
+        // Every PUT is rejected as stale, like a sha the caller never wins.
+        if (url.includes('speakers.yml') && opts?.method === 'PUT') {
+          return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(cfgYaml), sha: 'cfgsha' }) });
+      }),
+    );
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBeNull();
+
+    // Must not throw / reject unhandled — the whole point of the fix.
+    await act(async () => {
+      await result.current.mutateSpeakers(
+        current => current.map(s => ({ ...s, notes: 'will never land' })),
+        'msg',
+      );
+    });
+
+    expect(result.current.error).toMatch(/someone else is editing/);
+  });
+
+  it('mutateConfig surfaces a ConflictError through `error` instead of an unhandled rejection', async () => {
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, opts?: RequestInit) => {
+        if (url.includes('/user')) {
+          return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+        }
+        if (url.includes('config.yml') && opts?.method === 'PUT') {
+          return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(cfgYaml), sha: 'cfgsha' }) });
+      }),
+    );
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBeNull();
+
+    await act(async () => {
+      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 9 }), 'msg');
+    });
+
+    expect(result.current.error).toMatch(/someone else is editing/);
+  });
 });

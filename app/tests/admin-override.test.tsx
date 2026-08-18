@@ -1,0 +1,119 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { AuthProvider } from '../src/auth/AuthContext';
+import { DataProvider } from '../src/data/DataContext';
+import { AdminOverride } from '../src/components/AdminOverride';
+import { parseSpeakers, serializeSpeakers } from '../src/data/yaml';
+import type { Speaker } from '../src/data/types';
+
+function speaker(overrides: Partial<Speaker> = {}): Speaker {
+  return {
+    id: 'spk-001', name: 'Original Name', gender: 'undisclosed', email: '',
+    affiliation: '', country: '', title: '', abstract: '',
+    conflicts_of_interest: '', source: 'organizer', proposed_by: '', links: [],
+    host_1: '', host_2: '', status: 'lead',
+    selection: { votes_for: [], decided_on: '' }, edition_code: '',
+    date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
+    runbook_progress: {}, notes: '',
+    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
+    ...overrides,
+  };
+}
+
+function encodeUtf8(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function decodeUtf8(b64: string): string {
+  const bin = atob(b64);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+/** A minimal stand-in for the GitHub Contents API that actually enforces the
+ *  sha precondition, so a stale write is rejected like the real API would. */
+function makeSpeakersBackend(initial: Speaker[]) {
+  let server = initial;
+  let sha = 'sha-0';
+  let counter = 0;
+  const cfgYaml = 'season: 2026\nboard_members: []\n';
+
+  const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
+    if (url.includes('/user')) {
+      return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+    }
+    if (url.includes('speakers.yml')) {
+      if (opts?.method === 'PUT') {
+        const body = JSON.parse(opts.body as string);
+        if (body.sha !== sha) {
+          return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
+        }
+        server = parseSpeakers(decodeUtf8(body.content));
+        sha = `sha-${++counter}`;
+        return Promise.resolve({ ok: true, json: async () => ({ content: { sha } }) });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ content: encodeUtf8(serializeSpeakers(server)), sha }),
+      });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({ content: encodeUtf8(cfgYaml), sha: 'cfgsha' }) });
+  });
+
+  return {
+    fetchMock,
+    /** Simulate a concurrent writer committing directly, bypassing this test's UI. */
+    interlope(next: Speaker[]) {
+      server = next;
+      sha = `sha-other-${++counter}`;
+    },
+    current: () => server,
+  };
+}
+
+describe('AdminOverride EditFields', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    localStorage.setItem('convener.token', 'tok');
+  });
+
+  it('does not revert a field a concurrent writer changed that this form never exposes', async () => {
+    const original = speaker();
+    const backend = makeSpeakersBackend([original]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <AdminOverride speaker={original} />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByDisplayValue('Original Name');
+
+    // A concurrent writer (e.g. ForceStatus, in another tab) changes `status`
+    // — a field this EditFields form has no input for — directly on the
+    // remote. This component's local `draft` state has no idea it happened.
+    backend.interlope(
+      backend.current().map(s => (s.id === original.id ? { ...s, status: 'approved' } : s)),
+    );
+
+    fireEvent.change(nameInput, { target: { value: 'Edited Name' } });
+    fireEvent.click(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(screen.getByText('✓ saved')).toBeInTheDocument());
+
+    // The concurrent status change must survive this form's save...
+    expect(backend.current()[0].status).toBe('approved');
+    // ...and this form's own edit must still have been applied.
+    expect(backend.current()[0].name).toBe('Edited Name');
+  });
+});

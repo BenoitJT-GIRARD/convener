@@ -161,15 +161,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setS(p => ({ ...p, speakers: transform(p.speakers) }));
       return;
     }
-    const result = await mutate({
-      store: githubStore(token),
-      path: 'data/speakers.yml',
-      parse: parseSpeakers,
-      serialize: v => withSpeakersHeader(serializeSpeakers(v)),
-      transform,
-      message,
-    });
-    setS(p => ({ ...p, speakers: result.value, spkSha: result.sha }));
+    try {
+      const result = await mutate({
+        store: githubStore(token),
+        path: 'data/speakers.yml',
+        parse: parseSpeakers,
+        serialize: v => withSpeakersHeader(serializeSpeakers(v)),
+        transform,
+        message,
+      });
+      setS(p => ({ ...p, speakers: result.value, spkSha: result.sha }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setS(p => ({ ...p, error: msg }));
+    }
   }
 
   async function mutateConfig(
@@ -181,15 +186,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setS(p => ({ ...p, config: p.config ? transform(p.config) : p.config }));
       return;
     }
-    const result = await mutate({
-      store: githubStore(token),
-      path: 'data/config.yml',
-      parse: text => parseConfig(text) ?? DEFAULT_CONFIG,
-      serialize: v => withConfigHeader(serializeConfig(v)),
-      transform,
-      message,
-    });
-    setS(p => ({ ...p, config: result.value, cfgSha: result.sha }));
+    try {
+      const result = await mutate({
+        store: githubStore(token),
+        path: 'data/config.yml',
+        parse: text => parseConfig(text) ?? DEFAULT_CONFIG,
+        serialize: v => withConfigHeader(serializeConfig(v)),
+        transform,
+        message,
+      });
+      setS(p => ({ ...p, config: result.value, cfgSha: result.sha }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setS(p => ({ ...p, error: msg }));
+    }
   }
 
   useEffect(() => {

@@ -18,6 +18,29 @@ const ALL_STATUSES: SpeakerStatus[] = [
 ];
 const GENDERS: Gender[] = ['M', 'F', 'NB', 'undisclosed'];
 
+/**
+ * Fields this form's inputs actually write (see the `up`/`upMetrics` calls
+ * below). Status, selection, runbook_progress, and links are edited by other
+ * writers (ForceStatus, ActionButtons, the checklist, the archive metrics
+ * editor) and must never be overwritten by this form's stale snapshot — see
+ * `pickEdited`.
+ */
+const EDITABLE_FIELDS = [
+  'name', 'gender', 'email', 'affiliation', 'country', 'title', 'abstract',
+  'conflicts_of_interest', 'source', 'proposed_by', 'host_1', 'host_2',
+  'edition_code', 'date', 'time', 'zoom_link', 'youtube_url', 'forum_thread',
+  'notes', 'metrics',
+] as const satisfies readonly (keyof Speaker)[];
+
+/** Extracts only the fields this form edits, so a save can merge them onto a
+ *  freshly-read record instead of overwriting fields other writers own. */
+function pickEdited(draft: Speaker): Pick<Speaker, (typeof EDITABLE_FIELDS)[number]> {
+  return Object.fromEntries(EDITABLE_FIELDS.map(k => [k, draft[k]])) as Pick<
+    Speaker,
+    (typeof EDITABLE_FIELDS)[number]
+  >;
+}
+
 export function AdminOverride({ speaker }: { speaker: Speaker }) {
   return (
     <div className="space-y-10 mt-4">
@@ -60,7 +83,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
     setBusy(true);
     try {
       await mutateSpeakers(
-        current => current.map(s => (s.id === draft.id ? draft : s)),
+        current => current.map(s => (s.id === draft.id ? { ...s, ...pickEdited(draft) } : s)),
         `data: ${draft.id} admin edit by ${login}`,
       );
       setSaved(true);
