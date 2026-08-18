@@ -21,7 +21,9 @@ convention somebody is asked to respect.
   whole history and returns the whole file; the job replaces the file rather
   than appending to it. An edit made by hand does not merely violate a rule,
   it disappears on the next push -- there is no state anywhere that could
-  preserve it.
+  preserve it. `convener-register --check` runs that same derivation as an
+  assertion, so CI refuses the edit at the push that carries it instead of
+  leaving it standing in the repository until the next run undoes it.
 * **The rendering is a function of the commits alone.** No clock, no
   `data/*.yml`, no generation counter, no environment. Two runs over the same
   commits produce byte-identical files, which is what lets the job commit

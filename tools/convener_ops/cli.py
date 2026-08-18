@@ -466,8 +466,17 @@ def register() -> int:
     else, so the safe thing to do with whatever is on disk is to replace it --
     which is also what makes a hand-written row impossible to keep. `--dry-run`
     prints the same bytes and touches nothing.
+
+    `--check` writes nothing either and exits 1 when the committed file is not
+    what the history derives. Rewriting is what makes a hand edit impossible to
+    *keep*; on its own it leaves the edit standing in the repository between a
+    push and the next run, which is the window this mode closes. The comparison
+    is meaningful because the rendering reads no clock, no `data/*.yml` and no
+    environment: two runs over the same commits produce the same bytes, so a
+    difference can only be a change made outside the history.
     """
     dry_run = "--dry-run" in sys.argv[1:]
+    check = "--check" in sys.argv[1:]
     root = repo_root()
     log, error = _git_log(root)
     if error:
@@ -481,11 +490,25 @@ def register() -> int:
         return 0
 
     path = root / REGISTER_PATH
-    path.parent.mkdir(parents=True, exist_ok=True)
     current = path.read_text(encoding="utf-8") if path.exists() else ""
+    if check:
+        if current != rendered:
+            print(
+                f"{REGISTER_PATH.as_posix()} is not what the commit history derives.",
+                file=sys.stderr,
+            )
+            print(
+                "It is derived, not authored: run `convener-register` and commit the"
+                " file it writes.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"register matches the history - {len(entries)} decision(s)")
+        return 0
     if current == rendered:
         print(f"register unchanged - {len(entries)} decision(s)")
         return 0
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(rendered, encoding="utf-8", newline="")
     print(f"wrote {REGISTER_PATH.as_posix()} - {len(entries)} decision(s)")
     return 0

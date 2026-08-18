@@ -409,6 +409,107 @@ def test_register_dry_run_prints_and_writes_nothing(
     assert not (tmp_path / REGISTER_PATH).exists()
 
 
+# --- --check: the enforcement point, not just the correction ---------------
+
+
+def test_check_accepts_a_register_that_matches_the_history(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _log(
+        monkeypatch,
+        decision_line("2026-03-01T09:00:00+01:00", "lock-date", "spk-001", "ada"),
+    )
+    monkeypatch.setattr("sys.argv", ["convener-register"])
+    assert cli.register() == 0
+    capsys.readouterr()
+
+    monkeypatch.setattr("sys.argv", ["convener-register", "--check"])
+    assert cli.register() == 0
+
+    assert "register matches the history - 1 decision(s)" in capsys.readouterr().out
+
+
+def test_check_refuses_a_hand_written_row_instead_of_silently_undoing_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The window this mode exists to close.
+
+    Rewriting makes the row impossible to keep; on its own it leaves the row
+    standing between the push that added it and the next derivation. Here the
+    row is refused, and the file it was typed into is left exactly as found --
+    a check that repaired what it checks would report a clean tree it created.
+    """
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setattr("sys.argv", ["convener-register", "--check"])
+    path = tmp_path / REGISTER_PATH
+    path.parent.mkdir(parents=True)
+    hand_written = "| 2026-03-01 | decline | spk-009 | ada |\nhe never showed up\n"
+    path.write_text(hand_written, encoding="utf-8")
+    _log(
+        monkeypatch,
+        decision_line("2026-03-01T09:00:00+01:00", "lock-date", "spk-001", "ada"),
+    )
+
+    assert cli.register() == 1
+
+    assert path.read_text(encoding="utf-8") == hand_written
+    err = capsys.readouterr().err
+    assert "is not what the commit history derives" in err
+    assert "derived, not authored" in err
+
+
+def test_check_refuses_a_register_that_is_missing_altogether(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A deleted file is a mismatch, not an empty one, and writes nothing."""
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setattr("sys.argv", ["convener-register", "--check"])
+    _log(
+        monkeypatch,
+        decision_line("2026-03-01T09:00:00+01:00", "lock-date", "spk-001", "ada"),
+    )
+
+    assert cli.register() == 1
+
+    assert not (tmp_path / REGISTER_PATH).exists()
+
+
+def test_check_says_nothing_on_stdout_that_is_not_ascii(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setattr("sys.argv", ["convener-register", "--check"])
+    _log(
+        monkeypatch,
+        decision_line("2026-03-01T09:00:00+01:00", "lead-park", "spk-001", "ada"),
+    )
+
+    cli.register()
+
+    captured = capsys.readouterr()
+    (captured.out + captured.err).encode("ascii")
+
+
+def test_the_quality_workflow_checks_the_register_against_the_whole_history() -> None:
+    """The check is only worth having where the history is entirely present.
+
+    A shallow clone derives a truncated register, which would differ from the
+    committed one and fail the step for a reason that has nothing to do with a
+    hand edit -- or, on a repository with no decisions yet, match it and pass
+    for one.
+    """
+    from convener_ops.paths import repo_root
+
+    workflow = (repo_root() / ".github" / "workflows" / "quality.yml").read_text(
+        encoding="utf-8"
+    )
+    python_job = workflow.split("  typescript:")[0]
+
+    assert "convener-register --check" in python_job
+    assert "fetch-depth: 0" in python_job
+
+
 def test_register_reports_a_history_it_cannot_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
