@@ -40,29 +40,48 @@ def recording_withheld(entry: dict[str, Any]) -> bool:
     one implementation of each and nothing to pin in
     `tools/tests/fixtures/governance-cases.json`.
 
-    Three things pull a recording:
+    A recording appears only when two things are recorded, and each is asked
+    for in the affirmative:
 
-    - the speaker refused, or withdrew, their permission (G-15);
-    - the board resolved to withhold it;
-    - an objection is standing, i.e. an entry in `objections` with no
-      `resolved_on`. A missing key reads as standing, never as settled, so a
-      hand-edited file errs towards leaving the talk offline.
+    - the speaker's consent is `granted` (G-15). Not "did they refuse" but
+      "did they agree": `pending`, `''` and any value nobody recognises are
+      silence, and silence is never a permission. This is the only path on
+      which anything leaves the repository, so it is the last place an
+      absent answer may be read as a yes;
+    - the publication gate opened: `publication.outcome == "published"`,
+      written by the single transition `finalize-archive`, which refuses
+      unless the board approved and its objection window has run
+      (`app/src/state/governance.ts::canArchive`). `withheld`, `''` and an
+      untouched record are all "the gate was never run".
 
-    Deliberately *not* here: requiring `outcome == "published"`. Every
-    speaker migrated to schema v3 carries `consent: pending`, because consent
-    was never collected for the existing archive; requiring it would pull
-    every past recording out of the feed on this commit. That backlog is a
-    policy question for phase 3 (G-15), not something to decide by making it
-    a side effect of this function.
+    Either half turning back to silence is also a takedown, and so is one
+    more thing: a standing objection, i.e. an entry in `objections` with no
+    `resolved_on`. A missing key reads as standing, never as settled, so a
+    hand-edited file errs towards leaving the talk offline.
+
+    Only the recording is conditional. The programme fields -- name,
+    affiliation, country, title, abstract, date -- are published for every
+    speaker at a public status: agreeing to give a public webinar is
+    agreeing to appear in its programme. The recording is the separate
+    artefact the consent model exists for, and it is the only field this
+    function governs.
+
+    The migrated backlog (31 speakers) carries `consent: pending` or `''` and
+    no `youtube_url` at all, so requiring the gate's own verdict takes
+    nothing out of the feed that is in it.
     """
     publication = entry.get("publication")
     if not isinstance(publication, dict):
         # An unreadable publication block is not a permission. `validate.py`
         # reports it; here it simply keeps the recording out.
         return True
-    if publication.get("consent") == "refused":
+    if publication.get("consent") != "granted":
+        # Not "did they refuse" but "did they agree": `pending`, `''` and a
+        # hand-written value nobody recognises are all silence.
         return True
-    if publication.get("outcome") == "withheld":
+    if publication.get("outcome") != "published":
+        # Not "is it withheld" but "did the gate open": `withheld` and an
+        # untouched record both land here.
         return True
     objections = publication.get("objections")
     if isinstance(objections, list):
