@@ -10,7 +10,7 @@ import type { Speaker } from '../data/types';
 
 export function SpeakerPage() {
   const { id } = useParams();
-  const { speakers, loading, error, saveSpeakers } = useData();
+  const { speakers, loading, error, mutateSpeakers } = useData();
   const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
@@ -19,29 +19,31 @@ export function SpeakerPage() {
   if (!s) return <Navigate to="/pipeline" replace />;
 
   async function toggle(key: string, value: boolean) {
-    if (!login || !s) return;
-    const next = { ...s, runbook_progress: { ...s.runbook_progress, [key]: value } };
-    await saveSpeakers(
-      speakers.map(sp => (sp.id === s.id ? next : sp)),
-      `data: ${s.id} runbook ${key}=${value}`,
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current =>
+        current.map(sp =>
+          sp.id === id
+            ? { ...sp, runbook_progress: { ...sp.runbook_progress, [key]: value } }
+            : sp,
+        ),
+      `data: ${id} runbook ${key}=${value}`,
     );
   }
 
   async function onField(k: FieldKey, v: string) {
-    if (!login || !s) return;
-    const next = setField(s, k, v);
-    await saveSpeakers(
-      speakers.map(sp => (sp.id === s.id ? next : sp)),
-      `data: ${s.id} set ${k}`,
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current => current.map(sp => (sp.id === id ? setField(sp, k, v) : sp)),
+      `data: ${id} set ${k}`,
     );
   }
 
   async function finalize() {
-    if (!login || !s) return;
-    const next = { ...s, status: 'archived' as const };
-    await saveSpeakers(
-      speakers.map(sp => (sp.id === s.id ? next : sp)),
-      `data: ${s.id} finalize-and-archive by ${login}`,
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current => current.map(sp => (sp.id === id ? { ...sp, status: 'archived' as const } : sp)),
+      `data: ${id} finalize-and-archive by ${login}`,
     );
   }
 

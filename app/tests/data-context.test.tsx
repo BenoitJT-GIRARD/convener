@@ -32,22 +32,23 @@ describe('DataProvider (demo mode)', () => {
     expect(result.current.config?.season).toBe(2026);
   });
 
-  it('saveSpeakers updates local state only', async () => {
+  it('mutateSpeakers updates local state only, from current', async () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    const next = result.current.speakers.map(s => ({ ...s, notes: 'edited' }));
     await act(async () => {
-      await result.current.saveSpeakers(next, 'edit');
+      await result.current.mutateSpeakers(
+        current => current.map(s => ({ ...s, notes: 'edited' })),
+        'edit',
+      );
     });
     expect(result.current.speakers[0].notes).toBe('edited');
   });
 
-  it('saveConfig updates local state only', async () => {
+  it('mutateConfig updates local state only, from current', async () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    const next = { ...result.current.config!, vote_threshold: 5 };
     await act(async () => {
-      await result.current.saveConfig(next, 'edit config');
+      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 5 }), 'edit config');
     });
     expect(result.current.config?.vote_threshold).toBe(5);
   });
@@ -183,7 +184,7 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(putSpy).not.toHaveBeenCalled();
   });
 
-  it('saveConfig PUTs the serialized config and updates the sha', async () => {
+  it('mutateConfig PUTs the serialized config and updates the sha', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
     const cfgYaml = 'season: 2026\nboard_members: []\n';
     vi.stubGlobal(
@@ -204,13 +205,13 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.saveConfig({ ...result.current.config!, vote_threshold: 7 }, 'msg');
+      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 7 }), 'msg');
     });
     expect(result.current.cfgSha).toBe('newcfgsha');
     expect(result.current.config?.vote_threshold).toBe(7);
   });
 
-  it('saveSpeakers PUTs the serialized YAML and updates the sha', async () => {
+  it('mutateSpeakers PUTs the serialized YAML computed from current, and updates the sha', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
     const cfgYaml = 'season: 2026\nboard_members: []\n';
     vi.stubGlobal(
@@ -231,8 +232,12 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.saveSpeakers(result.current.speakers, 'msg');
+      await result.current.mutateSpeakers(
+        current => current.map(s => ({ ...s, notes: 'changed' })),
+        'msg',
+      );
     });
     expect(result.current.spkSha).toBe('newsha');
+    expect(result.current.speakers[0].notes).toBe('changed');
   });
 });

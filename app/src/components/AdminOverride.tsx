@@ -40,7 +40,7 @@ function L({ label, children }: { label: string; children: React.ReactNode }) {
 }
 
 function EditFields({ speaker }: { speaker: Speaker }) {
-  const { speakers, saveSpeakers } = useData();
+  const { mutateSpeakers } = useData();
   const { login } = useAuth();
   const [draft, setDraft] = useState<Speaker>(speaker);
   const [busy, setBusy] = useState(false);
@@ -59,8 +59,8 @@ function EditFields({ speaker }: { speaker: Speaker }) {
     if (!login) return;
     setBusy(true);
     try {
-      await saveSpeakers(
-        speakers.map(s => (s.id === draft.id ? draft : s)),
+      await mutateSpeakers(
+        current => current.map(s => (s.id === draft.id ? draft : s)),
         `data: ${draft.id} admin edit by ${login}`,
       );
       setSaved(true);
@@ -243,7 +243,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
 }
 
 function ForceStatus({ speaker }: { speaker: Speaker }) {
-  const { speakers, saveSpeakers } = useData();
+  const { mutateSpeakers } = useData();
   const { login } = useAuth();
   const [target, setTarget] = useState<SpeakerStatus>(speaker.status);
   const [busy, setBusy] = useState(false);
@@ -252,8 +252,8 @@ function ForceStatus({ speaker }: { speaker: Speaker }) {
     if (!login || target === speaker.status) return;
     setBusy(true);
     try {
-      await saveSpeakers(
-        speakers.map(s => (s.id === speaker.id ? { ...s, status: target } : s)),
+      await mutateSpeakers(
+        current => current.map(s => (s.id === speaker.id ? { ...s, status: target } : s)),
         `data: ${speaker.id} admin override status ${speaker.status}→${target} by ${login}`,
       );
     } finally {
@@ -292,7 +292,7 @@ function ForceStatus({ speaker }: { speaker: Speaker }) {
 }
 
 function DeleteSpeaker({ speaker }: { speaker: Speaker }) {
-  const { speakers, saveSpeakers } = useData();
+  const { mutateSpeakers } = useData();
   const { login } = useAuth();
   const nav = useNavigate();
   const [typed, setTyped] = useState('');
@@ -303,8 +303,8 @@ function DeleteSpeaker({ speaker }: { speaker: Speaker }) {
     if (!login || !armed) return;
     setBusy(true);
     try {
-      await saveSpeakers(
-        speakers.filter(s => s.id !== speaker.id),
+      await mutateSpeakers(
+        current => current.filter(s => s.id !== speaker.id),
         `data: deleted ${speaker.id} (${speaker.name}) by ${login}`,
       );
       nav('/pipeline');

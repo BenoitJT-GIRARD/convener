@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function ActionButtons({ speaker, role }: Props) {
-  const { config, speakers, saveSpeakers } = useData();
+  const { config, mutateSpeakers } = useData();
   const { login } = useAuth();
   const [busy, setBusy] = useState(false);
 
@@ -29,9 +29,13 @@ export function ActionButtons({ speaker, role }: Props) {
     if (!login || !canTransition(speaker, t, role)) return;
     setBusy(true);
     try {
-      const next = applyTransition(speaker, t, login, threshold, today, payload);
-      const updated = speakers.map(sp => (sp.id === speaker.id ? next : sp));
-      await saveSpeakers(updated, `data: ${speaker.id} → ${t}`);
+      await mutateSpeakers(
+        current =>
+          current.map(sp =>
+            sp.id === speaker.id ? applyTransition(sp, t, login, threshold, today, payload) : sp,
+          ),
+        `data: ${speaker.id} → ${t}`,
+      );
     } finally {
       setBusy(false);
     }

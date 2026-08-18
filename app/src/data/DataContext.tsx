@@ -1,8 +1,16 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { getFile, putFile } from '../github/contents';
-import { parseSpeakers, serializeSpeakers, parseConfig, serializeConfig } from './yaml';
+import { getFile, githubStore } from '../github/contents';
+import { mutate } from '../github/mutate';
+import {
+  parseSpeakers,
+  serializeSpeakers,
+  parseConfig,
+  serializeConfig,
+  withSpeakersHeader,
+  withConfigHeader,
+} from './yaml';
 import { isDemoMode, DEMO_SPEAKERS, DEMO_CONFIG } from './demo';
 import type { Speaker, Config } from './types';
 
@@ -17,8 +25,8 @@ interface State {
 
 interface Ctx extends State {
   reload: () => Promise<void>;
-  saveSpeakers: (next: Speaker[], message: string) => Promise<void>;
-  saveConfig: (next: Config, message: string) => Promise<void>;
+  mutateSpeakers: (transform: (current: Speaker[]) => Speaker[], message: string) => Promise<void>;
+  mutateConfig: (transform: (current: Config) => Config, message: string) => Promise<void>;
 }
 
 const C = createContext<Ctx | null>(null);
@@ -128,17 +136,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
         cfgSha: cfg.sha,
       });
       if (changed) {
-        const text =
-          '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
-          serializeSpeakers(swept);
-        const res = await putFile(
-          'data/speakers.yml',
-          text,
-          spk.sha,
-          'data: auto-sweep scheduled→delivered',
-          token,
-        );
-        setS(p => ({ ...p, spkSha: res.content.sha }));
+        const result = await mutate({
+          store: githubStore(token),
+          path: 'data/speakers.yml',
+          parse: parseSpeakers,
+          serialize: v => withSpeakersHeader(serializeSpeakers(v)),
+          transform: current => autoSweep(current, config, new Date()).swept,
+          message: 'data: auto-sweep scheduled→delivered',
+        });
+        setS(p => ({ ...p, speakers: result.value, spkSha: result.sha }));
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -146,28 +152,44 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function saveSpeakers(next: Speaker[], message: string) {
+  async function mutateSpeakers(
+    transform: (current: Speaker[]) => Speaker[],
+    message: string,
+  ) {
     if (!token) return;
     if (isDemoMode()) {
-      setS(p => ({ ...p, speakers: next }));
+      setS(p => ({ ...p, speakers: transform(p.speakers) }));
       return;
     }
-    const text =
-      '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
-      serializeSpeakers(next);
-    const res = await putFile('data/speakers.yml', text, s.spkSha, message, token);
-    setS(p => ({ ...p, speakers: next, spkSha: res.content.sha }));
+    const result = await mutate({
+      store: githubStore(token),
+      path: 'data/speakers.yml',
+      parse: parseSpeakers,
+      serialize: v => withSpeakersHeader(serializeSpeakers(v)),
+      transform,
+      message,
+    });
+    setS(p => ({ ...p, speakers: result.value, spkSha: result.sha }));
   }
 
-  async function saveConfig(next: Config, message: string) {
-    if (!token || !s.cfgSha) return;
+  async function mutateConfig(
+    transform: (current: Config) => Config,
+    message: string,
+  ) {
+    if (!token) return;
     if (isDemoMode()) {
-      setS(p => ({ ...p, config: next }));
+      setS(p => ({ ...p, config: p.config ? transform(p.config) : p.config }));
       return;
     }
-    const text = '# Repo-wide config for the Convener app\n' + serializeConfig(next);
-    const res = await putFile('data/config.yml', text, s.cfgSha, message, token);
-    setS(p => ({ ...p, config: next, cfgSha: res.content.sha }));
+    const result = await mutate({
+      store: githubStore(token),
+      path: 'data/config.yml',
+      parse: text => parseConfig(text) ?? DEFAULT_CONFIG,
+      serialize: v => withConfigHeader(serializeConfig(v)),
+      transform,
+      message,
+    });
+    setS(p => ({ ...p, config: result.value, cfgSha: result.sha }));
   }
 
   useEffect(() => {
@@ -185,7 +207,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   return (
-    <C.Provider value={{ ...s, reload, saveSpeakers, saveConfig }}>{children}</C.Provider>
+    <C.Provider value={{ ...s, reload, mutateSpeakers, mutateConfig }}>{children}</C.Provider>
   );
 }
 

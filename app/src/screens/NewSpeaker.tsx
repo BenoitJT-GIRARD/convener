@@ -14,7 +14,7 @@ function nextSpeakerId(speakers: Speaker[]): string {
 }
 
 export function NewSpeaker() {
-  const { speakers, saveSpeakers } = useData();
+  const { speakers, mutateSpeakers } = useData();
   const { login } = useAuth();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -79,7 +79,7 @@ export function NewSpeaker() {
         metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
         notes: form.notes.trim(),
       };
-      await saveSpeakers([...speakers, lead], `data: add lead ${id} (${lead.name})`);
+      await mutateSpeakers(current => [...current, lead], `data: add lead ${id} (${lead.name})`);
       nav(`/speakers/${id}`);
     } finally {
       setBusy(false);

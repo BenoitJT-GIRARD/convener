@@ -246,7 +246,7 @@ function ArchiveRow({
 }
 
 function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
-  const { speakers, saveSpeakers } = useData();
+  const { mutateSpeakers } = useData();
   const [yt30, setYt30] = useState<string | number>(speaker.metrics.youtube_views_30d ?? '');
   const [fr, setFr] = useState<string | number>(speaker.metrics.forum_replies ?? '');
   const [ytUrl, setYtUrl] = useState(speaker.youtube_url);
@@ -257,18 +257,22 @@ function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
   async function save() {
     setBusy(true);
     try {
-      const next: Speaker = {
-        ...speaker,
-        youtube_url: ytUrl,
-        forum_thread: forum,
-        metrics: {
-          ...speaker.metrics,
-          youtube_views_30d: yt30 === '' ? null : Number(yt30),
-          forum_replies: fr === '' ? null : Number(fr),
-        },
-      };
-      await saveSpeakers(
-        speakers.map(s => (s.id === speaker.id ? next : s)),
+      await mutateSpeakers(
+        current =>
+          current.map(s =>
+            s.id === speaker.id
+              ? {
+                  ...s,
+                  youtube_url: ytUrl,
+                  forum_thread: forum,
+                  metrics: {
+                    ...s.metrics,
+                    youtube_views_30d: yt30 === '' ? null : Number(yt30),
+                    forum_replies: fr === '' ? null : Number(fr),
+                  },
+                }
+              : s,
+          ),
         `data: ${speaker.id} update post-archive metrics`,
       );
       setSaved(true);

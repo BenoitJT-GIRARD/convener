@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getFile, putFile } from '../src/github/contents';
+import { getFile, putFile, githubStore } from '../src/github/contents';
 
 describe('getFile', () => {
   beforeEach(() => {
@@ -53,5 +53,35 @@ describe('putFile', () => {
     expect(body.message).toBe('update');
     expect(body.sha).toBe('oldsha');
     expect(atob(body.content)).toBe('speakers: []\n');
+  });
+});
+
+describe('githubStore', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('read delegates to getFile', async () => {
+    const b64 = btoa('speakers: []\n');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ content: b64, sha: 'abc123' }) }),
+    );
+    const out = await githubStore('tok').read('data/speakers.yml');
+    expect(out).toEqual({ text: 'speakers: []\n', sha: 'abc123' });
+  });
+
+  it('write delegates to putFile and maps content.sha to sha', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: { sha: 'newsha' } }),
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const out = await githubStore('tok').write('data/speakers.yml', 'speakers: []\n', 'oldsha', 'update');
+    expect(out).toEqual({ sha: 'newsha' });
+    const [, opts] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(opts.body as string);
+    expect(body.sha).toBe('oldsha');
+    expect(body.message).toBe('update');
   });
 });
