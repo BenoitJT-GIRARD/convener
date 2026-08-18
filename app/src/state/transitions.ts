@@ -90,6 +90,18 @@ export interface ResolutionPayload {
   note: string;
 }
 
+/** Everything a transition can be applied with. Named once so
+ *  `state/decisions.ts` writes the commit line from the very same value
+ *  `applyTransition` acts on, rather than from a parallel guess at it. */
+export type TransitionPayload =
+  | LockDatePayload
+  | OverridePayload
+  | BallotPayload
+  | HiddenCoiPayload
+  | ConsentPayload
+  | ObjectionPayload
+  | ResolutionPayload;
+
 const BOARD_ONLY: Transition[] = [
   'ballot-cast',
   'ballot-withdraw',
@@ -170,14 +182,7 @@ export function applyTransition(
   actor: string,
   config: Config,
   today: string,
-  payload?:
-    | LockDatePayload
-    | OverridePayload
-    | BallotPayload
-    | HiddenCoiPayload
-    | ConsentPayload
-    | ObjectionPayload
-    | ResolutionPayload,
+  payload?: TransitionPayload,
 ): Speaker {
   switch (t) {
     case 'ballot-cast': {

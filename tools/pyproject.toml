@@ -16,6 +16,7 @@ convener-check-config = "convener_ops.cli:check_config"
 convener-sweep = "convener_ops.cli:sweep"
 convener-public-data = "convener_ops.cli:public_data"
 convener-handle-proposal = "convener_ops.cli:handle_proposal"
+convener-check-commits = "convener_ops.commit_format:check_commits"
 
 [build-system]
 requires = ["hatchling"]

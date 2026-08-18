@@ -12,6 +12,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The commit-message check reads the range under review, so it needs
+          # the commits themselves, not just the merge result.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
@@ -39,6 +43,24 @@ jobs:
       - name: Integration status
         working-directory: tools
         run: uv run convener-check-config
+      - name: Commit messages
+        working-directory: tools
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -e
+          # Only the commits under review. Phase 1 is already written and does
+          # not follow this grammar; a check that demanded the past be
+          # rewritten would be turned off instead of obeyed.
+          from="${BASE:-$BEFORE}"
+          if [ -z "$from" ] || [ "$from" = "0000000000000000000000000000000000000000" ]; then
+            range="$HEAD -1"
+          else
+            range="$from..$HEAD"
+          fi
+          git log --format=%B%x00 $range | uv run convener-check-commits
 
   typescript:
     runs-on: ubuntu-latest

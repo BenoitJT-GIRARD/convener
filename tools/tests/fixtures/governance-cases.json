@@ -342,5 +342,284 @@
         "expected": 3
       }
     ]
-  }
+  },
+  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned.",
+  "commit_message_cases": [
+    {
+      "name": "a ballot names the lead, the voter and the value cast",
+      "kind": "ballot-cast",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "recused",
+      "message": "data: record a ballot on spk-007 by ada (recused)"
+    },
+    {
+      "name": "a yes is written out, never left to be inferred from the tally",
+      "kind": "ballot-cast",
+      "entity": "spk-007",
+      "actor": "grace",
+      "detail": "yes",
+      "message": "data: record a ballot on spk-007 by grace (yes)"
+    },
+    {
+      "name": "an abstention is a ballot and reads as one",
+      "kind": "ballot-cast",
+      "entity": "spk-007",
+      "actor": "hopper",
+      "detail": "abstain",
+      "message": "data: record a ballot on spk-007 by hopper (abstain)"
+    },
+    {
+      "name": "a withdrawn ballot takes no qualifier - there is nothing left to qualify",
+      "kind": "ballot-withdraw",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: withdraw a ballot on spk-007 by ada"
+    },
+    {
+      "name": "parking a lead",
+      "kind": "lead-park",
+      "entity": "spk-003",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: park spk-003 by ada"
+    },
+    {
+      "name": "declining a lead names the record and the member, and passes no judgement",
+      "kind": "lead-decline",
+      "entity": "spk-003",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: decline spk-003 by hopper"
+    },
+    {
+      "name": "bringing a parked lead back",
+      "kind": "reactivate",
+      "entity": "spk-003",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: reopen the review of spk-003 by grace"
+    },
+    {
+      "name": "a concealed conflict reopens the vote, over the name of whoever recorded it",
+      "kind": "vote-reopen",
+      "entity": "spk-012",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: reopen the vote on spk-012 by grace"
+    },
+    {
+      "name": "sending the invitation",
+      "kind": "send-invitation",
+      "entity": "spk-004",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: send the invitation for spk-004 by ada"
+    },
+    {
+      "name": "the speaker accepted",
+      "kind": "invited-accept",
+      "entity": "spk-004",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: record an accepted invitation for spk-004 by ada"
+    },
+    {
+      "name": "the speaker declined - the invitation is what declined, not the person",
+      "kind": "invited-decline",
+      "entity": "spk-004",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: record a declined invitation for spk-004 by ada"
+    },
+    {
+      "name": "locking a date",
+      "kind": "lock-date",
+      "entity": "spk-004",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: lock the date of spk-004 by hopper"
+    },
+    {
+      "name": "consent granted is an answer somebody heard, so it carries their name",
+      "kind": "consent-set",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "granted",
+      "message": "data: record the recording consent of spk-009 by ada (granted)"
+    },
+    {
+      "name": "consent refused is recorded exactly like consent granted",
+      "kind": "consent-set",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "refused",
+      "message": "data: record the recording consent of spk-009 by ada (refused)"
+    },
+    {
+      "name": "approving publication starts the objection window and is signed",
+      "kind": "publication-approve",
+      "entity": "spk-009",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: approve publication of spk-009 by grace"
+    },
+    {
+      "name": "an objection to publishing",
+      "kind": "publication-object",
+      "entity": "spk-009",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: record an objection to publishing spk-009 by hopper"
+    },
+    {
+      "name": "objections lifted",
+      "kind": "publication-resolve",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "lift",
+      "message": "data: resolve the objections on spk-009 by ada (lift)"
+    },
+    {
+      "name": "objections closed by withholding",
+      "kind": "publication-resolve",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "withhold",
+      "message": "data: resolve the objections on spk-009 by ada (withhold)"
+    },
+    {
+      "name": "the one commit that puts a recording online",
+      "kind": "finalize-archive",
+      "entity": "spk-009",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: publish the recording of spk-009 by ada"
+    },
+    {
+      "name": "a nomination is opened over its sponsor's name",
+      "kind": "nomination-open",
+      "entity": "curie",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: open a nomination for curie by ada"
+    },
+    {
+      "name": "an objection to a nomination",
+      "kind": "nomination-object",
+      "entity": "curie",
+      "actor": "hopper",
+      "detail": "",
+      "message": "data: record an objection to the nomination of curie by hopper"
+    },
+    {
+      "name": "seating the nominations whose window has run acts on the board itself",
+      "kind": "nomination-resolve",
+      "entity": "board",
+      "actor": "grace",
+      "detail": "",
+      "message": "data: apply the nominations due on board by grace"
+    },
+    {
+      "name": "an administrative status change is recorded like any other decision",
+      "kind": "override",
+      "entity": "spk-005",
+      "actor": "ada",
+      "detail": "decline-board",
+      "message": "data: override the status of spk-005 by ada (decline-board)"
+    },
+    {
+      "name": "deleting a record names the record, never the person it was about",
+      "kind": "speaker-delete",
+      "entity": "spk-005",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: delete the record of spk-005 by ada"
+    }
+  ],
+  "commit_message_rejects": [
+    {
+      "name": "a decision with no author is not a decision",
+      "message": "data: record a ballot on spk-007"
+    },
+    {
+      "name": "an author slot left empty",
+      "message": "data: reopen the vote on spk-007 by"
+    },
+    {
+      "name": "a qualifier the act does not admit",
+      "message": "data: record a ballot on spk-007 by ada (maybe)"
+    },
+    {
+      "name": "a qualifier on an act that admits none",
+      "message": "data: withdraw a ballot on spk-007 by ada (yes)"
+    },
+    {
+      "name": "a record identifier that is not one",
+      "message": "data: record a ballot on spk 007 by ada"
+    },
+    {
+      "name": "two authors - a decision has exactly one",
+      "message": "data: park spk-003 by ada and grace"
+    },
+    {
+      "name": "a decision that runs to a second line",
+      "message": "data: decline spk-003 by ada\n\nthe topic is out of scope this season"
+    },
+    {
+      "name": "a judgement smuggled into a qualifier",
+      "message": "data: apply the nominations due on board by ada (expelled)"
+    },
+    {
+      "name": "a judgement smuggled into a record name",
+      "message": "data: delete the record of negligent by ada"
+    },
+    {
+      "name": "an attribution trailer, on a decision or anywhere else",
+      "message": "app: tidy the ballot list\n\nCo-authored-by: Someone <someone@example.org>"
+    }
+  ],
+  "commit_message_ordinary": [
+    {
+      "name": "a code commit is not a decision",
+      "message": "app: gate archiving on the publication approval and consent"
+    },
+    {
+      "name": "a docs commit is not a decision",
+      "message": "docs: record that convener-sweep prints the inactivity proposals"
+    },
+    {
+      "name": "the form intake writes data, but decides nothing",
+      "message": "data: new lead from public form"
+    },
+    {
+      "name": "the nightly sweep writes data, but decides nothing",
+      "message": "data: sweep elapsed events and expired vote windows"
+    },
+    {
+      "name": "a member's own diary entry is not a decision about anybody",
+      "message": "data: mark ada unavailable until 2026-02-01"
+    },
+    {
+      "name": "a runbook tick is bookkeeping",
+      "message": "data: spk-001 runbook approved/invitation-sent=true"
+    },
+    {
+      "name": "an ordinary commit may use a word the register would not",
+      "message": "ops: drop the stale public-data cache"
+    },
+    {
+      "name": "and another one",
+      "message": "app: remove the unused helper"
+    },
+    {
+      "name": "a merge commit is left entirely alone",
+      "message": "Merge pull request #12 from tec/phase-2"
+    },
+    {
+      "name": "an empty message is not the grammar's problem",
+      "message": ""
+    }
+  ]
 }

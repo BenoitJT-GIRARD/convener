@@ -15,6 +15,7 @@ import {
 } from '../state/board';
 import type { Config, Nomination } from '../data/types';
 import { parisToday } from '../state/derived';
+import { BOARD_ENTITY, formatDecision } from '../state/decisions';
 
 const OUTCOME_LABEL: Record<Nomination['outcome'], string> = {
   '': 'Open',
@@ -79,7 +80,7 @@ export function Board() {
     const name = candidate.trim();
     await write(
       current => openNomination(speakers, current, name, me, today),
-      `data: open a nomination for ${name}`,
+      formatDecision({ kind: 'nomination-open', entity: name, actor: me }),
     );
     setCandidate('');
   };
@@ -87,13 +88,13 @@ export function Board() {
   const object = (target: string) =>
     write(
       current => objectToNomination(current, target, me, reasons[target] ?? '', today),
-      `data: record an objection to the nomination of ${target}`,
+      formatDecision({ kind: 'nomination-object', entity: target, actor: me }),
     );
 
   const applyDue = () =>
     write(
       current => resolveNominations(current, today),
-      'data: apply the nominations whose objection window has run',
+      formatDecision({ kind: 'nomination-resolve', entity: BOARD_ENTITY, actor: me }),
     );
 
   return (

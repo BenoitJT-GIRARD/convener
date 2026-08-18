@@ -195,6 +195,31 @@ Three things the rule will not do:
   reads the same list either way. The floor is three, never `board_min`,
   which is knowingly wrong until the September merge above.
 
+## Reading the register (decision commits)
+
+There is no database. The commit history is where a decision's author and
+date survive, so the app writes a fixed line for every act the Board takes:
+
+```
+data: <act> <record> by <login>
+data: <act> <record> by <login> (<qualifier>)
+```
+
+for example `data: record a ballot on spk-007 by ada (recused)`,
+`data: reopen the vote on spk-012 by grace`, or
+`data: apply the nominations due on board by ada`. The acts are a closed
+list (`tools/convener_ops/commit_format.py`, mirrored in
+`app/src/state/decisions.ts`), each naming a record rather than a person,
+and the qualifier is closed per act. So the register can be read back with
+`git log --format=%s -- data/` and filtered on one act, and no line in it
+can say anything about a volunteer beyond which record they touched.
+
+Ordinary commits -- code, docs, the nightly sweep, the public form -- are
+not decisions and follow no such shape. The `Commit messages` step of the
+`python` CI job checks only the commits under review, and only those that
+open with one of the acts above; it also refuses an attribution trailer in
+any message.
+
 ## After the September collaborators' meeting
 
 Two changes to the governance data are deliberately deferred until the

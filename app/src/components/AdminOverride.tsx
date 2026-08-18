@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { activeBoard } from '../state/board';
 import { applyTransition, canTransition } from '../state/transitions';
 import { parisToday } from '../state/derived';
+import { formatDecision } from '../state/decisions';
 import type { Speaker, SpeakerStatus, Gender } from '../data/types';
 
 const ALL_STATUSES: SpeakerStatus[] = [
@@ -287,7 +288,7 @@ function ForceStatus({ speaker }: { speaker: Speaker }) {
     try {
       await mutateSpeakers(
         current => current.map(s => (s.id === speaker.id ? { ...s, status: target } : s)),
-        `data: ${speaker.id} admin override status ${speaker.status}→${target} by ${login}`,
+        formatDecision({ kind: 'override', entity: speaker.id, actor: login, detail: target }),
       );
     } finally {
       setBusy(false);
@@ -366,7 +367,7 @@ function HiddenConflict({ speaker }: { speaker: Speaker }) {
               ? applyTransition(s, 'vote-reopen', login, config, today, { member, reason })
               : s,
           ),
-        `data: ${speaker.id} vote reopened after an undeclared conflict of interest, by ${login}`,
+        formatDecision({ kind: 'vote-reopen', entity: speaker.id, actor: login }),
       );
       if (ok) {
         setDone(true);
@@ -461,7 +462,9 @@ function DeleteSpeaker({ speaker }: { speaker: Speaker }) {
     try {
       const ok = await mutateSpeakers(
         current => current.filter(s => s.id !== speaker.id),
-        `data: deleted ${speaker.id} (${speaker.name}) by ${login}`,
+        // The record, not the person: the deleted row carries the name and
+        // the diff keeps it, so the subject line has no reason to.
+        formatDecision({ kind: 'speaker-delete', entity: speaker.id, actor: login }),
       );
       if (ok) nav('/pipeline');
     } finally {
