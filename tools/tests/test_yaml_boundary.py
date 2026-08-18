@@ -25,6 +25,11 @@ from convener_ops.yaml_safe import safe_load
 
 FIXTURE = Path(__file__).parent / "fixtures" / "speakers-from-app.yml"
 
+#: The logins that cast the fixture's ballots. The validator rejects a
+#: ballot from a non-member, so the board this fixture is validated against
+#: has to be stated -- there is no config.yml on this side of the boundary.
+BOARD = frozenset({"alice", "bob", "carol"})
+
 
 def test_fixture_has_a_non_empty_time_and_date() -> None:
     # Guards against the fixture being regenerated down to an empty/trivial
@@ -44,4 +49,27 @@ def test_python_reads_time_and_date_as_strings_not_int_or_date() -> None:
 
 def test_validator_accepts_what_the_browser_actually_writes() -> None:
     speakers = safe_load(FIXTURE.read_text(encoding="utf-8"))
-    assert validate_speakers(speakers) == []
+    assert validate_speakers(speakers, BOARD) == []
+
+
+def test_python_reads_a_yes_ballot_as_the_string_and_not_as_true() -> None:
+    # The third scalar YAML 1.1 misreads, and the one schema v3 added:
+    # bare `yes` is the boolean True. js-yaml quotes it on write, and
+    # `value: 'yes'` in the fixture is what that quoting looks like -- but
+    # a hand-edited copy may well not be quoted, and a ballot read as True
+    # is a ballot with no recognisable value at all.
+    speakers = safe_load(FIXTURE.read_text(encoding="utf-8"))
+    values = [b["value"] for b in speakers[0]["selection"]["ballots"]]
+    assert values == ["yes", "yes", "recused"]
+
+
+def test_the_fixture_carries_the_v3_governance_fields() -> None:
+    # Guards against the fixture drifting back to a shape that no longer
+    # exercises what the two languages have to agree on: without ballots,
+    # career_stage and publication in it, this boundary test would pass on
+    # a file neither side would accept in practice.
+    speaker = safe_load(FIXTURE.read_text(encoding="utf-8"))[0]
+    assert speaker["career_stage"] == "postdoc"
+    assert speaker["assigned_to"] == "bob"
+    assert speaker["publication"]["consent"] == "pending"
+    assert speaker["selection"]["opened_on"] == "2025-12-20"

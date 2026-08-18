@@ -20,7 +20,7 @@ export function serializeConfig(cfg: Config): string {
 }
 
 export const SPEAKERS_HEADER =
-  '# Speakers (unified schema v2 — see docs/reference/schema.md)\n';
+  '# Speakers (unified schema v3 — see docs/reference/schema.md)\n';
 export const CONFIG_HEADER = '# Repo-wide config for the Convener app\n';
 
 export function withSpeakersHeader(body: string): string {

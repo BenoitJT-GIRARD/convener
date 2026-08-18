@@ -336,3 +336,56 @@ def test_nomination_objection_date_must_be_a_date() -> None:
         config(nominations=[nomination(objections=[objection(date="not-a-date")])])
     )
     assert any("objections[0]: date must be YYYY-MM-DD" in e for e in errors)
+
+
+# --- Task 5 (the migration's own guarantees) ------------------------------
+
+
+def test_assigned_to_must_be_present_and_a_string() -> None:
+    # Ruling P2-15: every migrated speaker carries the field, empty when no
+    # board member owns the lead yet. A missing one is an unmigrated record.
+    s = speaker()
+    del s["assigned_to"]
+    assert any("assigned_to must be a string" in e for e in validate_speakers([s]))
+
+
+def test_assigned_to_must_name_a_board_member_when_set() -> None:
+    errors = validate_speakers(
+        [speaker(assigned_to="someone-else")], board_logins={"Anonymous"}
+    )
+    assert any("assigned_to is not a board member" in e for e in errors)
+
+
+def test_an_empty_assigned_to_is_accepted() -> None:
+    assert validate_speakers([speaker(assigned_to="")], {"Anonymous"}) == []
+
+
+def test_proposed_by_is_never_checked_against_the_board() -> None:
+    # It is the submitter's self-reported name, often someone outside the
+    # team entirely - checking it against the board would reject the public
+    # form's own leads.
+    assert validate_speakers([speaker(proposed_by="A Passer-By")], {"Anonymous"}) == []
+
+
+def test_a_speaker_without_career_stage_is_rejected() -> None:
+    # Unconditional since the migration (ruling P2-12): before it, absence
+    # was a legacy state; after it, absence means a field was dropped.
+    s = speaker()
+    del s["career_stage"]
+    assert any("invalid career_stage" in e for e in validate_speakers([s]))
+
+
+def test_a_speaker_without_a_publication_block_is_rejected() -> None:
+    s = speaker()
+    del s["publication"]
+    assert any(".publication: not a mapping" in e for e in validate_speakers([s]))
+
+
+def test_a_board_member_without_a_status_is_rejected() -> None:
+    # governance.active_board keeps only members whose status is exactly
+    # 'active': a member with none silently leaves the board, and with it
+    # the denominator of every vote.
+    member = board_member()
+    del member["status"]
+    errors = validate_config(config(board=[member, board_member(login="ada")]))
+    assert any("invalid board member status" in e for e in errors)

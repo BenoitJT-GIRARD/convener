@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,8 @@ import pytest
 from conftest import board_member, config, speaker
 
 from convener_ops.proposal import assign_lead, skip_reason, to_lead, verify_signature
+from convener_ops.sweep import expire_votes
+from convener_ops.validate import validate_speakers
 
 TODAY = "2026-01-08"
 
@@ -145,3 +148,25 @@ def test_assign_lead_matches_the_shared_fixture(case: dict[str, Any]) -> None:
         assign_lead(case["speakers"], {"board": case["board"]}, case["on"])
         == (case["expected"])
     )
+
+
+def test_a_form_lead_is_written_in_the_v3_shape() -> None:
+    lead = to_lead(_fields(("Name", "Ada Lovelace")), [], config(), TODAY)
+    assert lead is not None
+    assert lead["selection"] == {"ballots": [], "opened_on": TODAY, "decided_on": ""}
+    assert lead["career_stage"] == "undisclosed"
+    assert lead["publication"]["consent"] == ""
+    assert validate_speakers([lead], {m["login"] for m in config()["board"]}) == []
+
+
+def test_a_form_lead_opens_its_vote_window_so_it_can_expire() -> None:
+    # sweep.expire_votes skips any lead whose opened_on does not parse, and
+    # it does so silently so an overnight job never dies on bad data. A lead
+    # written without one was therefore exempt from expiry, for ever, with
+    # nothing anywhere reporting it.
+    lead = to_lead(_fields(("Name", "Ada Lovelace")), [], config(), "2026-01-01")
+    assert lead is not None
+    now = datetime(2026, 3, 1, tzinfo=UTC)
+    swept, changes = expire_votes([lead], config(), now)
+    assert swept[0]["status"] == "parked"
+    assert any("vote window expired" in c for c in changes)

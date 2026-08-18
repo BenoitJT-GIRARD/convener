@@ -116,7 +116,7 @@ def to_lead(
     config: dict[str, Any],
     today: str,
 ) -> dict[str, Any] | None:
-    """Build a v2-schema lead from form fields, or None if it should be skipped.
+    """Build a v3-schema lead from form fields, or None if it should be skipped.
 
     Skipped when the name is empty, or when the email matches an existing
     record that is still in ``lead`` status (a duplicate submission). See
@@ -152,6 +152,7 @@ def to_lead(
         "id": sid,
         "name": name,
         "gender": gender,
+        "career_stage": "undisclosed",
         "email": email,
         "affiliation": _get(fields, "Institution", "Affiliation"),
         "country": _get(fields, "Country"),
@@ -165,7 +166,21 @@ def to_lead(
         "host_1": "",
         "host_2": "",
         "status": "lead",
-        "selection": {"votes_for": [], "decided_on": ""},
+        # opened_on is the intake date, and it is what subjects the lead to
+        # vote expiry: sweep.expire_votes skips - silently, so an overnight
+        # job never dies on bad data - any lead whose opened_on does not
+        # parse. A lead created without one would wait forever.
+        "selection": {"ballots": [], "opened_on": today, "decided_on": ""},
+        # The form asks for neither, and a lead the board has not yet heard
+        # has nothing to consent to: both start where the v3 migration
+        # leaves a speaker who never reached a publishable status.
+        "publication": {
+            "consent": "",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [],
+            "outcome": "",
+        },
         "edition_code": "",
         "date": "",
         "time": "",

@@ -261,51 +261,59 @@ def validate_speakers(
         if status == "scheduled" and not (entry.get("host_1") and entry.get("host_2")):
             errors.append(f"{where}: scheduled requires both host_1 and host_2")
 
-        # career_stage and publication are schema-v3 additions (Task 1); a
-        # not-yet-migrated file simply lacks them, same as gender above, so
-        # only a present-but-unrecognised value is an error.
+        # assigned_to is the board member who owns the lead (ruling P2-15).
+        # It is not proposed_by, which is the submitter's self-reported name
+        # and is never checked against the board: a member of the public may
+        # propose a speaker, but only a member may be handed the follow-up.
+        assigned_to = entry.get("assigned_to")
+        if not isinstance(assigned_to, str):
+            errors.append(f"{where}: assigned_to must be a string")
+        elif assigned_to and assigned_to not in board_logins:
+            errors.append(
+                f"{where}: assigned_to is not a board member ({assigned_to!r})"
+            )
+
+        # career_stage and publication are required since the v3 migration
+        # (scripts/migrate_v3.py, Task 5) gave every speaker both. They were
+        # checked only when present while the real data was still v2; now
+        # their absence is a defect - a migration that silently dropped one
+        # is exactly what this validator exists to catch.
         career_stage = entry.get("career_stage")
-        if career_stage is not None and career_stage not in CAREER_STAGES:
+        if career_stage not in CAREER_STAGES:
             errors.append(f"{where}: invalid career_stage {career_stage!r}")
 
         publication = entry.get("publication")
-        if publication is not None:
-            pub_where = f"{where}.publication"
-            if not isinstance(publication, dict):
-                errors.append(f"{pub_where}: not a mapping")
-            else:
-                consent = publication.get("consent")
-                if consent not in PUBLICATION_CONSENTS:
-                    errors.append(
-                        f"{pub_where}: invalid publication consent {consent!r}"
-                    )
+        pub_where = f"{where}.publication"
+        if not isinstance(publication, dict):
+            errors.append(f"{pub_where}: not a mapping")
+        else:
+            consent = publication.get("consent")
+            if consent not in PUBLICATION_CONSENTS:
+                errors.append(f"{pub_where}: invalid publication consent {consent!r}")
 
-                outcome = publication.get("outcome")
-                if outcome not in PUBLICATION_OUTCOMES:
-                    errors.append(
-                        f"{pub_where}: invalid publication outcome {outcome!r}"
-                    )
+            outcome = publication.get("outcome")
+            if outcome not in PUBLICATION_OUTCOMES:
+                errors.append(f"{pub_where}: invalid publication outcome {outcome!r}")
 
-                approved_on = publication.get("approved_on")
-                if approved_on and not DATE_RE.match(str(approved_on)):
-                    errors.append(
-                        f"{pub_where}: approved_on must be YYYY-MM-DD, "
-                        f"got {approved_on!r}"
-                    )
-
-                errors.extend(
-                    _validate_objections(publication.get("objections"), pub_where)
+            approved_on = publication.get("approved_on")
+            if approved_on and not DATE_RE.match(str(approved_on)):
+                errors.append(
+                    f"{pub_where}: approved_on must be YYYY-MM-DD, got {approved_on!r}"
                 )
 
-                # Cross-field backstop (coordinator ruling, phase 2): consent
-                # and outcome can express a contradictory state that no type
-                # can forbid. The transformations meant to prevent this ship
-                # in later tasks; this check is the backstop for a file
-                # hand-edited outside them.
-                if consent == "refused" and outcome == "published":
-                    errors.append(
-                        f"{pub_where}: refused consent cannot have outcome published"
-                    )
+            errors.extend(
+                _validate_objections(publication.get("objections"), pub_where)
+            )
+
+            # Cross-field backstop (coordinator ruling, phase 2): consent
+            # and outcome can express a contradictory state that no type
+            # can forbid. The transformations meant to prevent this ship
+            # in later tasks; this check is the backstop for a file
+            # hand-edited outside them.
+            if consent == "refused" and outcome == "published":
+                errors.append(
+                    f"{pub_where}: refused consent cannot have outcome published"
+                )
 
         errors.extend(_validate_ballots(entry, where, board_logins))
 
@@ -347,8 +355,12 @@ def validate_config(cfg: Any) -> list[str]:
             if not isinstance(login, str) or not LOGIN_RE.match(login):
                 errors.append(f"config.yml: invalid board member {login!r}")
 
+            # Written explicitly by the migration, and required here:
+            # governance.active_board keeps only members whose status is
+            # exactly 'active', so a member with no status silently leaves
+            # the board - and with it the denominator of every vote.
             status = member.get("status")
-            if status is not None and status not in BOARD_STATUSES:
+            if status not in BOARD_STATUSES:
                 errors.append(f"config.yml: invalid board member status {status!r}")
 
             for date_field in ("joined_on", "unavailable_until"):
