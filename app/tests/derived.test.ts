@@ -3,16 +3,30 @@ import { effectiveStatus, hasEnded, parisWallTimeToEpoch } from '../src/state/de
 import type { Config, Speaker } from '../src/data/types';
 
 const config: Config = {
-  season: 2026, vw_counter: 5, vote_threshold: 3, overlap_window_days: 7,
-  seminar_duration_minutes: 90, board_members: [],
+  season: 2026, vw_counter: 5, overlap_window_days: 7,
+  seminar_duration_minutes: 90, board: [], nominations: [],
+  board_min: 3, board_max: 9, vote_window_days: 14,
+  objection_window_working_days: 5, inactivity_months: 6,
+  balance_window_months: 12,
+  sla_days: {
+    lead_decision: 14, invitation_follow_up: 7,
+    summary_after_delivery: 5, recording_after_delivery: 10,
+  },
 };
 
 function scheduled(date: string, time = '12:30'): Speaker {
   return {
-    id: 'spk-001', name: 'A', gender: 'undisclosed', email: '', affiliation: '',
+    id: 'spk-001', name: 'A', gender: 'undisclosed', career_stage: 'undisclosed',
+    email: '', affiliation: '',
     country: '', title: '', abstract: '', conflicts_of_interest: '',
-    source: 'organizer', proposed_by: '', links: [], host_1: 'H1', host_2: 'H2',
-    status: 'scheduled', selection: { votes_for: [], decided_on: '' },
+    source: 'organizer', proposed_by: '', assigned_to: '', links: [],
+    host_1: 'H1', host_2: 'H2',
+    status: 'scheduled',
+    selection: { ballots: [], opened_on: '', decided_on: '' },
+    publication: {
+      consent: 'pending', approved_by: '', approved_on: '',
+      objections: [], outcome: '',
+    },
     edition_code: 'MRG-05', date, time, zoom_link: '', youtube_url: '',
     forum_thread: '', runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },

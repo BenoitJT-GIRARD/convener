@@ -74,10 +74,8 @@ describe('mutate', () => {
     // store's underlying write logic (not the mock wrapper — reassigning
     // mockImplementation replaces it in place, so holding a reference to
     // `harness.store.write` itself would recurse into the new behavior).
-    const originalWrite = (
-      harness.store.write as ReturnType<typeof vi.fn>
-    ).getMockImplementation()!;
-    (harness.store.write as ReturnType<typeof vi.fn>).mockImplementation(
+    const originalWrite = vi.mocked(harness.store.write).getMockImplementation()!;
+    vi.mocked(harness.store.write).mockImplementation(
       async (path, text, sha, message) => {
         if (firstAttempt) {
           firstAttempt = false;

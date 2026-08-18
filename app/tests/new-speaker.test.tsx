@@ -9,10 +9,17 @@ import type { Speaker } from '../src/data/types';
 
 function speaker(id: string): Speaker {
   return {
-    id, name: `Speaker ${id}`, gender: 'undisclosed', email: '', affiliation: '',
+    id, name: `Speaker ${id}`, gender: 'undisclosed', career_stage: 'undisclosed',
+    email: '', affiliation: '',
     country: '', title: '', abstract: '', conflicts_of_interest: '',
     source: 'organizer', proposed_by: '', assigned_to: '', links: [], host_1: '', host_2: '',
-    status: 'lead', selection: { votes_for: [], decided_on: '' }, edition_code: '',
+    status: 'lead',
+    selection: { ballots: [], opened_on: '', decided_on: '' },
+    publication: {
+      consent: 'pending', approved_by: '', approved_on: '',
+      objections: [], outcome: '',
+    },
+    edition_code: '',
     date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
     runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },

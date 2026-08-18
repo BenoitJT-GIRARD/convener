@@ -9,11 +9,18 @@ import type { Speaker } from '../src/data/types';
 
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
   return {
-    id: 'spk-001', name: 'Original Name', gender: 'undisclosed', email: '',
+    id: 'spk-001', name: 'Original Name', gender: 'undisclosed',
+    career_stage: 'undisclosed', email: '',
     affiliation: '', country: '', title: '', abstract: '',
-    conflicts_of_interest: '', source: 'organizer', proposed_by: '', links: [],
+    conflicts_of_interest: '', source: 'organizer', proposed_by: '',
+    assigned_to: '', links: [],
     host_1: '', host_2: '', status: 'lead',
-    selection: { votes_for: [], decided_on: '' }, edition_code: '',
+    selection: { ballots: [], opened_on: '', decided_on: '' },
+    publication: {
+      consent: 'pending', approved_by: '', approved_on: '',
+      objections: [], outcome: '',
+    },
+    edition_code: '',
     date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
     runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
@@ -40,7 +47,7 @@ function makeSpeakersBackend(initial: Speaker[]) {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
-  const cfgYaml = 'season: 2026\nboard_members: []\n';
+  const cfgYaml = 'season: 2026\nboard: []\n';
 
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
@@ -78,7 +85,7 @@ function makeSpeakersBackend(initial: Speaker[]) {
 /** Every PUT is rejected as stale, no matter the sha sent — `mutate` exhausts
  *  its retries and the caller's `mutateSpeakers` resolves `false`. */
 function makeAlwaysConflictingBackend(initial: Speaker[]) {
-  const cfgYaml = 'season: 2026\nboard_members: []\n';
+  const cfgYaml = 'season: 2026\nboard: []\n';
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
       return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });

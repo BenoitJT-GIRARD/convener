@@ -56,11 +56,15 @@ describe('Login -- token strategy (default, nothing configured)', () => {
 
   it('activates demo mode and reloads when the demo button is clicked', () => {
     const reloadSpy = vi.fn();
+    // jsdom's `window.location` is neither writable nor deletable, and its
+    // `reload` is non-configurable, so the whole object is swapped for a
+    // stand-in through defineProperty and put back at the end of the test.
     const originalLocation = window.location;
-    // @ts-expect-error -- jsdom's window.location isn't directly replaceable
-    delete window.location;
-    // @ts-expect-error -- minimal stand-in, only `reload` is exercised here
-    window.location = { ...originalLocation, reload: reloadSpy };
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { ...originalLocation, reload: reloadSpy },
+    });
 
     render(
       <AuthProvider>
@@ -71,7 +75,11 @@ describe('Login -- token strategy (default, nothing configured)', () => {
     expect(localStorage.getItem('convener.demo')).toBe('1');
     expect(reloadSpy).toHaveBeenCalled();
 
-    window.location = originalLocation;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: originalLocation,
+    });
   });
 });
 

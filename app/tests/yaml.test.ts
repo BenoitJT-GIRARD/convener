@@ -7,10 +7,18 @@ import type { Speaker, Config } from '../src/data/types';
 
 function speaker(id: string, status: Speaker['status'] = 'lead'): Speaker {
   return {
-    id, name: `Speaker ${id}`, gender: 'undisclosed', email: '', affiliation: '',
+    id, name: `Speaker ${id}`, gender: 'undisclosed', career_stage: 'undisclosed',
+    email: '', affiliation: '',
     country: '', title: '', abstract: '', conflicts_of_interest: '',
-    source: 'organizer', proposed_by: '', links: [], host_1: '', host_2: '',
-    status, selection: { votes_for: [], decided_on: '' }, edition_code: '',
+    source: 'organizer', proposed_by: '', assigned_to: '', links: [],
+    host_1: '', host_2: '',
+    status,
+    selection: { ballots: [], opened_on: '', decided_on: '' },
+    publication: {
+      consent: 'pending', approved_by: '', approved_on: '',
+      objections: [], outcome: '',
+    },
+    edition_code: '',
     date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
     runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
@@ -65,10 +73,25 @@ const sample: Speaker = {
 const sampleCfg: Config = {
   season: 2026,
   vw_counter: 5,
-  vote_threshold: 3,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
-  board_members: ['alice', 'bob'],
+  board: [
+    { login: 'alice', joined_on: '2025-01-06', status: 'active', unavailable_until: '' },
+    { login: 'bob', joined_on: '2025-03-10', status: 'active', unavailable_until: '' },
+  ],
+  nominations: [],
+  board_min: 3,
+  board_max: 9,
+  vote_window_days: 14,
+  objection_window_working_days: 5,
+  inactivity_months: 6,
+  balance_window_months: 12,
+  sla_days: {
+    lead_decision: 14,
+    invitation_follow_up: 7,
+    summary_after_delivery: 5,
+    recording_after_delivery: 10,
+  },
 };
 
 describe('yaml v2 schema', () => {
