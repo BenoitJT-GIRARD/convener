@@ -13,7 +13,13 @@ from typing import Any
 
 import pytest
 
-from convener_ops.governance import active_board, decide, threshold_for
+from convener_ops.governance import (
+    active_board,
+    add_working_days,
+    decide,
+    threshold_for,
+    working_days_elapsed,
+)
 
 CASES = json.loads(
     (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
@@ -57,3 +63,27 @@ def test_active_board_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     assert unavailable == case["unavailable"]
     away = set(unavailable)
     assert [login for login in logins if login not in away] == case["eligible"]
+
+
+@pytest.mark.parametrize(
+    "case", CASES["working_day_cases"]["add"], ids=lambda c: c["name"]
+)
+def test_add_working_days_matches_the_shared_fixture(case: dict[str, Any]) -> None:
+    assert add_working_days(case["from"], case["days"]) == case["expected"]
+
+
+@pytest.mark.parametrize(
+    "case", CASES["working_day_cases"]["elapsed"], ids=lambda c: c["name"]
+)
+def test_working_days_elapsed_matches_the_shared_fixture(case: dict[str, Any]) -> None:
+    assert working_days_elapsed(case["from"], case["to"]) == case["expected"]
+
+
+@pytest.mark.parametrize(
+    "case", CASES["working_day_cases"]["add"], ids=lambda c: c["name"]
+)
+def test_elapsed_inverts_add_on_every_shared_case(case: dict[str, Any]) -> None:
+    """The two are one rule read from either end, so the fixture's `add` cases
+    also pin `working_days_elapsed`: a window opened on `from` has run exactly
+    when this many working days have elapsed."""
+    assert working_days_elapsed(case["from"], case["expected"]) == case["days"]

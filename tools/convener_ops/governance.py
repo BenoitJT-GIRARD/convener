@@ -35,6 +35,7 @@ import math
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import date, timedelta
 from typing import Any
 
 #: An ISO calendar day, the only date form stored in the two data files.
@@ -196,3 +197,98 @@ def decide(
         decided=(not suspended and yes >= threshold),
         suspended=suspended,
     )
+
+
+# ------------------------------------------------------------------ #
+# Working days
+#
+# Some governance windows are counted in working days rather than calendar
+# days -- `config.objection_window_working_days`, the publication objection
+# gate (G-10) -- because the people bound by them are unpaid volunteers with
+# day jobs, and a window that burns through a weekend has silently shortened
+# itself. Others are calendar days by rule: the nomination window (G-08) and
+# `config.vote_window_days`. Nothing here may be applied to those; converting
+# one unit into the other would move a real decision by a real day.
+#
+# Public holidays are deliberately not modelled. The board's members do not
+# all work under the same national calendar, so a holiday list right for
+# France would be wrong for the others; and an unmodelled holiday only ever
+# makes a window effectively longer, which is the prudent direction. The
+# shared fixture pins 1 May 2026 as an ordinary Friday so that reads as a
+# decision, not an oversight.
+#
+# `app/src/state/working-days.ts` is the twin, and
+# `tools/tests/fixtures/governance-cases.json`'s `working_day_cases` pins the
+# two together. Both take and return ISO days and read no clock, so there is
+# no timezone left for them to get wrong: the caller supplies the day, already
+# anchored on Europe/Paris the way `convener_ops.sweep._paris_today` anchors it.
+# ------------------------------------------------------------------ #
+
+#: Saturday and Sunday, as `datetime.date.weekday` numbers them.
+_WEEKEND = frozenset({5, 6})
+
+
+def _iso_day(value: Any) -> date | None:
+    """`value` as a calendar day, or `None` when it is not an ISO day."""
+    if not isinstance(value, str) or not _DATE_RE.match(value):
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _is_count(value: Any) -> bool:
+    """Whether `value` is usable as a number of days. `bool` is an `int` in
+    Python and is never a day count, so it is refused explicitly."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def add_working_days(start: str, days: Any) -> str:
+    """The ISO day `days` working days after `start`, weekends skipped.
+
+    The count is of the days *after* `start`: three working days from a
+    Thursday is the following Tuesday, and three from a Friday, a Saturday or a
+    Sunday are all the following Wednesday -- a window opened over a weekend
+    gets its full three working days. Zero is the identity, `start` itself,
+    weekend or not: a zero-length window closes the moment it opens, and
+    rounding a Saturday forward to the Monday would grant a window nobody
+    voted for. A negative count is the identity too, matching the TypeScript
+    side, where the loop simply does not run.
+
+    Returns `''` -- never raises -- when `start` is not an ISO day or `days` is
+    not a whole number, as a hand-edited `config.yaml` may well hold. The
+    caller reads that as "no deadline can be computed" and lets the window
+    stand open, so an unattended job never acts on a date it could not parse.
+    """
+    day = _iso_day(start)
+    if day is None or not _is_count(days):
+        return ""
+    counted = 0
+    while counted < days:
+        day += timedelta(days=1)
+        if day.weekday() not in _WEEKEND:
+            counted += 1
+    return day.isoformat()
+
+
+def working_days_elapsed(start: str, end: str) -> int:
+    """Working days from `start` to `end`, counting the days after `start` up
+    to and including `end` -- the exact inverse of `add_working_days`, so a
+    window opened on `start` with `n` working days has run once this reaches
+    `n`.
+
+    Zero when `end` is not after `start`, and zero when either is not an ISO
+    day: an unparsable date reads as "no time has passed", so the window stays
+    open rather than closing on a value nothing could make sense of.
+    """
+    day = _iso_day(start)
+    last = _iso_day(end)
+    if day is None or last is None:
+        return 0
+    elapsed = 0
+    while day < last:
+        day += timedelta(days=1)
+        if day.weekday() not in _WEEKEND:
+            elapsed += 1
+    return elapsed

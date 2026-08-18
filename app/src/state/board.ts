@@ -131,7 +131,11 @@ export function assignLead(speakers: Speaker[], config: Config, on: string): str
 
 /** Days of silence after which a nomination carries (G-08). Calendar days,
  *  not working days: `objection_window_working_days` is the *publication*
- *  gate (G-10), a different window with a different unit. */
+ *  gate (G-10), a different window with a different unit. So `windowHasRun`
+ *  below deliberately does *not* go through `state/working-days.ts`: that
+ *  module counts the working-day windows, and routing this one through it
+ *  would lengthen a seven-day window to nine or eleven calendar days -- a
+ *  real decision moved by real days, on nobody's authority. */
 export const NOMINATION_WINDOW_DAYS = 7;
 
 /** Webinars a candidate must have actually co-hosted to be nominated,

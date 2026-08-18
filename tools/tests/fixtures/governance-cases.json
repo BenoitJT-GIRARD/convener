@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared truth for the board mapping and the vote threshold. Read by app/tests/governance-fixture.test.ts, app/tests/board.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
+  "_comment": "Shared truth for the board mapping, the vote threshold and the working-day windows. Read by app/tests/governance-fixture.test.ts, app/tests/board.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
   "active_board_cases": [
     {
       "name": "an active member with no declared absence is eligible",
@@ -227,5 +227,120 @@
       "on": "2026-08-18",
       "expected": ""
     }
-  ]
+  ],
+  "working_day_cases": {
+    "_comment": "Working-day arithmetic, pinned across app/src/state/working-days.ts and tools/convener_ops/governance.py. Weekends are Saturday and Sunday. PUBLIC HOLIDAYS ARE DELIBERATELY NOT MODELLED: the board's members do not share one national calendar, so a holiday list right for France would be wrong for the others, and an unmodelled holiday only ever makes a window longer, which is the prudent direction. The 1 May 2026 cases below pin that as a decision rather than an oversight. The count is of the days AFTER the start day, and `elapsed` is the exact inverse of `add`.",
+    "add": [
+      {
+        "name": "three working days from a Monday land on the Thursday",
+        "from": "2026-08-17",
+        "days": 3,
+        "expected": "2026-08-20"
+      },
+      {
+        "name": "three working days from a Thursday cross the weekend and land on the Tuesday",
+        "from": "2026-08-20",
+        "days": 3,
+        "expected": "2026-08-25"
+      },
+      {
+        "name": "three working days from a Friday land on the Wednesday",
+        "from": "2026-08-21",
+        "days": 3,
+        "expected": "2026-08-26"
+      },
+      {
+        "name": "three working days from a Saturday land on the same Wednesday as from the Friday",
+        "from": "2026-08-22",
+        "days": 3,
+        "expected": "2026-08-26"
+      },
+      {
+        "name": "three working days from a Sunday land on that Wednesday too",
+        "from": "2026-08-23",
+        "days": 3,
+        "expected": "2026-08-26"
+      },
+      {
+        "name": "one working day from a Friday is the Monday",
+        "from": "2026-08-21",
+        "days": 1,
+        "expected": "2026-08-24"
+      },
+      {
+        "name": "zero working days is the identity",
+        "from": "2026-08-19",
+        "days": 0,
+        "expected": "2026-08-19"
+      },
+      {
+        "name": "zero working days from a Saturday is that Saturday, not the Monday",
+        "from": "2026-08-22",
+        "days": 0,
+        "expected": "2026-08-22"
+      },
+      {
+        "name": "1 May 2026 is counted as an ordinary Friday - holidays are not modelled",
+        "from": "2026-04-30",
+        "days": 3,
+        "expected": "2026-05-05"
+      }
+    ],
+    "elapsed": [
+      {
+        "name": "Monday to Thursday is three working days",
+        "from": "2026-08-17",
+        "to": "2026-08-20",
+        "expected": 3
+      },
+      {
+        "name": "Thursday to the following Tuesday is three working days, the weekend uncounted",
+        "from": "2026-08-20",
+        "to": "2026-08-25",
+        "expected": 3
+      },
+      {
+        "name": "Friday to Monday is one working day",
+        "from": "2026-08-21",
+        "to": "2026-08-24",
+        "expected": 1
+      },
+      {
+        "name": "Saturday to Monday is one working day",
+        "from": "2026-08-22",
+        "to": "2026-08-24",
+        "expected": 1
+      },
+      {
+        "name": "a span inside the weekend is zero working days",
+        "from": "2026-08-22",
+        "to": "2026-08-23",
+        "expected": 0
+      },
+      {
+        "name": "the same day is zero working days",
+        "from": "2026-08-19",
+        "to": "2026-08-19",
+        "expected": 0
+      },
+      {
+        "name": "a window cannot run backwards",
+        "from": "2026-08-20",
+        "to": "2026-08-17",
+        "expected": 0
+      },
+      {
+        "name": "a full week is five working days",
+        "from": "2026-08-17",
+        "to": "2026-08-24",
+        "expected": 5
+      },
+      {
+        "name": "the 1 May 2026 span counts three working days, holidays included as ordinary days",
+        "from": "2026-04-30",
+        "to": "2026-05-05",
+        "expected": 3
+      }
+    ]
+  }
 }

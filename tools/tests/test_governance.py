@@ -17,7 +17,13 @@ from typing import Any
 
 from conftest import board_member
 
-from convener_ops.governance import active_board, decide, eligible_voters
+from convener_ops.governance import (
+    active_board,
+    add_working_days,
+    decide,
+    eligible_voters,
+    working_days_elapsed,
+)
 
 ON = "2026-01-20"
 
@@ -65,3 +71,32 @@ def test_a_ballot_without_a_voter_key_neither_recuses_nor_raises() -> None:
     outcome = decide(["ada", "grace", "Anonymous"], [], ballots)
     assert outcome.eligible == 3
     assert outcome.yes == 1
+
+
+def test_an_unparsable_date_computes_no_deadline_rather_than_raising() -> None:
+    # A hand-edited `opened_on` must not close a window and must not crash the
+    # nightly job: no deadline can be computed, so the caller leaves the
+    # window open.
+    assert add_working_days("not-a-date", 3) == ""
+    assert add_working_days("2026-02-30", 3) == ""
+    assert add_working_days("", 3) == ""
+
+
+def test_an_unusable_window_length_computes_no_deadline() -> None:
+    # `objection_window_working_days` comes from a YAML file a human can edit.
+    assert add_working_days("2026-08-17", "3") == ""
+    assert add_working_days("2026-08-17", 3.0) == ""
+    assert add_working_days("2026-08-17", None) == ""
+    # `bool` is an `int` in Python; `True` is not a day count.
+    assert add_working_days("2026-08-17", True) == ""
+
+
+def test_a_negative_window_is_the_identity_as_it_is_in_typescript() -> None:
+    assert add_working_days("2026-08-19", -3) == "2026-08-19"
+
+
+def test_an_unparsable_span_reads_as_no_time_elapsed() -> None:
+    # Zero elapsed means "the window has not run", so nothing is parked or
+    # accepted on a date nothing could make sense of.
+    assert working_days_elapsed("not-a-date", "2026-08-20") == 0
+    assert working_days_elapsed("2026-08-17", "not-a-date") == 0
