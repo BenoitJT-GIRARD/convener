@@ -5,6 +5,7 @@ import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider } from '../src/data/DataContext';
 import { Board } from '../src/screens/Board';
 import { parseConfig, serializeConfig } from '../src/data/yaml';
+import { speaker as double } from './data-doubles';
 import type { BoardMember, Config, Nomination, Speaker } from '../src/data/types';
 
 function member(login: string, overrides: Partial<BoardMember> = {}): BoardMember {
@@ -35,18 +36,10 @@ function config(overrides: Partial<Config> = {}): Config {
   };
 }
 
+/** A delivered seminar hosted by `host` -- the only two facts this screen
+ *  reads off a speaker. Everything else comes from the shared double. */
 function speaker(id: string, host: string): Speaker {
-  return {
-    id, name: id, gender: 'undisclosed', career_stage: 'undisclosed', email: '', affiliation: '',
-    country: '', title: '', abstract: '', conflicts_of_interest: '', source: 'organizer',
-    proposed_by: '', assigned_to: '', links: [], host_1: host, host_2: '', status: 'delivered',
-    selection: { ballots: [], opened_on: '', decided_on: '' },
-    publication: { consent: 'pending', approved_by: '', approved_on: '', objections: [], outcome: '' },
-    edition_code: '', date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
-    runbook_progress: {},
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-    notes: '',
-  };
+  return double({ id, name: id, host_1: host, status: 'delivered' });
 }
 
 function encodeUtf8(text: string): string {

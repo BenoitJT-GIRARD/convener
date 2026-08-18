@@ -16,6 +16,7 @@ import {
   type Publication,
   type Speaker,
 } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /* ------------------------------------------------------------------ *
  * Fixtures
@@ -65,8 +66,7 @@ function publication(overrides: Partial<Publication> = {}): Publication {
 /** A delivered seminar with the delivered-phase checklist already satisfied,
  *  so the only thing standing between it and the archive is this gate. */
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
-  return {
-    id: 'spk-001',
+  return double({
     name: 'Dr Ada Lovelace',
     gender: 'F',
     career_stage: 'independent',
@@ -75,11 +75,9 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     country: 'UK',
     title: 'A talk',
     abstract: 'An abstract',
-    conflicts_of_interest: '',
     source: 'outreach',
     proposed_by: 'bob',
     assigned_to: 'bob',
-    links: [],
     host_1: 'alice',
     host_2: 'bob',
     status: 'delivered',
@@ -88,7 +86,6 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     edition_code: 'MRG-05',
     date: '2026-01-05',
     time: '12:30',
-    zoom_link: '',
     youtube_url: 'https://youtu.be/x',
     forum_thread: 'https://forum/x',
     runbook_progress: {
@@ -96,9 +93,8 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
       'delivered/thank-you': true,
     },
     metrics: { registrations: 40, live_peak: 22, youtube_views_30d: 5, forum_replies: 2 },
-    notes: '',
     ...overrides,
-  };
+  });
 }
 
 /** Far enough in the past that the objection window has run under any clock

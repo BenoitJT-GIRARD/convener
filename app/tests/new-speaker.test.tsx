@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { boardYaml, configYaml } from './data-doubles';
+import { boardYaml, configYaml, speaker as double } from './data-doubles';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -8,23 +8,10 @@ import { NewSpeaker } from '../src/screens/NewSpeaker';
 import { parseSpeakers, serializeSpeakers } from '../src/data/yaml';
 import type { Speaker } from '../src/data/types';
 
+/** An existing record in the file, from the shared double: what this file
+ *  is about is the id the form computes next, not the shape of a speaker. */
 function speaker(id: string): Speaker {
-  return {
-    id, name: `Speaker ${id}`, gender: 'undisclosed', career_stage: 'undisclosed',
-    email: '', affiliation: '',
-    country: '', title: '', abstract: '', conflicts_of_interest: '',
-    source: 'organizer', proposed_by: '', assigned_to: '', links: [], host_1: '', host_2: '',
-    status: 'lead',
-    selection: { ballots: [], opened_on: '', decided_on: '' },
-    publication: {
-      consent: 'pending', approved_by: '', approved_on: '',
-      objections: [], outcome: '',
-    },
-    edition_code: '',
-    date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
-    runbook_progress: {}, notes: '',
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-  };
+  return double({ id, name: `Speaker ${id}` });
 }
 
 function encodeUtf8(text: string): string {

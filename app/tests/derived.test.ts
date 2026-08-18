@@ -7,6 +7,7 @@ import {
   parisWallTimeToEpoch,
 } from '../src/state/derived';
 import type { Config, Speaker } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 const config: Config = {
   season: 2026, vw_counter: 5, overlap_window_days: 7,
@@ -20,8 +21,11 @@ const config: Config = {
   },
 };
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function scheduled(date: string, time = '12:30'): Speaker {
-  return {
+  return double({
     id: 'spk-001', name: 'A', gender: 'undisclosed', career_stage: 'undisclosed',
     email: '', affiliation: '',
     country: '', title: '', abstract: '', conflicts_of_interest: '',
@@ -36,7 +40,7 @@ function scheduled(date: string, time = '12:30'): Speaker {
     edition_code: 'MRG-05', date, time, zoom_link: '', youtube_url: '',
     forum_thread: '', runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-  };
+  });
 }
 
 describe('parisWallTimeToEpoch', () => {

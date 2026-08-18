@@ -63,8 +63,17 @@ export function NewSpeaker() {
         email: form.email.trim(),
         affiliation: form.affiliation.trim(),
         country: form.country.trim(),
+        // Written as answers, not left out. This form does not ask for the
+        // portrait, the biography or the handle -- they are asked for once
+        // the speaker is invited, not while the board is still deciding --
+        // and `''` says "none on record" where an absent key would say the
+        // file is incomplete.
+        photo_url: '',
+        bio: '',
+        linkedin: '',
         title: form.title.trim(),
         abstract: form.abstract.trim(),
+        seed_questions: '',
         conflicts_of_interest: form.conflicts_of_interest.trim(),
         source: form.source,
         proposed_by: form.proposed_by.trim(),
@@ -88,6 +97,8 @@ export function NewSpeaker() {
           outcome: '',
         },
         edition_code: '',
+        // No slot has been put to anyone yet: the board has not voted.
+        candidate_dates: [],
         date: '',
         time: '',
         zoom_link: '',

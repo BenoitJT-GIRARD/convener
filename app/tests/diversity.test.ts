@@ -7,12 +7,16 @@ import {
 } from '../src/state/diversity';
 import type { CareerStage, Gender, Speaker, SpeakerStatus } from '../src/data/types';
 import { CAREER_STAGES, GENDERS } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 const ON = '2026-08-18';
 const WINDOW = 24;
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
-  return {
+  return double({
     id: 'spk-001',
     name: 'A',
     gender: 'undisclosed',
@@ -53,7 +57,7 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     },
     notes: '',
     ...overrides,
-  };
+  });
 }
 
 /** `n` speakers opened inside the window, all alike. */

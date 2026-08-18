@@ -3,6 +3,7 @@ import { canTransition, applyTransition } from '../src/state/transitions';
 import type { Transition, TransitionPayload } from '../src/state/transitions';
 import { BallotRejected } from '../src/state/ballots';
 import type { Ballot, BallotValue, Config, Speaker } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /** Four active board members, so `thresholdFor(4)` is 3 — the same bar the
  *  old fixed `voteThreshold: 3` argument stood for. */
@@ -41,7 +42,10 @@ function cast(value: BallotValue = 'yes', coiReason = '', comment = '') {
   return { value, comment, coiReason };
 }
 
-const base: Speaker = {
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
+const base: Speaker = double({
   id: 'x',
   name: 'X',
   gender: 'undisclosed',
@@ -76,7 +80,7 @@ const base: Speaker = {
   runbook_progress: {},
   metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
   notes: '',
-};
+});
 
 describe('transitions v2', () => {
   it('allows board to vote on a lead; refuses organizer', () => {

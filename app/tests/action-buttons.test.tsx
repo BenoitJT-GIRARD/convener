@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { boardYaml } from './data-doubles';
+import { boardYaml, speaker } from './data-doubles';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -12,43 +12,14 @@ function ballot(voter: string, value: BallotValue = 'yes'): Ballot {
   return { voter, value, comment: '', coi_reason: '', date: '2026-05-20' };
 }
 
+/** A lead with its vote open, built from the shared double rather than from
+ *  a copy of the model: a field added to `Speaker` reaches this file on its
+ *  own, instead of leaving it describing a record the reader now refuses. */
 function lead(ballots: Ballot[] = []): Speaker {
-  return {
-    id: 'spk-001',
+  return speaker({
     name: 'Lead One',
-    gender: 'undisclosed',
-    career_stage: 'undisclosed',
-    email: '',
-    affiliation: '',
-    country: '',
-    title: '',
-    abstract: '',
-    conflicts_of_interest: '',
-    source: 'organizer',
-    proposed_by: '',
-    assigned_to: '',
-    links: [],
-    host_1: '',
-    host_2: '',
-    status: 'lead',
     selection: { ballots, opened_on: '2026-05-01', decided_on: '' },
-    publication: {
-      consent: 'pending',
-      approved_by: '',
-      approved_on: '',
-      objections: [],
-      outcome: '',
-    },
-    edition_code: '',
-    date: '',
-    time: '',
-    zoom_link: '',
-    youtube_url: '',
-    forum_thread: '',
-    runbook_progress: {},
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-    notes: '',
-  };
+  });
 }
 
 /** Four active members, so `thresholdFor(4)` is 3 yes votes. */

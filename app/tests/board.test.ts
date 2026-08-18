@@ -8,6 +8,7 @@ import {
 } from '../src/state/board';
 import type { BoardMember, Config, Speaker } from '../src/data/types';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
+import { speaker as double } from './data-doubles';
 
 function member(overrides: Partial<BoardMember> = {}): BoardMember {
   return {
@@ -42,8 +43,11 @@ function config(board: BoardMember[]): Config {
   };
 }
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
-  return {
+  return double({
     id: 'spk-001',
     name: 'A',
     gender: 'undisclosed',
@@ -84,7 +88,7 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     },
     notes: '',
     ...overrides,
-  };
+  });
 }
 
 describe('activeBoard', () => {

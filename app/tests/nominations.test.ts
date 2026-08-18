@@ -18,6 +18,7 @@ import {
 import { friendlyError } from '../src/github/errors';
 import { DecisionRejected, formatDecision, identifier } from '../src/state/decisions';
 import type { BoardMember, Config, Nomination, Speaker } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 function member(login: string, overrides: Partial<BoardMember> = {}): BoardMember {
   return {
@@ -53,8 +54,11 @@ function config(overrides: Partial<Config> = {}): Config {
   };
 }
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
-  return {
+  return double({
     id: 'spk-001',
     name: 'A',
     gender: 'undisclosed',
@@ -95,7 +99,7 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     },
     notes: '',
     ...overrides,
-  };
+  });
 }
 
 /** `dan` has co-hosted exactly the two webinars eligibility asks for. */

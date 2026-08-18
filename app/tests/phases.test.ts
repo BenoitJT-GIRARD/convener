@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { phaseOf, canFinalize, fieldValue, setField, PHASES, type FieldKey } from '../src/state/phases';
 import type { Speaker } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
-const base: Speaker = {
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
+const base: Speaker = double({
   id: 'x',
   name: 'X',
   gender: 'undisclosed',
@@ -37,7 +41,7 @@ const base: Speaker = {
   runbook_progress: {},
   metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
   notes: '',
-};
+});
 
 describe('phases v2', () => {
   it('returns phase by status', () => {

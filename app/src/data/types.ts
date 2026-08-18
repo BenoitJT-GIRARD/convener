@@ -17,6 +17,38 @@ export function isCareerStage(v: string): v is CareerStage {
   return (CAREER_STAGES as readonly string[]).includes(v);
 }
 
+/**
+ * What a speaker has said about one proposed slot.
+ *
+ * There is no `pending` and no fourth value. An answer that has not come
+ * back is `''` -- the same absence the rest of the model spells that way --
+ * and there is deliberately nothing to write for "probably fine": a slot is
+ * either one the speaker accepted, one they declined, or one nobody has
+ * answered on yet. The lock-in transition chooses among the accepted ones,
+ * so a value meaning "almost" would be a value the lock-in would have to
+ * guess about.
+ */
+export const DATE_ANSWERS = ['accepted', 'declined', ''] as const;
+export type DateAnswer = (typeof DATE_ANSWERS)[number];
+export function isDateAnswer(v: string): v is DateAnswer {
+  return (DATE_ANSWERS as readonly string[]).includes(v);
+}
+
+/**
+ * One slot put to the speaker, and their answer to it.
+ *
+ * The invitation has always proposed several dates while the model stored
+ * one, so the negotiation happened by e-mail and only its conclusion was
+ * ever written down. These are the proposals themselves; `Speaker.date` and
+ * `Speaker.time` stay what they were -- the single slot the lock-in froze --
+ * and are never derived from this list without a board act.
+ */
+export interface CandidateDate {
+  date: string;
+  time: string;
+  answer: DateAnswer;
+}
+
 export interface SpeakerMetrics {
   registrations: number | null;
   live_peak: number | null;
@@ -133,9 +165,20 @@ export interface Speaker {
   email: string;
   affiliation: string;
   country: string;
+  /** Portrait, asked for by the announcement visual. A link, not an upload:
+   *  the repository holds records, not media. */
+  photo_url: string;
+  /** Short biography, which feeds the introduction script the host reads
+   *  out. `''` is an answer -- "none given" -- and a missing key is not. */
+  bio: string;
+  /** LinkedIn handle, used to name the speaker in the promotion posts. */
+  linkedin: string;
 
   title: string;
   abstract: string;
+  /** A few sentences from the speaker to open the forum discussion with.
+   *  Free text, in their words, not a list this app parses. */
+  seed_questions: string;
   conflicts_of_interest: string;
 
   source: 'form' | 'outreach' | 'organizer';
@@ -158,6 +201,11 @@ export interface Speaker {
   publication: Publication;
 
   edition_code: string;
+  /** The slots put to the speaker, with their answers. Empty until the
+   *  invitation goes out; it stays populated after the lock-in, because
+   *  which dates were offered and which were refused is the record of how
+   *  the chosen one was chosen. */
+  candidate_dates: CandidateDate[];
   date: string;
   time: string;
 
@@ -169,6 +217,34 @@ export interface Speaker {
   metrics: SpeakerMetrics;
   notes: string;
 }
+
+/**
+ * Every key a speaker record has, in the order the model declares them.
+ *
+ * Written as a record keyed by `keyof Speaker` rather than as an array of
+ * strings, so it is exhaustive in both directions: add a field to `Speaker`
+ * and forget it here, and this file stops compiling; leave a field here that
+ * `Speaker` no longer has, and it stops compiling too. An array of the same
+ * strings would have compiled either way.
+ *
+ * `data/validate.ts` reads it as the set of keys a file may carry, and the
+ * publication classification reads it to prove no field slips past the
+ * consent gate unclassified -- neither of which a hand-kept second list
+ * could be trusted to have followed.
+ */
+const SPEAKER_FIELD_SET: Record<keyof Speaker, true> = {
+  id: true, name: true, gender: true, career_stage: true, email: true,
+  affiliation: true, country: true, photo_url: true, bio: true,
+  linkedin: true, title: true, abstract: true, seed_questions: true,
+  conflicts_of_interest: true, source: true, proposed_by: true,
+  assigned_to: true, links: true, host_1: true, host_2: true, status: true,
+  selection: true, publication: true, edition_code: true,
+  candidate_dates: true, date: true, time: true, zoom_link: true,
+  youtube_url: true, forum_thread: true, runbook_progress: true,
+  metrics: true, notes: true,
+};
+
+export const SPEAKER_FIELDS = Object.keys(SPEAKER_FIELD_SET) as readonly (keyof Speaker)[];
 
 export interface Config {
   season: number;

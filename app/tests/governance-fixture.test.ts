@@ -5,6 +5,7 @@ import type { BallotLike } from '../src/state/governance';
 import { lateness, overdueText, waitingSince } from '../src/state/sla';
 import { isBallotValue } from '../src/data/types';
 import type { Config, Speaker, SpeakerStatus } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /** The fixture is JSON, so every ballot value arrives as a bare string. It is
  *  narrowed through the same guard the app uses rather than cast: a typo in the
@@ -77,8 +78,11 @@ function configFor(sla_days: Config['sla_days']): Config {
   };
 }
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function speakerFor(c: LatenessCase): Speaker {
-  return {
+  return double({
     id: 'spk-001', name: '', gender: 'undisclosed', career_stage: 'undisclosed',
     email: '', affiliation: '', country: '', title: '', abstract: '',
     conflicts_of_interest: '', source: 'organizer', proposed_by: '', assigned_to: '',
@@ -92,7 +96,7 @@ function speakerFor(c: LatenessCase): Speaker {
     youtube_url: c.speaker.youtube_url, forum_thread: '',
     runbook_progress: c.speaker.runbook_progress, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-  };
+  });
 }
 
 describe('the overdue wording, shared with the daily digest', () => {

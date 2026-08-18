@@ -13,6 +13,7 @@ import {
   type Overdue,
 } from '../src/state/sla';
 import type { Config, Speaker, SpeakerStatus } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /** The values `data/config.yml` actually carries, so the arithmetic is pinned
  *  against the real turnaround times and not against round numbers. */
@@ -30,8 +31,11 @@ const config: Config = {
   },
 };
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function speaker(status: SpeakerStatus, overrides: Partial<Speaker> = {}): Speaker {
-  return {
+  return double({
     id: 'spk-001', name: 'A Speaker', gender: 'undisclosed', career_stage: 'undisclosed',
     email: '', affiliation: '', country: '', title: '', abstract: '',
     conflicts_of_interest: '', source: 'organizer', proposed_by: '', assigned_to: '',
@@ -44,7 +48,7 @@ function speaker(status: SpeakerStatus, overrides: Partial<Speaker> = {}): Speak
     forum_thread: '', runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
     ...overrides,
-  };
+  });
 }
 
 function lead(opened_on: string): Speaker {

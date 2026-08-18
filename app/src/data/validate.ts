@@ -34,6 +34,7 @@
 import type {
   Ballot,
   BoardMember,
+  CandidateDate,
   Config,
   Nomination,
   Objection,
@@ -43,7 +44,7 @@ import type {
   SpeakerMetrics,
   SpeakerSelection,
 } from './types';
-import { BALLOT_VALUES, CAREER_STAGES, GENDERS } from './types';
+import { BALLOT_VALUES, CAREER_STAGES, DATE_ANSWERS, GENDERS, SPEAKER_FIELDS } from './types';
 
 /**
  * A data file the app cannot read as the model it is meant to hold.
@@ -288,13 +289,28 @@ function readMetrics(at: Cursor, value: unknown): SpeakerMetrics {
   };
 }
 
-const SPEAKER_KEYS = [
-  'id', 'name', 'gender', 'career_stage', 'email', 'affiliation', 'country',
-  'title', 'abstract', 'conflicts_of_interest', 'source', 'proposed_by',
-  'assigned_to', 'links', 'host_1', 'host_2', 'status', 'selection',
-  'publication', 'edition_code', 'date', 'time', 'zoom_link', 'youtube_url',
-  'forum_thread', 'runbook_progress', 'metrics', 'notes',
-] as const;
+/** One list of speaker keys for the whole app, kept in `data/types.ts` where
+ *  the compiler holds it against `Speaker` itself. It used to be restated
+ *  here, which meant a field could be added to the model and silently
+ *  refused by the reader that is supposed to accept the model. */
+const SPEAKER_KEYS: readonly string[] = SPEAKER_FIELDS;
+
+/** One proposed slot: a day, an hour, and what the speaker said about it.
+ *
+ *  `answer` is checked against the closed vocabulary rather than read as
+ *  text -- `maybe` typed into the file would otherwise reach the lock-in,
+ *  which has no reading for it. The day and the hour are checked as text
+ *  here and as formats by `tools/convener_ops/validate.py`, the same division of
+ *  labour as `date` and `time` on the record itself. */
+function readCandidateDate(at: Cursor, entry: unknown): CandidateDate {
+  const raw = object(at, entry);
+  keys(at, raw, ['date', 'time', 'answer']);
+  return {
+    date: text(at, raw, 'date'),
+    time: text(at, raw, 'time'),
+    answer: oneOf(at, raw, 'answer', DATE_ANSWERS),
+  };
+}
 
 function readSpeaker(at: Cursor, entry: unknown): Speaker {
   const raw = object(at, entry);
@@ -311,8 +327,12 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     email: text(here, raw, 'email'),
     affiliation: text(here, raw, 'affiliation'),
     country: text(here, raw, 'country'),
+    photo_url: text(here, raw, 'photo_url'),
+    bio: text(here, raw, 'bio'),
+    linkedin: text(here, raw, 'linkedin'),
     title: text(here, raw, 'title'),
     abstract: text(here, raw, 'abstract'),
+    seed_questions: text(here, raw, 'seed_questions'),
     conflicts_of_interest: text(here, raw, 'conflicts_of_interest'),
     source: oneOf(here, raw, 'source', SOURCES),
     proposed_by: text(here, raw, 'proposed_by'),
@@ -324,6 +344,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     selection: readSelection(here, raw.selection),
     publication: readPublication(here, raw.publication),
     edition_code: text(here, raw, 'edition_code'),
+    candidate_dates: listOf(here, raw, 'candidate_dates', readCandidateDate),
     date: text(here, raw, 'date'),
     time: text(here, raw, 'time'),
     zoom_link: text(here, raw, 'zoom_link'),

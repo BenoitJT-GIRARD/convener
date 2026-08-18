@@ -127,6 +127,40 @@ describe('the JS/Python YAML boundary (D-14)', () => {
     expect(blank.proposed_by).toBe('');
   });
 
+  it('crosses the boundary with the fields the templates ask for', () => {
+    const [full, blank, odd] = parseSpeakers(stripHeader(fixture('speakers-from-app.yml')));
+    // A multi-line biography is written as a literal block, like the
+    // abstract: the shape the two writers first disagreed on, now pinned on
+    // a second field rather than on the one that happened to be found.
+    expect(fixture('speakers-from-app.yml')).toContain('bio: |-\n');
+    expect(full.bio).toBe('Directrice de recherche à Genève.\nElle étudie le campagnol depuis 2011.');
+    expect(full.photo_url).toBe('https://example.org/portraits/angstrom.jpg');
+    expect(full.linkedin).toBe('benedicte-angstrom');
+    expect(full.seed_questions).toContain("Qu'est-ce");
+    expect(full.seed_questions).toContain('modèle');
+    // Empty is a value that survives the crossing; the file with the keys
+    // *missing* is a different question (`types-shape.test.ts`).
+    expect(blank.bio).toBe('');
+    expect(blank.candidate_dates).toEqual([]);
+    // A seed question that reads as a time is still text.
+    expect(odd.seed_questions).toBe('12:30');
+  });
+
+  it('writes the proposed slots as a block sequence both writers agree on', () => {
+    const [full] = parseSpeakers(stripHeader(fixture('speakers-from-app.yml')));
+    expect(full.candidate_dates).toEqual([
+      { date: '2026-05-18', time: '12:30', answer: 'declined' },
+      { date: '2026-06-01', time: '12:30', answer: 'accepted' },
+      { date: '2026-06-15', time: '09:05', answer: '' },
+    ]);
+    // At the parent key's indentation (`noArrayIndent`), one level deeper
+    // than any list the fixture carried before, and with the hour quoted.
+    expect(fixture('speakers-from-app.yml')).toContain(
+      "candidate_dates:\n  - date: '2026-05-18'\n    time: '12:30'\n    answer: declined\n",
+    );
+    expect(fixture('speakers-from-app.yml')).toContain("answer: ''\n");
+  });
+
   it('tells a recorded zero from a metric nobody filled in', () => {
     const [full, blank] = parseSpeakers(stripHeader(fixture('speakers-from-app.yml')));
     expect(full.metrics.registrations).toBe(0);

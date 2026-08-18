@@ -6,27 +6,13 @@ import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider } from '../src/data/DataContext';
 import { AdminOverride } from '../src/components/AdminOverride';
 import { parseSpeakers, serializeSpeakers } from '../src/data/yaml';
+import { speaker as double } from './data-doubles';
 import type { Speaker } from '../src/data/types';
 
+/** The record under edit, from the shared double: this file is about what
+ *  the override form writes back, not about the shape of a speaker. */
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
-  return {
-    id: 'spk-001', name: 'Original Name', gender: 'undisclosed',
-    career_stage: 'undisclosed', email: '',
-    affiliation: '', country: '', title: '', abstract: '',
-    conflicts_of_interest: '', source: 'organizer', proposed_by: '',
-    assigned_to: '', links: [],
-    host_1: '', host_2: '', status: 'lead',
-    selection: { ballots: [], opened_on: '', decided_on: '' },
-    publication: {
-      consent: 'pending', approved_by: '', approved_on: '',
-      objections: [], outcome: '',
-    },
-    edition_code: '',
-    date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
-    runbook_progress: {}, notes: '',
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-    ...overrides,
-  };
+  return double({ name: 'Original Name', ...overrides });
 }
 
 function encodeUtf8(text: string): string {

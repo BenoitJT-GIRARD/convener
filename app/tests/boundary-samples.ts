@@ -29,6 +29,16 @@
  *   recorded are different facts, and one must not serialise as the other.
  * - a multi-line abstract, the one shape whose *formatting* the two writers
  *   disagreed on until `cli.py::_Dumper` was taught js-yaml's literal block.
+ * - a multi-line `bio`, so the literal block is pinned on a second field
+ *   and not on the one field that happened to be tested first.
+ * - a `seed_questions` carrying an apostrophe and accents: the apostrophe
+ *   is what decides between a plain and a quoted scalar, and the two
+ *   writers have to make that call the same way.
+ * - `candidate_dates`, a block sequence of *mappings* nested under a
+ *   speaker -- the shape `noArrayIndent` governs, one level deeper than
+ *   `links` and `ballots` reach.
+ * - `SPEAKERS[2].seed_questions: '12:30'`, the sexagesimal defect on a
+ *   field nobody thinks of as a time.
  */
 import type { Config, Speaker } from '../src/data/types';
 
@@ -41,8 +51,12 @@ export const SPEAKERS: Speaker[] = [
     email: 'b.angstrom@example.org',
     affiliation: 'Université de Genève',
     country: 'Suisse',
+    photo_url: 'https://example.org/portraits/angstrom.jpg',
+    bio: 'Directrice de recherche à Genève.\nElle étudie le campagnol depuis 2011.',
+    linkedin: 'benedicte-angstrom',
     title: 'Réponses sociales chez le campagnol',
     abstract: 'First paragraph of the abstract.\nSecond paragraph, after a break.',
+    seed_questions: "Qu'est-ce qui vous a menée à ce modèle ? L'élevage a-t-il changé ?",
     conflicts_of_interest: '',
     source: 'form',
     proposed_by: 'Émilie Dupré',
@@ -72,6 +86,11 @@ export const SPEAKERS: Speaker[] = [
       outcome: '',
     },
     edition_code: 'MRG-11',
+    candidate_dates: [
+      { date: '2026-05-18', time: '12:30', answer: 'declined' },
+      { date: '2026-06-01', time: '12:30', answer: 'accepted' },
+      { date: '2026-06-15', time: '09:05', answer: '' },
+    ],
     date: '2026-06-01',
     time: '12:30',
     zoom_link: 'https://example.org/zoom/11',
@@ -89,8 +108,12 @@ export const SPEAKERS: Speaker[] = [
     email: '',
     affiliation: '',
     country: '',
+    photo_url: '',
+    bio: '',
+    linkedin: '',
     title: '',
     abstract: '',
+    seed_questions: '',
     conflicts_of_interest: '',
     source: 'organizer',
     proposed_by: '',
@@ -102,6 +125,7 @@ export const SPEAKERS: Speaker[] = [
     selection: { ballots: [], opened_on: '', decided_on: '' },
     publication: { consent: '', approved_by: '', approved_on: '', objections: [], outcome: '' },
     edition_code: '',
+    candidate_dates: [],
     date: '',
     time: '',
     zoom_link: '',
@@ -119,8 +143,12 @@ export const SPEAKERS: Speaker[] = [
     email: 'no@example.org',
     affiliation: '0123',
     country: 'NO',
+    photo_url: '~',
+    bio: 'n',
+    linkedin: 'Y',
     title: 'yes',
     abstract: 'null',
+    seed_questions: '12:30',
     conflicts_of_interest: 'off',
     source: 'outreach',
     proposed_by: 'on',
@@ -138,6 +166,9 @@ export const SPEAKERS: Speaker[] = [
     },
     publication: { consent: 'pending', approved_by: '', approved_on: '', objections: [], outcome: '' },
     edition_code: 'MRG-12',
+    candidate_dates: [
+      { date: '2026-07-02', time: '09:05', answer: 'accepted' },
+    ],
     date: '2026-07-02',
     time: '09:05',
     zoom_link: '',

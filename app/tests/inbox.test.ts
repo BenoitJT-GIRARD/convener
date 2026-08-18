@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveInbox } from '../src/state/inbox';
 import type { Config, Speaker, SpeakerStatus } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /** Four active members, so `thresholdFor(4)` is 3. */
 const CFG: Config = {
@@ -29,7 +30,10 @@ const CFG: Config = {
   },
 };
 
-const baseSpk: Speaker = {
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
+const baseSpk: Speaker = double({
   id: 's',
   name: 'S',
   gender: 'undisclosed',
@@ -58,7 +62,7 @@ const baseSpk: Speaker = {
   runbook_progress: {},
   metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
   notes: '',
-};
+});
 
 const mk = (o: Partial<Speaker>): Speaker => ({ ...baseSpk, ...o });
 

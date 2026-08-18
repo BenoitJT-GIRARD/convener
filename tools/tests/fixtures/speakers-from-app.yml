@@ -6,10 +6,16 @@
   email: b.angstrom@example.org
   affiliation: Université de Genève
   country: Suisse
+  photo_url: https://example.org/portraits/angstrom.jpg
+  bio: |-
+    Directrice de recherche à Genève.
+    Elle étudie le campagnol depuis 2011.
+  linkedin: benedicte-angstrom
   title: Réponses sociales chez le campagnol
   abstract: |-
     First paragraph of the abstract.
     Second paragraph, after a break.
+  seed_questions: Qu'est-ce qui vous a menée à ce modèle ? L'élevage a-t-il changé ?
   conflicts_of_interest: ''
   source: form
   proposed_by: Émilie Dupré
@@ -59,6 +65,16 @@
       resolved_on: ''
     outcome: ''
   edition_code: MRG-11
+  candidate_dates:
+  - date: '2026-05-18'
+    time: '12:30'
+    answer: declined
+  - date: '2026-06-01'
+    time: '12:30'
+    answer: accepted
+  - date: '2026-06-15'
+    time: '09:05'
+    answer: ''
   date: '2026-06-01'
   time: '12:30'
   zoom_link: https://example.org/zoom/11
@@ -80,8 +96,12 @@
   email: ''
   affiliation: ''
   country: ''
+  photo_url: ''
+  bio: ''
+  linkedin: ''
   title: ''
   abstract: ''
+  seed_questions: ''
   conflicts_of_interest: ''
   source: organizer
   proposed_by: ''
@@ -101,6 +121,7 @@
     objections: []
     outcome: ''
   edition_code: ''
+  candidate_dates: []
   date: ''
   time: ''
   zoom_link: ''
@@ -120,8 +141,12 @@
   email: no@example.org
   affiliation: '0123'
   country: 'NO'
+  photo_url: '~'
+  bio: 'n'
+  linkedin: 'Y'
   title: 'yes'
   abstract: 'null'
+  seed_questions: '12:30'
   conflicts_of_interest: 'off'
   source: outreach
   proposed_by: 'on'
@@ -146,6 +171,10 @@
     objections: []
     outcome: ''
   edition_code: MRG-12
+  candidate_dates:
+  - date: '2026-07-02'
+    time: '09:05'
+    answer: accepted
   date: '2026-07-02'
   time: '09:05'
   zoom_link: ''

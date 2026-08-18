@@ -17,6 +17,7 @@ import { activeBoard } from '../src/state/board';
 import { friendlyError } from '../src/github/errors';
 import { substitute } from '../src/content/render';
 import type { Ballot, BoardMember, Config, Speaker, SpeakerStatus } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 const TODAY = '2026-06-10';
 
@@ -60,8 +61,11 @@ function ballot(voter: string, overrides: Partial<Ballot> = {}): Ballot {
   return { voter, value: 'yes', comment: '', coi_reason: '', date: '2026-05-20', ...overrides };
 }
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
-  return {
+  return double({
     id: 'spk-042',
     name: 'Rita Levi',
     gender: 'F',
@@ -101,7 +105,7 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
     notes: '',
     ...overrides,
-  };
+  });
 }
 
 function reopen(s: Speaker, actor: string, member: string, reason: string, config = FOUR): Speaker {
