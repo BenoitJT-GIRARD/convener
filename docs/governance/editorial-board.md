@@ -20,7 +20,9 @@ Takes part in validating speakers; may approve recordings for publishing; review
 
 ## 🚪 Publishing a recording
 
-A quick check (conflicts of interest, commercial content): one Board member approves, and it is done unless another member objects within **three days**.
+A quick check (conflicts of interest, commercial content): one Board member approves, and it is done unless another member objects within **three working days**.
+
+The Board's green light is only half of it. The speaker's own agreement is the other half, it is asked for separately, and silence is never taken for it — see [after the webinar](../workflow/4-after.md).
 
 ## Once a year — the start-of-season meeting
 

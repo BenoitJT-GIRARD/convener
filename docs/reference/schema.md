@@ -38,11 +38,11 @@ describe the workshop they deliver.
 | `selection.ballots` | list&lt;ballot&gt; | One entry per voting Board member — see the ballot fields below. Replaces the former `votes_for` list of logins. |
 | `selection.opened_on` | string | YYYY-MM-DD the vote opened. The vote window (`vote_window_days`) is counted from here; an empty value means `convener-sweep` can never expire the lead. |
 | `selection.decided_on` | string | YYYY-MM-DD the threshold was reached. Empty while the lead is still open. |
-| `publication.consent` | enum | `granted`, `refused`, or `pending` — the speaker's consent to publish the recording. |
+| `publication.consent` | enum | `granted`, `refused`, or `pending` — the speaker's own permission to publish the recording. Only `granted` opens the gate: `pending` is where every delivered speaker starts, and no delay turns it into a `granted`. Only `granted` and `refused` can be written by the app; `pending` is a starting value, never a decision. |
 | `publication.approved_by` | string | Login of the Board member who recorded the approval. |
 | `publication.approved_on` | string | YYYY-MM-DD of that approval. |
-| `publication.objections` | list&lt;objection&gt; | `member`, `reason`, `date` — objections raised during the objection window. |
-| `publication.outcome` | enum | `published`, `withheld`, or empty while undecided. |
+| `publication.objections` | list&lt;objection&gt; | `member`, `reason`, `date`, `resolved_on` — objections raised during the objection window. An empty or missing `resolved_on` means the objection still stands and publication is blocked. Nomination objections (G-08) carry no `resolved_on`: they defer the candidate to the annual meeting rather than being resolved. |
+| `publication.outcome` | enum | `published`, `withheld`, or empty while undecided. `published` is written in exactly one place, the gated archiving transition, so it cannot coexist with a refused consent, a standing objection, a missing approval, or an objection window that has not run. |
 | `edition_code` | string | `MRG-N` (assigned at `confirmed → scheduled`). Empty for non-scheduled. |
 | `date` | string | YYYY-MM-DD (assigned at scheduling). |
 | `time` | string | HH:MM, Paris local time (assigned at scheduling). |
@@ -111,7 +111,7 @@ nominations: []                    # candidate, sponsor, opened_on, objections, 
 board_min: 3
 board_max: 9
 vote_window_days: 14               # counted from selection.opened_on
-objection_window_working_days: 5
+objection_window_working_days: 3    # working days, not calendar days (G-10)
 inactivity_months: 6
 balance_window_months: 12
 sla_days:
