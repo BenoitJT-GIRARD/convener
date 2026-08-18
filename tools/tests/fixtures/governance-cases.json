@@ -1,0 +1,70 @@
+{
+  "_comment": "Shared truth for the vote threshold. Read by app/tests/governance-fixture.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
+  "threshold_cases": [
+    { "name": "board of 3 needs 2", "eligible": 3, "expected": 2 },
+    { "name": "board of 4 needs 3", "eligible": 4, "expected": 3 },
+    { "name": "board of 5 needs 4", "eligible": 5, "expected": 4 },
+    { "name": "board of 6 needs 4 - the handbook's own example", "eligible": 6, "expected": 4 },
+    { "name": "board of 7 needs 5", "eligible": 7, "expected": 5 },
+    { "name": "board of 8 needs 6", "eligible": 8, "expected": 6 },
+    { "name": "board of 9 needs 6 - the handbook's other example", "eligible": 9, "expected": 6 }
+  ],
+  "decision_cases": [
+    {
+      "name": "four yes on a board of six is decided",
+      "board": ["a", "b", "c", "d", "e", "f"],
+      "unavailable": [],
+      "ballots": [
+        { "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" },
+        { "voter": "c", "value": "yes" }, { "voter": "d", "value": "yes" }
+      ],
+      "eligible": 6, "threshold": 4, "yes": 4, "decided": true, "suspended": false
+    },
+    {
+      "name": "abstentions stay in the denominator, so three yes is not enough",
+      "board": ["a", "b", "c", "d", "e", "f"],
+      "unavailable": [],
+      "ballots": [
+        { "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" },
+        { "voter": "c", "value": "yes" }, { "voter": "d", "value": "abstain" },
+        { "voter": "e", "value": "abstain" }, { "voter": "f", "value": "abstain" }
+      ],
+      "eligible": 6, "threshold": 4, "yes": 3, "decided": false, "suspended": false
+    },
+    {
+      "name": "recusals leave the denominator, lowering the bar",
+      "board": ["a", "b", "c", "d", "e", "f"],
+      "unavailable": [],
+      "ballots": [
+        { "voter": "a", "value": "recused" }, { "voter": "b", "value": "recused" },
+        { "voter": "c", "value": "yes" }, { "voter": "d", "value": "yes" },
+        { "voter": "e", "value": "yes" }
+      ],
+      "eligible": 4, "threshold": 3, "yes": 3, "decided": true, "suspended": false
+    },
+    {
+      "name": "declared unavailability leaves the denominator too",
+      "board": ["a", "b", "c", "d", "e", "f"],
+      "unavailable": ["e", "f"],
+      "ballots": [
+        { "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" },
+        { "voter": "c", "value": "yes" }
+      ],
+      "eligible": 4, "threshold": 3, "yes": 3, "decided": true, "suspended": false
+    },
+    {
+      "name": "too few eligible members suspends the vote instead of lowering the bar",
+      "board": ["a", "b", "c", "d"],
+      "unavailable": ["c", "d"],
+      "ballots": [{ "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" }],
+      "eligible": 2, "threshold": 2, "yes": 2, "decided": false, "suspended": true
+    },
+    {
+      "name": "the absolute floor of three yes holds even when the ratio is met",
+      "board": ["a", "b", "c"],
+      "unavailable": [],
+      "ballots": [{ "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" }],
+      "eligible": 3, "threshold": 3, "yes": 2, "decided": false, "suspended": false
+    }
+  ]
+}
