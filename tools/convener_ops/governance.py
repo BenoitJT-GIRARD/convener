@@ -32,9 +32,13 @@ it ever starts reading repository data directly.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
+
+#: An ISO calendar day, the only date form stored in the two data files.
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 #: A vote needs at least this many yes ballots in absolute terms, whatever the
 #: ratio says. Guards a board shrunk by recusals from approving on two voices.
@@ -73,8 +77,14 @@ def active_board(config: dict[str, Any], on: str) -> tuple[list[str], list[str]]
     result is directly comparable with `activeBoard`'s and with the shared
     fixture. A caller wanting membership tests builds its own set.
 
-    `status: inactive` is a permanent departure and leaves the board entirely;
-    an unavailable member is still a member, only out of `N`.
+    `status: inactive` leaves the board's denominator entirely; an unavailable
+    member is still a member, only out of `N`. Inactive is not a departure and
+    not a verdict: the entry, its `login` and its `joined_on` all stay in the
+    file, `board.ts::seat` reactivates that same entry rather than adding a
+    second one, and the annual meeting is what settles the question (G-09).
+    Reading it as "gone for good" here would be wrong in both directions -- it
+    would invite deleting the record, and it would make a return look like a
+    new arrival.
     `unavailable_until` is inclusive: away *on* that date, back the day after.
     An empty value declares no absence. A value that is not a date is compared
     as it stands, which puts anything unparsable after the `on` date and so
@@ -104,6 +114,51 @@ def active_board(config: dict[str, Any], on: str) -> tuple[list[str], list[str]]
         if until and until >= on:
             unavailable.append(login)
     return logins, unavailable
+
+
+def last_ballot_on(speakers: Sequence[Any], login: str) -> str:
+    """The most recent day `login` cast a ballot, as an ISO string, or `''`.
+
+    The `last_vote_on` the board model calls derived: it is computed from
+    `speakers.yml` on every read and never written to `config.yml`, for the
+    same reason the vote threshold is never written -- a stored copy is a
+    second truth that can drift from the ballots it claims to summarise.
+
+    Every ballot counts, whatever its value: an `abstain` and a `recused` are
+    both a member turning up and saying something. Only silence is silence.
+    Ballots whose date is missing or not an ISO day are skipped rather than
+    compared as they stand: unlike `active_board`, where an unparsable date
+    shrinks the denominator and so errs toward caution, an unparsable date
+    here would err toward calling a member silent, and nothing about a
+    volunteer's standing should rest on a typo.
+
+    Python-only. No browser screen derives this today, so it has no twin in
+    `app/src/state/` and no entry in the shared fixture -- adding one would
+    pin a rule that only one side implements.
+    """
+    if not isinstance(speakers, Sequence) or isinstance(speakers, str | bytes):
+        return ""
+    latest = ""
+    for entry in speakers:
+        if not isinstance(entry, dict):
+            continue
+        selection = entry.get("selection")
+        if not isinstance(selection, dict):
+            continue
+        ballots = selection.get("ballots")
+        if not isinstance(ballots, list):
+            continue
+        for raw_ballot in ballots:
+            if not isinstance(raw_ballot, dict):
+                continue
+            if raw_ballot.get("voter") != login:
+                continue
+            day = raw_ballot.get("date")
+            if not isinstance(day, str) or not _DATE_RE.match(day):
+                continue
+            if day > latest:
+                latest = day
+    return latest
 
 
 def eligible_voters(
