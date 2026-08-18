@@ -151,12 +151,29 @@ toward the vote threshold. Nothing about this happens on its own.
 
 `tools/convener_ops/sweep.py::sweep_inactive_members` computes the proposal — the
 config as it would read, and one line per member naming the date of their
-last ballot — and **no command applies it**. `convener-sweep` does not call it: a
-scheduled job with nobody's name on it must not be able to change a
-volunteer's standing overnight, the same reason a vote window that runs out
-parks a lead rather than declining it. Applying the proposal is a human
-edit to `data/config.yml`, and the annual meeting is what settles the
-question.
+last ballot — and **no command applies it**.
+
+Detection is the half the scheduled task operates. Every `convener-sweep` run ends
+by printing whatever the rule has to propose, after the `scheduled →
+delivered` and vote-window lines and whether or not those changed anything
+(each proposal is one line; it is wrapped here to fit the page):
+
+```
+Board inactivity (G-09) - proposed, not applied; a human decides:
+  - <login>: no ballot since <date>; proposed inactive so the threshold stops
+    counting the seat - the seat is kept, the annual meeting decides, and one
+    word in config.yml undoes it
+```
+
+Nothing is printed when the rule has nothing to propose, which is the live
+case today (see the first of the three points below). The proposed config the
+rule returns is discarded on the spot: `convener-sweep` writes `data/speakers.yml`
+and never `data/config.yml`, and what it writes is byte-for-byte the same
+whether or not there were proposals to print. A scheduled job with nobody's
+name on it must not be able to change a volunteer's standing overnight — the
+same reason a vote window that runs out parks a lead rather than declining it.
+Applying the proposal is a human act on the Board screen, or a hand edit to
+`data/config.yml`, and the annual meeting is what settles the question.
 
 `inactive` is not a departure and not a judgement. The entry stays in the
 file with its `login` and `joined_on` intact; the seat is kept; the only
