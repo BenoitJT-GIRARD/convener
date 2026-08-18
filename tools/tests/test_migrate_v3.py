@@ -246,7 +246,23 @@ def test_migrating_the_config_twice_changes_nothing() -> None:
 # --- the two halves together ----------------------------------------------
 
 
+V4_FIELDS = ("photo_url", "bio", "linkedin", "seed_questions", "candidate_dates")
+
+
 def test_the_migrated_data_passes_the_validator() -> None:
+    """What this one-shot produces is v3, and the validator now reads v4.
+
+    The gap is named rather than tolerated: the errors this asserts are the
+    exhaustive list of what schema v4 asks for and the v3 migration cannot
+    know about -- the five fields that were never in a v2 file to migrate.
+    Anything else the validator finds still fails here, and the list itself
+    empties when the v4 migration fills those fields in.
+    """
+    expected_v4_gap = sorted(
+        f"speakers[{index}] ({sid}): missing {field}"
+        for index, sid in enumerate(("spk-001", "spk-002"))
+        for field in V4_FIELDS
+    )
     speakers = migrate_speakers(
         [
             v2_speaker(
@@ -260,7 +276,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
     )
     config = migrate_config(v2_config(), ballot_voters(speakers))
     logins = {m["login"] for m in config["board"]}
-    assert validate_speakers(speakers, logins) == []
+    assert sorted(validate_speakers(speakers, logins)) == expected_v4_gap
     assert validate_config(config) == []
 
 

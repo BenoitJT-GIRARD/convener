@@ -63,7 +63,13 @@ def nomination(**overrides: Any) -> dict[str, Any]:
 
 
 def speaker(**overrides: Any) -> dict[str, Any]:
-    """A minimal valid speaker (schema v3); override any field per test."""
+    """A minimal valid speaker (schema v4); override any field per test.
+
+    Minimal, not partial: every key the model declares is here, with the
+    empty value where the record has nothing to say. A double that left keys
+    out would be a record the validator refuses, and tests written against
+    it would agree with each other about a file the repository cannot hold.
+    """
     base: dict[str, Any] = {
         "id": "spk-001",
         "name": "Ada Lovelace",
@@ -71,6 +77,11 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "email": "ada@example.org",
         "affiliation": "Example University",
         "country": "UK",
+        "photo_url": "",
+        "bio": "",
+        "linkedin": "",
+        "seed_questions": "",
+        "candidate_dates": [],
         "title": "On analytical engines",
         "abstract": "",
         "conflicts_of_interest": "",

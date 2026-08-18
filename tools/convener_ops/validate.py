@@ -39,6 +39,23 @@ CAREER_STAGES = frozenset(
 #: '' is a legal consent: the migration sets it for any speaker whose status
 #: never reached a publishable state (see scripts/migrate_v3.py, Task 5).
 PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
+#: Schema v4. The fields the checklists have always asked for and the model
+#: never had, so they travelled by e-mail and were lost: a portrait, a short
+#: biography, a handle, and the questions the speaker wants the forum
+#: discussion opened with.
+#:
+#: Checked with `in`, never with `entry.get(key)`. An empty value is an
+#: answer -- "no biography" is a thing a speaker can say, and the file has to
+#: be able to hold it -- while an absent key is a record nobody finished.
+#: Truthiness cannot tell those apart, and reading one as the other is how a
+#: field ends up silently optional. `app/src/data/validate.ts` draws the same
+#: line on the read side.
+SPEAKER_TEXT_V4 = ("photo_url", "bio", "linkedin", "seed_questions")
+CANDIDATE_DATE_KEYS = frozenset({"date", "time", "answer"})
+#: What a speaker has said about one proposed slot. There is no 'pending' and
+#: no fourth value: an answer that has not come back is '', and nothing here
+#: can be read as a soft yes by the transition that locks the date in.
+DATE_ANSWERS = frozenset({"accepted", "declined", ""})
 PUBLICATION_OUTCOMES = frozenset({"published", "withheld", ""})
 NOMINATION_OUTCOMES = frozenset({"accepted", "deferred", "waiting", ""})
 BOARD_STATUSES = frozenset({"active", "inactive"})
@@ -128,6 +145,55 @@ def _validate_objections(objections: Any, where: str) -> list[str]:
             errors.append(
                 f"{owhere}: resolved_on must be YYYY-MM-DD, got {resolved_on!r}"
             )
+
+    return errors
+
+
+def _validate_candidate_dates(dates: Any, where: str) -> list[str]:
+    """Validate `Speaker.candidate_dates` - the slots put to the speaker.
+
+    The invitation has always proposed several dates while the record held
+    one, so the negotiation lived in a mailbox and only its conclusion was
+    ever written down. A slot is a day, an hour and an answer, and all three
+    are required: a proposal with no day is not a proposal, and an answer
+    outside the vocabulary would reach the transition that freezes `date`,
+    which has no reading for it.
+    """
+    errors: list[str] = []
+    if not isinstance(dates, list):
+        errors.append(f"{where}.candidate_dates: must be a list")
+        return errors
+
+    seen: set[tuple[str, str]] = set()
+    for index, slot in enumerate(dates):
+        swhere = f"{where}.candidate_dates[{index}]"
+        if not isinstance(slot, dict):
+            errors.append(f"{swhere}: not a mapping")
+            continue
+
+        missing = CANDIDATE_DATE_KEYS - set(slot)
+        if missing:
+            errors.append(f"{swhere}: missing keys {sorted(missing)}")
+
+        date = slot.get("date")
+        if not isinstance(date, str) or not DATE_RE.match(date):
+            errors.append(f"{swhere}: date must be YYYY-MM-DD, got {date!r}")
+
+        time = slot.get("time")
+        if not isinstance(time, str) or not TIME_RE.match(time):
+            errors.append(f"{swhere}: time must be HH:MM, got {time!r}")
+
+        answer = slot.get("answer")
+        if answer not in DATE_ANSWERS:
+            errors.append(f"{swhere}: invalid answer {answer!r}")
+
+        # The same slot offered twice reads as two answers to one question,
+        # and the file cannot say which of them the speaker gave.
+        if isinstance(date, str) and isinstance(time, str):
+            if (date, time) in seen:
+                errors.append(f"{swhere}: duplicate slot {date!r} {time!r}")
+            else:
+                seen.add((date, time))
 
     return errors
 
@@ -294,6 +360,20 @@ def validate_speakers(
         career_stage = entry.get("career_stage")
         if career_stage not in CAREER_STAGES:
             errors.append(f"{where}: invalid career_stage {career_stage!r}")
+
+        # Schema v4. Absent is a defect; empty is an answer. Anything that
+        # asked `entry.get(key)` here would report the two as one thing, and
+        # the field would be optional in everything but its documentation.
+        for key in SPEAKER_TEXT_V4:
+            if key not in entry:
+                errors.append(f"{where}: missing {key}")
+            elif not isinstance(entry[key], str):
+                errors.append(f"{where}: {key} must be a string")
+
+        if "candidate_dates" not in entry:
+            errors.append(f"{where}: missing candidate_dates")
+        else:
+            errors.extend(_validate_candidate_dates(entry["candidate_dates"], where))
 
         publication = entry.get("publication")
         pub_where = f"{where}.publication"
