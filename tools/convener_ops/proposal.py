@@ -13,6 +13,8 @@ import re
 from collections.abc import Sequence
 from typing import Any
 
+from convener_ops.governance import active_board
+
 GENDERS = {"M", "F", "NB", "undisclosed"}
 
 
@@ -57,31 +59,6 @@ def skip_reason(fields: dict[str, str], existing: list[dict[str, Any]]) -> str |
     return None
 
 
-def _active_board(config: dict[str, Any], on: str) -> tuple[list[str], set[str]]:
-    """Active board member logins as of ``on``, and the subset of them
-    unavailable that day (``unavailable_until`` is inclusive).
-
-    Mirrors ``app/src/state/board.ts::activeBoard``.
-    """
-    board = config.get("board") if isinstance(config, dict) else None
-    if not isinstance(board, list):
-        return [], set()
-
-    logins: list[str] = []
-    unavailable: set[str] = set()
-    for m in board:
-        if not isinstance(m, dict) or m.get("status") != "active":
-            continue
-        login = m.get("login")
-        if not isinstance(login, str):
-            continue
-        logins.append(login)
-        until = m.get("unavailable_until") or ""
-        if until and until >= on:
-            unavailable.add(login)
-    return logins, unavailable
-
-
 def _id_order(speaker_id: str) -> int:
     """The numeric suffix of a speaker id (``spk-007`` -> 7), used only as a
     creation-order proxy for ``assign_lead``'s tie-break. ``-1`` for
@@ -111,8 +88,9 @@ def assign_lead(
     Never raises: an empty string means the caller should show that the
     assignment is pending, not surface a raw error to a volunteer.
     """
-    logins, unavailable = _active_board(config, on)
-    eligible = sorted(login for login in logins if login not in unavailable)
+    logins, unavailable = active_board(config, on)
+    away = set(unavailable)
+    eligible = sorted(login for login in logins if login not in away)
     if not eligible:
         return ""
 

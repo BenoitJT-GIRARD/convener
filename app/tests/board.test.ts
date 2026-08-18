@@ -105,6 +105,28 @@ describe('activeBoard', () => {
     const board = activeBoard(cfg, '2026-08-19');
     expect(board.unavailable).toEqual([]);
   });
+
+  interface ActiveBoardCase {
+    name: string;
+    board: BoardMember[];
+    on: string;
+    logins: string[];
+    unavailable: string[];
+    eligible: string[];
+  }
+
+  // The BoardMember -> (logins, unavailable) step, pinned across both
+  // languages: `tools/tests/test_governance_fixture.py` runs these same cases
+  // through `convener_ops.governance.active_board`. `decision_cases` start from
+  // flat login lists, so they never covered this mapping -- which is where the
+  // Python copies of it once drifted apart with both suites still green.
+  it.each(cases.active_board_cases as ActiveBoardCase[])('shared fixture: $name', c => {
+    const board = activeBoard(config(c.board), c.on);
+    expect(board.logins).toEqual(c.logins);
+    expect(board.unavailable).toEqual(c.unavailable);
+    const away = new Set(board.unavailable);
+    expect(board.logins.filter(login => !away.has(login))).toEqual(c.eligible);
+  });
 });
 
 describe('isBoardMember', () => {

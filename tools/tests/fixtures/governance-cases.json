@@ -1,5 +1,94 @@
 {
-  "_comment": "Shared truth for the vote threshold. Read by app/tests/governance-fixture.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
+  "_comment": "Shared truth for the board mapping and the vote threshold. Read by app/tests/governance-fixture.test.ts, app/tests/board.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
+  "active_board_cases": [
+    {
+      "name": "an active member with no declared absence is eligible",
+      "board": [
+        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["ada"],
+      "unavailable": [],
+      "eligible": ["ada"]
+    },
+    {
+      "name": "an inactive member leaves the board entirely, not merely the eligible set",
+      "board": [
+        { "login": "Anonymous", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
+        { "login": "ada", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": "" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["Anonymous"],
+      "unavailable": [],
+      "eligible": ["Anonymous"]
+    },
+    {
+      "name": "a member away until a future date is unavailable but stays on the board",
+      "board": [
+        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-02-01" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["ada"],
+      "unavailable": ["ada"],
+      "eligible": []
+    },
+    {
+      "name": "a member whose absence has lapsed is available again the day after",
+      "board": [
+        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-19" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["ada"],
+      "unavailable": [],
+      "eligible": ["ada"]
+    },
+    {
+      "name": "the boundary day itself is still an absence - unavailable_until is inclusive",
+      "board": [
+        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-20" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["ada"],
+      "unavailable": ["ada"],
+      "eligible": []
+    },
+    {
+      "name": "an empty unavailable_until declares no absence at all",
+      "board": [
+        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
+        { "login": "grace", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-20" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["ada", "grace"],
+      "unavailable": ["grace"],
+      "eligible": ["ada"]
+    },
+    {
+      "name": "a malformed unavailable_until reads as an absence rather than as availability",
+      "board": [
+        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "not-a-date" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["ada"],
+      "unavailable": ["ada"],
+      "eligible": []
+    },
+    {
+      "name": "a whole board at once: active, inactive, future, lapsed, boundary, empty, malformed",
+      "board": [
+        { "login": "ada", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "" },
+        { "login": "Anonymous", "joined_on": "2024-01-01", "status": "inactive", "unavailable_until": "" },
+        { "login": "carol", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-02-01" },
+        { "login": "dan", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-19" },
+        { "login": "erin", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "2026-01-20" },
+        { "login": "grace", "joined_on": "2024-01-01", "status": "active", "unavailable_until": "not-a-date" }
+      ],
+      "on": "2026-01-20",
+      "logins": ["ada", "carol", "dan", "erin", "grace"],
+      "unavailable": ["carol", "erin", "grace"],
+      "eligible": ["ada", "dan"]
+    }
+  ],
   "threshold_cases": [
     { "name": "board of 3 needs 3 - the floor overrides the ratio", "eligible": 3, "expected": 3 },
     { "name": "board of 4 needs 3", "eligible": 4, "expected": 3 },

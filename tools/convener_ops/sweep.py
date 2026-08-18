@@ -12,7 +12,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from convener_ops.governance import decide
+from convener_ops.governance import active_board, decide
 
 PARIS = ZoneInfo("Europe/Paris")
 
@@ -73,34 +73,6 @@ def _paris_today(now: datetime) -> date:
     return now.astimezone(PARIS).date()
 
 
-def _active_board(config: dict[str, Any], on: date) -> tuple[list[str], list[str]]:
-    """Active board logins as of `on`, and the subset of them unavailable that
-    day (`unavailable_until` is inclusive: away *on* that date, back the day
-    after; an empty value means no declared absence).
-
-    Mirrors `app/src/state/board.ts::activeBoard` and its Python twin
-    `convener_ops.proposal._active_board`, which supply exactly this pair to
-    `decide`. `status: inactive` is a permanent departure and leaves the board
-    entirely; an unavailable member is still a member, only out of `N`.
-    """
-    board = config.get("board")
-    if not isinstance(board, list):
-        return [], []
-    logins: list[str] = []
-    unavailable: list[str] = []
-    for member in board:
-        if not isinstance(member, dict) or member.get("status") != "active":
-            continue
-        login = member.get("login")
-        if not login:
-            continue
-        logins.append(str(login))
-        until = str(member.get("unavailable_until") or "")
-        if until and until >= on.isoformat():
-            unavailable.append(str(login))
-    return logins, unavailable
-
-
 def _vote_window_days(config: dict[str, Any]) -> int:
     """The configured vote window, or the spec's 14-day default.
 
@@ -135,7 +107,7 @@ def expire_votes(
     """
     window_days = _vote_window_days(config)
     today = _paris_today(now)
-    board_logins, unavailable = _active_board(config, today)
+    board_logins, unavailable = active_board(config, today.isoformat())
     swept = copy.deepcopy(speakers)
     changes: list[str] = []
     for entry in swept:

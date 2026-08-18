@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops.governance import decide, threshold_for
+from convener_ops.governance import active_board, decide, threshold_for
 
 CASES = json.loads(
     (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
@@ -39,3 +39,21 @@ def test_decision_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     assert outcome.yes == case["yes"]
     assert outcome.decided is case["decided"]
     assert outcome.suspended is case["suspended"]
+
+
+@pytest.mark.parametrize("case", CASES["active_board_cases"], ids=lambda c: c["name"])
+def test_active_board_matches_the_shared_fixture(case: dict[str, Any]) -> None:
+    """The `BoardMember` -> (logins, unavailable) step, pinned across both
+    languages.
+
+    `decision_cases` start from flat lists of logins, so they pin `decide` but
+    say nothing about how a board record becomes one of those lists -- which is
+    exactly where the two Python copies of this mapping once drifted apart
+    without either suite noticing. `app/tests/board.test.ts` runs these same
+    cases through `activeBoard`.
+    """
+    logins, unavailable = active_board({"board": case["board"]}, case["on"])
+    assert logins == case["logins"]
+    assert unavailable == case["unavailable"]
+    away = set(unavailable)
+    assert [login for login in logins if login not in away] == case["eligible"]

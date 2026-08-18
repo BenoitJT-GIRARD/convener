@@ -10,7 +10,7 @@ contained (only the minimal fields this module's tests actually exercise).
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -18,7 +18,6 @@ import pytest
 from convener_ops.sweep import (
     DEFAULT_VOTE_WINDOW_DAYS,
     PARIS,
-    _active_board,
     _vote_window_days,
     expire_votes,
 )
@@ -224,57 +223,6 @@ def test_a_config_without_the_key_uses_fourteen_days_end_to_end() -> None:
     assert changes == []
     outside, changes = expire_votes([row], cfg, datetime(2026, 1, 16, tzinfo=PARIS))
     assert outside[0]["status"] == "parked"
-
-
-# --- The mapping from config to the eligible-voter count N ------------------
-
-
-def test_an_inactive_member_leaves_the_board_entirely() -> None:
-    cfg = config(
-        board=[
-            board_member(login="Anonymous"),
-            board_member(login="grace"),
-            board_member(login="ada", status="inactive"),
-        ]
-    )
-    logins, unavailable = _active_board(cfg, date(2026, 1, 20))
-    assert logins == ["Anonymous", "grace"]
-    assert unavailable == []
-
-
-def test_a_member_away_until_a_future_date_is_unavailable() -> None:
-    cfg = config(board=[board_member(login="ada", unavailable_until="2026-02-01")])
-    logins, unavailable = _active_board(cfg, date(2026, 1, 20))
-    assert logins == ["ada"]
-    assert unavailable == ["ada"]
-
-
-def test_a_member_whose_absence_has_lapsed_is_available_again() -> None:
-    cfg = config(board=[board_member(login="ada", unavailable_until="2026-01-19")])
-    logins, unavailable = _active_board(cfg, date(2026, 1, 20))
-    assert logins == ["ada"]
-    assert unavailable == []
-
-
-def test_the_last_day_of_an_absence_is_still_an_absence() -> None:
-    # `unavailable_until` is inclusive, matching app/src/state/board.ts.
-    cfg = config(board=[board_member(login="ada", unavailable_until="2026-01-20")])
-    _, unavailable = _active_board(cfg, date(2026, 1, 20))
-    assert unavailable == ["ada"]
-
-
-def test_an_empty_unavailable_until_declares_no_absence() -> None:
-    cfg = config(board=[board_member(login="ada", unavailable_until="")])
-    _, unavailable = _active_board(cfg, date(2026, 1, 20))
-    assert unavailable == []
-
-
-def test_a_malformed_board_yields_no_voters_rather_than_raising() -> None:
-    assert _active_board({}, date(2026, 1, 20)) == ([], [])
-    assert _active_board({"board": "nope"}, date(2026, 1, 20)) == ([], [])
-    assert _active_board({"board": ["nope", {}]}, date(2026, 1, 20)) == ([], [])
-    nameless = {"board": [board_member(login="")]}
-    assert _active_board(nameless, date(2026, 1, 20)) == ([], [])
 
 
 def test_an_inactive_member_shrinks_n_enough_to_suspend_an_expiry() -> None:
