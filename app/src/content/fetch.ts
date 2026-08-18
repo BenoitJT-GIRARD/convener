@@ -16,9 +16,18 @@ export async function fetchContent(key: string, _token: string | null): Promise<
   const entry = CONTENT_REGISTRY[key];
   if (!entry) return `*Missing content for \`${key}\`*`;
   const url = `${BASE}/handbook/${entry.file}`;
-  const r = await fetch(url);
+  let r: Response;
+  try {
+    r = await fetch(url);
+  } catch (e) {
+    console.error(e);
+    throw new Error('Could not load this content. Check your connection and try again.', {
+      cause: e,
+    });
+  }
   if (!r.ok) {
-    throw new Error(`Content fetch failed (${r.status}): handbook/${entry.file}`);
+    console.error(`Content fetch failed (${r.status}): handbook/${entry.file}`);
+    throw new Error('This content could not be loaded right now.');
   }
   const text = await r.text();
   cache.set(key, text);

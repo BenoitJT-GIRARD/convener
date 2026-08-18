@@ -5,7 +5,8 @@ The repo stores all operational data in two YAML files under `data/`:
 - `data/speakers.yml` — the unified speaker + event entity (one entry per invitation lifecycle)
 - `data/config.yml` — repo-wide configuration (board, thresholds, season counters)
 
-Both files are validated in CI by `.github/scripts/validate_data.py` on every commit.
+Both files are validated in CI by `convener-validate` (see `docs/reference/operations.md`)
+on every commit.
 
 ## `data/speakers.yml`
 
@@ -24,18 +25,19 @@ describe the workshop they deliver.
 | `email` | string | Speaker contact. |
 | `affiliation` | string | Institution. |
 | `country` | string | Two-letter code or full name. |
-| `title` | string | Talk title (split from the legacy `topic` field). |
+| `title` | string | Talk title. |
 | `abstract` | string | Talk abstract (multi-line). |
+| `conflicts_of_interest` | string | Declared by the speaker or noted by the Board. |
 | `source` | enum | `form` (Tally), `outreach` (team email), or `organizer` (added by hand). |
 | `proposed_by` | string | Team member who proposed this speaker. |
 | `links` | list&lt;string&gt; | URLs (ORCID, lab page, paper). |
-| `host` | string | Team member responsible. Defaults to `proposed_by` at approval; reassignable. |
-| `co_hosts` | list&lt;string&gt; | Exactly 2 entries for any scheduled+ status. |
+| `host_1`, `host_2` | string | The two Event Hosts. Both required for `scheduled` and later statuses. |
 | `status` | enum | State-machine managed. See below. |
 | `selection.votes_for` | list&lt;string&gt; | Logins of board members who voted yes on this lead. |
 | `selection.decided_on` | string | YYYY-MM-DD when the vote threshold was reached. |
 | `edition_code` | string | `MRG-N` (assigned at `confirmed → scheduled`). Empty for non-scheduled. |
 | `date` | string | YYYY-MM-DD (assigned at scheduling). |
+| `time` | string | HH:MM, Paris local time (assigned at scheduling). |
 | `zoom_link` | string | Set during runbook step. |
 | `youtube_url` | string | Filled after delivery. |
 | `forum_thread` | string | Link to forum announcement thread. |
@@ -51,13 +53,12 @@ describe the workshop they deliver.
 The state machine governs transitions. Statuses:
 
 - `lead` — submitted, awaiting board review
-- `approved` — board voted in favor; preparing invitation
+- `approved` — board voted in favour; preparing invitation
 - `invited` — invitation sent, awaiting reply
 - `confirmed` — speaker accepted, no date locked yet
 - `scheduled` — date locked + edition code assigned; runbook drives the rest
-- `delivered` — event date passed (automatic transition)
-- `wrapped` — post-event items done
-- `archived` — wrapped + 30 days (automatic transition)
+- `delivered` — event date passed (automatic transition, see `convener-sweep`)
+- `archived` — post-event items done (explicit gesture, not automatic)
 - `parked` — board paused this lead (reversible)
 - `decline-board` — board collectively declined (reversible)
 - `decline-speaker` — speaker declined the invitation
@@ -85,18 +86,9 @@ board_members:               # GitHub logins with board role
 detection) fails or returns no membership info. The authoritative source is
 the org's `editorial-board` team; the config is a safety net.
 
-## Migration from the legacy split schema
+## History
 
-The legacy schema had two files (`speakers.yml` + `events.yml`) joined on
-`event_id`. The migration script (`scripts/migrate_to_unified_schema.py`) joins
-them into the unified schema, splits the legacy `topic` into `title` + `abstract`
-(best effort), renames `owner → host`, and removes `data/events.yml`.
-
-Run once:
-
-```sh
-python scripts/migrate_to_unified_schema.py
-```
-
-Inspect any warnings in `migration_warnings.txt`, fix `co_hosts` cardinality
-manually, then commit.
+`data/speakers.yml` was originally split across two files, joined on an event
+id. `scripts/` holds the one-shot scripts that merged them into today's
+unified schema; they already ran and are kept only as a record, not as
+something to run again.

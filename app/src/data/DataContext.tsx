@@ -1,14 +1,30 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { getFile, putFile } from '../github/contents';
-import { parseSpeakers, serializeSpeakers, parseConfig, serializeConfig } from './yaml';
+import { getFile, githubStore } from '../github/contents';
+import { mutate } from '../github/mutate';
+import { friendlyError } from '../github/errors';
+import {
+  parseSpeakers,
+  serializeSpeakers,
+  parseConfig,
+  serializeConfig,
+  withSpeakersHeader,
+  withConfigHeader,
+} from './yaml';
 import { isDemoMode, DEMO_SPEAKERS, DEMO_CONFIG } from './demo';
 import type { Speaker, Config } from './types';
 
 interface State {
   loading: boolean;
+  /** Set only when the *initial load* (or an explicit reload) fails. There is
+   *  genuinely nothing to render in that case, so screens replace themselves
+   *  with this — see `error` usage in the screens under src/screens. */
   error: string | null;
+  /** Set only when a *write* fails. Unlike `error`, existing data is never
+   *  cleared for this — screens must show it as a dismissible banner and
+   *  leave the user's work on screen, never replace the page with it. */
+  saveError: string | null;
   speakers: Speaker[];
   config: Config | null;
   spkSha: string;
@@ -17,8 +33,20 @@ interface State {
 
 interface Ctx extends State {
   reload: () => Promise<void>;
-  saveSpeakers: (next: Speaker[], message: string) => Promise<void>;
-  saveConfig: (next: Config, message: string) => Promise<void>;
+  /** Resolves `true` if the write went through, `false` if it was caught and
+   *  surfaced via `saveError` — callers whose code after the write has a
+   *  user-visible success side effect (a confirmation, a navigation) must
+   *  guard it on this, so a failed write never reports success. */
+  mutateSpeakers: (
+    transform: (current: Speaker[]) => Speaker[],
+    message: string,
+  ) => Promise<boolean>;
+  mutateConfig: (
+    transform: (current: Config) => Config,
+    message: string,
+  ) => Promise<boolean>;
+  /** Dismiss the current save-error banner without touching anything else. */
+  clearSaveError: () => void;
 }
 
 const C = createContext<Ctx | null>(null);
@@ -32,150 +60,183 @@ const DEFAULT_CONFIG: Config = {
   board_members: [],
 };
 
-/**
- * Convert a wall-time in Europe/Paris (DST-aware) to a UTC epoch.
- * dateStr: YYYY-MM-DD; timeStr: HH:MM.
- */
-function parisWallTimeToEpoch(dateStr: string, timeStr: string): number {
-  const iso = `${dateStr}T${timeStr}:00`;
-  const probe = new Date(`${iso}Z`);
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(probe);
-  const map: Record<string, string> = {};
-  for (const p of parts) if (p.type !== 'literal') map[p.type] = p.value;
-  const hour = map.hour === '24' ? '00' : map.hour;
-  const parisIso = `${map.year}-${map.month}-${map.day}T${hour}:${map.minute}:${map.second}Z`;
-  const offsetMs = Date.parse(parisIso) - probe.getTime();
-  return probe.getTime() - offsetMs;
-}
+const DEMO_STATE: State = {
+  loading: false,
+  error: null,
+  saveError: null,
+  speakers: [...DEMO_SPEAKERS],
+  config: { ...DEMO_CONFIG },
+  spkSha: 'demo',
+  cfgSha: 'demo',
+};
 
-function autoSweep(
-  speakers: Speaker[],
-  config: Config | null,
-  now: Date,
-): { swept: Speaker[]; changed: boolean } {
-  const duration = (config?.seminar_duration_minutes ?? 90) * 60_000;
-  let changed = false;
-  const swept = speakers.map(s => {
-    if (s.status !== 'scheduled' || !s.date) return s;
-    if (s.time) {
-      const startEpoch = parisWallTimeToEpoch(s.date, s.time);
-      if (now.getTime() >= startEpoch + duration) {
-        changed = true;
-        return { ...s, status: 'delivered' as const };
-      }
-      return s;
-    }
-    // Legacy fallback: no time — flip the day after.
-    const todayStr = now.toISOString().slice(0, 10);
-    if (s.date < todayStr) {
-      changed = true;
-      return { ...s, status: 'delivered' as const };
-    }
-    return s;
-  });
-  return { swept, changed };
-}
-
-export function DataProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
-  const [s, setS] = useState<State>({
-    loading: true,
+/** The synchronous half of loading: demo mode resolves immediately (no
+ *  network), and having no token yet has nothing to load. Only the real
+ *  GitHub read is genuinely asynchronous, so it's the only part that runs
+ *  from inside the effect below. */
+function initialState(token: string | null): State {
+  if (isDemoMode()) return DEMO_STATE;
+  return {
+    loading: !!token,
     error: null,
+    saveError: null,
     speakers: [],
     config: null,
     spkSha: '',
     cfgSha: '',
-  });
+  };
+}
+
+/** Read-only: fetch speakers and config from GitHub. Never writes — the
+ *  scheduled->delivered transition is derived for display (see
+ *  src/state/derived.ts) and persisted only by the scheduled job, so two
+ *  volunteers opening the app at once can never race on the same write. */
+async function fetchState(token: string): Promise<State> {
+  const [spk, cfg] = await Promise.all([
+    getFile('data/speakers.yml', token),
+    getFile('data/config.yml', token),
+  ]);
+  const speakers = parseSpeakers(spk.text);
+  const config = parseConfig(cfg.text) ?? DEFAULT_CONFIG;
+  return {
+    loading: false,
+    error: null,
+    saveError: null,
+    speakers,
+    config,
+    spkSha: spk.sha,
+    cfgSha: cfg.sha,
+  };
+}
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const { token, ready } = useAuth();
+  // The synchronous half of loading (demo mode, or no token yet) is resolved
+  // directly in the initialiser, keyed off the token this component mounted
+  // with — `Shell` only renders `DataProvider` once a token exists, and
+  // swaps it out for `<Login/>` rather than mounting it with a null token,
+  // so `token` is stable for the lifetime of this component. Only the
+  // genuinely asynchronous GitHub read runs from inside the effect below,
+  // and it sets state solely from its promise callbacks — never
+  // synchronously in the effect body — so there is nothing here for
+  // react-hooks/set-state-in-effect to flag.
+  const [s, setS] = useState<State>(() => initialState(token));
+
+  useEffect(() => {
+    // Nothing to fetch yet (auth still resolving a stored credential) or
+    // ever (no session): `visible` below already reflects both cases
+    // without needing a render just to push that through state.
+    if (isDemoMode() || !ready || !token) return;
+    let cancelled = false;
+    fetchState(token)
+      .then(next => {
+        if (!cancelled) setS(next);
+      })
+      .catch(e => {
+        if (!cancelled) {
+          setS(p => ({ ...p, loading: false, error: friendlyError(e, 'load') }));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, ready]);
+
+  // The state exposed to consumers. While auth hasn't resolved (`ready` is
+  // false -- a stored legacy or refresh token is still validating), whether
+  // there will turn out to be a token is unknown, so this stays loading
+  // rather than reporting "signed out, nothing to load". Once `ready` is
+  // true, a missing token genuinely does mean there is nothing to fetch.
+  // Both cases are fully determined by `ready`/`token` and computed here at
+  // render time -- no extra setState, no extra render.
+  const visible: State =
+    isDemoMode() || (ready && token)
+      ? s
+      : !ready
+        ? { ...s, loading: true }
+        : {
+            ...s,
+            loading: false,
+            speakers: [],
+            config: null,
+            spkSha: '',
+            cfgSha: '',
+          };
 
   async function reload() {
     if (!token) return;
     if (isDemoMode()) {
-      setS({
-        loading: false,
-        error: null,
-        speakers: [...DEMO_SPEAKERS],
-        config: { ...DEMO_CONFIG },
-        spkSha: 'demo',
-        cfgSha: 'demo',
-      });
+      setS(DEMO_STATE);
       return;
     }
     setS(p => ({ ...p, loading: true, error: null }));
     try {
-      const [spk, cfg] = await Promise.all([
-        getFile('data/speakers.yml', token),
-        getFile('data/config.yml', token),
-      ]);
-      const parsed = parseSpeakers(spk.text);
-      const config = parseConfig(cfg.text) ?? DEFAULT_CONFIG;
-      const { swept, changed } = autoSweep(parsed, config, new Date());
-      setS({
-        loading: false,
-        error: null,
-        speakers: swept,
-        config,
-        spkSha: spk.sha,
-        cfgSha: cfg.sha,
+      setS(await fetchState(token));
+    } catch (e) {
+      setS(p => ({ ...p, loading: false, error: friendlyError(e, 'load') }));
+    }
+  }
+
+  async function mutateSpeakers(
+    transform: (current: Speaker[]) => Speaker[],
+    message: string,
+  ): Promise<boolean> {
+    if (!token) return false;
+    if (isDemoMode()) {
+      setS(p => ({ ...p, speakers: transform(p.speakers) }));
+      return true;
+    }
+    try {
+      const result = await mutate({
+        store: githubStore(token),
+        path: 'data/speakers.yml',
+        parse: parseSpeakers,
+        serialize: v => withSpeakersHeader(serializeSpeakers(v)),
+        transform,
+        message,
       });
-      if (changed) {
-        const text =
-          '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
-          serializeSpeakers(swept);
-        const res: any = await putFile(
-          'data/speakers.yml',
-          text,
-          spk.sha,
-          'data: auto-sweep scheduled→delivered',
-          token,
-        );
-        setS(p => ({ ...p, spkSha: res.content.sha }));
-      }
-    } catch (e: any) {
-      setS(p => ({ ...p, loading: false, error: e.message }));
+      setS(p => ({ ...p, speakers: result.value, spkSha: result.sha, saveError: null }));
+      return true;
+    } catch (e) {
+      setS(p => ({ ...p, saveError: friendlyError(e, 'save') }));
+      return false;
     }
   }
 
-  async function saveSpeakers(next: Speaker[], message: string) {
-    if (!token) return;
+  async function mutateConfig(
+    transform: (current: Config) => Config,
+    message: string,
+  ): Promise<boolean> {
+    if (!token) return false;
     if (isDemoMode()) {
-      setS(p => ({ ...p, speakers: next }));
-      return;
+      setS(p => ({ ...p, config: p.config ? transform(p.config) : p.config }));
+      return true;
     }
-    const text =
-      '# Speakers (unified schema v2 — see docs/reference/schema.md)\n' +
-      serializeSpeakers(next);
-    const res: any = await putFile('data/speakers.yml', text, s.spkSha, message, token);
-    setS(p => ({ ...p, speakers: next, spkSha: res.content.sha }));
+    try {
+      const result = await mutate({
+        store: githubStore(token),
+        path: 'data/config.yml',
+        parse: text => parseConfig(text) ?? DEFAULT_CONFIG,
+        serialize: v => withConfigHeader(serializeConfig(v)),
+        transform,
+        message,
+      });
+      setS(p => ({ ...p, config: result.value, cfgSha: result.sha, saveError: null }));
+      return true;
+    } catch (e) {
+      setS(p => ({ ...p, saveError: friendlyError(e, 'save') }));
+      return false;
+    }
   }
 
-  async function saveConfig(next: Config, message: string) {
-    if (!token || !s.cfgSha) return;
-    if (isDemoMode()) {
-      setS(p => ({ ...p, config: next }));
-      return;
-    }
-    const text = '# Repo-wide config for the Convener app\n' + serializeConfig(next);
-    const res: any = await putFile('data/config.yml', text, s.cfgSha, message, token);
-    setS(p => ({ ...p, config: next, cfgSha: res.content.sha }));
+  function clearSaveError() {
+    setS(p => ({ ...p, saveError: null }));
   }
-
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
 
   return (
-    <C.Provider value={{ ...s, reload, saveSpeakers, saveConfig }}>{children}</C.Provider>
+    <C.Provider value={{ ...visible, reload, mutateSpeakers, mutateConfig, clearSaveError }}>
+      {children}
+    </C.Provider>
   );
 }
 

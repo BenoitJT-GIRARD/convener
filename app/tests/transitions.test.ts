@@ -120,4 +120,24 @@ describe('transitions v2', () => {
     expect(canTransition(base, 'override', 'organizer')).toBe(false);
     expect(canTransition(base, 'override', 'board')).toBe(true);
   });
+
+  it('override forces an arbitrary status', () => {
+    const next = applyTransition(base, 'override', '', 3, '2026-05-23', { status: 'archived' });
+    expect(next.status).toBe('archived');
+  });
+
+  it('invited-accept/invited-decline are only allowed from invited', () => {
+    expect(canTransition({ ...base, status: 'invited' }, 'invited-accept', 'organizer')).toBe(true);
+    expect(canTransition({ ...base, status: 'invited' }, 'invited-decline', 'organizer')).toBe(true);
+    expect(canTransition(base, 'invited-accept', 'organizer')).toBe(false);
+  });
+
+  it('lock-date is only allowed from confirmed', () => {
+    expect(canTransition({ ...base, status: 'confirmed' }, 'lock-date', 'organizer')).toBe(true);
+    expect(canTransition(base, 'lock-date', 'organizer')).toBe(false);
+  });
+
+  it('unknown/unsupported transitions are refused', () => {
+    expect(canTransition({ ...base, status: 'archived' }, 'finalize-archive', 'organizer')).toBe(false);
+  });
 });

@@ -4,20 +4,23 @@ on:
   push:
     paths:
       - 'data/**.yml'
-      - '.github/scripts/validate_data.py'
+      - 'tools/**'
       - '.github/workflows/validate-data.yml'
   pull_request:
     paths:
       - 'data/**.yml'
-      - '.github/scripts/validate_data.py'
+      - 'tools/**'
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: '3.x'
-      - run: pip install pyyaml
-      - run: python .github/scripts/validate_data.py
+          version: '0.5.x'
+      - name: Validate
+        working-directory: tools
+        run: uv run convener-validate

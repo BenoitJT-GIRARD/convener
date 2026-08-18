@@ -3,13 +3,14 @@ import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { deriveInbox, type InboxRow } from '../state/inbox';
+import { LoadError } from '../components/LoadError';
 
 export function Inbox() {
   const { speakers, loading, error } = useData();
   const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
-  if (error) return <p className="text-danger">Error: {error}</p>;
+  if (error) return <LoadError message={error} />;
 
   const today = new Date().toISOString().slice(0, 10);
   const rows = deriveInbox(speakers, login, role, today);

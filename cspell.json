@@ -1,0 +1,20 @@
+{
+  "version": "0.2",
+  "language": "en-GB",
+  "dictionaryDefinitions": [
+    { "name": "project-words", "path": "./project-words.txt", "addWords": true }
+  ],
+  "dictionaries": ["project-words"],
+  "ignorePaths": [
+    "node_modules/**",
+    "**/package-lock.json",
+    "**/uv.lock",
+    "app/dist/**",
+    "site/**",
+    "public-data/**",
+    "docs/superpowers/**",
+    "data/speakers.yml",
+    "tools/**"
+  ],
+  "files": ["docs/**/*.md", "README.md", "INFORMATION-ARCHITECTURE.md"]
+}

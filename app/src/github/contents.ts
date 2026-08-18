@@ -1,4 +1,9 @@
 import { gh } from './client';
+import type { FileStore } from './mutate';
+
+export interface PutFileResponse {
+  content: { sha: string };
+}
 
 export async function getFile(path: string, token: string): Promise<{ text: string; sha: string }> {
   const data = await gh(`/contents/${path}`, { token, method: 'GET' });
@@ -11,7 +16,7 @@ export async function getFile(path: string, token: string): Promise<{ text: stri
 
 export async function putFile(
   path: string, text: string, sha: string, message: string, token: string
-) {
+): Promise<PutFileResponse> {
   // utf-8 -> base64
   const bytes = new TextEncoder().encode(text);
   let bin = '';
@@ -23,4 +28,15 @@ export async function putFile(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, content, sha }),
   });
+}
+
+/** The real store, backed by the GitHub Contents API. */
+export function githubStore(token: string): FileStore {
+  return {
+    read: (path) => getFile(path, token),
+    write: async (path, text, sha, message) => {
+      const res = await putFile(path, text, sha, message, token);
+      return { sha: res.content.sha };
+    },
+  };
 }

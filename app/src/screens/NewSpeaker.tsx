@@ -14,7 +14,7 @@ function nextSpeakerId(speakers: Speaker[]): string {
 }
 
 export function NewSpeaker() {
-  const { speakers, saveSpeakers } = useData();
+  const { mutateSpeakers } = useData();
   const { login } = useAuth();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -51,9 +51,7 @@ export function NewSpeaker() {
     if (!form.name.trim() || !login) return;
     setBusy(true);
     try {
-      const id = nextSpeakerId(speakers);
-      const lead: Speaker = {
-        id,
+      const fields: Omit<Speaker, 'id'> = {
         name: form.name.trim(),
         gender: form.gender,
         email: form.email.trim(),
@@ -79,8 +77,18 @@ export function NewSpeaker() {
         metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
         notes: form.notes.trim(),
       };
-      await saveSpeakers([...speakers, lead], `data: add lead ${id} (${lead.name})`);
-      nav(`/speakers/${id}`);
+      // The id must be computed from `current` inside the transform — not
+      // from a `speakers` list snapshotted at render time — so a retry
+      // against a fresher read (someone else added a speaker meanwhile)
+      // picks a fresh id instead of colliding with theirs. `assignedId`
+      // records whatever id the transform that actually got written used,
+      // for navigation below.
+      let assignedId = '';
+      const ok = await mutateSpeakers(current => {
+        assignedId = nextSpeakerId(current);
+        return [...current, { ...fields, id: assignedId }];
+      }, `data: add lead ${fields.name}`);
+      if (ok) nav(`/speakers/${assignedId}`);
     } finally {
       setBusy(false);
     }

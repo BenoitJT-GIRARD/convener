@@ -1,0 +1,98 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Install
+        working-directory: tools
+        run: uv sync --all-extras
+      - name: Lint
+        working-directory: tools
+        run: uv run ruff check .
+      - name: Format check
+        working-directory: tools
+        run: uv run ruff format --check .
+      - name: Types
+        working-directory: tools
+        run: uv run mypy
+      - name: Security patterns
+        working-directory: tools
+        run: uv run bandit -q -r convener_ops
+      - name: Dependency audit
+        working-directory: tools
+        run: uv run pip-audit
+      - name: Tests
+        working-directory: tools
+        run: uv run pytest --cov=convener_ops --cov-report=term-missing
+      - name: Integration status
+        working-directory: tools
+        run: uv run convener-check-config
+
+  typescript:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      - name: Install
+        working-directory: app
+        run: npm ci
+      - name: Lint
+        working-directory: app
+        run: npm run lint
+      - name: Types
+        working-directory: app
+        run: npm run typecheck
+      - name: Tests and coverage
+        working-directory: app
+        run: npm run test:cov
+
+  spelling:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+      - name: Spell check (en-GB)
+        run: npx --yes cspell@8 lint --no-progress
+
+  auth-proxy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/auth-proxy/package-lock.json
+      - name: Install
+        working-directory: services/auth-proxy
+        run: npm ci
+      - name: Lint
+        working-directory: services/auth-proxy
+        run: npx --yes eslint@9 src test
+      - name: Test
+        working-directory: services/auth-proxy
+        run: npm test

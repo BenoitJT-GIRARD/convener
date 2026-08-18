@@ -2,6 +2,7 @@ import { Outlet, Link } from 'react-router-dom';
 import { TopTabs } from './TopTabs';
 import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
+import { useData } from '../data/DataContext';
 import { isDemoMode, exitDemoMode } from '../data/demo';
 
 function exitDemo() {
@@ -13,6 +14,7 @@ export function Layout() {
   const demo = isDemoMode();
   const { login, signOut } = useAuth();
   const role = useRole();
+  const { saveError, clearSaveError } = useData();
   return (
     <>
       <header className="bg-primary text-white border-b-4 border-accent">
@@ -57,6 +59,20 @@ export function Layout() {
               className="font-display font-bold text-[11px] tracking-widest uppercase underline underline-offset-2"
             >
               Exit demo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="bg-danger/10 border-b-2 border-danger text-danger text-sm py-2 px-6">
+          <div className="max-w-content mx-auto flex items-center justify-between flex-wrap gap-2">
+            <span>{saveError}</span>
+            <button
+              onClick={clearSaveError}
+              className="font-display font-bold text-[11px] tracking-widest uppercase underline underline-offset-2"
+            >
+              Dismiss
             </button>
           </div>
         </div>

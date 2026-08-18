@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { SpeakerCard } from '../components/Card';
+import { effectiveStatus } from '../state/derived';
+import { LoadError } from '../components/LoadError';
 import type { SpeakerStatus } from '../data/types';
 
 const ACTIVE_COLUMNS: { key: SpeakerStatus; label: string }[] = [
@@ -12,9 +14,10 @@ const ACTIVE_COLUMNS: { key: SpeakerStatus; label: string }[] = [
 ];
 
 export function Pipeline() {
-  const { speakers, loading, error } = useData();
+  const { speakers, loading, error, config } = useData();
   if (loading) return <p className="text-ink-muted">Loading…</p>;
-  if (error) return <p className="text-danger">Error: {error}</p>;
+  if (error) return <LoadError message={error} />;
+  const now = new Date();
   return (
     <div>
       <div className="flex items-baseline justify-between mb-8 flex-wrap gap-3">
@@ -48,7 +51,11 @@ export function Pipeline() {
               </div>
               <div className="flex flex-col gap-2">
                 {items.map(s => (
-                  <SpeakerCard key={s.id} s={s} />
+                  <SpeakerCard
+                    key={s.id}
+                    s={s}
+                    displayStatus={config ? effectiveStatus(s, config, now) : undefined}
+                  />
                 ))}
                 {items.length === 0 && (
                   <p className="text-xs text-ink-faint italic py-2">— empty</p>

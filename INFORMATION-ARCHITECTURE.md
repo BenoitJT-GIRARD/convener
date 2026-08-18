@@ -1,6 +1,6 @@
 # Information architecture
 
-This is the contract the handbook and the team app honour. Five rules.
+This is the contract the handbook and the app honour. Five rules.
 
 ## 1 · One source per piece of information
 
@@ -14,21 +14,23 @@ Each concept, term, rule, step has exactly one home file. If two places talk abo
 | Selection criteria | `docs/governance/selection-criteria.md` |
 | Conflict-of-interest policy | `docs/governance/conflict-of-interest.md` |
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |
-| T-minus runbook steps | `app/src/data/runbook.ts` (rendered into handbook via build hook) |
+| T-minus runbook steps | `app/src/state/phases.ts` |
 | Templates | `docs/toolkit/` |
-| Live speakers & events data | `data/speakers.yml` and `data/events.yml` |
+| Live speaker & event data | `data/speakers.yml` |
+| External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
 
 ## 2 · Doctrine in the handbook, state in the app
 
-The handbook explains *who · what · why*. The app shows *where you are · click to advance*. Never the other way around. The team app contains no explanatory paragraphs; small `↗ in the handbook` links bridge the two.
+The handbook explains *who · what · why*. The app shows *where you are · click to advance*. Never the other way around. The app's own screens contain no explanatory paragraphs; small `↗ in the handbook` links bridge the two.
 
-The two surfaces share the same shell: the handbook is the entire MkDocs Material site,
-and the team app is one page inside it (`team-app.md`). One nav, one chrome, one URL space.
-The app uses hash routing for its sub-routes so MkDocs serves a single HTML page.
+The handbook content under `docs/` is not a separate site: the React app
+fetches it at runtime via the GitHub API and renders it inline — at the point
+of action for templates, in the Handbook tab for long-form reading. One app,
+one URL space.
 
-## 3 · Same labels everywhere, via generation
+## 3 · Same labels everywhere, via a single source
 
-Where the same identifier appears in both surfaces (runbook step labels, pipeline statuses), it lives in a single source file in the repo. A build hook injects it into the handbook page. The app reads it directly.
+Where the same identifier appears in both surfaces (runbook step labels, pipeline statuses), it lives in a single source file in the repo (`app/src/state/phases.ts`, `app/src/data/types.ts`). The app reads it directly; the handbook pages that describe the workflow are written to match, not generated.
 
 ## 4 · Hierarchy by urgency, not by topic
 
@@ -46,7 +48,7 @@ A single glossary at `docs/start-here/glossary.md` defines every term. Every oth
 - **Editorial Board** — the curatorial body. Always capitalised.
 - **Architecte** — the system-design role (intentionally kept in French).
 - **Gate** — one of the two Board approvals (lowercase as a common noun).
-- **Lead / Approved / Invited / Confirmed / Scheduled / Parking Lot / Declined** — pipeline statuses, lowercase in prose, kebab-cased in data.
+- **Lead / Approved / Invited / Confirmed / Scheduled / Delivered / Archived / Parked / Decline (board or speaker)** — pipeline statuses, lowercase in prose, kebab-cased in data.
 
 ---
 

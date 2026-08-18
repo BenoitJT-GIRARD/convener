@@ -1,22 +1,16 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { activateDemoMode } from '../data/demo';
+import { authEnv, availableStrategy } from './strategy';
+import { requestDeviceCode, pollForToken, DeviceFlowError } from './device';
+import type { DeviceCode } from './device';
 
-export function Login() {
-  const { signIn } = useAuth();
-  const [token, setToken] = useState('');
-  const [err, setErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+function realSleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    const ok = await signIn(token.trim());
-    setBusy(false);
-    if (!ok) setErr('That token did not work. Check the scope and try again.');
-  }
-
+function Shell({ children }: { children: ReactNode }) {
   function enterDemo() {
     activateDemoMode();
     window.location.reload();
@@ -61,58 +55,8 @@ export function Login() {
         <h1 className="font-display font-extrabold text-4xl uppercase tracking-tight mb-4 leading-[1.05]">
           For the team.
         </h1>
-        <p className="text-ink-muted mb-8 max-w-prose">
-          The app uses your GitHub identity. You need a fine-grained personal access token
-          with read/write access to the <code className="font-mono text-ink">workshop-series</code>{' '}
-          repository.
-        </p>
 
-        <details className="mb-8 text-sm border-l-2 border-primary pl-4">
-          <summary className="cursor-pointer font-display font-bold uppercase tracking-wider text-xs text-primary-hover">
-            How to generate a token (one minute)
-          </summary>
-          <ol className="list-decimal pl-6 mt-3 space-y-1.5 text-ink-muted">
-            <li>
-              Open{' '}
-              <a
-                className="underline"
-                href="https://github.com/settings/personal-access-tokens/new"
-                target="_blank"
-                rel="noreferrer"
-              >
-                github.com/settings/personal-access-tokens/new
-              </a>
-              .
-            </li>
-            <li>
-              Resource owner: <code className="font-mono text-ink">The Example Collective</code>.
-              Repository access: only <code className="font-mono text-ink">workshop-series</code>.
-            </li>
-            <li>
-              Permissions: <em>Contents: read &amp; write</em>, <em>Issues: read &amp; write</em>.
-            </li>
-            <li>Generate, copy the token, paste below.</li>
-          </ol>
-        </details>
-
-        <form onSubmit={submit} className="space-y-4">
-          <input
-            type="password"
-            placeholder="github_pat_..."
-            value={token}
-            onChange={e => setToken(e.target.value)}
-            className="w-full px-3 py-3 font-mono text-sm"
-            required
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover disabled:opacity-50 transition-colors"
-          >
-            {busy ? 'Checking…' : 'Sign in →'}
-          </button>
-          {err && <p className="text-danger text-sm">{err}</p>}
-        </form>
+        {children}
 
         <div className="mt-12 pt-8 border-t border-border">
           <p className="text-xs font-bold tracking-[0.14em] uppercase text-ink-muted mb-2">
@@ -131,5 +75,185 @@ export function Login() {
         </div>
       </div>
     </div>
+  );
+}
+
+function TokenPanel() {
+  const { signIn } = useAuth();
+  const [token, setToken] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr(null);
+    const ok = await signIn(token.trim());
+    setBusy(false);
+    if (!ok) {
+      setErr(
+        'That did not work. Check the token and your internet connection, then try again.',
+      );
+    }
+  }
+
+  return (
+    <>
+      <p className="text-ink-muted mb-8 max-w-prose">
+        Sign-in with a short code is not configured yet, so this instance uses a personal
+        access token. You need a fine-grained personal access token with read/write access
+        to the <code className="font-mono text-ink">workshop-series</code> repository.
+      </p>
+
+      <details className="mb-8 text-sm border-l-2 border-primary pl-4">
+        <summary className="cursor-pointer font-display font-bold uppercase tracking-wider text-xs text-primary-hover">
+          How to generate a token (one minute)
+        </summary>
+        <ol className="list-decimal pl-6 mt-3 space-y-1.5 text-ink-muted">
+          <li>
+            Open{' '}
+            <a
+              className="underline"
+              href="https://github.com/settings/personal-access-tokens/new"
+              target="_blank"
+              rel="noreferrer"
+            >
+              github.com/settings/personal-access-tokens/new
+            </a>
+            .
+          </li>
+          <li>
+            Resource owner: <code className="font-mono text-ink">The Example Collective</code>.
+            Repository access: only <code className="font-mono text-ink">workshop-series</code>.
+          </li>
+          <li>
+            Permissions: <em>Contents: read &amp; write</em>, <em>Issues: read &amp; write</em>.
+          </li>
+          <li>Generate, copy the token, paste below.</li>
+        </ol>
+      </details>
+
+      <form onSubmit={submit} className="space-y-4">
+        <input
+          type="password"
+          placeholder="github_pat_..."
+          value={token}
+          onChange={e => setToken(e.target.value)}
+          className="w-full px-3 py-3 font-mono text-sm"
+          required
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover disabled:opacity-50 transition-colors"
+        >
+          {busy ? 'Checking...' : 'Sign in ->'}
+        </button>
+        {err && <p className="text-danger text-sm">{err}</p>}
+      </form>
+    </>
+  );
+}
+
+type DeviceState =
+  | { step: 'idle' }
+  | { step: 'requesting' }
+  | { step: 'code'; code: DeviceCode }
+  | { step: 'error'; message: string };
+
+function DevicePanel({ proxyUrl, clientId }: { proxyUrl: string; clientId: string }) {
+  const { signInWithTokens } = useAuth();
+  const [state, setState] = useState<DeviceState>({ step: 'idle' });
+
+  async function start() {
+    setState({ step: 'requesting' });
+    try {
+      const code = await requestDeviceCode(proxyUrl, clientId);
+      setState({ step: 'code', code });
+      const tokens = await pollForToken(proxyUrl, clientId, code.device_code, {
+        interval: code.interval,
+        sleep: realSleep,
+      });
+      const ok = await signInWithTokens(tokens.access_token);
+      if (!ok) {
+        setState({
+          step: 'error',
+          message: 'Sign-in succeeded on GitHub, but the token was rejected. Please try again.',
+        });
+      }
+    } catch (e) {
+      const message = e instanceof DeviceFlowError ? e.message : 'Sign-in failed. Please try again.';
+      setState({ step: 'error', message });
+    }
+  }
+
+  if (state.step === 'code') {
+    return (
+      <div className="space-y-5">
+        <p className="text-ink-muted max-w-prose">
+          Open GitHub and enter this code to finish signing in.
+        </p>
+        <p className="font-mono font-extrabold text-4xl tracking-[0.2em] text-center bg-primary/5 border-2 border-primary py-6">
+          {state.code.user_code}
+        </p>
+        <button
+          type="button"
+          onClick={() => window.open(state.code.verification_uri, '_blank', 'noopener,noreferrer')}
+          className="w-full font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover transition-colors"
+        >
+          Open GitHub
+        </button>
+        <p className="text-xs text-ink-muted text-center">Waiting for confirmation...</p>
+      </div>
+    );
+  }
+
+  if (state.step === 'error') {
+    return (
+      <div className="space-y-4">
+        <p className="text-danger text-sm">{state.message}</p>
+        <button
+          type="button"
+          onClick={() => setState({ step: 'idle' })}
+          className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover transition-colors"
+        >
+          Start again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <p className="text-ink-muted max-w-prose">
+        Sign in with your GitHub account. Click the button, then read and enter a short code
+        on github.com. No token to create or paste.
+      </p>
+      <button
+        type="button"
+        disabled={state.step === 'requesting'}
+        onClick={start}
+        className="font-display font-bold tracking-widest uppercase text-sm bg-primary text-white border-2 border-primary px-6 py-3 hover:bg-primary-hover hover:border-primary-hover disabled:opacity-50 transition-colors"
+      >
+        {state.step === 'requesting' ? 'Starting...' : 'Sign in with GitHub'}
+      </button>
+    </div>
+  );
+}
+
+export function Login() {
+  const env = authEnv();
+  const strategy = availableStrategy(env);
+  const { startupError } = useAuth();
+
+  return (
+    <Shell>
+      {startupError && <p className="text-danger text-sm mb-6">{startupError}</p>}
+      {strategy === 'device' ? (
+        <DevicePanel proxyUrl={env.proxyUrl as string} clientId={env.clientId as string} />
+      ) : (
+        <TokenPanel />
+      )}
+    </Shell>
   );
 }

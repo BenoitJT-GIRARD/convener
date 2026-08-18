@@ -1,0 +1,36 @@
+# Speakers (unified schema v2 — see docs/reference/schema.md)
+- id: spk-test
+  name: Test Person
+  gender: F
+  email: someone@example.test
+  affiliation: X
+  country: FR
+  title: Talk title
+  abstract: Abstract.
+  conflicts_of_interest: ''
+  source: organizer
+  proposed_by: alice
+  links: []
+  host_1: alice
+  host_2: bob
+  status: scheduled
+  selection:
+    votes_for:
+      - alice
+      - bob
+      - carol
+    decided_on: '2026-01-01'
+  edition_code: MRG-10
+  date: '2026-06-01'
+  time: '12:30'
+  zoom_link: ''
+  youtube_url: ''
+  forum_thread: ''
+  runbook_progress:
+    approved/invitation-sent: true
+  metrics:
+    registrations: null
+    live_peak: null
+    youtube_views_30d: null
+    forum_replies: null
+  notes: ''

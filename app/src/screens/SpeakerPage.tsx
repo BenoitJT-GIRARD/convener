@@ -6,42 +6,49 @@ import { ActionButtons } from '../components/ActionButtons';
 import { AdminOverride } from '../components/AdminOverride';
 import { Checklist } from '../components/Checklist';
 import { canFinalize, setField, phaseOf, type FieldKey } from '../state/phases';
+import { effectiveStatus } from '../state/derived';
+import { LoadError } from '../components/LoadError';
 import type { Speaker } from '../data/types';
 
 export function SpeakerPage() {
   const { id } = useParams();
-  const { speakers, loading, error, saveSpeakers } = useData();
+  const { speakers, loading, error, config, mutateSpeakers } = useData();
   const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
-  if (error) return <p className="text-danger">Error: {error}</p>;
+  if (error) return <LoadError message={error} />;
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
+  // Display only: what has aired, not necessarily what's recorded yet — the
+  // scheduled job (tools/convener_ops/sweep.py) is the single writer for that.
+  const displayStatus = config ? effectiveStatus(s, config, new Date()) : s.status;
 
   async function toggle(key: string, value: boolean) {
-    if (!login || !s) return;
-    const next = { ...s, runbook_progress: { ...s.runbook_progress, [key]: value } };
-    await saveSpeakers(
-      speakers.map(sp => (sp.id === s.id ? next : sp)),
-      `data: ${s.id} runbook ${key}=${value}`,
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current =>
+        current.map(sp =>
+          sp.id === id
+            ? { ...sp, runbook_progress: { ...sp.runbook_progress, [key]: value } }
+            : sp,
+        ),
+      `data: ${id} runbook ${key}=${value}`,
     );
   }
 
   async function onField(k: FieldKey, v: string) {
-    if (!login || !s) return;
-    const next = setField(s, k, v);
-    await saveSpeakers(
-      speakers.map(sp => (sp.id === s.id ? next : sp)),
-      `data: ${s.id} set ${k}`,
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current => current.map(sp => (sp.id === id ? setField(sp, k, v) : sp)),
+      `data: ${id} set ${k}`,
     );
   }
 
   async function finalize() {
-    if (!login || !s) return;
-    const next = { ...s, status: 'archived' as const };
-    await saveSpeakers(
-      speakers.map(sp => (sp.id === s.id ? next : sp)),
-      `data: ${s.id} finalize-and-archive by ${login}`,
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current => current.map(sp => (sp.id === id ? { ...sp, status: 'archived' as const } : sp)),
+      `data: ${id} finalize-and-archive by ${login}`,
     );
   }
 
@@ -59,7 +66,7 @@ export function SpeakerPage() {
         {s.country && ` · ${s.country}`}
       </p>
       <p className="text-ink-muted mt-1">
-        Status: <strong>{s.status}</strong>
+        Status: <strong>{displayStatus}</strong>
         {s.date && ` · ${s.date}`}
         {s.time && ` · ${s.time}`}
         {s.host_1 && ` · host 1: ${s.host_1}`}

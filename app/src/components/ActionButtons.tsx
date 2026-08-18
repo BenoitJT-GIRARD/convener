@@ -4,6 +4,8 @@ import {
   applyTransition,
   type Transition,
   type Role,
+  type LockDatePayload,
+  type OverridePayload,
 } from '../state/transitions';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
@@ -16,20 +18,24 @@ interface Props {
 }
 
 export function ActionButtons({ speaker, role }: Props) {
-  const { config, speakers, saveSpeakers } = useData();
+  const { config, mutateSpeakers } = useData();
   const { login } = useAuth();
   const [busy, setBusy] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
   const threshold = config?.vote_threshold ?? 3;
 
-  async function fire(t: Transition, payload?: any) {
+  async function fire(t: Transition, payload?: LockDatePayload | OverridePayload) {
     if (!login || !canTransition(speaker, t, role)) return;
     setBusy(true);
     try {
-      const next = applyTransition(speaker, t, login, threshold, today, payload);
-      const updated = speakers.map(sp => (sp.id === speaker.id ? next : sp));
-      await saveSpeakers(updated, `data: ${speaker.id} → ${t}`);
+      await mutateSpeakers(
+        current =>
+          current.map(sp =>
+            sp.id === speaker.id ? applyTransition(sp, t, login, threshold, today, payload) : sp,
+          ),
+        `data: ${speaker.id} → ${t}`,
+      );
     } finally {
       setBusy(false);
     }

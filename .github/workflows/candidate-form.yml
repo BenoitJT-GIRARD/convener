@@ -4,24 +4,23 @@ on:
   repository_dispatch:
     types: [proposal-submitted]
 
-permissions:
-  contents: write
-
 jobs:
   handle:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: '3.x'
-      - run: pip install pyyaml
+          version: '0.5.x'
       - name: Process payload
+        working-directory: tools
         env:
           PROPOSAL_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
           PROPOSAL_SIGNATURE: ${{ github.event.client_payload.signature }}
           TALLY_WEBHOOK_SECRET: ${{ secrets.TALLY_WEBHOOK_SECRET }}
-        run: python .github/scripts/handle_proposal.py
+        run: uv run convener-handle-proposal
       - name: Commit
         run: |
           set -e
@@ -33,4 +32,12 @@ jobs:
             exit 0
           fi
           git commit -m "data: new lead from public form"
-          git push
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
+            git pull --rebase
+          done
+          echo "::error::push failed after 3 attempts -- this lead was not saved"
+          exit 1

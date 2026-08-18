@@ -46,13 +46,15 @@ function buildContext(ctx: SubstitutionContext): Resolved {
   return r;
 }
 
+type ResolvedValue = Resolved | Record<string, string> | { name: string } | string | undefined;
+
 export function substitute(text: string, ctx: SubstitutionContext): string {
   const resolved = buildContext(ctx);
   return text.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, path) => {
     const parts = path.split('.');
-    let cur: any = resolved;
+    let cur: ResolvedValue = resolved;
     for (const p of parts) {
-      if (cur && typeof cur === 'object' && p in cur) cur = cur[p];
+      if (cur && typeof cur === 'object' && p in cur) cur = (cur as Record<string, ResolvedValue>)[p];
       else return MISSING(path);
     }
     if (cur === null || cur === undefined || cur === '') return MISSING(path);

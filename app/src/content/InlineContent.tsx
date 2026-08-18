@@ -18,10 +18,20 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
+  // When the request identity (contentKey/token) changes, reset the display
+  // state during render rather than from inside the effect below — this is
+  // React's documented pattern for "adjusting state when a prop changes"
+  // (react.dev), and keeps the effect itself free of synchronous setState.
+  const requestKey = `${contentKey}::${token ?? ''}`;
+  const [loadedFor, setLoadedFor] = useState(requestKey);
+  if (loadedFor !== requestKey) {
+    setLoadedFor(requestKey);
     setText(null);
     setErr(null);
     setCopied(false);
+  }
+
+  useEffect(() => {
     fetchContent(contentKey, token)
       .then(setText)
       .catch(e => setErr(e.message));
