@@ -6,7 +6,8 @@ import { activeBoard } from '../state/board';
 import { applyTransition, canTransition } from '../state/transitions';
 import { parisToday } from '../state/derived';
 import { formatDecision } from '../state/decisions';
-import type { Speaker, SpeakerStatus, Gender } from '../data/types';
+import { CAREER_STAGES, GENDERS } from '../data/types';
+import type { Speaker, SpeakerStatus, Gender, CareerStage } from '../data/types';
 
 const ALL_STATUSES: SpeakerStatus[] = [
   'lead',
@@ -20,7 +21,6 @@ const ALL_STATUSES: SpeakerStatus[] = [
   'decline-board',
   'decline-speaker',
 ];
-const GENDERS: Gender[] = ['M', 'F', 'NB', 'undisclosed'];
 
 /**
  * Projects `obj` down to the given keys. Used to build a save patch from
@@ -122,6 +122,25 @@ function EditFields({ speaker }: { speaker: Speaker }) {
             {GENDERS.map(g => (
               <option key={g} value={g}>
                 {g}
+              </option>
+            ))}
+          </select>
+        </L>
+        <L label="Career stage">
+          {/* Declared by the speaker, never guessed at from a CV or a
+              publication record: `undisclosed` is the honest answer and it is
+              the default. Editable here as well as at intake because a lead
+              often tells us only later, and correcting it in the record the
+              speaker described is better than leaving a wrong stage standing
+              in the balance figures. */}
+          <select
+            className={input}
+            value={draft.career_stage}
+            onChange={e => up('career_stage', e.target.value as CareerStage)}
+          >
+            {CAREER_STAGES.map(stage => (
+              <option key={stage} value={stage}>
+                {stage}
               </option>
             ))}
           </select>

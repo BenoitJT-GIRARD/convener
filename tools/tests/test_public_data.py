@@ -57,6 +57,22 @@ def test_private_fields_never_leak() -> None:
         assert forbidden not in serialised
 
 
+def test_the_diversity_attributes_never_reach_the_feed() -> None:
+    # gender and career_stage are collected for one purpose: an aggregate the
+    # board reads, over a window, inside the app (app/src/state/diversity.ts).
+    # Published per row they stop being a measure and become an attribute
+    # attached to a named researcher on the open web. Neither is on the
+    # allowlist, and this pins that they stay off it.
+    assert "gender" not in PUBLIC_FIELDS
+    assert "career_stage" not in PUBLIC_FIELDS
+    out = to_public([_scheduled(gender="F", career_stage="postdoc")])
+    assert "gender" not in out[0]
+    assert "career_stage" not in out[0]
+    serialised = repr(out)
+    for forbidden in ("postdoc", "'F'"):
+        assert forbidden not in serialised
+
+
 def test_recording_is_only_exposed_after_delivery() -> None:
     assert to_public([_scheduled()])[0]["youtube_url"] == ""
     delivered = to_public([_scheduled(status="delivered")])[0]

@@ -17,6 +17,19 @@ from convener_ops.governance import active_board
 
 GENDERS = {"M", "F", "NB", "undisclosed"}
 
+# Mirrors CAREER_STAGES in app/src/data/types.ts. "undisclosed" is a real
+# answer, not a missing one: the form must be answerable without declaring a
+# career stage, and the balance figures count the people who did not answer
+# rather than dropping them (app/src/state/diversity.ts).
+CAREER_STAGES = {
+    "phd",
+    "postdoc",
+    "independent",
+    "group-leader",
+    "other",
+    "undisclosed",
+}
+
 
 def verify_signature(payload: str, signature: str, secret: str) -> bool:
     """Check the HMAC-SHA256 signature of a payload.
@@ -145,6 +158,15 @@ def to_lead(
     if gender not in GENDERS:
         gender = "undisclosed"
 
+    # Declared by the submitter or not at all. An unrecognised answer -- a
+    # free-text field, a renamed form option, a translation -- falls back to
+    # "undisclosed" rather than being kept verbatim: a value outside the
+    # vocabulary would open a career stage of its own in the balance figures
+    # and read as a finding.
+    career_stage = _get(fields, "Career stage", "Career level") or "undisclosed"
+    if career_stage not in CAREER_STAGES:
+        career_stage = "undisclosed"
+
     raw_links = _get(fields, "Links", "Profile links")
     links = [s.strip() for s in raw_links.split(",") if s.strip()]
 
@@ -152,7 +174,7 @@ def to_lead(
         "id": sid,
         "name": name,
         "gender": gender,
-        "career_stage": "undisclosed",
+        "career_stage": career_stage,
         "email": email,
         "affiliation": _get(fields, "Institution", "Affiliation"),
         "country": _get(fields, "Country"),

@@ -3,7 +3,11 @@ export type SpeakerStatus =
   | 'scheduled' | 'delivered' | 'archived'
   | 'parked' | 'decline-board' | 'decline-speaker';
 
-export type Gender = 'M' | 'F' | 'NB' | 'undisclosed';
+export const GENDERS = ['M', 'F', 'NB', 'undisclosed'] as const;
+export type Gender = (typeof GENDERS)[number];
+export function isGender(v: string): v is Gender {
+  return (GENDERS as readonly string[]).includes(v);
+}
 
 export const CAREER_STAGES = [
   'phd', 'postdoc', 'independent', 'group-leader', 'other', 'undisclosed',

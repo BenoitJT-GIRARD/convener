@@ -82,6 +82,31 @@ def test_an_unrecognised_gender_falls_back_to_undisclosed() -> None:
     assert lead["gender"] == "undisclosed"
 
 
+def test_a_declared_career_stage_is_kept() -> None:
+    fields = _fields(("Name", "Grace Hopper"), ("Career stage", "postdoc"))
+    lead = to_lead(fields, [], config(), TODAY)
+    assert lead is not None
+    assert lead["career_stage"] == "postdoc"
+
+
+def test_an_unrecognised_career_stage_falls_back_to_undisclosed() -> None:
+    # A free-text answer, a renamed form option or a translation must not open
+    # a career stage of its own in the balance figures.
+    fields = _fields(("Name", "Grace Hopper"), ("Career stage", "Assistant Professor"))
+    lead = to_lead(fields, [], config(), TODAY)
+    assert lead is not None
+    assert lead["career_stage"] == "undisclosed"
+
+
+def test_a_submission_that_declares_no_career_stage_is_still_a_lead() -> None:
+    # The form is answerable without declaring one, and the answer is recorded
+    # as "undisclosed" rather than left absent -- it is counted, not dropped.
+    lead = to_lead(_fields(("Name", "Grace Hopper")), [], config(), TODAY)
+    assert lead is not None
+    assert lead["career_stage"] == "undisclosed"
+    assert lead["gender"] == "undisclosed"
+
+
 def test_a_comma_separated_links_string_becomes_a_stripped_list() -> None:
     fields = _fields(
         ("Name", "Grace Hopper"), ("Links", " a@example.org , , b@example.org ")
