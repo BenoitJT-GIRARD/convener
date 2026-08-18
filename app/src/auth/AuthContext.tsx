@@ -24,6 +24,12 @@ const Ctx = createContext<AuthCtx | null>(null);
 // removed. Never written again.
 const LEGACY_KEY = 'convener.token';
 
+// Written by an earlier build that attempted a refresh flow. That flow was
+// removed (it needed a client secret the relay deliberately does not hold), so
+// the key is inert -- but an inert key nobody clears is litter in a browser we
+// do not control. Cleared on startup, like the legacy token above.
+const ORPHANED_REFRESH_KEY = 'convener.refresh';
+
 function readLocalStorage(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -63,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isDemoMode()) return;
 
+    removeLocalStorage(ORPHANED_REFRESH_KEY);
     const legacy = consumeLegacyToken();
     if (!legacy) return; // initial state was already ready: true
 
