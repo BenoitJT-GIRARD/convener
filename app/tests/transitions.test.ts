@@ -20,7 +20,7 @@ const cfg: Config = {
   board_min: 3,
   board_max: 9,
   vote_window_days: 14,
-  objection_window_working_days: 5,
+  objection_window_working_days: 3,
   inactivity_months: 6,
   balance_window_months: 12,
   sla_days: {
@@ -228,10 +228,29 @@ describe('transitions v2', () => {
     expect(next.time).toBe('14:30');
   });
 
-  it('finalize-archive moves delivered → archived', () => {
+  it('finalize-archive moves delivered → archived once the publication gate opens', () => {
+    // Archiving publishes the recording, so it is no longer a status change
+    // anyone can make on demand -- see the publication gate (G-10, G-15) in
+    // state/governance.ts and app/tests/publication-gate.test.tsx.
     const s: Speaker = { ...base, status: 'delivered' };
     expect(canTransition(s, 'finalize-archive', 'organizer')).toBe(true);
-    expect(applyTransition(s, 'finalize-archive', '', cfg, '2026-05-23').status).toBe('archived');
+    expect(() => applyTransition(s, 'finalize-archive', '', cfg, '2026-05-23')).toThrowError(
+      /not given permission/,
+    );
+
+    const cleared: Speaker = {
+      ...s,
+      publication: {
+        consent: 'granted',
+        approved_by: 'a',
+        approved_on: '2026-05-15',
+        objections: [],
+        outcome: '',
+      },
+    };
+    const next = applyTransition(cleared, 'finalize-archive', '', cfg, '2026-05-23');
+    expect(next.status).toBe('archived');
+    expect(next.publication.outcome).toBe('published');
   });
 
   it('override is board only', () => {
@@ -255,7 +274,20 @@ describe('transitions v2', () => {
     expect(canTransition(base, 'lock-date', 'organizer')).toBe(false);
   });
 
-  it('unknown/unsupported transitions are refused', () => {
-    expect(canTransition({ ...base, status: 'archived' }, 'finalize-archive', 'organizer')).toBe(false);
+  it('refuses to re-archive a recording that is already published', () => {
+    const published: Speaker = {
+      ...base,
+      status: 'archived',
+      publication: { ...base.publication, outcome: 'published' },
+    };
+    expect(canTransition(published, 'finalize-archive', 'organizer')).toBe(false);
+    // But an archived recording an objection took offline can go back
+    // through the same gated transition rather than through a second path.
+    const takenDown: Speaker = {
+      ...base,
+      status: 'archived',
+      publication: { ...base.publication, outcome: 'withheld' },
+    };
+    expect(canTransition(takenDown, 'finalize-archive', 'organizer')).toBe(true);
   });
 });

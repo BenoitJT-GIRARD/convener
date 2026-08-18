@@ -1,7 +1,14 @@
-import type { BallotValue, Config, Speaker, SpeakerStatus } from '../data/types';
+import type {
+  BallotValue,
+  Config,
+  ConsentDecision,
+  ObjectionResolution,
+  Speaker,
+  SpeakerStatus,
+} from '../data/types';
 import { BallotRejected, castBallot, withdrawBallot } from './ballots';
 import { activeBoard, isBoardMember } from './board';
-import { decide } from './governance';
+import { PublicationBlocked, canArchive, decide, standingObjections } from './governance';
 
 export type Role = 'board' | 'organizer';
 
@@ -16,6 +23,10 @@ export type Transition =
   | 'invited-decline'
   | 'lock-date'
   | 'finalize-archive'
+  | 'consent-set'
+  | 'publication-approve'
+  | 'publication-object'
+  | 'publication-resolve'
   | 'vote-reopen'
   | 'override';
 
@@ -50,12 +61,45 @@ export interface HiddenCoiPayload {
   reason: string;
 }
 
+/**
+ * Relaying what the speaker actually answered about their recording (G-15).
+ *
+ * `ConsentDecision` is `granted | refused` and nothing else. `pending` is a
+ * legal stored value but is absent from the vocabulary a transition can
+ * write, so there is no way to express "assume, for now" and no way for an
+ * elapsed delay to arrive at one: the only values this carries are answers a
+ * named person heard the speaker give.
+ */
+export interface ConsentPayload {
+  consent: ConsentDecision;
+}
+
+/** One board member's objection to publishing a recording (G-10). The reason
+ *  is required for the same reason a recusal's is: it stops publication of a
+ *  named researcher's talk, so the register has to say why. */
+export interface ObjectionPayload {
+  reason: string;
+}
+
+/** Closing the objections that stand on a recording. `resolution` is
+ *  `lift | withhold` -- there is deliberately no value meaning "publish", so
+ *  no resolution can bypass `canArchive`. `note` says what was decided and
+ *  is kept alongside the original objection. */
+export interface ResolutionPayload {
+  resolution: ObjectionResolution;
+  note: string;
+}
+
 const BOARD_ONLY: Transition[] = [
   'ballot-cast',
   'ballot-withdraw',
   'lead-park',
   'lead-decline',
   'reactivate',
+  'consent-set',
+  'publication-approve',
+  'publication-object',
+  'publication-resolve',
   'vote-reopen',
   'override',
 ];
@@ -78,7 +122,24 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
     case 'lock-date':
       return s.status === 'confirmed';
     case 'finalize-archive':
-      return s.status === 'delivered';
+      // Also reachable from `archived` when the recording is not currently
+      // published -- an objection took it down and was later lifted. It goes
+      // back through this one gated transition rather than through a second
+      // path that could publish on its own authority.
+      return s.status === 'delivered' || (s.status === 'archived' && s.publication.outcome !== 'published');
+    case 'consent-set':
+      // Recordable from the moment there is a recording to talk about, and
+      // never closed: a speaker may withdraw permission at any time (G-15).
+      return s.status === 'delivered' || s.status === 'archived';
+    case 'publication-approve':
+      return s.status === 'delivered' || s.status === 'archived';
+    case 'publication-object':
+      return s.status === 'delivered' || s.status === 'archived';
+    case 'publication-resolve':
+      return (
+        (s.status === 'delivered' || s.status === 'archived') &&
+        (standingObjections(s.publication).length > 0 || s.publication.outcome === 'withheld')
+      );
     case 'vote-reopen':
       // Everything except the three outcomes a reopening could not undo: a
       // talk already given (`delivered`, `archived`) is history, and a
@@ -109,7 +170,14 @@ export function applyTransition(
   actor: string,
   config: Config,
   today: string,
-  payload?: LockDatePayload | OverridePayload | BallotPayload | HiddenCoiPayload,
+  payload?:
+    | LockDatePayload
+    | OverridePayload
+    | BallotPayload
+    | HiddenCoiPayload
+    | ConsentPayload
+    | ObjectionPayload
+    | ResolutionPayload,
 ): Speaker {
   switch (t) {
     case 'ballot-cast': {
@@ -166,8 +234,106 @@ export function applyTransition(
         time: p.time,
       };
     }
-    case 'finalize-archive':
-      return { ...s, status: 'archived' };
+    case 'finalize-archive': {
+      // The single writer of `outcome: 'published'` in this codebase, and it
+      // cannot run unless the gate opens. Every contradictory shape the
+      // validator used to have to catch -- refused consent published,
+      // published with an objection standing, published with no approval,
+      // published inside the objection window -- is unreachable because the
+      // only door into `published` is this one, and this one asks first.
+      const gate = canArchive(s, config, today);
+      if (!gate.allowed) throw new PublicationBlocked(gate.reason);
+      return {
+        ...s,
+        status: 'archived',
+        publication: { ...s.publication, outcome: 'published' },
+      };
+    }
+    case 'consent-set': {
+      const p = payload as ConsentPayload;
+      // A refusal is not only a block, it is a takedown (G-15): it writes
+      // `withheld` on the spot, so the pair (refused, published) cannot exist
+      // even for an instant, on any ordering of events. Granting consent
+      // publishes nothing by itself -- it clears one of two permissions, and
+      // `finalize-archive` still has to be run by a person.
+      const refused = p.consent === 'refused';
+      return {
+        ...s,
+        publication: {
+          ...s.publication,
+          consent: p.consent,
+          outcome: refused ? 'withheld' : s.publication.outcome,
+        },
+      };
+    }
+    case 'publication-approve':
+      // A named member, on a named day. `actor` comes from the signed-in
+      // session, so no scheduled job can produce an approval -- and an
+      // approval is what starts the objection window running.
+      return {
+        ...s,
+        publication: { ...s.publication, approved_by: actor, approved_on: today },
+      };
+    case 'publication-object': {
+      const p = payload as ObjectionPayload;
+      const reason = p.reason.trim();
+      if (reason === '') {
+        throw new PublicationBlocked(
+          'An objection to publishing a recording needs a written reason. ' +
+            'Add a short note saying what the problem is before submitting.',
+        );
+      }
+      return {
+        ...s,
+        publication: {
+          ...s.publication,
+          // Replaces this member's own standing objection rather than
+          // stacking a second one; everyone else's is left untouched, and
+          // resolved ones stay as the record of what happened.
+          objections: [
+            ...s.publication.objections.filter(o => !(o.member === actor && !o.resolved_on)),
+            { member: actor, reason, date: today, resolved_on: '' },
+          ],
+          // An objection against a recording that is already online takes it
+          // down while the objection is examined. This is what keeps
+          // (published, objection standing) out of reach in the one ordering
+          // the gate cannot cover, publication first and objection after.
+          outcome: s.publication.outcome === 'published' ? 'withheld' : s.publication.outcome,
+        },
+      };
+    }
+    case 'publication-resolve': {
+      const p = payload as ResolutionPayload;
+      const note = p.note.trim();
+      if (note === '') {
+        throw new PublicationBlocked(
+          'Resolving an objection needs a written note saying what was decided. ' +
+            'One line is enough, and it is kept next to the objection.',
+        );
+      }
+      const objections = s.publication.objections.map(o =>
+        o.resolved_on
+          ? o
+          : {
+              ...o,
+              // Appended rather than replaced: the register adds, it never
+              // rewrites, so the objection keeps saying what it said.
+              reason: `${o.reason} (resolved by ${actor} on ${today}: ${note})`,
+              resolved_on: today,
+            },
+      );
+      // `ObjectionResolution` has no value that publishes. Lifting returns
+      // the record to the gate -- `finalize-archive` still has to be run, and
+      // still asks `canArchive` -- while withholding is a decision the board
+      // has to lift explicitly before anything can move again.
+      const outcome =
+        p.resolution === 'withhold'
+          ? ('withheld' as const)
+          : s.publication.outcome === 'withheld'
+            ? ('' as const)
+            : s.publication.outcome;
+      return { ...s, publication: { ...s.publication, objections, outcome } };
+    }
     case 'vote-reopen': {
       // A conflict of interest that was never declared comes to light.
       //

@@ -44,12 +44,57 @@ export interface SpeakerSelection {
   decided_on: string;
 }
 
-export type PublicationConsent = 'granted' | 'refused' | 'pending';
+/** `''` is a real stored value, not an oversight: `scripts/migrate_v3.py`
+ *  writes it for every speaker whose status never reached a publishable
+ *  state, and `tools/convener_ops/validate.py` accepts it. It is spelled out here
+ *  so that code reading `consent` has to face it -- neither `''` nor
+ *  `pending` is an agreement, and the gate treats them identically. */
+export type PublicationConsent = 'granted' | 'refused' | 'pending' | '';
 
-export interface PublicationObjection {
+/**
+ * What a board member may actually *decide* about a speaker's consent.
+ *
+ * `pending` is a legal stored value -- it is where the migration starts every
+ * delivered speaker -- but it is deliberately absent from this vocabulary, so
+ * no transition can write it. Consent is only ever moved by relaying an answer
+ * the speaker actually gave (P2-8: the ambiguous value is not guarded, it does
+ * not exist here to be written).
+ */
+export const CONSENT_DECISIONS = ['granted', 'refused'] as const;
+export type ConsentDecision = (typeof CONSENT_DECISIONS)[number];
+
+/**
+ * How a board objection to publishing is closed.
+ *
+ * There is no `publish` value here, and that is the point: resolving an
+ * objection returns the record to the publication gate, it never walks
+ * through it. `outcome: 'published'` has exactly one writer in this codebase
+ * (`transitions.ts::finalize-archive`) and that writer is behind
+ * `governance.canArchive`.
+ */
+export const OBJECTION_RESOLUTIONS = ['lift', 'withhold'] as const;
+export type ObjectionResolution = (typeof OBJECTION_RESOLUTIONS)[number];
+
+/** An objection as raised: who, why, when. */
+export interface Objection {
   member: string;
   reason: string;
   date: string;
+}
+
+/**
+ * A publication objection, which additionally records the day it was closed.
+ *
+ * Empty means it still stands. "Unresolved" is therefore a *stored fact*, not
+ * something inferred by comparing dates against the approval -- and a
+ * hand-written objection that omits the key reads as standing, which is the
+ * safe direction.
+ *
+ * Nomination objections (G-08) use the plain `Objection`: an objection there
+ * is never resolved, it defers the candidate to the annual meeting.
+ */
+export interface PublicationObjection extends Objection {
+  resolved_on: string;
 }
 
 export interface Publication {
@@ -72,7 +117,7 @@ export interface Nomination {
   candidate: string;
   sponsor: string;
   opened_on: string;
-  objections: PublicationObjection[];
+  objections: Objection[];
   outcome: 'accepted' | 'deferred' | 'waiting' | '';
 }
 

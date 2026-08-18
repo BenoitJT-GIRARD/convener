@@ -65,7 +65,7 @@ const DEFAULT_CONFIG: Config = {
   board_min: 3,
   board_max: 9,
   vote_window_days: 14,
-  objection_window_working_days: 5,
+  objection_window_working_days: 3,
   inactivity_months: 6,
   balance_window_months: 12,
   sla_days: {

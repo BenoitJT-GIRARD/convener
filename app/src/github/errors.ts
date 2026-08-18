@@ -35,6 +35,14 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
   // transformation -- which must still read as the governance rule it is.
   if (e instanceof Error && e.name === 'NominationRejected') return e.message;
 
+  // PublicationBlocked (state/governance.ts) is the publication gate (G-10,
+  // G-15) refusing to archive. `PublicationGate` keeps the button disabled
+  // and shows the same sentence beforehand, so reaching here means the rule
+  // fired inside a `mutate` transformation replayed against freshly-read
+  // data -- which is precisely when the volunteer most needs to read "the
+  // speaker has not given permission" rather than a network error.
+  if (e instanceof Error && e.name === 'PublicationBlocked') return e.message;
+
   // Anything else (a rejected fetch: offline, DNS failure, captive portal)
   // reaches here as a bare TypeError with no useful message to show.
   return 'GitHub is not responding. Try again in a moment.';
