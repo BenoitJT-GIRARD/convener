@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { getFile, githubStore } from '../github/contents';
 import { mutate } from '../github/mutate';
+import { friendlyError } from '../github/errors';
 import {
   parseSpeakers,
   serializeSpeakers,
@@ -16,7 +17,14 @@ import type { Speaker, Config } from './types';
 
 interface State {
   loading: boolean;
+  /** Set only when the *initial load* (or an explicit reload) fails. There is
+   *  genuinely nothing to render in that case, so screens replace themselves
+   *  with this — see `error` usage in the screens under src/screens. */
   error: string | null;
+  /** Set only when a *write* fails. Unlike `error`, existing data is never
+   *  cleared for this — screens must show it as a dismissible banner and
+   *  leave the user's work on screen, never replace the page with it. */
+  saveError: string | null;
   speakers: Speaker[];
   config: Config | null;
   spkSha: string;
@@ -26,7 +34,7 @@ interface State {
 interface Ctx extends State {
   reload: () => Promise<void>;
   /** Resolves `true` if the write went through, `false` if it was caught and
-   *  surfaced via `error` — callers whose code after the write has a
+   *  surfaced via `saveError` — callers whose code after the write has a
    *  user-visible success side effect (a confirmation, a navigation) must
    *  guard it on this, so a failed write never reports success. */
   mutateSpeakers: (
@@ -37,6 +45,8 @@ interface Ctx extends State {
     transform: (current: Config) => Config,
     message: string,
   ) => Promise<boolean>;
+  /** Dismiss the current save-error banner without touching anything else. */
+  clearSaveError: () => void;
 }
 
 const C = createContext<Ctx | null>(null);
@@ -53,6 +63,7 @@ const DEFAULT_CONFIG: Config = {
 const DEMO_STATE: State = {
   loading: false,
   error: null,
+  saveError: null,
   speakers: [...DEMO_SPEAKERS],
   config: { ...DEMO_CONFIG },
   spkSha: 'demo',
@@ -68,6 +79,7 @@ function initialState(token: string | null): State {
   return {
     loading: !!token,
     error: null,
+    saveError: null,
     speakers: [],
     config: null,
     spkSha: '',
@@ -89,6 +101,7 @@ async function fetchState(token: string): Promise<State> {
   return {
     loading: false,
     error: null,
+    saveError: null,
     speakers,
     config,
     spkSha: spk.sha,
@@ -121,8 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       })
       .catch(e => {
         if (!cancelled) {
-          const message = e instanceof Error ? e.message : String(e);
-          setS(p => ({ ...p, loading: false, error: message }));
+          setS(p => ({ ...p, loading: false, error: friendlyError(e, 'load') }));
         }
       });
     return () => {
@@ -142,7 +154,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ? s
       : !ready
         ? { ...s, loading: true }
-        : { ...s, loading: false, speakers: [], config: null, spkSha: '', cfgSha: '' };
+        : {
+            ...s,
+            loading: false,
+            speakers: [],
+            config: null,
+            spkSha: '',
+            cfgSha: '',
+          };
 
   async function reload() {
     if (!token) return;
@@ -154,8 +173,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       setS(await fetchState(token));
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setS(p => ({ ...p, loading: false, error: message }));
+      setS(p => ({ ...p, loading: false, error: friendlyError(e, 'load') }));
     }
   }
 
@@ -177,11 +195,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         transform,
         message,
       });
-      setS(p => ({ ...p, speakers: result.value, spkSha: result.sha }));
+      setS(p => ({ ...p, speakers: result.value, spkSha: result.sha, saveError: null }));
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setS(p => ({ ...p, error: msg }));
+      setS(p => ({ ...p, saveError: friendlyError(e, 'save') }));
       return false;
     }
   }
@@ -204,17 +221,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
         transform,
         message,
       });
-      setS(p => ({ ...p, config: result.value, cfgSha: result.sha }));
+      setS(p => ({ ...p, config: result.value, cfgSha: result.sha, saveError: null }));
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setS(p => ({ ...p, error: msg }));
+      setS(p => ({ ...p, saveError: friendlyError(e, 'save') }));
       return false;
     }
   }
 
+  function clearSaveError() {
+    setS(p => ({ ...p, saveError: null }));
+  }
+
   return (
-    <C.Provider value={{ ...visible, reload, mutateSpeakers, mutateConfig }}>{children}</C.Provider>
+    <C.Provider value={{ ...visible, reload, mutateSpeakers, mutateConfig, clearSaveError }}>
+      {children}
+    </C.Provider>
   );
 }
 

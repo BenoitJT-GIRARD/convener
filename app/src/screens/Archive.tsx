@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
-import type { Speaker, SpeakerStatus } from '../data/types';
+import { effectiveStatus } from '../state/derived';
+import { LoadError } from '../components/LoadError';
+import type { Config, Speaker, SpeakerStatus } from '../data/types';
 
 type Category = {
   key: 'past' | 'parked' | 'declined-board' | 'declined-speaker';
@@ -48,7 +50,7 @@ const CATEGORIES: Category[] = [
 ];
 
 export function Archive() {
-  const { speakers, loading, error } = useData();
+  const { speakers, loading, error, config } = useData();
   const [q, setQ] = useState('');
   const [active, setActive] = useState<Category['key'] | 'all'>('all');
 
@@ -81,7 +83,7 @@ export function Archive() {
   }, [speakers, q]);
 
   if (loading) return <p className="text-ink-muted">Loading…</p>;
-  if (error) return <p className="text-danger">Error: {error}</p>;
+  if (error) return <LoadError message={error} />;
 
   const visible = active === 'all' ? CATEGORIES : CATEGORIES.filter(c => c.key === active);
   const total = visible.reduce((n, c) => n + grouped[c.key].length, 0);
@@ -124,7 +126,7 @@ export function Archive() {
       </div>
 
       {visible.map(c => (
-        <CategorySection key={c.key} category={c} speakers={grouped[c.key]} />
+        <CategorySection key={c.key} category={c} speakers={grouped[c.key]} config={config} />
       ))}
     </div>
   );
@@ -156,9 +158,11 @@ function FilterChip({
 function CategorySection({
   category,
   speakers,
+  config,
 }: {
   category: Category;
   speakers: Speaker[];
+  config: Config | null;
 }) {
   return (
     <section className="mb-10">
@@ -178,7 +182,7 @@ function CategorySection({
       ) : (
         <ol className="divide-y divide-border border-y border-border">
           {speakers.map(s => (
-            <ArchiveRow key={s.id} speaker={s} category={category} />
+            <ArchiveRow key={s.id} speaker={s} category={category} config={config} />
           ))}
         </ol>
       )}
@@ -189,9 +193,11 @@ function CategorySection({
 function ArchiveRow({
   speaker: s,
   category,
+  config,
 }: {
   speaker: Speaker;
   category: Category;
+  config: Config | null;
 }) {
   const [editing, setEditing] = useState(false);
   const showMetricsEdit =
@@ -201,6 +207,9 @@ function ArchiveRow({
       s.metrics.forum_replies === null ||
       !s.youtube_url ||
       !s.forum_thread);
+  // Filtering into this category is (deliberately) on the raw stored
+  // status; the label shown for it is not -- see effectiveStatus.
+  const displayStatus = config ? effectiveStatus(s, config, new Date()) : s.status;
   return (
     <li>
       <div className="grid grid-cols-[7rem_1fr_auto] gap-4 items-center py-3 px-2 hover:bg-primary-soft transition-colors">
@@ -221,6 +230,11 @@ function ArchiveRow({
           </Link>
         </div>
         <div className="text-right flex items-center justify-end gap-3">
+          {displayStatus !== s.status && (
+            <span className="font-mono text-[10px] uppercase tracking-wider text-accent shrink-0">
+              now {displayStatus}
+            </span>
+          )}
           {category.key === 'past' && s.date ? (
             <span className="font-mono text-xs text-ink-muted">
               {s.date.replace(/-/g, ' / ')}
@@ -257,7 +271,7 @@ function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
   async function save() {
     setBusy(true);
     try {
-      await mutateSpeakers(
+      const ok = await mutateSpeakers(
         current =>
           current.map(s =>
             s.id === speaker.id
@@ -275,7 +289,9 @@ function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
           ),
         `data: ${speaker.id} update post-archive metrics`,
       );
-      setSaved(true);
+      // A failure is surfaced via the saveError banner (see Layout) -- never
+      // report success here unless the write actually went through.
+      setSaved(ok);
     } finally {
       setBusy(false);
     }

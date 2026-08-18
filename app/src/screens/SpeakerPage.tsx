@@ -7,6 +7,7 @@ import { AdminOverride } from '../components/AdminOverride';
 import { Checklist } from '../components/Checklist';
 import { canFinalize, setField, phaseOf, type FieldKey } from '../state/phases';
 import { effectiveStatus } from '../state/derived';
+import { LoadError } from '../components/LoadError';
 import type { Speaker } from '../data/types';
 
 export function SpeakerPage() {
@@ -15,7 +16,7 @@ export function SpeakerPage() {
   const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
-  if (error) return <p className="text-danger">Error: {error}</p>;
+  if (error) return <LoadError message={error} />;
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
   // Display only: what has aired, not necessarily what's recorded yet — the

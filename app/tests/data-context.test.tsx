@@ -147,7 +147,7 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.config?.vw_counter).toBe(1);
   });
 
-  it('sets an error message when the fetch fails', async () => {
+  it('sets a plain-language error message when the fetch fails, not the raw status/body', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string) => {
@@ -159,7 +159,8 @@ describe('DataProvider (real GitHub backend)', () => {
     );
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.error).toMatch(/GitHub 500/);
+    expect(result.current.error).toMatch(/GitHub is not responding/);
+    expect(result.current.error).not.toMatch(/500|boom/);
   });
 
   it('never PUTs on load, even when a scheduled talk is long past its end time', async () => {
@@ -309,7 +310,7 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.speakers[0].notes).toBe('changed');
   });
 
-  it('mutateSpeakers surfaces a ConflictError through `error` instead of an unhandled rejection', async () => {
+  it('mutateSpeakers surfaces a ConflictError through `saveError` instead of an unhandled rejection', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
     const cfgYaml = 'season: 2026\nboard_members: []\n';
     vi.stubGlobal(
@@ -331,6 +332,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBeNull();
+    expect(result.current.saveError).toBeNull();
 
     // Must not throw / reject unhandled — the whole point of the fix.
     let ok: boolean | undefined;
@@ -342,7 +344,10 @@ describe('DataProvider (real GitHub backend)', () => {
     });
 
     expect(ok).toBe(false);
-    expect(result.current.error).toMatch(/someone else is editing/);
+    expect(result.current.saveError).toMatch(/someone else is editing/);
+    // A save failure never destroys existing data or the load-error state.
+    expect(result.current.error).toBeNull();
+    expect(result.current.speakers[0].notes).not.toBe('will never land');
   });
 
   it('reload() re-fetches from GitHub without writing anything', async () => {
@@ -400,7 +405,8 @@ describe('DataProvider (real GitHub backend)', () => {
     await act(async () => {
       await result.current.reload();
     });
-    expect(result.current.error).toMatch(/GitHub 500/);
+    expect(result.current.error).toMatch(/GitHub is not responding/);
+    expect(result.current.error).not.toMatch(/500|boom/);
   });
 
   it('stays loading while a stored credential is still being validated, and never reports an empty result before the data arrives', async () => {
@@ -451,7 +457,7 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.speakers).toHaveLength(1);
   });
 
-  it('mutateConfig surfaces a ConflictError through `error` instead of an unhandled rejection', async () => {
+  it('mutateConfig surfaces a ConflictError through `saveError` instead of an unhandled rejection', async () => {
     const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
     const cfgYaml = 'season: 2026\nboard_members: []\n';
     vi.stubGlobal(
@@ -479,6 +485,35 @@ describe('DataProvider (real GitHub backend)', () => {
     });
 
     expect(ok).toBe(false);
-    expect(result.current.error).toMatch(/someone else is editing/);
+    expect(result.current.saveError).toMatch(/someone else is editing/);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('clearSaveError dismisses the save-error banner without touching anything else', async () => {
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, opts?: RequestInit) => {
+        if (url.includes('/user')) {
+          return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+        }
+        if (url.includes('config.yml') && opts?.method === 'PUT') {
+          return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(cfgYaml), sha: 'cfgsha' }) });
+      }),
+    );
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.mutateConfig(current => ({ ...current, vote_threshold: 9 }), 'msg');
+    });
+    expect(result.current.saveError).not.toBeNull();
+    act(() => result.current.clearSaveError());
+    expect(result.current.saveError).toBeNull();
   });
 });

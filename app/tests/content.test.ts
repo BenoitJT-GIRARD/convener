@@ -57,9 +57,18 @@ describe('fetchContent', () => {
     expect(fetchSpy.mock.calls[0][0]).toMatch(/handbook\/toolkit\/emails\/invitation\.md$/);
   });
 
-  it('throws on non-ok response', async () => {
+  it('throws a plain-language error on non-ok response, not the raw status', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
-    await expect(fetchContent('handbook/overview', null)).rejects.toThrow(/Content fetch failed/);
+    await expect(fetchContent('handbook/overview', null)).rejects.toThrow(
+      /could not be loaded/,
+    );
+  });
+
+  it('throws a plain-language error, not a rejected promise, when the network fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+    await expect(fetchContent('handbook/roles', null)).rejects.toThrow(
+      /check your connection/i,
+    );
   });
 
   it('caches subsequent calls', async () => {

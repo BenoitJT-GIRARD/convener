@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { effectiveStatus } from '../state/derived';
 import type { Speaker } from '../data/types';
+import { LoadError } from '../components/LoadError';
 
 const STATUS_COLOR: Record<string, string> = {
   scheduled: 'bg-primary/20 border-primary text-ink',
@@ -12,7 +13,7 @@ const STATUS_COLOR: Record<string, string> = {
 export function Agenda() {
   const { speakers, loading, error, config } = useData();
   if (loading) return <p className="text-ink-muted">Loading…</p>;
-  if (error) return <p className="text-danger">Error: {error}</p>;
+  if (error) return <LoadError message={error} />;
   const now = new Date();
 
   const dated = speakers
