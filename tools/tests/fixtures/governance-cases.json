@@ -1,7 +1,7 @@
 {
   "_comment": "Shared truth for the vote threshold. Read by app/tests/governance-fixture.test.ts and tools/tests/test_governance_fixture.py. A case added here must pass in both languages.",
   "threshold_cases": [
-    { "name": "board of 3 needs 2", "eligible": 3, "expected": 2 },
+    { "name": "board of 3 needs 3 - the floor overrides the ratio", "eligible": 3, "expected": 3 },
     { "name": "board of 4 needs 3", "eligible": 4, "expected": 3 },
     { "name": "board of 5 needs 4", "eligible": 5, "expected": 4 },
     { "name": "board of 6 needs 4 - the handbook's own example", "eligible": 6, "expected": 4 },
@@ -57,7 +57,7 @@
       "board": ["a", "b", "c", "d"],
       "unavailable": ["c", "d"],
       "ballots": [{ "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" }],
-      "eligible": 2, "threshold": 2, "yes": 2, "decided": false, "suspended": true
+      "eligible": 2, "threshold": 3, "yes": 2, "decided": false, "suspended": true
     },
     {
       "name": "the absolute floor of three yes holds even when the ratio is met",
@@ -65,6 +65,16 @@
       "unavailable": [],
       "ballots": [{ "voter": "a", "value": "yes" }, { "voter": "b", "value": "yes" }],
       "eligible": 3, "threshold": 3, "yes": 2, "decided": false, "suspended": false
+    },
+    {
+      "name": "a repeated yes ballot from the same voter counts once, not twice",
+      "board": ["a", "b", "c", "d", "e", "f"],
+      "unavailable": [],
+      "ballots": [
+        { "voter": "a", "value": "yes" }, { "voter": "a", "value": "yes" },
+        { "voter": "b", "value": "yes" }, { "voter": "c", "value": "yes" }
+      ],
+      "eligible": 6, "threshold": 4, "yes": 3, "decided": false, "suspended": false
     }
   ]
 }
