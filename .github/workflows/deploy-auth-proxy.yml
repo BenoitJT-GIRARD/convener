@@ -1,0 +1,41 @@
+name: Deploy auth relay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/auth-proxy/**'
+      - '.github/workflows/deploy-auth-proxy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+      - name: Check whether the integration is configured
+        id: gate
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Auth relay not configured — skipping. This is a normal state."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install
+        if: steps.gate.outputs.configured == 'true'
+        working-directory: services/auth-proxy
+        run: npm ci
+      - name: Deploy
+        if: steps.gate.outputs.configured == 'true'
+        working-directory: services/auth-proxy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy
