@@ -35,8 +35,9 @@ import math
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 #: An ISO calendar day, the only date form stored in the two data files.
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -48,6 +49,24 @@ MINIMUM_YES = 3
 #: Below this many eligible members the vote is suspended rather than decided on
 #: a bar that has become meaningless.
 MINIMUM_ELIGIBLE = 3
+
+#: The one time zone this repository's calendar days are named in. Every stored
+#: date is a Paris local day, so anything turning an instant into a day goes
+#: through `paris_today` rather than reading `date()` off a clock of its own.
+PARIS = ZoneInfo("Europe/Paris")
+
+
+def paris_today(now: datetime) -> date:
+    """The calendar day `now` falls on in Paris.
+
+    The single definition, shared by the scheduled sweep and the candidate-form
+    intake, and the twin of `app/src/state/today.ts::parisToday`. A caller
+    reading a UTC clock would otherwise still be on the previous day between
+    00:00 and 02:00 Paris: the sweep would close a vote window a day late, and
+    the intake would stamp an `opened_on` a day early, moving every deadline
+    derived from it.
+    """
+    return now.astimezone(PARIS).date()
 
 
 @dataclass(frozen=True)
@@ -221,7 +240,7 @@ def decide(
 # `tools/tests/fixtures/governance-cases.json`'s `working_day_cases` pins the
 # two together. Both take and return ISO days and read no clock, so there is
 # no timezone left for them to get wrong: the caller supplies the day, already
-# anchored on Europe/Paris the way `convener_ops.sweep._paris_today` anchors it.
+# anchored on Europe/Paris the way `paris_today` above anchors it.
 # ------------------------------------------------------------------ #
 
 #: Saturday and Sunday, as `datetime.date.weekday` numbers them.

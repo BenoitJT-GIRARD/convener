@@ -15,9 +15,9 @@ from typing import Any
 
 import pytest
 
+from convener_ops.governance import PARIS
 from convener_ops.sweep import (
     DEFAULT_VOTE_WINDOW_DAYS,
-    PARIS,
     _vote_window_days,
     expire_votes,
 )

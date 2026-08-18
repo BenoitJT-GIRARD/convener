@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 
+from convener_ops.governance import paris_today
 from convener_ops.integrations import Integration, load_declaration, resolve_states
 from convener_ops.paths import repo_root
 from convener_ops.proposal import skip_reason, to_lead, verify_signature
@@ -203,7 +204,11 @@ def handle_proposal() -> int:
         return 1
     speakers = speakers or []
 
-    today = datetime.now(UTC).date().isoformat()
+    # The Paris day, not the UTC one: this date seeds the vote window
+    # (`selection.opened_on`), so a submission arriving between 00:00 and 02:00
+    # Paris would otherwise open a window dated a day early and every deadline
+    # derived from it would inherit the error.
+    today = paris_today(datetime.now(UTC)).isoformat()
     lead = to_lead(fields, speakers, cfg or {}, today)
     if lead is None:
         print(f"skipping: {skip_reason(fields, speakers)}")

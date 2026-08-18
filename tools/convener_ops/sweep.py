@@ -11,16 +11,15 @@ import calendar
 import copy
 from datetime import date, datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from convener_ops.governance import (
     MINIMUM_ELIGIBLE,
+    PARIS,
     active_board,
     decide,
     last_ballot_on,
+    paris_today,
 )
-
-PARIS = ZoneInfo("Europe/Paris")
 
 #: Spec default for the vote window when `config.vote_window_days` is absent
 #: or unusable. Days, counted from `selection.opened_on`.
@@ -69,16 +68,6 @@ def _parse_date(value: str) -> date | None:
         return None
 
 
-def _paris_today(now: datetime) -> date:
-    """The calendar day `now` falls on in Paris.
-
-    Every other date in this module is a Paris local date; a caller passing a
-    UTC clock would otherwise still be on the previous day between 00:00 and
-    02:00 Paris, and the vote window would close a day late.
-    """
-    return now.astimezone(PARIS).date()
-
-
 def _vote_window_days(config: dict[str, Any]) -> int:
     """The configured vote window, or the spec's 14-day default.
 
@@ -112,7 +101,7 @@ def expire_votes(
     open for two weeks can only be the day the question is asked.
     """
     window_days = _vote_window_days(config)
-    today = _paris_today(now)
+    today = paris_today(now)
     board_logins, unavailable = active_board(config, today.isoformat())
     swept = copy.deepcopy(speakers)
     changes: list[str] = []
@@ -303,7 +292,7 @@ def sweep_inactive_members(
     if months is None or not isinstance(board, list):
         return proposed, []
 
-    today = _paris_today(now)
+    today = paris_today(now)
     cutoff = _months_before(today, months)
     pending = _pending_candidates(proposed)
     speaker_list = speakers if isinstance(speakers, list) else []

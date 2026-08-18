@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, tzinfo
 from pathlib import Path
 
 import pytest
@@ -136,6 +137,40 @@ def test_handle_proposal_writes_a_new_lead(
     text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
     assert "spk-002" in text
     assert "Grace Hopper" in text
+
+
+class _FrozenClock:
+    """`datetime` with `now` pinned to one instant, for the intake date."""
+
+    #: 23:30 UTC on 11 January 2026 is 00:30 Paris on the 12th: the two zones
+    #: name different calendar days at this instant.
+    INSTANT = datetime(2026, 1, 11, 23, 30, tzinfo=UTC)
+
+    @staticmethod
+    def now(tz: tzinfo | None = None) -> datetime:
+        return (
+            _FrozenClock.INSTANT if tz is None else _FrozenClock.INSTANT.astimezone(tz)
+        )
+
+
+def test_handle_proposal_stamps_the_paris_day_not_the_utc_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `opened_on` seeds the vote window, so an intake between 00:00 and 02:00
+    # Paris must not be dated on the UTC day that is still yesterday.
+    _write_data(tmp_path, [], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setattr("convener_ops.cli.datetime", _FrozenClock)
+    payload = json.dumps({"fields": [{"label": "Name", "value": "Grace Hopper"}]})
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+    capsys.readouterr()
+
+    written = yaml.safe_load((tmp_path / "data" / "speakers.yml").read_text("utf-8"))
+    assert written[0]["selection"]["opened_on"] == "2026-01-12"
 
 
 def test_handle_proposal_with_an_invalid_signature_returns_1(
