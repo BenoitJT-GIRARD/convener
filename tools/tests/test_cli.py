@@ -50,7 +50,7 @@ def test_validate_reports_ok_and_returns_0(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
 
     assert validate() == 0
-    assert "Data OK — 1 speakers, config=ok" in capsys.readouterr().out
+    assert "Data OK - 1 speakers, config=ok" in capsys.readouterr().out
 
 
 def test_validate_reports_errors_and_returns_1(

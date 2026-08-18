@@ -21,7 +21,7 @@ def _load(path: Path) -> tuple[Any, list[str]]:
     try:
         return yaml.safe_load(path.read_text(encoding="utf-8")), []
     except yaml.YAMLError as exc:
-        return None, [f"{path.name}: invalid YAML — {exc}"]
+        return None, [f"{path.name}: invalid YAML - {exc}"]
 
 
 def validate() -> int:
@@ -42,7 +42,7 @@ def validate() -> int:
         return 1
 
     count = len(speakers or [])
-    print(f"Data OK — {count} speakers, config=ok")
+    print(f"Data OK - {count} speakers, config=ok")
     return 0
 
 
@@ -53,7 +53,7 @@ def render_check(integrations: list[Integration]) -> str:
     lines = ["Integration status", "=================="]
     for integration in integrations:
         lines.append(
-            f"{_SYMBOL[integration.state]} {integration.label} — {integration.state}"
+            f"{_SYMBOL[integration.state]} {integration.label} - {integration.state}"
         )
         if integration.missing:
             lines.append(f"      waiting on: {', '.join(integration.missing)}")
