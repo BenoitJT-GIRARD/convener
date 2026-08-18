@@ -49,6 +49,18 @@ describe('hasEnded', () => {
     expect(hasEnded(noTime, config, new Date('2026-01-08T23:00:00Z'))).toBe(false);
     expect(hasEnded(noTime, config, new Date('2026-01-09T08:00:00Z'))).toBe(true);
   });
+
+  it('treats a configured duration of 0 as unset and falls back to 90 minutes', () => {
+    const zeroDuration: Config = { ...config, seminar_duration_minutes: 0 };
+    const now = new Date('2026-01-08T13:01:00Z'); // 14:01 Paris, 91 min in
+    expect(hasEnded(scheduled('2026-01-08'), zeroDuration, now)).toBe(true);
+  });
+
+  it('counts the exact boundary instant as ended, not just past it', () => {
+    // 12:30 Paris start + 90 min = 14:00 Paris = 13:00:00Z (winter, UTC+1)
+    const boundary = new Date('2026-01-08T13:00:00Z');
+    expect(hasEnded(scheduled('2026-01-08'), config, boundary)).toBe(true);
+  });
 });
 
 describe('effectiveStatus', () => {

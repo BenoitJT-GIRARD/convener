@@ -63,3 +63,18 @@ def test_the_input_is_not_mutated() -> None:
     rows = [_scheduled()]
     sweep(rows, config(), datetime(2026, 1, 8, 13, 1, tzinfo=UTC))
     assert rows[0]["status"] == "scheduled"
+
+
+def test_a_configured_duration_of_0_is_treated_as_unset() -> None:
+    now = datetime(2026, 1, 8, 13, 1, tzinfo=UTC)  # 14:01 Paris, 91 min in
+    swept, changes = sweep([_scheduled()], config(seminar_duration_minutes=0), now)
+    assert swept[0]["status"] == "delivered"
+    assert changes == ["spk-001: scheduled -> delivered"]
+
+
+def test_the_exact_boundary_instant_counts_as_ended() -> None:
+    # 12:30 Paris start + 90 min = 14:00 Paris = 13:00:00Z (winter, UTC+1)
+    boundary = datetime(2026, 1, 8, 13, 0, tzinfo=UTC)
+    swept, changes = sweep([_scheduled()], config(), boundary)
+    assert swept[0]["status"] == "delivered"
+    assert changes == ["spk-001: scheduled -> delivered"]

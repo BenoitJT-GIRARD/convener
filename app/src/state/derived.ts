@@ -24,7 +24,10 @@ export function parisWallTimeToEpoch(dateStr: string, timeStr: string): number {
 export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
   if (s.status !== 'scheduled' || !s.date) return false;
   if (s.time) {
-    const duration = (config.seminar_duration_minutes ?? 90) * 60_000;
+    // A falsy configured value (0, or unset) falls back to the default,
+    // matching tools/convener_ops/sweep.py's `or 90` — the two must agree since
+    // one displays the transition and the other persists it.
+    const duration = (config.seminar_duration_minutes || 90) * 60_000;
     return now.getTime() >= parisWallTimeToEpoch(s.date, s.time) + duration;
   }
   // Legacy rows carry no time: treat them as over the following day.
