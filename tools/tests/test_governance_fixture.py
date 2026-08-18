@@ -4,10 +4,12 @@ Two green suites in two languages proved insufficient in phase 1: the browser
 wrote `time: 12:30` and Python read the integer 750. Both sides now read the
 same cases from one file.
 """
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -21,12 +23,12 @@ CASES = json.loads(
 
 
 @pytest.mark.parametrize("case", CASES["threshold_cases"], ids=lambda c: c["name"])
-def test_threshold_matches_the_shared_fixture(case: dict) -> None:
+def test_threshold_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     assert threshold_for(case["eligible"]) == case["expected"]
 
 
 @pytest.mark.parametrize("case", CASES["decision_cases"], ids=lambda c: c["name"])
-def test_decision_matches_the_shared_fixture(case: dict) -> None:
+def test_decision_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     outcome = decide(
         board=case["board"],
         unavailable=case["unavailable"],
