@@ -90,6 +90,9 @@ jobs:
       - name: Install
         working-directory: services/auth-proxy
         run: npm ci
+      - name: Lint
+        working-directory: services/auth-proxy
+        run: npx --yes eslint@9 src test
       - name: Test
         working-directory: services/auth-proxy
         run: npm test

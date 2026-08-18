@@ -37,24 +37,26 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
         status = entry.get("status", "")
         if status not in PUBLIC_STATUSES:
             continue
-        out.append(
-            {
-                "id": entry.get("edition_code", ""),
-                "title": entry.get("title", ""),
-                "date": entry.get("date", ""),
-                "status": status,
-                "abstract": entry.get("abstract", ""),
-                "youtube_url": (
-                    entry.get("youtube_url", "") if status in RECORDING_STATUSES else ""
-                ),
-                "registration_link": (
-                    entry.get("zoom_link", "") if status == "scheduled" else ""
-                ),
-                "forum_thread": entry.get("forum_thread", ""),
-                "speaker_name": entry.get("name", ""),
-                "speaker_affiliation": entry.get("affiliation", ""),
-                "speaker_country": entry.get("country", ""),
-            }
-        )
+        row = {
+            "id": entry.get("edition_code", ""),
+            "title": entry.get("title", ""),
+            "date": entry.get("date", ""),
+            "status": status,
+            "abstract": entry.get("abstract", ""),
+            "youtube_url": (
+                entry.get("youtube_url", "") if status in RECORDING_STATUSES else ""
+            ),
+            "registration_link": (
+                entry.get("zoom_link", "") if status == "scheduled" else ""
+            ),
+            "forum_thread": entry.get("forum_thread", ""),
+            "speaker_name": entry.get("name", ""),
+            "speaker_affiliation": entry.get("affiliation", ""),
+            "speaker_country": entry.get("country", ""),
+        }
+        # Project through the allowlist rather than trusting `row` above was
+        # built correctly: adding a key to `row` without adding it to
+        # PUBLIC_FIELDS silently drops it here instead of publishing it.
+        out.append({field: row[field] for field in row if field in PUBLIC_FIELDS})
     out.sort(key=lambda row: row.get("date", ""), reverse=True)
     return out

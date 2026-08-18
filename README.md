@@ -12,7 +12,6 @@ events. Everything a volunteer needs sits inside the app.
 | `data/` | `speakers.yml` (unified entity), `config.yml` (board, threshold, season). |
 | `docs/` | Handbook content as Markdown — rendered *inside* the app at the point of action and in the Handbook tab. Not a separate site. |
 | `tools/` | The `convener-ops` package: data validation, integration status, the sweep, the public-data filter, and the form-proposal handler. |
-| `scripts/` | One-shot scripts (e.g. schema migration). |
 | `services/auth-proxy/` | The Cloudflare Worker that relays the GitHub device-flow sign-in. |
 | `.github/` | CI: data validation, Tally proposal handler, public-data filter, vitrine sync, quality and security gates. |
 

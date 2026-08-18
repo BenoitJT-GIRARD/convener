@@ -1,10 +1,17 @@
 /**
  * Transactional writes against a file store.
  *
- * A write is expressed as a *pure transform* of the current value rather than
- * as a replacement value. When the remote version has moved on, the transform
+ * A write is expressed as a *transform* of the current value rather than as
+ * a replacement value. When the remote version has moved on, the transform
  * is replayed against the fresh version instead of overwriting it — so two
- * people acting at the same time both keep their change.
+ * people acting at the same time both keep their change. The transform can
+ * be replayed more than once (up to `attempts`), so it must be safe to call
+ * repeatedly with a fresh `current` each time; it does not need to be pure
+ * in the strict sense of writing nothing outside its return value. A caller
+ * that needs something the transform computed along the way (an id it
+ * assigned, say) may stash it in a variable in its own closure — the value
+ * from the call that actually produced the returned result is the one that
+ * matters, and each replay simply overwrites it with a fresh answer.
  */
 
 export interface FileStore {

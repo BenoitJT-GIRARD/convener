@@ -6,6 +6,15 @@ import type { Config, Speaker, SpeakerStatus } from '../data/types';
  * derivations and can finally be tested.
  */
 export function parisWallTimeToEpoch(dateStr: string, timeStr: string): number {
+  // Single-probe DST correction: this reads the UTC offset at the wall time
+  // *treated as if it were already UTC*, which is off by one probe iteration
+  // right at a DST transition. For wall times in [00:00, 03:00) on the day
+  // the clock changes, that can land the probe on the wrong side of the
+  // transition and produce an answer up to an hour off. Unreachable in
+  // practice here: seminars run at 12:30 (see the `time` default in
+  // src/data/demo.ts and src/components/ActionButtons.tsx), never in that
+  // window. Left as a known, accepted limitation rather than complicated
+  // away for a scenario this data can never hit.
   const probe = new Date(`${dateStr}T${timeStr}:00Z`);
   const fmt = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Europe/Paris',

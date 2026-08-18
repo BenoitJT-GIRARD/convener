@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from conftest import speaker
 
+import convener_ops.public_data as public_data
 from convener_ops.public_data import PUBLIC_FIELDS, to_public
 
 
@@ -68,6 +70,19 @@ def test_registration_link_is_only_exposed_while_scheduled() -> None:
 
 def test_archived_events_expose_the_recording() -> None:
     assert to_public([_scheduled(status="archived")])[0]["youtube_url"] != ""
+
+
+def test_public_fields_is_load_bearing_not_just_documentation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # If a field is removed from the allowlist, it must actually disappear
+    # from the emitted row -- proving `to_public` is built by projecting
+    # through PUBLIC_FIELDS, not by a dict literal that merely resembles it.
+    monkeypatch.setattr(
+        public_data, "PUBLIC_FIELDS", frozenset(PUBLIC_FIELDS - {"abstract"})
+    )
+    out = public_data.to_public([_scheduled(abstract="a summary")])
+    assert "abstract" not in out[0]
 
 
 def test_output_is_sorted_newest_first() -> None:
