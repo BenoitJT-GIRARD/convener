@@ -23,13 +23,23 @@ def _scheduled(**overrides: Any) -> dict[str, Any]:
     return speaker(**base)
 
 
+NON_PUBLIC_STATUSES = (
+    "lead",
+    "approved",
+    "invited",
+    "confirmed",
+    "parked",
+    "decline-board",
+    "decline-speaker",
+)
+
+
 def test_only_public_statuses_are_emitted() -> None:
     rows = [
-        speaker(id="spk-001", status="lead"),
-        speaker(id="spk-002", status="approved"),
-        speaker(id="spk-003", status="parked"),
-        _scheduled(id="spk-004"),
+        speaker(id=f"spk-{i:03d}", status=status)
+        for i, status in enumerate(NON_PUBLIC_STATUSES, start=1)
     ]
+    rows.append(_scheduled(id="spk-999"))
     assert [r["id"] for r in to_public(rows)] == ["MRG-05"]
 
 
