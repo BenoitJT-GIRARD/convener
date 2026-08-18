@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
-import type { Speaker, Gender } from '../data/types';
+import { CAREER_STAGES } from '../data/types';
+import type { Speaker, Gender, CareerStage } from '../data/types';
 
 function nextSpeakerId(speakers: Speaker[]): string {
   const nums = speakers
@@ -25,6 +26,7 @@ export function NewSpeaker() {
     affiliation: '',
     country: '',
     gender: 'undisclosed' as Gender,
+    career_stage: 'undisclosed' as CareerStage,
     title: '',
     abstract: '',
     links: '',
@@ -50,10 +52,12 @@ export function NewSpeaker() {
     e.preventDefault();
     if (!form.name.trim() || !login) return;
     setBusy(true);
+    const today = new Date().toISOString().slice(0, 10);
     try {
       const fields: Omit<Speaker, 'id'> = {
         name: form.name.trim(),
         gender: form.gender,
+        career_stage: form.career_stage,
         email: form.email.trim(),
         affiliation: form.affiliation.trim(),
         country: form.country.trim(),
@@ -62,11 +66,25 @@ export function NewSpeaker() {
         conflicts_of_interest: form.conflicts_of_interest.trim(),
         source: form.source,
         proposed_by: form.proposed_by.trim(),
+        // Who submitted the lead, not who will handle it. `assigned_to` starts
+        // empty: nobody owns this lead until the board assigns it (G-17), and
+        // filling it with the submitter would lose the record of who has to be
+        // told if the board declines.
+        assigned_to: '',
         links: form.links.split(/[\s,]+/).map(s => s.trim()).filter(Boolean),
         host_1: '',
         host_2: '',
         status: 'lead',
-        selection: { votes_for: [], decided_on: '' },
+        // The vote window runs from `opened_on` (see tools/convener_ops/sweep.py), and
+        // it opens the day the lead is recorded.
+        selection: { ballots: [], opened_on: today, decided_on: '' },
+        publication: {
+          consent: 'pending',
+          approved_by: '',
+          approved_on: '',
+          objections: [],
+          outcome: '',
+        },
         edition_code: '',
         date: '',
         time: '',
@@ -173,19 +191,35 @@ export function NewSpeaker() {
           </label>
         </div>
 
-        <label className="block">
-          <span className="text-xs uppercase tracking-wider text-ink-muted">Gender</span>
-          <select
-            value={form.gender}
-            onChange={e => up('gender', e.target.value as Gender)}
-            className={`${inputCls} mt-1`}
-          >
-            <option value="undisclosed">undisclosed</option>
-            <option value="F">F</option>
-            <option value="M">M</option>
-            <option value="NB">NB</option>
-          </select>
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">Gender</span>
+            <select
+              value={form.gender}
+              onChange={e => up('gender', e.target.value as Gender)}
+              className={`${inputCls} mt-1`}
+            >
+              <option value="undisclosed">undisclosed</option>
+              <option value="F">F</option>
+              <option value="M">M</option>
+              <option value="NB">NB</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">Career stage</span>
+            <select
+              value={form.career_stage}
+              onChange={e => up('career_stage', e.target.value as CareerStage)}
+              className={`${inputCls} mt-1`}
+            >
+              {CAREER_STAGES.map(stage => (
+                <option key={stage} value={stage}>
+                  {stage}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-ink-muted">

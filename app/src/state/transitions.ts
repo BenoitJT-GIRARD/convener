@@ -1,4 +1,7 @@
-import type { Speaker, SpeakerStatus } from '../data/types';
+import type { Config, Speaker, SpeakerStatus } from '../data/types';
+import { castBallot, withdrawBallot } from './ballots';
+import { activeBoard } from './board';
+import { decide } from './governance';
 
 export type Role = 'board' | 'organizer';
 
@@ -60,31 +63,39 @@ export function canTransition(s: Speaker, t: Transition, role: Role): boolean {
   }
 }
 
+/**
+ * `config` rather than a pre-computed threshold: the threshold is derived from
+ * the *eligible* board (active, available, not recused on this lead), which
+ * changes with the ballots being cast here. A caller cannot compute it ahead of
+ * the ballot it is about to record, so it hands over the board and lets
+ * `governance.decide` do both halves at once.
+ */
 export function applyTransition(
   s: Speaker,
   t: Transition,
   actor: string,
-  voteThreshold: number,
+  config: Config,
   today: string,
   payload?: LockDatePayload | OverridePayload,
 ): Speaker {
   switch (t) {
     case 'lead-vote': {
-      const votes = Array.from(new Set([...s.selection.votes_for, actor]));
-      const decided = votes.length >= voteThreshold;
+      // `castBallot` replaces any earlier ballot from `actor`, so voting twice
+      // records one ballot and cannot inflate the yes count.
+      const selection = castBallot(s.selection, actor, 'yes', '', '', today);
+      const { logins, unavailable } = activeBoard(config, today);
+      const { decided } = decide({ board: logins, unavailable, ballots: selection.ballots });
       return {
         ...s,
         status: decided ? 'approved' : 'lead',
         selection: {
-          votes_for: votes,
+          ...selection,
           decided_on: decided ? today : s.selection.decided_on,
         },
       };
     }
-    case 'lead-vote-withdraw': {
-      const votes = s.selection.votes_for.filter(v => v !== actor);
-      return { ...s, selection: { ...s.selection, votes_for: votes } };
-    }
+    case 'lead-vote-withdraw':
+      return { ...s, selection: withdrawBallot(s.selection, actor) };
     case 'lead-park':
       return { ...s, status: 'parked' };
     case 'lead-decline':

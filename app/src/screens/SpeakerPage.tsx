@@ -143,7 +143,8 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
     { label: 'YouTube views (30d)', value: s.metrics.youtube_views_30d },
     { label: 'Forum replies', value: s.metrics.forum_replies },
   ].filter(f => f.value !== null);
-  const hasVotes = s.selection.votes_for.length > 0 || !!s.selection.decided_on;
+  const hasVotes =
+    s.selection.ballots.length > 0 || !!s.selection.opened_on || !!s.selection.decided_on;
 
   return (
     <section className="mt-12 border-t border-border pt-8">
@@ -187,10 +188,22 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
       {hasVotes && (
         <DetailBlock title="Selection vote">
           <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 text-sm">
-            <DetailLine
-              label="Votes for"
-              value={s.selection.votes_for.join(', ') || '(none)'}
-            />
+            {s.selection.opened_on && (
+              <DetailLine label="Opened on" value={s.selection.opened_on} mono />
+            )}
+            {s.selection.ballots.length === 0 && (
+              <DetailLine label="Ballots" value="(none cast yet)" />
+            )}
+            {/* One line per ballot rather than a list of names: a recusal is
+                only meaningful next to the reason given for it, and the
+                comments are what makes the decision readable years later. */}
+            {s.selection.ballots.map(b => (
+              <DetailLine
+                key={b.voter}
+                label={b.voter}
+                value={[b.value, b.coi_reason, b.comment].filter(Boolean).join(' — ')}
+              />
+            ))}
             {s.selection.decided_on && (
               <DetailLine label="Decided on" value={s.selection.decided_on} mono />
             )}

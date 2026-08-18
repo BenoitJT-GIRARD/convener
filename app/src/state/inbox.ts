@@ -37,7 +37,7 @@ export function deriveInbox(
 
     // ── votes (board only)
     if (s.status === 'lead' && role === 'board') {
-      if (!s.selection.votes_for.includes(login)) {
+      if (!s.selection.ballots.some(b => b.voter === login)) {
         rows.push({ kind: 'vote', speaker: s, label: `Vote on lead: ${s.name}`, urgency: -100 });
       }
     }

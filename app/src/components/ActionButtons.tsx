@@ -10,6 +10,8 @@ import {
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { findOverlaps, nextEditionCode } from '../state/agenda';
+import { activeBoard } from '../state/board';
+import { decide } from '../state/governance';
 import type { Speaker } from '../data/types';
 
 interface Props {
@@ -23,16 +25,23 @@ export function ActionButtons({ speaker, role }: Props) {
   const [busy, setBusy] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
-  const threshold = config?.vote_threshold ?? 3;
+  // The threshold is never stored: it follows from who is eligible today, so
+  // it is recomputed on every render from the board and the ballots cast.
+  const board = config ? activeBoard(config, today) : { logins: [], unavailable: [] };
+  const outcome = decide({
+    board: board.logins,
+    unavailable: board.unavailable,
+    ballots: speaker.selection.ballots,
+  });
 
   async function fire(t: Transition, payload?: LockDatePayload | OverridePayload) {
-    if (!login || !canTransition(speaker, t, role)) return;
+    if (!login || !config || !canTransition(speaker, t, role)) return;
     setBusy(true);
     try {
       await mutateSpeakers(
         current =>
           current.map(sp =>
-            sp.id === speaker.id ? applyTransition(sp, t, login, threshold, today, payload) : sp,
+            sp.id === speaker.id ? applyTransition(sp, t, login, config, today, payload) : sp,
           ),
         `data: ${speaker.id} → ${t}`,
       );
@@ -65,7 +74,7 @@ export function ActionButtons({ speaker, role }: Props) {
   switch (speaker.status) {
     case 'lead':
       if (role === 'board') {
-        const voted = login && speaker.selection.votes_for.includes(login);
+        const voted = !!login && speaker.selection.ballots.some(b => b.voter === login);
         if (!voted) buttons.push(btn('Vote yes', 'lead-vote'));
         else buttons.push(btn('Withdraw vote', 'lead-vote-withdraw', 'ghost'));
         buttons.push(btn('Park', 'lead-park', 'ghost'));
@@ -73,7 +82,9 @@ export function ActionButtons({ speaker, role }: Props) {
       } else {
         buttons.push(
           <span className="text-sm text-ink-muted" key="msg">
-            Awaiting board vote ({speaker.selection.votes_for.length} / {threshold}).
+            {outcome.suspended
+              ? `Board vote on hold: only ${outcome.eligible} member(s) are eligible to vote today.`
+              : `Awaiting board vote (${outcome.yes} / ${outcome.threshold}).`}
           </span>,
         );
       }
