@@ -49,11 +49,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          # Two commits: the push and its parent. The immediate events are a
-          # difference between those two revisions of data/speakers.yml, and
-          # with only one revision available the tool says nothing rather than
-          # reading the whole file as new.
-          fetch-depth: 2
+          # The whole history. The immediate events are a difference between
+          # two revisions of data/speakers.yml -- the working tree's and the
+          # one the branch was at before this push -- and a push carrying
+          # several commits moved the branch by more than one, so the parent
+          # of HEAD is not that revision. With the revision unreachable the
+          # tool says nothing rather than reading the whole file as new.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
@@ -62,6 +64,10 @@ jobs:
         env:
           CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
           CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
+          # Where the branch was before this push, so every commit it carried
+          # is covered rather than only the last. The all-zero name GitHub
+          # sends for a branch's first push falls back to the parent of HEAD.
+          BEFORE: ${{ github.event.before }}
         run: uv run convener-notify-immediate
       - name: Post
         if: hashFiles('notify-body.md') != ''

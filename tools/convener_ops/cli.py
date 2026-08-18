@@ -10,6 +10,7 @@ import re
 import subprocess  # nosec B404
 import sys
 from collections import Counter
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
@@ -324,23 +325,50 @@ def handle_proposal() -> int:
 #: run artefact, never a file anybody edits.
 NOTIFY_BODY: Final = "notify-body.md"
 
-#: The previous revision of the speaker file, as a fixed `git show` argument.
-#: Held as a constant rather than assembled from a ref and a path so that
-#: `_git_show` interpolates nothing at all -- the same discipline as `_git_log`.
+#: The parent of HEAD, as a fixed `git show` argument. The fallback, used when
+#: the run does not know where the branch actually moved from.
 PREVIOUS_SPEAKERS: Final = "HEAD~1:data/speakers.yml"
 
+#: An object name, and nothing else, may be interpolated into `git show`.
+#: Anchored and hexadecimal, so no value of `BEFORE` can become an option or a
+#: second argument -- the same discipline `PREVIOUS_SPEAKERS` keeps by being a
+#: constant.
+_OBJECT_NAME: Final = re.compile(r"[0-9a-f]{40}")
 
-def _git_show(root: Path) -> tuple[str, str]:
-    """`data/speakers.yml` as of the previous commit, or an explanation.
 
-    A shallow clone, an initial commit, or a repository with no parent for
-    HEAD all land in the error half, and the caller turns that into "nothing
-    to compare, so nothing to say" -- never into a message.
+def previous_revision(env: Mapping[str, str]) -> str:
+    """The revision of the speaker file to compare against.
+
+    `HEAD~1` is only the previous *commit*, not the previous state of the
+    branch. A push carrying three commits moved the branch by three, so
+    comparing against the parent of HEAD describes the last one and silently
+    drops the events of the other two. GitHub sends where the branch actually
+    was as `github.event.before`, and `.github/workflows/notify.yml` passes it
+    through as `BEFORE`; that is what this prefers.
+
+    Falls back to `HEAD~1` when `BEFORE` is absent, malformed, or the all-zero
+    name GitHub sends for the first push to a branch (`NO_PARENT`) -- there is
+    no earlier state to read in that last case, and the caller turns a `git
+    show` failure into "nothing to compare, so nothing to say".
     """
-    # Fixed argv, shell=False, nothing interpolated: B603 and B607 both
-    # describe a risk this call does not carry.
+    before = env.get("BEFORE", "").strip()
+    if _OBJECT_NAME.fullmatch(before) and before.strip("0"):
+        return f"{before}:data/speakers.yml"
+    return PREVIOUS_SPEAKERS
+
+
+def _git_show(root: Path, revision: str) -> tuple[str, str]:
+    """`data/speakers.yml` as of `revision`, or an explanation.
+
+    A shallow clone, an initial commit, or a repository with no such revision
+    all land in the error half, and the caller turns that into "nothing to
+    compare, so nothing to say" -- never into a message.
+    """
+    # shell=False and `revision` is either a constant or an object name that
+    # matched `_OBJECT_NAME`, so it can be neither an option nor a second
+    # argument: B603 and B607 both describe a risk this call does not carry.
     result = subprocess.run(  # nosec B603 B607
-        ["git", "show", PREVIOUS_SPEAKERS],
+        ["git", "show", revision],
         cwd=root,
         capture_output=True,
         text=True,
@@ -393,9 +421,11 @@ def _notify(message: str | None) -> int:
 def notify_immediate() -> int:
     """`convener-notify-immediate`: the three events spec section 7 interrupts for.
 
-    Compares the working tree's speaker file against the previous commit's.
-    With no previous commit to read there is no change to describe, so this
-    says nothing rather than treating the whole file as new -- which on a fresh
+    Compares the working tree's speaker file against the state the branch was
+    in before the push (`previous_revision`), so a push carrying several
+    commits reports the events of all of them rather than only the last. With
+    no earlier revision to read there is no change to describe, so this says
+    nothing rather than treating the whole file as new -- which on a fresh
     clone would announce every lead in it at once.
     """
     root = repo_root()
@@ -405,7 +435,7 @@ def notify_immediate() -> int:
             print(f"  - {error}")
         return 1
 
-    text, error = _git_show(root)
+    text, error = _git_show(root, previous_revision(os.environ))
     if error:
         print(f"no previous revision to compare against ({error}); nothing to notify")
         return 0

@@ -1125,7 +1125,9 @@ def test_immediate_says_nothing_when_there_is_no_previous_revision(
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
-    monkeypatch.setattr("convener_ops.cli._git_show", lambda _root: ("", "no parent commit"))
+    monkeypatch.setattr(
+        "convener_ops.cli._git_show", lambda _root, _revision: ("", "no parent commit")
+    )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
 
@@ -1143,7 +1145,9 @@ def test_immediate_says_nothing_when_the_previous_revision_is_unreadable(
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
-    monkeypatch.setattr("convener_ops.cli._git_show", lambda _root: ("- id: [unclosed", ""))
+    monkeypatch.setattr(
+        "convener_ops.cli._git_show", lambda _root, _revision: ("- id: [unclosed", "")
+    )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
 
@@ -1163,7 +1167,7 @@ def test_immediate_writes_a_body_for_a_lead_from_the_form(
     )
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
-    monkeypatch.setattr("convener_ops.cli._git_show", lambda _root: ("[]\n", ""))
+    monkeypatch.setattr("convener_ops.cli._git_show", lambda _root, _revision: ("[]\n", ""))
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
 
@@ -1183,7 +1187,8 @@ def test_immediate_writes_nothing_for_an_ordinary_change(
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
     monkeypatch.setattr(
-        "convener_ops.cli._git_show", lambda _root: ("- id: spk-009\n  status: lead\n", "")
+        "convener_ops.cli._git_show",
+        lambda _root, _revision: ("- id: spk-009\n  status: lead\n", ""),
     )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
@@ -1208,11 +1213,67 @@ def test_immediate_reports_unreadable_current_data(
 
 def test_git_show_reads_the_previous_revision_of_the_speaker_file() -> None:
     """The one subprocess this feature adds, exercised against this very
-    repository: fixed argv, nothing interpolated, and the failure half is what
-    the callers above stub."""
-    text, error = cli._git_show(repo_root())
+    repository: fixed argv, an argument that is either a constant or an object
+    name, and the failure half is what the callers above stub."""
+    text, error = cli._git_show(repo_root(), cli.PREVIOUS_SPEAKERS)
     assert error == ""
     assert "- id: spk-001" in text
+
+
+def test_the_comparison_starts_where_the_branch_actually_moved_from() -> None:
+    """A push carrying three commits moved the branch by three.
+
+    `HEAD~1` describes only the last of them, so the events of the other two
+    would be dropped in silence. GitHub sends the branch's previous tip as
+    `github.event.before`; the workflow passes it through as `BEFORE`.
+    """
+    sha = "0123456789abcdef0123456789abcdef01234567"
+    assert cli.previous_revision({"BEFORE": sha}) == f"{sha}:data/speakers.yml"
+
+
+@pytest.mark.parametrize(
+    "before",
+    [
+        "",
+        "   ",
+        "HEAD~3",
+        "main",
+        "0123456789ABCDEF0123456789ABCDEF01234567",
+        "0123456",
+        "--upload-pack=touch",
+        "0" * 40,
+    ],
+    ids=[
+        "absent",
+        "blank",
+        "a ref rather than an object name",
+        "a branch name",
+        "an object name in the wrong case",
+        "an abbreviated object name",
+        "an argument dressed as an option",
+        "the all-zero name of a branch's first push",
+    ],
+)
+def test_anything_that_is_not_an_object_name_falls_back_to_the_parent(
+    before: str,
+) -> None:
+    """Nothing but a full object name is interpolated into `git show`, so no
+    value of `BEFORE` can become an option or a second argument. Falling back
+    to `HEAD~1` reports less than the truth; interpolating a ref would report
+    something nobody chose."""
+    assert cli.previous_revision({"BEFORE": before}) == cli.PREVIOUS_SPEAKERS
+
+
+def test_the_immediate_job_fetches_enough_history_to_reach_that_commit() -> None:
+    """`fetch-depth: 2` gives the parent of HEAD and nothing before it, so a
+    push of three commits could not read the revision it has to compare
+    against even when GitHub names it."""
+    workflow = (repo_root() / ".github" / "workflows" / "notify.yml").read_text(
+        encoding="utf-8"
+    )
+    immediate = workflow.split("digest:")[0]
+    assert "fetch-depth: 0" in immediate
+    assert "BEFORE: ${{ github.event.before }}" in immediate
 
 
 # ------------------------------------------------------------------ #
