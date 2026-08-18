@@ -91,3 +91,93 @@ def test_output_is_sorted_newest_first() -> None:
         _scheduled(id="spk-002", edition_code="MRG-02", date="2026-01-08"),
     ]
     assert [r["date"] for r in to_public(rows)] == ["2026-01-08", "2025-01-08"]
+
+
+def _delivered(**publication: Any) -> dict[str, Any]:
+    """A delivered seminar whose recording is in the feed, with the
+    publication block under test."""
+    block: dict[str, Any] = {
+        "consent": "granted",
+        "approved_by": "alice",
+        "approved_on": "2026-01-09",
+        "objections": [],
+        "outcome": "published",
+    }
+    block.update(publication)
+    return _scheduled(status="delivered", publication=block)
+
+
+def test_a_refused_consent_pulls_the_recording_from_the_feed() -> None:
+    # G-15: a speaker may withdraw permission at any time, and the recording
+    # has to come out of the public feed when they do. The talk itself stays
+    # listed - it happened - but the link to the recording does not.
+    out = to_public([_delivered(consent="refused", outcome="withheld")])
+    assert out[0]["youtube_url"] == ""
+    assert out[0]["title"] == "On analytical engines"
+
+
+def test_a_withheld_recording_is_not_linked() -> None:
+    out = to_public([_delivered(outcome="withheld")])
+    assert out[0]["youtube_url"] == ""
+
+
+def test_a_standing_objection_pulls_the_recording() -> None:
+    out = to_public(
+        [
+            _delivered(
+                objections=[
+                    {
+                        "member": "carol",
+                        "reason": "unpublished data on a slide",
+                        "date": "2026-01-10",
+                        "resolved_on": "",
+                    }
+                ]
+            )
+        ]
+    )
+    assert out[0]["youtube_url"] == ""
+
+
+def test_an_objection_missing_resolved_on_still_counts_as_standing() -> None:
+    # A hand-edited file that omits the key must read as "still open". The
+    # safe direction is the one that leaves the talk offline.
+    out = to_public(
+        [
+            _delivered(
+                objections=[{"member": "carol", "reason": "wait", "date": "2026-01-10"}]
+            )
+        ]
+    )
+    assert out[0]["youtube_url"] == ""
+
+
+def test_a_resolved_objection_does_not_pull_the_recording() -> None:
+    out = to_public(
+        [
+            _delivered(
+                objections=[
+                    {
+                        "member": "carol",
+                        "reason": "wait",
+                        "date": "2026-01-10",
+                        "resolved_on": "2026-01-12",
+                    }
+                ]
+            )
+        ]
+    )
+    assert out[0]["youtube_url"] == "https://youtu.be/abc"
+
+
+def test_an_unreadable_publication_block_is_not_a_permission() -> None:
+    out = to_public([_scheduled(status="delivered", publication="nonsense")])
+    assert out[0]["youtube_url"] == ""
+
+
+def test_a_malformed_objections_value_does_not_pull_a_clean_recording() -> None:
+    # `validate.py` reports the shape; this function only decides whether the
+    # link goes out, and an unreadable objections list says nothing about
+    # anyone having objected.
+    out = to_public([_delivered(objections="nonsense")])
+    assert out[0]["youtube_url"] == "https://youtu.be/abc"

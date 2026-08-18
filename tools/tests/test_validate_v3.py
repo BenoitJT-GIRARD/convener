@@ -271,9 +271,11 @@ def test_publication_objection_member_must_look_like_a_login() -> None:
 
 
 def test_refused_consent_with_published_outcome_is_rejected() -> None:
-    # Cross-field backstop: consent and outcome can disagree, and no type
-    # forbids it. This is the backstop for a hand-edited file, ahead of the
-    # transformations (later tasks) that are meant to prevent it in the app.
+    # Cross-field check: consent and outcome can disagree in a YAML file, and
+    # no type forbids it. This is now a statement about the past rather than
+    # a live defence -- the app writes `outcome: published` in exactly one
+    # place, behind `canArchive` -- so what it still catches is a file
+    # hand-edited outside the app.
     s = speaker(
         publication={
             "consent": "refused",
@@ -424,3 +426,79 @@ def test_a_board_member_without_a_status_is_rejected() -> None:
     del member["status"]
     errors = validate_config(config(board=[member, board_member(login="ada")]))
     assert any("invalid board member status" in e for e in errors)
+
+
+def test_published_recording_with_no_approval_is_rejected() -> None:
+    s = speaker(
+        publication={
+            "consent": "granted",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [],
+            "outcome": "published",
+        }
+    )
+    errors = validate_speakers([s])
+    assert any("has no approval on record" in e for e in errors)
+
+
+def test_published_recording_with_a_standing_objection_is_rejected() -> None:
+    s = speaker(
+        publication={
+            "consent": "granted",
+            "approved_by": "alice",
+            "approved_on": "2026-01-09",
+            "objections": [
+                {
+                    "member": "carol",
+                    "reason": "unpublished data",
+                    "date": "2026-01-10",
+                    "resolved_on": "",
+                }
+            ],
+            "outcome": "published",
+        }
+    )
+    errors = validate_speakers([s])
+    assert any("has a standing objection" in e for e in errors)
+
+
+def test_a_resolved_objection_does_not_trip_the_published_check() -> None:
+    s = speaker(
+        publication={
+            "consent": "granted",
+            "approved_by": "alice",
+            "approved_on": "2026-01-09",
+            "objections": [
+                {
+                    "member": "carol",
+                    "reason": "unpublished data",
+                    "date": "2026-01-10",
+                    "resolved_on": "2026-01-12",
+                }
+            ],
+            "outcome": "published",
+        }
+    )
+    assert validate_speakers([s]) == []
+
+
+def test_a_malformed_resolved_on_is_reported() -> None:
+    s = speaker(
+        publication={
+            "consent": "granted",
+            "approved_by": "alice",
+            "approved_on": "2026-01-09",
+            "objections": [
+                {
+                    "member": "carol",
+                    "reason": "x",
+                    "date": "2026-01-10",
+                    "resolved_on": "12 January",
+                }
+            ],
+            "outcome": "",
+        }
+    )
+    errors = validate_speakers([s])
+    assert any("resolved_on must be YYYY-MM-DD" in e for e in errors)

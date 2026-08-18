@@ -116,6 +116,17 @@ def _validate_objections(objections: Any, where: str) -> list[str]:
         if date and not DATE_RE.match(str(date)):
             errors.append(f"{owhere}: date must be YYYY-MM-DD, got {date!r}")
 
+        # Publication objections carry the day they were closed; nomination
+        # objections do not (an objection there defers the candidate to the
+        # annual meeting rather than being resolved). Absent is legal in
+        # both, and means the objection still stands - the reading that
+        # keeps a recording offline rather than publishing it.
+        resolved_on = objection.get("resolved_on")
+        if resolved_on and not DATE_RE.match(str(resolved_on)):
+            errors.append(
+                f"{owhere}: resolved_on must be YYYY-MM-DD, got {resolved_on!r}"
+            )
+
     return errors
 
 
@@ -305,14 +316,34 @@ def validate_speakers(
                 _validate_objections(publication.get("objections"), pub_where)
             )
 
-            # Cross-field backstop (coordinator ruling, phase 2): consent
-            # and outcome can express a contradictory state that no type
-            # can forbid. The transformations meant to prevent this ship
-            # in later tasks; this check is the backstop for a file
-            # hand-edited outside them.
+            # Cross-field checks on the publication block.
+            #
+            # These are now statements about the past, not live defences.
+            # `outcome: published` has exactly one writer in the app
+            # (`app/src/state/transitions.ts`, the finalize-archive
+            # transition) and that writer asks `governance.canArchive`
+            # first, so none of the states below can be produced by using
+            # the application. What is left is a file hand-edited outside
+            # it - a real possibility for a YAML repository, and the only
+            # thing these still catch.
             if consent == "refused" and outcome == "published":
                 errors.append(
                     f"{pub_where}: refused consent cannot have outcome published"
+                )
+            if outcome == "published" and not approved_on:
+                errors.append(
+                    f"{pub_where}: published recording has no approval on record"
+                )
+            objections = publication.get("objections")
+            if (
+                outcome == "published"
+                and isinstance(objections, list)
+                and any(
+                    isinstance(o, dict) and not o.get("resolved_on") for o in objections
+                )
+            ):
+                errors.append(
+                    f"{pub_where}: published recording has a standing objection"
                 )
 
         errors.extend(_validate_ballots(entry, where, board_logins))
