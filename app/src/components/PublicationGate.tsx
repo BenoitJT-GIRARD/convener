@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { parisToday } from '../state/derived';
-import { formatDecision, transitionDecision } from '../state/decisions';
+import { formatDecision, identifier, transitionDecision } from '../state/decisions';
 import { canArchive, objectionWindowCloses, standingObjections } from '../state/governance';
 import { canFinalize } from '../state/phases';
 import {
@@ -58,7 +58,7 @@ export function PublicationGate({ speaker, role }: { speaker: Speaker; role: Rol
           current.map(sp =>
             sp.id === speaker.id ? applyTransition(sp, t, login, config, today, payload) : sp,
           ),
-        formatDecision(transitionDecision(t, speaker.id, login, payload)),
+        formatDecision(transitionDecision(t, identifier(speaker.id), identifier(login), payload)),
       );
     } finally {
       setBusy(false);

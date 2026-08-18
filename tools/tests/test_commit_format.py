@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -223,3 +224,31 @@ def test_the_cli_fails_the_build_on_a_malformed_decision(
     out = capsys.readouterr().out
     assert out.startswith("error: ")
     assert "1 commit message(s) to fix." in out
+
+
+@pytest.mark.parametrize("case", CASES["identifier_cases"], ids=lambda c: c["name"])
+def test_what_a_decision_may_point_at_is_the_same_rule_on_both_sides(
+    case: dict[str, Any],
+) -> None:
+    """`app/tests/decisions.test.ts` reads this same table.
+
+    The browser's copy is a branded type, so free text cannot reach
+    `formatDecision` at all; this asserts the two agree on which strings are
+    identifiers, which is what keeps the browser from writing a line this
+    module cannot read back.
+    """
+    from convener_ops.commit_format import _TOKEN
+
+    assert bool(re.fullmatch(_TOKEN, case["value"])) is case["identifier"]
+
+
+@pytest.mark.parametrize(
+    "case",
+    [c for c in CASES["identifier_cases"] if not c["identifier"]],
+    ids=lambda c: c["name"],
+)
+def test_a_decision_cannot_be_written_about_a_person_by_name(
+    case: dict[str, Any],
+) -> None:
+    with pytest.raises(DecisionRejectedError):
+        format_decision("nomination-open", case["value"], "ada")

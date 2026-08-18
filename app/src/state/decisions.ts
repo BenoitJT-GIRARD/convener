@@ -44,6 +44,55 @@ import type {
   TransitionPayload,
 } from './transitions';
 
+/**
+ * An identifier the register is allowed to point at.
+ *
+ * Mirrors `_TOKEN` in `tools/convener_ops/commit_format.py`, and the pair is
+ * pinned by `identifier_cases` in
+ * `tools/tests/fixtures/governance-cases.json`. A speaker id (`spk-001`), a
+ * GitHub login, or `board` -- never a person's name. A name is prose about a
+ * person, and a commit subject is permanent and unrewritable: once
+ * `data: open a nomination for Jane Doe (CNRS) by ada` is pushed there is no
+ * taking it back, and `parse_decision` cannot read it either, so the
+ * register silently loses the decision it was meant to record.
+ */
+const TOKEN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+declare const identifierBrand: unique symbol;
+
+/** A string that has been checked against `TOKEN`. The brand is what makes
+ *  the malformed line unconstructible rather than merely detected: `Decision`
+ *  has no `string` slot for an identifier, so free text cannot reach
+ *  `formatDecision` without going through `identifier` below and the compiler
+ *  says so at the call site. */
+export type Identifier = string & { readonly [identifierBrand]: true };
+
+export function isIdentifier(value: string): value is Identifier {
+  return TOKEN.test(value);
+}
+
+/** Raised when a caller tries to point the register at something that is not
+ *  an identifier. Every caller in the app asks its own rule first -- see
+ *  `board.nominationBlocker` -- so this is a backstop, and its sentence is
+ *  one a volunteer can act on because `github/errors.ts` relays it as-is. */
+export class DecisionRejected extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DecisionRejected';
+  }
+}
+
+/** The only way to obtain an `Identifier`. */
+export function identifier(value: string): Identifier {
+  if (!isIdentifier(value)) {
+    throw new DecisionRejected(
+      `"${value}" is not an identifier. The register points at records -- a speaker ` +
+        'reference, a GitHub username, or the board -- never at a person by name.',
+    );
+  }
+  return value;
+}
+
 /** Acts that take no qualifier: the kind alone says what was recorded. */
 export type PlainDecisionKind =
   | 'ballot-withdraw'
@@ -73,11 +122,16 @@ export type PlainDecisionKind =
  * has no `detail` property to set at all.
  */
 export type Decision =
-  | { kind: 'ballot-cast'; entity: string; actor: string; detail: BallotValue }
-  | { kind: 'consent-set'; entity: string; actor: string; detail: ConsentDecision }
-  | { kind: 'publication-resolve'; entity: string; actor: string; detail: ObjectionResolution }
-  | { kind: 'override'; entity: string; actor: string; detail: SpeakerStatus }
-  | { kind: PlainDecisionKind; entity: string; actor: string };
+  | { kind: 'ballot-cast'; entity: Identifier; actor: Identifier; detail: BallotValue }
+  | { kind: 'consent-set'; entity: Identifier; actor: Identifier; detail: ConsentDecision }
+  | {
+      kind: 'publication-resolve';
+      entity: Identifier;
+      actor: Identifier;
+      detail: ObjectionResolution;
+    }
+  | { kind: 'override'; entity: Identifier; actor: Identifier; detail: SpeakerStatus }
+  | { kind: PlainDecisionKind; entity: Identifier; actor: Identifier };
 
 export type DecisionKind = Decision['kind'];
 
@@ -109,7 +163,7 @@ export const ACTS: Record<DecisionKind, string> = {
 
 /** The board taken as a whole, for the one act that is not about a single
  *  record. Never a person's name -- the register points at records. */
-export const BOARD_ENTITY = 'board';
+export const BOARD_ENTITY = identifier('board');
 
 /** The exact line to commit. The `Decision` type admits nothing malformed, so
  *  this is total: every value it can be given produces a line
@@ -128,8 +182,8 @@ export function formatDecision(d: Decision): string {
  */
 export function transitionDecision(
   t: Transition,
-  entity: string,
-  actor: string,
+  entity: Identifier,
+  actor: Identifier,
   payload?: TransitionPayload,
 ): Decision {
   switch (t) {

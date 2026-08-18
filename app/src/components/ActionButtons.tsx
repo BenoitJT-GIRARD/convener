@@ -14,7 +14,7 @@ import { findOverlaps, nextEditionCode } from '../state/agenda';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';
 import { parisToday } from '../state/derived';
-import { formatDecision, transitionDecision } from '../state/decisions';
+import { formatDecision, identifier, transitionDecision } from '../state/decisions';
 import type { BallotValue, Speaker } from '../data/types';
 
 interface Props {
@@ -60,7 +60,7 @@ export function ActionButtons({ speaker, role }: Props) {
         // Not a string: `formatDecision` takes the transition and the very
         // payload it is applied with, so the line cannot disagree with what
         // was written -- see `state/decisions.ts`.
-        formatDecision(transitionDecision(t, speaker.id, login, payload)),
+        formatDecision(transitionDecision(t, identifier(speaker.id), identifier(login), payload)),
       );
     } finally {
       setBusy(false);

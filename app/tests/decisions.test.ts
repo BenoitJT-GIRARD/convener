@@ -3,6 +3,9 @@ import cases from '../../tools/tests/fixtures/governance-cases.json';
 import {
   ACTS,
   formatDecision,
+  identifier,
+  isIdentifier,
+  DecisionRejected,
   transitionDecision,
   type Decision,
   type DecisionKind,
@@ -44,7 +47,9 @@ interface FixtureCase {
  *  through the same unions the app writes with means a typo in the shared
  *  fixture fails here rather than producing a line neither side can read. */
 function decisionFrom(c: FixtureCase): Decision {
-  const { entity, actor, detail } = c;
+  const entity = identifier(c.entity);
+  const actor = identifier(c.actor);
+  const { detail } = c;
   switch (c.kind) {
     case 'ballot-cast':
       if (!isBallotValue(detail)) throw new Error(`not a ballot value: ${detail}`);
@@ -91,7 +96,7 @@ describe('the grammar of decision commits', () => {
 
   it('takes the ballot value from the ballot actually cast', () => {
     for (const value of BALLOT_VALUES) {
-      const d = transitionDecision('ballot-cast', 'spk-007', 'ada', {
+      const d = transitionDecision('ballot-cast', identifier('spk-007'), identifier('ada'), {
         value,
         comment: '',
         coiReason: value === 'recused' ? 'co-author' : '',
@@ -102,11 +107,13 @@ describe('the grammar of decision commits', () => {
 
   it('takes the consent answer and the resolution from their payloads', () => {
     expect(
-      formatDecision(transitionDecision('consent-set', 'spk-009', 'ada', { consent: 'refused' })),
+      formatDecision(transitionDecision('consent-set', identifier('spk-009'), identifier('ada'), {
+        consent: 'refused',
+      })),
     ).toBe('data: record the recording consent of spk-009 by ada (refused)');
     expect(
       formatDecision(
-        transitionDecision('publication-resolve', 'spk-009', 'ada', {
+        transitionDecision('publication-resolve', identifier('spk-009'), identifier('ada'), {
           resolution: 'withhold',
           note: 'the speaker asked',
         }),
@@ -114,7 +121,9 @@ describe('the grammar of decision commits', () => {
     ).toBe('data: resolve the objections on spk-009 by ada (withhold)');
     expect(
       formatDecision(
-        transitionDecision('override', 'spk-005', 'ada', { status: 'decline-board' }),
+        transitionDecision('override', identifier('spk-005'), identifier('ada'), {
+          status: 'decline-board',
+        }),
       ),
     ).toBe('data: override the status of spk-005 by ada (decline-board)');
   });
@@ -146,7 +155,7 @@ describe('the grammar of decision commits', () => {
   });
 
   it('never lets a qualifier out on an act that has none', () => {
-    const parked = transitionDecision('lead-park', 'spk-003', 'ada');
+    const parked = transitionDecision('lead-park', identifier('spk-003'), identifier('ada'));
     expect('detail' in parked).toBe(false);
     expect(formatDecision(parked)).toBe('data: park spk-003 by ada');
   });
@@ -154,10 +163,44 @@ describe('the grammar of decision commits', () => {
   it('says nothing about the person, only about the record', () => {
     // The delete button knows the speaker's name; the subject line does not
     // carry it. Nothing in the vocabulary can be said about a volunteer.
-    const line = formatDecision({ kind: 'speaker-delete', entity: 'spk-005', actor: 'ada' });
+    const line = formatDecision({
+      kind: 'speaker-delete',
+      entity: identifier('spk-005'),
+      actor: identifier('ada'),
+    });
     expect(line).toBe('data: delete the record of spk-005 by ada');
     for (const act of Object.values(ACTS)) {
       expect(act).toMatch(/^[a-z][a-z ]*$/);
     }
+  });
+
+  it.each(cases.identifier_cases)('$name', c => {
+    // The same table `tools/tests/test_commit_format.py` reads. `_TOKEN`
+    // there and `TOKEN` here are one rule about what a commit subject may
+    // point at, and this is what stops them drifting.
+    expect(isIdentifier(c.value)).toBe(c.identifier);
+  });
+
+  it('cannot be given a person by name', () => {
+    // The defect this closes: a free-text nomination candidate produced
+    // `data: open a nomination for Jane Doe (CNRS) by ada`. That put a real
+    // person's name into a history nothing rewrites, and `parse_decision`
+    // then dropped the row, so the register lost the decision too.
+    expect(() => identifier('Jane Doe (CNRS)')).toThrow(DecisionRejected);
+    for (const c of cases.identifier_cases.filter(x => !x.identifier)) {
+      expect(() => identifier(c.value), c.name).toThrow(DecisionRejected);
+    }
+  });
+
+  it('says what to do instead, in a sentence a volunteer can act on', () => {
+    let message = '';
+    try {
+      identifier('Jane Doe (CNRS)');
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain('is not an identifier');
+    expect(message).toContain('GitHub username');
+    expect(message).not.toMatch(/regex|token|TOKEN|\/\^/);
   });
 });

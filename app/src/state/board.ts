@@ -12,6 +12,7 @@
  * pinned by `tools/tests/fixtures/governance-cases.json`'s `assign_lead_cases`.
  */
 import type { BoardMember, Config, Nomination, Speaker } from '../data/types';
+import { isIdentifier } from './decisions';
 
 export interface Board {
   logins: string[];
@@ -242,7 +243,20 @@ export function nominationBlocker(
   on: string,
 ): string {
   const login = candidate.trim();
-  if (login === '') return 'Name the person being nominated.';
+  if (login === '') return 'Give the GitHub username of the person being nominated.';
+  // A GitHub username, not a name. Opening a nomination writes a commit
+  // subject, and a commit subject is permanent: `Jane Doe (CNRS)` typed here
+  // would put a real person's name into a history nothing rewrites, and the
+  // register (`tools/convener_ops/commit_format.py`) could not read the line back
+  // either, so the decision would be lost as well as the privacy. The
+  // identifier is checked here, where a sentence can be shown, rather than
+  // left to `decisions.identifier` to refuse at the moment of writing.
+  if (!isIdentifier(login)) {
+    return (
+      `"${login}" is not a GitHub username. Nominations are opened on the account ` +
+      'that co-hosted the webinars, so type the username rather than the person.'
+    );
+  }
 
   if (!isBoardMember(config, sponsor, on)) {
     return 'Only an active board member can sponsor a nomination.';

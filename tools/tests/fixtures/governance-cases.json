@@ -381,6 +381,24 @@
       }
     ]
   },
+  "_identifier_comment": "What a decision commit may point at. `_TOKEN` in tools/convener_ops/commit_format.py and `TOKEN` in app/src/state/decisions.ts are the same rule, read from both sides here. A record, never a person by name: a commit subject is permanent and unrewritable, so a name typed into a nomination box would be there for good.",
+  "identifier_cases": [
+    {"name": "a speaker reference is an identifier", "value": "spk-001", "identifier": true},
+    {"name": "a github login is an identifier", "value": "Anonymous", "identifier": true},
+    {"name": "the board as a whole is an identifier", "value": "board", "identifier": true},
+    {"name": "a login with a hyphen is an identifier", "value": "ada-lovelace", "identifier": true},
+    {"name": "a login with a dot and an underscore is an identifier", "value": "a.b_c", "identifier": true},
+    {"name": "a digit may open an identifier", "value": "0xdead", "identifier": true},
+    {"name": "a person's name is not an identifier - it is prose about a person", "value": "Jane Doe", "identifier": false},
+    {"name": "a name with an affiliation is not an identifier", "value": "Jane Doe (CNRS)", "identifier": false},
+    {"name": "nothing is not an identifier", "value": "", "identifier": false},
+    {"name": "a leading space is not an identifier", "value": " ada", "identifier": false},
+    {"name": "a trailing space is not an identifier", "value": "ada ", "identifier": false},
+    {"name": "an identifier may not open with punctuation", "value": "-ada", "identifier": false},
+    {"name": "an email address is not an identifier", "value": "jane@example.org", "identifier": false},
+    {"name": "a second line is not an identifier", "value": "ada\nby bob", "identifier": false},
+    {"name": "the word by is not allowed to hide inside one", "value": "ada by bob", "identifier": false}
+  ],
   "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned.",
   "commit_message_cases": [
     {

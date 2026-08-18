@@ -17,7 +17,7 @@ import {
 } from '../state/board';
 import type { Config, Nomination } from '../data/types';
 import { parisToday } from '../state/derived';
-import { BOARD_ENTITY, formatDecision } from '../state/decisions';
+import { BOARD_ENTITY, formatDecision, identifier } from '../state/decisions';
 
 const OUTCOME_LABEL: Record<Nomination['outcome'], string> = {
   '': 'Open',
@@ -82,7 +82,7 @@ export function Board() {
     const name = candidate.trim();
     await write(
       current => openNomination(speakers, current, name, me, today),
-      formatDecision({ kind: 'nomination-open', entity: name, actor: me }),
+      formatDecision({ kind: 'nomination-open', entity: identifier(name), actor: identifier(me) }),
     );
     setCandidate('');
   };
@@ -90,19 +90,27 @@ export function Board() {
   const withdraw = (target: string) =>
     write(
       current => withdrawObjection(current, target, me, today),
-      formatDecision({ kind: 'nomination-withdraw-objection', entity: target, actor: me }),
+      formatDecision({
+        kind: 'nomination-withdraw-objection',
+        entity: identifier(target),
+        actor: identifier(me),
+      }),
     );
 
   const object = (target: string) =>
     write(
       current => objectToNomination(current, target, me, reasons[target] ?? '', today),
-      formatDecision({ kind: 'nomination-object', entity: target, actor: me }),
+      formatDecision({
+        kind: 'nomination-object',
+        entity: identifier(target),
+        actor: identifier(me),
+      }),
     );
 
   const applyDue = () =>
     write(
       current => resolveNominations(current, today),
-      formatDecision({ kind: 'nomination-resolve', entity: BOARD_ENTITY, actor: me }),
+      formatDecision({ kind: 'nomination-resolve', entity: BOARD_ENTITY, actor: identifier(me) }),
     );
 
   return (
@@ -279,11 +287,12 @@ export function Board() {
           <div className="flex items-end gap-3 flex-wrap">
             <label className="block">
               <span className="text-xs uppercase tracking-wider text-ink-muted">
-                Nominate (you sponsor)
+                Nominate a GitHub username (you sponsor)
               </span>
               <input
                 type="text"
                 aria-label="Nominate"
+                placeholder="github-username"
                 value={candidate}
                 onChange={e => setCandidate(e.target.value)}
                 className="mt-1 px-3 py-2 border border-border rounded-md bg-surface text-sm"

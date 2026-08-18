@@ -16,6 +16,7 @@ import {
   withdrawalBlocker,
 } from '../src/state/board';
 import { friendlyError } from '../src/github/errors';
+import { DecisionRejected, formatDecision, identifier } from '../src/state/decisions';
 import type { BoardMember, Config, Nomination, Speaker } from '../src/data/types';
 
 function member(login: string, overrides: Partial<BoardMember> = {}): BoardMember {
@@ -146,6 +147,30 @@ describe('openNomination', () => {
       speaker({ id: 'spk-102', host_1: 'bob', host_2: 'dan', status: 'archived' }),
     ];
     expect(nominationBlocker(speakers, config(), 'dan', 'alice', '2026-03-01')).toBe('');
+  });
+
+  it('refuses a candidate typed as a person rather than a username', () => {
+    // The commit subject an accepted nomination writes is permanent. A real
+    // name typed into the box would be in the history for good, and the
+    // register could not read the line back either -- so this is refused
+    // before the button is enabled, with a sentence saying what to type.
+    for (const typed of ['Jane Doe', 'Jane Doe (CNRS)', 'jane@example.org', '  ']) {
+      const reason = nominationBlocker(SPEAKERS, config(), typed, 'alice', '2026-03-01');
+      expect(reason, typed).not.toBe('');
+      expect(reason, typed).toContain('username');
+    }
+  });
+
+  it('never writes a decision line about a person by name', () => {
+    // Belt and braces across the two halves: the blocker refuses, and the
+    // grammar has no slot for it even if a caller ignored the blocker.
+    expect(() =>
+      formatDecision({
+        kind: 'nomination-open',
+        entity: identifier('Jane Doe (CNRS)'),
+        actor: identifier('alice'),
+      }),
+    ).toThrow(DecisionRejected);
   });
 
   it('refuses a sponsor who is not an active board member', () => {

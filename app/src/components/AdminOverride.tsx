@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { activeBoard } from '../state/board';
 import { applyTransition, canTransition } from '../state/transitions';
 import { parisToday } from '../state/derived';
-import { formatDecision } from '../state/decisions';
+import { formatDecision, identifier } from '../state/decisions';
 import { CAREER_STAGES, GENDERS } from '../data/types';
 import type { Speaker, SpeakerStatus, Gender, CareerStage } from '../data/types';
 
@@ -307,7 +307,12 @@ function ForceStatus({ speaker }: { speaker: Speaker }) {
     try {
       await mutateSpeakers(
         current => current.map(s => (s.id === speaker.id ? { ...s, status: target } : s)),
-        formatDecision({ kind: 'override', entity: speaker.id, actor: login, detail: target }),
+        formatDecision({
+          kind: 'override',
+          entity: identifier(speaker.id),
+          actor: identifier(login),
+          detail: target,
+        }),
       );
     } finally {
       setBusy(false);
@@ -386,7 +391,11 @@ function HiddenConflict({ speaker }: { speaker: Speaker }) {
               ? applyTransition(s, 'vote-reopen', login, config, today, { member, reason })
               : s,
           ),
-        formatDecision({ kind: 'vote-reopen', entity: speaker.id, actor: login }),
+        formatDecision({
+          kind: 'vote-reopen',
+          entity: identifier(speaker.id),
+          actor: identifier(login),
+        }),
       );
       if (ok) {
         setDone(true);
@@ -483,7 +492,11 @@ function DeleteSpeaker({ speaker }: { speaker: Speaker }) {
         current => current.filter(s => s.id !== speaker.id),
         // The record, not the person: the deleted row carries the name and
         // the diff keeps it, so the subject line has no reason to.
-        formatDecision({ kind: 'speaker-delete', entity: speaker.id, actor: login }),
+        formatDecision({
+          kind: 'speaker-delete',
+          entity: identifier(speaker.id),
+          actor: identifier(login),
+        }),
       );
       if (ok) nav('/pipeline');
     } finally {
