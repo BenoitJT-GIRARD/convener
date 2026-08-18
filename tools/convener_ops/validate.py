@@ -413,16 +413,29 @@ def validate_config(cfg: Any) -> list[str]:
 
     # Ordering alone (above) doesn't catch an actual board that has drifted
     # outside its own declared bounds - check the real headcount too.
+    #
+    # *Active* members, not entries. G-07's floor and ceiling are about who
+    # can vote: an `inactive` entry is out of the denominator
+    # (`governance.active_board`), stays in the file with its `login` and
+    # `joined_on` intact so coming back costs one word, and must not occupy a
+    # seat while it does. The browser reads it the same way -
+    # `board.resolveNominations` counts active members before seating - and
+    # counting entries here meant the app could write a config this very
+    # function then rejected in CI. Pinned by `board_headcount_cases` in
+    # tools/tests/fixtures/governance-cases.json.
     if (
         isinstance(board, list)
         and isinstance(board_min, int)
         and isinstance(board_max, int)
-        and not (board_min <= len(board) <= board_max)
     ):
-        errors.append(
-            f"config.yml: board has {len(board)} members, outside "
-            f"board_min..board_max ({board_min}..{board_max})"
+        seated = sum(
+            1 for m in board if isinstance(m, dict) and m.get("status") == "active"
         )
+        if not (board_min <= seated <= board_max):
+            errors.append(
+                f"config.yml: board has {seated} active members, outside "
+                f"board_min..board_max ({board_min}..{board_max})"
+            )
 
     nominations = cfg.get("nominations")
     if "nominations" in cfg and not isinstance(nominations, list):

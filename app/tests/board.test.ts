@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { activeBoard, assignLead, coHostedCount, isBoardMember } from '../src/state/board';
+import {
+  activeBoard,
+  assignLead,
+  coHostedCount,
+  isBoardMember,
+  resolveNominations,
+} from '../src/state/board';
 import type { BoardMember, Config, Speaker } from '../src/data/types';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 
@@ -223,5 +229,83 @@ describe('assignLead', () => {
     const cfg = config(c.board);
     const speakers = c.speakers.map(s => speaker(s));
     expect(assignLead(speakers, cfg, c.on)).toBe(c.expected);
+  });
+});
+
+describe('the seat count, pinned to the validator', () => {
+  interface HeadcountCase {
+    name: string;
+    board: BoardMember[];
+    board_min: number;
+    board_max: number;
+    active: number;
+    within: boolean;
+  }
+
+  // `tools/tests/test_validate.py` runs these same cases through
+  // `validate_config`. The two used to disagree: this side counted active
+  // members before seating, the validator counted entries, so a board with an
+  // inactive entry could be seated up to `board_max` by the app and then
+  // rejected in CI by `convener-validate` -- on the very file the app had just
+  // written. One number, read from both sides, is what stops that.
+  it.each(cases.board_headcount_cases as HeadcountCase[])('shared fixture: $name', c => {
+    const cfg = { ...config(c.board), board_min: c.board_min, board_max: c.board_max };
+    expect(activeBoard(cfg, '2024-06-01').logins.length).toBe(c.active);
+    expect(c.active >= c.board_min && c.active <= c.board_max).toBe(c.within);
+  });
+
+  it('never seats past the ceiling the validator enforces', () => {
+    const board = [
+      member({ login: 'alice' }),
+      member({ login: 'bob' }),
+      member({ login: 'carol' }),
+      member({ login: 'dave', status: 'inactive' }),
+    ];
+    const cfg: Config = {
+      ...config(board),
+      board_min: 3,
+      board_max: 3,
+      nominations: [
+        {
+          candidate: 'erin',
+          sponsor: 'alice',
+          opened_on: '2026-01-01',
+          objections: [],
+          outcome: '',
+        },
+      ],
+    };
+    const next = resolveNominations(cfg, '2026-03-01');
+    expect(next.nominations[0].outcome).toBe('waiting');
+    expect(next.board.filter(m => m.status === 'active').length).toBe(3);
+  });
+
+  it('lets an inactive entry be reseated without overshooting the ceiling', () => {
+    // The inactive entry is not a seat, so seating its own login is a
+    // reactivation rather than a tenth member -- and the count the validator
+    // reads is unchanged by the entry sitting there beforehand.
+    const board = [
+      member({ login: 'alice' }),
+      member({ login: 'bob' }),
+      member({ login: 'carol', status: 'inactive' }),
+    ];
+    const cfg: Config = {
+      ...config(board),
+      board_min: 2,
+      board_max: 3,
+      nominations: [
+        {
+          candidate: 'carol',
+          sponsor: 'alice',
+          opened_on: '2026-01-01',
+          objections: [],
+          outcome: '',
+        },
+      ],
+    };
+    const next = resolveNominations(cfg, '2026-03-01');
+    expect(next.nominations[0].outcome).toBe('accepted');
+    expect(next.board.filter(m => m.status === 'active').length).toBe(3);
+    expect(next.board.length).toBe(3);
   });
 });

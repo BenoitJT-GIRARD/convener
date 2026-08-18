@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
 from conftest import board_member, config, speaker
 
 from convener_ops.validate import validate_config, validate_speakers
+
+CASES = json.loads(
+    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+        encoding="utf-8"
+    )
+)
 
 
 def test_a_minimal_lead_is_valid() -> None:
@@ -73,3 +84,27 @@ def test_config_board_member_must_look_like_a_login() -> None:
 
 def test_valid_config_produces_no_error() -> None:
     assert validate_config(config()) == []
+
+
+@pytest.mark.parametrize(
+    "case", CASES["board_headcount_cases"], ids=lambda c: c["name"]
+)
+def test_the_headcount_bounds_count_active_members(case: dict[str, Any]) -> None:
+    """The same table `app/tests/board.test.ts` reads.
+
+    `board.resolveNominations` counts active members before it seats anyone,
+    so counting entries here would let the app write a config this function
+    then rejects in CI - a file rejected by the validator of the very tool
+    that wrote it.
+    """
+    errors = validate_config(
+        config(
+            board=case["board"],
+            board_min=case["board_min"],
+            board_max=case["board_max"],
+        )
+    )
+    outside = [e for e in errors if "outside board_min..board_max" in e]
+    assert bool(outside) is (not case["within"]), errors
+    if outside:
+        assert f"board has {case['active']} active members" in outside[0]
