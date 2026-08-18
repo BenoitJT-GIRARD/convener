@@ -432,6 +432,26 @@ def validate_config(cfg: Any) -> list[str]:
             if outcome == "accepted" and isinstance(objections, list) and objections:
                 errors.append(f"{nwhere}: accepted nomination has open objections")
 
+            # The other half of the same pair. An acceptance and the seat it
+            # implies are written in one transformation
+            # (app/src/state/board.ts::resolveNominations), so an accepted
+            # nomination whose candidate holds no active seat cannot come out
+            # of the app - only out of a hand edit, and it would leave the
+            # board smaller than the record says it is.
+            if outcome == "accepted" and isinstance(candidate, str):
+                members = board if isinstance(board, list) else []
+                seated = any(
+                    isinstance(m, dict)
+                    and m.get("login") == candidate
+                    and m.get("status") == "active"
+                    for m in members
+                )
+                if not seated:
+                    errors.append(
+                        f"{nwhere}: accepted nomination {candidate!r} is not an "
+                        f"active board member"
+                    )
+
     sla_days = cfg.get("sla_days")
     if "sla_days" in cfg and not isinstance(sla_days, dict):
         errors.append("config.yml: sla_days must be a mapping")

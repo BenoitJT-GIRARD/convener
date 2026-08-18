@@ -176,6 +176,36 @@ def test_accepted_nomination_with_open_objections_is_rejected() -> None:
     assert any("accepted nomination has open objections" in e for e in errors)
 
 
+def test_accepted_nomination_without_a_seat_is_rejected() -> None:
+    # The app writes the acceptance and the board entry together, so this
+    # pair can only disagree in a hand-edited file.
+    errors = validate_config(
+        config(nominations=[nomination(candidate="hopper", outcome="accepted")])
+    )
+    assert any("is not an active board member" in e for e in errors)
+
+
+def test_accepted_nomination_of_a_seated_member_is_accepted() -> None:
+    errors = validate_config(
+        config(nominations=[nomination(candidate="grace", outcome="accepted")])
+    )
+    assert not [e for e in errors if e.startswith("config.yml: nominations")]
+
+
+def test_accepted_nomination_of_a_departed_member_is_rejected() -> None:
+    errors = validate_config(
+        config(
+            board=[
+                board_member(login="Anonymous"),
+                board_member(login="ada"),
+                board_member(login="grace", status="inactive"),
+            ],
+            nominations=[nomination(candidate="grace", outcome="accepted")],
+        )
+    )
+    assert any("is not an active board member" in e for e in errors)
+
+
 def test_board_member_status_must_be_valid() -> None:
     errors = validate_config(config(board=[board_member(status="bogus")]))
     assert any("invalid board member status" in e for e in errors)
