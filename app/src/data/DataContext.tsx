@@ -50,112 +50,92 @@ const DEFAULT_CONFIG: Config = {
   board_members: [],
 };
 
-/**
- * Convert a wall-time in Europe/Paris (DST-aware) to a UTC epoch.
- * dateStr: YYYY-MM-DD; timeStr: HH:MM.
- */
-function parisWallTimeToEpoch(dateStr: string, timeStr: string): number {
-  const iso = `${dateStr}T${timeStr}:00`;
-  const probe = new Date(`${iso}Z`);
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(probe);
-  const map: Record<string, string> = {};
-  for (const p of parts) if (p.type !== 'literal') map[p.type] = p.value;
-  const hour = map.hour === '24' ? '00' : map.hour;
-  const parisIso = `${map.year}-${map.month}-${map.day}T${hour}:${map.minute}:${map.second}Z`;
-  const offsetMs = Date.parse(parisIso) - probe.getTime();
-  return probe.getTime() - offsetMs;
-}
+const DEMO_STATE: State = {
+  loading: false,
+  error: null,
+  speakers: [...DEMO_SPEAKERS],
+  config: { ...DEMO_CONFIG },
+  spkSha: 'demo',
+  cfgSha: 'demo',
+};
 
-function autoSweep(
-  speakers: Speaker[],
-  config: Config | null,
-  now: Date,
-): { swept: Speaker[]; changed: boolean } {
-  const duration = (config?.seminar_duration_minutes ?? 90) * 60_000;
-  let changed = false;
-  const swept = speakers.map(s => {
-    if (s.status !== 'scheduled' || !s.date) return s;
-    if (s.time) {
-      const startEpoch = parisWallTimeToEpoch(s.date, s.time);
-      if (now.getTime() >= startEpoch + duration) {
-        changed = true;
-        return { ...s, status: 'delivered' as const };
-      }
-      return s;
-    }
-    // Legacy fallback: no time — flip the day after.
-    const todayStr = now.toISOString().slice(0, 10);
-    if (s.date < todayStr) {
-      changed = true;
-      return { ...s, status: 'delivered' as const };
-    }
-    return s;
-  });
-  return { swept, changed };
-}
-
-export function DataProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
-  const [s, setS] = useState<State>({
-    loading: true,
+/** The synchronous half of loading: demo mode resolves immediately (no
+ *  network), and having no token yet has nothing to load. Only the real
+ *  GitHub read is genuinely asynchronous, so it's the only part that runs
+ *  from inside the effect below. */
+function initialState(token: string | null): State {
+  if (isDemoMode()) return DEMO_STATE;
+  return {
+    loading: !!token,
     error: null,
     speakers: [],
     config: null,
     spkSha: '',
     cfgSha: '',
-  });
+  };
+}
+
+/** Read-only: fetch speakers and config from GitHub. Never writes — the
+ *  scheduled->delivered transition is derived for display (see
+ *  src/state/derived.ts) and persisted only by the scheduled job, so two
+ *  volunteers opening the app at once can never race on the same write. */
+async function fetchState(token: string): Promise<State> {
+  const [spk, cfg] = await Promise.all([
+    getFile('data/speakers.yml', token),
+    getFile('data/config.yml', token),
+  ]);
+  const speakers = parseSpeakers(spk.text);
+  const config = parseConfig(cfg.text) ?? DEFAULT_CONFIG;
+  return {
+    loading: false,
+    error: null,
+    speakers,
+    config,
+    spkSha: spk.sha,
+    cfgSha: cfg.sha,
+  };
+}
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const { token } = useAuth();
+  // The synchronous half of loading (demo mode, or no token yet) is resolved
+  // directly in the initialiser, keyed off the token this component mounted
+  // with — `Shell` only renders `DataProvider` once a token exists, and
+  // swaps it out for `<Login/>` rather than mounting it with a null token,
+  // so `token` is stable for the lifetime of this component. Only the
+  // genuinely asynchronous GitHub read runs from inside the effect below,
+  // and it sets state solely from its promise callbacks — never
+  // synchronously in the effect body — so there is nothing here for
+  // react-hooks/set-state-in-effect to flag.
+  const [s, setS] = useState<State>(() => initialState(token));
+
+  useEffect(() => {
+    if (isDemoMode() || !token) return;
+    let cancelled = false;
+    fetchState(token)
+      .then(next => {
+        if (!cancelled) setS(next);
+      })
+      .catch(e => {
+        if (!cancelled) {
+          const message = e instanceof Error ? e.message : String(e);
+          setS(p => ({ ...p, loading: false, error: message }));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   async function reload() {
     if (!token) return;
     if (isDemoMode()) {
-      setS({
-        loading: false,
-        error: null,
-        speakers: [...DEMO_SPEAKERS],
-        config: { ...DEMO_CONFIG },
-        spkSha: 'demo',
-        cfgSha: 'demo',
-      });
+      setS(DEMO_STATE);
       return;
     }
     setS(p => ({ ...p, loading: true, error: null }));
     try {
-      const [spk, cfg] = await Promise.all([
-        getFile('data/speakers.yml', token),
-        getFile('data/config.yml', token),
-      ]);
-      const parsed = parseSpeakers(spk.text);
-      const config = parseConfig(cfg.text) ?? DEFAULT_CONFIG;
-      const { swept, changed } = autoSweep(parsed, config, new Date());
-      setS({
-        loading: false,
-        error: null,
-        speakers: swept,
-        config,
-        spkSha: spk.sha,
-        cfgSha: cfg.sha,
-      });
-      if (changed) {
-        const result = await mutate({
-          store: githubStore(token),
-          path: 'data/speakers.yml',
-          parse: parseSpeakers,
-          serialize: v => withSpeakersHeader(serializeSpeakers(v)),
-          transform: current => autoSweep(current, config, new Date()).swept,
-          message: 'data: auto-sweep scheduled→delivered',
-        });
-        setS(p => ({ ...p, speakers: result.value, spkSha: result.sha }));
-      }
+      setS(await fetchState(token));
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setS(p => ({ ...p, loading: false, error: message }));
@@ -215,20 +195,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }
-
-  useEffect(() => {
-    // `reload` sets state synchronously before its first `await` (the demo-mode
-    // branch, and the initial `loading: true` flag). Deferring those updates
-    // would require reworking the whole load/save state machine in this file,
-    // which Task 12 does as a dedicated rewrite — narrowly disabling here avoids
-    // a throwaway restructuring that would just be redone.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    reload();
-    // `reload` is redefined every render (it closes over `s`); adding it here
-    // would re-run the effect on every render and loop. Task 12 rewrites this
-    // block (state machine refactor) and will fix the dependency properly.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
 
   return (
     <C.Provider value={{ ...s, reload, mutateSpeakers, mutateConfig }}>{children}</C.Provider>

@@ -6,17 +6,21 @@ import { ActionButtons } from '../components/ActionButtons';
 import { AdminOverride } from '../components/AdminOverride';
 import { Checklist } from '../components/Checklist';
 import { canFinalize, setField, phaseOf, type FieldKey } from '../state/phases';
+import { effectiveStatus } from '../state/derived';
 import type { Speaker } from '../data/types';
 
 export function SpeakerPage() {
   const { id } = useParams();
-  const { speakers, loading, error, mutateSpeakers } = useData();
+  const { speakers, loading, error, config, mutateSpeakers } = useData();
   const { login } = useAuth();
   const role = useRole();
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
   if (error) return <p className="text-danger">Error: {error}</p>;
   const s = speakers.find(sp => sp.id === id);
   if (!s) return <Navigate to="/pipeline" replace />;
+  // Display only: what has aired, not necessarily what's recorded yet — the
+  // scheduled job (tools/convener_ops/sweep.py) is the single writer for that.
+  const displayStatus = config ? effectiveStatus(s, config, new Date()) : s.status;
 
   async function toggle(key: string, value: boolean) {
     if (!login || !id) return;
@@ -61,7 +65,7 @@ export function SpeakerPage() {
         {s.country && ` · ${s.country}`}
       </p>
       <p className="text-ink-muted mt-1">
-        Status: <strong>{s.status}</strong>
+        Status: <strong>{displayStatus}</strong>
         {s.date && ` · ${s.date}`}
         {s.time && ` · ${s.time}`}
         {s.host_1 && ` · host 1: ${s.host_1}`}

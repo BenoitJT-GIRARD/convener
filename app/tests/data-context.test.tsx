@@ -56,6 +56,46 @@ describe('DataProvider (demo mode)', () => {
   it('useData throws when used outside a provider', () => {
     expect(() => renderHook(() => useData())).toThrow(/outside provider/);
   });
+
+  it('reload() in demo mode resets to the demo dataset without network access', async () => {
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.mutateSpeakers(current => current.map(s => ({ ...s, notes: 'x' })), 'x');
+    });
+    expect(result.current.speakers[0].notes).toBe('x');
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.speakers[0].notes).not.toBe('x');
+    expect(result.current.loading).toBe(false);
+  });
+});
+
+describe('DataProvider (no session)', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('reload/mutateSpeakers/mutateConfig no-op without a token', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await act(async () => {
+      await result.current.reload();
+    });
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await result.current.mutateSpeakers(current => current, 'noop');
+    });
+    expect(ok).toBe(false);
+    await act(async () => {
+      ok = await result.current.mutateConfig(current => current, 'noop');
+    });
+    expect(ok).toBe(false);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('DataProvider (real GitHub backend)', () => {
@@ -87,6 +127,26 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.error).toBeNull();
   });
 
+  it('falls back to the default config when config.yml has no parseable object', async () => {
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/user')) {
+          return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(''), sha: 'cfgsha' }) });
+      }),
+    );
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.config?.season).toBe(2026);
+    expect(result.current.config?.vw_counter).toBe(1);
+  });
+
   it('sets an error message when the fetch fails', async () => {
     vi.stubGlobal(
       'fetch',
@@ -102,12 +162,12 @@ describe('DataProvider (real GitHub backend)', () => {
     expect(result.current.error).toMatch(/GitHub 500/);
   });
 
-  it('auto-sweeps a past scheduled talk to delivered and PUTs the update', async () => {
+  it('never PUTs on load, even when a scheduled talk is long past its end time', async () => {
     const spkYaml = speakersYaml([
       { id: 'a', status: 'scheduled', date: '2000-01-01', time: '' },
     ]);
     const cfgYaml = 'season: 2026\nboard_members: []\n';
-    let putBody: string | undefined;
+    const putSpy = vi.fn();
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, opts?: RequestInit) => {
@@ -115,7 +175,7 @@ describe('DataProvider (real GitHub backend)', () => {
           return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
         }
         if (url.includes('speakers.yml') && opts?.method === 'PUT') {
-          putBody = opts.body as string;
+          putSpy();
           return Promise.resolve({ ok: true, json: async () => ({ content: { sha: 'sweptsha' } }) });
         }
         if (url.includes('speakers.yml')) {
@@ -126,17 +186,19 @@ describe('DataProvider (real GitHub backend)', () => {
     );
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    await waitFor(() => expect(result.current.spkSha).toBe('sweptsha'));
-    expect(result.current.speakers[0].status).toBe('delivered');
-    expect(putBody).toBeDefined();
-    expect(JSON.parse(putBody!).message).toMatch(/auto-sweep/);
+    // The raw record is untouched: writing the transition is the scheduled
+    // job's business (tools/convener_ops/sweep.py), not the browser's.
+    expect(result.current.speakers[0].status).toBe('scheduled');
+    expect(result.current.spkSha).toBe('spksha');
+    expect(putSpy).not.toHaveBeenCalled();
   });
 
-  it('auto-sweeps a past scheduled talk with a set time to delivered', async () => {
+  it('never PUTs on load for a scheduled talk with a set time that has already ended', async () => {
     const spkYaml = speakersYaml([
       { id: 'a', status: 'scheduled', date: '2000-01-01', time: '12:30' },
     ]);
     const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const putSpy = vi.fn();
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, opts?: RequestInit) => {
@@ -144,6 +206,7 @@ describe('DataProvider (real GitHub backend)', () => {
           return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
         }
         if (url.includes('speakers.yml') && opts?.method === 'PUT') {
+          putSpy();
           return Promise.resolve({ ok: true, json: async () => ({ content: { sha: 'sweptsha' } }) });
         }
         if (url.includes('speakers.yml')) {
@@ -154,7 +217,8 @@ describe('DataProvider (real GitHub backend)', () => {
     );
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    await waitFor(() => expect(result.current.speakers[0].status).toBe('delivered'));
+    expect(result.current.speakers[0].status).toBe('scheduled');
+    expect(putSpy).not.toHaveBeenCalled();
   });
 
   it('does not sweep a scheduled talk with a set time that has not started yet', async () => {
@@ -279,6 +343,64 @@ describe('DataProvider (real GitHub backend)', () => {
 
     expect(ok).toBe(false);
     expect(result.current.error).toMatch(/someone else is editing/);
+  });
+
+  it('reload() re-fetches from GitHub without writing anything', async () => {
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    const putSpy = vi.fn();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, opts?: RequestInit) => {
+        if (url.includes('/user')) {
+          return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+        }
+        if (opts?.method === 'PUT') {
+          putSpy();
+          return Promise.resolve({ ok: true, json: async () => ({ content: { sha: 'x' } }) });
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha2' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(cfgYaml), sha: 'cfgsha2' }) });
+      }),
+    );
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.spkSha).toBe('spksha2');
+    expect(result.current.error).toBeNull();
+    expect(putSpy).not.toHaveBeenCalled();
+  });
+
+  it('reload() surfaces a fetch failure through `error`', async () => {
+    const spkYaml = speakersYaml([{ id: 'a', status: 'lead', date: '', time: '' }]);
+    const cfgYaml = 'season: 2026\nboard_members: []\n';
+    let fail = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/user')) {
+          return Promise.resolve({ ok: true, json: async () => ({ login: 'alice' }) });
+        }
+        if (fail) {
+          return Promise.resolve({ ok: false, status: 500, text: async () => 'boom' });
+        }
+        if (url.includes('speakers.yml')) {
+          return Promise.resolve({ ok: true, json: async () => ({ content: btoa(spkYaml), sha: 'spksha' }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ content: btoa(cfgYaml), sha: 'cfgsha' }) });
+      }),
+    );
+    const { result } = renderHook(() => useData(), { wrapper: Providers });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    fail = true;
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.error).toMatch(/GitHub 500/);
   });
 
   it('mutateConfig surfaces a ConflictError through `error` instead of an unhandled rejection', async () => {
