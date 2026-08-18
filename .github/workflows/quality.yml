@@ -60,3 +60,15 @@ jobs:
       - name: Tests and coverage
         working-directory: app
         run: npm run test:cov
+
+  spelling:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Spell check (en-GB)
+        run: npx --yes cspell@8 lint --no-progress

@@ -8,7 +8,7 @@
 
 Dear {{ speaker.first_name }},
 
-We are organizers of **The Example Collective Monthly Reading Group** — a community series of online seminars on behavioural science, with a discussion both before and after each talk on our forum.
+We are organisers of **The Example Collective Monthly Reading Group** — a community series of online seminars on behavioural science, with a discussion both before and after each talk on our forum.
 
 We would be delighted to invite you to give a talk on **{{ speaker.title }}**. The format is a Thursday, **12:30–14:00 CET**: roughly a 40-minute talk followed by a moderated discussion, before an international community of behaviour researchers.
 

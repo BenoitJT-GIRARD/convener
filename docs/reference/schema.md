@@ -51,7 +51,7 @@ describe the workshop they deliver.
 The state machine governs transitions. Statuses:
 
 - `lead` — submitted, awaiting board review
-- `approved` — board voted in favor; preparing invitation
+- `approved` — board voted in favour; preparing invitation
 - `invited` — invitation sent, awaiting reply
 - `confirmed` — speaker accepted, no date locked yet
 - `scheduled` — date locked + edition code assigned; runbook drives the rest
