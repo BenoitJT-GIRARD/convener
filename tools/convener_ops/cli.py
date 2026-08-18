@@ -18,13 +18,14 @@ from convener_ops.proposal import skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
+from convener_ops.yaml_safe import safe_load as yaml_safe_load
 
 
 def _load(path: Path) -> tuple[Any, list[str]]:
     if not path.exists():
         return None, [f"{path.name}: file missing"]
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8")), []
+        return yaml_safe_load(path.read_text(encoding="utf-8")), []
     except yaml.YAMLError as exc:
         return None, [f"{path.name}: invalid YAML - {exc}"]
 

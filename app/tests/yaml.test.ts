@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { parseSpeakers, serializeSpeakers, parseConfig, serializeConfig } from '../src/data/yaml';
 import { SPEAKERS_HEADER, withSpeakersHeader, stripHeader } from '../src/data/yaml';
@@ -87,5 +89,19 @@ describe('speakers serialisation round-trip', () => {
       serializeSpeakers(parseSpeakers(stripHeader(once))),
     );
     expect(twice).toBe(once);
+  });
+});
+
+describe('JS/Python YAML boundary (I1)', () => {
+  // tools/tests/test_yaml_boundary.py loads this same file and asserts the
+  // Python validator accepts it -- this is the one round-trip test the
+  // language boundary never had. `time` and `date` are non-empty on
+  // purpose: they're the two fields YAML 1.1 (PyYAML's default resolvers)
+  // misreads when unquoted, and this fixture must always stay byte-for-byte
+  // what serializeSpeakers actually emits, not a hand-typed approximation.
+  it('matches the checked-in fixture consumed by the Python validator test', () => {
+    const fixturePath = resolve(__dirname, '../../tools/tests/fixtures/speakers-from-app.yml');
+    const fixture = readFileSync(fixturePath, 'utf-8');
+    expect(withSpeakersHeader(serializeSpeakers([sample]))).toBe(fixture);
   });
 });
