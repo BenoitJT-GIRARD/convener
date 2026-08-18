@@ -143,3 +143,62 @@ repository still needs to know they exist and where they live.
   *Authentication relay*: used by *Deploy auth relay* to deploy the
   worker in `services/auth-proxy/`. Listed again here because it is the
   same kind of CI-only, cross-account credential as the other two.
+
+## After the September collaborators' meeting
+
+Two changes to the governance data are deliberately deferred until the
+collaborators' meeting in September. They are a deferred configuration in
+the sense of decision D-13 — the state below is normal and expected, not a
+defect to be rediscovered and not something to fix piecemeal beforehand.
+Both changes touch `data/config.yml` and `data/speakers.yml`, and they are
+easiest done together, in one commit, with `cd tools && uv run convener-validate`
+run before it is pushed.
+
+**What this costs until then:** the Board is declared as five members while
+only four people sit on it (see step 2), so the threshold — two thirds of
+the eligible board, rounded up — is four, and only four people ever vote.
+A lead therefore needs every available voice to be approved: effective
+unanimity. This is a known, accepted, temporary state.
+
+### 1. Replace the Board identifiers with real GitHub logins
+
+`data/config.yml` currently lists the Board as `Anonymous`, `Anonymous`,
+`Anonymous`, `Anonymous` and `Anonymous`. Only `Anonymous` is a GitHub login; the
+other four are first names. Role detection matches the signed-in GitHub
+account against these values, so today it recognises nobody but that one
+account — every other member is treated as a visitor.
+
+Collect each member's GitHub login at the meeting, then rewrite both files
+in step:
+
+1. `data/config.yml` — every `board[].login`.
+2. `data/speakers.yml` — every `selection.ballots[].voter`, using exactly
+   the same mapping. The ballots carry the same first-name identifiers, and
+   a vote is tallied only from ballots whose voter is on the Board
+   (`tools/convener_ops/governance.py`), so a Board renamed on its own would
+   silently discard every vote cast so far.
+
+Nothing else in `data/speakers.yml` holds a Board identifier today:
+`assigned_to` and `publication.approved_by` are empty everywhere, and
+`host_1` and `host_2` hold people's display names, which are not logins and
+must not be rewritten. Check that this is still true before starting.
+
+`convener-validate` reports any voter you miss as `ballot from a non-member`.
+
+### 2. Merge the duplicate member and lower `board_min`
+
+`Anonymous` and `Anonymous` are the same person, recorded twice. Delete one of
+the two entries, keeping that person's real GitHub login. The Board then
+goes from five members to four, and the threshold from four to three.
+
+`board_min` is `5` in `data/config.yml` and must become `3` in the same
+change, or validation fails with `board has 4 members, outside
+board_min..board_max`. Three is the floor set by decision G-03: a vote is
+suspended rather than decided below three eligible members, so the Board
+must never be declared smaller than that.
+
+Rewrite the ballots of whichever identifier disappears to the surviving
+one. If any lead ends up with two ballots from the merged person, keep one:
+one person casts one voice, and a repeated voter is a validation error.
+No lead carries ballots from both identifiers at the time of writing —
+`Anonymous` has never voted — but confirm it rather than assume it.
