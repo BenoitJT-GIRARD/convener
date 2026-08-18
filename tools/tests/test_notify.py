@@ -18,6 +18,7 @@ from conftest import nomination, objection, speaker
 
 from convener_ops import cli, notify
 from convener_ops.commit_format import judgemental_terms
+from convener_ops.governance import vote_window_days
 from convener_ops.notify import (
     EVENT_KINDS,
     MENTION_ENV,
@@ -37,6 +38,7 @@ from convener_ops.notify import (
     waiting_since,
 )
 from convener_ops.paths import repo_root
+from convener_ops.sweep import expire_votes
 
 NOW = datetime(2026, 8, 18, 9, 0, tzinfo=UTC)
 
@@ -252,6 +254,94 @@ def test_a_vote_window_opened_yesterday_does_not_reach_todays_digest() -> None:
         )
     ]
     assert daily_digest(speakers, make_config(), NOW) is None
+
+
+def test_a_lead_parked_by_the_sweep_today_reaches_the_digest() -> None:
+    """Spec section 7 asks for automatic transitions in the digest, and this
+    is the only one there is.
+
+    `expire_votes` writes `status: parked` and no day, so the day is derived
+    from `selection.opened_on` and `config.vote_window_days` -- the same
+    single definition the sweep parks on. The window here is 10 days, the
+    closing day is still a voting day, so the parking day is opened_on + 11.
+    """
+    speakers = [
+        lead(
+            id="spk-004",
+            status="parked",
+            selection={"ballots": [], "opened_on": "2026-08-07", "decided_on": ""},
+        )
+    ]
+    digest = daily_digest(speakers, make_config(), NOW)
+    assert digest is not None
+    assert "spk-004: the vote window closed and the lead was parked" in digest
+
+
+def test_a_lead_parked_on_another_day_does_not_reach_todays_digest() -> None:
+    for opened_on in ("2026-08-06", "2026-08-08", "2026-07-01"):
+        speakers = [
+            lead(
+                id="spk-004",
+                status="parked",
+                selection={"ballots": [], "opened_on": opened_on, "decided_on": ""},
+            )
+        ]
+        digest = daily_digest(speakers, make_config(), NOW)
+        assert digest is None or "was parked" not in digest, opened_on
+
+
+def test_the_parked_line_follows_the_window_the_sweep_actually_applies() -> None:
+    """One definition, read from both sides.
+
+    `governance.vote_window_days` is what `sweep.expire_votes` parks on and
+    what the digest names the day from, so a config that lengthens the window
+    moves both together. A second copy here would let the digest announce a
+    parking on a day the job did not act.
+    """
+    cfg = make_config(vote_window_days=21)
+    entry = lead(
+        id="spk-004",
+        status="parked",
+        selection={"ballots": [], "opened_on": "2026-07-27", "decided_on": ""},
+    )
+    assert vote_window_days(cfg) == 21
+    digest = daily_digest([entry], cfg, NOW)
+    assert digest is not None
+    assert "spk-004: the vote window closed and the lead was parked" in digest
+    assert "was parked" not in (daily_digest([entry], make_config(), NOW) or "")
+
+
+def test_a_parked_lead_that_reached_a_decision_is_not_announced_as_expiring() -> None:
+    """`expire_votes` never touches a lead the board decided, so a parked
+    record carrying `decided_on` was parked by a person. The digest has
+    nothing automatic to report about it."""
+    entry = lead(
+        id="spk-004",
+        status="parked",
+        selection={
+            "ballots": [],
+            "opened_on": "2026-08-07",
+            "decided_on": "2026-08-10",
+        },
+    )
+    digest = daily_digest([entry], make_config(), NOW)
+    assert digest is None or "was parked" not in digest
+
+
+def test_the_parked_line_is_the_line_the_sweep_would_produce_that_day() -> None:
+    """Not two implementations of the same rule: the sweep is run over the
+    same record and the day it acts on is the day the digest names."""
+    entry = lead(
+        id="spk-004",
+        status="lead",
+        selection={"ballots": [], "opened_on": "2026-08-07", "decided_on": ""},
+    )
+    cfg = make_config()
+    swept, changes = expire_votes([entry], cfg, NOW)
+    assert changes, "the sweep does not park this record today"
+    digest = daily_digest(swept, cfg, NOW)
+    assert digest is not None
+    assert "spk-004: the vote window closed and the lead was parked" in digest
 
 
 def test_a_nomination_opened_today_reaches_the_digest_without_naming_anyone() -> None:
@@ -574,6 +664,13 @@ def every_rendering() -> list[str]:
                 "decided_on": "2026-08-18",
             },
         ),
+        # Parked today by the sweep: the window opened 11 days ago, and the
+        # configured window is 10 days.
+        loaded(
+            id="spk-006",
+            status="parked",
+            selection={"ballots": [], "opened_on": "2026-08-07", "decided_on": ""},
+        ),
         # Delivered today, publication approved today, one objection lodged
         # today and one closed today.
         loaded(
@@ -603,6 +700,7 @@ def every_rendering() -> list[str]:
     for expected in (
         "the vote window opened",
         "the board decision was recorded",
+        "the vote window closed and the lead was parked",
         "the talk is recorded as delivered",
         "the publication was approved",
         "an objection was lodged on the publication",

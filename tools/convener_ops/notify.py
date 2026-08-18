@@ -84,7 +84,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Final
 
-from convener_ops.governance import paris_today
+from convener_ops.governance import paris_today, vote_window_days
 
 # ------------------------------------------------------------------ #
 # Lateness -- the twin of `app/src/state/sla.ts`
@@ -445,6 +445,36 @@ def _publication_day(entry: Mapping[str, Any], key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _parked_on(entry: Mapping[str, Any], config: Any) -> str:
+    """The day this record's vote window ran out, if that is why it is parked.
+
+    The one automatic transition that leaves no date of its own.
+    `sweep.expire_votes` writes `status: parked` and nothing else, and this
+    module takes no previous file to diff against -- so the day is *derived*
+    from the two things the record does hold, `selection.opened_on` and the
+    configured window, using `governance.vote_window_days`, the same single
+    definition the sweep parks on. The sweep bites on the first day after the
+    window closes (the closing day is still a day the board may vote), so
+    that is the day named here.
+
+    `''` for anything else: a lead the board parked by hand carries no
+    `opened_on`-derived day that means anything, so this returns a day only
+    for a record that is parked, has an opened window, and reached no
+    decision. What it costs is that a sweep which does not run on its
+    scheduled morning parks a day late while this still names the day the
+    window closed; `daily_digest`'s docstring says so rather than leaving the
+    reader to find out.
+    """
+    if entry.get("status") != "parked":
+        return ""
+    if _selection_day(entry, "decided_on"):
+        return ""
+    opened = _iso(_selection_day(entry, "opened_on"))
+    if opened is None:
+        return ""
+    return (opened + timedelta(days=vote_window_days(config) + 1)).isoformat()
+
+
 def _happened_today(speakers: Sequence[Any], config: Any, today: str) -> list[str]:
     """Everything the repository records as having happened on `today`.
 
@@ -462,6 +492,8 @@ def _happened_today(speakers: Sequence[Any], config: Any, today: str) -> list[st
             lines.append(f"{rid}: the vote window opened")
         if _selection_day(entry, "decided_on") == today:
             lines.append(f"{rid}: the board decision was recorded")
+        if _parked_on(entry, config) == today:
+            lines.append(f"{rid}: the vote window closed and the lead was parked")
         if entry.get("status") == "delivered" and entry.get("date") == today:
             lines.append(f"{rid}: the talk is recorded as delivered")
         if _publication_day(entry, "approved_on") == today:
@@ -537,6 +569,16 @@ def daily_digest(speakers: Any, config: Any, now: datetime) -> str | None:
     `now` is an instant; the day is taken in Paris (`governance.paris_today`),
     never off a UTC clock, so a run between 00:00 and 02:00 Paris does not
     report yesterday.
+
+    **The one automatic transition, and how it is dated.** Spec section 7 asks
+    for automatic transitions here. There is exactly one -- `expire_votes`
+    parking a lead whose window ran out -- and it writes `status: parked` and
+    no day. `_parked_on` derives that day from `selection.opened_on` and
+    `governance.vote_window_days`, the same single definition the sweep parks
+    on, so the digest cannot describe a window the job did not apply. It does
+    assume the sweep ran on its scheduled morning: a job that misses a day
+    parks a day late while this still names the day the window closed. That is
+    a wrong day, not a wrong record, and it is stated here rather than hidden.
 
     **What this cannot report, and why nothing is invented to cover it.** Spec
     section 7 also lists locked dates and settled nominations. Neither leaves a

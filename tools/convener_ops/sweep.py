@@ -19,11 +19,8 @@ from convener_ops.governance import (
     decide,
     last_ballot_on,
     paris_today,
+    vote_window_days,
 )
-
-#: Spec default for the vote window when `config.vote_window_days` is absent
-#: or unusable. Days, counted from `selection.opened_on`.
-DEFAULT_VOTE_WINDOW_DAYS = 14
 
 
 def _start(date: str, time: str) -> datetime:
@@ -68,20 +65,6 @@ def _parse_date(value: str) -> date | None:
         return None
 
 
-def _vote_window_days(config: dict[str, Any]) -> int:
-    """The configured vote window, or the spec's 14-day default.
-
-    Absent, zero, negative or non-integer: all fall back to the default rather
-    than to zero. A config that never mentions the key must degrade to "do
-    nothing today", never to "park every open lead tomorrow" - the scheduled
-    job runs without a validation pass, so an unchecked config reaches here.
-    """
-    raw = config.get("vote_window_days")
-    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 1:
-        return DEFAULT_VOTE_WINDOW_DAYS
-    return raw
-
-
 def expire_votes(
     speakers: list[dict[str, Any]],
     config: dict[str, Any],
@@ -100,7 +83,7 @@ def expire_votes(
     Neither side keeps a per-ballot roster, so "the vote date" of a window
     open for two weeks can only be the day the question is asked.
     """
-    window_days = _vote_window_days(config)
+    window_days = vote_window_days(config)
     today = paris_today(now)
     board_logins, unavailable = active_board(config, today.isoformat())
     swept = copy.deepcopy(speakers)
@@ -160,8 +143,9 @@ def _inactivity_months(config: dict[str, Any]) -> int | None:
 
     Absent, zero, negative or non-integer all degrade to `None` rather than to
     a built-in default, which is the opposite choice from
-    `_vote_window_days`'s. The two safe directions are opposite: there, the
-    spec default is the value that parks nothing today; here, *any* number
+    `governance.vote_window_days`'s. The two safe directions are opposite:
+    there, the spec default is the value that parks nothing today; here, *any*
+    number
     would name somebody, and no hand-edit to `config.yml` should be able to
     put a volunteer's name on a list by accident. A missing key means the
     board has not adopted the rule, so the rule says nothing.

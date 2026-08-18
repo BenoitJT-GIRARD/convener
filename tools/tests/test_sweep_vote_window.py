@@ -15,12 +15,12 @@ from typing import Any
 
 import pytest
 
-from convener_ops.governance import PARIS
-from convener_ops.sweep import (
+from convener_ops.governance import (
     DEFAULT_VOTE_WINDOW_DAYS,
-    _vote_window_days,
-    expire_votes,
+    PARIS,
+    vote_window_days,
 )
+from convener_ops.sweep import expire_votes
 
 
 def ballot(**overrides: Any) -> dict[str, Any]:
@@ -198,7 +198,7 @@ def test_the_window_closes_on_the_paris_calendar_not_the_utc_one() -> None:
 
 def test_the_default_window_is_fourteen_days() -> None:
     assert DEFAULT_VOTE_WINDOW_DAYS == 14
-    assert _vote_window_days({}) == 14
+    assert vote_window_days({}) == 14
 
 
 @pytest.mark.parametrize("value", [0, -1, "10", 10.5, None, True, [10]])
@@ -206,11 +206,11 @@ def test_an_unusable_window_falls_back_to_the_default(value: object) -> None:
     # A missing or nonsensical value must degrade to "do nothing yet", never
     # to "act on everything": a window of 0 would park every open lead the
     # day after it opened, and the scheduled job runs with no validation pass.
-    assert _vote_window_days({"vote_window_days": value}) == DEFAULT_VOTE_WINDOW_DAYS
+    assert vote_window_days({"vote_window_days": value}) == DEFAULT_VOTE_WINDOW_DAYS
 
 
 def test_a_configured_window_is_honoured() -> None:
-    assert _vote_window_days({"vote_window_days": 21}) == 21
+    assert vote_window_days({"vote_window_days": 21}) == 21
 
 
 def test_a_config_without_the_key_uses_fourteen_days_end_to_end() -> None:

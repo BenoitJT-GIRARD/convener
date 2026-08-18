@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -244,6 +244,30 @@ def decide(
 # ------------------------------------------------------------------ #
 
 #: Saturday and Sunday, as `datetime.date.weekday` numbers them.
+#: Spec default for the vote window when `config.vote_window_days` is absent
+#: or unusable. Days, counted from `selection.opened_on`.
+DEFAULT_VOTE_WINDOW_DAYS = 14
+
+
+def vote_window_days(config: Any) -> int:
+    """The configured vote window, or the spec's 14-day default.
+
+    Absent, zero, negative or non-integer: all fall back to the default rather
+    than to zero. A config that never mentions the key must degrade to "do
+    nothing today", never to "park every open lead tomorrow" - the scheduled
+    job runs without a validation pass, so an unchecked config reaches here.
+
+    Lives here rather than in `sweep.py` because two modules read it now:
+    `sweep.expire_votes`, which parks on it, and `notify._happened_today`,
+    which has to name the same day the sweep acted on. One copy, so the
+    digest cannot describe a window the job did not apply.
+    """
+    raw = config.get("vote_window_days") if isinstance(config, Mapping) else None
+    if isinstance(raw, bool) or not isinstance(raw, int) or raw < 1:
+        return DEFAULT_VOTE_WINDOW_DAYS
+    return raw
+
+
 _WEEKEND = frozenset({5, 6})
 
 
