@@ -1,5 +1,6 @@
 import type { Config } from '../data/types';
 import { isBoardMember } from '../state/board';
+import { parisToday } from '../state/derived';
 
 const ORG = 'The Example Collective';
 const TEAM = 'editorial-board';
@@ -43,7 +44,7 @@ export async function detectRole(
     /* network or CORS -- fall through to config fallback */
   }
   if (config) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = parisToday();
     if (isBoardMember(config, login, today)) return 'board';
   }
   return 'organizer';

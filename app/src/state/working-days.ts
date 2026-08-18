@@ -38,7 +38,11 @@ function epochOf(day: string): number {
   return Date.parse(`${day}T00:00:00Z`);
 }
 
+/** The inverse of `epochOf`. UTC here is not the P2-9 defect: the epoch being
+ *  formatted is one this module built from an ISO day at midnight UTC, never a
+ *  reading of the clock, so `parisToday()` would be the wrong tool. */
 function isoOf(epoch: number): string {
+  // eslint-disable-next-line no-restricted-syntax -- see above: a fixed epoch, not "now".
   return new Date(epoch).toISOString().slice(0, 10);
 }
 

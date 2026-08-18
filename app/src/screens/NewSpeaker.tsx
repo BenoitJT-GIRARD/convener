@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { assignLead } from '../state/board';
+import { parisToday } from '../state/derived';
 import { useAuth } from '../auth/AuthContext';
 import { CAREER_STAGES } from '../data/types';
 import type { Speaker, Gender, CareerStage } from '../data/types';
@@ -53,7 +54,7 @@ export function NewSpeaker() {
     e.preventDefault();
     if (!form.name.trim() || !login || !config) return;
     setBusy(true);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = parisToday();
     try {
       const fields: Omit<Speaker, 'id'> = {
         name: form.name.trim(),

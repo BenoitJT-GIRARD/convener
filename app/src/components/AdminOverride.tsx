@@ -4,6 +4,7 @@ import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { activeBoard } from '../state/board';
 import { applyTransition, canTransition } from '../state/transitions';
+import { parisToday } from '../state/derived';
 import type { Speaker, SpeakerStatus, Gender } from '../data/types';
 
 const ALL_STATUSES: SpeakerStatus[] = [
@@ -346,7 +347,7 @@ function HiddenConflict({ speaker }: { speaker: Speaker }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisToday();
   const board = config ? activeBoard(config, today).logins : [];
   const allowed = canTransition(speaker, 'vote-reopen', 'board');
   const armed = allowed && !!login && !!config && member !== '' && reason.trim() !== '' && !busy;

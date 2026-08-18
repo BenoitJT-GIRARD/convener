@@ -14,6 +14,7 @@ import {
   resolveNominations,
 } from '../state/board';
 import type { Config, Nomination } from '../data/types';
+import { parisToday } from '../state/derived';
 
 const OUTCOME_LABEL: Record<Nomination['outcome'], string> = {
   '': 'Open',
@@ -43,7 +44,7 @@ export function Board() {
   if (error) return <LoadError message={error} />;
   if (!config || !login) return <p className="text-ink-muted">Nothing to show yet.</p>;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisToday();
   const me = login;
   const iAmMember = isBoardMember(config, me, today);
   const due = dueOutcomes(config, today);

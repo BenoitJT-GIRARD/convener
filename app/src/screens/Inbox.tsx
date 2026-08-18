@@ -3,6 +3,7 @@ import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { deriveInbox, type InboxRow } from '../state/inbox';
+import { parisToday } from '../state/derived';
 import { LoadError } from '../components/LoadError';
 
 export function Inbox() {
@@ -12,7 +13,7 @@ export function Inbox() {
   if (loading || !role) return <p className="text-ink-muted">Loading…</p>;
   if (error) return <LoadError message={error} />;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisToday();
   const rows = deriveInbox(speakers, login, role, today);
   const votes = rows.filter(r => r.kind === 'vote');
   const actions = rows.filter(r => r.kind === 'action');

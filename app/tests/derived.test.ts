@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { effectiveStatus, hasEnded, parisWallTimeToEpoch } from '../src/state/derived';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  effectiveStatus,
+  hasEnded,
+  parisDayOf,
+  parisToday,
+  parisWallTimeToEpoch,
+} from '../src/state/derived';
 import type { Config, Speaker } from '../src/data/types';
 
 const config: Config = {
@@ -60,8 +66,17 @@ describe('hasEnded', () => {
 
   it('falls back to the next day when no time is recorded', () => {
     const noTime = scheduled('2026-01-08', '');
-    expect(hasEnded(noTime, config, new Date('2026-01-08T23:00:00Z'))).toBe(false);
+    // 23:00 Paris on the 8th, still the day of the seminar.
+    expect(hasEnded(noTime, config, new Date('2026-01-08T22:00:00Z'))).toBe(false);
     expect(hasEnded(noTime, config, new Date('2026-01-09T08:00:00Z'))).toBe(true);
+  });
+
+  it('rolls a timeless row over at Paris midnight, not UTC midnight', () => {
+    // 23:00Z on the 8th is already 00:00 on the 9th in Paris: the seminar's day
+    // is over there, and Paris is where the series is run. Under the old UTC
+    // reading this was still the 8th and the row read as not yet ended (P2-9).
+    const noTime = scheduled('2026-01-08', '');
+    expect(hasEnded(noTime, config, new Date('2026-01-08T23:00:00Z'))).toBe(true);
   });
 
   it('treats a configured duration of 0 as unset and falls back to 90 minutes', () => {
@@ -88,5 +103,51 @@ describe('effectiveStatus', () => {
   it('leaves every other status untouched', () => {
     const lead = { ...scheduled('2026-01-08'), status: 'lead' as const };
     expect(effectiveStatus(lead, config, new Date('2027-01-01T00:00:00Z'))).toBe('lead');
+  });
+});
+
+describe('parisDayOf', () => {
+  it('reads the Paris day, not the UTC day, in winter', () => {
+    // 23:30Z on 11 January is 00:30 on the 12th in Paris (UTC+1).
+    expect(parisDayOf(new Date('2026-01-11T23:30:00Z'))).toBe('2026-01-12');
+    // ...while half an hour earlier the two zones still agree.
+    expect(parisDayOf(new Date('2026-01-11T22:30:00Z'))).toBe('2026-01-11');
+  });
+
+  it('reads the Paris day in summer, where the offset is two hours', () => {
+    // 22:30Z on 11 July is already 00:30 on the 12th in Paris (UTC+2), an hour
+    // earlier than the winter boundary -- so the offset is genuinely read from
+    // the zone rather than hard-coded.
+    expect(parisDayOf(new Date('2026-07-11T22:30:00Z'))).toBe('2026-07-12');
+    expect(parisDayOf(new Date('2026-07-11T21:30:00Z'))).toBe('2026-07-11');
+  });
+
+  it('never disagrees with the UTC day in the middle of the afternoon', () => {
+    expect(parisDayOf(new Date('2026-03-04T12:00:00Z'))).toBe('2026-03-04');
+  });
+});
+
+describe('parisToday', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('is the Paris day when the clock reads the previous day in UTC', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-11T23:30:00Z')); // 00:30 Paris, the 12th
+    expect(parisToday()).toBe('2026-01-12');
+    expect(new Date().toISOString().slice(0, 10)).toBe('2026-01-11'); // the old answer
+  });
+
+  it('is the Paris day across the summer offset too', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-11T22:30:00Z')); // 00:30 Paris, the 12th
+    expect(parisToday()).toBe('2026-07-12');
+  });
+
+  it('agrees with UTC when the two zones are on the same day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-11T09:00:00Z'));
+    expect(parisToday()).toBe('2026-07-11');
   });
 });

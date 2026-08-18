@@ -13,6 +13,7 @@ import { useAuth } from '../auth/AuthContext';
 import { findOverlaps, nextEditionCode } from '../state/agenda';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';
+import { parisToday } from '../state/derived';
 import type { BallotValue, Speaker } from '../data/types';
 
 interface Props {
@@ -28,7 +29,7 @@ export function ActionButtons({ speaker, role }: Props) {
   // reads the board from it, and `fire` would otherwise no-op in silence.
   const locked = busy || !config;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisToday();
   // The threshold is never stored: it follows from who is eligible today, so
   // it is recomputed on every render from the board and the ballots cast.
   const board = config ? activeBoard(config, today) : { logins: [], unavailable: [] };

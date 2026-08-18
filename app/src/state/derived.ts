@@ -30,6 +30,41 @@ export function parisWallTimeToEpoch(dateStr: string, timeStr: string): number {
   return probe.getTime() - (Date.parse(parisIso) - probe.getTime());
 }
 
+/**
+ * The ISO `YYYY-MM-DD` calendar day an instant falls on in Europe/Paris.
+ *
+ * `Intl` is asked for the Paris wall date directly rather than an offset being
+ * applied by hand, so DST is the platform's problem and not ours. `en-CA`
+ * formats dates as `YYYY-MM-DD`, which is the shape every date in the data
+ * files and every comparison in this app already uses.
+ */
+const PARIS_DAY = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Paris',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+export function parisDayOf(instant: Date): string {
+  return PARIS_DAY.format(instant);
+}
+
+/**
+ * Today, in Europe/Paris.
+ *
+ * The one way this app is allowed to ask what day it is. `new Date()
+ * .toISOString().slice(0, 10)` is a *UTC* day, and between midnight and 01:00
+ * (02:00 in summer) Paris it is still yesterday's -- which matters because
+ * several callers do not merely compare this value, they persist it:
+ * `opened_on`, `joined_on`, `decided_on`, and every working-day deadline
+ * derived from them. A volunteer acting late in the evening would stamp the
+ * record with the wrong day and every later comparison would inherit it.
+ * `tools/convener_ops/sweep.py::_paris_today` anchors the unattended job the same
+ * way; an ESLint rule in `eslint.config.js` keeps the UTC form from coming
+ * back (P2-9).
+ */
+export function parisToday(): string {
+  return parisDayOf(new Date());
+}
+
 export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
   if (s.status !== 'scheduled' || !s.date) return false;
   if (s.time) {
@@ -40,7 +75,7 @@ export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
     return now.getTime() >= parisWallTimeToEpoch(s.date, s.time) + duration;
   }
   // Legacy rows carry no time: treat them as over the following day.
-  return s.date < now.toISOString().slice(0, 10);
+  return s.date < parisDayOf(now);
 }
 
 /**
