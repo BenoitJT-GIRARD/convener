@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'data/speakers.yml'
-      - '.github/scripts/filter_public_data.py'
+      - 'tools/**'
 
 jobs:
   publish:
@@ -14,11 +14,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: '3.x'
-      - run: pip install pyyaml
-      - run: python .github/scripts/filter_public_data.py
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - name: Build public data
+        working-directory: tools
+        run: uv run convener-public-data
       - name: Push to example-showcase
         env:
           DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}

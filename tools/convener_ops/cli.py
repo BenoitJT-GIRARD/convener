@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from collections import Counter
@@ -13,6 +14,7 @@ import yaml
 
 from convener_ops.integrations import Integration, load_declaration, resolve_states
 from convener_ops.paths import repo_root
+from convener_ops.public_data import to_public
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import validate_config, validate_speakers
 
@@ -108,6 +110,24 @@ def sweep() -> int:
     )
     for change in changes:
         print(change)
+    return 0
+
+
+def public_data() -> int:
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"  - {error}")
+        return 1
+
+    rows = to_public(speakers or [])
+    out_dir = root / "public-data"
+    out_dir.mkdir(exist_ok=True)
+    (out_dir / "events-public.json").write_text(
+        json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(rows)} events")
     return 0
 
 
