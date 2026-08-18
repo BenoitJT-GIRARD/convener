@@ -5,6 +5,7 @@ const LINKS = [
   { to: '/pipeline', label: 'Pipeline' },
   { to: '/agenda', label: 'Agenda' },
   { to: '/archive', label: 'Archive' },
+  { to: '/board', label: 'Board' },
   { to: '/handbook', label: 'Handbook' },
   { to: '/templates', label: 'Templates' },
 ];

@@ -11,7 +11,7 @@
  * implements the same rule for the public-form intake path, and both are
  * pinned by `tools/tests/fixtures/governance-cases.json`'s `assign_lead_cases`.
  */
-import type { BoardMember, Config, Speaker } from '../data/types';
+import type { BoardMember, Config, Nomination, Speaker } from '../data/types';
 
 export interface Board {
   logins: string[];
@@ -105,4 +105,304 @@ export function assignLead(speakers: Speaker[], config: Config, on: string): str
     const better = count < bestCount || (count === bestCount && recent < bestRecent);
     return better ? login : best;
   });
+}
+
+/* ------------------------------------------------------------------ *
+ * Nominations (G-08)
+ *
+ * How the board renews itself: a Contributor who has co-hosted at least
+ * two webinars is sponsored by a board member, and joins unless someone
+ * objects within seven days. Silence is consent; an objection is not a
+ * refusal but a referral to the annual meeting.
+ *
+ * There is deliberately no rejected outcome in the vocabulary. The three
+ * outcomes a transformation here can write are `accepted` (seated),
+ * `deferred` (an objection was raised, the annual meeting arbitrates) and
+ * `waiting` (the rule was satisfied but there is no seat). None of them is
+ * terminal against the candidate, and none can be written by a scheduled
+ * job: `resolveNominations` is called from the Board screen by a signed-in
+ * member, and the only outcome it can reach without a named human act is
+ * an acceptance -- the thing silence is supposed to produce.
+ *
+ * These are pure functions of their arguments, today's date included, so
+ * they run inside a `mutate` transformation that may be replayed against a
+ * freshly-read config after a concurrent write.
+ * ------------------------------------------------------------------ */
+
+/** Days of silence after which a nomination carries (G-08). Calendar days,
+ *  not working days: `objection_window_working_days` is the *publication*
+ *  gate (G-10), a different window with a different unit. */
+export const NOMINATION_WINDOW_DAYS = 7;
+
+/** Webinars a candidate must have actually co-hosted to be nominated,
+ *  counted from `data/speakers.yml` by `coHostedCount` -- never declared in
+ *  the config, never inferred from board membership. */
+export const NOMINATION_MIN_CO_HOSTED = 2;
+
+/** A nomination that cannot be recorded as asked. The message is a plain
+ *  sentence a volunteer can act on; it reaches the screen as-is through
+ *  `github/errors.ts`. The screens ask `nominationBlocker` /
+ *  `objectionBlocker` first and keep the control disabled, so this is a
+ *  backstop -- but a governance rule must never surface as "GitHub is not
+ *  responding". */
+export class NominationRejected extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NominationRejected';
+  }
+}
+
+/** Whether the automated path may still resolve this nomination. `deferred`
+ *  and `accepted` are settled -- the first by the annual meeting, the
+ *  second for good. `waiting` stays open: it says "the rule is satisfied,
+ *  there is no seat", so it is re-examined every time the board changes. */
+function isPending(n: Nomination): boolean {
+  return n.outcome === '' || n.outcome === 'waiting';
+}
+
+/** Whole days from `from` to `to`, both ISO `YYYY-MM-DD`. `NaN` when either
+ *  is unusable -- callers treat that as "the window has not run", so a
+ *  hand-edited nomination with no opening date is never auto-accepted. */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86400000);
+}
+
+function windowHasRun(nomination: Nomination, on: string): boolean {
+  const days = daysBetween(nomination.opened_on, on);
+  return !Number.isNaN(days) && days >= NOMINATION_WINDOW_DAYS;
+}
+
+/**
+ * Why `candidate` cannot be nominated by `sponsor` today, as a plain
+ * sentence -- or `''` when the nomination can be opened. The screen calls
+ * this to disable the control *and* to say why, so a rule the volunteer
+ * cannot satisfy is visible before they submit rather than as a failure
+ * afterwards; `openNomination` calls it too, so the rule holds even if a
+ * caller forgets to.
+ *
+ * Nothing here reads the declared headcount against `board_min`: the live
+ * board is knowingly mis-declared (five entries for four people, pending
+ * the identity merge -- see `docs/reference/operations.md`), and a
+ * nomination must be neither blocked nor waved through by that artefact.
+ */
+export function nominationBlocker(
+  speakers: Speaker[],
+  config: Config,
+  candidate: string,
+  sponsor: string,
+  on: string,
+): string {
+  const login = candidate.trim();
+  if (login === '') return 'Name the person being nominated.';
+
+  if (!isBoardMember(config, sponsor, on)) {
+    return 'Only an active board member can sponsor a nomination.';
+  }
+  if (isBoardMember(config, login, on)) {
+    return `${login} is already on the board.`;
+  }
+  if (config.nominations.some(n => n.candidate === login && isPending(n))) {
+    return `A nomination for ${login} is already open.`;
+  }
+
+  const hosted = coHostedCount(speakers, login);
+  if (hosted < NOMINATION_MIN_CO_HOSTED) {
+    return (
+      `${login} has co-hosted ${hosted} webinar${hosted === 1 ? '' : 's'}. ` +
+      `${NOMINATION_MIN_CO_HOSTED} are needed before a nomination can be opened.`
+    );
+  }
+  return '';
+}
+
+/**
+ * Open a nomination for `candidate`, sponsored by `sponsor`, on `today`.
+ * Returns a new `Config`; never mutates the one it is given.
+ *
+ * Eligibility is computed here, from `speakers`, rather than taken as a
+ * number from the caller -- passing a count would be declaring eligibility,
+ * which is precisely what G-08 forbids. That is why this takes the speaker
+ * list even though it writes only to `config.yml`: the two files are read
+ * in the same load cycle, and co-hosting history changes far more slowly
+ * than the config being transformed.
+ *
+ * An earlier `deferred` nomination for the same candidate does not block a
+ * new one -- the annual meeting can only arbitrate a nomination somebody
+ * brings back -- and it is kept in the list rather than replaced, so the
+ * objections that deferred it stay readable next to the new attempt.
+ */
+export function openNomination(
+  speakers: Speaker[],
+  config: Config,
+  candidate: string,
+  sponsor: string,
+  today: string,
+): Config {
+  const blocker = nominationBlocker(speakers, config, candidate, sponsor, today);
+  if (blocker !== '') throw new NominationRejected(blocker);
+
+  const nomination: Nomination = {
+    candidate: candidate.trim(),
+    sponsor,
+    opened_on: today,
+    objections: [],
+    outcome: '',
+  };
+  return { ...config, nominations: [...config.nominations, nomination] };
+}
+
+/**
+ * Which nomination an objection to `candidate` lands on: the most recent
+ * one that is not already accepted, or `-1` when there is none. An accepted
+ * nomination is closed to objections -- the seat is taken, and re-opening it
+ * is a departure (G-09), not an objection. A *deferred* one still takes
+ * them: the annual meeting arbitrates on the whole record, so a second
+ * member's reason must be recordable next to the first. Most recent, not
+ * every match, because a deferred nomination can be brought back (see
+ * `openNomination`) and the old entry is history, not a live question.
+ */
+function objectionTarget(config: Config, candidate: string): number {
+  return config.nominations.reduce(
+    (found, n, i) => (n.candidate === candidate && n.outcome !== 'accepted' ? i : found),
+    -1,
+  );
+}
+
+/** Why `member` cannot object to `candidate`'s nomination, as a plain
+ *  sentence -- or `''` when the objection can be recorded. */
+export function objectionBlocker(
+  config: Config,
+  candidate: string,
+  member: string,
+  reason: string,
+  on: string,
+): string {
+  if (objectionTarget(config, candidate) === -1) {
+    return `There is no open nomination for ${candidate}.`;
+  }
+  if (!isBoardMember(config, member, on)) {
+    return 'Only an active board member can object to a nomination.';
+  }
+  if (reason.trim() === '') {
+    return 'An objection needs a written reason. Add a short note before submitting.';
+  }
+  return '';
+}
+
+/**
+ * Record `member`'s objection to `candidate`'s nomination and defer it, in
+ * one transformation. The two are inseparable on purpose: an objection that
+ * only appended to the list would leave a nomination carrying an objection
+ * while still on course to be accepted by silence, and the next
+ * `resolveNominations` would have to catch it. There is no window in which
+ * that state exists.
+ *
+ * `deferred` is not a refusal. It means the annual meeting decides, at the
+ * G-01 threshold, with the objection and its author on the record -- which
+ * is why a written reason and an identified board member are both required.
+ * A second objection from the same member replaces the first in place,
+ * keeping list order, exactly as `ballots.castBallot` does.
+ */
+export function objectToNomination(
+  config: Config,
+  candidate: string,
+  member: string,
+  reason: string,
+  today: string,
+): Config {
+  const blocker = objectionBlocker(config, candidate, member, reason, today);
+  if (blocker !== '') throw new NominationRejected(blocker);
+
+  const objection = { member, reason, date: today };
+  const target = objectionTarget(config, candidate);
+  const nominations = config.nominations.map((n, i): Nomination => {
+    if (i !== target) return n;
+    const existing = n.objections.some(o => o.member === member);
+    return {
+      ...n,
+      objections: existing
+        ? n.objections.map(o => (o.member === member ? objection : o))
+        : [...n.objections, objection],
+      outcome: 'deferred',
+    };
+  });
+  return { ...config, nominations };
+}
+
+/** Seat `candidate` as of `on`, reactivating an existing entry rather than
+ *  adding a second one for the same login. */
+function seat(board: BoardMember[], candidate: string, on: string): BoardMember[] {
+  const entry: BoardMember = {
+    login: candidate,
+    joined_on: on,
+    status: 'active',
+    unavailable_until: '',
+  };
+  const index = board.findIndex(m => m.login === candidate);
+  if (index === -1) return [...board, entry];
+  return board.map((m, i) => (i === index ? entry : m));
+}
+
+/**
+ * Apply every nomination whose seven days of silence have run, and seat the
+ * members that carries. Returns a new `Config`; never mutates its argument,
+ * and returns a value-equal result when nothing is due, so it is safe to
+ * call from a `mutate` transformation that may be replayed.
+ *
+ * An acceptance and the board entry it implies are written together, so an
+ * `accepted` nomination whose candidate is not on the board cannot exist. A
+ * nomination is only accepted when it carries no objection, so an
+ * `accepted` nomination with objections cannot exist either -- the
+ * validator's cross-field check on that pair (`tools/convener_ops/validate.py`)
+ * is now a statement about hand-edited files, not a live defence.
+ *
+ * Seats are counted as they are filled, so a run that accepts several
+ * nominations cannot overshoot `board_max`; the ones that do not fit become
+ * `waiting`, and stay in the running for the next call. Nothing here reads
+ * `board_min`: a board below its floor still admits members, and the
+ * knowingly mis-declared live board (five entries, four people) can at
+ * worst delay a seat -- which the next call gives back once the identity
+ * merge lands.
+ */
+export function resolveNominations(config: Config, today: string): Config {
+  let board = config.board;
+
+  const nominations = config.nominations.map((n): Nomination => {
+    if (!isPending(n)) return n;
+    // A hand-edited nomination carrying an objection with no outcome: the
+    // objection stands, so the nomination is deferred, never accepted.
+    if (n.objections.length > 0) return { ...n, outcome: 'deferred' };
+    if (n.outcome === '' && !windowHasRun(n, today)) return n;
+
+    const seated = board.some(m => m.login === n.candidate && m.status === 'active');
+    const active = board.filter(m => m.status === 'active').length;
+    if (!seated && active >= config.board_max) {
+      return n.outcome === 'waiting' ? n : { ...n, outcome: 'waiting' };
+    }
+
+    board = seat(board, n.candidate, today);
+    return { ...n, outcome: 'accepted' };
+  });
+
+  return { ...config, board, nominations };
+}
+
+/**
+ * Declare (or clear, with an empty `until`) `login`'s own absence. Only an
+ * *active* member can be marked away: an absence recorded against someone
+ * who has left the board would read as "away, back on the 12th" for a seat
+ * nobody holds, so the entry is left untouched instead.
+ *
+ * `until` is the inclusive last day away, the same reading `activeBoard`
+ * applies. There is no proxy and no third-party declaration: the screen
+ * passes the signed-in login, and the return is automatic when the date
+ * passes -- nothing has to be written to come back.
+ */
+export function declareUnavailability(config: Config, login: string, until: string): Config {
+  return {
+    ...config,
+    board: config.board.map(m =>
+      m.login === login && m.status === 'active' ? { ...m, unavailable_until: until } : m,
+    ),
+  };
 }

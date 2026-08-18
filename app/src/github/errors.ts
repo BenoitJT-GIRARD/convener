@@ -29,6 +29,12 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
   // surface as "GitHub is not responding".
   if (e instanceof Error && e.name === 'BallotRejected') return e.message;
 
+  // NominationRejected (state/board.ts) is the same arrangement: the Board
+  // screen keeps the control disabled and shows the reason before anyone
+  // submits, so reaching here means a rule fired inside a `mutate`
+  // transformation -- which must still read as the governance rule it is.
+  if (e instanceof Error && e.name === 'NominationRejected') return e.message;
+
   // Anything else (a rejected fetch: offline, DNS failure, captive portal)
   // reaches here as a bare TypeError with no useful message to show.
   return 'GitHub is not responding. Try again in a moment.';
