@@ -230,10 +230,14 @@ function windowHasRun(nomination: Nomination, on: string): boolean {
  * afterwards; `openNomination` calls it too, so the rule holds even if a
  * caller forgets to.
  *
- * Nothing here reads the declared headcount against `board_min`: the live
- * board is knowingly mis-declared (five entries for four people, pending
- * the identity merge -- see `docs/reference/operations.md`), and a
- * nomination must be neither blocked nor waved through by that artefact.
+ * Nothing here reads the headcount against `board_min`, and nothing should.
+ * `board_min` is the size the board aims to be, not a permission to admit
+ * anyone: a board under its target needs members more than a full one does,
+ * so refusing a nomination there would forbid the one act that closes the
+ * gap, and a nomination is in any case a question put to the board rather
+ * than a seat taken. Room is a question for the moment of seating, where
+ * `board_max` answers it (`resolveNominations`), not for the moment of
+ * asking.
  */
 export function nominationBlocker(
   speakers: Speaker[],
@@ -532,10 +536,12 @@ function seat(board: BoardMember[], candidate: string, on: string): BoardMember[
  * single-candidate calls, because each reads the board the previous one
  * left; the ones that do not fit become
  * `waiting`, and stay in the running for the next call. Nothing here reads
- * `board_min`: a board below its floor still admits members, and the
- * knowingly mis-declared live board (five entries, four people) can at
- * worst delay a seat -- which the next call gives back once the identity
- * merge lands.
+ * `board_min`, whatever a given file declares it to be: `board_min` is a
+ * target the tools report on -- `tools/convener_ops/validate.py::board_target_report`
+ * and the Composition table on the Board screen -- never a rule that admits
+ * or refuses anyone. Seating is a question about room, and only a ceiling
+ * can run short of room; a floor could only ever argue for seating someone
+ * the board has not accepted, which no headcount is entitled to decide.
  */
 export function resolveNominations(config: Config, today: string, only?: string): Config {
   let board = config.board;

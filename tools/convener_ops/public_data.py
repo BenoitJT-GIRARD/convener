@@ -75,9 +75,13 @@ def recording_withheld(entry: dict[str, Any]) -> bool:
     artefact the consent model exists for, and it is the only field this
     function governs.
 
-    The migrated backlog (31 speakers) carries `consent: pending` or `''` and
-    no `youtube_url` at all, so requiring the gate's own verdict takes
-    nothing out of the feed that is in it.
+    Requiring the gate's own verdict can only ever keep a link out of the
+    feed, never put one in, and that is the direction this function is
+    allowed to be wrong in: a recording whose clearance the file does not
+    record stays offline until somebody records it. Whether any particular
+    file has such recordings in it is not part of the argument -- a rule that
+    had to be checked against today's data before it could be called safe
+    would have to be re-checked after every commit.
     """
     publication = entry.get("publication")
     if not isinstance(publication, dict):
