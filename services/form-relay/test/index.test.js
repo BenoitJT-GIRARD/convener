@@ -131,6 +131,30 @@ describe('form relay', () => {
     expect(text).not.toContain('Bad credentials');
   });
 
+  it('reports 502 when the dispatch to GitHub cannot even be attempted (a real network failure)', async () => {
+    // fetch rejects, rather than resolving to a Response, on a genuine
+    // network failure -- GitHub unreachable, DNS failure, a reset
+    // connection. Left uncaught, this would escape as an unhandled
+    // exception instead of the 502 the file-level comment promises.
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError('fetch failed');
+    });
+    const res = await handle(post(VALID_CASE.body, VALID_CASE.signature), env(VALID_CASE.secret));
+    expect(res.status).toBe(502);
+    const text = await res.text();
+    expect(text).not.toContain('fetch failed');
+  });
+
+  it('normalises any 2xx from GitHub to a fixed 204, never the literal upstream code', async () => {
+    // GitHub's dispatches endpoint is documented to answer success with
+    // exactly 204. Passing upstream.status straight through would let an
+    // unexpected 2xx leak to the caller as-is -- the caller must only
+    // ever see one of this worker's three codes: 204, 401, or 502.
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 200 }));
+    const res = await handle(post(VALID_CASE.body, VALID_CASE.signature), env(VALID_CASE.secret));
+    expect(res.status).toBe(204);
+  });
+
   it('refuses a method other than POST', async () => {
     const res = await handle(requestAt('/', 'GET'), env(VALID_CASE.secret));
     expect(res.status).toBe(405);

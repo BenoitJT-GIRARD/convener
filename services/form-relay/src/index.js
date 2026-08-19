@@ -96,24 +96,34 @@ export async function handle(request, env) {
     return new Response('Bad Gateway', { status: 502 });
   }
 
-  const upstream = await fetch(DISPATCH_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.CONVENER_DISPATCH_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      // GitHub's REST API rejects a request with no User-Agent (403).
-      'User-Agent': 'convener-form-relay',
-    },
-    // `body` must be a JSON *string*, never a nested object: the workflow
-    // reads it as a bare ${{ github.event.client_payload.body }}
-    // interpolation, which only renders raw JSON when the value is a
-    // string (R-7). It is the exact bytes received, untouched.
-    body: JSON.stringify({
-      event_type: 'proposal-submitted',
-      client_payload: { body, signature: given },
-    }),
-  });
+  let upstream;
+  try {
+    upstream = await fetch(DISPATCH_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.CONVENER_DISPATCH_TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        // GitHub's REST API rejects a request with no User-Agent (403).
+        'User-Agent': 'convener-form-relay',
+      },
+      // `body` must be a JSON *string*, never a nested object: the workflow
+      // reads it as a bare ${{ github.event.client_payload.body }}
+      // interpolation, which only renders raw JSON when the value is a
+      // string (R-7). It is the exact bytes received, untouched.
+      body: JSON.stringify({
+        event_type: 'proposal-submitted',
+        client_payload: { body, signature: given },
+      }),
+    });
+  } catch {
+    // A rejected fetch -- GitHub unreachable, DNS failure, a reset
+    // connection -- is exactly as much "this worker could not complete
+    // the dispatch" as a 401 or 500 answered by GitHub. Left uncaught,
+    // this would escape as an uncaught exception, and workerd's generic
+    // platform error page is not this worker's 502.
+    return new Response('Bad Gateway', { status: 502 });
+  }
 
   if (!upstream.ok) {
     // Never GitHub's status or body verbatim -- see the file-level comment
@@ -122,8 +132,14 @@ export async function handle(request, env) {
     return new Response('Bad Gateway', { status: 502 });
   }
 
-  // A successful dispatch is 204 No Content, not 200.
-  return new Response(null, { status: upstream.status });
+  // Fixed 204, not upstream.status: GitHub's dispatches endpoint is
+  // documented to answer success with exactly 204, and returning the
+  // literal upstream code here would let an unexpected 2xx (200, 202, ...)
+  // leak through as-is -- a smaller version of the same "upstream detail
+  // reaches the caller" problem the 502 branches above exist to avoid.
+  // The caller only ever sees one of three codes from this worker: 204,
+  // 401, or 502.
+  return new Response(null, { status: 204 });
 }
 
 export default { fetch: handle };
