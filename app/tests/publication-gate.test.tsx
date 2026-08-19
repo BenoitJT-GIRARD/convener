@@ -90,6 +90,11 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     youtube_url: 'https://youtu.be/x',
     forum_thread: 'https://forum/x',
     runbook_progress: {
+      // Three weeks before this talk, somebody checked that the speaker was
+      // on the forum and signed up to their own seminar. A record where that
+      // was never done does not reach the archive at all -- which is the
+      // subject of its own test below, not of these.
+      'scheduled/T-14/speaker_registered': true,
       'delivered/forum-summary': true,
       'delivered/thank-you': true,
     },
@@ -580,6 +585,25 @@ describe('PublicationGate on the speaker page', () => {
     expect(await screen.findByRole('button', { name: PUBLISH })).toBeDisabled();
     expect(screen.getByText(/not given permission/)).toBeInTheDocument();
     // Nothing was written, and in particular nothing was published.
+    expect(backend.current()[0].publication.outcome).toBe('');
+  });
+
+  it('names the step in the way, including one from three weeks before the talk', async () => {
+    // The volunteer is on the wrap-up screen. What is missing is not on it:
+    // pointing at "the required fields of the delivered checklist" would have
+    // sent them looking through fields that are all filled in.
+    const backend = makeBackend(config(), [
+      speaker({
+        publication: publication({ consent: 'granted', approved_by: 'alice', approved_on: LONG_AGO }),
+        runbook_progress: { 'delivered/forum-summary': true, 'delivered/thank-you': true },
+      }),
+    ]);
+    renderSpeaker(backend);
+
+    expect(await screen.findByRole('button', { name: PUBLISH })).toBeDisabled();
+    expect(
+      screen.getByText(/Speaker registered on the forum and to their own talk is not ticked\./),
+    ).toBeInTheDocument();
     expect(backend.current()[0].publication.outcome).toBe('');
   });
 

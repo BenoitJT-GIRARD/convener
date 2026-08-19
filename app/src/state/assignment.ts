@@ -40,15 +40,22 @@
  * Pure throughout: no clock and no state, so every writer here can run inside a
  * `mutate` transformation replayed against freshly-read data.
  */
-import type { Speaker } from '../data/types';
-import { PHASES, isItemDone, phaseOf, type RunbookItem } from './phases';
+import type { Config, Speaker } from '../data/types';
+import { PHASES, isItemDone, phaseItems, phaseOf, type RunbookItem } from './phases';
 
 /** Every key the journey has, so a line that is not in it cannot be written
- *  against. Built from `PHASES` rather than listed, so an item added there is
- *  assignable the same day. */
-const JOURNEY_ITEM_KEYS: ReadonlySet<string> = new Set(
-  PHASES.flatMap(phase => phase.items.map(item => item.key)),
-);
+ *  against.
+ *
+ *  Built rather than listed, and built through `phaseItems`, so an item added
+ *  to `PHASES` is assignable the same day -- and so is a promotion channel
+ *  added to `data/config.yml`, which is why this is a function of the config
+ *  and not a constant. A channel is a line of the journey like any other; a
+ *  guard that only knew the static table would have refused every one of them
+ *  with "is not a step of the journey", leaving the series a list of places to
+ *  announce in that nobody could be put down for. */
+function journeyItemKeys(config: Config | null): ReadonlySet<string> {
+  return new Set(PHASES.flatMap(phase => phaseItems(phase, config).map(item => item.key)));
+}
 
 /** An assignment that cannot be recorded as asked. The message is a plain
  *  sentence that reaches a volunteer's screen as-is, relayed by
@@ -79,9 +86,10 @@ function withChecklist(
   current: Speaker[],
   speakerId: string,
   itemKey: string,
+  config: Config | null,
   update: (checklist: Speaker['checklist']) => Speaker['checklist'],
 ): Speaker[] {
-  if (!JOURNEY_ITEM_KEYS.has(itemKey)) {
+  if (!journeyItemKeys(config).has(itemKey)) {
     throw new AssignmentRejected(
       `"${itemKey}" is not a step of the journey, so nobody can be put down for it.`,
     );
@@ -99,16 +107,22 @@ function withChecklist(
  * An empty `login` unassigns rather than storing a blank owner, because "no
  * owner" already has a spelling in this model and two spellings of one fact is
  * how a filter starts disagreeing with a display.
+ *
+ * `config` is what makes the promotion channels assignable: they are lines of
+ * the journey that live in `data/config.yml`, so which keys exist cannot be
+ * answered without it. `null` -- no config loaded -- accepts the lines of the
+ * static table and nothing more.
  */
 export function assignItem(
   current: Speaker[],
   speakerId: string,
   itemKey: string,
   login: string,
+  config: Config | null,
 ): Speaker[] {
   const owner = login.trim();
-  if (owner === '') return unassignItem(current, speakerId, itemKey);
-  return withChecklist(current, speakerId, itemKey, checklist => ({
+  if (owner === '') return unassignItem(current, speakerId, itemKey, config);
+  return withChecklist(current, speakerId, itemKey, config, checklist => ({
     ...checklist,
     [itemKey]: { assignee: owner },
   }));
@@ -124,8 +138,9 @@ export function unassignItem(
   current: Speaker[],
   speakerId: string,
   itemKey: string,
+  config: Config | null,
 ): Speaker[] {
-  return withChecklist(current, speakerId, itemKey, checklist =>
+  return withChecklist(current, speakerId, itemKey, config, checklist =>
     Object.fromEntries(Object.entries(checklist).filter(([key]) => key !== itemKey)),
   );
 }
@@ -150,13 +165,17 @@ export interface WaitingItem {
  * series would match the one person whose login had not loaded yet, and the
  * screen would open on a list of other people's work.
  */
-export function itemsWaitingFor(speakers: Speaker[], login: string | null): WaitingItem[] {
+export function itemsWaitingFor(
+  speakers: Speaker[],
+  login: string | null,
+  config: Config | null,
+): WaitingItem[] {
   if (!login) return [];
   const waiting: WaitingItem[] = [];
   for (const speaker of speakers) {
     const phase = phaseOf(speaker.status);
     if (!phase) continue;
-    for (const item of phase.items) {
+    for (const item of phaseItems(phase, config)) {
       if (itemAssignee(speaker, item.key) !== login) continue;
       if (isItemDone(speaker, item)) continue;
       waiting.push({ speaker, item });

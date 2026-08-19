@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Speaker } from '../data/types';
-import { phaseOf, fieldValue, type RunbookItem, type FieldKey } from '../state/phases';
+import type { Config, Speaker } from '../data/types';
+import { phaseOf, phaseItems, fieldValue, type RunbookItem, type FieldKey } from '../state/phases';
 import { itemAssignee } from '../state/assignment';
 import { parisToday } from '../state/derived';
 import { InlineContent } from '../content/InlineContent';
@@ -18,11 +18,25 @@ interface Props {
    *  inbox would never match, so a typo would silently file the work with
    *  nobody. */
   people?: string[];
+  /** The loaded configuration, for the lines of the journey that live in it:
+   *  the places an event is announced. Absent -- nothing loaded -- shows the
+   *  static journey, which is what the screen showed before those lines
+   *  existed. */
+  config?: Config | null;
   disabled?: boolean;
   today?: string;
 }
 
-export function Checklist({ speaker, onToggle, onField, onAssign, people, disabled, today }: Props) {
+export function Checklist({
+  speaker,
+  onToggle,
+  onField,
+  onAssign,
+  people,
+  config,
+  disabled,
+  today,
+}: Props) {
   const phase = phaseOf(speaker.status);
   if (!phase) return null;
   const todayStr = today ?? parisToday();
@@ -35,7 +49,7 @@ export function Checklist({ speaker, onToggle, onField, onAssign, people, disabl
   return (
     <div className="space-y-3">
       <h2 className="font-serif text-xl mb-3">{phase.label}</h2>
-      {phase.items.map(item => (
+      {phaseItems(phase, config ?? null).map(item => (
         <div key={item.key}>
           <Row
             item={item}
@@ -184,7 +198,7 @@ function FieldRow({
     <label className="block border border-border rounded p-3">
       <span className="font-display font-bold text-xs uppercase tracking-widest text-ink-muted">
         {item.label}
-        {item.required && <span className="text-danger ml-1">*</span>}
+        {mustBeDone(item) && <span className="text-danger ml-1">*</span>}
       </span>
       {long ? (
         <textarea
@@ -205,6 +219,14 @@ function FieldRow({
       )}
     </label>
   );
+}
+
+/** The asterisk means "this one is not optional", and a line that stops the
+ *  archive from three weeks before the talk is as far from optional as the
+ *  journey gets. Reading only `required` would have left the one line the
+ *  volunteers write in capitals looking like every other tick. */
+function mustBeDone(item: RunbookItem): boolean {
+  return item.required === true || item.blocksFinalisation === true;
 }
 
 function CheckboxRow({
@@ -237,7 +259,7 @@ function CheckboxRow({
         <div className="flex-1">
           <p className="text-sm">
             {label}
-            {item.required && <span className="text-danger ml-1">*</span>}
+            {mustBeDone(item) && <span className="text-danger ml-1">*</span>}
           </p>
           {item.contentKey && (
             <button

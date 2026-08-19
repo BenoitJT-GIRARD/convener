@@ -50,7 +50,7 @@ export function Inbox() {
   // that is late says it in the words `state/sla.ts` already uses -- "Forum
   // summary is 3 days overdue", "waiting since 2026-08-18" -- about the step,
   // never about whoever is down for it.
-  const waiting = itemsWaitingFor(speakers, login).map(w => ({
+  const waiting = itemsWaitingFor(speakers, login, config).map(w => ({
     r: {
       kind: 'action' as const,
       speaker: w.speaker,

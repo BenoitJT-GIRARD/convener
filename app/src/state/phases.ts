@@ -1,4 +1,5 @@
-import type { SpeakerStatus, Speaker } from '../data/types';
+import type { Config, SpeakerStatus, Speaker } from '../data/types';
+import { channelItem, channelsOf } from './channels';
 
 export type ItemForm = 'content' | 'field' | 'checkbox' | 'button-group';
 
@@ -18,7 +19,16 @@ export interface RunbookItem {
   key: string;
   form: ItemForm;
   label: string;
+  /** Must be done before the phase it sits in is finished. On the delivered
+   *  phase that is the same thing as blocking the archive, which is why
+   *  `blockers` reads it there and `state/inbox.ts` reads it to raise the
+   *  wrap-up rows. */
   required?: boolean;
+  /** Stops the archive from being finalised *from wherever it sits in the
+   *  journey*. Only a line whose absence damages the published record earns
+   *  it: `required` is the ordinary "not finished yet", this is "do not
+   *  publish without it". */
+  blocksFinalisation?: true;
   contentKey?: string;
   window?: number;
   fieldKey?: FieldKey;
@@ -28,6 +38,13 @@ export interface PhaseDef {
   status: SpeakerStatus;
   label: string;
   items: RunbookItem[];
+  /** Key of the line the promotion channels follow, for the one phase that
+   *  promotes. The channels themselves are configuration
+   *  (`state/channels.ts`), so where they fall is the only thing this table
+   *  can say about them. A key that names no line of this phase would put
+   *  them at the front, which the ordering test in `phases.test.ts` catches
+   *  by comparing the whole expanded sequence rather than its membership. */
+  channelsAfter?: string;
 }
 
 export const PHASES: PhaseDef[] = [
@@ -86,8 +103,22 @@ export const PHASES: PhaseDef[] = [
   {
     status: 'scheduled',
     label: 'Scheduled — runbook',
+    // Two weeks out, once the speaker is known to be on the forum, the event
+    // is announced everywhere it is announced. Which places those are is read
+    // from `data/config.yml`; only their position in the journey is here.
+    channelsAfter: 'scheduled/T-14/speaker_registered',
     items: [
       { key: 'scheduled/T-30/visuals', form: 'checkbox', label: 'Visuals + flyer made', window: 30 },
+      {
+        // The speaker hears that the series is about to start talking about
+        // them *before* it does. The announcement carries their name, their
+        // title and their abstract, and a speaker who learns of it from a
+        // notification has been told last about their own talk.
+        key: 'scheduled/T-21/promotion-starting',
+        form: 'checkbox',
+        label: 'Speaker told the promotion is starting',
+        window: 21,
+      },
       {
         key: 'scheduled/T-21/linkedin',
         form: 'checkbox',
@@ -109,6 +140,21 @@ export const PHASES: PhaseDef[] = [
         window: 14,
       },
       {
+        // Written in capitals with two exclamation marks in the checklist the
+        // volunteers actually keep, and the only line of the runbook that
+        // stops the archive. The series promises a discussion around each
+        // seminar; a speaker who is not in the thread of their own seminar
+        // cannot answer anyone in it, and the promise is published anyway.
+        //
+        // The last segment of the key is the name `blockers` reports, so the
+        // screen and the record cannot end up calling this two things.
+        key: 'scheduled/T-14/speaker_registered',
+        form: 'checkbox',
+        label: 'Speaker registered on the forum and to their own talk',
+        window: 14,
+        blocksFinalisation: true,
+      },
+      {
         key: 'scheduled/T-7/forum-announce',
         form: 'checkbox',
         label: 'Forum announcement seeded',
@@ -119,6 +165,12 @@ export const PHASES: PhaseDef[] = [
         key: 'scheduled/T-7/seed-questions',
         form: 'checkbox',
         label: 'Seeded a question on the forum',
+        window: 7,
+      },
+      {
+        key: 'scheduled/T-7/waiting-room',
+        form: 'checkbox',
+        label: 'Waiting room and co-host rights set up',
         window: 7,
       },
       {
@@ -203,12 +255,45 @@ export const PHASES: PhaseDef[] = [
         required: true,
         contentKey: 'toolkit/emails/thank-you',
       },
+      {
+        // The step exists now because the volunteers do it now; the template
+        // it will hand over is written later. A line with nothing attached is
+        // still a line somebody can be put down for and tick.
+        key: 'delivered/video-online',
+        form: 'checkbox',
+        label: 'Speaker told the video is online',
+      },
     ],
   },
 ];
 
 export function phaseOf(status: SpeakerStatus): PhaseDef | undefined {
   return PHASES.find(p => p.status === status);
+}
+
+/**
+ * The lines of one phase, including the ones that are configuration.
+ *
+ * `PHASES` is a constant; the places an event is announced are not. They live
+ * in `data/config.yml` and are read through `state/channels.ts`, so a phase's
+ * journey is a function of the loaded config rather than a table. Everything
+ * that walks a phase's lines walks them from here -- the checklist screen, the
+ * inbox, and the guard in `state/assignment.ts` that decides which keys can
+ * carry an owner -- so a channel added to the file is, the same day, a line a
+ * volunteer sees, ticks and can be put down for.
+ *
+ * `null` means no config has loaded yet, which is what a screen holds while
+ * the data is being fetched: nothing expands and the phase reads exactly as it
+ * did before. That is a different fact from a config whose `channels` cannot
+ * be read, which `channelsOf` refuses outright rather than quietly showing a
+ * promotion phase with no lines in it.
+ */
+export function phaseItems(phase: PhaseDef, config: Config | null): RunbookItem[] {
+  const items = [...phase.items];
+  if (phase.channelsAfter === undefined || config === null) return items;
+  const after = items.findIndex(item => item.key === phase.channelsAfter);
+  items.splice(after + 1, 0, ...channelsOf(config).map(channelItem));
+  return items;
 }
 
 /**
@@ -233,15 +318,62 @@ export function isItemDone(s: Speaker, item: RunbookItem): boolean {
   return true;
 }
 
-/** True if all required items (fields + checkboxes) of the delivered phase are satisfied. */
-export function canFinalize(s: Speaker): boolean {
-  const phase = phaseOf('delivered');
-  if (!phase || s.status !== 'delivered') return false;
-  for (const item of phase.items) {
-    if (!item.required) continue;
-    if (!isItemDone(s, item)) return false;
+/** One reason the archive cannot be finalised yet. */
+export interface Blocker {
+  /** Stable name for this obstacle: the last segment of the line's journey
+   *  key, so a screen naming it and a record storing it cannot drift. */
+  key: string;
+  /** One sentence, already readable by a volunteer, about a piece of work
+   *  outstanding -- never about a person. */
+  why: string;
+}
+
+/**
+ * A line stops finalisation either because the wrap-up is not finished
+ * (`required`, on the delivered phase, which is what that flag has always
+ * meant there) or because it is marked as damaging the published record by its
+ * absence, wherever it sits. The second exists because the one line that most
+ * needs to hold falls three weeks before the talk: the check that the speaker
+ * is on the forum and signed up to their own seminar.
+ */
+function stopsFinalisation(phase: PhaseDef, item: RunbookItem): boolean {
+  return item.blocksFinalisation === true || (phase.status === 'delivered' && item.required === true);
+}
+
+function whyOutstanding(item: RunbookItem): string {
+  return item.form === 'field' ? `${item.label} is still empty.` : `${item.label} is not ticked.`;
+}
+
+/**
+ * Everything standing between this record and its archive, in journey order.
+ *
+ * A boolean says the button is off and leaves the volunteer to guess which of
+ * a dozen lines is why -- and once a line from three weeks before the talk can
+ * be the answer, guessing stops working: nothing in the delivered checklist in
+ * front of them would explain it. So the obstacles are named, and the screen
+ * renders the sentences as they are.
+ *
+ * Empty means finalisation is possible; `canFinalize` is exactly that test and
+ * not a second reading of the same question.
+ */
+export function blockers(s: Speaker): Blocker[] {
+  if (s.status !== 'delivered') {
+    return [{ key: 'not-delivered', why: 'This talk has not been delivered yet.' }];
   }
-  return true;
+  const found: Blocker[] = [];
+  for (const phase of PHASES) {
+    for (const item of phase.items) {
+      if (!stopsFinalisation(phase, item)) continue;
+      if (isItemDone(s, item)) continue;
+      found.push({ key: item.key.slice(item.key.lastIndexOf('/') + 1), why: whyOutstanding(item) });
+    }
+  }
+  return found;
+}
+
+/** True when nothing is left in the way of the archive. */
+export function canFinalize(s: Speaker): boolean {
+  return blockers(s).length === 0;
 }
 
 /** Read a Speaker field value from a FieldKey (top-level or metrics). */

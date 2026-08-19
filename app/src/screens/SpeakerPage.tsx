@@ -58,7 +58,7 @@ export function SpeakerPage() {
   async function assign(key: string, who: string) {
     if (!login || !id) return;
     await mutateSpeakers(
-      current => assignItem(current, id, key, who),
+      current => assignItem(current, id, key, who, config),
       who === '' ? `data: ${id} owner cleared on ${key}` : `data: ${id} owner for ${key}`,
     );
   }
@@ -109,6 +109,7 @@ export function SpeakerPage() {
             onField={onField}
             onAssign={assign}
             people={people}
+            config={config}
           />
         </div>
       )}

@@ -1,7 +1,31 @@
 import { describe, it, expect } from 'vitest';
-import { phaseOf, canFinalize, fieldValue, setField, PHASES, type FieldKey } from '../src/state/phases';
+import {
+  phaseOf,
+  phaseItems,
+  blockers,
+  canFinalize,
+  fieldValue,
+  setField,
+  PHASES,
+  type FieldKey,
+} from '../src/state/phases';
 import type { Speaker } from '../src/data/types';
-import { speaker as double } from './data-doubles';
+import { config, speaker as double } from './data-doubles';
+
+/** The one line of the runbook that stops the archive, by the name
+ *  `blockers` reports it under. */
+const REGISTERED = 'scheduled/T-14/speaker_registered';
+
+/** Everything the wrap-up asks for, so a test about one obstacle is not
+ *  quietly about five. */
+const WRAPPED_UP = {
+  metrics: { registrations: 50, live_peak: 40, youtube_views_30d: null, forum_replies: null },
+  runbook_progress: {
+    [REGISTERED]: true,
+    'delivered/forum-summary': true,
+    'delivered/thank-you': true,
+  },
+};
 
 // Through the shared double: a field added to `Speaker` reaches this
 // record on its own, instead of leaving the file describing a shape
@@ -65,22 +89,159 @@ describe('phases v2', () => {
   });
 
   it('canFinalize true when all required satisfied', () => {
-    const s: Speaker = {
-      ...base,
-      metrics: { ...base.metrics, registrations: 50, live_peak: 40 },
-      runbook_progress: { 'delivered/forum-summary': true, 'delivered/thank-you': true },
-    };
+    const s: Speaker = { ...base, ...WRAPPED_UP };
     expect(canFinalize(s)).toBe(true);
   });
 
   it('canFinalize ignores optional fields', () => {
+    // youtube_url, youtube_views_30d and forum_replies stay empty/null.
+    const s: Speaker = { ...base, ...WRAPPED_UP };
+    expect(canFinalize(s)).toBe(true);
+  });
+});
+
+describe('the journey the volunteers actually keep', () => {
+  /**
+   * The whole sequence, not its membership.
+   *
+   * A step present and a step in the right place are two different facts, and
+   * only the second is any use to somebody working down a checklist three
+   * weeks before a talk: "tell the speaker the promotion is starting" after
+   * the announcement has gone out is not the same instruction. So this asserts
+   * the order, and it asserts it including the lines that come from
+   * configuration -- the promotion channels sit between the registration check
+   * and the week-before work, and nowhere else.
+   */
+  it('runs the scheduled phase in chronological order, channels included', () => {
+    const phase = phaseOf('scheduled')!;
+    expect(phaseItems(phase, config()).map(i => i.key)).toEqual([
+      'scheduled/T-30/visuals',
+      'scheduled/T-21/promotion-starting',
+      'scheduled/T-21/linkedin',
+      'scheduled/T-14/zoom-link',
+      'scheduled/T-14/access-setup',
+      'scheduled/T-14/speaker_registered',
+      'promotion/forum',
+      'promotion/linkedin_page',
+      'scheduled/T-7/forum-announce',
+      'scheduled/T-7/seed-questions',
+      'scheduled/T-7/waiting-room',
+      'scheduled/T-3/reminder',
+      'scheduled/T-3/plan-day',
+      'scheduled/T-1/final-reminder',
+    ]);
+  });
+
+  it('runs the wrap-up in the order the work happens', () => {
+    const phase = phaseOf('delivered')!;
+    expect(phaseItems(phase, config()).map(i => i.key)).toEqual([
+      'delivered/registrations',
+      'delivered/live-peak',
+      'delivered/youtube-url',
+      'delivered/youtube-views-30d',
+      'delivered/forum-replies',
+      'delivered/forum-thread',
+      'delivered/forum-summary',
+      'delivered/thank-you',
+      'delivered/video-online',
+    ]);
+  });
+
+  it('never sends a volunteer backwards in time within a phase', () => {
+    for (const phase of PHASES) {
+      const windows = phaseItems(phase, config())
+        .map(i => i.window)
+        .filter((w): w is number => w !== undefined);
+      expect(windows).toEqual([...windows].sort((a, b) => b - a));
+    }
+  });
+
+  it('leaves the journey as it was when no config has loaded', () => {
+    for (const phase of PHASES) {
+      expect(phaseItems(phase, null)).toEqual(phase.items);
+    }
+    expect(phaseItems(phaseOf('lead')!, config())).toEqual(phaseOf('lead')!.items);
+  });
+
+  it('follows the file: the channel lines are the ones config lists', () => {
+    const cfg = config({ channels: [{ key: 'posters', label: 'Printed posters' }] });
+    const keys = phaseItems(phaseOf('scheduled')!, cfg).map(i => i.key);
+    expect(keys.filter(k => k.startsWith('promotion/'))).toEqual(['promotion/posters']);
+  });
+});
+
+describe('what stands between a record and its archive', () => {
+  /**
+   * The line the checklist writes in capitals with two exclamation marks. A
+   * speaker who is not on the forum and not signed up to their own seminar
+   * cannot answer anybody in the thread the series promises around it -- and
+   * by the time the wrap-up is being filled in, nothing on the screen would
+   * have said so.
+   */
+  it('blocks finalisation while the speaker registration check is unticked', () => {
     const s: Speaker = {
       ...base,
-      metrics: { ...base.metrics, registrations: 50, live_peak: 40 },
-      runbook_progress: { 'delivered/forum-summary': true, 'delivered/thank-you': true },
-      // youtube_url, youtube_views_30d, forum_replies still empty/null
+      ...WRAPPED_UP,
+      runbook_progress: { ...WRAPPED_UP.runbook_progress, [REGISTERED]: false },
     };
-    expect(canFinalize(s)).toBe(true);
+    expect(blockers(s).map(b => b.key)).toContain('speaker_registered');
+    expect(canFinalize(s)).toBe(false);
+  });
+
+  it('lets the archive through once it is ticked, everything else being equal', () => {
+    expect(canFinalize({ ...base, ...WRAPPED_UP })).toBe(true);
+  });
+
+  it('is the only step of the runbook that blocks: the rest inform', () => {
+    const s: Speaker = { ...base, ...WRAPPED_UP, runbook_progress: WRAPPED_UP.runbook_progress };
+    // None of the new informative steps is ticked on this record, and it
+    // finalises all the same.
+    for (const key of [
+      'scheduled/T-21/promotion-starting',
+      'scheduled/T-7/waiting-room',
+      'delivered/video-online',
+    ]) {
+      expect(s.runbook_progress[key]).toBeUndefined();
+    }
+    expect(blockers(s)).toEqual([]);
+  });
+
+  it('names each obstacle in a sentence about the work, not about a person', () => {
+    const why = blockers(base).map(b => b.why);
+    expect(why).toContain('Speaker registered on the forum and to their own talk is not ticked.');
+    expect(why).toContain('Registrations is still empty.');
+    expect(why).toContain('Forum summary posted is not ticked.');
+    for (const sentence of why) expect(sentence).toMatch(/\.$/);
+  });
+
+  it('says so plainly when the talk has not happened yet', () => {
+    const s: Speaker = { ...base, ...WRAPPED_UP, status: 'scheduled' };
+    expect(blockers(s).map(b => b.key)).toEqual(['not-delivered']);
+    expect(canFinalize(s)).toBe(false);
+  });
+
+  it('gives each obstacle a name of its own', () => {
+    const keys = blockers(base).map(b => b.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  /** `canFinalize` asks the same question as `blockers` and must not answer it
+   *  a second way: the two are checked together over records that differ one
+   *  requirement at a time. */
+  it('keeps canFinalize and blockers the same question', () => {
+    const records: Speaker[] = [
+      base,
+      { ...base, ...WRAPPED_UP },
+      { ...base, ...WRAPPED_UP, status: 'scheduled' },
+      { ...base, metrics: { ...base.metrics, registrations: 50, live_peak: 40 } },
+      { ...base, runbook_progress: { [REGISTERED]: true } },
+      {
+        ...base,
+        ...WRAPPED_UP,
+        runbook_progress: { ...WRAPPED_UP.runbook_progress, 'delivered/thank-you': false },
+      },
+    ];
+    for (const s of records) expect(canFinalize(s)).toBe(blockers(s).length === 0);
   });
 });
 

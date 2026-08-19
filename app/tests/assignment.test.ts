@@ -22,11 +22,14 @@ import {
   unassignItem,
 } from '../src/state/assignment';
 import { PHASES } from '../src/state/phases';
-import { speaker } from './data-doubles';
+import { config, speaker } from './data-doubles';
 
 const VISUALS = 'scheduled/T-30/visuals';
 const LINKEDIN = 'scheduled/T-21/linkedin';
 const SUMMARY = 'delivered/forum-summary';
+/** A line of the journey that does not exist in `state/phases.ts`: it comes
+ *  from the channel list in `data/config.yml`, through `state/channels.ts`. */
+const CHANNEL = 'promotion/forum';
 
 /** A scheduled talk, the phase whose lines are the ones volunteers divide up. */
 function scheduled(overrides: Parameters<typeof speaker>[0] = {}) {
@@ -62,7 +65,7 @@ describe('an item owner is never derived from the lead owner', () => {
 
   it('leaves the lead owner untouched when a line is assigned', () => {
     const s = speaker({ assigned_to: 'ada', proposed_by: 'Professor Somebody' });
-    const [after] = assignItem([s], 'spk-001', VISUALS, 'bob');
+    const [after] = assignItem([s], 'spk-001', VISUALS, 'bob', null);
     expect(after.assigned_to).toBe('ada');
     expect(after.proposed_by).toBe('Professor Somebody');
   });
@@ -95,21 +98,21 @@ describe('no owner is the normal state', () => {
 
   it('waits for nobody when nobody is signed in', () => {
     const s = scheduled({ checklist: { [VISUALS]: { assignee: 'bob' } } });
-    expect(itemsWaitingFor([s], null)).toEqual([]);
-    expect(itemsWaitingFor([s], '')).toEqual([]);
+    expect(itemsWaitingFor([s], null, null)).toEqual([]);
+    expect(itemsWaitingFor([s], '', null)).toEqual([]);
   });
 
   it('raises nothing at all for a record nobody is down for', () => {
     const s = scheduled();
-    expect(itemsWaitingFor([s], 'bob')).toEqual([]);
-    expect(itemsWaitingFor([s], 'ada')).toEqual([]);
+    expect(itemsWaitingFor([s], 'bob', null)).toEqual([]);
+    expect(itemsWaitingFor([s], 'ada', null)).toEqual([]);
   });
 
   it('stores no blank owner: assigning nobody removes the entry', () => {
     const s = speaker({ checklist: { [VISUALS]: { assignee: 'bob' } } });
-    const [cleared] = assignItem([s], 'spk-001', VISUALS, '');
+    const [cleared] = assignItem([s], 'spk-001', VISUALS, '', null);
     expect(cleared.checklist).toEqual({});
-    const [unassigned] = unassignItem([s], 'spk-001', VISUALS);
+    const [unassigned] = unassignItem([s], 'spk-001', VISUALS, null);
     expect(unassigned.checklist).toEqual({});
   });
 });
@@ -118,7 +121,7 @@ describe('writing an owner', () => {
   it('writes only the record asked for, and only the line asked for', () => {
     const a = speaker({ id: 'spk-001', checklist: { [SUMMARY]: { assignee: 'carol' } } });
     const b = speaker({ id: 'spk-002' });
-    const after = assignItem([a, b], 'spk-001', VISUALS, 'bob');
+    const after = assignItem([a, b], 'spk-001', VISUALS, 'bob', null);
     expect(after[0].checklist).toEqual({
       [SUMMARY]: { assignee: 'carol' },
       [VISUALS]: { assignee: 'bob' },
@@ -131,7 +134,8 @@ describe('writing an owner', () => {
     const fresh = [speaker({ id: 'spk-001', checklist: { [SUMMARY]: { assignee: 'carol' } } })];
     // The transformation is built against `rendered` and applied to `fresh`:
     // an owner recorded meanwhile has to survive.
-    const transform = (current: typeof rendered) => assignItem(current, 'spk-001', VISUALS, 'bob');
+    const transform = (current: typeof rendered) =>
+      assignItem(current, 'spk-001', VISUALS, 'bob', null);
     expect(transform(rendered)[0].checklist).toEqual({ [VISUALS]: { assignee: 'bob' } });
     expect(transform(fresh)[0].checklist).toEqual({
       [SUMMARY]: { assignee: 'carol' },
@@ -141,20 +145,40 @@ describe('writing an owner', () => {
 
   it('does not mutate the record it was given', () => {
     const s = speaker({ checklist: {} });
-    assignItem([s], 'spk-001', VISUALS, 'bob');
+    assignItem([s], 'spk-001', VISUALS, 'bob', null);
     expect(s.checklist).toEqual({});
   });
 
   it('trims the name, so a stray space is not a second person', () => {
-    const [after] = assignItem([speaker()], 'spk-001', VISUALS, '  bob  ');
+    const [after] = assignItem([speaker()], 'spk-001', VISUALS, '  bob  ', null);
     expect(itemAssignee(after, VISUALS)).toBe('bob');
   });
 
-  it('refuses a line the journey does not have', () => {
-    expect(() => assignItem([speaker()], 'spk-001', 'made/up/step', 'bob')).toThrow(
+  it('puts an owner on a promotion channel, which is a line of the journey too', () => {
+    // The blocker Task 6 left behind: the channel list is configuration, and
+    // a guard that only knew the static table refused every one of its keys.
+    const [after] = assignItem([scheduled()], 'spk-001', CHANNEL, 'bob', config());
+    expect(itemAssignee(after, CHANNEL)).toBe('bob');
+  });
+
+  it('follows the file rather than a remembered list of channels', () => {
+    const cfg = config({ channels: [{ key: 'posters', label: 'Printed posters' }] });
+    const [after] = assignItem([scheduled()], 'spk-001', 'promotion/posters', 'bob', cfg);
+    expect(itemAssignee(after, 'promotion/posters')).toBe('bob');
+    // `forum` is in the double's default list and not in this one. A guard
+    // reading a constant would have accepted it here.
+    expect(() => assignItem([scheduled()], 'spk-001', CHANNEL, 'bob', cfg)).toThrow(
       AssignmentRejected,
     );
-    expect(() => unassignItem([speaker()], 'spk-001', 'made/up/step')).toThrow(AssignmentRejected);
+  });
+
+  it('refuses a line the journey does not have', () => {
+    expect(() => assignItem([speaker()], 'spk-001', 'made/up/step', 'bob', null)).toThrow(
+      AssignmentRejected,
+    );
+    expect(() => unassignItem([speaker()], 'spk-001', 'made/up/step', null)).toThrow(
+      AssignmentRejected,
+    );
   });
 });
 
@@ -163,8 +187,16 @@ describe('what is waiting for me', () => {
     const s = scheduled({
       checklist: { [VISUALS]: { assignee: 'bob' }, [LINKEDIN]: { assignee: 'carol' } },
     });
-    expect(itemsWaitingFor([s], 'bob').map(w => w.item.key)).toEqual([VISUALS]);
-    expect(itemsWaitingFor([s], 'carol').map(w => w.item.key)).toEqual([LINKEDIN]);
+    expect(itemsWaitingFor([s], 'bob', null).map(w => w.item.key)).toEqual([VISUALS]);
+    expect(itemsWaitingFor([s], 'carol', null).map(w => w.item.key)).toEqual([LINKEDIN]);
+  });
+
+  it('raises an unticked channel for whoever is down for it', () => {
+    const s = scheduled({ checklist: { [CHANNEL]: { assignee: 'bob' } } });
+    expect(itemsWaitingFor([s], 'bob', config()).map(w => w.item.key)).toEqual([CHANNEL]);
+    // Without a config there is no channel list to expand, so the journey
+    // reads as the static table and this line is not in it.
+    expect(itemsWaitingFor([s], 'bob', null)).toEqual([]);
   });
 
   it('drops a line as soon as it is done, rather than nagging about it', () => {
@@ -172,7 +204,7 @@ describe('what is waiting for me', () => {
       checklist: { [VISUALS]: { assignee: 'bob' } },
       runbook_progress: { [VISUALS]: true },
     });
-    expect(itemsWaitingFor([s], 'bob')).toEqual([]);
+    expect(itemsWaitingFor([s], 'bob', null)).toEqual([]);
   });
 
   it('reads a required field as done once it carries a value', () => {
@@ -186,10 +218,10 @@ describe('what is waiting for me', () => {
       ...base,
       metrics: { registrations: 40, live_peak: null, youtube_views_30d: null, forum_replies: null },
     });
-    expect(itemsWaitingFor([empty], 'bob').map(w => w.item.key)).toEqual([
+    expect(itemsWaitingFor([empty], 'bob', null).map(w => w.item.key)).toEqual([
       'delivered/registrations',
     ]);
-    expect(itemsWaitingFor([filled], 'bob')).toEqual([]);
+    expect(itemsWaitingFor([filled], 'bob', null)).toEqual([]);
   });
 
   it('leaves behind a name on a line the event has already moved past', () => {
@@ -201,19 +233,19 @@ describe('what is waiting for me', () => {
       date: '2026-05-01',
       checklist: { [VISUALS]: { assignee: 'bob' } },
     });
-    expect(itemsWaitingFor([s], 'bob')).toEqual([]);
+    expect(itemsWaitingFor([s], 'bob', null)).toEqual([]);
   });
 
   it('says nothing about a record that has no journey left', () => {
     for (const status of ['archived', 'parked', 'decline-board'] as const) {
       const s = speaker({ status, checklist: { [VISUALS]: { assignee: 'bob' } } });
-      expect(itemsWaitingFor([s], 'bob')).toEqual([]);
+      expect(itemsWaitingFor([s], 'bob', null)).toEqual([]);
     }
   });
 
   it('carries the record alongside the line, so the screen can link to it', () => {
     const s = scheduled({ checklist: { [VISUALS]: { assignee: 'bob' } } });
-    const [waiting] = itemsWaitingFor([s], 'bob');
+    const [waiting] = itemsWaitingFor([s], 'bob', null);
     expect(waiting.speaker.id).toBe('spk-001');
     expect(waiting.item.label).toBe('Visuals + flyer made');
   });
@@ -224,7 +256,7 @@ describe('what is waiting for me', () => {
     // `state/sla.ts`. Neither has a slot for a name, and neither is written
     // here -- so the six words the inactivity sweep bans have nowhere to enter.
     const s = scheduled({ checklist: { [VISUALS]: { assignee: 'bob' } } });
-    for (const w of itemsWaitingFor([s], 'bob')) {
+    for (const w of itemsWaitingFor([s], 'bob', null)) {
       expect(w.item.label).not.toContain('bob');
     }
   });
