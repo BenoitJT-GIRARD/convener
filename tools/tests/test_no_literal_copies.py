@@ -52,11 +52,16 @@ _REPO = Path(__file__).resolve().parents[2]
 _DOCS = _REPO / "docs"
 
 #: The rule `app/scripts/handbook-files.mjs` applies, so that this sweep covers
-#: exactly the pages a volunteer can open. Kept in step by
-#: ``test_the_sweep_covers_the_pages_the_app_serves`` below rather than by
-#: hoping: a directory added to one side and not the other silently shrinks
-#: what this test looks at.
+#: exactly the pages a volunteer can open. Held against that file itself by
+#: ``test_the_skip_list_is_the_one_the_app_applies`` below, which reads
+#: `SKIP_DIRS` out of it: a directory added to one side and not the other
+#: silently shrinks what this test looks at, and shrinking it is invisible --
+#: the sweep still passes, over less.
 _SKIP_DIRS = {"superpowers", "stylesheets", "app"}
+
+#: Where the app's copy of the same rule lives, and the form it is written in.
+_HANDBOOK_FILES = Path("app/scripts/handbook-files.mjs")
+_APP_SKIP_DIRS = re.compile(r"export const SKIP_DIRS = new Set\(\[(.*?)\]\)", re.S)
 
 _FENCE = re.compile(r"^\s*```", re.M)
 _INCLUDE_LINE = re.compile(r"^[ \t]*\{\{>[^}]*\}\}[ \t]*$", re.M)
@@ -129,6 +134,25 @@ def _handbook() -> dict[str, str]:
         path.relative_to(_DOCS).as_posix(): path.read_text(encoding="utf-8")
         for path in served_pages()
     }
+
+
+def test_the_skip_list_is_the_one_the_app_applies() -> None:
+    """The two copies of "which directories never reach a volunteer".
+
+    Not a formality. Dropping two directories from `_SKIP_DIRS` -- which
+    silently removes two whole sections of the handbook from the
+    no-duplicate sweep -- left every test in this module green, because
+    nothing read the other side. The docstring on `_SKIP_DIRS` claimed this
+    pin before it existed, which is worse than claiming nothing: it is what a
+    reviewer trusts instead of looking.
+    """
+    source = (_REPO / _HANDBOOK_FILES).read_text(encoding="utf-8")
+    listed = _APP_SKIP_DIRS.search(source)
+    assert listed is not None, (
+        f"{_HANDBOOK_FILES.as_posix()} no longer declares SKIP_DIRS in the form "
+        "this test reads, so the two skip lists are no longer held together."
+    )
+    assert set(re.findall(r"'([^']+)'", listed.group(1))) == _SKIP_DIRS
 
 
 def test_the_sweep_covers_the_pages_the_app_serves() -> None:
