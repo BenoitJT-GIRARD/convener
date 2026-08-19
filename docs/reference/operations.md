@@ -36,8 +36,10 @@ fully usable; onboarding is simply slower.
 
 **To create:**
 1. Register a GitHub App in the organisation. Permissions: *Contents: read &
-   write*, *Issues: read & write*, on `example-cockpit` only. Enable device
-   flow.
+   write* and nothing else, on `example-cockpit` only. Enable device flow. The
+   app never touches issues -- the board notifications are posted by the
+   workflow's own token, not by this app -- so granting it *Issues* would be
+   a permission nobody uses on a repository holding personal data.
 2. Create a Cloudflare account with the organisation address; deploy the
    worker from `services/auth-proxy/` (`npx wrangler deploy` from that
    folder — see its README).
