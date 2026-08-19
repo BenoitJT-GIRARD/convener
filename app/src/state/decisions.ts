@@ -111,7 +111,9 @@ export type PlainDecisionKind =
   | 'nomination-object'
   | 'nomination-withdraw-objection'
   | 'nomination-resolve'
-  | 'speaker-delete';
+  | 'speaker-create'
+  | 'speaker-delete'
+  | 'date-propose';
 
 /**
  * One act of the register.
@@ -133,6 +135,25 @@ export type PlainDecisionKind =
  */
 export type AvailabilityChange = 'away' | 'back';
 
+/**
+ * What a speaker's reply about one offered day said.
+ *
+ * `accepted` and `declined` are `DateAnswer`; `cleared` is the third thing
+ * the act can record and the record cannot -- a reply taken back, which
+ * `data/speakers.yml` stores as `answer: ''` and which reads as "not answered
+ * yet" once it is written. The register needs the three because the act is
+ * what happened, not what the field now holds.
+ *
+ * The day itself is not here, and not in the subject. It is in the diff,
+ * exactly as `lock-date`'s date and `availability-set`'s day are -- and here
+ * it matters more than there: `candidate_dates` is classified
+ * `NEVER_PUBLISHED` (`state/consent.ts`) because which evenings a researcher
+ * turned down is their availability and not the programme, and a commit
+ * subject is the one place in this repository nothing can be taken back
+ * from.
+ */
+export type DateReply = 'accepted' | 'declined' | 'cleared';
+
 export type Decision =
   | { kind: 'availability-set'; entity: Identifier; actor: Identifier; detail: AvailabilityChange }
   | { kind: 'ballot-cast'; entity: Identifier; actor: Identifier; detail: BallotValue }
@@ -143,6 +164,7 @@ export type Decision =
       actor: Identifier;
       detail: ObjectionResolution;
     }
+  | { kind: 'date-answer'; entity: Identifier; actor: Identifier; detail: DateReply }
   | { kind: 'override'; entity: Identifier; actor: Identifier; detail: SpeakerStatus }
   | { kind: PlainDecisionKind; entity: Identifier; actor: Identifier };
 
@@ -161,6 +183,8 @@ export const ACTS: Record<DecisionKind, string> = {
   'send-invitation': 'send the invitation for',
   'invited-accept': 'record an accepted invitation for',
   'invited-decline': 'record a declined invitation for',
+  'date-propose': 'propose a date for',
+  'date-answer': 'record a date reply for',
   'lock-date': 'lock the date of',
   'consent-set': 'record the recording consent of',
   'publication-approve': 'approve publication of',
@@ -172,8 +196,37 @@ export const ACTS: Record<DecisionKind, string> = {
   'nomination-withdraw-objection': 'withdraw an objection to the nomination of',
   'nomination-resolve': 'settle the nomination of',
   override: 'override the status of',
+  'speaker-create': 'record a new lead for',
   'speaker-delete': 'delete the record of',
 };
+
+/**
+ * The subject for a `data:` commit that records no decision.
+ *
+ * Five screens write to `data/speakers.yml` without deciding anything: a
+ * runbook box ticked, a talk detail typed in, a name put against a line of
+ * the journey, the post-archive numbers, and the admin form saving the fields
+ * it was given. They are bookkeeping -- the file catching up with something
+ * that already happened elsewhere -- and `validate_messages` is right to leave
+ * them alone: a grammar that made every commit an obstacle would be abandoned
+ * inside a week (`tools/convener_ops/commit_format.py`).
+ *
+ * They are routed through here all the same, and not because the string needs
+ * building. It is so that the next reader finds a decision about them rather
+ * than five ad-hoc template literals that read as a pattern to copy; and so
+ * that the one rule they do share with the register is stated in one place:
+ * the subject points at a record -- `entity` is an `Identifier`, so a name
+ * cannot reach it -- and `what` says which part of it moved, never who a
+ * person is and never a value that discloses something about a third party. A
+ * commit subject is permanent and unrewritable whether or not a grammar reads
+ * it back.
+ *
+ * `app/tests/decisions.test.ts` checks that no other `data:` subject is
+ * assembled anywhere in `src/`.
+ */
+export function dataEdit(entity: Identifier, what: string): string {
+  return `data: ${entity} ${what}`;
+}
 
 /** The exact line to commit. The `Decision` type admits nothing malformed, so
  *  this is total: every value it can be given produces a line

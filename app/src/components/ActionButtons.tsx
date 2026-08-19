@@ -354,7 +354,7 @@ function CandidateDates({
   }
 
   async function offer() {
-    if (locked || !config || !date || blocker) return;
+    if (locked || !config || !login || !date || blocker) return;
     setBusy(true);
     try {
       // Everything the transformation writes is read from `current`: the
@@ -376,7 +376,15 @@ function CandidateDates({
                 )
               : sp,
           ),
-        `data: ${speaker.id} propose ${date}`,
+        // The act, not the day. Which evenings a researcher was offered is
+        // their availability rather than the programme, and the diff already
+        // carries it -- the same division `lock-date` and `availability-set`
+        // make.
+        formatDecision({
+          kind: 'date-propose',
+          entity: identifier(speaker.id),
+          actor: identifier(login),
+        }),
       );
       setDate('');
     } finally {
@@ -385,13 +393,23 @@ function CandidateDates({
   }
 
   async function reply(slotDate: string, answer: DateAnswer) {
-    if (locked) return;
+    if (locked || !login) return;
     setBusy(true);
     try {
       await mutateSpeakers(
         current =>
           current.map(sp => (sp.id === speaker.id ? answerDate(sp, slotDate, answer).speaker : sp)),
-        `data: ${speaker.id} candidate ${slotDate}=${answer || 'unanswered'}`,
+        // `${slotDate}=${answer}` stood here, which published which
+        // evenings a named researcher turned down into a subject line
+        // nothing can rewrite. `candidate_dates` is NEVER_PUBLISHED for
+        // exactly that reason (`state/consent.ts`). The reply is the
+        // qualifier; the day is in the diff.
+        formatDecision({
+          kind: 'date-answer',
+          entity: identifier(speaker.id),
+          actor: identifier(login),
+          detail: answer === '' ? 'cleared' : answer,
+        }),
       );
     } finally {
       setBusy(false);

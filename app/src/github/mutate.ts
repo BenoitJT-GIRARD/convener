@@ -30,7 +30,14 @@ export interface MutateOptions<T> {
   parse: (text: string) => T;
   serialize: (value: T) => string;
   transform: (current: T) => T;
-  message: string;
+  /** The commit subject, or a function from the value about to be written to
+   *  it. The function form exists for a subject that has to name something
+   *  the transformation assigned -- the id of a record just created, which
+   *  `nextSpeakerId(current)` only settles inside the transform and only for
+   *  the attempt that actually gets written. Without it the caller would have
+   *  to build the subject from a value read before the replay, which is the
+   *  one value that may be stale. */
+  message: string | ((next: T) => string);
   attempts?: number;
 }
 
@@ -72,7 +79,8 @@ export async function mutate<T>(options: MutateOptions<T>): Promise<MutateResult
     }
 
     try {
-      const written = await store.write(path, nextText, sha, message);
+      const subject = typeof message === 'function' ? message(next) : message;
+      const written = await store.write(path, nextText, sha, subject);
       return { value: next, sha: written.sha, changed: true, attempts: attempt };
     } catch (error) {
       if (isConflict(error)) continue;

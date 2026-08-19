@@ -55,6 +55,14 @@ ACTS: Final[dict[str, str]] = {
     "send-invitation": "send the invitation for",
     "invited-accept": "record an accepted invitation for",
     "invited-decline": "record a declined invitation for",
+    # The date negotiation. Neither act carries the day: which evenings a
+    # researcher was offered, and which they turned down, is their
+    # availability rather than the programme -- `candidate_dates` is
+    # classified NEVER_PUBLISHED for that reason -- and a commit subject is
+    # the one thing here nothing can take back. The day is in the diff, as
+    # `lock-date`'s is.
+    "date-propose": "propose a date for",
+    "date-answer": "record a date reply for",
     "lock-date": "lock the date of",
     # Publishing a recording (G-10, G-15).
     "consent-set": "record the recording consent of",
@@ -78,6 +86,10 @@ ACTS: Final[dict[str, str]] = {
     "nomination-resolve": "settle the nomination of",
     # Administrative acts, which the register records exactly like the rest.
     "override": "override the status of",
+    # Creating a record names the record, never the person in it: the browser
+    # knows the lead's full name at this point and the subject carries the id
+    # it has just assigned instead.
+    "speaker-create": "record a new lead for",
     "speaker-delete": "delete the record of",
 }
 
@@ -89,6 +101,10 @@ QUALIFIERS: Final[dict[str, frozenset[str]]] = {
     "ballot-cast": frozenset({"yes", "abstain", "recused"}),
     "availability-set": frozenset({"away", "back"}),
     "consent-set": frozenset({"granted", "refused"}),
+    # `cleared` is a reply taken back, which the record stores as `answer:
+    # ""`. The act records what happened, so it has a word the field does
+    # not.
+    "date-answer": frozenset({"accepted", "declined", "cleared"}),
     "publication-resolve": frozenset({"lift", "withhold"}),
     "override": frozenset(
         {

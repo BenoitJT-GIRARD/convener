@@ -37,9 +37,13 @@ interface Ctx extends State {
    *  surfaced via `saveError` — callers whose code after the write has a
    *  user-visible success side effect (a confirmation, a navigation) must
    *  guard it on this, so a failed write never reports success. */
+  /** `message` may be a function of the list about to be written, for a
+   *  subject that names something the transformation assigned -- the id of a
+   *  record just created. It is called once, on the value that actually goes
+   *  to GitHub. */
   mutateSpeakers: (
     transform: (current: Speaker[]) => Speaker[],
-    message: string,
+    message: string | ((next: Speaker[]) => string),
   ) => Promise<boolean>;
   mutateConfig: (
     transform: (current: Config) => Config,
@@ -170,7 +174,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   async function mutateSpeakers(
     transform: (current: Speaker[]) => Speaker[],
-    message: string,
+    message: string | ((next: Speaker[]) => string),
   ): Promise<boolean> {
     if (!token) return false;
     if (isDemoMode()) {

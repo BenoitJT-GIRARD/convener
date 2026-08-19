@@ -8,6 +8,7 @@ import { PublicationGate } from '../components/PublicationGate';
 import { Checklist } from '../components/Checklist';
 import { setField, phaseOf, type FieldKey } from '../state/phases';
 import { assignItem } from '../state/assignment';
+import { dataEdit, identifier } from '../state/decisions';
 import { effectiveStatus } from '../state/derived';
 import { LoadError } from '../components/LoadError';
 import type { Speaker } from '../data/types';
@@ -34,7 +35,10 @@ export function SpeakerPage() {
             ? { ...sp, runbook_progress: { ...sp.runbook_progress, [key]: value } }
             : sp,
         ),
-      `data: ${id} runbook ${key}=${value}`,
+      // A box ticked on the runbook is the record catching up with work
+      // already done, not an act of the register. The key is the journey's
+      // own, from `state/phases.ts`, and names no one.
+      dataEdit(identifier(id), `runbook ${key}=${value}`),
     );
   }
 
@@ -42,7 +46,9 @@ export function SpeakerPage() {
     if (!login || !id) return;
     await mutateSpeakers(
       current => current.map(sp => (sp.id === id ? setField(sp, k, v) : sp)),
-      `data: ${id} set ${k}`,
+      // A talk detail typed in. `k` is a field name, never its value: the
+      // value is in the diff, where the consent classification governs it.
+      dataEdit(identifier(id), `set ${k}`),
     );
   }
 
@@ -59,7 +65,10 @@ export function SpeakerPage() {
     if (!login || !id) return;
     await mutateSpeakers(
       current => assignItem(current, id, key, who, config),
-      who === '' ? `data: ${id} owner cleared on ${key}` : `data: ${id} owner for ${key}`,
+      // Who owes a line is not a decision of the register, and the login
+      // put down is deliberately left out of the subject -- the line is
+      // named, the person is not.
+      dataEdit(identifier(id), who === '' ? `owner cleared on ${key}` : `owner for ${key}`),
     );
   }
 

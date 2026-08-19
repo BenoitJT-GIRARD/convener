@@ -1625,6 +1625,46 @@
       "actor": "ada",
       "detail": "",
       "message": "data: delete the record of spk-005 by ada"
+    },
+    {
+      "name": "creating a lead names the record the id was assigned to, never the person in it",
+      "kind": "speaker-create",
+      "entity": "spk-032",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: record a new lead for spk-032 by ada"
+    },
+    {
+      "name": "offering a date names the record, and leaves the day to the diff",
+      "kind": "date-propose",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: propose a date for spk-007 by ada"
+    },
+    {
+      "name": "a reply the speaker accepted",
+      "kind": "date-answer",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "accepted",
+      "message": "data: record a date reply for spk-007 by ada (accepted)"
+    },
+    {
+      "name": "a reply the speaker declined -- which evening is in the diff, not the subject",
+      "kind": "date-answer",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "declined",
+      "message": "data: record a date reply for spk-007 by ada (declined)"
+    },
+    {
+      "name": "a reply taken back, which the record spells as an empty answer",
+      "kind": "date-answer",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "cleared",
+      "message": "data: record a date reply for spk-007 by ada (cleared)"
     }
   ],
   "commit_message_rejects": [
@@ -1667,6 +1707,14 @@
     {
       "name": "an attribution trailer, on a decision or anywhere else",
       "message": "app: tidy the ballot list\n\nCo-authored-by: Someone <someone@example.org>"
+    },
+    {
+      "name": "a date reply that does not say what was replied",
+      "message": "data: record a date reply for spk-007 by ada"
+    },
+    {
+      "name": "a date in the subject line instead of a qualifier the act admits",
+      "message": "data: record a date reply for spk-007 by ada (2026-06-01)"
     }
   ],
   "commit_message_ordinary": [
@@ -1705,6 +1753,26 @@
     {
       "name": "an empty message is not the grammar's problem",
       "message": ""
+    },
+    {
+      "name": "a talk detail typed into the record is bookkeeping",
+      "message": "data: spk-001 set title"
+    },
+    {
+      "name": "a name put against a line of the journey decides nothing",
+      "message": "data: spk-001 owner for scheduled/T-30/visuals"
+    },
+    {
+      "name": "and taking it off again is the same kind of edit",
+      "message": "data: spk-001 owner cleared on scheduled/T-30/visuals"
+    },
+    {
+      "name": "the numbers read off after the archive are a record of what happened",
+      "message": "data: spk-001 update post-archive metrics"
+    },
+    {
+      "name": "the admin form saves the fields it was given",
+      "message": "data: spk-001 admin edit"
     }
   ],
   "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. Each case carries the whole `config` the two readers take, not just `sla_days`: the board-decision step is timed by `vote_window_days` and the other three by `sla_days`, one number per deadline (F-13). The two cases with a vote window other than 14 are what makes that testable rather than merely stated: a reader that hard-coded fourteen days for the board, or read a `lead_decision` key of its own, passes every other case here and fails those two. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",

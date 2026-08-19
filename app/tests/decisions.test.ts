@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 import {
@@ -6,6 +8,7 @@ import {
   identifier,
   isIdentifier,
   DecisionRejected,
+  dataEdit,
   transitionDecision,
   type Decision,
   type DecisionKind,
@@ -74,6 +77,11 @@ function decisionFrom(c: FixtureCase): Decision {
         actor,
         detail: detail as ObjectionResolution,
       };
+    case 'date-answer':
+      if (detail !== 'accepted' && detail !== 'declined' && detail !== 'cleared') {
+        throw new Error(`not a date reply: ${detail}`);
+      }
+      return { kind: 'date-answer', entity, actor, detail };
     case 'override': {
       const status = STATUSES.find(s => s === detail);
       if (!status) throw new Error(`not a speaker status: ${detail}`);
@@ -207,5 +215,41 @@ describe('the grammar of decision commits', () => {
     expect(message).toContain('is not an identifier');
     expect(message).toContain('GitHub username');
     expect(message).not.toMatch(/regex|token|TOKEN|\/\^/);
+  });
+
+  it('is the only place in the app a `data:` subject is assembled', () => {
+    // The eight ad-hoc template literals this replaced were not caught by
+    // anything: none of them opened with an act phrase, so `_claimed_kind`
+    // returned nothing and `convener-check-commits` passed them in silence. One
+    // carried a researcher's full name. A subject built anywhere else is
+    // therefore invisible until it is in the history for good, which is why
+    // the rule is checked over the source rather than over the messages.
+    const root = join(__dirname, '..', 'src');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry)) files.push(full);
+      }
+    };
+    walk(root);
+    const subjects = files.flatMap(f =>
+      readFileSync(f, 'utf8')
+        .split('\n')
+        .map((text, i) => ({ file: f, line: i + 1, text }))
+        // Code, not the comments that quote a subject to explain it.
+        .filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l.text))
+        .filter(l => /`data: /.test(l.text)),
+    );
+    expect(subjects.map(s => `${s.file}:${s.line}`)).toHaveLength(2);
+    for (const s of subjects) expect(s.file).toMatch(/decisions\.ts$/);
+  });
+
+  it('writes a non-decision subject about the record and nobody else', () => {
+    expect(dataEdit(identifier('spk-001'), 'set title')).toBe('data: spk-001 set title');
+    // The same `Identifier` gate as the register: a person cannot be named
+    // in one of these either.
+    expect(() => dataEdit(identifier('Jane Doe'), 'set title')).toThrow(DecisionRejected);
   });
 });

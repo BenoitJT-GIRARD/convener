@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { effectiveStatus } from '../state/derived';
 import { viewCountLabel } from '../state/phases';
+import { dataEdit, identifier } from '../state/decisions';
 import { LoadError } from '../components/LoadError';
 import type { Config, Speaker, SpeakerStatus } from '../data/types';
 
@@ -288,7 +289,9 @@ function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
                 }
               : s,
           ),
-        `data: ${speaker.id} update post-archive metrics`,
+        // Bookkeeping, not a decision: the numbers are read off elsewhere
+        // and written down here, and nothing about a person is said.
+        dataEdit(identifier(speaker.id), 'update post-archive metrics'),
       );
       // A failure is surfaced via the saveError banner (see Layout) -- never
       // report success here unless the write actually went through.
