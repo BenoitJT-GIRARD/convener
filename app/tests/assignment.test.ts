@@ -174,13 +174,24 @@ describe('writing an owner', () => {
     );
   });
 
-  it('refuses a line the journey does not have', () => {
+  it('refuses to put a name on a line the journey does not have', () => {
     expect(() => assignItem([speaker()], 'spk-001', 'made/up/step', 'bob', null)).toThrow(
       AssignmentRejected,
     );
-    expect(() => unassignItem([speaker()], 'spk-001', 'made/up/step', null)).toThrow(
-      AssignmentRejected,
-    );
+  });
+
+  it('clears a line the journey no longer has, which is the only way back', () => {
+    // Drop a channel from `data/config.yml` and the entries already written
+    // under `promotion/<key>` stay in `speakers.yml`, on a line that no
+    // longer renders. This used to refuse them -- the app would not undo what
+    // the app had written, and nothing else can.
+    const stranded = speaker({ checklist: { 'promotion/gone': { assignee: 'bob' } } });
+    const cleared = unassignItem([stranded], 'spk-001', 'promotion/gone', config());
+    expect(cleared[0].checklist).toEqual({});
+    // And it is still not a way to write one: only clearing is open.
+    expect(() =>
+      assignItem([stranded], 'spk-001', 'promotion/gone', 'bob', config()),
+    ).toThrow(AssignmentRejected);
   });
 });
 

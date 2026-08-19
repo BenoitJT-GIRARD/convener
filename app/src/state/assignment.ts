@@ -95,15 +95,8 @@ export function itemAssignee(speaker: Speaker, itemKey: string): string {
 function withChecklist(
   current: Speaker[],
   speakerId: string,
-  itemKey: string,
-  config: Config | null,
   update: (checklist: Speaker['checklist']) => Speaker['checklist'],
 ): Speaker[] {
-  if (!journeyItemKeys(config).has(itemKey)) {
-    throw new AssignmentRejected(
-      `"${itemKey}" is not a step of the journey, so nobody can be put down for it.`,
-    );
-  }
   return current.map(s => (s.id === speakerId ? { ...s, checklist: update(s.checklist) } : s));
 }
 
@@ -138,7 +131,12 @@ export function assignItem(
         'A line is owned by an account, never by a person written out by name.',
     );
   }
-  return withChecklist(current, speakerId, itemKey, config, checklist => ({
+  if (!journeyItemKeys(config).has(itemKey)) {
+    throw new AssignmentRejected(
+      `"${itemKey}" is not a step of the journey, so nobody can be put down for it.`,
+    );
+  }
+  return withChecklist(current, speakerId, checklist => ({
     ...checklist,
     [itemKey]: { assignee: owner },
   }));
@@ -149,14 +147,28 @@ export function assignItem(
  *
  * Removes the entry rather than blanking it: an unassigned line is one the
  * record says nothing about, which is where every line starts.
+ *
+ * **Any key can be cleared, including one the journey no longer has.** The
+ * guard on `assignItem` is about writing a name onto a line that does not
+ * exist; taking a name off is never that. Drop a channel from
+ * `data/config.yml` and the `checklist['promotion/<key>']` entries already
+ * written stay in `speakers.yml`, on a line that no longer renders -- and the
+ * guard, applied here as it once was, made them permanent: the app refused
+ * the one operation that would clear them. Refusing to undo what the app
+ * itself wrote is a worse answer than accepting an unknown key, and the
+ * alternative -- a config edit that reaches into `speakers.yml` and deletes
+ * entries across every record -- is a cross-file write triggered by what may
+ * be a typo in a key. The parameter stays in the signature -- unread, and
+ * named for it -- because `assignItem` delegates here for an empty login and
+ * a caller should not have to know which of the two reads it.
  */
 export function unassignItem(
   current: Speaker[],
   speakerId: string,
   itemKey: string,
-  config: Config | null,
+  _config: Config | null,
 ): Speaker[] {
-  return withChecklist(current, speakerId, itemKey, config, checklist =>
+  return withChecklist(current, speakerId, checklist =>
     Object.fromEntries(Object.entries(checklist).filter(([key]) => key !== itemKey)),
   );
 }

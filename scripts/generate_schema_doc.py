@@ -552,7 +552,11 @@ Each channel becomes one line of the promotion phase, keyed `promotion/<key>`,
 so it carries an owner in `checklist` exactly like every other line. The `key`
 is what records store, so renaming one re-keys what is already written and is a
 migration rather than an edit; the `label` is only ever shown, and can be
-reworded at any time. An empty list is a legal answer and means nothing is
+reworded at any time. Removing a channel has the same property from the other
+side: the owners already written under `promotion/<key>` stay in
+`data/speakers.yml`, on a line no screen shows any more. They are harmless and
+they are not stranded — the entry can still be cleared, and only cleared, once
+the key has gone. An empty list is a legal answer and means nothing is
 promoted through this app; a `channels` that is missing, that is not a list,
 that repeats a key, or that holds a channel with no label stops the file being
 read at all, with a message naming the entry — a broken list must not read as a
