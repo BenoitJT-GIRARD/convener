@@ -225,11 +225,18 @@ class _Question:
                 "text": value,
             }
             if index == 0:
-                # A group-level setting, and Tally's own convention (see
+                # Group-level settings, and Tally's own convention (see
                 # `hasBadge`/`randomize`/etc. in its option payload schema)
-                # is to set it once, on the first option, rather than repeat
-                # it identically on every sibling.
+                # is to set them once, on the first option, rather than
+                # repeat them identically on every sibling. `placeholder`
+                # existing on `DropdownOptionPayload` is confirmed against
+                # Tally's own OpenAPI spec; that it renders the way
+                # INPUT_TEXT's placeholder does -- a hint shown before a
+                # value is chosen -- is inferred from the field's presence
+                # and name, not confirmed by a worked example the way the
+                # option block's own shape was.
                 payload["isRequired"] = self.required
+                payload["placeholder"] = self.placeholder
             blocks.append(
                 _block(
                     "DROPDOWN_OPTION",
@@ -244,6 +251,44 @@ class _Question:
                 )
             )
         return blocks
+
+
+#: What each non-`"undisclosed"` token in `GENDER_ORDER`/`CAREER_STAGE_ORDER`
+#: means, for `_dropdown_placeholder` below to fold into a disambiguating
+#: placeholder. R-9 made the vocabulary arrive intact; it does not make a
+#: respondent pick the *right* token -- "independent" and "group-leader"
+#: read as near-synonyms side by side, and "NB" means nothing to a
+#: respondent who has never seen the abbreviation. The gloss lives here,
+#: never in the option `text` itself (R-3: a "helpful" rewording of an
+#: option's own text would silently break the build, since option text is
+#: what `test_the_gender_options_are_exactly_the_imported_vocabulary_in_order`
+#: pins against the shared vocabulary). A token present in the order tuple
+#: but missing here raises `KeyError` at import time -- a vocabulary added
+#: without a gloss fails the build loudly rather than shipping a dropdown
+#: with one undisambiguated option.
+_GENDER_GLOSS: Final[dict[str, str]] = {
+    "F": "female",
+    "M": "male",
+    "NB": "non-binary",
+}
+_CAREER_STAGE_GLOSS: Final[dict[str, str]] = {
+    "phd": "PhD student",
+    "postdoc": "postdoctoral researcher",
+    "independent": "no lab of their own",
+    "group-leader": "runs a lab",
+    "other": "none of the above",
+}
+
+
+def _dropdown_placeholder(order: tuple[str, ...], gloss: dict[str, str]) -> str:
+    """'token (gloss), token (gloss), ..., or undisclosed if you'd rather
+    not say' -- built from the live vocabulary and its gloss rather than a
+    second hand-typed sentence, so the wording always lists whatever the
+    vocabulary actually is. `undisclosed` is named last and framed as a
+    choice, never omitted -- R-2: it must read as a legitimate answer, not
+    a refusal to answer."""
+    named = [f"{value} ({gloss[value]})" for value in order if value != "undisclosed"]
+    return ", ".join(named) + ", or undisclosed if you'd rather not say"
 
 
 #: Per-question specifics `FORM_FIELDS` does not carry: how the question is
@@ -270,8 +315,16 @@ _ANSWER_SPECS: Final[dict[tuple[str, ...], tuple[str, str, tuple[str, ...]]]] = 
         (),
     ),
     LABEL_ABSTRACT: ("TEXTAREA", "A few sentences on what the talk would cover", ()),
-    LABEL_CAREER_STAGE: ("DROPDOWN", "", CAREER_STAGE_ORDER),
-    LABEL_GENDER: ("DROPDOWN", "", GENDER_ORDER),
+    LABEL_CAREER_STAGE: (
+        "DROPDOWN",
+        _dropdown_placeholder(CAREER_STAGE_ORDER, _CAREER_STAGE_GLOSS),
+        CAREER_STAGE_ORDER,
+    ),
+    LABEL_GENDER: (
+        "DROPDOWN",
+        _dropdown_placeholder(GENDER_ORDER, _GENDER_GLOSS),
+        GENDER_ORDER,
+    ),
     LABEL_LINKS: (
         "INPUT_TEXT",
         "Comma-separated links: personal site, Google Scholar, LinkedIn, etc.",

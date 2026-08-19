@@ -95,6 +95,12 @@ def _answer_payload(blocks: list[dict[str, Any]], label: str) -> dict[str, Any]:
     return dict(body[0]["payload"])
 
 
+def _first_option_payload(blocks: list[dict[str, Any]], label: str) -> dict[str, Any]:
+    """The first option's payload for a DROPDOWN question -- where the
+    group-level settings (`isRequired`, `placeholder`) live."""
+    return dict(_body_blocks(blocks, label)[0]["payload"])
+
+
 def _option_texts(blocks: list[dict[str, Any]], label: str) -> list[str]:
     return [b["payload"]["text"] for b in _body_blocks(blocks, label)]
 
@@ -338,6 +344,49 @@ def test_the_career_stage_options_are_exactly_the_imported_vocabulary_in_order()
     None
 ):
     assert _option_texts(build_blocks(), "Career stage") == list(CAREER_STAGE_ORDER)
+
+
+def test_every_question_has_a_non_empty_placeholder() -> None:
+    # R-9 made the vocabulary arrive intact; it does not make a respondent
+    # pick the *right* token. A dropdown with bare tokens and no
+    # disambiguation ("independent" vs "group-leader"; an unexplained "NB")
+    # would still let every choice pass vocabulary membership -- nothing
+    # downstream would ever flag the resulting noise, a quieter version of
+    # the failure R-2 exists to prevent. The nine plain questions already
+    # carry a placeholder; this pins that Gender and Career stage's first
+    # option does too, across all eleven in one assertion.
+    for title, body in _question_groups(build_blocks()):
+        label = title["payload"]["html"]
+        assert body[0]["payload"].get("placeholder"), label
+
+
+def test_the_gender_placeholder_explains_nb_and_offers_undisclosed_legitimately() -> (
+    None
+):
+    placeholder = _first_option_payload(build_blocks(), "Gender")["placeholder"]
+    assert "NB" in placeholder
+    assert "non-binary" in placeholder
+    assert "undisclosed if you'd rather not say" in placeholder
+
+
+def test_the_career_stage_placeholder_distinguishes_independent_from_group_leader() -> (
+    None
+):
+    placeholder = _first_option_payload(build_blocks(), "Career stage")["placeholder"]
+    assert "no lab" in placeholder
+    assert "runs a lab" in placeholder
+    assert "undisclosed if you'd rather not say" in placeholder
+
+
+def test_the_dropdown_placeholder_glosses_never_touch_the_bare_option_text() -> None:
+    # R-3 a second time: the gloss belongs in the placeholder only. Option
+    # text (already pinned exactly against GENDER_ORDER/CAREER_STAGE_ORDER
+    # above) must stay the bare token, with no parenthetical explanation
+    # smuggled in -- that is what the next "helpful" rewording would touch
+    # first, silently breaking the vocabulary the build produces.
+    for label in ("Gender", "Career stage"):
+        for text in _option_texts(build_blocks(), label):
+            assert "(" not in text and ")" not in text, (label, text)
 
 
 def test_no_option_text_or_placeholder_or_label_carries_non_ascii_text() -> None:
