@@ -73,6 +73,25 @@ def test_config_missing_keys_are_reported() -> None:
     assert any("missing keys ['season']" in e for e in errors)
 
 
+def test_the_view_counting_window_is_configuration_on_this_side_too() -> None:
+    """The window a view count is read off is a convention, so it is a setting.
+
+    Both languages have to require it, or the browser writes a file the
+    scheduled jobs refuse - or, worse, the other way round, and a config
+    without the key reaches `data/` where the app then reads `undefined`
+    into a label. `docs/workflow/4-after.md` states the convention itself.
+    """
+    cfg = config()
+    del cfg["view_count_window_days"]
+    errors = validate_config(cfg)
+    assert any("missing keys ['view_count_window_days']" in e for e in errors)
+
+    errors = validate_config(config(view_count_window_days="thirty"))
+    assert any("view_count_window_days must be an integer" in e for e in errors)
+
+    assert validate_config(config(view_count_window_days=90)) == []
+
+
 def test_config_board_member_must_look_like_a_login() -> None:
     # Schema v3: board_members (flat login list) was replaced by board
     # (a list of BoardMember mappings) in Task 1 / Task 4. The rule this

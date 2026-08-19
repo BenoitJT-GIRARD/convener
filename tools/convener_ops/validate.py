@@ -82,6 +82,7 @@ CONFIG_REQUIRED = frozenset(
         "objection_window_working_days",
         "inactivity_months",
         "balance_window_months",
+        "view_count_window_days",
         "sla_days",
         "channels",
     }
@@ -112,6 +113,7 @@ CONFIG_INTS = (
     "objection_window_working_days",
     "inactivity_months",
     "balance_window_months",
+    "view_count_window_days",
 )
 SLA_DAYS_KEYS = frozenset(
     {

@@ -302,6 +302,7 @@ def test_the_config_fixture_carries_every_window_the_two_languages_read() -> Non
         "objection_window_working_days",
         "inactivity_months",
         "balance_window_months",
+        "view_count_window_days",
     ):
         assert isinstance(cfg[key], int), key
     assert set(cfg["sla_days"]) == {
