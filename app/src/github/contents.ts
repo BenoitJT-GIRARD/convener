@@ -1,5 +1,6 @@
 import { gh } from './client';
 import type { FileStore } from './mutate';
+import { DecisionRejected, isSubject } from '../state/decisions';
 import type { Subject } from '../state/decisions';
 
 export interface PutFileResponse {
@@ -17,8 +18,11 @@ export async function getFile(path: string, token: string): Promise<{ text: stri
 
 /** The `message` is the commit subject and is a `Subject` for the reason
  *  `state/decisions.ts` gives: it is permanent, and this is the call that
- *  makes it so. `mutate` asks the grammar of the string as well, at the one
- *  point every write of this app goes through. */
+ *  makes it so. The grammar is asked of the string here rather than only at
+ *  `mutate`, because this is the call that reaches GitHub: a caller that
+ *  reaches past the transactional path -- losing the replay and the conflict
+ *  handling with it -- still cannot write a subject the register cannot read
+ *  back. A type is a compile-time fact and a cast, or an `any`, is past it. */
 export async function putFile(
   path: string, text: string, sha: string, message: Subject, token: string
 ): Promise<PutFileResponse> {
@@ -27,6 +31,13 @@ export async function putFile(
   let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);
   const content = btoa(bin);
+  if (!isSubject(message)) {
+    throw new DecisionRejected(
+      `"${message}" is not a commit subject this app assembles. Build it with ` +
+        'formatDecision() or dataEdit() in src/state/decisions.ts: a commit ' +
+        'subject is permanent and cannot be taken back.',
+    );
+  }
   return gh(`/contents/${path}`, {
     token,
     method: 'PUT',

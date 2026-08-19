@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getFile, putFile, githubStore } from '../src/github/contents';
-import { dataEdit, identifier } from '../src/state/decisions';
+import { dataEdit, identifier, DecisionRejected } from '../src/state/decisions';
 
 describe('getFile', () => {
   beforeEach(() => {
@@ -60,6 +60,24 @@ describe('putFile', () => {
     expect(body.message).toBe('data: spk-001 admin edit');
     expect(body.sha).toBe('oldsha');
     expect(atob(body.content)).toBe('speakers: []\n');
+  });
+
+  it('refuses to PUT a subject the register could not read back', async () => {
+    // The last net, on the call that actually reaches GitHub. A caller that
+    // reaches past `mutate` -- and so past its check -- with a string
+    // laundered into a `Subject` still cannot write it down.
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    await expect(
+      putFile(
+        'data/speakers.yml',
+        'speakers: []\n',
+        'oldsha',
+        JSON.parse(JSON.stringify('data: add lead Jane Doe')),
+        'tok',
+      ),
+    ).rejects.toThrow(DecisionRejected);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
