@@ -9,6 +9,7 @@ import { Agenda } from './screens/Agenda';
 import { Archive } from './screens/Archive';
 import { Board } from './screens/Board';
 import { Diversity } from './screens/Diversity';
+import { Consent } from './screens/Consent';
 import { Handbook } from './screens/Handbook';
 import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
@@ -28,6 +29,7 @@ function Shell() {
           <Route path="archive" element={<Archive />} />
           <Route path="board" element={<Board />} />
           <Route path="diversity" element={<Diversity />} />
+          <Route path="consent" element={<Consent />} />
           <Route path="handbook" element={<Handbook />} />
           <Route path="templates" element={<Templates />} />
           <Route path="speakers/new" element={<NewSpeaker />} />

@@ -20,6 +20,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'toolkit/emails/zoom-request': { file: 'toolkit/emails/zoom-request.md', anchor: null },
   'toolkit/emails/reminder': { file: 'toolkit/emails/reminder.md', anchor: null },
   'toolkit/emails/thank-you': { file: 'toolkit/emails/thank-you.md', anchor: null },
+  'toolkit/emails/consent-request': { file: 'toolkit/emails/consent-request.md', anchor: null },
   'toolkit/emails/outreach-sourcing': { file: 'toolkit/emails/outreach-sourcing.md', anchor: null },
   'toolkit/emails/decision-declined': { file: 'toolkit/emails/decision-declined.md', anchor: null },
   'toolkit/emails/decision-parked': { file: 'toolkit/emails/decision-parked.md', anchor: null },

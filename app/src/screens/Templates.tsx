@@ -7,6 +7,7 @@ const TEMPLATES = [
   { key: 'toolkit/emails/zoom-request', label: 'Zoom request' },
   { key: 'toolkit/emails/reminder', label: 'Reminder email' },
   { key: 'toolkit/emails/thank-you', label: 'Thank-you email' },
+  { key: 'toolkit/emails/consent-request', label: 'Recording consent request' },
   { key: 'toolkit/emails/outreach-sourcing', label: 'Outreach sourcing' },
   { key: 'toolkit/emails/registration-confirmation', label: 'Registration confirmation' },
   { key: 'toolkit/emails/decision-declined', label: 'Decision: declined' },

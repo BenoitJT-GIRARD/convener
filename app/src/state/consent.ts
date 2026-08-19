@@ -38,7 +38,8 @@
  * it is the side that actually writes the feed -- and the two copies are bound
  * by `tools/tests/fixtures/governance-cases.json`, read from both languages.
  */
-import type { Speaker } from '../data/types';
+import { CONSENT_DECISIONS } from '../data/types';
+import type { PublicationConsent, Speaker } from '../data/types';
 
 /**
  * The programme of a public seminar.
@@ -158,3 +159,120 @@ export const NEVER_PUBLISHED = [
   'metrics',
   'notes',
 ] as const satisfies readonly (keyof Speaker)[];
+
+/**
+ * A field of the record, in words a speaker would recognise.
+ *
+ * The message that asks the thirty-one speakers for their permission has to
+ * say what would be published. Written out by hand, that sentence is true on
+ * the day it is written and false the first time somebody adds a field to
+ * `PUBLISHABLE_ON_CONSENT` -- and the drift is silent, because a Markdown
+ * file has no way of failing. So the sentence is not written: it is composed
+ * from the classification above, and the only thing kept by hand is one
+ * phrase per field.
+ *
+ * The `Record` is what binds them. Its key type is the union of the two
+ * publishable sets, so a field added to either one stops the build until
+ * somebody says how to name it to a speaker -- the same shape of guarantee
+ * as `consent-fields.test.ts`, one step further along: a new field must be
+ * classified, and if it is publishable it must also be describable.
+ *
+ * `NEVER_PUBLISHED` is deliberately absent. Those fields are not offered,
+ * not withheld pending an answer, and mostly meaningless outside the team
+ * ("your runbook progress"); listing them in a message asking for permission
+ * would invite the reader to think they were on the table.
+ */
+export type PublishableField =
+  | (typeof PUBLISHABLE_ALWAYS)[number]
+  | (typeof PUBLISHABLE_ON_CONSENT)[number];
+
+export const FIELD_WORDING: Record<PublishableField, string> = {
+  // The programme.
+  edition_code: 'the number of the seminar in the series',
+  title: 'the title of your talk',
+  abstract: 'its abstract',
+  date: 'the day it was held',
+  time: 'the time it started',
+  status: 'whether it is upcoming, held or archived',
+  name: 'your name',
+  affiliation: 'the institution you spoke for',
+  country: 'the country the talk was billed from',
+  zoom_link: 'the joining link, whilst the seminar is still to come',
+  forum_thread: 'a link to the discussion thread on the forum',
+  // The person.
+  photo_url: 'your photograph',
+  bio: 'the short biography you send us',
+  linkedin: 'your LinkedIn profile',
+  links: 'any other professional links you give us',
+  seed_questions: 'the questions you wrote to open the discussion',
+  youtube_url: 'the video recording of your talk',
+};
+
+/** `a, b and c` -- an English list, not a comma-separated dump. */
+function sentenceList(parts: readonly string[]): string {
+  if (parts.length <= 1) return parts.join('');
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+/** What goes out on the programme of a public seminar, in one phrase. */
+export function publishedAlwaysWording(): string {
+  return sentenceList(PUBLISHABLE_ALWAYS.map(f => FIELD_WORDING[f]));
+}
+
+/** What a `granted` unlocks and nothing else does, in one phrase. */
+export function publishedOnConsentWording(): string {
+  return sentenceList(PUBLISHABLE_ON_CONSENT.map(f => FIELD_WORDING[f]));
+}
+
+/**
+ * Whether a recorded consent value is an answer somebody gave.
+ *
+ * `CONSENT_DECISIONS` is the vocabulary of answers, and it holds two. Every
+ * other stored value -- `pending`, `''`, and anything a hand-edited file
+ * might carry -- is silence. The screen that lists who still owes an answer
+ * asks this question and no other: there is no third state to display and
+ * none to write.
+ */
+export function isAnswer(consent: PublicationConsent): boolean {
+  return (CONSENT_DECISIONS as readonly string[]).includes(consent);
+}
+
+/**
+ * The statuses from which a recording consent can be asked about at all.
+ *
+ * The same two `transitions.ts` allows `consent-set` from, and for the same
+ * reason: before a talk is given there is no recording to ask about, and
+ * after it is archived a speaker may still change their mind. Kept as its
+ * own constant rather than reached through `canTransition` so that the
+ * classification module does not depend on the transition machine;
+ * `consent-request.test.tsx` asserts the two agree over every status, so
+ * they cannot drift apart in silence.
+ */
+export const CONSENT_ASKABLE_FROM = ['delivered', 'archived'] as const;
+
+/**
+ * Whether this record is one somebody still has to ask.
+ *
+ * Derived, every time, from the record itself. There is no list of people to
+ * contact stored anywhere -- a stored list is a list that can disagree with
+ * the data, and the disagreement always resolves the wrong way: a speaker
+ * ticked off a list nobody actually wrote to.
+ */
+export function awaitingAnswer(s: Speaker): boolean {
+  return (
+    (CONSENT_ASKABLE_FROM as readonly string[]).includes(s.status) &&
+    !isAnswer(s.publication.consent)
+  );
+}
+
+/** Those still to be asked, most recent talk first. */
+export function awaitingAnswerList(speakers: readonly Speaker[]): Speaker[] {
+  return speakers.filter(awaitingAnswer).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** Those who answered, whichever way they answered. */
+export function answeredList(speakers: readonly Speaker[]): Speaker[] {
+  return speakers
+    .filter(s => (CONSENT_ASKABLE_FROM as readonly string[]).includes(s.status) && isAnswer(s.publication.consent))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}

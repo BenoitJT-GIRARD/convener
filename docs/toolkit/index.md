@@ -13,6 +13,7 @@ Templates use `{{double-brace}}` placeholders. Common ones: `{{speaker}}`, `{{sp
 - [Zoom request](emails/zoom-request.md) — ask the Zoom responsible for a link
 - [Reminder](emails/reminder.md) — reminder to the speaker before the event
 - [Thank-you](emails/thank-you.md) — after the talk
+- [Recording consent](emails/consent-request.md) — asking whether the recording may be published, after the talk
 - [Registration confirmation](emails/registration-confirmation.md) — confirm the announcement is live
 - [Decision — declined](emails/decision-declined.md) — to a candidate not retained
 - [Decision — parked](emails/decision-parked.md) — to a candidate kept for later

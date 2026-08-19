@@ -1,3 +1,4 @@
+import { publishedAlwaysWording, publishedOnConsentWording } from '../state/consent';
 import type { Speaker } from '../data/types';
 
 export interface SubstitutionContext {
@@ -9,6 +10,12 @@ export interface SubstitutionContext {
 const MISSING = (path: string) => `«missing: ${path}»`;
 
 interface Resolved {
+  /** What this repository publishes, composed from the field classification
+   *  in `state/consent.ts` rather than restated in prose. A template that
+   *  tells a speaker what would go online reads it from here, so the message
+   *  and the gate cannot drift: adding a field to `PUBLISHABLE_ON_CONSENT`
+   *  changes the sentence the next speaker is sent. */
+  consent?: { published_always: string; published_on_consent: string };
   speaker?: Record<string, string>;
   host_1?: { name: string };
   host_2?: { name: string };
@@ -17,7 +24,12 @@ interface Resolved {
 }
 
 function buildContext(ctx: SubstitutionContext): Resolved {
-  const r: Resolved = {};
+  const r: Resolved = {
+    consent: {
+      published_always: publishedAlwaysWording(),
+      published_on_consent: publishedOnConsentWording(),
+    },
+  };
   if (ctx.speaker) {
     const s = ctx.speaker;
     const first_name = (s.name || '').split(' ')[0];
@@ -46,7 +58,12 @@ function buildContext(ctx: SubstitutionContext): Resolved {
   return r;
 }
 
-type ResolvedValue = Resolved | Record<string, string> | { name: string } | string | undefined;
+type ResolvedValue =
+  | Resolved
+  | Record<string, string>
+  | { name: string }
+  | string
+  | undefined;
 
 export function substitute(text: string, ctx: SubstitutionContext): string {
   const resolved = buildContext(ctx);
