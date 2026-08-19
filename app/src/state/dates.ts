@@ -18,6 +18,17 @@
  * box has no route to that type, and the compiler says so at the call site --
  * the same shape the `Identifier` brand takes in `state/decisions.ts`.
  *
+ * **A slot is identified by its day.** Not by the pair (day, hour): the
+ * question put to the speaker is "would the 12th suit you?", the reply is
+ * recorded against the day, `AcceptedDate` is a day, and the hour of the
+ * evening finally locked is read off the slot that day names. `proposeDates`
+ * refuses to offer one day twice for that reason, and both file readers --
+ * `data/validate.ts` here and `tools/convener_ops/validate.py` there -- now refuse
+ * a record that holds two hours on one day, so a file edited by hand cannot
+ * present this module with two answers to one question.
+ * `candidate_date_cases` in `tools/tests/fixtures/governance-cases.json` is
+ * the pair's shared statement of that.
+ *
  * Pure throughout: no clock, no state, no side effects. Today's date and the
  * rest of the agenda are parameters, so every function here can run inside a
  * `mutate` transformation replayed against a freshly-read value.

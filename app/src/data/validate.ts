@@ -346,6 +346,35 @@ function readCandidateDate(at: Cursor, entry: unknown): CandidateDate {
   };
 }
 
+/** The slots a record offers, checked to hold each day once.
+ *
+ *  The day is what identifies a slot, here and in
+ *  `tools/convener_ops/validate.py`. `state/dates.ts` finds a slot by its date,
+ *  writes an answer to every entry carrying that date, and locks the hour of
+ *  the day it locked; `proposeDates` refuses to offer the same day twice for
+ *  exactly that reason. So a file holding two hours on one day would carry
+ *  one reply recorded against both -- and `lockDate` would freeze whichever
+ *  came first, committing the speaker to an evening they may have declined.
+ *  It is a contradiction in the file rather than a bad field, which is why it
+ *  is caught here and not in `readCandidateDate`. Pinned across both
+ *  languages by `candidate_date_cases` in
+ *  `tools/tests/fixtures/governance-cases.json`. */
+function oneSlotPerDay(at: Cursor, slots: CandidateDate[]): CandidateDate[] {
+  const seen = new Set<string>();
+  for (const slot of slots) {
+    if (seen.has(slot.date)) {
+      fail(
+        at.file,
+        at.where,
+        `offers ${slot.date} twice in "candidate_dates". A date is offered once, ` +
+          'so the reply recorded about it cannot be ambiguous',
+      );
+    }
+    seen.add(slot.date);
+  }
+  return slots;
+}
+
 function readSpeaker(at: Cursor, entry: unknown): Speaker {
   const raw = object(at, entry);
   // Named by id from here on where there is one: "speaker 12" sends a
@@ -378,7 +407,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     selection: readSelection(here, raw.selection),
     publication: readPublication(here, raw.publication),
     edition_code: text(here, raw, 'edition_code'),
-    candidate_dates: listOf(here, raw, 'candidate_dates', readCandidateDate),
+    candidate_dates: oneSlotPerDay(here, listOf(here, raw, 'candidate_dates', readCandidateDate)),
     date: text(here, raw, 'date'),
     time: text(here, raw, 'time'),
     zoom_link: text(here, raw, 'zoom_link'),

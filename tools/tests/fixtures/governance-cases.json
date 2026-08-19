@@ -1239,6 +1239,175 @@
       "identifier": false
     }
   ],
+  "_candidate_date_comment": "What identifies one slot of the date negotiation: the day, and never the pair (day, hour). The question put to a speaker is whether a day suits them, the reply is recorded against the day, and the hour of the evening locked is read off the slot that day names. The two readers of data/speakers.yml disagreed about this: tools/convener_ops/validate.py de-duplicated on (date, time) while app/src/state/dates.ts keyed on date alone, so a file holding two hours on one day validated clean and then had one recorded reply marked against both -- with lockDate freezing whichever hour came first, an evening the speaker may have declined. `valid` is read by both readers (app/src/data/validate.ts, tools/convener_ops/validate.py); `answered` is what app/src/state/dates.ts must do with the slots, and says why the same-day pair is a file no reader accepts: the reply lands on the day, so both hours carry it.",
+  "candidate_date_cases": [
+    {
+      "name": "one day, one hour, no reply yet -- where every negotiation starts",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": null
+    },
+    {
+      "name": "several days, one hour each, is the offer the invitation makes",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-08",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-15",
+          "time": "18:00",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": null
+    },
+    {
+      "name": "a reply is recorded against the day it answers, and leaves the other days alone",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-08",
+          "time": "12:30",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": {
+        "date": "2026-06-01",
+        "answer": "declined",
+        "slots": [
+          {
+            "date": "2026-06-01",
+            "time": "12:30",
+            "answer": "declined"
+          },
+          {
+            "date": "2026-06-08",
+            "time": "12:30",
+            "answer": ""
+          }
+        ],
+        "accepted_dates": []
+      }
+    },
+    {
+      "name": "two hours on one day is one question asked twice, so no file may hold it",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-01",
+          "time": "18:00",
+          "answer": ""
+        }
+      ],
+      "valid": false,
+      "answered": {
+        "date": "2026-06-01",
+        "answer": "accepted",
+        "slots": [
+          {
+            "date": "2026-06-01",
+            "time": "12:30",
+            "answer": "accepted"
+          },
+          {
+            "date": "2026-06-01",
+            "time": "18:00",
+            "answer": "accepted"
+          }
+        ],
+        "accepted_dates": [
+          "2026-06-01",
+          "2026-06-01"
+        ]
+      }
+    },
+    {
+      "name": "the same day and the same hour twice is the same slot twice",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": "accepted"
+        }
+      ],
+      "valid": false,
+      "answered": null
+    },
+    {
+      "name": "a day already answered keeps its answer beside the days still open",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": "declined"
+        },
+        {
+          "date": "2026-06-08",
+          "time": "12:30",
+          "answer": "accepted"
+        },
+        {
+          "date": "2026-06-15",
+          "time": "12:30",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": {
+        "date": "2026-06-15",
+        "answer": "accepted",
+        "slots": [
+          {
+            "date": "2026-06-01",
+            "time": "12:30",
+            "answer": "declined"
+          },
+          {
+            "date": "2026-06-08",
+            "time": "12:30",
+            "answer": "accepted"
+          },
+          {
+            "date": "2026-06-15",
+            "time": "12:30",
+            "answer": "accepted"
+          }
+        ],
+        "accepted_dates": [
+          "2026-06-08",
+          "2026-06-15"
+        ]
+      }
+    }
+  ],
   "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned. A member's own absence used to sit in that last list as free prose; it is a decision (it moves `N`, and with it the majority a speaker needs), so it is now `availability-set` and reads like every other line of the register (F-16).",
   "commit_message_cases": [
     {

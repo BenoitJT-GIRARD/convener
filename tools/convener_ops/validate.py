@@ -269,13 +269,15 @@ def _validate_candidate_dates(dates: Any, where: str) -> list[str]:
     are required: a proposal with no day is not a proposal, and an answer
     outside the vocabulary would reach the transition that freezes `date`,
     which has no reading for it.
+
+    One slot per day: the day is what identifies a slot, in both languages.
     """
     errors: list[str] = []
     if not isinstance(dates, list):
         errors.append(f"{where}.candidate_dates: must be a list")
         return errors
 
-    seen: set[tuple[str, str]] = set()
+    seen: set[str] = set()
     for index, slot in enumerate(dates):
         swhere = f"{where}.candidate_dates[{index}]"
         if not isinstance(slot, dict):
@@ -298,13 +300,22 @@ def _validate_candidate_dates(dates: Any, where: str) -> list[str]:
         if answer not in DATE_ANSWERS:
             errors.append(f"{swhere}: invalid answer {answer!r}")
 
-        # The same slot offered twice reads as two answers to one question,
-        # and the file cannot say which of them the speaker gave.
-        if isinstance(date, str) and isinstance(time, str):
-            if (date, time) in seen:
-                errors.append(f"{swhere}: duplicate slot {date!r} {time!r}")
+        # A slot is identified by its day, not by the pair (day, hour).
+        # That is the reading of the record on the other side --
+        # `app/src/state/dates.ts` finds a slot by `date`, writes an answer
+        # to every entry with that date, and takes the hour from the day it
+        # locks -- and it is the reading `proposeDates` enforces when it
+        # refuses the same day twice. A file holding two hours on one day
+        # would therefore carry one answer written against both, and
+        # `lockDate` would freeze whichever hour came first: an evening the
+        # speaker may have declined. This check kept the pair, so such a
+        # file passed here and broke there. Pinned across both languages by
+        # `candidate_date_cases` in tests/fixtures/governance-cases.json.
+        if isinstance(date, str):
+            if date in seen:
+                errors.append(f"{swhere}: duplicate date {date!r}")
             else:
-                seen.add((date, time))
+                seen.add(date)
 
     return errors
 

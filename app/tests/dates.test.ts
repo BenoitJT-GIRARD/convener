@@ -9,8 +9,10 @@ import {
   proposeDates,
   type AcceptedDate,
 } from '../src/state/dates';
-import type { CandidateDate, Speaker } from '../src/data/types';
-import { speaker as double } from './data-doubles';
+import type { CandidateDate, DateAnswer, Speaker } from '../src/data/types';
+import { speaker as double, speakersYaml } from './data-doubles';
+import cases from '../../tools/tests/fixtures/governance-cases.json';
+import { parseSpeakers } from '../src/data/yaml';
 
 const TODAY = '2026-09-01';
 
@@ -269,4 +271,38 @@ describe('the AcceptedDate brand', () => {
     expect(typeof acceptedDates(s)[0]).toBe('string');
     expect(JSON.stringify(acceptedDates(s))).toBe('["2026-10-01"]');
   });
+});
+
+/**
+ * What a slot *is*, stated once for both languages.
+ *
+ * The day identifies a slot; the hour is part of the offer, not part of its
+ * name. The two readers of `data/speakers.yml` disagreed about that --
+ * `tools/convener_ops/validate.py` de-duplicated on (date, time) while this
+ * module keys on the date -- so a file holding two hours on one day passed
+ * validation and then had one recorded reply written against both, with
+ * `lockDate` freezing whichever hour came first. These cases are read from
+ * the same file by `tools/tests/test_validate_v4.py`, so the pair cannot
+ * drift apart again without one of the two suites going red.
+ */
+describe('the shared statement of what a candidate slot is', () => {
+  it.each(cases.candidate_date_cases)('$name -- the file reader', c => {
+    const yaml = speakersYaml([{ candidate_dates: c.slots as CandidateDate[] }]);
+    if (c.valid) {
+      expect(parseSpeakers(yaml)[0].candidate_dates).toEqual(c.slots);
+    } else {
+      expect(() => parseSpeakers(yaml)).toThrow(/offers .* twice/);
+    }
+  });
+
+  it.each(cases.candidate_date_cases.filter(c => c.answered !== null))(
+    '$name -- recording the reply',
+    c => {
+      const answered = c.answered!;
+      const s = withCandidates(c.slots as CandidateDate[]);
+      const { speaker: next } = answerDate(s, answered.date, answered.answer as DateAnswer);
+      expect(next.candidate_dates).toEqual(answered.slots);
+      expect([...acceptedDates(next)]).toEqual(answered.accepted_dates);
+    },
+  );
 });

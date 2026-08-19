@@ -19,6 +19,8 @@ taken away or changed, so a failure names the one thing.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -27,6 +29,14 @@ from conftest import speaker
 from convener_ops.validate import DATE_ANSWERS, SPEAKER_TEXT_V4, validate_speakers
 
 BOARD = frozenset({"Anonymous"})
+
+#: The two languages' shared statement of what a slot is. See
+#: `_candidate_date_comment` in the file itself.
+CASES = json.loads(
+    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+        encoding="utf-8"
+    )
+)
 
 #: The six fields schema v4 adds, as a volunteer would name them.
 NEW_FIELDS = (*SPEAKER_TEXT_V4, "candidate_dates", "checklist")
@@ -155,7 +165,37 @@ class TestCandidateDates:
             ]
         )
         errors = validate_speakers([entry], BOARD)
-        assert any("duplicate slot" in e for e in errors), errors
+        assert any("duplicate date" in e for e in errors), errors
+
+    def test_one_day_at_two_hours_is_one_question_asked_twice(self) -> None:
+        # The divergence this rule closes: the check here used to key on
+        # (date, time), so this file passed, while the browser keys on the
+        # day -- one recorded reply marked both slots and `lockDate` froze
+        # the earlier hour, committing the speaker to an evening they may
+        # have declined.
+        entry = speaker(
+            candidate_dates=[_slot(time="12:30"), _slot(time="18:00")],
+        )
+        errors = validate_speakers([entry], BOARD)
+        assert any("duplicate date '2026-06-01'" in e for e in errors), errors
+
+    @pytest.mark.parametrize(
+        "case", CASES["candidate_date_cases"], ids=lambda c: c["name"]
+    )
+    def test_the_shared_slot_cases_read_the_same_way_here(
+        self, case: dict[str, Any]
+    ) -> None:
+        """The identity of a slot, as both languages must read it.
+
+        `app/tests/dates.test.ts` runs these same cases through
+        `data/validate.ts` and `state/dates.ts`, so a reader that started
+        keying on the hour again would fail on one side or the other.
+        """
+        errors = validate_speakers([speaker(candidate_dates=case["slots"])], BOARD)
+        if case["valid"]:
+            assert errors == [], errors
+        else:
+            assert any("duplicate date" in e for e in errors), errors
 
     def test_the_slot_that_is_wrong_is_named_by_its_position(self) -> None:
         entry = speaker(
