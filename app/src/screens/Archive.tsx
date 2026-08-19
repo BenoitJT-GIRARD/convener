@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../data/DataContext';
 import { effectiveStatus } from '../state/derived';
+import { viewCountLabel } from '../state/phases';
 import { LoadError } from '../components/LoadError';
 import type { Config, Speaker, SpeakerStatus } from '../data/types';
 
@@ -260,7 +261,7 @@ function ArchiveRow({
 }
 
 function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
-  const { mutateSpeakers } = useData();
+  const { mutateSpeakers, config } = useData();
   const [yt30, setYt30] = useState<string | number>(speaker.metrics.youtube_views_30d ?? '');
   const [fr, setFr] = useState<string | number>(speaker.metrics.forum_replies ?? '');
   const [ytUrl, setYtUrl] = useState(speaker.youtube_url);
@@ -308,7 +309,7 @@ function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
       </label>
       <label className="block">
         <span className="font-display font-bold text-[11px] uppercase tracking-widest text-ink-muted">
-          YouTube views (30d)
+          {config ? viewCountLabel(config) : 'Video views'}
         </span>
         <input
           className={`${input} mt-1`}

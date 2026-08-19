@@ -7,9 +7,10 @@ import {
   fieldValue,
   setField,
   PHASES,
+  VIEW_COUNT_KEY,
   type FieldKey,
 } from '../src/state/phases';
-import type { Speaker } from '../src/data/types';
+import type { Config, Speaker } from '../src/data/types';
 import { config, speaker as double } from './data-doubles';
 
 /** The one line of the runbook that stops the archive, by the name
@@ -97,6 +98,37 @@ describe('phases v2', () => {
     // youtube_url, youtube_views_30d and forum_replies stay empty/null.
     const s: Speaker = { ...base, ...WRAPPED_UP };
     expect(canFinalize(s)).toBe(true);
+  });
+});
+
+describe('the view-counting window is a convention, so it is configuration', () => {
+  /**
+   * Views arrive for years; a count is only comparable with another count
+   * taken the same number of days out. The number is therefore arbitrary,
+   * agreed once and written in `data/config.yml` -- and the field a volunteer
+   * fills in has to say which number is in force, or the handbook and the
+   * form can end up asking for two different measurements of the same talk.
+   * `docs/workflow/4-after.md` is where the convention is stated.
+   */
+  const wrapUp = phaseOf('delivered')!;
+  const labelFor = (cfg: Config | null) =>
+    phaseItems(wrapUp, cfg).find(i => i.key === VIEW_COUNT_KEY)!.label;
+
+  it('names the window the config sets, not the one that was typed', () => {
+    expect(labelFor(config({ view_count_window_days: 30 }))).toContain('(30d)');
+    expect(labelFor(config({ view_count_window_days: 90 }))).toContain('(90d)');
+  });
+
+  it('keeps the rest of the line, so the hint about Archive survives', () => {
+    expect(labelFor(config({ view_count_window_days: 90 }))).toContain(
+      'can be filled later from Archive',
+    );
+  });
+
+  it('falls back to a stated window before any config has loaded', () => {
+    // A screen drawn while the file is still being fetched shows a number
+    // rather than a gap: a blank window reads as "any time you like".
+    expect(labelFor(null)).toMatch(/\(\d+d\)/);
   });
 });
 

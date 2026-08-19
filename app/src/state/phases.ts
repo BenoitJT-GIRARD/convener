@@ -3,6 +3,34 @@ import { channelItem, channelsOf } from './channels';
 
 export type ItemForm = 'content' | 'field' | 'checkbox' | 'button-group';
 
+/** The line whose wording carries the view-counting window. */
+export const VIEW_COUNT_KEY = 'delivered/youtube-views-30d';
+
+/** The window used only for the wording of a screen drawn before any config
+ *  has loaded. `data/config.yml` is the number that governs. */
+const DEFAULT_VIEW_WINDOW_DAYS = 30;
+
+/**
+ * How the view-count field is named, for the window the config sets.
+ *
+ * The window is a convention and nothing more -- views arrive for years, so a
+ * count means something only next to another count read off the same number
+ * of days after its talk -- which is why it is `view_count_window_days` in
+ * `data/config.yml` and not a constant here. It is also why the label is
+ * built rather than typed: a handbook saying thirty days and a form asking
+ * for something else would leave a volunteer to guess which the Board meant,
+ * and the guess would be stored as a number nobody could compare afterwards.
+ * `docs/workflow/4-after.md` states the convention.
+ */
+export function viewCountLabel(config: Pick<Config, 'view_count_window_days'>): string {
+  return `Video views (${config.view_count_window_days}d)`;
+}
+
+/** The wording before a config is in hand; `phaseItems` replaces it. */
+const VIEW_COUNT_LABEL = viewCountLabel({
+  view_count_window_days: DEFAULT_VIEW_WINDOW_DAYS,
+});
+
 export type FieldKey =
   | 'host_1'
   | 'host_2'
@@ -288,10 +316,13 @@ export const PHASES: PhaseDef[] = [
         label: 'YouTube URL — recorded here, published only through the gate below',
       },
       {
-        key: 'delivered/youtube-views-30d',
+        // The label carries a number that is configuration, so `phaseItems`
+        // rewrites it from the loaded config. What is typed here is only what
+        // a screen shows before any config has arrived.
+        key: VIEW_COUNT_KEY,
         form: 'field',
         fieldKey: 'youtube_views_30d',
-        label: 'YouTube views (30d) — can be filled later from Archive',
+        label: `${VIEW_COUNT_LABEL} — can be filled later from Archive`,
       },
       {
         key: 'delivered/forum-replies',
@@ -401,7 +432,14 @@ export function phaseOf(status: SpeakerStatus): PhaseDef | undefined {
  * promotion phase with no lines in it.
  */
 export function phaseItems(phase: PhaseDef, config: Config | null): RunbookItem[] {
-  const items = [...phase.items];
+  let items = [...phase.items];
+  if (config !== null) {
+    items = items.map(item =>
+      item.key === VIEW_COUNT_KEY
+        ? { ...item, label: item.label.replace(VIEW_COUNT_LABEL, viewCountLabel(config)) }
+        : item,
+    );
+  }
   if (phase.channelsAfter === undefined || config === null) return items;
   const after = items.findIndex(item => item.key === phase.channelsAfter);
   items.splice(after + 1, 0, ...channelsOf(config).map(channelItem));

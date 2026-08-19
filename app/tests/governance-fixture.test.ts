@@ -74,7 +74,7 @@ function configFor(sla_days: Config['sla_days']): Config {
     seminar_duration_minutes: 90, board: [], nominations: [],
     board_min: 5, board_max: 9, vote_window_days: 14,
     objection_window_working_days: 3, inactivity_months: 6,
-    balance_window_months: 24, sla_days, channels: [],
+    balance_window_months: 24, view_count_window_days: 30, sla_days, channels: [],
   };
 }
 

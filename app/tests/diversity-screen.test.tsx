@@ -165,6 +165,7 @@ describe('Diversity screen', () => {
       board: [{ login: 'alice', joined_on: '2024-01-01', status: 'active', unavailable_until: '' }],
       nominations: [], board_min: 3, board_max: 9, vote_window_days: 10,
       objection_window_working_days: 3, inactivity_months: 6, balance_window_months: WINDOW,
+      view_count_window_days: 30,
       sla_days: {
         lead_decision: 14, invitation_follow_up: 7,
         summary_after_delivery: 5, recording_after_delivery: 10,

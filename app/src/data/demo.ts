@@ -55,6 +55,7 @@ export const DEMO_CONFIG: Config = {
   objection_window_working_days: 3,
   inactivity_months: 12,
   balance_window_months: 12,
+  view_count_window_days: 30,
   sla_days: {
     lead_decision: 14,
     invitation_follow_up: 7,

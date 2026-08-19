@@ -314,6 +314,14 @@ export interface Config {
   objection_window_working_days: number;
   inactivity_months: number;
   balance_window_months: number;
+  /** How long after a talk its view count is read off, in days.
+   *
+   *  Views arrive for years, so a count is only comparable with another
+   *  count taken the same number of days out. The number itself is a
+   *  convention -- see `docs/workflow/4-after.md` -- which is why it is
+   *  configuration and not a constant, and why the field's label is built
+   *  from it rather than typed. */
+  view_count_window_days: number;
   sla_days: {
     lead_decision: number;
     invitation_follow_up: number;
