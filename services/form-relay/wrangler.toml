@@ -1,0 +1,6 @@
+name = "convener-form-relay"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# TALLY_WEBHOOK_SECRET and CONVENER_DISPATCH_TOKEN are Wrangler secrets, set with
+# `npx wrangler secret put <NAME>` -- never here. See README.md.

@@ -1,0 +1,62 @@
+name: Deploy form relay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/form-relay/**'
+      - '.github/workflows/deploy-form-relay.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/form-relay/package-lock.json
+      - name: Install
+        working-directory: services/form-relay
+        run: npm ci
+      - name: Test
+        working-directory: services/form-relay
+        run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/form-relay/package-lock.json
+      - name: Check whether the integration is configured
+        id: gate
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "CLOUDFLARE_API_TOKEN not set - form relay deploy skipped. This is a normal state until the Cloudflare account is connected."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install
+        if: steps.gate.outputs.configured == 'true'
+        working-directory: services/form-relay
+        run: npm ci
+      - name: Deploy
+        if: steps.gate.outputs.configured == 'true'
+        working-directory: services/form-relay
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy

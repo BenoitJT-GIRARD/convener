@@ -1,0 +1,13 @@
+{
+  "name": "convener-form-relay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.7",
+    "wrangler": "^3.99.0"
+  }
+}

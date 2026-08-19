@@ -68,6 +68,51 @@ changing them has no effect until the application is rebuilt — push to
 **To verify:** sign out, reload; the screen should offer a short code rather
 than a token field.
 
+## Form relay
+
+**Without it:** the public Tally form has nowhere to send a submission. No
+proposal is turned into a lead, and *Handle proposal*
+(`.github/workflows/candidate-form.yml`) is never triggered.
+
+This is a second Cloudflare Worker, `services/form-relay/`, deliberately
+separate from the authentication relay above. That relay is stateless and
+secret-free by design, which is what lets anyone in the organisation
+redeploy it with one command (see its README). The form relay cannot make
+that claim — turning a Tally webhook into a `repository_dispatch` requires
+a GitHub token — so it holds one, and is kept in its own Worker rather than
+folded into the auth relay, so the secret-free property of the other one
+still holds.
+
+**To create:**
+1. Deploy the worker from `services/form-relay/` (`npx wrangler deploy`
+   from that folder — see its README) to the same Cloudflare account used
+   for the authentication relay above.
+2. Configure Tally's webhook to `POST` to the worker's URL, and set the
+   same signing secret in Tally that is set below as
+   `TALLY_WEBHOOK_SECRET`.
+
+**Secrets to set:**
+- Wrangler secret `TALLY_WEBHOOK_SECRET` on the worker — set with
+  `npx wrangler secret put TALLY_WEBHOOK_SECRET` from
+  `services/form-relay/`. The same value must also be set as the
+  repository secret `TALLY_WEBHOOK_SECRET` (see *CI-only secrets* below):
+  Tally signs with it, the worker verifies it, and
+  `tools/convener_ops/proposal.py` verifies it again on the GitHub Actions side
+  — one secret, read in three places.
+- Wrangler secret `CONVENER_DISPATCH_TOKEN` on the worker — set with
+  `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from
+  `services/form-relay/`. A GitHub token scoped to *Contents: read & write*
+  on `example-cockpit` only, sufficient to send it a `repository_dispatch`.
+- Repository secret `CLOUDFLARE_API_TOKEN` — the same one already set for
+  *Deploy auth relay* above; *Deploy form relay* reads it too, since both
+  workers deploy to the same Cloudflare account.
+
+Neither Wrangler secret belongs in `wrangler.toml` — both are set with
+`npx wrangler secret put`, never committed.
+
+**To verify:** submit the Tally form; a new lead should appear in
+`data/speakers.yml` shortly after, committed by *Handle proposal*.
+
 ## GitHub Pages
 
 **Without it:** nothing else is affected here — this is how the app itself
@@ -196,6 +241,9 @@ repository still needs to know they exist and where they live.
   (`.github/workflows/candidate-form.yml`) really came from the public
   Tally form and not a forged request. Set as a repository secret; its
   value is the signing secret Tally shows when the webhook is configured.
+  The same value is also set as a Wrangler secret on
+  `services/form-relay/` (see *Form relay* above), which checks this
+  signature first, before it ever sends the dispatch this workflow reads.
 - **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
   scoped to the separate `example-instance/example-showcase` repository
   (contents: read & write only), that both *Publish vitrine data*
@@ -210,8 +258,9 @@ repository still needs to know they exist and where they live.
   on `example-cockpit`.
 - **`CLOUDFLARE_API_TOKEN`** — already introduced above under
   *Authentication relay*: used by *Deploy auth relay* to deploy the
-  worker in `services/auth-proxy/`. Listed again here because it is the
-  same kind of CI-only, cross-account credential as the other two.
+  worker in `services/auth-proxy/`, and by *Deploy form relay* to deploy
+  `services/form-relay/` to the same account. Listed again here because it
+  is the same kind of CI-only, cross-account credential as the other two.
 
 ## Inactivity (G-09)
 
