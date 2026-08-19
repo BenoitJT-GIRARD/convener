@@ -24,3 +24,4 @@ Templates use `{{double-brace}}` placeholders. Common ones: `{{speaker}}`, `{{sp
 - [Forum post — discussion summary](forum-post-summary.md)
 - [LinkedIn post](linkedin-post.md)
 - [Intro scripts](intro-scripts.md) — the two spoken introductions
+- [Run of show](run-of-show.md) — the session slide by slide, and the split between the two hosts

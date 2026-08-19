@@ -147,6 +147,9 @@ describe('the journey the volunteers actually keep', () => {
       'delivered/forum-summary',
       'delivered/thank-you',
       'delivered/video-online',
+      'delivered/coi-slide-shown',
+      'delivered/coi-spoken-aloud',
+      'delivered/coi-in-video-description',
     ]);
   });
 

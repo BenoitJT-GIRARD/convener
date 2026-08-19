@@ -193,15 +193,26 @@ export const PHASES: PhaseDef[] = [
         contentKey: 'toolkit/emails/reminder',
       },
       {
+        // The run of show is offered here, at the moment the two hosts sit
+        // down to divide the session between them. It is a template and not a
+        // rule: it carries the split the hosts who have run these sessions
+        // settled on, nothing reads whether it was followed, and a pair who
+        // agree a different split tick this line exactly the same way.
         key: 'scheduled/T-3/plan-day',
         form: 'checkbox',
         label: 'Plan for the day agreed between hosts',
         window: 3,
+        contentKey: 'toolkit/run-of-show',
       },
       {
+        // "Registration" means the link the audience uses, which is what the
+        // handbook has always said here -- not the speaker's own sign-up,
+        // which is the T-14 line above and a different piece of work a week
+        // earlier. Two lines a week apart both reading "registration check"
+        // is how one of them gets ticked for the other.
         key: 'scheduled/T-1/final-reminder',
         form: 'checkbox',
-        label: 'Final reminder + registration check',
+        label: 'Final reminder sent, registration link checked',
         window: 1,
       },
       // The recording sequence, on the day. Three steps and not one tick,
@@ -301,6 +312,46 @@ export const PHASES: PhaseDef[] = [
         key: 'delivered/video-online',
         form: 'checkbox',
         label: 'Speaker told the video is online',
+      },
+      // The conflict declared to the audience during the session (G-16), as
+      // three lines and not one.
+      //
+      // Three, because the decision names three facts -- a slide of its own,
+      // said out loud, written into the video description -- and a single box
+      // would let all three be asserted by somebody who did one. The problem
+      // it answers is observed rather than theoretical: a slide flashed up for
+      // two seconds while nobody says anything is what a single tick calls
+      // done. Someone who ticks three has had to think about three.
+      //
+      // This is not the board's conflict of interest. `conflicts_of_interest`
+      // on the record is a declaration made to the board so that it can apply
+      // its own recusal rules to a vote; these three lines are the speaker's
+      // or the hosts' declaration made to the audience, in the room. Different
+      // people, a different moment, and nothing here is derived from that
+      // field -- a free-text box that may well read "none" cannot be turned
+      // into a gate without making volunteers tick a declaration that never
+      // happened.
+      //
+      // None of the three stops the archive, for the same reason: the decision
+      // asks for them when a conflict is declared, and the app has no way to
+      // know that a conflict was. A control that has to be ticked on every
+      // record, including the ones with nothing to declare, is a control
+      // people learn to tick without reading -- which is precisely the failure
+      // these three lines exist to answer.
+      {
+        key: 'delivered/coi-slide-shown',
+        form: 'checkbox',
+        label: 'Conflict of interest: dedicated slide shown in the session',
+      },
+      {
+        key: 'delivered/coi-spoken-aloud',
+        form: 'checkbox',
+        label: 'Conflict of interest: declaration spoken aloud in the session',
+      },
+      {
+        key: 'delivered/coi-in-video-description',
+        form: 'checkbox',
+        label: 'Conflict of interest: declaration written in the video description',
       },
     ],
   },
