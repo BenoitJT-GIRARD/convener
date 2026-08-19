@@ -37,11 +37,11 @@ coming along.
 - [ ] Forum announcement seeded
 - [ ] Seeded a question on the forum
 - [ ] Waiting room and co-host rights set up
+- [ ] Plan for the day agreed between hosts — the [run of show](../toolkit/run-of-show.md)
 
 ### T-3 days
 
 - [ ] Reminder sent to speaker
-- [ ] Plan for the day agreed between hosts — the [run of show](../toolkit/run-of-show.md)
 
 ### T-1 day
 

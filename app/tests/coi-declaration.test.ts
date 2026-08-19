@@ -224,7 +224,7 @@ describe('what the three checks do not do', () => {
 });
 
 describe('the run of show is offered, not imposed', () => {
-  const PLAN_DAY = 'scheduled/T-3/plan-day';
+  const PLAN_DAY = 'scheduled/T-7/plan-day';
 
   it('reaches the screen through the fragment mechanism, like every other template', () => {
     expect(CONTENT_REGISTRY['toolkit/run-of-show']).toEqual({

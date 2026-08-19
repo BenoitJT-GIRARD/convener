@@ -232,23 +232,30 @@ export const PHASES: PhaseDef[] = [
         window: 7,
       },
       {
-        key: 'scheduled/T-3/reminder',
-        form: 'checkbox',
-        label: 'Reminder sent to speaker',
-        window: 3,
-        contentKey: 'toolkit/emails/reminder',
-      },
-      {
         // The run of show is offered here, at the moment the two hosts sit
         // down to divide the session between them. It is a template and not a
         // rule: it carries the split the hosts who have run these sessions
         // settled on, nothing reads whether it was followed, and a pair who
         // agree a different split tick this line exactly the same way.
-        key: 'scheduled/T-3/plan-day',
+        //
+        // T-1 week, which is what spec F-02 says and what the page this line
+        // hands over opens with ("At T-1 week, in ten minutes"). It sat at
+        // T-3 because the existing T-3 line was reused rather than a T-7 one
+        // added, so the app and the page disagreed about when the thing
+        // happens. No record carries the old key: `runbook_progress` is empty
+        // in `data/speakers.yml`, so renaming it is not a migration.
+        key: 'scheduled/T-7/plan-day',
         form: 'checkbox',
         label: 'Plan for the day agreed between hosts',
-        window: 3,
+        window: 7,
         contentKey: 'toolkit/run-of-show',
+      },
+      {
+        key: 'scheduled/T-3/reminder',
+        form: 'checkbox',
+        label: 'Reminder sent to speaker',
+        window: 3,
+        contentKey: 'toolkit/emails/reminder',
       },
       {
         // "Registration" means the link the audience uses, which is what the
