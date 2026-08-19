@@ -181,16 +181,20 @@ export const PHASES: PhaseDef[] = [
         contentKey: 'toolkit/linkedin-post',
       },
       {
+        // No template hangs off this line any more. It used to hand over an
+        // e-mail asking a contact at another institute to open the room; the
+        // series holds the meeting account itself now, so the link is either
+        // the platform's or one somebody types in, and there is nobody left
+        // to write to. The line itself stays: the link still has to exist.
         key: 'scheduled/T-14/zoom-link',
         form: 'checkbox',
-        label: 'Zoom link from operations',
+        label: 'Meeting link in hand, recording arranged',
         window: 14,
-        contentKey: 'toolkit/emails/zoom-request',
       },
       {
         key: 'scheduled/T-14/access-setup',
         form: 'checkbox',
-        label: 'Canva + LinkedIn access in place',
+        label: 'LinkedIn access in place',
         window: 14,
       },
       {

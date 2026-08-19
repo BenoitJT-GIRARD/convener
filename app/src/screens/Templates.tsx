@@ -8,7 +8,6 @@ const TEMPLATES = [
   { key: 'toolkit/emails/proposal-received', label: 'Proposal received' },
   { key: 'toolkit/emails/invitation', label: 'Invitation email' },
   { key: 'toolkit/emails/talk-details', label: 'Talk details email' },
-  { key: 'toolkit/emails/zoom-request', label: 'Zoom request' },
   { key: 'toolkit/emails/promotion-starting', label: 'Promotion starting' },
   { key: 'toolkit/emails/reminder', label: 'Reminder email' },
   { key: 'toolkit/emails/thank-you', label: 'Thank-you email' },

@@ -21,7 +21,6 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // toolkit — emails
   'toolkit/emails/invitation': { file: 'toolkit/emails/invitation.md', anchor: null },
   'toolkit/emails/talk-details': { file: 'toolkit/emails/talk-details.md', anchor: null },
-  'toolkit/emails/zoom-request': { file: 'toolkit/emails/zoom-request.md', anchor: null },
   'toolkit/emails/reminder': { file: 'toolkit/emails/reminder.md', anchor: null },
   'toolkit/emails/thank-you': { file: 'toolkit/emails/thank-you.md', anchor: null },
   'toolkit/emails/proposal-received': {
@@ -67,6 +66,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'handbook/preparation': { file: 'workflow/2-preparation.md', anchor: null },
   'handbook/hosting': { file: 'workflow/3-hosting.md', anchor: null },
   'handbook/after': { file: 'workflow/4-after.md', anchor: null },
+  'handbook/workspace': { file: 'reference/the-workspace.md', anchor: null },
   'handbook/tools': { file: 'reference/tools.md', anchor: null },
   'handbook/contacts': { file: 'reference/contacts.md', anchor: null },
   'handbook/schema': { file: 'reference/schema.md', anchor: null },
