@@ -84,10 +84,24 @@ folded into the auth relay, so the secret-free property of the other one
 still holds.
 
 **To create:**
-1. Deploy the worker from `services/form-relay/` (`npx wrangler deploy`
+1. Build the public form: `TALLY_API_KEY=tly-xxxx uv run python
+   ../scripts/create_tally_form.py` from `tools/`. It is created as a
+   `DRAFT`, deliberately — open it in Tally's dashboard and confirm the
+   hint text actually renders under *Gender* and *Career stage* before
+   publishing it. That text is placed on each dropdown's first option, a
+   location `scripts/create_tally_form.py`'s own docstring notes is
+   inferred from Tally's schema rather than confirmed against a worked
+   example, so the script cannot verify for itself that Tally renders it
+   as a hint rather than treating it as something else (Tally's OpenAPI
+   spec suggests that field may instead be reserved for an "Other"
+   sub-field on some block types) — if it does not render, the two
+   dropdowns still resolve correctly, but a respondent sees a bare token
+   with no explanation. Publish by hand once satisfied; a later run of
+   the script never touches `status`, so this is a one-time check.
+2. Deploy the worker from `services/form-relay/` (`npx wrangler deploy`
    from that folder — see its README) to the same Cloudflare account used
    for the authentication relay above.
-2. Configure Tally's webhook to `POST` to the worker's URL with no path
+3. Configure Tally's webhook to `POST` to the worker's URL with no path
    suffix (the worker's only route is its root) — any other path 404s and
    the submission is silently lost — and set the same signing secret in
    Tally that is set below as `TALLY_WEBHOOK_SECRET`.
@@ -174,8 +188,8 @@ sent, and the interface says so. Nothing is silently dropped.
 
 **To create:** see phase 4.
 
-**Secrets to set:** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_USER`, `CONVENER_SMTP_PASSWORD`,
-`CONVENER_SMTP_FROM`.
+**Secrets to set:** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_PORT`, `CONVENER_SMTP_USER`,
+`CONVENER_SMTP_PASSWORD`, `CONVENER_SMTP_FROM`.
 
 **To verify:** run `cd tools && uv run convener-check-config`; *Outbound email*
 moves from `absent` to `production`.
