@@ -102,19 +102,6 @@ CHANNEL_KEYS = frozenset({"key", "label"})
 #: person. The `label`, which nothing stores, carries whatever wording the
 #: volunteers want.
 CHANNEL_KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
-CONFIG_INTS = (
-    "season",
-    "vw_counter",
-    "overlap_window_days",
-    "seminar_duration_minutes",
-    "board_min",
-    "board_max",
-    "vote_window_days",
-    "objection_window_working_days",
-    "inactivity_months",
-    "balance_window_months",
-    "view_count_window_days",
-)
 SLA_DAYS_KEYS = frozenset(
     {
         "lead_decision",
@@ -123,12 +110,62 @@ SLA_DAYS_KEYS = frozenset(
         "recording_after_delivery",
     }
 )
+#: Every setting counted rather than named, written as the path to it.
+#:
+#: A dotted path because the four turnaround targets sit one level down and
+#: are day counts in exactly the same sense as the windows above: the browser
+#: reads all of them with the same `whole()`, which refuses anything that is
+#: not a whole number, so a setting checked only for presence here is a
+#: hand edit CI waves through and the app then refuses to load on. One list,
+#: walked one way, rather than a second mechanism growing beside this one.
+#:
+#: `bool` is refused although Python counts it as an `int`: `true` is not a
+#: number of days, `Number.isInteger(true)` is `false` in the browser's
+#: reader, and `governance._is_count` already refuses it on the other side of
+#: this package.
+CONFIG_INTS = (
+    *(
+        "season",
+        "vw_counter",
+        "overlap_window_days",
+        "seminar_duration_minutes",
+        "board_min",
+        "board_max",
+        "vote_window_days",
+        "objection_window_working_days",
+        "inactivity_months",
+        "balance_window_months",
+        "view_count_window_days",
+    ),
+    *(f"sla_days.{key}" for key in sorted(SLA_DAYS_KEYS)),
+)
 NEEDS_SCHEDULE = frozenset({"scheduled", "delivered", "archived"})
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 EDITION_RE = re.compile(r"^MRG-\d+$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
+
+#: "no such setting", which is a different fact from "the setting is None".
+#: A missing key is `CONFIG_REQUIRED`'s business and is reported once, by
+#: name, rather than a second time as a type error.
+_ABSENT = object()
+
+
+def _setting(cfg: Any, path: str) -> Any:
+    """The value at a dotted `path` in the config, or `_ABSENT`.
+
+    Walks one level per dot and gives up quietly the moment a step is not a
+    mapping or is not there: `sla_days: "later"` is already reported as not
+    being a mapping, and a second sentence about each of its four keys would
+    bury the one that says what is actually wrong.
+    """
+    value: Any = cfg
+    for step in path.split("."):
+        if not isinstance(value, dict) or step not in value:
+            return _ABSENT
+        value = value[step]
+    return value
 
 
 def _validate_checklist(checklist: Any, where: str) -> list[str]:
@@ -782,8 +819,13 @@ def validate_config(cfg: Any) -> list[str]:
         if missing_sla:
             errors.append(f"config.yml: missing sla_days keys {sorted(missing_sla)}")
 
-    for key in CONFIG_INTS:
-        if key in cfg and not isinstance(cfg[key], int):
-            errors.append(f"config.yml: {key} must be an integer")
+    for path in CONFIG_INTS:
+        value = _setting(cfg, path)
+        if value is _ABSENT:
+            continue
+        # `bool` first: `isinstance(True, int)` is true in Python and `true`
+        # is not a number of days anywhere else in this repository.
+        if isinstance(value, bool) or not isinstance(value, int):
+            errors.append(f"config.yml: {path} must be an integer")
 
     return errors
