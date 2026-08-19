@@ -554,9 +554,13 @@ is what records store, so renaming one re-keys what is already written and is a
 migration rather than an edit; the `label` is only ever shown, and can be
 reworded at any time. Removing a channel has the same property from the other
 side: the owners already written under `promotion/<key>` stay in
-`data/speakers.yml`, on a line no screen shows any more. They are harmless and
-they are not stranded — the entry can still be cleared, and only cleared, once
-the key has gone. An empty list is a legal answer and means nothing is
+`data/speakers.yml`, on a line no screen shows any more. They are harmless, and
+nothing in the app offers to clear them: the record page lists the lines the
+journey currently has, so a key it no longer has has no control beside it.
+Clearing one means putting the channel back in `channels`, taking the name off
+the line on the record page, and removing the channel again — or editing
+`data/speakers.yml` on GitHub. Neither is urgent: an entry under a key no phase
+holds is read by nothing. An empty list is a legal answer and means nothing is
 promoted through this app; a `channels` that is missing, that is not a list,
 that repeats a key, or that holds a channel with no label stops the file being
 read at all, with a message naming the entry — a broken list must not read as a
