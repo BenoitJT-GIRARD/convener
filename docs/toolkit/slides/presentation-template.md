@@ -108,5 +108,5 @@ the forum link and QR code, the series name, and the edition code
 - Type large enough to survive a phone screen — a good share of the audience
   is on one.
 - Keep contrast high and do not rely on colour alone to carry a distinction.
-- Test the deck in the Zoom share, at the size the audience sees it, during
+- Test the deck in the meeting room's screen share, at the size the audience sees it, during
   the tech check — not for the first time at 12:30.

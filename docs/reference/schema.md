@@ -109,7 +109,7 @@ The state machine governs transitions. Statuses:
 
 ### `runbook_progress` key convention
 
-Keys follow `phase/item` (e.g. `approved/hosts-decided`, `scheduled/T-14/zoom-link`).
+Keys follow `phase/item` (e.g. `approved/host_1`, `scheduled/T-14/zoom-link`).
 The phase definitions and gate semantics live in `app/src/state/phases.ts`.
 Checking the last gate of a phase auto-advances the speaker to the next status.
 

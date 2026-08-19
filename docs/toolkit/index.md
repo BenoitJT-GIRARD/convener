@@ -23,7 +23,7 @@ record's own field names, reached through the object that holds them:
 A name that is not in that vocabulary does not resolve: it comes out as
 `«missing: …»` in the message, which is what a volunteer would paste into an
 e-mail. So anything you have to write in by hand is written in **square
-brackets** instead — `[first name of the Zoom responsible]` — and reads as an
+brackets** instead — `[the day the LinkedIn post goes out]` — and reads as an
 instruction rather than as a field the workspace forgot to fill.
 
 ## Emails
@@ -31,7 +31,6 @@ instruction rather than as a field the workspace forgot to fill.
 - [Proposal received](emails/proposal-received.md) — acknowledging a proposal, the day it arrives
 - [Invitation](emails/invitation.md) — first contact with an approved speaker
 - [Talk details](emails/talk-details.md) — collect title, abstract, bio
-- [Zoom request](emails/zoom-request.md) — ask the Zoom responsible for a link
 - [Promotion starting](emails/promotion-starting.md) — telling the speaker, three weeks out, that the series is about to announce them
 - [Reminder](emails/reminder.md) — reminder to the speaker before the event
 - [Thank-you](emails/thank-you.md) — after the talk

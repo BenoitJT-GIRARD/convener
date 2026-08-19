@@ -4,18 +4,18 @@ Every tool the series uses, and how to get access.
 
 | Tool | What it is for | Access |
 |---|---|---|
-| **The handbook** (this site) | All our guides, in one place | Ask the Architecte |
+| **The workspace** (this app) | The handbook, and where each webinar stands | Sign in with GitHub — [The workspace](the-workspace.md) |
 | **LinkedIn** | Announcement posts | Ask the organisers |
 | **The meeting platform** | Hosting the webinar and recording it | The organisation's own account — see [Operations](operations.md#meeting-platform) |
 | **The video channel** | Publishing the recordings | The organisation's own account — see [Operations](operations.md#video-channel) |
 | **The forum** | Discussion before and after each talk | forum.example.test |
 
 !!! tip "Everyone registers"
-    Everyone signs up through the Zoom link — organisers and the speaker included.
+    Everyone signs up through the registration link — organisers and the speaker included.
 
 ## How we communicate
 
-The team app (in development) is for **tracking and editing** the pipeline and webinars — not for chat. For team communication, use:
+The workspace is for **tracking and editing** the pipeline and webinars — not for chat. What each of its screens is for, and what runs in it without anybody, is in [The workspace](the-workspace.md). For team communication, use:
 
 - **Email** — substantive coordination, decisions, formal speaker contact.
 - **The forum** — discussion meant to involve the community.

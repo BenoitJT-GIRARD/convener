@@ -15,4 +15,4 @@ Layout:
 - `workflow/`    — phase-specific instructions (sourcing, preparation, hosting, after)
 - `toolkit/`     — email and post templates
 - `governance/`  — editorial line, board, selection criteria, decision log
-- `reference/`   — tools, contacts, schema
+- `reference/`   — the workspace, tools, contacts, operations, schema

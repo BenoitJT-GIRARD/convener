@@ -23,7 +23,7 @@ A Lead moves forward only when the **Editorial Board** validates it:
 
 - **The rule:** two-thirds of the Board say yes (a board of 6 → 4 yes). The vote runs over about two weeks.
 - **Yes** → the speaker is **Approved**, ready to be invited.
-- **No** → moved to **Parking Lot** (kept for later) or **Declined**.
+- **No** → moved to **Parked** (kept for later) or **Declined (board)**.
 - **What the Board weighs:** quality, diversity, a preference for early-career researchers, and any conflicts of interest. See [how we validate speakers](../governance/selection-criteria.md).
 - **How the vote is counted** — who is in the count, how the bar moves, what happens when the window runs out: [the Board's rules](../governance/board-rules.md).
 

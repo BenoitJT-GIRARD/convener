@@ -25,6 +25,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |
 | T-minus runbook steps | `app/src/state/phases.ts` |
 | Templates | `docs/toolkit/` |
+| What each screen of the app is for | `docs/reference/the-workspace.md` |
 | Live speaker & event data | `data/speakers.yml` |
 | External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
 
@@ -47,7 +48,7 @@ The nav reflects how soon a volunteer needs the page:
 
 - **First** (essential, 5 min read): Start here · Editorial line · Roles.
 - **When you act**: Workflow phases · Governance · Templates.
-- **Reference, occasional**: Decision log · Tools & access · Contacts · Glossary.
+- **Reference, occasional**: Decision log · The workspace · Tools & access · Contacts · Operations · Glossary.
 
 ## 5 · Coherent terminology
 
@@ -57,7 +58,7 @@ A single glossary at `docs/start-here/glossary.md` defines every term. Every oth
 - **Editorial Board** — the curatorial body. Always capitalised.
 - **Architecte** — the system-design role (intentionally kept in French).
 - **Gate** — one of the two Board approvals (lowercase as a common noun).
-- **Lead / Approved / Invited / Confirmed / Scheduled / Delivered / Archived / Parked / Decline (board or speaker)** — pipeline statuses, lowercase in prose, kebab-cased in data.
+- **Lead / Approved / Invited / Confirmed / Scheduled / Delivered / Archived / Parked / Decline (board or speaker)** — pipeline statuses, lowercase in prose, kebab-cased in data. There is no *parking lot* and no bare *declined*: both were renamed and a page still using them sends a reader looking for a column that is not there.
 
 ---
 
