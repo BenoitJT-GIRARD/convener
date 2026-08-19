@@ -6,15 +6,15 @@
 
 🔬 Next **The Example Collective Monthly Reading Group**!
 
-We are hosting **{{speaker}}** ({{affiliation}}) for a talk on:
+We are hosting **{{ speaker.name }}** ({{ speaker.affiliation }}) for a talk on:
 
-**{{title}}**
+**{{ speaker.title }}**
 
-🗓 {{date}} · 🕧 12:30–14:00 CET · 💻 Online, free — registration required
+🗓 {{ speaker.date }} · 🕧 {{ speaker.time }} CET · 💻 Online, free — registration required
 
-{{one_line_hook}}
+[One line, in your own words, on why this talk matters. Written by hand — the record holds no such sentence.]
 
-Register here 👉 {{registration_link}}
-Join the discussion on The Example Collective 👉 {{forum_link}}
+Register here 👉 {{ speaker.zoom_link }}
+Join the discussion on The Example Collective 👉 {{ speaker.forum_thread }}
 
 \#BehaviouralScience #Neuroscience #Webinar #OpenScience

@@ -10,10 +10,10 @@
 
 ## Prompt to use
 
-> I want a summary, in English, to post on The Example Collective as a reply under the post that announced the talk. Say that the talk is now on YouTube at {{youtube_link}}, and that this summarises the discussion after the talk. Make it read well as a forum post — not a transcript, but a clear synthesis: give the context, be tactful, and organise the discussion sensibly.
+> I want a summary, in English, to post on The Example Collective as a reply under the post that announced the talk. Say that the talk is now on YouTube at {{ speaker.youtube_url }}, and that this summarises the discussion after the talk. Make it read well as a forum post — not a transcript, but a clear synthesis: give the context, be tactful, and organise the discussion sensibly.
 
 ## What the post should contain
 
-- One line: the talk is now on YouTube — {{youtube_link}}.
+- One line: the talk is now on YouTube — {{ speaker.youtube_url }}.
 - A short, organised summary of the discussion: the main themes, the key questions, the speaker's answers.
 - An invitation to keep the conversation going on the thread.

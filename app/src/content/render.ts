@@ -53,6 +53,12 @@ function buildContext(ctx: SubstitutionContext): Resolved {
       zoom_link: s.zoom_link,
       youtube_url: s.youtube_url,
       forum_thread: s.forum_thread,
+      // The one wrap-up number a message quotes back to the speaker. It is
+      // recorded on the delivered checklist above the thank-you that reads
+      // it, so an empty one is a line not yet filled in rather than a value
+      // to invent: it renders as the missing marker, and nothing here
+      // substitutes a plausible-looking zero for it.
+      live_peak: s.metrics.live_peak === null ? '' : String(s.metrics.live_peak),
     };
     r.host_1 = { name: s.host_1 };
     r.host_2 = { name: s.host_2 };
@@ -79,6 +85,13 @@ export function substitute(text: string, ctx: SubstitutionContext): string {
       else return MISSING(path);
     }
     if (cur === null || cur === undefined || cur === '') return MISSING(path);
+    // A path that stops on a branch rather than a leaf -- `{{speaker}}`, the
+    // vocabulary four toolkit pages were written in before this -- used to
+    // reach `String(cur)` and put the literal text "[object Object]" in front
+    // of a speaker. It is the same failure as a name nobody feeds, so it gets
+    // the same visible marker: a template written against a vocabulary the
+    // renderer does not have must look broken, not merely read oddly.
+    if (typeof cur === 'object') return MISSING(path);
     return String(cur);
   });
 }

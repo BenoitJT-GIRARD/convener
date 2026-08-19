@@ -4,24 +4,24 @@
 
 ---
 
-**Title:** Monthly Reading Group #{{number}}: {{title}}
+**Title:** Monthly Reading Group {{ speaker.edition_code }}: {{ speaker.title }}
 
 Don't miss the next Example Collective Webinar! As usual, we host a stellar speaker presenting their work on a **Thursday at 12:30 CET** — so everyone can join.
 
-In our next session we host **{{speaker}}**, who will present:
+In our next session we host **{{ speaker.name }}** ({{ speaker.affiliation }}), who will present:
 
-> **{{title}}**
+> **{{ speaker.title }}**
 
 *(Insert the session image here.)*
 
-- **When:** {{date}}
-- **Time:** 12:30–14:00 CET
+- **When:** {{ speaker.date }}
+- **Time:** {{ speaker.time }} CET
 - **Where:** online — registration needed
-- **Registration:** {{registration_link}}
+- **Registration:** {{ speaker.zoom_link }}
 
 **Abstract**
 
-{{abstract}}
+{{ speaker.abstract }}
 
 ---
 

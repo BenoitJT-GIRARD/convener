@@ -6,7 +6,7 @@
 
 **Subject:** Zoom link for the next TEC webinar — {{ speaker.date }}
 
-Hi {{zoom_responsible_first}},
+Hi [first name of the Zoom responsible],
 
 Could you please set up a Zoom registration link for our next Monthly Reading Group?
 
