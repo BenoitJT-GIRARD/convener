@@ -82,6 +82,10 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'governance/board-rules.md',
     anchor: 'publishing-a-recording-two-permissions-and-they-are-not-alike',
   },
+  'fragments/board-rules-objection': {
+    file: 'governance/board-rules.md',
+    anchor: 'objecting-and-what-deferral-means',
+  },
   'fragments/roles-host-pair': { file: 'roles.md', anchor: 'two-event-hosts-per-webinar' },
   'fragments/roles-no-ladder': { file: 'roles.md', anchor: 'no-ladder-to-climb' },
 };
