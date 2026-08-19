@@ -148,6 +148,14 @@ def config(**overrides: Any) -> dict[str, Any]:
             "summary_after_delivery": 5,
             "recording_after_delivery": 10,
         },
+        # Two, where `data/config.yml` lists seven: the channels are
+        # configuration, and a double that restated the seven of today would
+        # make every unrelated test depend on a list this repository leaves
+        # editable. A test about the channels states its own.
+        "channels": [
+            {"key": "forum", "label": "The Example Collective forum"},
+            {"key": "linkedin_page", "label": "TEC LinkedIn page"},
+        ],
     }
     base.update(overrides)
     return base

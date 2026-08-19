@@ -83,8 +83,24 @@ CONFIG_REQUIRED = frozenset(
         "inactivity_months",
         "balance_window_months",
         "sla_days",
+        "channels",
     }
 )
+#: The two fields one promotion channel carries, and the only two.
+#:
+#: The seven channels the spec named are configuration and not a constant:
+#: whether they are still the right seven cannot be confirmed without asking
+#: the collaborators, which this project never does. So nothing here counts
+#: them, and nothing here names one - a channel added, renamed or dropped in
+#: `data/config.yml` passes this validator unchanged, which is the whole
+#: point of the list being data.
+CHANNEL_KEYS = frozenset({"key", "label"})
+#: A channel `key` becomes a checklist key inside `data/speakers.yml`, read
+#: back by both languages and skimmed in hand-reviewed diffs. Spaces and
+#: capitals would survive the round-trip and read as a different key to a
+#: person. The `label`, which nothing stores, carries whatever wording the
+#: volunteers want.
+CHANNEL_KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 CONFIG_INTS = (
     "season",
     "vw_counter",
@@ -714,6 +730,47 @@ def validate_config(cfg: Any) -> list[str]:
                     f"config.yml: nominations[{nindex}]: {candidate!r} already "
                     f"has an unsettled nomination at nominations[{seen_at}]"
                 )
+
+    # The channels an event is announced on. The list is validated; its
+    # contents are not judged. An empty list is legal and means nothing is
+    # promoted through this app - the "absent configuration does nothing"
+    # side of the standing pattern. A list that cannot be read is an error,
+    # because a broken list read as an empty one would show a volunteer a
+    # promotion phase with no lines in it and nothing to say the file, not
+    # the plan, is what is missing.
+    channels = cfg.get("channels")
+    if "channels" in cfg and not isinstance(channels, list):
+        errors.append("config.yml: channels must be a list")
+    elif isinstance(channels, list):
+        first_seen: dict[str, int] = {}
+        for cindex, channel in enumerate(channels):
+            cwhere = f"config.yml: channels[{cindex}]"
+            if not isinstance(channel, dict):
+                errors.append(f"{cwhere}: not a mapping")
+                continue
+
+            unknown = sorted(set(channel) - CHANNEL_KEYS)
+            if unknown:
+                errors.append(f"{cwhere}: unknown keys {unknown}")
+
+            key = channel.get("key")
+            if not isinstance(key, str) or not CHANNEL_KEY_RE.match(key):
+                errors.append(f"{cwhere}: invalid channel key {key!r}")
+            else:
+                # Two entries sharing a key share one checklist key: ticking
+                # one would tick the other, and which label a screen showed
+                # would come down to list order.
+                seen_at = first_seen.get(key)
+                if seen_at is None:
+                    first_seen[key] = cindex
+                else:
+                    errors.append(
+                        f"{cwhere}: {key!r} already used at channels[{seen_at}]"
+                    )
+
+            label = channel.get("label")
+            if not isinstance(label, str) or not label.strip():
+                errors.append(f"{cwhere}: channel {key!r} has no label")
 
     sla_days = cfg.get("sla_days")
     if "sla_days" in cfg and not isinstance(sla_days, dict):
