@@ -150,6 +150,9 @@ sla_days:
   invitation_follow_up: 7
   summary_after_delivery: 5
   recording_after_delivery: 10
+channels:                          # where an event is announced
+  - key: forum                     # stored: becomes a checklist key
+    label: The Example Collective forum # shown: change it freely
 ```
 
 `board` replaces the former flat `board_members` list of logins: a member now
@@ -157,6 +160,24 @@ carries the date they joined, whether they are still active, and any declared
 absence, because all three feed the vote threshold. There is no
 `vote_threshold` key — see the ballot section above for why it is computed
 rather than stored.
+
+`channels` is the list of places an event is announced -- the forum, the
+LinkedIn page, personal LinkedIn accounts, the TEATIME mailing list, institute
+newsletters and internal messaging, the RISC newsletter, printed posters -- and
+it is configuration rather than a list in the code. Whether those are still the
+right places is a question for the people who do the posting, and this
+repository never depends on being able to ask them: a channel is added,
+renamed or dropped by editing this file, and nothing in the app changes.
+
+Each channel becomes one line of the promotion phase, keyed
+`promotion/<key>`, so it carries an owner in `checklist` exactly like every
+other line. The `key` is what records store, so renaming one re-keys what is
+already written and is a migration rather than an edit; the `label` is only
+ever shown, and can be reworded at any time. An empty list is a legal answer
+and means nothing is promoted through this app; a `channels` that is missing,
+that is not a list, that repeats a key, or that holds a channel with no label
+stops the file being read at all, with a message naming the entry -- a broken
+list must not read as a deliberately empty one.
 
 The `board` entries are used as fallback when the GitHub team API call (for
 role detection) fails or returns no membership info. The authoritative source
