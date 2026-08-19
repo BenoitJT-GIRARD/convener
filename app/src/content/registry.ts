@@ -35,6 +35,10 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'toolkit/linkedin-post': { file: 'toolkit/linkedin-post.md', anchor: null },
   'toolkit/intro-scripts': { file: 'toolkit/intro-scripts.md', anchor: null },
   'toolkit/run-of-show': { file: 'toolkit/run-of-show.md', anchor: null },
+  'toolkit/slides/presentation-template': {
+    file: 'toolkit/slides/presentation-template.md',
+    anchor: null,
+  },
 
   // handbook — long-read
   'handbook/overview': { file: 'start-here/index.md', anchor: null },

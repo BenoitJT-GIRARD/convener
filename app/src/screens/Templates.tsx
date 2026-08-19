@@ -16,6 +16,8 @@ const TEMPLATES = [
   { key: 'toolkit/forum-post-summary', label: 'Forum: summary' },
   { key: 'toolkit/linkedin-post', label: 'LinkedIn post' },
   { key: 'toolkit/intro-scripts', label: 'Intro scripts' },
+  { key: 'toolkit/run-of-show', label: 'Run of show' },
+  { key: 'toolkit/slides/presentation-template', label: 'Slide template' },
 ];
 
 export function Templates() {

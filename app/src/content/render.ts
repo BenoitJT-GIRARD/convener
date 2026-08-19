@@ -41,6 +41,10 @@ function buildContext(ctx: SubstitutionContext): Resolved {
       affiliation: s.affiliation,
       country: s.country,
       gender: s.gender,
+      // The introduction script reads this out. It is the speaker's own
+      // sentences, kept as they wrote them: a biography this repository
+      // rephrased would be a biography nobody had agreed to.
+      bio: s.bio,
       title: s.title,
       abstract: s.abstract,
       edition_code: s.edition_code,

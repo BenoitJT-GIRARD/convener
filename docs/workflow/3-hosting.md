@@ -33,16 +33,19 @@ Run this about a minute before 12:30:
 
 ## Plan for the day (~90 minutes)
 
-| Time | What | Who |
-|---|---|---|
-| 0:00 | Welcome + housekeeping (recording notice, how to ask questions) | Host 1 |
-| 0:02 | Introduce The Example Collective and the series | Host 2 |
-| 0:04 | Introduce the speaker | Host 1 |
-| 0:06 | The talk | Speaker |
-| ~0:50 | Questions & discussion | Both hosts |
-| ~1:25 | Closing | Host 1 |
+The session slide by slide, with the timings and the split between the two
+hosts, is the [run of show](../toolkit/run-of-show.md) — one page, kept in one
+place, so that a change to the order is a change in one file and not in three.
+It is a template and not a rule; agree your own split if it suits you better.
 
-Use the [intro scripts](../toolkit/intro-scripts.md) for the two introductions.
+Three pages cover the day between them:
+
+- **[Run of show](../toolkit/run-of-show.md)** — what happens when, and who
+  does it.
+- **[Intro scripts](../toolkit/intro-scripts.md)** — what the hosts say over
+  the opening slides.
+- **[Slide template](../toolkit/slides/presentation-template.md)** — what goes
+  on the hosts' own slides.
 
 ## Running the questions
 

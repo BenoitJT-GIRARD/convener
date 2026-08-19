@@ -13,14 +13,18 @@ for the other to speak.
 Timings are from the start of the session, not from the clock. The session runs
 about ninety minutes.
 
+The words spoken over slides 2, 3 and 4 are in the
+[intro scripts](intro-scripts.md), one script per slide; what goes *on* the
+hosts' slides is in the [slide template](slides/presentation-template.md).
+
 ## The slides
 
 | # | Slide | Roughly | Who speaks | What happens |
 |---|---|---|---|---|
 | 1 | Holding slide — series name, today's title, "we start at 12:30" | before 0:00 | — | On screen while people arrive. Nobody talks over it. |
-| 2 | Welcome + housekeeping | 0:00 | Host 1 | Welcome, the recording notice, how to ask a question (chat or forum). |
-| 3 | The Example Collective and the series | 0:02 | Host 2 | [Script 1](intro-scripts.md). Ends by handing over to Host 1. |
-| 4 | Today's speaker | 0:04 | Host 1 | [Script 2](intro-scripts.md). Ends with "the floor is yours". |
+| 2 | Welcome + housekeeping | 0:00 | Host 1 | Welcome, the recording notice, how to ask a question (chat or forum). [Script for slide 2](intro-scripts.md). |
+| 3 | The Example Collective and the series | 0:02 | Host 2 | [Script for slide 3](intro-scripts.md). Ends by handing over to Host 1. |
+| 4 | Today's speaker | 0:04 | Host 1 | [Script for slide 4](intro-scripts.md). Ends with "the floor is yours". |
 | 5 | Conflict-of-interest slide | 0:05 | Speaker | A slide of their own, read aloud, given the time to be read. See below. |
 | 6 | The talk | 0:06 | Speaker | Hosts stay muted; Host 2 watches the chat and the forum thread. |
 | 7 | Questions and discussion | ~0:50 | Both hosts | Forum questions first, then the chat. The hosts take turns. |
