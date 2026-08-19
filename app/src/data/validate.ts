@@ -202,7 +202,18 @@ function ticks(at: Cursor, raw: Record<string, unknown>, key: string): Record<st
  *  An entry whose `assignee` is `''` is legal and means the same as no entry
  *  at all: nobody in particular, which is the hosts. It is not an error,
  *  because not naming an owner is the default this repository has always had
- *  and the state most lines will stay in. */
+ *  and the state most lines will stay in.
+ *
+ *  A name that is there is a GitHub login and nothing else -- the same rule
+ *  `tools/convener_ops/validate.py` applies, and it lived only there, so the
+ *  browser could accept and write a file `convener-validate` then refuses.
+ *  `checklist_assignee_cases` in `tools/tests/fixtures/governance-cases.json`
+ *  is the two sides' shared statement of it. Refusing `Anonymous Dupont` here is
+ *  also what keeps a person's name out of a field the app puts on screen
+ *  beside a line of work. */
+/** A GitHub login, as `LOGIN_RE` in `tools/convener_ops/validate.py` spells it. */
+const LOGIN = /^[a-zA-Z0-9-]+$/;
+
 function assignees(
   at: Cursor,
   raw: Record<string, unknown>,
@@ -219,6 +230,9 @@ function assignees(
     }
     if (typeof block.assignee !== 'string') {
       fail(at.file, at.where, `gives "${key}" step "${step}" an owner that reads as ${shown(block.assignee)} instead of a name`);
+    }
+    if (block.assignee !== '' && !LOGIN.test(block.assignee)) {
+      fail(at.file, at.where, `gives "${key}" step "${step}" the owner "${block.assignee}", which is not a GitHub username`);
     }
     out[step] = { assignee: block.assignee };
   }

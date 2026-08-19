@@ -1408,6 +1408,44 @@
       }
     }
   ],
+  "_checklist_assignee_comment": "Who may be named against a line of the journey. A GitHub login and nothing else: tools/convener_ops/validate.py refuses an assignee outside ^[a-zA-Z0-9-]+$, while app/src/data/validate.ts accepted any string and app/src/state/assignment.ts any non-empty trimmed one -- so the browser could write a record its own validator passes and convener-validate rejects. `''` is not in these cases: it is the answer 'nobody in particular, which is the hosts', legal on both sides and the state most lines stay in. Read by tools/tests/test_validate_v4.py and app/tests/assignment.test.ts. `assignItem` trims what a volunteer typed before applying the rule, so surrounding whitespace is not one of these cases: it is normalised on the writing side and refused on the reading one.",
+  "checklist_assignee_cases": [
+    {
+      "name": "a plain login",
+      "login": "ada",
+      "valid": true
+    },
+    {
+      "name": "digits and hyphens, as GitHub allows",
+      "login": "ada-lovelace-1815",
+      "valid": true
+    },
+    {
+      "name": "a person's name is not a login",
+      "login": "Anonymous Dupont",
+      "valid": false
+    },
+    {
+      "name": "an e-mail address is not a login",
+      "login": "ada@example.org",
+      "valid": false
+    },
+    {
+      "name": "an underscore, which a GitHub login does not carry",
+      "login": "ada_lovelace",
+      "valid": false
+    },
+    {
+      "name": "an at-sign the way a mention is written",
+      "login": "@ada",
+      "valid": false
+    },
+    {
+      "name": "a sentence about who is doing it",
+      "login": "ada, once she is back",
+      "valid": false
+    }
+  ],
   "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned. A member's own absence used to sit in that last list as free prose; it is a decision (it moves `N`, and with it the majority a speaker needs), so it is now `availability-set` and reads like every other line of the register (F-16).",
   "commit_message_cases": [
     {

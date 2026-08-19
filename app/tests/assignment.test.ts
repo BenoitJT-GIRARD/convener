@@ -22,7 +22,9 @@ import {
   unassignItem,
 } from '../src/state/assignment';
 import { PHASES } from '../src/state/phases';
-import { config, speaker } from './data-doubles';
+import { config, speaker, speakersYaml } from './data-doubles';
+import { parseSpeakers } from '../src/data/yaml';
+import cases from '../../tools/tests/fixtures/governance-cases.json';
 
 const VISUALS = 'scheduled/T-30/visuals';
 const LINKEDIN = 'scheduled/T-21/linkedin';
@@ -259,5 +261,45 @@ describe('what is waiting for me', () => {
     for (const w of itemsWaitingFor([s], 'bob', null)) {
       expect(w.item.label).not.toContain('bob');
     }
+  });
+});
+
+/**
+ * Who may be named against a line, in both languages.
+ *
+ * `tools/convener_ops/validate.py` refused an assignee that is not a GitHub login;
+ * this side accepted any string, in the file reader and in `assignItem`
+ * alike. The `<select>` of board logins on the speaker page is a screen, not
+ * a rule -- `assignItem` is exported, and a hand-edited file goes through the
+ * reader and nothing else -- so the browser could accept and write a record
+ * `convener-validate` then refuses. `tools/tests/test_validate_v4.py` runs these
+ * same cases through the other reader.
+ */
+describe('the shared statement of who can own a line', () => {
+  it.each(cases.checklist_assignee_cases)('$name -- the writer', c => {
+    const call = () => assignItem([scheduled()], 'spk-001', VISUALS, c.login, config());
+    if (c.valid) {
+      expect(call()[0].checklist[VISUALS]).toEqual({ assignee: c.login });
+    } else {
+      expect(call).toThrow(AssignmentRejected);
+    }
+  });
+
+  it.each(cases.checklist_assignee_cases)('$name -- the file reader', c => {
+    const yaml = speakersYaml([{ checklist: { [VISUALS]: { assignee: c.login } } }]);
+    if (c.valid) {
+      expect(parseSpeakers(yaml)[0].checklist[VISUALS]).toEqual({ assignee: c.login });
+    } else {
+      expect(() => parseSpeakers(yaml)).toThrow(/not a GitHub username/);
+    }
+  });
+
+  it('leaves "nobody" alone, which is what most lines say', () => {
+    // `''` is not one of the cases above: it is the answer "the hosts", legal
+    // on both sides, and `assignItem` spells it by removing the entry.
+    const s = assignItem([scheduled()], 'spk-001', VISUALS, '   ', config());
+    expect(s[0].checklist[VISUALS]).toBeUndefined();
+    expect(parseSpeakers(speakersYaml([{ checklist: { [VISUALS]: { assignee: '' } } }]))[0]
+      .checklist[VISUALS]).toEqual({ assignee: '' });
   });
 });

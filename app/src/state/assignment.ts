@@ -57,6 +57,16 @@ function journeyItemKeys(config: Config | null): ReadonlySet<string> {
   return new Set(PHASES.flatMap(phase => phaseItems(phase, config).map(item => item.key)));
 }
 
+/** Who a line may be owned by: a GitHub login, the same rule
+ *  `tools/convener_ops/validate.py` applies to `checklist[*].assignee` and
+ *  `data/validate.ts` now applies when reading the file. It was enforced on
+ *  the Python side alone, so `assignItem` -- which is exported, and whose
+ *  `<select>` of logins is a screen and not a rule -- could write a record
+ *  `convener-validate` refuses. Pinned across both languages by
+ *  `checklist_assignee_cases` in
+ *  `tools/tests/fixtures/governance-cases.json`. */
+const LOGIN = /^[a-zA-Z0-9-]+$/;
+
 /** An assignment that cannot be recorded as asked. The message is a plain
  *  sentence that reaches a volunteer's screen as-is, relayed by
  *  `github/errors.ts` -- the same arrangement as `DateRejected`. */
@@ -122,6 +132,12 @@ export function assignItem(
 ): Speaker[] {
   const owner = login.trim();
   if (owner === '') return unassignItem(current, speakerId, itemKey, config);
+  if (!LOGIN.test(owner)) {
+    throw new AssignmentRejected(
+      `"${owner}" is not a GitHub username, so nobody can be put down under it. ` +
+        'A line is owned by an account, never by a person written out by name.',
+    );
+  }
   return withChecklist(current, speakerId, itemKey, config, checklist => ({
     ...checklist,
     [itemKey]: { assignee: owner },

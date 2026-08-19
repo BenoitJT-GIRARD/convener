@@ -283,3 +283,24 @@ class TestChecklist:
         errors = validate_speakers([entry], BOARD)
         assert any("'scheduled/T-21/linkedin'" in e for e in errors), errors
         assert not any("'scheduled/T-30/visuals'" in e for e in errors), errors
+
+
+@pytest.mark.parametrize(
+    "case", CASES["checklist_assignee_cases"], ids=lambda c: c["name"]
+)
+def test_the_shared_assignee_cases_read_the_same_way_here(
+    case: dict[str, Any],
+) -> None:
+    """Who may be named against a line, in both languages.
+
+    This rule lived here alone: `app/src/data/validate.ts` accepted any
+    string and `assignItem` any non-empty one, so the browser could write a
+    record this validator refuses. `app/tests/assignment.test.ts` runs these
+    same cases through both of those.
+    """
+    entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": case["login"]}})
+    errors = validate_speakers([entry], BOARD)
+    if case["valid"]:
+        assert errors == [], errors
+    else:
+        assert any("invalid assignee" in e for e in errors), errors
