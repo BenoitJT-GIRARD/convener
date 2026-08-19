@@ -40,8 +40,11 @@ three separate steps on the day; this is the same sequence, in the room:
 - **Start recording** just before slide 2, so the welcome is in the recording.
 - **Stop recording** at the end of slide 6, *before* the discussion begins. The
   discussion is not published.
-- **Start recording again** for slide 7 if — and only if — the discussion is
-  being recorded for the team's own notes, and say so out loud before you do.
+- **Start recording again** for slide 7, when the discussion begins. It is the
+  third step of the sequence and not a choice: the app carries it as a tick of
+  its own, and the sequence is what decides what can be published. The
+  discussion is still not published — stopping in between is what keeps it out
+  of the recording that goes online.
 
 ## The conflict-of-interest slide
 
