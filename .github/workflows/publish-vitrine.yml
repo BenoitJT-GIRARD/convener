@@ -30,7 +30,7 @@ jobs:
             exit 0
           fi
           git config --global user.name "convener-publisher"
-          git config --global user.email "convener-publisher@forum.example.test"
+          git config --global user.email "convener-publisher@users.noreply.github.com"
           git clone --depth 1 \
             "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
           mkdir -p /tmp/vit/src/_data

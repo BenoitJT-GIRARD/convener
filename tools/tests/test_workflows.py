@@ -24,6 +24,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
 
@@ -161,3 +163,38 @@ def test_deploy_workflow_push_step_skips_committing_when_nothing_changed() -> No
         "an unchanged build must not produce an empty commit, the same "
         "guard publish-vitrine.yml already applies"
     )
+
+
+# ------------------------------------------------------------------ #
+# Commit authors: an address on a domain this project administers
+# ------------------------------------------------------------------ #
+
+#: Workflows that commit as an automated identity, and the distinct name
+#: each keeps. Nothing breaks if a commit author is unreachable, but
+#: `forum.example.test` is a domain this project does not administer,
+#: while a `users.noreply.github.com` address claims nothing beyond what
+#: GitHub itself already vouches for.
+_AUTOMATED_COMMIT_WORKFLOWS = {
+    Path(".github/workflows/candidate-form.yml"): "convener-form",
+    Path(".github/workflows/publish-vitrine.yml"): "convener-publisher",
+}
+
+
+@pytest.mark.parametrize(
+    ("workflow", "identity"),
+    list(_AUTOMATED_COMMIT_WORKFLOWS.items()),
+    ids=[path.name for path in _AUTOMATED_COMMIT_WORKFLOWS],
+)
+def test_automated_commit_author_is_not_on_a_domain_we_do_not_administer(
+    workflow: Path, identity: str
+) -> None:
+    text = (ROOT / workflow).read_text(encoding="utf-8")
+    assert "forum.example.test" not in text, (
+        f"{workflow.as_posix()} still signs commits on a domain this "
+        "project does not administer"
+    )
+    assert f'user.email "{identity}@users.noreply.github.com"' in text, (
+        f"{workflow.as_posix()} should keep {identity!r} as the distinct "
+        "user.name while addressing it at users.noreply.github.com"
+    )
+    assert f'user.name "{identity}"' in text

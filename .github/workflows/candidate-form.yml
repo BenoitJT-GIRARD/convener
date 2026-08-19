@@ -33,7 +33,7 @@ jobs:
         run: |
           set -e
           git config user.name "convener-form"
-          git config user.email "convener-form@forum.example.test"
+          git config user.email "convener-form@users.noreply.github.com"
           git add data/speakers.yml
           if git diff --staged --quiet; then
             echo "no new lead"
