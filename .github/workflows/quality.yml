@@ -74,6 +74,19 @@ jobs:
         # gives. Byte-comparable because the rendering reads no clock and no
         # data file, only the commits.
         run: uv run convener-register --check
+      - name: Schema appendix
+        working-directory: tools
+        # `docs/reference/schema.md` is derived from `app/src/data/types.ts`,
+        # the model both readers share. It was written by hand next to a model
+        # that kept moving and drifted every time it moved -- four times over
+        # two phases, corrected by hand each time. This is the same derivation
+        # run as an assertion: it writes nothing and fails if the committed
+        # page is not what the types give, naming the command to run.
+        #
+        # Unlike the register above, this reads no history at all, only two
+        # files in the tree, so it would be satisfied by the shallow clone the
+        # other jobs take; it runs here because this is the job that has `uv`.
+        run: uv run python ../scripts/generate_schema_doc.py --check
 
   typescript:
     runs-on: ubuntu-latest
