@@ -24,6 +24,10 @@ _FIXTURE = json.loads(
 )
 ASSIGN_LEAD_CASES = _FIXTURE["assign_lead_cases"]
 WEBHOOK_SIGNATURE_CASES = _FIXTURE["webhook_signature_cases"]
+# A parametrize over an emptied fixture list silently collects zero tests and
+# still passes -- this project has a history of vacuously passing tests, so
+# this guard makes that impossible for this block specifically.
+assert WEBHOOK_SIGNATURE_CASES
 
 
 def _fields(*pairs: tuple[str, str]) -> dict[str, str]:
@@ -56,6 +60,26 @@ def test_one_changed_byte_fails() -> None:
         hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
     ).decode()
     assert not verify_signature(tampered, sig, secret)
+
+
+def test_a_non_ascii_signature_is_refused_not_crashed() -> None:
+    """hmac.compare_digest raises TypeError comparing two str when either
+    holds a non-ASCII character. signature is attacker-controlled (relayed
+    verbatim from an HTTP header by the Cloudflare Worker), so a crafted
+    header must be refused, not let the exception escape the console-script
+    entry point."""
+    secret = "s3cr3t"
+    body = '{"data":{"fields":[]}}'
+    assert verify_signature(body, "h\u00e9llo-not-a-real-signature", secret) is False
+
+
+def test_a_signature_with_a_trailing_space_is_refused() -> None:
+    secret = "s3cr3t"
+    body = '{"data":{"fields":[]}}'
+    sig = base64.b64encode(
+        hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
+    ).decode()
+    assert verify_signature(body, sig + " ", secret) is False
 
 
 def test_an_invalid_signature_is_rejected() -> None:

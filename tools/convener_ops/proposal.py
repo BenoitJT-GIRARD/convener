@@ -43,13 +43,29 @@ def verify_signature(body: str, signature: str, secret: str) -> bool:
     With no secret configured, the check is skipped and the body is
     accepted: the webhook secret is one of the integrations that may not
     exist yet (D-13).
+
+    ``signature`` reaches here from an HTTP header, relayed verbatim by a
+    Cloudflare Worker -- it is attacker-controlled and may hold anything,
+    including bytes that are not valid ASCII. ``hmac.compare_digest`` raises
+    ``TypeError`` when given two ``str`` and either holds a non-ASCII
+    character, which would otherwise let a crafted header crash this
+    function instead of being refused. Comparing as ``bytes`` sidesteps that
+    restriction entirely -- ``bytes`` carries no such ASCII requirement --
+    so any string, ASCII or not, compares safely and still refuses to match.
     """
     if not secret:
         return True
     expected = base64.b64encode(
         hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
-    ).decode()
-    return hmac.compare_digest(expected, signature)
+    )
+    try:
+        given = signature.encode()
+    except UnicodeEncodeError:
+        # A lone surrogate (from a header carrying invalid UTF-8) cannot be
+        # encoded at all -- refuse it exactly as any other non-match, rather
+        # than letting the encode error escape as an unhandled crash.
+        return False
+    return hmac.compare_digest(expected, given)
 
 
 def _get(fields: dict[str, str], *keys: str) -> str:
