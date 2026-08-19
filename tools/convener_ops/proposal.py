@@ -7,6 +7,7 @@ webhook secret.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import re
@@ -31,16 +32,23 @@ CAREER_STAGES = {
 }
 
 
-def verify_signature(payload: str, signature: str, secret: str) -> bool:
-    """Check the HMAC-SHA256 signature of a payload.
+def verify_signature(body: str, signature: str, secret: str) -> bool:
+    """Check the HMAC-SHA256 signature of a raw webhook body.
 
-    With no secret configured, the check is skipped and the payload is
+    ``body`` must be exactly the bytes Tally signed -- the raw JSON it POSTed,
+    untransformed -- and ``signature`` is base64, the encoding Tally sends in
+    its ``Tally-Signature`` header (never hex: that was a defect this
+    function used to have).
+
+    With no secret configured, the check is skipped and the body is
     accepted: the webhook secret is one of the integrations that may not
-    exist yet.
+    exist yet (D-13).
     """
     if not secret:
         return True
-    expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    expected = base64.b64encode(
+        hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
+    ).decode()
     return hmac.compare_digest(expected, signature)
 
 

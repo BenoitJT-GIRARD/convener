@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,27 +17,45 @@ from convener_ops.validate import validate_speakers
 
 TODAY = "2026-01-08"
 
-ASSIGN_LEAD_CASES = json.loads(
+_FIXTURE = json.loads(
     (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
-)["assign_lead_cases"]
+)
+ASSIGN_LEAD_CASES = _FIXTURE["assign_lead_cases"]
+WEBHOOK_SIGNATURE_CASES = _FIXTURE["webhook_signature_cases"]
 
 
 def _fields(*pairs: tuple[str, str]) -> dict[str, str]:
     return dict(pairs)
 
 
-def test_a_valid_signature_is_accepted() -> None:
-    payload = '{"fields": []}'
-    secret = "shh"
-    import hashlib
-    import hmac as hmac_mod
+def test_a_body_signed_the_way_tally_signs_it_verifies() -> None:
+    secret = "s3cr3t"
+    body = '{"data":{"fields":[]}}'
+    sig = base64.b64encode(
+        hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
+    ).decode()
+    assert verify_signature(body, sig, secret)
 
-    signature = hmac_mod.new(
-        secret.encode(), payload.encode(), hashlib.sha256
-    ).hexdigest()
-    assert verify_signature(payload, signature, secret) is True
+
+def test_a_hex_signature_is_refused() -> None:
+    """The regression this task exists to fix: hexdigest was what the code
+    computed, and base64 is what Tally sends."""
+    secret = "s3cr3t"
+    body = '{"data":{"fields":[]}}'
+    hexsig = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
+    assert not verify_signature(body, hexsig, secret)
+
+
+def test_one_changed_byte_fails() -> None:
+    secret = "s3cr3t"
+    body = '{"data":{"fields":[{"label":"Name","value":"Ada Lovelace"}]}}'
+    tampered = body.replace("Ada", "Bda")
+    sig = base64.b64encode(
+        hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
+    ).decode()
+    assert not verify_signature(tampered, sig, secret)
 
 
 def test_an_invalid_signature_is_rejected() -> None:
@@ -42,7 +63,17 @@ def test_an_invalid_signature_is_rejected() -> None:
 
 
 def test_with_no_secret_configured_the_payload_is_accepted() -> None:
+    # D-13: an unconfigured integration is a normal state, not an error, and
+    # this stays true whatever body or signature-shaped string shows up.
     assert verify_signature('{"fields": []}', "anything-or-nothing", "") is True
+
+
+@pytest.mark.parametrize("case", WEBHOOK_SIGNATURE_CASES, ids=lambda c: c["name"])
+def test_verify_signature_matches_the_shared_fixture(case: dict[str, Any]) -> None:
+    assert (
+        verify_signature(case["body"], case["signature"], case["secret"])
+        == case["valid"]
+    )
 
 
 def test_the_next_id_is_assigned_from_the_highest_existing_one() -> None:

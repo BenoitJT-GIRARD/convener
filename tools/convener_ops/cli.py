@@ -276,6 +276,16 @@ def public_data() -> int:
 
 
 def handle_proposal() -> int:
+    """Turn a signed Tally webhook into a lead, or refuse it.
+
+    ``PROPOSAL_PAYLOAD`` is the raw body Tally signed -- not a wrapper
+    around it -- so verifying the signature against it and then parsing it
+    as JSON are both operating on exactly what Tally sent. The workflow
+    (.github/workflows/candidate-form.yml) sets it from
+    ``client_payload.body``, which the relay (services/form-relay) sends
+    separately from ``client_payload.signature`` for exactly this reason: a
+    signature cannot verify a payload that contains that signature.
+    """
     payload_str = os.environ.get("PROPOSAL_PAYLOAD", "")
     signature = os.environ.get("PROPOSAL_SIGNATURE", "").strip()
     secret = os.environ.get("TALLY_WEBHOOK_SECRET", "").strip()

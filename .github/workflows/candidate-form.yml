@@ -17,7 +17,15 @@ jobs:
       - name: Process payload
         working-directory: tools
         env:
-          PROPOSAL_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          # The relay (services/form-relay) sends client_payload as exactly
+          # {"body": <raw Tally body>, "signature": <base64 signature>}. What
+          # is verified below must be identical to what Tally signed, so the
+          # raw body is passed through untouched -- never the whole
+          # client_payload, which would include this very signature field and
+          # so could never verify against itself. Set as env, not inlined
+          # into `run:`, so untrusted payload text is never substituted into
+          # the shell script.
+          PROPOSAL_PAYLOAD: ${{ github.event.client_payload.body }}
           PROPOSAL_SIGNATURE: ${{ github.event.client_payload.signature }}
           TALLY_WEBHOOK_SECRET: ${{ secrets.TALLY_WEBHOOK_SECRET }}
         run: uv run convener-handle-proposal
