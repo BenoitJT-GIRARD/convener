@@ -27,6 +27,7 @@ repository to hold one.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -130,11 +131,61 @@ def test_the_page_says_it_is_generated_and_names_the_command() -> None:
     assert TYPES_PATH.as_posix() in head
 
 
+#: `SPEAKER_FIELD_SET` in `app/src/data/types.ts`, read as text.
+#:
+#: Deliberately not read through `generate_schema_doc.parse_types`: this is
+#: the second opinion about the model, and a second opinion that shares the
+#: first one's parser is not one. `SPEAKER_FIELD_SET` is also a different
+#: declaration from `interface Speaker` -- it is a `Record<keyof Speaker,
+#: true>`, which the TypeScript compiler holds exhaustive in both directions
+#: -- so a field the parser cannot read is still listed here.
+_FIELD_SET = re.compile(
+    r"const SPEAKER_FIELD_SET: Record<keyof Speaker, true> = \{(.*?)\n\};", re.S
+)
+
+
+def _declared_speaker_fields() -> list[str]:
+    source = (ROOT / TYPES_PATH).read_text(encoding="utf-8")
+    listed = _FIELD_SET.search(source)
+    assert listed is not None, (
+        f"{TYPES_PATH.as_posix()} no longer declares SPEAKER_FIELD_SET in the "
+        "form this test reads, so nothing holds the Python double to the model."
+    )
+    return re.findall(r"(\w+): true", listed.group(1))
+
+
+def test_the_python_double_is_the_model_key_for_key() -> None:
+    """What makes the check below a check.
+
+    `test_every_stored_key_of_a_record_has_a_row` walks
+    `tools/tests/conftest.py::speaker()`, and is worth exactly as much as the
+    claim that that double is the record the model declares. Nothing held it
+    to the model: the app suite pins `app/tests/data-doubles.ts`, a different
+    double, so a field could be added to `Speaker` and left out of the Python
+    double, and the row test would pass without ever asking for its row.
+
+    That matters because the parser has a ceiling. `parse_types` reads four
+    declaration forms; a field declared in a fifth -- a type wrapped over
+    several lines, which is what prettier does to a long one -- is simply not
+    seen, and `--check` cannot catch it: both sides of that comparison come
+    from the same parser, so the short page matches itself. This pin is the
+    independent path: the field is in `SPEAKER_FIELD_SET` whatever shape its
+    declaration takes, so it is in this list, so it is in the double, so the
+    page is asked for its row.
+    """
+    # Compared as sets: which keys the double holds is the claim, and the
+    # order it holds them in reaches nothing -- the page's order is the
+    # interface's, and the file's is the reader's (`data/validate.ts` rebuilds
+    # every record in the order the model declares).
+    assert set(_declared_speaker_fields()) == set(speaker())
+
+
 def test_every_stored_key_of_a_record_has_a_row() -> None:
     """No field reaches the file without reaching the handbook.
 
-    The double in `conftest` is the record as the model declares it -- the app
-    suite pins it key for key against `SPEAKER_FIELDS` -- so a field added to
+    The double in `conftest` is the record as the model declares it --
+    `test_the_python_double_is_the_model_key_for_key` above holds it key for
+    key against `SPEAKER_FIELD_SET`, in both directions -- so a field added to
     the model and left out of the page is caught here as well as by the
     comparison above, with a message naming the field.
     """

@@ -156,9 +156,17 @@ def parse_types(text: str) -> Model:
     A reader of the declarations, not of TypeScript: it understands the four
     forms this file uses -- an interface, an inline object field, a `const`
     tuple of string literals, and a union of string literals -- and nothing
-    else. That is a deliberate ceiling. A model that grew a form this cannot
-    read stops the build (`--check` fails on a page missing the new field)
-    rather than quietly leaving the handbook short of it.
+    else. That is a deliberate ceiling, and it is worth being exact about what
+    happens at it, because the obvious answer is wrong: a field declared in a
+    fifth form is not seen, and `--check` cannot notice. Both sides of that
+    comparison come from this parser, so a short page matches itself. What
+    catches it is `tools/tests/test_schema_doc.py`, in two steps that do not
+    go through here at all: `SPEAKER_FIELD_SET` is read out of `types.ts` as
+    text and held against `tools/tests/conftest.py::speaker()`, and every key
+    of that double is then required to have a row on the page. A field this
+    parser cannot read is still in `SPEAKER_FIELD_SET` -- the compiler holds
+    that record exhaustive over `keyof Speaker` -- so it still reaches the
+    double, and the missing row fails with the field's name.
     """
     interfaces: dict[str, Interface] = {}
     enums: dict[str, Enumeration] = {}
