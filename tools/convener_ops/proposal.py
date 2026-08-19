@@ -31,6 +31,43 @@ CAREER_STAGES = {
     "undisclosed",
 }
 
+# The eleven labels ``to_lead`` reads a submission by -- canonical name first,
+# any alias this module also accepts after it. ``scripts/create_tally_form.py``
+# builds the live form's questions from these same tuples, not from a second,
+# hand-typed copy of them, so a label renamed on one side breaks a test
+# instead of breaking the form in production (R-3, D-03).
+LABEL_NAME = ("Name",)
+LABEL_EMAIL = ("Email",)
+LABEL_INSTITUTION = ("Institution", "Affiliation")
+LABEL_COUNTRY = ("Country",)
+LABEL_TITLE = ("Preliminary title", "(preliminary) Title", "Title")
+LABEL_ABSTRACT = ("Short abstract", "Summary", "Abstract")
+LABEL_CAREER_STAGE = ("Career stage", "Career level")
+LABEL_GENDER = ("Gender",)
+LABEL_LINKS = ("Links", "Profile links")
+LABEL_CONFLICTS = ("Conflicts of interest",)
+# The submitter, not the speaker being proposed -- distinct from LABEL_NAME
+# above. Kept as ``proposed_by`` on the resulting lead (G-17).
+LABEL_PROPOSED_BY = ("Your name", "Who are you", "How you propose")
+
+#: Every field ``to_lead`` reads, in the order the form asks them, each as
+#: ``(aliases, required)`` with the canonical label first in ``aliases``.
+#: ``Name`` is the only required one. ``scripts/create_tally_form.py`` walks
+#: this exact tuple to build the form's questions.
+FORM_FIELDS: tuple[tuple[tuple[str, ...], bool], ...] = (
+    (LABEL_NAME, True),
+    (LABEL_EMAIL, False),
+    (LABEL_INSTITUTION, False),
+    (LABEL_COUNTRY, False),
+    (LABEL_TITLE, False),
+    (LABEL_ABSTRACT, False),
+    (LABEL_CAREER_STAGE, False),
+    (LABEL_GENDER, False),
+    (LABEL_LINKS, False),
+    (LABEL_CONFLICTS, False),
+    (LABEL_PROPOSED_BY, False),
+)
+
 
 def verify_signature(body: str, signature: str, secret: str) -> bool:
     """Check the HMAC-SHA256 signature of a raw webhook body.
@@ -82,11 +119,11 @@ def skip_reason(fields: dict[str, str], existing: list[dict[str, Any]]) -> str |
     Distinguishes an empty name from a duplicate submission so the caller can
     log which one happened.
     """
-    name = _get(fields, "Name")
+    name = _get(fields, *LABEL_NAME)
     if not name:
         return "empty name"
 
-    email = _get(fields, "Email")
+    email = _get(fields, *LABEL_EMAIL)
     if email and any(
         isinstance(s, dict) and s.get("email") == email and s.get("status") == "lead"
         for s in existing
@@ -167,8 +204,8 @@ def to_lead(
     if skip_reason(fields, existing) is not None:
         return None
 
-    name = _get(fields, "Name")
-    email = _get(fields, "Email")
+    name = _get(fields, *LABEL_NAME)
+    email = _get(fields, *LABEL_EMAIL)
 
     nums: list[int] = []
     for s in existing:
@@ -178,7 +215,7 @@ def to_lead(
                 nums.append(int(match.group(1)))
     sid = f"spk-{(max(nums or [0]) + 1):03d}"
 
-    gender = _get(fields, "Gender") or "undisclosed"
+    gender = _get(fields, *LABEL_GENDER) or "undisclosed"
     if gender not in GENDERS:
         gender = "undisclosed"
 
@@ -187,11 +224,11 @@ def to_lead(
     # "undisclosed" rather than being kept verbatim: a value outside the
     # vocabulary would open a career stage of its own in the balance figures
     # and read as a finding.
-    career_stage = _get(fields, "Career stage", "Career level") or "undisclosed"
+    career_stage = _get(fields, *LABEL_CAREER_STAGE) or "undisclosed"
     if career_stage not in CAREER_STAGES:
         career_stage = "undisclosed"
 
-    raw_links = _get(fields, "Links", "Profile links")
+    raw_links = _get(fields, *LABEL_LINKS)
     links = [s.strip() for s in raw_links.split(",") if s.strip()]
 
     return {
@@ -200,8 +237,8 @@ def to_lead(
         "gender": gender,
         "career_stage": career_stage,
         "email": email,
-        "affiliation": _get(fields, "Institution", "Affiliation"),
-        "country": _get(fields, "Country"),
+        "affiliation": _get(fields, *LABEL_INSTITUTION),
+        "country": _get(fields, *LABEL_COUNTRY),
         # Written as answers, not left out. The public form does not ask for
         # a portrait, a biography, a handle or seed questions -- those are
         # asked for once the Board has approved the lead and the speaker has
@@ -211,11 +248,11 @@ def to_lead(
         "bio": "",
         "linkedin": "",
         "seed_questions": "",
-        "title": _get(fields, "Preliminary title", "(preliminary) Title", "Title"),
-        "abstract": _get(fields, "Short abstract", "Summary", "Abstract"),
-        "conflicts_of_interest": _get(fields, "Conflicts of interest"),
+        "title": _get(fields, *LABEL_TITLE),
+        "abstract": _get(fields, *LABEL_ABSTRACT),
+        "conflicts_of_interest": _get(fields, *LABEL_CONFLICTS),
         "source": "form",
-        "proposed_by": _get(fields, "Your name", "Who are you", "How you propose"),
+        "proposed_by": _get(fields, *LABEL_PROPOSED_BY),
         "assigned_to": assign_lead(existing, config, today),
         "links": links,
         "host_1": "",
