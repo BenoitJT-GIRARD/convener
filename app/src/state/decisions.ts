@@ -276,7 +276,10 @@ function editPart(edit: Edit): string {
     case 'post-archive-metrics':
       return 'update post-archive metrics';
     case 'field':
-      return `set ${edit.key}`;
+      // Checked, not merely typed: `FieldKey` is a union the compiler
+      // enforces, and a cast is what a compiler cannot enforce. The same
+      // shape rule as a journey key, which every field name satisfies.
+      return `set ${itemKey(edit.key)}`;
     case 'runbook-box':
       return `runbook ${edit.key}=${edit.ticked}`;
     case 'owner':

@@ -17,6 +17,7 @@ import {
   type PlainDecisionKind,
 } from '../src/state/decisions';
 import type { Transition } from '../src/state/transitions';
+import type { FieldKey } from '../src/state/phases';
 import {
   BALLOT_VALUES,
   CONSENT_DECISIONS,
@@ -284,6 +285,15 @@ describe('the grammar of decision commits', () => {
     for (const edit of edits) {
       expect(ordinary, JSON.stringify(edit)).toContain(dataEdit(identifier('spk-001'), edit));
     }
+  });
+
+  it('refuses a field name cast into carrying its own value', () => {
+    // The union is the control and the cast is the way past it, so the key
+    // is checked as well as typed. `set title=Jane Doe` in a permanent
+    // subject is the whole finding, one level down from the entity.
+    expect(() =>
+      dataEdit(identifier('spk-001'), { part: 'field', key: 'title=Jane Doe' as FieldKey }),
+    ).toThrow(DecisionRejected);
   });
 
   it('refuses a journey key that is a sentence about a person', () => {
