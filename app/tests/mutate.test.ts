@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ConflictError, mutate } from '../src/github/mutate';
 import type { FileStore } from '../src/github/mutate';
+import { dataEdit, identifier } from '../src/state/decisions';
+
+/** These tests are about replay, conflicts and shas, not about what the
+ *  subject says -- but the store writes commits, so there is no plain string
+ *  to hand it. One real subject stands in for all of them. */
+const SUBJECT = dataEdit(identifier('spk-001'), { part: 'admin-fields' });
 
 /** In-memory store whose `write` rejects a stale sha, like the real API. */
 function makeStore(initial: string) {
@@ -44,7 +50,7 @@ describe('mutate', () => {
       path: 'data/n.txt',
       ...numbers,
       transform: (v) => [...v, 3],
-      message: 'add 3',
+      message: SUBJECT,
     });
     expect(current()).toBe('1,2,3');
     expect(result.changed).toBe(true);
@@ -58,7 +64,7 @@ describe('mutate', () => {
       path: 'data/n.txt',
       ...numbers,
       transform: (v) => v,
-      message: 'noop',
+      message: SUBJECT,
     });
     expect(result.changed).toBe(false);
     expect(store.write).not.toHaveBeenCalled();
@@ -93,7 +99,7 @@ describe('mutate', () => {
       path: 'data/n.txt',
       ...numbers,
       transform: (v) => [...v, 3],
-      message: 'add 3',
+      message: SUBJECT,
     });
 
     // Both writes survive: the other person's 9 and our 3.
@@ -113,7 +119,7 @@ describe('mutate', () => {
         path: 'data/n.txt',
         ...numbers,
         transform: (v) => [...v, 2],
-        message: 'add 2',
+        message: SUBJECT,
         attempts: 3,
       }),
     ).rejects.toBeInstanceOf(ConflictError);
@@ -128,7 +134,7 @@ describe('mutate', () => {
       throw err;
     });
     await expect(
-      mutate({ store, path: 'data/n.txt', ...numbers, transform: (v) => v.concat(2), message: 'x' }),
+      mutate({ store, path: 'data/n.txt', ...numbers, transform: (v) => v.concat(2), message: SUBJECT }),
     ).rejects.toThrow('forbidden');
     expect(store.write).toHaveBeenCalledTimes(1);
   });

@@ -12,7 +12,15 @@
  * assigned, say) may stash it in a variable in its own closure — the value
  * from the call that actually produced the returned result is the one that
  * matters, and each replay simply overwrites it with a fresh answer.
+ *
+ * The store is a git repository, so the message this carries is a commit
+ * subject: permanent, unrewritable, and mailed to every watcher. It is a
+ * `Subject` (`state/decisions.ts`) rather than a `string` for that reason —
+ * here as well as at `mutateSpeakers`, so that reaching past the data layer
+ * to this function is not a way around the grammar.
  */
+
+import type { Subject } from '../state/decisions';
 
 export interface FileStore {
   read(path: string): Promise<{ text: string; sha: string }>;
@@ -20,7 +28,7 @@ export interface FileStore {
     path: string,
     text: string,
     sha: string,
-    message: string,
+    message: Subject,
   ): Promise<{ sha: string }>;
 }
 
@@ -37,7 +45,7 @@ export interface MutateOptions<T> {
    *  the attempt that actually gets written. Without it the caller would have
    *  to build the subject from a value read before the replay, which is the
    *  one value that may be stale. */
-  message: string | ((next: T) => string);
+  message: Subject | ((next: T) => Subject);
   attempts?: number;
 }
 

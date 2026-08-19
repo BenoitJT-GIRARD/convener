@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getFile, putFile, githubStore } from '../src/github/contents';
+import { dataEdit, identifier } from '../src/state/decisions';
 
 describe('getFile', () => {
   beforeEach(() => {
@@ -77,11 +78,16 @@ describe('githubStore', () => {
       json: async () => ({ content: { sha: 'newsha' } }),
     });
     vi.stubGlobal('fetch', fetchSpy);
-    const out = await githubStore('tok').write('data/speakers.yml', 'speakers: []\n', 'oldsha', 'update');
+    const out = await githubStore('tok').write(
+      'data/speakers.yml',
+      'speakers: []\n',
+      'oldsha',
+      dataEdit(identifier('spk-001'), { part: 'admin-fields' }),
+    );
     expect(out).toEqual({ sha: 'newsha' });
     const [, opts] = fetchSpy.mock.calls[0];
     const body = JSON.parse(opts.body as string);
     expect(body.sha).toBe('oldsha');
-    expect(body.message).toBe('update');
+    expect(body.message).toBe('data: spk-001 admin edit');
   });
 });
