@@ -122,9 +122,12 @@ describe('the wording carries the risk', () => {
 
   it('leaves the reason at the point of use and nowhere else', () => {
     // The reason belongs to the step that carries the risk. Repeating it on
-    // the two neighbours would turn it into wallpaper.
-    const noted = PHASES.flatMap(p => p.items).filter(i => i.note !== undefined);
+    // the two neighbours -- or on the rest of the runbook they sit in --
+    // would turn it into wallpaper.
+    const phase = PHASES.find(p => p.status === 'scheduled')!;
+    const noted = phase.items.filter(i => i.note !== undefined);
     expect(noted.map(i => i.key)).toEqual([STOP]);
+    for (const key of [TALK, DISCUSSION]) expect(itemByKey(key)!.note).toBeUndefined();
   });
 });
 

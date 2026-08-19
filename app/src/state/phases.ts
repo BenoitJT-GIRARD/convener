@@ -70,6 +70,19 @@ export const PHASES: PhaseDef[] = [
         label: 'Selection criteria',
         contentKey: 'governance/selection-criteria',
       },
+      {
+        // The only line of the journey whose recipient is not on the team and
+        // not the speaker: whoever sent the proposal in, very often somebody
+        // outside the series entirely. Nothing else in the pipeline writes to
+        // them until the board has decided, which can be weeks -- and silence
+        // from a series is not read as "still thinking", it is read as
+        // "defunct". So the acknowledgement is a line somebody can be put
+        // down for and tick, on the day the proposal arrives.
+        key: 'lead/acknowledge-proposal',
+        form: 'checkbox',
+        label: 'Proposal acknowledged to whoever sent it',
+        contentKey: 'toolkit/emails/proposal-received',
+      },
     ],
   },
   {
@@ -130,6 +143,7 @@ export const PHASES: PhaseDef[] = [
         form: 'checkbox',
         label: 'Speaker told the promotion is starting',
         window: 21,
+        contentKey: 'toolkit/emails/promotion-starting',
       },
       {
         key: 'scheduled/T-21/linkedin',
@@ -306,12 +320,20 @@ export const PHASES: PhaseDef[] = [
         contentKey: 'toolkit/emails/thank-you',
       },
       {
-        // The step exists now because the volunteers do it now; the template
-        // it will hand over is written later. A line with nothing attached is
-        // still a line somebody can be put down for and tick.
+        // Only honest once the speaker has answered the consent question and
+        // the recorded answer is that they agreed: until then there is no
+        // published recording to write about. The message it hands over says
+        // so and refuses to be the ask; the ask is `consent-request.md`,
+        // which explains what would be published and how to withdraw.
+        //
+        // Not `after:` the thank-you or anything else, because what this line
+        // waits on is not another tick: it is a value on the record
+        // (`publication.consent`), and `after` names steps.
         key: 'delivered/video-online',
         form: 'checkbox',
         label: 'Speaker told the video is online',
+        note: 'Only after the speaker has agreed to the recording being published — check the recorded answer first.',
+        contentKey: 'toolkit/emails/video-online',
       },
       // The conflict declared to the audience during the session (G-16), as
       // three lines and not one.

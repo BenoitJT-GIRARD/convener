@@ -1,19 +1,42 @@
 # Templates
 
-Ready-to-use templates for every outbound communication. **Copy, fill the placeholders, send.** Do not edit a template in place — work on a copy, and leave the original for the next person.
+Ready-to-use templates for every outbound communication. **Open it on the speaker's page, read it through, send it.** Do not edit a template in place — work on a copy, and leave the original for the next person.
 
 ## Placeholders
 
-Templates use `{{double-brace}}` placeholders. Common ones: `{{speaker}}`, `{{speaker_first}}`, `{{title}}`, `{{date}}`, `{{registration_link}}`, `{{forum_link}}`, `{{zoom_link}}`, `{{abstract}}`.
+Anything a template writes in double braces is filled in for you from the
+speaker's record when you open it in the workspace. The vocabulary is the
+record's own field names, reached through the object that holds them:
+
+- the speaker — `{{ speaker.name }}`, `{{ speaker.first_name }}`,
+  `{{ speaker.affiliation }}`, `{{ speaker.country }}`, `{{ speaker.bio }}`;
+- their talk — `{{ speaker.title }}`, `{{ speaker.abstract }}`,
+  `{{ speaker.edition_code }}`, `{{ speaker.date }}`, `{{ speaker.time }}`,
+  `{{ speaker.zoom_link }}`, `{{ speaker.forum_thread }}`,
+  `{{ speaker.youtube_url }}`, `{{ speaker.live_peak }}`;
+- the people around it — `{{ host_1.name }}`, `{{ host_2.name }}`,
+  `{{ proposed_by.name }}`;
+- what the series publishes — `{{ consent.published_always }}` and
+  `{{ consent.published_on_consent }}`, composed from the publication gate
+  itself so that no message can promise something the gate would not do.
+
+A name that is not in that vocabulary does not resolve: it comes out as
+`«missing: …»` in the message, which is what a volunteer would paste into an
+e-mail. So anything you have to write in by hand is written in **square
+brackets** instead — `[first name of the Zoom responsible]` — and reads as an
+instruction rather than as a field the workspace forgot to fill.
 
 ## Emails
 
+- [Proposal received](emails/proposal-received.md) — acknowledging a proposal, the day it arrives
 - [Invitation](emails/invitation.md) — first contact with an approved speaker
 - [Talk details](emails/talk-details.md) — collect title, abstract, bio
 - [Zoom request](emails/zoom-request.md) — ask the Zoom responsible for a link
+- [Promotion starting](emails/promotion-starting.md) — telling the speaker, three weeks out, that the series is about to announce them
 - [Reminder](emails/reminder.md) — reminder to the speaker before the event
 - [Thank-you](emails/thank-you.md) — after the talk
 - [Recording consent](emails/consent-request.md) — asking whether the recording may be published, after the talk
+- [Video online](emails/video-online.md) — telling the speaker the recording is published, once they have agreed to it
 - [Registration confirmation](emails/registration-confirmation.md) — confirm the announcement is live
 - [Decision — declined](emails/decision-declined.md) — to a candidate not retained
 - [Decision — parked](emails/decision-parked.md) — to a candidate kept for later

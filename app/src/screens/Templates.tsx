@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import { InlineContent } from '../content/InlineContent';
 
+/** Every template, in the order of the journey they belong to: a volunteer
+ *  who opens this screen is usually looking for the next message to send, not
+ *  for one they can already name. */
 const TEMPLATES = [
+  { key: 'toolkit/emails/proposal-received', label: 'Proposal received' },
   { key: 'toolkit/emails/invitation', label: 'Invitation email' },
   { key: 'toolkit/emails/talk-details', label: 'Talk details email' },
   { key: 'toolkit/emails/zoom-request', label: 'Zoom request' },
+  { key: 'toolkit/emails/promotion-starting', label: 'Promotion starting' },
   { key: 'toolkit/emails/reminder', label: 'Reminder email' },
   { key: 'toolkit/emails/thank-you', label: 'Thank-you email' },
   { key: 'toolkit/emails/consent-request', label: 'Recording consent request' },
+  { key: 'toolkit/emails/video-online', label: 'Video online' },
   { key: 'toolkit/emails/outreach-sourcing', label: 'Outreach sourcing' },
   { key: 'toolkit/emails/registration-confirmation', label: 'Registration confirmation' },
   { key: 'toolkit/emails/decision-declined', label: 'Decision: declined' },

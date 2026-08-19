@@ -200,12 +200,18 @@ describe('what the three checks do not do', () => {
     expect(canFinalize(s)).toBe(true);
   });
 
-  it('adds no second note anywhere in the journey', () => {
-    // The one note in the journey is on the recording step, whose cost cannot
-    // be paid back. Three lines whose wording already says what each of them
-    // is would only turn the device into wallpaper.
+  it('adds no note of its own, and leaves the device rare', () => {
+    // Three lines whose wording already says what each of them is would only
+    // turn the device into wallpaper. The whole journey's notes are listed
+    // here rather than counted, so that a fourth one has to be argued for in
+    // this test before it reaches a volunteer's screen: they are the two
+    // steps whose cost, once skipped, cannot be paid back -- a discussion
+    // recorded by mistake, and a publication announced before it was allowed.
     const noted = PHASES.flatMap(p => p.items).filter(i => i.note !== undefined);
-    expect(noted).toHaveLength(1);
+    expect(noted.map(i => i.key)).toEqual([
+      'scheduled/T-0/recording-stopped-before-discussion',
+      'delivered/video-online',
+    ]);
     for (const key of THREE) expect(itemByKey(key)!.note).toBeUndefined();
   });
 
