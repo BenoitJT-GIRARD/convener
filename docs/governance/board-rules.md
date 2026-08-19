@@ -129,6 +129,10 @@ Inactive is not a departure and not a judgement. The seat is kept, the entry sta
 
 ## Publishing a recording: two permissions, and they are not alike
 
+**Why there is a second gate at all.** The Board has already said yes to this speaker, so it is fair to ask what is left to decide. The answer is that the session and the recording are not the same object. A session is heard once, by the people who came, and then it is gone; nobody can be sent back to it, and nothing about it can be found by someone who was not there. A recording is the opposite in every respect. It sits under the series' name for as long as the channel exists, it is what a stranger finds first, and it goes on speaking for the speaker long after everyone who organised the day has moved on. We do not carry the same responsibility for the two. An hour that went a little wrong in the room is an hour that went a little wrong; the same hour published is a standing statement that we are content for it to represent us and the person who gave it. So the second gate is not a second opinion about the speaker — that question was settled — it is the first decision anyone has taken about the recording, which is a different thing, decided once, by people who have watched it.
+
+**This is also why it is quick.** It asks a member to look at a specific and finite list — a conflict of interest that was not declared, commercial content that turned into a pitch, something said in the room that should not follow the speaker around — and then to get out of the way. It is three working days and one approval, not a review. Treating it as a formality is the mistake it exists to prevent; treating it as a hurdle is how it comes to be routed around, which costs more.
+
 A recording goes online only when **two separate permissions** are in hand, from two separate parties. Neither can be read off the other.
 
 ### The speaker's — which must be present

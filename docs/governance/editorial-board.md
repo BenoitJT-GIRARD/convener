@@ -33,4 +33,8 @@ Each year the Board meets to:
 
 ## Other Board decisions
 
-Changing a rule, adding a member, standing back from the Board: one member proposes it, and it is done unless someone objects in writing — or it waits for the yearly meeting. Joining and stepping back have their own windows and their own safeguards, all set out in [the Board's rules, in detail](board-rules.md).
+Changing a rule, adding a member, standing back from the Board: one member proposes it, and it carries unless another member objects in writing — in which case it waits for the yearly meeting. Joining and stepping back have their own windows and their own safeguards, all set out in [the Board's rules, in detail](board-rules.md).
+
+That sentence stops one clause too early, and the missing clause is the one that decides what actually happens: what an objection has to carry, why it defers rather than refuses, and who — only ever one person — can lift it again. An objection here works exactly as it does on a nomination, so it is written once, there:
+
+{{> fragments/board-rules-objection }}

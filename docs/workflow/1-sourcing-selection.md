@@ -7,6 +7,16 @@
 
 Either way, the result is a new **Lead**, with one person looking after it.
 
+## Finding a speaker is not contacting them
+
+**Do not write to a prospective speaker before the Board has validated them.** This is a rule, not a courtesy. Spotting someone, reading their work and putting their name forward is the whole of what this step asks of you; the invitation is a separate act, taken afterwards, by the two Event Hosts, with [the invitation template](../toolkit/emails/invitation.md).
+
+The reason is what an early approach does to the vote. A researcher who has been written to believes, quite reasonably, that they have been invited — so the Board is no longer being asked whether to invite them. It is being asked to ratify a decision somebody else has already taken, or else to send a volunteer back to a stranger to explain that the invitation was not one. Neither of those is a decision, and the second costs the series a person's goodwill for nothing. A vote can only be a real vote while every outcome is still available.
+
+Two things this does **not** forbid. Asking a lab, a colleague or a mailing list to *suggest names* is outreach, it is what the [outreach template](../toolkit/emails/outreach-sourcing.md) is for, and it needs nobody's permission — what waits for the vote is approaching the person who would give the talk. And knowing the person already is an argument for proposing them, not a licence to ask them: say so in the suggestion, where it helps the Board, and then wait like everybody else.
+
+If you have already written to somebody, say so on the record now rather than letting the hosts find out from the reply. A mistake the Board knows about is a small problem.
+
 ## 🚪 The gate — validating the speaker
 
 A Lead moves forward only when the **Editorial Board** validates it:

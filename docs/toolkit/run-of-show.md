@@ -53,6 +53,16 @@ speaker says nothing is not a declaration, and the audience cannot read it.
 
 The hosts confirm all three in the wrap-up checklist, as three separate ticks.
 
+## Results that have not been peer-reviewed
+
+The [editorial line](../governance/editorial-line.md) welcomes work that has not been through peer review, on one condition: that the audience is told. In the room, that condition is met in one of two places, and it is worth knowing both before the day.
+
+**Normally the speaker meets it, on slide 5.** The hosts ask for it in the [talk details email](emails/talk-details.md), in the same breath as the declaration slide, and the speaker states it there and says it aloud — one sentence, of the kind *"the results in the second half are unpublished and have not been reviewed"*. Nothing is filled in anywhere and nothing has to be proved; a speaker whose work is all published simply has nothing to say.
+
+**If they did not, a host says it**, once, just before the questions open, and in as few words as it takes. Whichever host is not chairing that part is the one who says it. The tone is the point: this is the audience being told what it has been looking at, not the speaker being corrected, so it goes at the same pitch as the housekeeping and is not returned to afterwards.
+
+**Nothing in the app is ticked for this, deliberately.** The wrap-up carries three ticks and they are all about the conflict-of-interest declaration. A fourth box would have to be answered on every session, including the great majority with nothing at all to flag, and a box that is nearly always the same answer is a box people stop reading. The flag is a sentence somebody says, and its record is the recording.
+
 ## What the hosts agree beforehand
 
 At T-1 week, in ten minutes:

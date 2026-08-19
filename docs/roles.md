@@ -17,7 +17,7 @@ There is no ladder to climb. Most volunteers are Contributors and Event Hosts. A
 
 ## Two Event Hosts per webinar
 
-Every webinar is run by **two Event Hosts**, working as a pair from preparation through to the live day. Both are hosts — there is no separate "technical" role (the Zoom contact handles the recording).
+Every webinar is run by **two Event Hosts**, working as a pair from preparation through to the live day. Both are hosts — there is no separate "technical" role; the meeting platform does the recording, and starting and stopping it is one of the things the pair agree beforehand.
 
 How they split the work is up to them — two equal hosts, or one main host and a second. The usual split on the day:
 

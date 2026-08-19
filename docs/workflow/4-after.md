@@ -20,7 +20,7 @@ Write your notes up into a short, readable summary and post it under the announc
 
 {{> fragments/board-rules-publication-gate }}
 
-Once cleared, send the recording to the YouTube contact for the TEATIME channel, and announce it on the forum.
+Once cleared, publish the recording on the series' own video channel and announce it on the forum. There is nobody outside the team to send it to — see [Contacts](../reference/contacts.md).
 
 ## Thank the speaker
 
@@ -28,15 +28,18 @@ Send a short, warm thank-you — [template](../toolkit/emails/thank-you.md). Men
 
 ## Note the numbers
 
-Add the four numbers for this webinar to the event list: registrations, peak live attendance, YouTube views after a month, and forum replies. They feed the Board's yearly review.
+Add the four numbers for this webinar to the event list: registrations, peak live attendance, video views once the counting window has passed, and forum replies. They feed the Board's yearly review.
+
+**The counting window is a convention.** Views keep arriving for years, so a view count is not a fact about a talk until somebody says when it was read off; without an agreed moment the four numbers are not comparable with each other, and a session from March quietly outranks one from November for no reason but its age. The series reads them **thirty days after the talk**. There is nothing behind the thirty: it is long enough that most of the views have arrived and short enough that somebody still remembers to look, and any other number chosen once would do the same job. What matters is that it is the same number every time.
+
+Because it is a convention and not a law, it is configuration: `view_count_window_days` in `data/config.yml`. Change it there and both the app and the validator follow — the field on this page and in the Archive relabels itself, so the handbook and the form cannot end up claiming different windows. Change it rarely, and know that counts taken under the old window and the new one are not comparable, which is exactly the problem the convention exists to avoid.
 
 ## Checklist
 
 - [ ] Notes from the discussion written up while fresh
-- [ ] Recording sent to the YouTube contact (TEATIME channel)
 - [ ] Draft summary shown to the speaker
 - [ ] Summary posted on the forum thread
-- [ ] Recording published on YouTube — only after the Board's green light
+- [ ] Recording published on the video channel — only after the Board's green light
 - [ ] Thank-you sent to the speaker
 - [ ] Numbers noted in the event list
 - [ ] **Handbook improved** — fix anything that was unclear or could be smoother. This is what keeps the handbook trustworthy.
