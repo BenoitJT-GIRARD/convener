@@ -961,6 +961,36 @@ def test_a_partly_configured_environment_yields_no_channel(env: dict[str, str]) 
     assert resolve_channel(env) is None
 
 
+@pytest.mark.parametrize(
+    "mention",
+    [
+        "example-instance/convener-board",
+        "@example-instance",
+        "@volunteer",
+        "@/convener-board",
+        "@example-instance/",
+        "",
+        "   ",
+    ],
+    ids=[
+        "no-leading-at",
+        "org-only-no-slash",
+        "bare-person-handle",
+        "empty-org",
+        "empty-team",
+        "empty",
+        "blank",
+    ],
+)
+def test_a_mention_that_is_not_a_team_handle_yields_no_channel(mention: str) -> None:
+    """A mention nobody would see: without its leading `@` (or naming a
+    person rather than an org and a team), the comment would still be
+    posted, readable and plausible, and would notify nobody. Treated exactly
+    like an absent mention -- no `Channel` is built."""
+    env = {THREAD_ENV: "42", MENTION_ENV: mention}
+    assert resolve_channel(env) is None
+
+
 def test_nothing_can_be_dispatched_without_a_channel() -> None:
     assert dispatch("a real message", {}) is None
 

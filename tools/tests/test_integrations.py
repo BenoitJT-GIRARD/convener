@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 from convener_ops.integrations import load_declaration, resolve_states
+from convener_ops.paths import repo_root
 
 DECLARATION = """
 integrations:
@@ -80,3 +81,43 @@ def test_malformed_yaml_raises(tmp_path: Path) -> None:
     path.write_text("integrations: [unterminated", encoding="utf-8")
     with pytest.raises(yaml.YAMLError):
         load_declaration(path)
+
+
+# ------------------------------------------------------------------ #
+# The real declaration
+# ------------------------------------------------------------------ #
+
+
+def test_email_transport_declares_the_smtp_port() -> None:
+    """Gmail requires port 587 with STARTTLS; other providers require 465
+    with implicit TLS. Hardcoding either would silently exclude the other, so
+    the port is a secret like the rest of the transport rather than a
+    constant -- and an absent one must be reported exactly like an absent
+    host, user, password or from-address, not specially."""
+    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    email = next(i for i in declaration if i.name == "email_transport")
+    assert set(email.secrets) == {
+        "CONVENER_SMTP_HOST",
+        "CONVENER_SMTP_PORT",
+        "CONVENER_SMTP_USER",
+        "CONVENER_SMTP_PASSWORD",
+        "CONVENER_SMTP_FROM",
+    }
+
+
+def test_email_transport_is_absent_when_only_the_port_is_missing() -> None:
+    """The port is resolved through the same generic `secrets` list as its
+    four siblings -- nothing in `resolve_states` singles it out -- so an
+    environment with everything except the port is `absent`, exactly as an
+    environment missing the host would be."""
+    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    env = {
+        "CONVENER_SMTP_HOST": "smtp.example.org",
+        "CONVENER_SMTP_USER": "board",
+        "CONVENER_SMTP_PASSWORD": "secret",
+        "CONVENER_SMTP_FROM": "board@example.org",
+    }
+    resolved = {i.name: i for i in resolve_states(declaration, env=env)}
+    email = resolved["email_transport"]
+    assert email.state == "absent"
+    assert email.missing == ["CONVENER_SMTP_PORT"]

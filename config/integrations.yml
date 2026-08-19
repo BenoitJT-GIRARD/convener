@@ -31,6 +31,7 @@ integrations:
     label: Outbound email
     secrets:
       - CONVENER_SMTP_HOST
+      - CONVENER_SMTP_PORT
       - CONVENER_SMTP_USER
       - CONVENER_SMTP_PASSWORD
       - CONVENER_SMTP_FROM

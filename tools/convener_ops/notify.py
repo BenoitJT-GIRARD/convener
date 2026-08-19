@@ -656,6 +656,22 @@ THREAD_ENV: Final = "CONVENER_NOTIFY_THREAD"
 #: account still existing.
 MENTION_ENV: Final = "CONVENER_NOTIFY_MENTION"
 
+#: The shape of a GitHub team handle: `@org/team`. Anchored so a substring
+#: cannot pass -- both the organisation and the team segment must be made of
+#: handle characters (letters, digits, hyphens, underscores or dots), the
+#: `@` and the `/` are mandatory, and neither segment may be empty.
+#:
+#: This is deliberately narrower than "any handle" -- it rejects `@person`
+#: (no `/`, so no team) just as firmly as it rejects a bare `org/team` with
+#: no leading `@`. The project's binding constraint is that nothing may
+#: depend on the goodwill or the continued presence of one collaborator; a
+#: personal mention notifies exactly one human and reintroduces that
+#: dependency, so `resolve_channel` below refuses anything that does not
+#: name an organisation and a team.
+_TEAM_MENTION_RE: Final = re.compile(
+    r"^@[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
+)
+
 
 @dataclass(frozen=True)
 class Channel:
@@ -681,10 +697,21 @@ def resolve_channel(env: Mapping[str, str]) -> Channel | None:
     `board_notifications`, so `convener-check-config` reports the channel's state
     alongside every other integration and an absent one reads as the normal
     state it is.
+
+    `mention` must be a team handle (`@org/team`, see `_TEAM_MENTION_RE`), not
+    merely a non-empty string. A value missing its leading `@` -- or naming a
+    person rather than an organisation and a team -- would still render at
+    the head of a posted, readable, plausible comment, and would notify
+    nobody: the one failure mode here that leaves no trace. A malformed
+    mention is therefore treated exactly like an absent one: this returns
+    `None`, so no `Channel` -- and downstream, no `Dispatch` -- is ever
+    constructed from it. Widening this to also accept a personal handle would
+    reintroduce the dependency on one volunteer's account that the team
+    requirement exists to remove; do not "fix" it back open.
     """
     thread = env.get(THREAD_ENV, "").strip()
     mention = env.get(MENTION_ENV, "").strip()
-    if not thread or not mention:
+    if not thread or not mention or not _TEAM_MENTION_RE.match(mention):
         return None
     return Channel(thread=thread, mention=mention)
 
