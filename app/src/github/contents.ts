@@ -1,5 +1,6 @@
 import { gh } from './client';
 import type { FileStore } from './mutate';
+import type { Subject } from '../state/decisions';
 
 export interface PutFileResponse {
   content: { sha: string };
@@ -14,8 +15,12 @@ export async function getFile(path: string, token: string): Promise<{ text: stri
   return { text, sha: data.sha };
 }
 
+/** The `message` is the commit subject and is a `Subject` for the reason
+ *  `state/decisions.ts` gives: it is permanent, and this is the call that
+ *  makes it so. `mutate` asks the grammar of the string as well, at the one
+ *  point every write of this app goes through. */
 export async function putFile(
-  path: string, text: string, sha: string, message: string, token: string
+  path: string, text: string, sha: string, message: Subject, token: string
 ): Promise<PutFileResponse> {
   // utf-8 -> base64
   const bytes = new TextEncoder().encode(text);

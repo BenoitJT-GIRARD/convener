@@ -46,12 +46,18 @@ describe('putFile', () => {
       json: async () => ({ content: { sha: 'newsha' } }),
     });
     vi.stubGlobal('fetch', fetchSpy);
-    const out = await putFile('data/speakers.yml', 'speakers: []\n', 'oldsha', 'update', 'tok');
+    const out = await putFile(
+      'data/speakers.yml',
+      'speakers: []\n',
+      'oldsha',
+      dataEdit(identifier('spk-001'), { part: 'admin-fields' }),
+      'tok',
+    );
     expect(out).toEqual({ content: { sha: 'newsha' } });
     const [, opts] = fetchSpy.mock.calls[0];
     expect(opts.method).toBe('PUT');
     const body = JSON.parse(opts.body as string);
-    expect(body.message).toBe('update');
+    expect(body.message).toBe('data: spk-001 admin edit');
     expect(body.sha).toBe('oldsha');
     expect(atob(body.content)).toBe('speakers: []\n');
   });
