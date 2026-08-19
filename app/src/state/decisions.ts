@@ -121,7 +121,20 @@ export type PlainDecisionKind =
  * line somebody has to notice in a log two years from now, and a plain kind
  * has no `detail` property to set at all.
  */
+/**
+ * What a member recorded about their own availability.
+ *
+ * Not a field of the data model -- `BoardMember.unavailable_until` holds a
+ * day or `''` -- but the closed pair of things the act can say, and the
+ * register needs the pair rather than the day: `data: record the
+ * availability of ada by ada (away)` is a sentence about the record that
+ * changed, in the same shape as every other decision. The day itself is in
+ * the diff, exactly as `lock-date`'s date is.
+ */
+export type AvailabilityChange = 'away' | 'back';
+
 export type Decision =
+  | { kind: 'availability-set'; entity: Identifier; actor: Identifier; detail: AvailabilityChange }
   | { kind: 'ballot-cast'; entity: Identifier; actor: Identifier; detail: BallotValue }
   | { kind: 'consent-set'; entity: Identifier; actor: Identifier; detail: ConsentDecision }
   | {
@@ -138,6 +151,7 @@ export type DecisionKind = Decision['kind'];
 /** The imperative phrase each act is written with, ending in the preposition
  *  that introduces the record. Mirrors `ACTS` in `commit_format.py`. */
 export const ACTS: Record<DecisionKind, string> = {
+  'availability-set': 'record the availability of',
   'ballot-cast': 'record a ballot on',
   'ballot-withdraw': 'withdraw a ballot on',
   'lead-park': 'park',

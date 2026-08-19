@@ -1239,8 +1239,24 @@
       "identifier": false
     }
   ],
-  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned.",
+  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned. A member's own absence used to sit in that last list as free prose; it is a decision (it moves `N`, and with it the majority a speaker needs), so it is now `availability-set` and reads like every other line of the register (F-16).",
   "commit_message_cases": [
+    {
+      "name": "a member declaring themselves away records it about their own entry",
+      "kind": "availability-set",
+      "entity": "ada",
+      "actor": "ada",
+      "detail": "away",
+      "message": "data: record the availability of ada by ada (away)"
+    },
+    {
+      "name": "and coming back is the same act with the other value, never a second verb",
+      "kind": "availability-set",
+      "entity": "ada",
+      "actor": "ada",
+      "detail": "back",
+      "message": "data: record the availability of ada by ada (back)"
+    },
     {
       "name": "a ballot names the lead, the voter and the value cast",
       "kind": "ballot-cast",
@@ -1500,10 +1516,6 @@
     {
       "name": "the nightly sweep writes data, but decides nothing",
       "message": "data: sweep elapsed events and expired vote windows"
-    },
-    {
-      "name": "a member's own diary entry is not a decision about anybody",
-      "message": "data: mark ada unavailable until 2026-02-01"
     },
     {
       "name": "a runbook tick is bookkeeping",

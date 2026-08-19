@@ -62,7 +62,16 @@ ACTS: Final[dict[str, str]] = {
     "publication-object": "record an objection to publishing",
     "publication-resolve": "resolve the objections on",
     "finalize-archive": "publish the recording of",
-    # Who sits on the board (G-08).
+    # Who sits on the board (G-08), and who is available to vote (G-09).
+    #
+    # `availability-set` is a decision like the rest and not a diary entry
+    # (F-16): `unavailable_until` is read by `activeBoard`, so declaring
+    # oneself away changes `N` and with it the majority a speaker needs. An
+    # act that moves the threshold belongs in the register. The day it runs
+    # to is not in the subject, for the same reason `lock-date` does not
+    # carry the date it locked: the subject names the record and the actor,
+    # and the value is in the diff the commit carries.
+    "availability-set": "record the availability of",
     "nomination-open": "open a nomination for",
     "nomination-object": "record an objection to the nomination of",
     "nomination-withdraw-objection": "withdraw an objection to the nomination of",
@@ -78,6 +87,7 @@ ACTS: Final[dict[str, str]] = {
 #: this grammar can express, nor one it will accept.
 QUALIFIERS: Final[dict[str, frozenset[str]]] = {
     "ballot-cast": frozenset({"yes", "abstain", "recused"}),
+    "availability-set": frozenset({"away", "back"}),
     "consent-set": frozenset({"granted", "refused"}),
     "publication-resolve": frozenset({"lift", "withhold"}),
     "override": frozenset(

@@ -51,6 +51,11 @@ function decisionFrom(c: FixtureCase): Decision {
   const actor = identifier(c.actor);
   const { detail } = c;
   switch (c.kind) {
+    case 'availability-set':
+      if (detail !== 'away' && detail !== 'back') {
+        throw new Error(`not an availability change: ${detail}`);
+      }
+      return { kind: 'availability-set', entity, actor, detail };
     case 'ballot-cast':
       if (!isBallotValue(detail)) throw new Error(`not a ballot value: ${detail}`);
       return { kind: 'ballot-cast', entity, actor, detail };

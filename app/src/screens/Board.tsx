@@ -86,9 +86,17 @@ export function Board() {
     // against whatever is actually there.
     write(
       current => declareUnavailability(current, me, until),
-      until === ''
-        ? `data: mark ${me} available again`
-        : `data: mark ${me} unavailable until ${until}`,
+      // Through the grammar, not around it (F-16). This writes
+      // `unavailable_until`, which `activeBoard` reads and the vote
+      // threshold is computed from, so it is a decision and the register
+      // records it as one. The day is in the diff; the subject names the
+      // record and who acted, like every other line of the register.
+      formatDecision({
+        kind: 'availability-set',
+        entity: identifier(me),
+        actor: identifier(me),
+        detail: until === '' ? 'back' : 'away',
+      }),
     );
 
   const nominate = async () => {

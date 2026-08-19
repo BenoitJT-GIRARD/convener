@@ -181,6 +181,36 @@ describe('Board screen', () => {
       ),
     );
     expect(backend.current().board.map(m => m.login)).toEqual(['alice', 'bob', 'carol', 'dan']);
+
+    // F-16. `unavailable_until` is read by `activeBoard`, so an absence
+    // moves `N` and with it the majority a speaker needs: it is a decision,
+    // and its subject comes out of `formatDecision` like every other one.
+    // It used to be the free prose `data: mark alice unavailable until ...`,
+    // which `parse_decision` could not read back, so the register lost it.
+    const subject = (backend.fetchMock.mock.calls
+      .filter(([, opts]) => (opts as RequestInit | undefined)?.method === 'PUT')
+      .map(([, opts]) => JSON.parse((opts as RequestInit).body as string).message as string))[0];
+    expect(subject).toBe('data: record the availability of alice by alice (away)');
+  });
+
+  it('records coming back as the same act, with the other value', async () => {
+    const backend = makeBackend(
+      config({ board: [member('alice', { unavailable_until: '2099-02-01' }), member('bob')] }),
+      [],
+    );
+    renderBoard(backend);
+
+    // The field starts empty, and an empty field is the way back: the
+    // control says so rather than needing a second act.
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark me available' }));
+    await waitFor(() =>
+      expect(backend.current().board.find(m => m.login === 'alice')?.unavailable_until).toBe(''),
+    );
+
+    const subject = (backend.fetchMock.mock.calls
+      .filter(([, opts]) => (opts as RequestInit | undefined)?.method === 'PUT')
+      .map(([, opts]) => JSON.parse((opts as RequestInit).body as string).message as string))[0];
+    expect(subject).toBe('data: record the availability of alice by alice (back)');
   });
 
   it('keeps the nomination control disabled and says why, rather than failing on submit', async () => {
