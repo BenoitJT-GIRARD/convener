@@ -20,6 +20,7 @@
  * to this function is not a way around the grammar.
  */
 
+import { DecisionRejected, isSubject } from '../state/decisions';
 import type { Subject } from '../state/decisions';
 
 export interface FileStore {
@@ -88,6 +89,18 @@ export async function mutate<T>(options: MutateOptions<T>): Promise<MutateResult
 
     try {
       const subject = typeof message === 'function' ? message(next) : message;
+      // Asked of the string, not of its type. `Subject` is a compile-time
+      // fact and a cast is past it in one keystroke; this is the last point
+      // before a commit subject becomes permanent, so the grammar is asked
+      // here as well. It costs one regex per write and it is the only check
+      // in the chain that does not depend on how a defeat was spelled.
+      if (!isSubject(subject)) {
+        throw new DecisionRejected(
+          `"${subject}" is not a commit subject this app assembles. Build it with ` +
+            'formatDecision() or dataEdit() in src/state/decisions.ts: a commit ' +
+            'subject is permanent and cannot be taken back.',
+        );
+      }
       const written = await store.write(path, nextText, sha, subject);
       return { value: next, sha: written.sha, changed: true, attempts: attempt };
     } catch (error) {

@@ -33,6 +33,7 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
   let server = initial;
   let sha = 'sha-0';
   let counter = 0;
+  const messages: string[] = [];
 
   const fetchMock = vi.fn((url: string, opts?: RequestInit) => {
     if (url.includes('/user')) {
@@ -44,6 +45,7 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
         if (body.sha !== sha) {
           return Promise.resolve({ ok: false, status: 409, text: async () => 'stale sha' });
         }
+        messages.push(body.message as string);
         server = parseSpeakers(decodeUtf8(body.content));
         sha = `sha-${++counter}`;
         return Promise.resolve({ ok: true, json: async () => ({ content: { sha } }) });
@@ -58,6 +60,8 @@ function makeSpeakersBackend(initial: Speaker[], cfgYaml = configYaml()) {
 
   return {
     fetchMock,
+    /** Every commit subject this UI actually sent, in order. */
+    messages,
     /** Simulate another submitter's write landing directly on the remote,
      *  bypassing this test's UI and this component's local React state. */
     interlope(next: Speaker[]) {
@@ -139,6 +143,37 @@ describe('NewSpeaker', () => {
     const ids = backend.current().map(s => s.id);
     expect(new Set(ids).size).toBe(4); // all distinct — no collision with spk-003
     expect(ids).toContain('spk-004');
+  });
+
+  it('commits the new record by its id, never by the researcher it names', async () => {
+    // The subject the branch review found: `data: add lead Jane Doe`, in a
+    // history nothing rewrites and every watcher is mailed. What stops it
+    // now is the grammar and the `Subject` brand, but neither is read by a
+    // test that never looks at what was sent -- so this looks.
+    const backend = makeSpeakersBackend([], boardYaml(['alice', 'bob']));
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <NewSpeaker />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const nameInput = await screen.findByLabelText(/Name \*/);
+    fireEvent.change(nameInput, { target: { value: 'Jane Doe' } });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create lead' })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Create lead' }));
+    await waitFor(() => expect(backend.messages).toHaveLength(1));
+
+    expect(backend.messages[0]).toBe('data: record a new lead for spk-001 by alice');
+    expect(backend.messages[0]).not.toContain('Jane');
+    expect(backend.messages[0]).not.toContain('Doe');
   });
 
   it('gives a lead created in the app an owner, by the same rotation the public form uses', async () => {

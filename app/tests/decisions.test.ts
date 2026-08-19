@@ -9,6 +9,7 @@ import {
   isIdentifier,
   DecisionRejected,
   dataEdit,
+  isSubject,
   itemKey,
   transitionDecision,
   type Edit,
@@ -285,6 +286,29 @@ describe('the grammar of decision commits', () => {
     for (const edit of edits) {
       expect(ordinary, JSON.stringify(edit)).toContain(dataEdit(identifier('spk-001'), edit));
     }
+  });
+
+  it('reads back every line it can write, and nothing else', () => {
+    // The check `mutate` makes of the string itself, at the last point
+    // before a subject is permanent. The brand is a compile-time fact -- a
+    // cast is past it, and an `any` is past it without a cast -- and the
+    // source walk reads text, so a prefix assembled out of pieces is past
+    // that. This one is asked of what is actually about to be committed.
+    for (const c of cases.commit_message_cases) {
+      expect(isSubject(c.message as string), c.name as string).toBe(true);
+    }
+    for (const c of cases.commit_message_ordinary) {
+      const message = c.message as string;
+      // The bookkeeping subjects this module writes are in that fixture
+      // alongside commits it has nothing to do with (`app:`, `docs:`, the
+      // form intake, the nightly sweep), which it must not claim.
+      expect(isSubject(message), c.name as string).toBe(
+        message.startsWith('data: spk-001 '),
+      );
+    }
+    expect(isSubject('data: add lead Jane Doe')).toBe(false);
+    expect(isSubject('data: spk-001 set title=Jane Doe')).toBe(false);
+    expect(isSubject('data: spk-001 admin edit by mallory')).toBe(false);
   });
 
   it('refuses a field name cast into carrying its own value', () => {

@@ -324,6 +324,39 @@ export function formatDecision(d: Decision): Subject {
   return ('detail' in d ? `${line} (${d.detail})` : line) as Subject;
 }
 
+/** A token as `TOKEN` spells it, for use inside a larger pattern. */
+const TOKEN_SRC = '[A-Za-z0-9][A-Za-z0-9._-]*';
+const KEY_SRC = `${TOKEN_SRC}(?:/${TOKEN_SRC})*`;
+
+/**
+ * Does this line read as a subject this module assembled?
+ *
+ * The last net, and the only one that does not depend on how a defeat is
+ * written. The brand is a compile-time fact, so a cast gets past it, and an
+ * `any` from `JSON.parse` gets past it without even a cast; the source walk
+ * in `app/tests/decisions.test.ts` reads text, so a prefix built out of
+ * pieces gets past that. `mutate` asks this of every subject before the
+ * write, at the one point every write goes through, so a subject built any
+ * other way fails there instead of landing in a history nothing rewrites.
+ *
+ * It is the grammar's own shape, built from `ACTS` and from `editPart`'s
+ * five phrases rather than restated: a phrase reworded above changes what
+ * this accepts, in the same edit.
+ */
+export function isSubject(line: string): line is Subject {
+  // Every phrase is words and spaces -- see `ACTS` and `editPart` -- so
+  // there is nothing here to escape for the pattern.
+  const acts = Object.values(ACTS).join('|');
+  const decision = new RegExp(
+    `^data: (?:${acts}) ${TOKEN_SRC} by ${TOKEN_SRC}(?: \\([A-Za-z0-9 _-]+\\))?$`,
+  );
+  const edit = new RegExp(
+    `^data: ${TOKEN_SRC} (?:admin edit|update post-archive metrics|set ${KEY_SRC}|` +
+      `runbook ${KEY_SRC}=(?:true|false)|owner for ${KEY_SRC}|owner cleared on ${KEY_SRC})$`,
+  );
+  return decision.test(line) || edit.test(line);
+}
+
 /**
  * The decision a `Transition` records, with its qualifier taken from the very
  * payload the transition is applied with -- so the line cannot say `abstain`
