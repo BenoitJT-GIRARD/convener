@@ -11,6 +11,8 @@ Roles are jobs, not people — the same setup works whether we are 4 volunteers 
 | **Editorial Board** | Validates speakers, approves recordings, steers the series. |
 | **Architecte** | Designs and maintains the handbook and the tools behind it. |
 
+## No ladder to climb
+
 There is no ladder to climb. Most volunteers are Contributors and Event Hosts. After a few events, anyone who wants to can put themselves forward for the Editorial Board, or as Architecte.
 
 ## Two Event Hosts per webinar

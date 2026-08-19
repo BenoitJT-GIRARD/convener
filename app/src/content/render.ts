@@ -1,4 +1,8 @@
-import { publishedAlwaysWording, publishedOnConsentWording } from '../state/consent';
+import {
+  publishedAlwaysWording,
+  publishedOnConsentWording,
+  spokenRecordingNotice,
+} from '../state/consent';
 import type { Speaker } from '../data/types';
 
 export interface SubstitutionContext {
@@ -15,7 +19,11 @@ interface Resolved {
    *  tells a speaker what would go online reads it from here, so the message
    *  and the gate cannot drift: adding a field to `PUBLISHABLE_ON_CONSENT`
    *  changes the sentence the next speaker is sent. */
-  consent?: { published_always: string; published_on_consent: string };
+  consent?: {
+    published_always: string;
+    published_on_consent: string;
+    spoken_recording: string;
+  };
   speaker?: Record<string, string>;
   host_1?: { name: string };
   host_2?: { name: string };
@@ -28,6 +36,7 @@ function buildContext(ctx: SubstitutionContext): Resolved {
     consent: {
       published_always: publishedAlwaysWording(),
       published_on_consent: publishedOnConsentWording(),
+      spoken_recording: spokenRecordingNotice(),
     },
   };
   if (ctx.speaker) {
@@ -94,4 +103,27 @@ export function substitute(text: string, ctx: SubstitutionContext): string {
     if (typeof cur === 'object') return MISSING(path);
     return String(cur);
   });
+}
+
+/** The `{{ consent.… }}` group, and only it. */
+const CONSENT_ONLY = /\{\{\s*consent\.(\w+)\s*\}\}/g;
+
+/**
+ * Resolve what the classification composes, with no speaker in hand.
+ *
+ * `substitute` is given a speaker at the point of action and leaves the raw
+ * `{{ speaker.name }}` placeholders alone everywhere else, so that the
+ * Templates screen shows a volunteer a template rather than a page of missing
+ * markers. The `consent.…` group does not depend on a speaker -- it is read
+ * off `state/consent.ts` -- and one of its phrases is a sentence a host reads
+ * out loud. A host reading the intro script on the Templates screen must see
+ * the sentence, not the token: a placeholder in the middle of spoken prose is
+ * either read aloud or improvised around, and both are worse than the drift
+ * this replaced.
+ */
+export function substituteConsent(text: string): string {
+  const resolved = buildContext({}).consent!;
+  return text.replace(CONSENT_ONLY, (whole, leaf: string) =>
+    leaf in resolved ? resolved[leaf as keyof typeof resolved] : whole,
+  );
 }

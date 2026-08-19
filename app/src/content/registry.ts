@@ -5,6 +5,10 @@ export interface ContentEntry {
   anchor: string | null;
 }
 
+/** The repository the handbook is kept in. Both the "edit this page" link and
+ *  the attribution line under an included passage are built from it. */
+export const REPO_URL = 'https://github.com/example-instance/workshop-series';
+
 export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // governance
   'governance/selection-criteria': { file: 'governance/selection-criteria.md', anchor: null },
@@ -66,4 +70,18 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'handbook/tools': { file: 'reference/tools.md', anchor: null },
   'handbook/contacts': { file: 'reference/contacts.md', anchor: null },
   'handbook/schema': { file: 'reference/schema.md', anchor: null },
+
+  // fragments -- one section of a page, so that a passage two pages need is
+  // written on one of them and included by the other. An entry with an anchor
+  // is not a second file: it is the same file, scoped to one heading, which is
+  // why an included passage cannot hold a version of its own. See
+  // `content/transclude.ts`. The keys name their source, so an editor who
+  // meets `{{> fragments/roles-no-ladder }}` in a page knows where to go
+  // without opening this file.
+  'fragments/board-rules-publication-gate': {
+    file: 'governance/board-rules.md',
+    anchor: 'publishing-a-recording-two-permissions-and-they-are-not-alike',
+  },
+  'fragments/roles-host-pair': { file: 'roles.md', anchor: 'two-event-hosts-per-webinar' },
+  'fragments/roles-no-ladder': { file: 'roles.md', anchor: 'no-ladder-to-climb' },
 };

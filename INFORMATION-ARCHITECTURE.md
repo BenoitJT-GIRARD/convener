@@ -6,6 +6,14 @@ This is the contract the handbook and the app honour. Five rules.
 
 Each concept, term, rule, step has exactly one home file. If two places talk about it, one is generated from the other.
 
+**Repetition is allowed; copying is not.** A reader who lands halfway down a page needs the rule in front of them, not a link to it — so a passage may appear on two pages, provided the second one **includes** it from the first. A page includes a passage by naming a registry fragment on a line of its own:
+
+```
+{{> fragments/board-rules-publication-gate }}
+```
+
+The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: the same file as the page that owns the passage, scoped to one of its headings. The app replaces the line with the passage, under a line saying which page and section it came from and linking to it. Two rules hold this up, and both are tests: every include resolves to a registered, anchored fragment (`app/tests/transclusion.test.ts`), and no run of prose of a hundred characters or more appears in two served pages (`tools/tests/test_no_literal_copies.py`).
+
 | Topic | Canonical home |
 |---|---|
 | Editorial line | `docs/governance/editorial-line.md` |

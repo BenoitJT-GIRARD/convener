@@ -208,6 +208,55 @@ export const FIELD_WORDING: Record<PublishableField, string> = {
   youtube_url: 'the video recording of your talk',
 };
 
+/** Which of the three sets a field belongs to. */
+export type FieldPermission = 'always' | 'on_consent' | 'never';
+
+/**
+ * The classification, asked one field at a time.
+ *
+ * The three constants above are the answer to "what may leave"; this is the
+ * same answer read from the other end, for the callers that hold a field and
+ * want its rule. `NEVER_PUBLISHED` is the fallthrough on purpose: a field that
+ * nobody classified is not published by default, and `consent-fields.test.ts`
+ * proves the three sets are exhaustive so that the fallthrough is never
+ * silently doing the classifying.
+ */
+export function permissionFor(field: keyof Speaker): FieldPermission {
+  if ((PUBLISHABLE_ALWAYS as readonly string[]).includes(field)) return 'always';
+  if ((PUBLISHABLE_ON_CONSENT as readonly string[]).includes(field)) return 'on_consent';
+  return 'never';
+}
+
+/**
+ * What the hosts tell the audience about the recording, before it starts.
+ *
+ * The consent e-mail cannot drift from the gate, because its two sentences are
+ * composed from the classification above. The spoken notice could: it is prose
+ * in `toolkit/intro-scripts.md`, read out to a room, about the one field of the
+ * record whose publication the room is standing inside. Nothing linked it to
+ * anything until now, so `youtube_url` could have been reclassified and the
+ * hosts would have gone on saying the old thing to the next audience -- and an
+ * audience told the wrong thing about a recording is the error this repository
+ * has the least ability to undo.
+ *
+ * So the sentence is not chosen, it is looked up. One phrase per rule, and the
+ * rule comes from `permissionFor('youtube_url')`. Moving the field between the
+ * sets rewrites what the hosts say, in the same commit, without anybody
+ * remembering that this page existed.
+ */
+const SPOKEN_RECORDING_NOTICE: Record<FieldPermission, string> = {
+  always:
+    'We are recording the talk itself, and the recording is published afterwards as part of the programme',
+  on_consent:
+    'We are recording the talk itself, and the recording only goes online if our speaker tells us afterwards that it may',
+  never: 'We are recording the talk itself for the team alone, and the recording is not published',
+};
+
+/** The recording sentence the hosts read out, in the words the gate justifies. */
+export function spokenRecordingNotice(): string {
+  return SPOKEN_RECORDING_NOTICE[permissionFor('youtube_url')];
+}
+
 /** `a, b and c` -- an English list, not a comma-separated dump. */
 function sentenceList(parts: readonly string[]): string {
   if (parts.length <= 1) return parts.join('');

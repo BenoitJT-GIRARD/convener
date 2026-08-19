@@ -14,10 +14,7 @@ The webinar runs on a **Thursday, 12:30–14:00 CET**, hosted by its **two Event
 
 ## How the two hosts split it
 
-Both Event Hosts are hosts — there is no separate technical role (the Zoom contact handles the recording). They split the work however suits them; the usual division:
-
-- **Host 1** — introduces the speaker, runs the questions, closes.
-- **Host 2** — introduces The Example Collective and the series, keeps an eye on the chat and forum for questions.
+{{> fragments/roles-host-pair }}
 
 ## Final check — before going live
 

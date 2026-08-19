@@ -19,6 +19,8 @@ import {
   NEVER_PUBLISHED,
   PUBLISHABLE_ALWAYS,
   PUBLISHABLE_ON_CONSENT,
+  permissionFor,
+  spokenRecordingNotice,
 } from '../src/state/consent';
 import { SPEAKER_FIELDS } from '../src/data/types';
 
@@ -146,5 +148,26 @@ describe('the shared classification fixture', () => {
     ];
     expect(new Set(all).size).toBe(all.length);
     expect(new Set(all)).toEqual(new Set(SPEAKER_FIELDS));
+  });
+});
+
+describe('what the hosts say about the recording is read off the classification', () => {
+  it('answers the classification one field at a time, over all three sets', () => {
+    expect(permissionFor('name')).toBe('always');
+    expect(permissionFor('youtube_url')).toBe('on_consent');
+    expect(permissionFor('email')).toBe('never');
+  });
+
+  it('says the recording goes online only on a recorded answer', () => {
+    // The sentence a host reads to a room, composed rather than typed. It is
+    // the one claim in the spoken script that states a rule; `intro-scripts.md`
+    // carries the token and not these words, so moving `youtube_url` between
+    // the sets rewrites what is said without anybody remembering the page.
+    expect(permissionFor('youtube_url')).toBe('on_consent');
+    expect(spokenRecordingNotice()).toContain('only goes online if our speaker tells us');
+  });
+
+  it('promises nothing about a recording in the notice it composes', () => {
+    expect(spokenRecordingNotice()).not.toMatch(/will be published|will go/i);
   });
 });

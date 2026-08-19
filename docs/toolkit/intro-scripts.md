@@ -29,6 +29,15 @@ a gap you would read aloud.
 | `{{ speaker.title }}` | The title of today's talk |
 | `{{ speaker.bio }}` | The short biography they sent with the talk details |
 | `{{ host_1.name }}`, `{{ host_2.name }}` | The two hosts |
+| `{{ consent.spoken_recording }}` | What may be said about the recording |
+
+One of those is not from the speaker's record. `{{ consent.spoken_recording }}`
+is composed from the publication rule itself — the classification in
+`app/src/state/consent.ts` that decides whether a recording may go online, and
+on what. It is the one sentence here that states a rule rather than a fact
+about today, so it is the one sentence that must not be typed out: if the rule
+ever changes, the words the hosts read change with it, in the same commit.
+Unlike the rest, it is filled in wherever this page is shown, including here.
 
 Nothing here carries a worked example of a real past speaker. An example left
 in a script is the sentence that gets read out by mistake — if you want to see
@@ -41,10 +50,9 @@ The recording sequence itself — the one part of the day a mistake cannot
 repair — belongs to [the run of show](run-of-show.md), under "Where the
 recording starts and stops", and is not repeated here.*
 
-> Good afternoon, everyone, and welcome. We are recording the talk itself, and
-> the recording only goes online if our speaker tells us afterwards that it
-> may — so if you would rather not be in it, keep your camera and microphone
-> off and you will not be. **The discussion after the talk is not published.**
+> Good afternoon, everyone, and welcome. {{ consent.spoken_recording }}. So if
+> you would rather not be in it, keep your camera and microphone off and you
+> will not be. **The discussion after the talk is not published.**
 > Questions are very welcome throughout: put them in the chat or in the forum
 > thread, and we will bring them to the speaker at the end. And please do keep
 > yourselves on mute until then. Over to {{ host_2.name }}, who is going to
