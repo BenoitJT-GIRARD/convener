@@ -105,6 +105,9 @@ export function NewSpeaker() {
         youtube_url: '',
         forum_thread: '',
         runbook_progress: {},
+        // Nobody is down for any line, which is where every record starts and
+        // where most lines stay: an item with no owner is the hosts'.
+        checklist: {},
         metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
         notes: form.notes.trim(),
       };

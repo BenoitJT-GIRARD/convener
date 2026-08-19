@@ -3,6 +3,7 @@ import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { deriveInbox, type InboxRow } from '../state/inbox';
+import { itemsWaitingFor } from '../state/assignment';
 import { parisToday } from '../state/derived';
 import { byUrgency, lateness, overdueText, waitingSince, type Lateness } from '../state/sla';
 import { LoadError } from '../components/LoadError';
@@ -37,6 +38,29 @@ export function Inbox() {
   const actions = rows.filter(x => x.r.kind === 'action');
   const awareness = rows.filter(x => x.r.kind === 'awareness');
 
+  // "Where is this event up to" and "what is waiting for me" are two
+  // questions, and this screen is the only thing they share. `deriveInbox`
+  // keys on `assigned_to` -- who looks after the lead -- while these rows come
+  // from the name put against one line of the runbook, read by
+  // `state/assignment.ts` from `checklist` and from nothing else. A line
+  // nobody is down for produces no row at all, here or anywhere: not naming an
+  // owner is the default, not an omission to chase.
+  //
+  // The rows are shown through the same `Row` as everything else, so a line
+  // that is late says it in the words `state/sla.ts` already uses -- "Forum
+  // summary is 3 days overdue", "waiting since 2026-08-18" -- about the step,
+  // never about whoever is down for it.
+  const waiting = itemsWaitingFor(speakers, login).map(w => ({
+    r: {
+      kind: 'action' as const,
+      speaker: w.speaker,
+      label: w.item.label,
+      itemKey: w.item.key,
+      urgency: 0,
+    },
+    late: config ? lateness(w.speaker, config, today) : ({ state: 'none' } as Lateness),
+  }));
+
   return (
     <div>
       <div className="flex items-baseline justify-between mb-10 flex-wrap gap-2">
@@ -68,6 +92,18 @@ export function Inbox() {
           label="Awareness"
           rows={awareness}
           variant="awareness"
+        />
+      )}
+
+      {waiting.length > 0 && (
+        <Section
+          num={String(2 + (votes.length > 0 ? 1 : 0) + (awareness.length > 0 ? 1 : 0)).padStart(
+            2,
+            '0',
+          )}
+          label="Waiting for you"
+          rows={waiting}
+          variant="action"
         />
       )}
     </div>

@@ -130,7 +130,10 @@ export const PUBLISHABLE_ON_CONSENT = [
  *   declaration made to the board for its own recusal rules, and republishing
  *   it would broadcast a statement about a person's ties that was made in a
  *   governance context, to a different audience;
- * - **other people**: `host_1` and `host_2` are volunteers, not the speaker.
+ * - **other people**: `host_1` and `host_2` are volunteers, not the speaker,
+ *   and `checklist` names one volunteer per line of the runbook -- who made
+ *   the visual, who wrote to the speaker. It is the team's own division of
+ *   labour, about people who never agreed to be listed anywhere public.
  *   The only consent this repository stores is the speaker's, and a speaker
  *   cannot consent on a host's behalf. A field naming a third party can never
  *   be unlocked by this gate -- which is why it is here and not in
@@ -151,6 +154,7 @@ export const NEVER_PUBLISHED = [
   'publication',
   'candidate_dates',
   'runbook_progress',
+  'checklist',
   'metrics',
   'notes',
 ] as const satisfies readonly (keyof Speaker)[];

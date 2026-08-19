@@ -49,6 +49,30 @@ export interface CandidateDate {
   answer: DateAnswer;
 }
 
+/**
+ * What the record holds about one line of the journey, beyond whether it is
+ * ticked.
+ *
+ * One field today, and a block rather than a bare string on purpose: the
+ * checklist the volunteers actually keep says more about a line than who owns
+ * it, and a bare `Record<string, string>` would have to be widened later by
+ * rewriting every stored value.
+ *
+ * **`assignee` is not `assigned_to`.** `Speaker.assigned_to` is the board
+ * member who looks after the *lead*; this is the person who owes *one line of
+ * the runbook*. They are different people at different grains, and phase 2
+ * already paid for merging two notions into one field -- `assignLead` wrote
+ * over `proposed_by`, and with it the record of who had to tell the speaker
+ * if the board declined. Nothing in this repository derives one from the
+ * other: `state/assignment.ts` reads this block and nothing else.
+ *
+ * `''` -- and an item with no entry at all -- means the hosts, which is what
+ * every line has always meant and stays the default.
+ */
+export interface ChecklistAssignee {
+  assignee: string;
+}
+
 export interface SpeakerMetrics {
   registrations: number | null;
   live_peak: number | null;
@@ -214,6 +238,11 @@ export interface Speaker {
   forum_thread: string;
 
   runbook_progress: Record<string, boolean>;
+  /** Who owes each line of the journey, keyed by runbook item. An item with
+   *  no entry here is nobody's in particular, which means the hosts' -- the
+   *  behaviour the app has always had, and still the default. Never read
+   *  from, and never written to, `assigned_to`. */
+  checklist: Record<string, ChecklistAssignee>;
   metrics: SpeakerMetrics;
   notes: string;
 }
@@ -241,6 +270,7 @@ const SPEAKER_FIELD_SET: Record<keyof Speaker, true> = {
   selection: true, publication: true, edition_code: true,
   candidate_dates: true, date: true, time: true, zoom_link: true,
   youtube_url: true, forum_thread: true, runbook_progress: true,
+  checklist: true,
   metrics: true, notes: true,
 };
 

@@ -211,19 +211,35 @@ export function phaseOf(status: SpeakerStatus): PhaseDef | undefined {
   return PHASES.find(p => p.status === status);
 }
 
+/**
+ * Whether this record already carries what the item asks for.
+ *
+ * One reading of "done" for the whole app: `canFinalize` gates the archive on
+ * it, and `state/assignment.ts` uses it to decide whether an item someone owns
+ * is still waiting on them. A second copy of these two `if`s would have been
+ * free to drift, and the drift would show up as a line still nagging somebody
+ * after they had filled it in.
+ *
+ * A `content` item is never "done": it is a template to read, not a thing to
+ * complete, so there is nothing about it that could be waiting. It is reported
+ * as done for exactly that reason -- nothing outstanding.
+ */
+export function isItemDone(s: Speaker, item: RunbookItem): boolean {
+  if (item.form === 'field') {
+    const val = fieldValue(s, item.fieldKey!);
+    return !(val === '' || val === null || val === undefined);
+  }
+  if (item.form === 'checkbox') return !!s.runbook_progress[item.key];
+  return true;
+}
+
 /** True if all required items (fields + checkboxes) of the delivered phase are satisfied. */
 export function canFinalize(s: Speaker): boolean {
   const phase = phaseOf('delivered');
   if (!phase || s.status !== 'delivered') return false;
   for (const item of phase.items) {
     if (!item.required) continue;
-    if (item.form === 'field') {
-      const val = fieldValue(s, item.fieldKey!);
-      if (val === '' || val === null || val === undefined) return false;
-    }
-    if (item.form === 'checkbox') {
-      if (!s.runbook_progress[item.key]) return false;
-    }
+    if (!isItemDone(s, item)) return false;
   }
   return true;
 }

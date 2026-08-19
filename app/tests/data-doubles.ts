@@ -91,6 +91,7 @@ export function speaker(overrides: Partial<Speaker> = {}): Speaker {
     youtube_url: '',
     forum_thread: '',
     runbook_progress: {},
+    checklist: {},
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
     notes: '',
     ...overrides,

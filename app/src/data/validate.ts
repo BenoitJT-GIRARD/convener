@@ -35,6 +35,7 @@ import type {
   Ballot,
   BoardMember,
   CandidateDate,
+  ChecklistAssignee,
   Config,
   Nomination,
   Objection,
@@ -187,6 +188,38 @@ function ticks(at: Cursor, raw: Record<string, unknown>, key: string): Record<st
       fail(at.file, at.where, `gives "${key}" step "${step}" as ${shown(done)} instead of yes or no`);
     }
     out[step] = done;
+  }
+  return out;
+}
+
+/** `checklist`: free-form step names again, each carrying the person who owes
+ *  that line. The names are not a closed vocabulary for the same reason
+ *  `runbook_progress` has none -- they follow the runbook -- and the owner is
+ *  read as plain text: it is a login typed by a volunteer, not a value this
+ *  app can enumerate from the file it is reading.
+ *
+ *  An entry whose `assignee` is `''` is legal and means the same as no entry
+ *  at all: nobody in particular, which is the hosts. It is not an error,
+ *  because not naming an owner is the default this repository has always had
+ *  and the state most lines will stay in. */
+function assignees(
+  at: Cursor,
+  raw: Record<string, unknown>,
+  key: string,
+): Record<string, ChecklistAssignee> {
+  const value = object({ ...at, where: `${at.where} "${key}"` }, raw[key]);
+  const out: Record<string, ChecklistAssignee> = {};
+  for (const [step, entry] of Object.entries(value)) {
+    const block = object({ ...at, where: `${at.where} "${key}" step "${step}"` }, entry);
+    for (const extra of Object.keys(block)) {
+      if (extra !== 'assignee') {
+        fail(at.file, at.where, `gives "${key}" step "${step}" a "${extra}", which this app does not use`);
+      }
+    }
+    if (typeof block.assignee !== 'string') {
+      fail(at.file, at.where, `gives "${key}" step "${step}" an owner that reads as ${shown(block.assignee)} instead of a name`);
+    }
+    out[step] = { assignee: block.assignee };
   }
   return out;
 }
@@ -351,6 +384,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     youtube_url: text(here, raw, 'youtube_url'),
     forum_thread: text(here, raw, 'forum_thread'),
     runbook_progress: ticks(here, raw, 'runbook_progress'),
+    checklist: assignees(here, raw, 'checklist'),
     metrics: readMetrics(here, raw.metrics),
     notes: text(here, raw, 'notes'),
   };

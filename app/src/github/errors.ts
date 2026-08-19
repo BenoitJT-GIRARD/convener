@@ -43,6 +43,13 @@ export function friendlyError(e: unknown, context: ErrorContext): string {
   // evening, rather than that GitHub is unwell.
   if (e instanceof Error && e.name === 'DateRejected') return e.message;
 
+  // AssignmentRejected (state/assignment.ts) is a name being put down against
+  // a line the journey does not have. The checklist only ever offers the lines
+  // it is rendering, so reaching here means the runbook changed underneath a
+  // page somebody left open -- and the sentence says which line, not that
+  // GitHub is unwell.
+  if (e instanceof Error && e.name === 'AssignmentRejected') return e.message;
+
   // DataShapeError (data/validate.ts) is a data file that does not match the
   // model: the app cannot read it, and no amount of retrying will change
   // that. The sentence names the file and the field, and says who can fix

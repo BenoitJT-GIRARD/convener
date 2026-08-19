@@ -39,6 +39,17 @@
  *   `links` and `ballots` reach.
  * - `SPEAKERS[2].seed_questions: '12:30'`, the sexagesimal defect on a
  *   field nobody thinks of as a time.
+ * - `checklist`, a mapping of mappings nested under a speaker, whose keys
+ *   are runbook item names carrying slashes and hyphens -- the one shape in
+ *   the model that is a block map inside a block map, and the only place a
+ *   `/` appears in a key.
+ * - `SPEAKERS[2].assigned_to: 'bob'` beside a checklist owned by `erin`: the
+ *   item owner and the lead owner are different notions, and a record where
+ *   they hold different values is what proves the boundary carries both
+ *   rather than one written twice. The same guard `proposed_by` and
+ *   `assigned_to` already stand for, one grain further down.
+ * - `SPEAKERS[0].checklist` carrying an `assignee: ''`: legal, and the same
+ *   fact as no entry at all -- nobody in particular, which is the hosts.
  */
 import type { Config, Speaker } from '../src/data/types';
 
@@ -97,6 +108,10 @@ export const SPEAKERS: Speaker[] = [
     youtube_url: 'https://example.org/watch/11',
     forum_thread: 'https://example.org/forum/11',
     runbook_progress: { 'approved/invitation-sent': true, 'delivered/summary-posted': false },
+    checklist: {
+      'scheduled/T-30/visuals': { assignee: 'ada' },
+      'delivered/forum-summary': { assignee: '' },
+    },
     metrics: { registrations: 0, live_peak: 60, youtube_views_30d: 148, forum_replies: 3 },
     notes: 'TEC review: Y',
   },
@@ -132,6 +147,7 @@ export const SPEAKERS: Speaker[] = [
     youtube_url: '',
     forum_thread: '',
     runbook_progress: {},
+    checklist: {},
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
     notes: '',
   },
@@ -175,6 +191,7 @@ export const SPEAKERS: Speaker[] = [
     youtube_url: '',
     forum_thread: '',
     runbook_progress: {},
+    checklist: { 'scheduled/T-21/linkedin': { assignee: 'erin' } },
     metrics: { registrations: 0, live_peak: null, youtube_views_30d: null, forum_replies: null },
     notes: '3.14',
   },

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { friendlyError } from '../src/github/errors';
 import { DateRejected } from '../src/state/dates';
+import { AssignmentRejected } from '../src/state/assignment';
 import { GitHubError } from '../src/github/client';
 import { ConflictError } from '../src/github/mutate';
 import { BallotRejected } from '../src/state/ballots';
@@ -46,6 +47,18 @@ describe('friendlyError', () => {
     // needs to read that the speaker has not agreed to that evening.
     const e = new DateRejected('2026-10-01 is not a date this speaker has accepted.');
     expect(friendlyError(e, 'save')).toBe('2026-10-01 is not a date this speaker has accepted.');
+  });
+
+  it('relays an assignment refusal as the sentence it carries', () => {
+    // Not "GitHub is unwell": the line the owner was put down for is not one
+    // the journey has, and the volunteer needs to read that, not a status
+    // code. The sentence is about the step, never about who chose it.
+    const e = new AssignmentRejected(
+      '"made/up/step" is not a step of the journey, so nobody can be put down for it.',
+    );
+    expect(friendlyError(e, 'save')).toBe(
+      '"made/up/step" is not a step of the journey, so nobody can be put down for it.',
+    );
   });
 
   it('maps 404 to a plain not-found message', () => {

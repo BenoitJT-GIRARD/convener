@@ -7,6 +7,7 @@ import { AdminOverride } from '../components/AdminOverride';
 import { PublicationGate } from '../components/PublicationGate';
 import { Checklist } from '../components/Checklist';
 import { setField, phaseOf, type FieldKey } from '../state/phases';
+import { assignItem } from '../state/assignment';
 import { effectiveStatus } from '../state/derived';
 import { LoadError } from '../components/LoadError';
 import type { Speaker } from '../data/types';
@@ -42,6 +43,23 @@ export function SpeakerPage() {
     await mutateSpeakers(
       current => current.map(sp => (sp.id === id ? setField(sp, k, v) : sp)),
       `data: ${id} set ${k}`,
+    );
+  }
+
+  // Who can be put down for a line: the board, plus whichever hosts this
+  // record already names. Hosts are here because a host is who a runbook line
+  // usually belongs to and is not necessarily a board member; the record's own
+  // `host_1`/`host_2` are read as the *candidates offered*, never as an
+  // answer -- an unassigned line stays unassigned until somebody chooses.
+  const people = Array.from(
+    new Set([...(config?.board ?? []).map(m => m.login), s.host_1, s.host_2].filter(Boolean)),
+  );
+
+  async function assign(key: string, who: string) {
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current => assignItem(current, id, key, who),
+      who === '' ? `data: ${id} owner cleared on ${key}` : `data: ${id} owner for ${key}`,
     );
   }
 
@@ -85,7 +103,13 @@ export function SpeakerPage() {
 
       {hasPhase && (
         <div className="mt-10">
-          <Checklist speaker={s} onToggle={toggle} onField={onField} />
+          <Checklist
+            speaker={s}
+            onToggle={toggle}
+            onField={onField}
+            onAssign={assign}
+            people={people}
+          />
         </div>
       )}
 
