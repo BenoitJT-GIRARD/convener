@@ -4,9 +4,9 @@ Three properties matter more than the rest:
 
 * `build_blocks()` is pure -- no network, no environment, no filesystem --
   and deterministic, so it is tested directly, with nothing faked;
-* the eleven labels and the two vocabularies come from
+* the eleven labels, the two vocabularies, and their order come from
   `convener_ops.proposal`, not from a second, hand-typed copy of them (R-3), so
-  a rename on either side is expected to break a test here or in
+  a rename or reorder on either side is expected to break a test here or in
   `test_proposal.py`, not to go unnoticed;
 * `main()` and `sync_form()` are the only parts that would ever reach
   `api.tally.so`, and neither is ever called against the real network in
@@ -16,13 +16,15 @@ Three properties matter more than the rest:
 The self-review question this whole task exists to answer -- could a form
 built from `build_blocks()` produce a submission that `to_lead` silently
 drops or downgrades to `undisclosed` -- is answered directly by the
-round-trip tests in the second section: they feed a synthesized submission,
-keyed by the same labels `build_blocks()` asks for, through the real
-`convener_ops.proposal.to_lead`, and check nothing was lost.
+round-trip tests in the "R-9" section: they build the exact webhook shape
+Tally sends for a chosen dropdown option, using `build_blocks()`'s own
+option uuids (never hand-typed ones), resolve it through the real
+`convener_ops.proposal.field_value`, and feed the result to the real `to_lead`.
 """
 
 from __future__ import annotations
 
+import http.client
 import io
 import urllib.error
 from email.message import Message
@@ -42,7 +44,13 @@ from create_tally_form import (
     sync_form,
 )
 
-from convener_ops.proposal import CAREER_STAGES, FORM_FIELDS, GENDERS, to_lead
+from convener_ops.proposal import (
+    CAREER_STAGE_ORDER,
+    FORM_FIELDS,
+    GENDER_ORDER,
+    field_value,
+    to_lead,
+)
 
 TODAY = "2026-01-08"
 
@@ -52,26 +60,72 @@ TODAY = "2026-01-08"
 # --------------------------------------------------------------------- #
 
 
-def _question_pairs(
+def _question_groups(
     blocks: list[dict[str, Any]],
-) -> list[tuple[dict[str, Any], dict[str, Any]]]:
-    """Every (TITLE, answer) pair in `blocks`, in order, skipping the leading
-    FORM_TITLE block."""
-    rest = blocks[1:]
-    return list(zip(rest[0::2], rest[1::2], strict=True))
+) -> list[tuple[dict[str, Any], list[dict[str, Any]]]]:
+    """Every (TITLE, [body blocks]) group in `blocks`, in order, skipping
+    the leading FORM_TITLE block. A plain question has one body block; a
+    DROPDOWN question has one DROPDOWN_OPTION block per offered value, so
+    this scans from each TITLE to the next one rather than assuming a fixed
+    number of blocks per question."""
+    title_indices = [i for i, b in enumerate(blocks) if b["type"] == "TITLE"]
+    groups = []
+    for position, start in enumerate(title_indices):
+        end = (
+            title_indices[position + 1]
+            if position + 1 < len(title_indices)
+            else len(blocks)
+        )
+        groups.append((blocks[start], blocks[start + 1 : end]))
+    return groups
 
 
-def _answer_payload(blocks: list[dict[str, Any]], label: str) -> dict[str, Any]:
-    for title, answer in _question_pairs(blocks):
+def _body_blocks(blocks: list[dict[str, Any]], label: str) -> list[dict[str, Any]]:
+    for title, body in _question_groups(blocks):
         if title["payload"]["html"] == label:
-            return dict(answer["payload"])
+            return body
     raise AssertionError(f"no question titled {label!r}")
 
 
-def _submission(gender: str = "NB", career_stage: str = "postdoc") -> dict[str, str]:
-    """A fields dict shaped exactly like `convener_ops.cli.handle_proposal`
-    flattens a Tally webhook into: `{label: value}`, keyed by the same
-    canonical labels `build_blocks()` asks for."""
+def _answer_payload(blocks: list[dict[str, Any]], label: str) -> dict[str, Any]:
+    """The single answer block's payload for a plain (non-DROPDOWN)
+    question."""
+    body = _body_blocks(blocks, label)
+    assert len(body) == 1, f"{label!r} is not a single-answer question"
+    return dict(body[0]["payload"])
+
+
+def _option_texts(blocks: list[dict[str, Any]], label: str) -> list[str]:
+    return [b["payload"]["text"] for b in _body_blocks(blocks, label)]
+
+
+def _dropdown_options(blocks: list[dict[str, Any]], label: str) -> list[dict[str, str]]:
+    """Every option of a DROPDOWN question as Tally's own webhook shapes
+    it: `{"id": <the block's uuid>, "text": <its display text>}`."""
+    return [
+        {"id": b["uuid"], "text": b["payload"]["text"]}
+        for b in _body_blocks(blocks, label)
+    ]
+
+
+def _resolved_field(blocks: list[dict[str, Any]], label: str, chosen_text: str) -> str:
+    """The string `field_value()` would produce for a real Tally submission
+    that picked `chosen_text` on the DROPDOWN question titled `label` --
+    built from that question's own option uuids (via `_dropdown_options`),
+    exactly the shape Tally's webhook sends, never a hand-typed id."""
+    options = _dropdown_options(blocks, label)
+    chosen_id = next(o["id"] for o in options if o["text"] == chosen_text)
+    field = {"label": label, "value": [chosen_id], "options": options}
+    return field_value(field)
+
+
+def _submission() -> dict[str, str]:
+    """A fields dict shaped exactly like `convener_ops.proposal.field_value`
+    resolves a Tally webhook into: `{label: value}`, keyed by the same
+    canonical labels `build_blocks()` asks for. `Gender` and `Career stage`
+    are left for the caller to fill via `_resolved_field` -- they are
+    DROPDOWN questions now, and a bare hand-typed string is not the shape a
+    real submission for either one takes."""
     return {
         "Name": "Ada Lovelace",
         "Email": "ada@example.org",
@@ -79,8 +133,6 @@ def _submission(gender: str = "NB", career_stage: str = "postdoc") -> dict[str, 
         "Country": "UK",
         "Preliminary title": "On analytical engines",
         "Short abstract": "A survey of the analytical engine's capabilities.",
-        "Career stage": career_stage,
-        "Gender": gender,
         "Links": "https://example.org/ada, https://scholar.example/ada",
         "Conflicts of interest": "None",
         "Your name": "Charles Babbage",
@@ -90,10 +142,20 @@ def _submission(gender: str = "NB", career_stage: str = "postdoc") -> dict[str, 
 class FakeTally:
     """An in-memory double for enough of the Tally API to test idempotence
     without a byte crossing the network: `GET /forms` (paginated exactly
-    like the real one), `POST /forms`, `PATCH /forms/{id}`."""
+    like the real one), `POST /forms`, `PATCH /forms/{id}`.
 
-    def __init__(self, forms: dict[str, dict[str, Any]]) -> None:
+    `misname_new_forms`, when set, has `POST /forms` name a freshly created
+    form something other than what its FORM_TITLE block asked for -- the
+    scenario Critical 2 is about: Tally not honouring the assumed
+    title-from-block naming. `sync_form` is expected to notice and correct
+    it with a follow-up `PATCH`.
+    """
+
+    def __init__(
+        self, forms: dict[str, dict[str, Any]], *, misname_new_forms: bool = False
+    ) -> None:
         self.forms = forms
+        self.misname_new_forms = misname_new_forms
         self._next_id = 1
         self.page_size = 100
 
@@ -119,9 +181,11 @@ class FakeTally:
         assert path == "/forms"
         form_id = f"f{self._next_id}"
         self._next_id += 1
+        wanted_name = payload["blocks"][0]["payload"]["title"]
         form = {
             "id": form_id,
-            "name": payload["blocks"][0]["payload"]["title"],
+            "name": "Untitled" if self.misname_new_forms else wanted_name,
+            "status": payload.get("status"),
             "blocks": payload["blocks"],
         }
         self.forms[form_id] = form
@@ -130,7 +194,7 @@ class FakeTally:
     def _patch(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         form_id = path.removeprefix("/forms/")
         assert form_id in self.forms, f"no such form: {form_id}"
-        self.forms[form_id] = {**self.forms[form_id], "blocks": payload["blocks"]}
+        self.forms[form_id] = {**self.forms[form_id], **payload}
         return dict(self.forms[form_id])
 
 
@@ -161,12 +225,29 @@ def test_build_blocks_is_pure_and_deterministic() -> None:
 def test_every_block_has_a_unique_uuid_and_the_shape_tally_requires() -> None:
     blocks = build_blocks()
     uuids = [b["uuid"] for b in blocks]
-    group_uuids = [b["groupUuid"] for b in blocks]
     assert len(uuids) == len(set(uuids)), "duplicate block uuid"
-    assert len(group_uuids) == len(set(group_uuids)), "duplicate group uuid"
     for block in blocks:
         assert set(block) == {"uuid", "type", "groupUuid", "groupType", "payload"}
         assert isinstance(block["payload"], dict)
+
+
+def test_every_dropdown_shares_exactly_one_group_and_nothing_else_does() -> None:
+    blocks = build_blocks()
+    by_group: dict[str, list[dict[str, Any]]] = {}
+    for block in blocks:
+        by_group.setdefault(block["groupUuid"], []).append(block)
+
+    for title, body in _question_groups(blocks):
+        label = title["payload"]["html"]
+        # Every TITLE block sits alone in its own group.
+        assert by_group[title["groupUuid"]] == [title], label
+        if label in {"Gender", "Career stage"}:
+            group_uuids = {b["groupUuid"] for b in body}
+            assert len(group_uuids) == 1, label
+            assert by_group[group_uuids.pop()] == body, label
+        else:
+            assert len(body) == 1, label
+            assert by_group[body[0]["groupUuid"]] == body, label
 
 
 def test_the_form_title_block_comes_first_and_names_the_form() -> None:
@@ -180,7 +261,7 @@ def test_the_form_asks_for_exactly_the_eleven_canonical_labels_in_order() -> Non
     # Pinned as a literal list, independent of FORM_FIELDS, so that renaming
     # a canonical label breaks this test even if both sides of the sharing
     # moved together.
-    titles = [t["payload"]["html"] for t, _a in _question_pairs(build_blocks())]
+    titles = [t["payload"]["html"] for t, _body in _question_groups(build_blocks())]
     assert titles == [
         "Name",
         "Email",
@@ -197,14 +278,21 @@ def test_the_form_asks_for_exactly_the_eleven_canonical_labels_in_order() -> Non
 
 
 def test_the_form_labels_are_shared_from_proposal_py_not_a_second_copy() -> None:
-    titles = [t["payload"]["html"] for t, _a in _question_pairs(build_blocks())]
+    titles = [t["payload"]["html"] for t, _body in _question_groups(build_blocks())]
     assert titles == [aliases[0] for aliases, _required in FORM_FIELDS]
 
 
 def test_only_name_is_marked_required_matching_to_lead() -> None:
-    pairs = _question_pairs(build_blocks())
-    required = {t["payload"]["html"] for t, a in pairs if a["payload"]["isRequired"]}
-    assert required == {"Name"}
+    # `isRequired` lives on the single answer block for a plain question,
+    # and on the first option only for a DROPDOWN (the group-level
+    # convention `_option_blocks` follows) -- `body[0]` is the right block
+    # to check in both cases.
+    required_labels = {
+        title["payload"]["html"]
+        for title, body in _question_groups(build_blocks())
+        if body[0]["payload"].get("isRequired")
+    }
+    assert required_labels == {"Name"}
 
 
 def test_the_your_name_question_is_worded_to_distinguish_it_from_name() -> None:
@@ -219,57 +307,40 @@ def test_the_your_name_question_is_worded_to_distinguish_it_from_name() -> None:
     assert name_placeholder != your_name_placeholder
 
 
-def test_no_question_uses_a_tally_picker_type() -> None:
-    # DROPDOWN / MULTIPLE_CHOICE / CHECKBOXES / MULTI_SELECT / RANKING submit
-    # the option's internal id as `value` (a list), never the option's
-    # display text -- confirmed against Tally's own webhook documentation
-    # and OpenAPI spec, see the module docstring. `convener_ops.cli.handle_proposal`
-    # takes that value as-is, so any of these types on any of the eleven
-    # questions would make the submitted value un-comparable to anything
-    # `to_lead` expects. None of the eleven may ever be one.
-    picker_types = {
-        "DROPDOWN",
-        "MULTIPLE_CHOICE",
-        "CHECKBOXES",
-        "MULTI_SELECT",
-        "RANKING",
+def test_gender_and_career_stage_are_dropdowns_and_no_other_question_is_a_picker() -> (
+    None
+):
+    # Every choice-type block Tally has, other than DROPDOWN_OPTION, which
+    # is exactly what Gender and Career stage must be (R-9).
+    other_picker_types = {
+        "MULTIPLE_CHOICE_OPTION",
+        "CHECKBOX",
+        "RANKING_OPTION",
+        "MULTI_SELECT_OPTION",
     }
-    answer_types = {
-        b["type"] for b in build_blocks() if b["type"] not in {"FORM_TITLE", "TITLE"}
-    }
-    assert not answer_types & picker_types
+    for title, body in _question_groups(build_blocks()):
+        label = title["payload"]["html"]
+        types = {b["type"] for b in body}
+        if label in {"Gender", "Career stage"}:
+            assert types == {"DROPDOWN_OPTION"}, label
+        else:
+            assert not types & (other_picker_types | {"DROPDOWN_OPTION"}), label
 
 
-def test_the_vocabulary_this_form_offers_is_pinned() -> None:
-    # A change to either set changes what the form should ask for; pinned
-    # literally so that change is caught here, not only inferred from a form
-    # nobody happened to be looking at.
-    assert {"M", "F", "NB", "undisclosed"} == GENDERS
-    assert {
-        "phd",
-        "postdoc",
-        "independent",
-        "group-leader",
-        "other",
-        "undisclosed",
-    } == CAREER_STAGES
+def test_the_gender_options_are_exactly_the_imported_vocabulary_in_order() -> None:
+    # List equality, not just set equality: it is strictly stronger, and it
+    # is what makes a "helpful" rewording of one option's text -- or a
+    # silent reordering -- break this test.
+    assert _option_texts(build_blocks(), "Gender") == list(GENDER_ORDER)
 
 
-def test_the_gender_placeholder_names_every_value_and_offers_undisclosed() -> None:
-    placeholder = _answer_payload(build_blocks(), "Gender")["placeholder"]
-    for value in GENDERS - {"undisclosed"}:
-        assert value in placeholder
-    assert "undisclosed if you'd rather not say" in placeholder
+def test_the_career_stage_options_are_exactly_the_imported_vocabulary_in_order() -> (
+    None
+):
+    assert _option_texts(build_blocks(), "Career stage") == list(CAREER_STAGE_ORDER)
 
 
-def test_the_career_stage_placeholder_names_every_value_and_undisclosed() -> None:
-    placeholder = _answer_payload(build_blocks(), "Career stage")["placeholder"]
-    for value in CAREER_STAGES - {"undisclosed"}:
-        assert value in placeholder
-    assert "undisclosed if you'd rather not say" in placeholder
-
-
-def test_no_placeholder_or_label_carries_non_ascii_text() -> None:
+def test_no_option_text_or_placeholder_or_label_carries_non_ascii_text() -> None:
     # The form's content is not what the ASCII-only rule is about (that is
     # the operator's console, see `_ascii`) -- but nothing here needs
     # anything outside ASCII either, and staying inside it removes one more
@@ -281,13 +352,20 @@ def test_no_placeholder_or_label_carries_non_ascii_text() -> None:
 
 
 # --------------------------------------------------------------------- #
-# The self-review question: does a submission through this form survive
-# to_lead intact, for every question and every accepted vocabulary value?
+# R-9: does a submission through this form survive to_lead intact, for
+# every question and every accepted vocabulary value -- resolved through
+# the real field_value, from build_blocks()'s own option ids, not a
+# hand-typed string standing in for one?
 # --------------------------------------------------------------------- #
 
 
 def test_a_submission_through_every_question_round_trips_into_a_lead() -> None:
-    lead = to_lead(_submission(), [], config(), TODAY)
+    blocks = build_blocks()
+    fields = _submission()
+    fields["Gender"] = _resolved_field(blocks, "Gender", "NB")
+    fields["Career stage"] = _resolved_field(blocks, "Career stage", "postdoc")
+
+    lead = to_lead(fields, [], config(), TODAY)
     assert lead is not None
     assert lead["name"] == "Ada Lovelace"
     assert lead["email"] == "ada@example.org"
@@ -305,34 +383,58 @@ def test_a_submission_through_every_question_round_trips_into_a_lead() -> None:
     assert lead["proposed_by"] == "Charles Babbage"
 
 
-@pytest.mark.parametrize("value", sorted(GENDERS - {"undisclosed"}))
-def test_every_accepted_gender_value_is_kept_verbatim_not_downgraded(
+@pytest.mark.parametrize("value", list(GENDER_ORDER))
+def test_every_gender_dropdown_option_resolves_through_the_real_pipeline(
     value: str,
 ) -> None:
-    lead = to_lead(_submission(gender=value), [], config(), TODAY)
+    blocks = build_blocks()
+    fields = _submission()
+    fields["Gender"] = _resolved_field(blocks, "Gender", value)
+    lead = to_lead(fields, [], config(), TODAY)
     assert lead is not None
     assert lead["gender"] == value
 
 
-@pytest.mark.parametrize("value", sorted(CAREER_STAGES - {"undisclosed"}))
-def test_every_accepted_career_stage_value_is_kept_verbatim_not_downgraded(
+@pytest.mark.parametrize("value", list(CAREER_STAGE_ORDER))
+def test_every_career_stage_dropdown_option_resolves_through_the_real_pipeline(
     value: str,
 ) -> None:
-    lead = to_lead(_submission(career_stage=value), [], config(), TODAY)
+    blocks = build_blocks()
+    fields = _submission()
+    fields["Career stage"] = _resolved_field(blocks, "Career stage", value)
+    lead = to_lead(fields, [], config(), TODAY)
     assert lead is not None
     assert lead["career_stage"] == value
 
 
-def test_undisclosed_is_a_kept_answer_not_only_a_silent_fallback() -> None:
-    lead = to_lead(
-        _submission(gender="undisclosed", career_stage="undisclosed"),
-        [],
-        config(),
-        TODAY,
+def test_an_empty_dropdown_selection_yields_undisclosed_not_a_crash() -> None:
+    # An unanswered DROPDOWN -- Tally sends an empty selection rather than
+    # omitting the field, or the field is simply absent; both must resolve
+    # the same way "undisclosed" already does when declared nowhere at all.
+    fields = _submission()
+    fields["Gender"] = field_value({"label": "Gender", "value": [], "options": []})
+    fields["Career stage"] = field_value(
+        {"label": "Career stage", "value": [], "options": []}
     )
+    lead = to_lead(fields, [], config(), TODAY)
     assert lead is not None
     assert lead["gender"] == "undisclosed"
     assert lead["career_stage"] == "undisclosed"
+
+
+def test_an_unmapped_option_id_does_not_leak_a_stringified_list_into_the_lead() -> None:
+    # A malformed or truncated payload -- an id with no entry in `options`
+    # -- must not resurrect the original bug ("['not-a-known-id']" reaching
+    # the record). field_value falls back to the raw id as plain text,
+    # which to_lead's existing membership check then correctly treats as an
+    # unrecognised value.
+    fields = _submission()
+    fields["Gender"] = field_value(
+        {"label": "Gender", "value": ["not-a-known-id"], "options": []}
+    )
+    lead = to_lead(fields, [], config(), TODAY)
+    assert lead is not None
+    assert lead["gender"] == "undisclosed"
 
 
 def test_the_name_only_question_is_enough_on_its_own_to_produce_a_lead() -> None:
@@ -384,6 +486,17 @@ def test_find_form_id_gives_up_rather_than_paging_forever() -> None:
         _find_form_id(lambda path: {"items": [], "hasMore": True}, FORM_TITLE)
 
 
+def test_find_form_id_raises_when_a_matching_form_has_no_readable_id() -> None:
+    # "found it but its id is unreadable" must not be treated as "no such
+    # form" -- that would let sync_form POST a second form with the same
+    # name (Critical 2's sibling risk on the read side).
+    def get(path: str) -> dict[str, Any]:
+        return {"items": [{"name": FORM_TITLE}], "hasMore": False}
+
+    with pytest.raises(TallyError, match="no readable id"):
+        _find_form_id(get, FORM_TITLE)
+
+
 # --------------------------------------------------------------------- #
 # sync_form -- idempotence, pinned against FakeTally, never the real API
 # --------------------------------------------------------------------- #
@@ -395,6 +508,9 @@ def test_sync_form_creates_a_new_form_when_none_exists() -> None:
     assert created is True
     assert fake.forms[form_id]["name"] == FORM_TITLE
     assert fake.forms[form_id]["blocks"] == build_blocks()
+    # Created as a draft, not live, so the first run leaves a human a form
+    # to look at before anything public depends on it.
+    assert fake.forms[form_id]["status"] == "DRAFT"
 
 
 def test_sync_form_updates_the_existing_form_instead_of_creating_a_second_one() -> None:
@@ -427,6 +543,23 @@ def test_sync_form_never_touches_a_form_with_a_different_title() -> None:
     assert form_id != "other"
     assert fake.forms["other"]["blocks"] == ["kept"]
     assert len(fake.forms) == 2
+
+
+def test_sync_form_corrects_a_form_tally_named_differently_than_asked() -> None:
+    # Critical 2: nothing but the FORM_TITLE block's own payload.title tells
+    # Tally what to call the form on creation -- if that assumption turns
+    # out wrong, sync_form must notice and fix the name in the same run,
+    # rather than silently leaving a form _find_form_id can never match
+    # again.
+    fake = FakeTally(forms={}, misname_new_forms=True)
+    form_id, created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    assert created is True
+    assert fake.forms[form_id]["name"] == FORM_TITLE
+
+    second_id, second_created = sync_form(fake.client(), FORM_TITLE, build_blocks())
+    assert second_created is False
+    assert second_id == form_id
+    assert len(fake.forms) == 1
 
 
 # --------------------------------------------------------------------- #
@@ -491,6 +624,26 @@ def test_main_reports_an_api_error_in_plain_ascii_not_a_traceback(
     assert "r\\xe9essayez" in captured.err  # escaped instead, information kept
 
 
+def test_main_ascii_escapes_the_form_id_not_only_the_title(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Important 3: form_id is the one API-controlled string on that printed
+    # line, and it must be escaped exactly like FORM_TITLE is.
+    monkeypatch.setenv("TALLY_API_KEY", "tly-test-key")
+
+    def _get(path: str) -> dict[str, Any]:
+        return {"items": [], "hasMore": False}
+
+    def _post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return {"id": "café-id", "name": FORM_TITLE}
+
+    client = TallyClient(get=_get, post=_post, patch=lambda *a: {})
+    assert main(client_factory=lambda api_key: client) == 0
+    captured = capsys.readouterr()
+    assert _is_ascii(captured.out)
+    assert "café" not in captured.out
+
+
 # --------------------------------------------------------------------- #
 # _live_client / _request -- the real transport, exercised with urlopen
 # replaced by an in-memory stand-in so nothing ever opens a socket.
@@ -549,6 +702,21 @@ def test_request_wraps_a_connection_failure_as_a_tally_error(
 
     monkeypatch.setattr("create_tally_form.urllib.request.urlopen", fake_urlopen)
     with pytest.raises(TallyError, match="no route to host"):
+        _request("tly-test-key", "GET", "/forms")
+
+
+def test_request_wraps_a_raw_http_client_exception_as_a_tally_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Important 1: http.client.getresponse() sits under urllib's bare
+    # `except: raise`, unlike h.request() -- so BadStatusLine and friends
+    # reach here as themselves, never as URLError, unless _request catches
+    # them too.
+    def fake_urlopen(request: Any, timeout: int = 0) -> Any:
+        raise http.client.BadStatusLine("garbage")
+
+    monkeypatch.setattr("create_tally_form.urllib.request.urlopen", fake_urlopen)
+    with pytest.raises(TallyError):
         _request("tly-test-key", "GET", "/forms")
 
 

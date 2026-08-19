@@ -11,7 +11,17 @@ from typing import Any
 import pytest
 from conftest import board_member, config, speaker
 
-from convener_ops.proposal import assign_lead, skip_reason, to_lead, verify_signature
+from convener_ops.proposal import (
+    CAREER_STAGE_ORDER,
+    CAREER_STAGES,
+    GENDER_ORDER,
+    GENDERS,
+    assign_lead,
+    field_value,
+    skip_reason,
+    to_lead,
+    verify_signature,
+)
 from convener_ops.sweep import expire_votes
 from convener_ops.validate import validate_speakers
 
@@ -250,3 +260,101 @@ def test_a_form_lead_opens_its_vote_window_so_it_can_expire() -> None:
     swept, changes = expire_votes([lead], config(), now)
     assert swept[0]["status"] == "parked"
     assert any("vote window expired" in c for c in changes)
+
+
+# --------------------------------------------------------------------- #
+# GENDER_ORDER/CAREER_STAGE_ORDER -- the guard against re-introducing the
+# hash-seed drift the sets used to carry (prerequisite for R-9).
+# --------------------------------------------------------------------- #
+
+
+def test_gender_order_is_exactly_the_set_it_derives() -> None:
+    assert set(GENDER_ORDER) == GENDERS
+    assert len(GENDER_ORDER) == len(GENDERS)
+
+
+def test_career_stage_order_is_exactly_the_set_it_derives() -> None:
+    assert set(CAREER_STAGE_ORDER) == CAREER_STAGES
+    assert len(CAREER_STAGE_ORDER) == len(CAREER_STAGES)
+
+
+def test_the_vocabulary_this_form_offers_is_pinned() -> None:
+    # A change to either set changes what scripts/create_tally_form.py
+    # should build a dropdown from; pinned literally here -- not only in
+    # test_create_tally_form.py, which this pin outlives if that script is
+    # ever deleted -- so the change is caught, not only inferred from a
+    # form nobody happened to be looking at.
+    assert {"M", "F", "NB", "undisclosed"} == GENDERS
+    assert {
+        "phd",
+        "postdoc",
+        "independent",
+        "group-leader",
+        "other",
+        "undisclosed",
+    } == CAREER_STAGES
+
+
+# --------------------------------------------------------------------- #
+# field_value -- resolving a picker's chosen option id(s) against that
+# field's own `options` array (R-9).
+# --------------------------------------------------------------------- #
+
+
+def test_field_value_resolves_a_single_select_id_to_its_text() -> None:
+    field = {
+        "label": "Gender",
+        "value": ["opt-nb"],
+        "options": [
+            {"id": "opt-f", "text": "F"},
+            {"id": "opt-nb", "text": "NB"},
+        ],
+    }
+    assert field_value(field) == "NB"
+
+
+def test_field_value_joins_a_multi_select_answer_with_a_comma() -> None:
+    field = {
+        "label": "Interests",
+        "value": ["a", "b"],
+        "options": [
+            {"id": "a", "text": "Soccer"},
+            {"id": "b", "text": "Skiing"},
+        ],
+    }
+    assert field_value(field) == "Soccer, Skiing"
+
+
+def test_field_value_falls_back_to_the_raw_id_when_unmapped() -> None:
+    # A malformed or truncated payload -- an id absent from `options` --
+    # must read as an odd value, not disappear.
+    assert field_value({"value": ["mystery-id"], "options": []}) == "mystery-id"
+
+
+def test_field_value_on_an_empty_selection_is_an_empty_string() -> None:
+    assert field_value({"value": [], "options": []}) == ""
+
+
+def test_field_value_passes_a_plain_text_answer_through_unchanged() -> None:
+    assert field_value({"value": "Ada Lovelace"}) == "Ada Lovelace"
+
+
+def test_field_value_stringifies_a_number_or_boolean_answer() -> None:
+    assert field_value({"value": 10}) == "10"
+    assert field_value({"value": True}) == "True"
+
+
+def test_field_value_on_a_missing_value_is_an_empty_string() -> None:
+    assert field_value({}) == ""
+
+
+def test_get_still_degrades_a_raw_unresolved_list_to_recognisable_text() -> None:
+    # The last line of defence: field_value is meant to run first, but if a
+    # caller ever skips it, `_get` (exercised here through to_lead) must not
+    # let "['uuid']" reach a record.
+    fields = {"Name": "Ada Lovelace", "Gender": ["opt-nb"]}
+    lead = to_lead(fields, [], config(), TODAY)  # type: ignore[arg-type]
+    assert lead is not None
+    # "opt-nb" is not a member of GENDERS, so it falls back to undisclosed
+    # -- but the point of this test is what it is *not*: "['opt-nb']".
+    assert lead["gender"] == "undisclosed"

@@ -16,20 +16,31 @@ from typing import Any
 
 from convener_ops.governance import active_board
 
-GENDERS = {"M", "F", "NB", "undisclosed"}
+# Iterating a `set` of `str` is `PYTHONHASHSEED`-dependent *across
+# processes* -- two runs of this interpreter can iterate the same set in a
+# different order. `GENDERS`/`CAREER_STAGES` are membership-tested only
+# here, but `scripts/create_tally_form.py` also needs a *stable* order to
+# build a DROPDOWN's options from (R-9): iterate the set there and the
+# option order, and each option's `index`, would differ run to run, so
+# every re-run would rewrite the live form for no reason. These tuples are
+# the one source of order; the sets below are derived from them, never a
+# second, hand-kept copy that could drift out of step.
+GENDER_ORDER: tuple[str, ...] = ("F", "M", "NB", "undisclosed")
+GENDERS = frozenset(GENDER_ORDER)
 
 # Mirrors CAREER_STAGES in app/src/data/types.ts. "undisclosed" is a real
 # answer, not a missing one: the form must be answerable without declaring a
 # career stage, and the balance figures count the people who did not answer
 # rather than dropping them (app/src/state/diversity.ts).
-CAREER_STAGES = {
+CAREER_STAGE_ORDER: tuple[str, ...] = (
     "phd",
     "postdoc",
     "independent",
     "group-leader",
     "other",
     "undisclosed",
-}
+)
+CAREER_STAGES = frozenset(CAREER_STAGE_ORDER)
 
 # The eleven labels ``to_lead`` reads a submission by -- canonical name first,
 # any alias this module also accepts after it. ``scripts/create_tally_form.py``
@@ -105,11 +116,62 @@ def verify_signature(body: str, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, given)
 
 
+def field_value(field: dict[str, Any]) -> str:
+    """The text one raw Tally field means, resolving a picker's chosen
+    option id(s) against that same field's own ``options`` array when Tally
+    sent one.
+
+    Tally's webhook flattens a DROPDOWN/MULTIPLE_CHOICE/CHECKBOXES/
+    MULTI_SELECT answer to ``value: [<option id>, ...]`` -- never the
+    option's display text -- with the id-to-text mapping riding alongside
+    it, unresolved, as ``options: [{"id": ..., "text": ...}, ...]`` on that
+    same field. Resolving it *here*, before a submission ever reaches
+    ``to_lead``, is what keeps ``fields: dict[str, str]`` an honest
+    contract: without this step ``to_lead`` would be comparing a
+    stringified id list against ``GENDERS``/``CAREER_STAGES`` and losing
+    every declared answer to ``"undisclosed"`` silently -- for every
+    respondent, not an occasional one (R-9). This lives here rather than in
+    ``convener_ops.cli`` because it is knowledge about the shape of a
+    submission, this module's subject, and because it makes the behaviour
+    reachable from this file's own tests.
+
+    A single-select DROPDOWN's one-element ``value`` list resolves to a
+    bare string -- exactly what the membership tests below need. An id
+    absent from ``options`` (a malformed payload, or a field with no
+    ``options`` at all) falls back to the raw element rather than being
+    dropped, so a bug upstream reads as an odd value instead of a silent
+    loss.
+    """
+    value = field.get("value")
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        by_id = {
+            opt.get("id"): opt.get("text")
+            for opt in field.get("options") or []
+            if isinstance(opt, dict)
+        }
+        return ", ".join(str(by_id.get(item, item)) for item in value)
+    return str(value)
+
+
 def _get(fields: dict[str, str], *keys: str) -> str:
     for key in keys:
         value = fields.get(key)
-        if value:
-            return str(value).strip()
+        if not value:
+            continue
+        if isinstance(value, list):
+            # A last line of defence, not the intended path: `value` is
+            # meant to already be resolved by `field_value` before it ever
+            # reaches here (see `convener_ops.cli.handle_proposal`). If a picker
+            # is ever added somewhere that skips that step, `if value:`
+            # above is still truthy for `["uuid"]`, and `str(value).strip()`
+            # would silently yield `"['uuid']"` -- recognisable text instead
+            # is at least a value a human reading the record can make sense
+            # of. `[]` is already falsy and falls through to the next key
+            # correctly, without reaching this branch.
+            return ", ".join(str(v) for v in value).strip()
+        return str(value).strip()
     return ""
 
 

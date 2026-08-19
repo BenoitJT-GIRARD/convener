@@ -296,3 +296,68 @@ def test_handle_proposal_reports_load_errors_and_returns_1(
 
     assert handle_proposal() == 1
     assert "file missing" in capsys.readouterr().out
+
+
+def test_handle_proposal_resolves_a_picker_shaped_gender_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # R-9: a DROPDOWN answer's raw `value` is a list of option ids, not
+    # text -- this is the end-to-end proof that handle_proposal resolves it
+    # (via field_value) before to_lead ever sees it, using the exact shape
+    # Tally's webhook sends, not a plain string standing in for one.
+    _write_data(tmp_path, [speaker(id="spk-001")], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    payload = json.dumps(
+        {
+            "fields": [
+                {"label": "Name", "value": "Grace Hopper"},
+                {
+                    "label": "Gender",
+                    "value": ["opt-nb"],
+                    "options": [
+                        {"id": "opt-f", "text": "F"},
+                        {"id": "opt-m", "text": "M"},
+                        {"id": "opt-nb", "text": "NB"},
+                        {"id": "opt-undisclosed", "text": "undisclosed"},
+                    ],
+                },
+            ]
+        }
+    )
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+
+    written = yaml.safe_load((tmp_path / "data" / "speakers.yml").read_text("utf-8"))
+    assert written[-1]["gender"] == "NB"
+
+
+def test_handle_proposal_never_writes_a_stringified_list_for_an_unresolvable_option(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # An id absent from `options` (a malformed or truncated payload) must
+    # not resurrect the original bug: "['unknown-id']" landing in the
+    # record instead of the field being recognised as unmapped and falling
+    # back to "undisclosed" like any other unrecognised answer.
+    _write_data(tmp_path, [speaker(id="spk-001")], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    payload = json.dumps(
+        {
+            "fields": [
+                {"label": "Name", "value": "Grace Hopper"},
+                {"label": "Gender", "value": ["unknown-id"], "options": []},
+            ]
+        }
+    )
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+
+    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    assert "['unknown-id']" not in text
+    written = yaml.safe_load(text)
+    assert written[-1]["gender"] == "undisclosed"

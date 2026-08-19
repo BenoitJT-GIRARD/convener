@@ -8,7 +8,8 @@ together in Tally's editor cannot be recreated if the account is ever lost;
 a form built from this script can -- D-03 applied to something other than
 code. Re-running it is safe: it finds the existing form by its title
 (`FORM_TITLE` below) and updates it in place rather than creating a second
-one.
+one -- and see the note on renaming the form in Tally's own UI, near the
+bottom of this docstring, before ever doing that.
 
 `build_blocks()` is the whole testable surface: pure, no network, no
 environment, no filesystem. `main()` is the only part that talks to the
@@ -19,61 +20,71 @@ The labels are shared, not copied
 ----------------------------------
 `convener_ops.proposal` reads a submission by label -- `Name`, `Email`,
 `Institution`, and so on, several with aliases it also accepts. Those labels
-are not retyped here: this module imports `convener_ops.proposal.FORM_FIELDS` and
-walks it to build each question, so a label renamed in `proposal.py` changes
-the live form the next time this script runs, and a label renamed in one
-place without the other breaks a test rather than breaking the form in
-production.
+are not retyped here: `_QUESTIONS` below is built by walking
+`convener_ops.proposal.FORM_FIELDS` itself, reading each label and its
+`required` flag from there rather than restating them, so a label renamed
+in `proposal.py` changes the live form the next time this script runs, and
+a label renamed in one place without the other breaks a test rather than
+breaking the form in production.
 
-Gender and career stage are free text, not a picker -- and this is the part
-worth explaining
------------------------------------------------------------------------------
+Gender and Career stage are DROPDOWNs, and the ids are resolved -- R-9
+------------------------------------------------------------------------
 `proposal.py` compares a submission's `Gender` and `Career stage` literally
 against `GENDERS` and `CAREER_STAGES`, falling back to `"undisclosed"` on
-anything else. The tempting design is a Tally DROPDOWN or MULTIPLE_CHOICE
-question whose options read `M`, `F`, `NB`, ... so the exact vocabulary
-reaches the code. It does not work, and it is worth recording why, because
-the failure is silent and total rather than an edge case:
+anything else. An earlier version of this script answered that by asking
+both as free text, with a placeholder spelling out the accepted words --
+reasoning, wrongly, that a Tally DROPDOWN could not deliver the vocabulary
+intact. That reasoning stopped at "the submitted `value` is the option's
+internal id, not its text" and did not go the one step further: Tally's
+webhook payload carries the id-to-text mapping *alongside* that id, on the
+very same field --
 
-Tally's own webhook documentation
-(https://tally.so/help/webhooks, `DROPDOWN`/`MULTIPLE_CHOICE`/`CHECKBOXES`/
-`MULTI_SELECT` entries) and its OpenAPI spec
-(`DropdownOptionPayload`/`MultipleChoiceOptionPayload`, which carry only a
-display `text`) agree: a picker-type question submits the **option's
-internal id** as `value` -- always as a list, e.g. `"value": ["6010d529-...
-"]` -- never the option's display text. The text lives only in a sibling
-`options: [{id, text}]` array on the same field. `convener_ops.cli.handle_proposal`
-flattens a webhook payload with `f.get("value", "")` and never consults
-`options`, so a picker-type Gender or Career-stage question would submit a
-value like `"['6010d529-...']"` for *every* respondent -- never a member of
-`GENDERS`/`CAREER_STAGES`, so every single submission would silently
-downgrade to `"undisclosed"`, independent of what the option's display text
-said. That is not a labelled-option problem to route around with careful
-wording; it is a shape mismatch between what a picker submits and what
-`_get`/`to_lead` compare, and fixing it would mean teaching
-`convener_ops.cli.handle_proposal` to resolve `options`, which is outside this
-task's file list and this script's reach (`build_blocks()` cannot change how
-the webhook is parsed).
+    { "label": "Career stage",
+      "value": ["6010d529-..."],
+      "options": [{"id": "260c201f-...", "text": "phd"},
+                  {"id": "6010d529-...", "text": "postdoc"}] }
 
-So `Gender` and `Career stage` are `INPUT_TEXT` questions here, each with a
-placeholder spelling out the exact accepted words -- generated from
-`GENDERS`/`CAREER_STAGES` themselves via `_vocabulary_hint`, not a second,
-hand-typed copy of the vocabulary -- so what a respondent types is what
-`to_lead` compares, and `"undisclosed"` is offered in that placeholder as a
-legitimate answer ("... or undisclosed if you'd rather not say"), not
-worded as a refusal. The risk this leaves is an ordinary free-text one --
-already the risk `proposal.py`'s own comment names ("a free-text field, a
-renamed form option, a translation") -- a typo reads as `"undisclosed"`
-rather than as its intended value, which is the existing, accepted fallback,
-not a new failure this script introduces.
+-- so resolving it is self-describing and trivial, and a dropdown, once
+resolved, delivers the exact vocabulary token every time. Free text over a
+closed six-token vocabulary does the opposite: a respondent who types
+`Postdoc`, `post-doc` or `Senior Lecturer` fails the literal membership
+test in `to_lead` and is written as `"undisclosed"`, silently, with no log
+line and no signal -- precisely the outcome R-2 exists to prevent, and at a
+steady rate rather than as an edge case.
+
+So `Gender` and `Career stage` are `DROPDOWN` questions here, and the
+resolution the earlier design avoided lives in `convener_ops.proposal.field_value`
+instead -- read by `convener_ops.cli.handle_proposal` before a submission ever
+reaches `to_lead`, so `to_lead`'s `fields: dict[str, str]` stays an honest
+contract. Each option's `text` is the bare vocabulary token (`phd`, `NB`,
+`group-leader`, ...) and nothing else: any friendly gloss belongs in the
+question's own wording, never smuggled into the option text, or the next
+"helpful" rewording of an option silently breaks the build (R-3, again).
+`undisclosed` is offered as an ordinary option among the others, not singled
+out or worded as a refusal -- R-2 again: it is a real answer.
+
+Option order matters and is not incidental
+-------------------------------------------
+`GENDER_ORDER`/`CAREER_STAGE_ORDER` in `proposal.py` are ordered tuples, not
+the `GENDERS`/`CAREER_STAGES` sets: iterating a `set` of `str` is
+`PYTHONHASHSEED`-dependent across processes, so building a dropdown's
+options from the set (rather than from the tuple the set is derived from)
+would put them in a different order on every run, rewriting the live form
+each time for no reason other than the interpreter's own hash seed.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
     TALLY_API_KEY=tly-xxxx uv run python ../scripts/create_tally_form.py
+
+The form is found again on every re-run by matching `FORM_TITLE` against
+each existing form's name (`_find_form_id`) -- so renaming the form inside
+Tally's own editor breaks that match, and the next run creates a second
+form rather than updating the renamed one.
 """
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import sys
@@ -85,8 +96,9 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from convener_ops.proposal import (
-    CAREER_STAGES,
-    GENDERS,
+    CAREER_STAGE_ORDER,
+    FORM_FIELDS,
+    GENDER_ORDER,
     LABEL_ABSTRACT,
     LABEL_CAREER_STAGE,
     LABEL_CONFLICTS,
@@ -129,38 +141,32 @@ def _uuid(name: str) -> str:
 
 
 def _block(
-    block_type: str, group_type: str, name: str, payload: dict[str, Any]
+    block_type: str,
+    group_type: str,
+    name: str,
+    payload: dict[str, Any],
+    *,
+    group_name: str | None = None,
 ) -> dict[str, Any]:
-    """One Tally block: its own uuid, and its own single-block group.
+    """One Tally block: its own uuid, and -- by default -- its own
+    single-block group.
 
-    Every question below is two blocks -- a `TITLE` and an answer block --
-    and neither shares a group with the other or with any other question's
-    blocks (unlike a DROPDOWN's options, which share one `groupUuid` on
-    purpose). `name` must be unique across the whole form for that to hold;
-    `build_blocks` passes a string built from the field label and the
-    block's role for exactly that reason.
+    `group_name` defaults to `name`, so a plain question's `TITLE` and its
+    single answer block each sit alone in their own group, as Tally's own
+    examples do it. A DROPDOWN is the one exception: every `DROPDOWN_OPTION`
+    block that offers a value for the *same* question must share one
+    `groupUuid` with its sibling options -- that grouping is how Tally knows
+    they are options of one dropdown rather than five unrelated blocks --
+    so `_Question._option_blocks` passes the same explicit `group_name` for
+    every option belonging to one question.
     """
     return {
         "uuid": _uuid(name),
         "type": block_type,
-        "groupUuid": _uuid(f"{name}:group"),
+        "groupUuid": _uuid(f"{group_name or name}:group"),
         "groupType": group_type,
         "payload": payload,
     }
-
-
-def _vocabulary_hint(values: set[str]) -> str:
-    """'a, b, c, or undisclosed if you'd rather not say'.
-
-    Read from the live vocabulary set rather than typed out a second time,
-    so a value added to or removed from `GENDERS`/`CAREER_STAGES` changes
-    this placeholder on the next run instead of needing a second, hand-kept
-    copy (the same reasoning as `FORM_FIELDS` for the labels themselves).
-    `undisclosed` is named last and framed as a choice, not omitted --
-    R-2: it must read as a legitimate answer, not a refusal to answer.
-    """
-    named = sorted(v for v in values if v != "undisclosed")
-    return ", ".join(named) + ", or undisclosed if you'd rather not say"
 
 
 @dataclass(frozen=True)
@@ -171,20 +177,34 @@ class _Question:
     `aliases[0]` is the canonical label the form uses; the rest are the
     aliases `to_lead` also accepts from older or hand-run submissions, never
     offered here since the form only ever produces its own canonical label.
+
+    `answer_type == "DROPDOWN"` is the one case with more than one answer
+    block: `options` then holds the ordered vocabulary tuple (`GENDER_ORDER`
+    / `CAREER_STAGE_ORDER`), and `blocks()` emits one `DROPDOWN_OPTION` per
+    value instead of a single answer block. Tally's own schema has no
+    standalone "dropdown" block type distinct from its options -- confirmed
+    against the full `Block` union in Tally's OpenAPI spec, which lists
+    `DropdownOptionBlock` and nothing else named `Dropdown*` -- so a
+    question's option blocks *are* its dropdown, immediately following the
+    question's own `TITLE` block.
     """
 
     aliases: tuple[str, ...]
     answer_type: str
     required: bool
-    placeholder: str
+    placeholder: str = ""
+    options: tuple[str, ...] = ()
 
     @property
     def label(self) -> str:
         return self.aliases[0]
 
     def blocks(self) -> list[dict[str, Any]]:
+        title = _block("TITLE", "QUESTION", f"{self.label}:title", {"html": self.label})
+        if self.answer_type == "DROPDOWN":
+            return [title, *self._option_blocks()]
         return [
-            _block("TITLE", "QUESTION", f"{self.label}:title", {"html": self.label}),
+            title,
             _block(
                 self.answer_type,
                 self.answer_type,
@@ -193,82 +213,110 @@ class _Question:
             ),
         ]
 
+    def _option_blocks(self) -> list[dict[str, Any]]:
+        group_name = f"{self.label}:answer"
+        last_index = len(self.options) - 1
+        blocks: list[dict[str, Any]] = []
+        for index, value in enumerate(self.options):
+            payload: dict[str, Any] = {
+                "index": index,
+                "isFirst": index == 0,
+                "isLast": index == last_index,
+                "text": value,
+            }
+            if index == 0:
+                # A group-level setting, and Tally's own convention (see
+                # `hasBadge`/`randomize`/etc. in its option payload schema)
+                # is to set it once, on the first option, rather than repeat
+                # it identically on every sibling.
+                payload["isRequired"] = self.required
+            blocks.append(
+                _block(
+                    "DROPDOWN_OPTION",
+                    "DROPDOWN",
+                    # Name-derived from the value, not the index, so an
+                    # option's uuid is stable even if `options` is ever
+                    # reordered -- reordering the tuple must not read as
+                    # deleting every option and adding them all back.
+                    f"{self.label}:option:{value}",
+                    payload,
+                    group_name=group_name,
+                )
+            )
+        return blocks
 
-#: The eleven questions, in the order `convener_ops.proposal.FORM_FIELDS` lists
-#: them. `Name` is the only required one, matching `to_lead`/`skip_reason`:
-#: every other field is optional there, so marking one required here that
-#: `to_lead` does not require would let the form refuse a submission
-#: `to_lead` would have accepted.
-_QUESTIONS: Final[tuple[_Question, ...]] = (
-    _Question(
-        LABEL_NAME,
+
+#: Per-question specifics `FORM_FIELDS` does not carry: how the question is
+#: asked (`answer_type`), and either its placeholder or its dropdown
+#: options. Keyed by the same alias tuple `FORM_FIELDS` uses for that
+#: field, so `_QUESTIONS` below walks `FORM_FIELDS` itself for the label and
+#: the `required` flag -- neither is restated here.
+_ANSWER_SPECS: Final[dict[tuple[str, ...], tuple[str, str, tuple[str, ...]]]] = {
+    LABEL_NAME: (
         "INPUT_TEXT",
-        True,
         "Full name of the person you are proposing as a speaker",
+        (),
     ),
-    _Question(
-        LABEL_EMAIL,
+    LABEL_EMAIL: (
         "INPUT_EMAIL",
-        False,
         "So the Board can reach the proposed speaker directly",
+        (),
     ),
-    _Question(
-        LABEL_INSTITUTION,
+    LABEL_INSTITUTION: ("INPUT_TEXT", "University, lab, or organization", ()),
+    LABEL_COUNTRY: ("INPUT_TEXT", "Country of residence or affiliation", ()),
+    LABEL_TITLE: (
         "INPUT_TEXT",
-        False,
-        "University, lab, or organization",
-    ),
-    _Question(
-        LABEL_COUNTRY,
-        "INPUT_TEXT",
-        False,
-        "Country of residence or affiliation",
-    ),
-    _Question(
-        LABEL_TITLE,
-        "INPUT_TEXT",
-        False,
         "Working title for the talk -- it can change later",
+        (),
     ),
-    _Question(
-        LABEL_ABSTRACT,
-        "TEXTAREA",
-        False,
-        "A few sentences on what the talk would cover",
-    ),
-    _Question(
-        LABEL_CAREER_STAGE,
+    LABEL_ABSTRACT: ("TEXTAREA", "A few sentences on what the talk would cover", ()),
+    LABEL_CAREER_STAGE: ("DROPDOWN", "", CAREER_STAGE_ORDER),
+    LABEL_GENDER: ("DROPDOWN", "", GENDER_ORDER),
+    LABEL_LINKS: (
         "INPUT_TEXT",
-        False,
-        _vocabulary_hint(CAREER_STAGES),
-    ),
-    _Question(
-        LABEL_GENDER,
-        "INPUT_TEXT",
-        False,
-        _vocabulary_hint(GENDERS),
-    ),
-    _Question(
-        LABEL_LINKS,
-        "INPUT_TEXT",
-        False,
         "Comma-separated links: personal site, Google Scholar, LinkedIn, etc.",
+        (),
     ),
-    _Question(
-        LABEL_CONFLICTS,
+    LABEL_CONFLICTS: (
         "TEXTAREA",
-        False,
         "Any conflicts of interest the Board should know about, or leave"
         " blank if there are none",
+        (),
     ),
-    _Question(
-        LABEL_PROPOSED_BY,
+    LABEL_PROPOSED_BY: (
         "INPUT_TEXT",
-        False,
         "Your own name -- the person submitting this proposal, not the"
         " speaker named above",
+        (),
     ),
-)
+}
+
+
+def _build_questions() -> tuple[_Question, ...]:
+    """Walk `FORM_FIELDS` for the label and the `required` flag, and
+    `_ANSWER_SPECS` for how each is asked -- `required` is read from
+    `FORM_FIELDS`, never re-declared here, so `to_lead`'s eleventh field
+    (`Name`, the only required one) and this form's required question stay
+    the same field by construction rather than by two people remembering to
+    agree."""
+    questions = []
+    for aliases, required in FORM_FIELDS:
+        answer_type, placeholder, options = _ANSWER_SPECS[aliases]
+        questions.append(
+            _Question(
+                aliases,
+                answer_type,
+                required,
+                placeholder=placeholder,
+                options=options,
+            )
+        )
+    return tuple(questions)
+
+
+#: The eleven questions, in the order `convener_ops.proposal.FORM_FIELDS` lists
+#: them.
+_QUESTIONS: Final[tuple[_Question, ...]] = _build_questions()
 
 
 def build_blocks() -> list[dict[str, Any]]:
@@ -279,7 +327,9 @@ def build_blocks() -> list[dict[str, Any]]:
     whole of this function's output is determined by this module's own
     constants and by `convener_ops.proposal`'s shared label and vocabulary
     constants. Calling it twice, in the same process or a year apart,
-    returns byte-identical output (see `_uuid`).
+    returns byte-identical output (see `_uuid`, and `GENDER_ORDER`/
+    `CAREER_STAGE_ORDER` in `proposal.py` for why the vocabulary itself is
+    order-stable too).
     """
     blocks: list[dict[str, Any]] = [
         _block(
@@ -322,8 +372,19 @@ def _request(
     api_key: str, method: str, path: str, payload: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """One HTTP call to the Tally API, raising `TallyError` -- never a raw
-    `urllib` exception -- on anything that goes wrong, so `main` only ever
-    has one exception type to catch and report legibly."""
+    `urllib`/`http.client` exception -- on anything that goes wrong, so
+    `main` only ever has one exception type to catch and report legibly.
+
+    `urllib`'s own `OSError -> URLError` translation covers only
+    `h.request(...)`; in CPython's `AbstractHTTPHandler.do_open`, the
+    matching `r = h.getresponse()` sits under a bare `except: raise`, so
+    `http.client.BadStatusLine`, `IncompleteRead` and `RemoteDisconnected`
+    would otherwise propagate unwrapped -- a traceback for the first,
+    blind-running operator instead of one plain-ASCII line. The
+    success-path decode uses `"replace"` for the same reason the error path
+    already did: a body containing invalid UTF-8 must not turn a legible
+    HTTP failure into an illegible decode failure.
+    """
     url = f"{API_BASE}{path}"
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(url, data=data, method=method)
@@ -332,12 +393,14 @@ def _request(
         request.add_header("Content-Type", "application/json")
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            body = response.read().decode("utf-8")
+            body = response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")[:500]
         raise TallyError(f"{method} {path}: HTTP {exc.code} -- {detail}") from exc
     except urllib.error.URLError as exc:
         raise TallyError(f"{method} {path}: {exc.reason}") from exc
+    except (OSError, http.client.HTTPException, UnicodeDecodeError) as exc:
+        raise TallyError(f"{method} {path}: {exc}") from exc
     if not body:
         return {}
     try:
@@ -374,6 +437,11 @@ def _find_form_id(get: Callable[[str], dict[str, Any]], title: str) -> str | Non
     and compared by `name` -- which is why the form's title matters: it is
     both what a human sees in the Tally dashboard and the idempotency key
     `sync_form` searches on.
+
+    A form whose `name` matches but whose `id` cannot be read raises rather
+    than being treated as "no match": returning `None` here would tell
+    `sync_form` to `POST` a second form with the same name, silently, which
+    is a worse outcome than stopping to say the found form is unreadable.
     """
     for page in range(1, _MAX_PAGES + 1):
         body = get(f"/forms?page={page}&limit={_PAGE_SIZE}")
@@ -382,7 +450,12 @@ def _find_form_id(get: Callable[[str], dict[str, Any]], title: str) -> str | Non
             for form in items:
                 if isinstance(form, dict) and form.get("name") == title:
                     form_id = form.get("id")
-                    return form_id if isinstance(form_id, str) else None
+                    if not isinstance(form_id, str) or not form_id:
+                        raise TallyError(
+                            f"GET /forms: found a form named {title!r} with"
+                            " no readable id"
+                        )
+                    return form_id
         if not body.get("hasMore"):
             return None
     raise TallyError(f"GET /forms: more than {_MAX_PAGES} pages, giving up")
@@ -398,25 +471,46 @@ def sync_form(
     `PATCH`es it, rather than creating a second form with the same name --
     Tally does not itself refuse a duplicate name, so this is the only thing
     that keeps a second run from doing that.
+
+    Created as `"DRAFT"`, not `"PUBLISHED"`: the first run's whole point is
+    for a human to look at the result in the Tally dashboard before
+    anything public depends on it, and creating it live would defeat that.
+    A later run never touches `status` on the `PATCH` path, so publishing it
+    (by hand, once) is never silently undone by a re-run.
+
+    `POST /forms` has no `name` field (checked against Tally's own OpenAPI
+    spec) -- the form's name can only come from the `FORM_TITLE` block's own
+    `payload.title`, an assumption about a service this script does not
+    control. If that assumption is ever wrong (Tally names the form
+    something else, or normalises the string), `_find_form_id` would never
+    match it again, and every future run would create another form, each
+    one reported as `created form <id>` -- success that silently is not.
+    The `response.get("name") != title` check below turns that unverifiable
+    assumption into a verified, self-healing one: found wrong, corrected
+    with one `PATCH`, in the same run that created it.
     """
     form_id = _find_form_id(client.get, title)
     if form_id is not None:
         client.patch(f"/forms/{form_id}", {"blocks": blocks})
         return form_id, False
 
-    response = client.post("/forms", {"status": "PUBLISHED", "blocks": blocks})
+    response = client.post("/forms", {"status": "DRAFT", "blocks": blocks})
     new_id = response.get("id")
     if not isinstance(new_id, str) or not new_id:
         raise TallyError("POST /forms: response had no form id")
+    if response.get("name") != title:
+        client.patch(f"/forms/{new_id}", {"name": title})
     return new_id, True
 
 
 def _ascii(text: str) -> str:
     """Escape non-ASCII for a terminal.
 
-    The operator's console renders anything outside ASCII as mojibake, and
-    this is the one thing this script prints that is not written by this
-    file's own author -- a Tally error body can hold anything.
+    The operator's console renders anything outside ASCII as mojibake.
+    Applied to both strings `main` prints -- `FORM_TITLE` is a local ASCII
+    constant and does not strictly need it, but `form_id` is API-controlled,
+    and escaping both unconditionally means this guarantee never depends on
+    remembering which of the two might someday not be ASCII.
     """
     return text.encode("ascii", "backslashreplace").decode("ascii")
 
@@ -454,7 +548,7 @@ def main(
         return 1
 
     verb = "created" if created else "updated"
-    print(f"{verb} form {form_id}: {_ascii(FORM_TITLE)}")
+    print(f"{verb} form {_ascii(form_id)}: {_ascii(FORM_TITLE)}")
     return 0
 
 

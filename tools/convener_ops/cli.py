@@ -21,7 +21,7 @@ from convener_ops.governance import paris_today
 from convener_ops.integrations import Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
-from convener_ops.proposal import skip_reason, to_lead, verify_signature
+from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
 from convener_ops.register import (
     LOG_FORMAT,
@@ -306,10 +306,15 @@ def handle_proposal() -> int:
     )
     if not isinstance(fields_list, list):
         fields_list = []
+    # field_value resolves a picker's chosen option id(s) against that
+    # field's own `options` array (R-9) -- without it, a DROPDOWN/
+    # MULTIPLE_CHOICE/CHECKBOXES/MULTI_SELECT answer's raw `value` is a list
+    # of ids, never the text `to_lead` compares against `GENDERS`/
+    # `CAREER_STAGES`, and every such answer would silently become
+    # "undisclosed". This is the one place in the repository that flattens
+    # a Tally field into `to_lead`'s `fields: dict[str, str]`.
     fields = {
-        f.get("label", ""): f.get("value", "")
-        for f in fields_list
-        if isinstance(f, dict)
+        f.get("label", ""): field_value(f) for f in fields_list if isinstance(f, dict)
     }
 
     root = repo_root()
