@@ -59,6 +59,7 @@ answer -- "none given" -- and is well formed.
 | `youtube_url` | string | Filled after delivery. |
 | `forum_thread` | string | Link to forum announcement thread. |
 | `runbook_progress` | map&lt;string,bool&gt; | Keys follow `phase/item` convention. See below. |
+| `checklist` | map&lt;string,block&gt; | Who owes each runbook item, keyed the same way as `runbook_progress`. Each block holds one field, `assignee`, a login. `{}` -- and an item with no entry -- means nobody in particular, which means the hosts; that is the default and is not a defect. Distinct from `assigned_to`, which is the board member who owns the *lead*: the two are never derived from one another. |
 | `metrics.registrations` | int \| null | Fill after delivery. |
 | `metrics.live_peak` | int \| null | Peak concurrent attendees. |
 | `metrics.youtube_views_30d` | int \| null | 30-day YouTube views. |
@@ -111,6 +112,19 @@ The state machine governs transitions. Statuses:
 Keys follow `phase/item` (e.g. `approved/hosts-decided`, `scheduled/T-14/zoom-link`).
 The phase definitions and gate semantics live in `app/src/state/phases.ts`.
 Checking the last gate of a phase auto-advances the speaker to the next status.
+
+`checklist` is keyed the same way, one entry per line somebody has been put
+down for:
+
+```yaml
+checklist:
+  scheduled/T-30/visuals:
+    assignee: ada
+```
+
+A line with no entry is nobody's in particular and stays the hosts'. Naming an
+owner has never been asked of anybody and is not asked for here either: the app
+raises no warning and no reminder over an empty checklist.
 
 ## `data/config.yml`
 
