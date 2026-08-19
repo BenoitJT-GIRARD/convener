@@ -18,19 +18,19 @@ coming along.
 
 ### T-30 days
 
-- [ ] Visuals + flyer made, from the [visual kit](../toolkit/visual-kit.md)
+- [ ] Visuals + flyer made — from the [visual kit](../toolkit/visual-kit.md)
 
 ### T-21 days
 
-- [ ] Speaker told the promotion is starting, before anything is posted
+- [ ] Speaker told the promotion is starting — before anything is posted
 - [ ] LinkedIn post published
 
 ### T-14 days
 
-- [ ] Meeting link in hand, and the recording arranged
+- [ ] Meeting link in hand, recording arranged
 - [ ] LinkedIn access in place
 - [ ] **Speaker registered on the forum and to their own talk**
-- [ ] One line per promotion channel — the list is `channels` in `data/config.yml`, so what you see is what the Board has set
+- [ ] One line per promotion channel — as many as there are entries in `channels` in `data/config.yml`, so what you see is what the Board has set
 
 ### T-7 days
 
