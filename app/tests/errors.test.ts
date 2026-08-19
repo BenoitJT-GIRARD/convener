@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { friendlyError } from '../src/github/errors';
+import { DateRejected } from '../src/state/dates';
 import { GitHubError } from '../src/github/client';
 import { ConflictError } from '../src/github/mutate';
 import { BallotRejected } from '../src/state/ballots';
@@ -37,6 +38,14 @@ describe('friendlyError', () => {
     // volunteer must read what to add, not "GitHub is not responding".
     const e = new BallotRejected('A recusal needs a written reason.');
     expect(friendlyError(e, 'save')).toBe('A recusal needs a written reason.');
+  });
+
+  it('relays a rejected date as the sentence it already is', () => {
+    // Reaching here means the rule fired inside a `mutate` transformation
+    // replayed against freshly-read data -- the moment the volunteer most
+    // needs to read that the speaker has not agreed to that evening.
+    const e = new DateRejected('2026-10-01 is not a date this speaker has accepted.');
+    expect(friendlyError(e, 'save')).toBe('2026-10-01 is not a date this speaker has accepted.');
   });
 
   it('maps 404 to a plain not-found message', () => {

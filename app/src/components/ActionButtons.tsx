@@ -10,12 +10,13 @@ import {
 } from '../state/transitions';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
-import { findOverlaps, nextEditionCode } from '../state/agenda';
+import { nextEditionCode } from '../state/agenda';
+import { DateRejected, answerDate, proposeDates } from '../state/dates';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';
 import { parisToday } from '../state/derived';
 import { formatDecision, identifier, transitionDecision } from '../state/decisions';
-import type { BallotValue, Speaker } from '../data/types';
+import type { BallotValue, DateAnswer, Speaker } from '../data/types';
 
 interface Props {
   speaker: Speaker;
@@ -132,14 +133,27 @@ export function ActionButtons({ speaker, role }: Props) {
     case 'invited':
       buttons.push(btn('Speaker accepted', 'invited-accept'));
       buttons.push(btn('Speaker declined', 'invited-decline', 'danger'));
+      // The dates are negotiated while the invitation is out: that is when
+      // the speaker replies with the evenings that suit them. Recording the
+      // replies here is what gives the lock-in something to choose among.
+      buttons.push(
+        <CandidateDates
+          key="dates"
+          speaker={speaker}
+          disabled={locked}
+          canLock={false}
+          onLock={NO_LOCK}
+        />,
+      );
       break;
     case 'confirmed':
       buttons.push(
-        <LockDateForm
-          key="lock"
+        <CandidateDates
+          key="dates"
           speaker={speaker}
           disabled={locked}
-          onSubmit={(d, e, t) => fire('lock-date', { date: d, edition_code: e, time: t })}
+          canLock
+          onLock={(d, e) => fire('lock-date', { date: d, edition_code: e })}
         />,
       );
       break;
@@ -284,50 +298,181 @@ function BallotForm({
   );
 }
 
-function LockDateForm({
+/** Locking is not on offer while the invitation is still out, so the panel
+ *  shown there is handed a callback it can never reach. */
+const NO_LOCK = () => {};
+
+/**
+ * The date negotiation, on screen: the slots offered, the speaker's reply to
+ * each, and -- only against a reply that says `accepted` -- the button that
+ * freezes one of them.
+ *
+ * There is no field to type a date into and lock. The lock-in takes a date
+ * out of this list or it does not happen, because `state/dates.ts` hands out
+ * an `AcceptedDate` for nothing else; the volunteer is never in a position to
+ * commit an outside researcher to an evening the record does not show them
+ * agreeing to.
+ *
+ * The clash check runs on the offer, before the button is enabled, and its
+ * sentence is the one `proposeDates` would throw with -- asked of the rule
+ * rather than written a second time here.
+ */
+function CandidateDates({
   speaker,
-  onSubmit,
   disabled,
+  canLock,
+  onLock,
 }: {
   speaker: Speaker;
-  onSubmit: (date: string, edition: string, time: string) => void;
   disabled: boolean;
+  canLock: boolean;
+  onLock: (date: string, edition: string) => void;
 }) {
-  const { speakers, config } = useData();
+  const { speakers, config, mutateSpeakers } = useData();
+  const { login } = useAuth();
   const [date, setDate] = useState('');
   const [time, setTime] = useState('12:30');
   const [edition, setEdition] = useState('');
-  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const today = parisToday();
+  const locked = disabled || busy || !login || !config;
 
-  function suggestEdition() {
-    if (!config) return;
-    setEdition(nextEditionCode(speakers, config.vw_counter));
+  const slots = speaker.candidate_dates.map(c => ({ date: c.date, time: c.time }));
+
+  // Asked of the rule, not restated: `proposeDates` is pure, so the offer
+  // about to be made is tried here on the values on screen and its refusal
+  // becomes the disabled reason. A volunteer reads why the date will not do
+  // before clicking, never after a failed save.
+  let blocker: string | null = null;
+  if (config && date) {
+    try {
+      proposeDates(speaker, [...slots, { date, time }], speakers, config.overlap_window_days, today);
+    } catch (e) {
+      if (!(e instanceof DateRejected)) throw e;
+      blocker = e.message;
+    }
   }
 
-  function attempt() {
-    setErr(null);
-    if (!date || !edition || !time || !config) return;
-    const hits = findOverlaps(date, speakers, config.overlap_window_days, speaker.id);
-    if (hits.length) {
-      const h = hits[0];
-      setErr(
-        `Overlap: ${h.speaker.edition_code || h.speaker.id} is on ${h.speaker.date} (${h.daysApart}d apart). Choose another date.`,
+  async function offer() {
+    if (locked || !config || !date || blocker) return;
+    setBusy(true);
+    try {
+      // Everything the transformation writes is read from `current`: the
+      // slots already offered come from the record as freshly read, not from
+      // the copy this component rendered, so a date offered from another
+      // browser in the meantime survives instead of being overwritten. Only
+      // the one new slot comes from the form -- it is what the volunteer has
+      // just typed and exists nowhere else.
+      await mutateSpeakers(
+        current =>
+          current.map(sp =>
+            sp.id === speaker.id
+              ? proposeDates(
+                  sp,
+                  [...sp.candidate_dates.map(c => ({ date: c.date, time: c.time })), { date, time }],
+                  current,
+                  config.overlap_window_days,
+                  today,
+                )
+              : sp,
+          ),
+        `data: ${speaker.id} propose ${date}`,
       );
-      return;
+      setDate('');
+    } finally {
+      setBusy(false);
     }
-    onSubmit(date, edition, time);
+  }
+
+  async function reply(slotDate: string, answer: DateAnswer) {
+    if (locked) return;
+    setBusy(true);
+    try {
+      await mutateSpeakers(
+        current =>
+          current.map(sp => (sp.id === speaker.id ? answerDate(sp, slotDate, answer).speaker : sp)),
+        `data: ${speaker.id} candidate ${slotDate}=${answer || 'unanswered'}`,
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   const titleMissing = !speaker.title || !speaker.abstract;
-  const formIncomplete = !date || !edition || !time;
-  const locked = disabled || formIncomplete || titleMissing;
 
   return (
     <div className="space-y-2 w-full">
+      <p className="text-xs font-mono uppercase text-ink-muted">Dates offered</p>
+      {speaker.candidate_dates.length === 0 && (
+        <p className="text-xs text-ink-muted italic">
+          No dates offered yet. Offer the ones the invitation proposes, then record what the
+          speaker replies.
+        </p>
+      )}
+      <ul className="space-y-1">
+        {speaker.candidate_dates.map(c => (
+          <li key={c.date} className="flex gap-2 items-center flex-wrap text-sm">
+            <span className="font-mono">
+              {c.date} {c.time}
+            </span>
+            <span
+              className={
+                c.answer === 'accepted'
+                  ? 'text-xs text-primary'
+                  : c.answer === 'declined'
+                    ? 'text-xs text-danger'
+                    : 'text-xs text-ink-muted italic'
+              }
+            >
+              {c.answer === 'accepted'
+                ? 'accepted by the speaker'
+                : c.answer === 'declined'
+                  ? 'declined by the speaker'
+                  : 'no reply yet'}
+            </span>
+            {c.answer !== 'accepted' && (
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => reply(c.date, 'accepted')}
+                className="text-xs text-primary-hover underline disabled:opacity-50"
+              >
+                they accepted
+              </button>
+            )}
+            {c.answer !== 'declined' && (
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => reply(c.date, 'declined')}
+                className="text-xs text-danger underline disabled:opacity-50"
+              >
+                they declined
+              </button>
+            )}
+            {canLock && c.answer === 'accepted' && (
+              <button
+                type="button"
+                disabled={locked || !edition || titleMissing}
+                onClick={() => onLock(c.date, edition)}
+                className="px-3 py-1 text-xs font-display font-bold tracking-widest uppercase bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Lock this date &rarr;
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+
       <div className="flex gap-2 items-center flex-wrap">
         <label className="flex items-center gap-1.5">
-          <span className="text-xs font-mono uppercase text-ink-muted">Date</span>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="px-2 py-1 text-sm" />
+          <span className="text-xs font-mono uppercase text-ink-muted">Offer date</span>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="px-2 py-1 text-sm"
+          />
         </label>
         <label className="flex items-center gap-1.5">
           <span className="text-xs font-mono uppercase text-ink-muted">Time (Paris)</span>
@@ -338,34 +483,45 @@ function LockDateForm({
             className="px-2 py-1 text-sm font-mono w-24"
           />
         </label>
-        <label className="flex items-center gap-1.5">
-          <span className="text-xs font-mono uppercase text-ink-muted">№</span>
-          <input
-            type="text"
-            placeholder="MRG-N"
-            value={edition}
-            onChange={e => setEdition(e.target.value)}
-            className="px-2 py-1 text-sm font-mono w-20"
-          />
-        </label>
-        <button onClick={suggestEdition} className="text-xs text-primary-hover underline" type="button">
-          suggest
-        </button>
         <button
-          disabled={locked}
-          onClick={attempt}
-          className="px-3 py-1.5 text-sm font-display font-bold tracking-widest uppercase bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
           type="button"
+          disabled={locked || !date || !time || !!blocker}
+          onClick={offer}
+          className="px-3 py-1.5 text-sm rounded border border-border text-ink-muted hover:text-ink disabled:opacity-50"
         >
-          Lock date →
+          Offer this date
         </button>
       </div>
-      {titleMissing && (
+
+      {canLock && (
+        <div className="flex gap-2 items-center flex-wrap">
+          <label className="flex items-center gap-1.5">
+            <span className="text-xs font-mono uppercase text-ink-muted">&#8470;</span>
+            <input
+              type="text"
+              placeholder="MRG-N"
+              value={edition}
+              onChange={e => setEdition(e.target.value)}
+              className="px-2 py-1 text-sm font-mono w-20"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => config && setEdition(nextEditionCode(speakers, config.vw_counter))}
+            className="text-xs text-primary-hover underline"
+          >
+            suggest
+          </button>
+        </div>
+      )}
+
+      {blocker && <p className="text-danger text-xs">{blocker}</p>}
+      {canLock && titleMissing && (
         <p className="text-xs text-danger italic">
-          Title and abstract are required before locking the date. Fill them in the checklist above.
+          Title and abstract are required before locking the date. Fill them in the checklist
+          above.
         </p>
       )}
-      {err && <p className="text-danger text-xs">{err}</p>}
     </div>
   );
 }

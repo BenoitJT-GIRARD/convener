@@ -8,6 +8,7 @@ import type {
 } from '../data/types';
 import { BallotRejected, castBallot, withdrawBallot } from './ballots';
 import { activeBoard, isBoardMember } from './board';
+import { DateRejected, acceptedDates, lockDate } from './dates';
 import { PublicationBlocked, canArchive, decide, standingObjections } from './governance';
 
 export type Role = 'board' | 'organizer';
@@ -30,10 +31,12 @@ export type Transition =
   | 'vote-reopen'
   | 'override';
 
+/** What the lock-in is applied with. There is no `time`: the hour comes from
+ *  the slot the speaker accepted (`state/dates.ts`), so a lock-in cannot name
+ *  an evening other than the one that was offered and agreed. */
 export interface LockDatePayload {
   date: string;
   edition_code: string;
-  time: string;
 }
 
 export interface OverridePayload {
@@ -230,14 +233,22 @@ export function applyTransition(
     case 'invited-decline':
       return { ...s, status: 'decline-speaker' };
     case 'lock-date': {
+      // The date is not taken from the payload and written: it is looked up
+      // among the ones this record says the speaker accepted, and only that
+      // lookup can produce the `AcceptedDate` that `lockDate` takes. A date
+      // the speaker never agreed to has no route through here -- see
+      // `state/dates.ts`. The lookup reads `s`, the value `mutate` handed
+      // this transformation, so a reply recorded between the read and the
+      // write is the one that decides.
       const p = payload as LockDatePayload;
-      return {
-        ...s,
-        status: 'scheduled',
-        date: p.date,
-        edition_code: p.edition_code,
-        time: p.time,
-      };
+      const accepted = acceptedDates(s).find(d => d === p.date);
+      if (!accepted) {
+        throw new DateRejected(
+          `${p.date} is not a date this speaker has accepted. Record their reply first -- ` +
+            'locking a date commits them to that evening.',
+        );
+      }
+      return lockDate(s, accepted, p.edition_code);
     }
     case 'finalize-archive': {
       // The single writer of `outcome: 'published'` in this codebase, and it
