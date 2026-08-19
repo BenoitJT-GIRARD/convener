@@ -144,6 +144,7 @@ def test_an_empty_string_is_kept_as_an_empty_string_not_as_none() -> None:
     assert blank["publication"]["consent"] == ""
     assert blank["links"] == []
     assert blank["runbook_progress"] == {}
+    assert blank["checklist"] == {}
     assert blank["selection"]["ballots"] == []
 
 
@@ -177,6 +178,29 @@ def test_proposed_by_and_assigned_to_are_two_fields_and_stay_two() -> None:
     assert full["assigned_to"] == "alice"
     assert full["assigned_to"] in _board_logins()
     assert full["proposed_by"] not in _board_logins()
+
+
+def test_the_item_owner_and_the_lead_owner_cross_as_two_separate_fields() -> None:
+    """The same defect one grain further down, pinned before it happens.
+
+    `assigned_to` is who owns the *lead*; `checklist[...]["assignee"]` is who
+    owes *one line of the runbook*. On `spk-103` they hold different logins,
+    so a writer -- on either side -- that derived one from the other could not
+    produce this file. `spk-101` carries an owner that is the empty string,
+    which is legal and means the same as no entry: nobody in particular.
+    """
+    full, blank, odd = _speakers()
+    assert odd["assigned_to"] == "bob"
+    assert odd["checklist"] == {"scheduled/T-21/linkedin": {"assignee": "erin"}}
+    assert full["checklist"]["scheduled/T-30/visuals"]["assignee"] == "ada"
+    assert full["checklist"]["delivered/forum-summary"]["assignee"] == ""
+    # A block map inside a block map, whose keys carry slashes: the one shape
+    # in the model nothing else has, and the indentation both writers have to
+    # agree on.
+    assert "\n".join(
+        ("  checklist:", "    scheduled/T-30/visuals:", "      assignee: ada")
+    ) in _text(SPEAKERS_FIXTURE)
+    assert blank["checklist"] == {}
 
 
 def test_a_multi_line_abstract_is_written_as_a_literal_block_by_both_sides() -> None:

@@ -83,6 +83,11 @@
   runbook_progress:
     approved/invitation-sent: true
     delivered/summary-posted: false
+  checklist:
+    scheduled/T-30/visuals:
+      assignee: ada
+    delivered/forum-summary:
+      assignee: ''
   metrics:
     registrations: 0
     live_peak: 60
@@ -128,6 +133,7 @@
   youtube_url: ''
   forum_thread: ''
   runbook_progress: {}
+  checklist: {}
   metrics:
     registrations: null
     live_peak: null
@@ -181,6 +187,9 @@
   youtube_url: ''
   forum_thread: ''
   runbook_progress: {}
+  checklist:
+    scheduled/T-21/linkedin:
+      assignee: erin
   metrics:
     registrations: 0
     live_peak: null

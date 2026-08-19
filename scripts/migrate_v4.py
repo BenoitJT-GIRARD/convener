@@ -1,15 +1,26 @@
 """One-shot migration of `data/speakers.yml` from schema v3 to schema v4.
 
-Schema v4 adds the five fields the checklists have always asked for and the
+Schema v4 adds the six fields the checklists have always asked for and the
 model never had, so they travelled by e-mail and were lost: a portrait, a
 short biography, a handle, the questions the speaker wants the discussion
-opened with, and the slots that were put to the speaker.
+opened with, the slots that were put to the speaker, and the name against
+each line of the journey.
 
 What it does, and the whole of what it does:
 
 1. every speaker gains `photo_url`, `bio`, `linkedin` and `seed_questions`
    as `''` when the key is absent;
-2. every speaker gains `candidate_dates` as `[]` when the key is absent.
+2. every speaker gains `candidate_dates` as `[]` when the key is absent;
+3. every speaker gains `checklist` as `{}` when the key is absent.
+
+`checklist` arrives empty and stays empty until somebody puts a name against
+a line. That is not an unfinished migration: a line with no owner is the
+hosts', which is exactly what every line meant before this field existed, so
+an empty checklist is the migration preserving today's behaviour rather than
+declining to guess at one. Nothing here reads `assigned_to` to fill it --
+that is the board member who owns the *lead*, a different notion at a
+different grain, and deriving one from the other is the defect phase 2 paid
+for.
 
 What it deliberately does not do: it never overwrites a key that is already
 there, and it never touches `publication.consent`. Asking the speakers for
@@ -58,6 +69,13 @@ LIST_AFTER: dict[str, tuple[str, ...]] = {
     "edition_code": ("candidate_dates",),
 }
 
+#: `checklist` says who owes each line of the runbook, so it sits directly
+#: after `runbook_progress`, which says whether each line is done. The two
+#: are read together on every screen that shows a journey.
+MAP_AFTER: dict[str, tuple[str, ...]] = {
+    "runbook_progress": ("checklist",),
+}
+
 #: Every key this migration may add, with the empty value it adds. Nothing
 #: outside this mapping is written.
 NEW_FIELDS: dict[str, Any] = {
@@ -66,14 +84,20 @@ NEW_FIELDS: dict[str, Any] = {
     "linkedin": "",
     "seed_questions": "",
     "candidate_dates": [],
+    "checklist": {},
 }
 
 
 def _empty(field: str) -> Any:
     value = NEW_FIELDS[field]
-    # A fresh list per speaker: a shared mutable default would give all 31
-    # records the same object, and one later edit would appear in all of them.
-    return list(value) if isinstance(value, list) else value
+    # A fresh container per speaker: a shared mutable default would give all
+    # 31 records the same object, and one later edit would appear in all of
+    # them.
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, dict):
+        return dict(value)
+    return value
 
 
 def migrate_speaker(speaker: dict[str, Any]) -> dict[str, Any]:
@@ -86,7 +110,11 @@ def migrate_speaker(speaker: dict[str, Any]) -> dict[str, Any]:
     migrated: dict[str, Any] = {}
     for key, value in speaker.items():
         migrated[key] = value
-        for field in (*TEXT_AFTER.get(key, ()), *LIST_AFTER.get(key, ())):
+        for field in (
+            *TEXT_AFTER.get(key, ()),
+            *LIST_AFTER.get(key, ()),
+            *MAP_AFTER.get(key, ()),
+        ):
             if field not in speaker:
                 migrated[field] = _empty(field)
 

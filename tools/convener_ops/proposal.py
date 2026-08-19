@@ -221,6 +221,9 @@ def to_lead(
         "youtube_url": "",
         "forum_thread": "",
         "runbook_progress": {},
+        # Nobody is down for any line yet, and nobody has to be: an item with
+        # no owner is the hosts', which is what every line has always meant.
+        "checklist": {},
         "metrics": {
             "registrations": None,
             "live_peak": None,

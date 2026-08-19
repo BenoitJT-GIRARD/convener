@@ -78,7 +78,8 @@ PUBLISHABLE_ON_CONSENT = frozenset(
 #: person (`email`), attributes collected for an aggregate (`gender`,
 #: `career_stage`), the team's own working record of how a decision was
 #: reached -- including `publication` itself, which this module reads and
-#: never emits -- and `host_1`/`host_2`, who are other people. A speaker's
+#: never emits -- and `host_1`/`host_2` plus `checklist`, which are other
+#: people: the second names one volunteer per line of the runbook. A speaker's
 #: consent cannot answer for a volunteer, so a field naming one can never be
 #: unlocked by this gate.
 NEVER_PUBLISHED = frozenset(
@@ -97,6 +98,7 @@ NEVER_PUBLISHED = frozenset(
         "publication",
         "candidate_dates",
         "runbook_progress",
+        "checklist",
         "metrics",
         "notes",
     }

@@ -1904,6 +1904,7 @@
       "publication",
       "candidate_dates",
       "runbook_progress",
+      "checklist",
       "metrics",
       "notes"
     ]

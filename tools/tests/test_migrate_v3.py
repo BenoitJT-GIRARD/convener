@@ -247,7 +247,14 @@ def test_migrating_the_config_twice_changes_nothing() -> None:
 # --- the two halves together ----------------------------------------------
 
 
-V4_FIELDS = ("photo_url", "bio", "linkedin", "seed_questions", "candidate_dates")
+V4_FIELDS = (
+    "photo_url",
+    "bio",
+    "linkedin",
+    "seed_questions",
+    "candidate_dates",
+    "checklist",
+)
 
 
 def test_the_migrated_data_passes_the_validator() -> None:
@@ -255,7 +262,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
 
     The gap is named rather than tolerated: the errors this asserts are the
     exhaustive list of what schema v4 asks for and the v3 migration cannot
-    know about -- the five fields that were never in a v2 file to migrate.
+    know about -- the six fields that were never in a v2 file to migrate.
     Anything else the validator finds still fails here.
 
     The gap is no longer open: `scripts/migrate_v4.py` closes it, and the

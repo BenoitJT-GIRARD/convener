@@ -108,6 +108,9 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "youtube_url": "",
         "forum_thread": "",
         "runbook_progress": {},
+        # Nobody down for any line, which is the state every record starts in
+        # and most lines stay in.
+        "checklist": {},
         "metrics": {
             "registrations": None,
             "live_peak": None,

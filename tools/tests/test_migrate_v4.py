@@ -113,6 +113,29 @@ def test_each_speaker_gets_its_own_candidate_dates_list() -> None:
     assert second["candidate_dates"] == []
 
 
+def test_the_checklist_is_added_empty() -> None:
+    # Empty is the whole of it. A line nobody is down for is the hosts', which
+    # is exactly what every line meant before this field existed, so the
+    # migration preserves today's behaviour rather than guessing at an owner.
+    assert migrate_speaker(v3_speaker())["checklist"] == {}
+
+
+def test_the_checklist_is_never_filled_in_from_the_lead_owner() -> None:
+    # `assigned_to` is the board member who owns the lead; an item owner is
+    # who owes one line of the runbook. Two notions, two fields, and the
+    # migration derives neither from the other -- the phase 2 defect that lost
+    # `proposed_by` started as exactly this kind of convenience.
+    migrated = migrate_speaker(v3_speaker(assigned_to="Anonymous", host_1="Anonymous"))
+    assert migrated["checklist"] == {}
+    assert migrated["assigned_to"] == "Anonymous"
+
+
+def test_each_speaker_gets_its_own_checklist() -> None:
+    first, second = migrate_speakers([v3_speaker(), v3_speaker(id="spk-002")])
+    first["checklist"]["scheduled/T-30/visuals"] = {"assignee": "Anonymous"}
+    assert second["checklist"] == {}
+
+
 def test_consent_is_not_touched() -> None:
     # Asking the 31 speakers for their consent is a human act; the migration
     # has no business deciding it, not even for a speaker who never delivered.
@@ -140,6 +163,11 @@ def test_an_existing_value_is_never_overwritten() -> None:
         linkedin="Anonymous-Anonymous",
         seed_questions="What first drew you to the model?",
         candidate_dates=[{"date": "2026-06-01", "time": "12:30", "answer": ""}],
+        # A name already put against a line of the runbook. The migration
+        # must not read it as an absence and blank it: `assignee` is who owes
+        # that line, and it is not derived from anything -- least of all from
+        # `assigned_to`, which is who owns the lead.
+        checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}},
     )
     migrated = migrate_speaker(before)
     for field in NEW_FIELDS:
@@ -169,6 +197,9 @@ def test_the_migrated_keys_keep_the_order_of_the_type() -> None:
     assert keys.index("linkedin") == keys.index("bio") + 1
     assert keys.index("seed_questions") == keys.index("abstract") + 1
     assert keys.index("candidate_dates") == keys.index("edition_code") + 1
+    # Who owes each line sits directly after whether each line is done: the
+    # two are read together on every screen that shows a journey.
+    assert keys.index("checklist") == keys.index("runbook_progress") + 1
 
 
 def test_a_speaker_missing_the_usual_anchors_still_gains_every_field() -> None:
@@ -203,9 +234,11 @@ def test_a_re_run_does_not_blank_a_field_someone_filled_in_since() -> None:
     once[0]["candidate_dates"] = [
         {"date": "2026-06-01", "time": "12:30", "answer": "accepted"}
     ]
+    once[0]["checklist"] = {"scheduled/T-30/visuals": {"assignee": "Anonymous"}}
     twice = migrate_speakers(once)
     assert twice[0]["bio"] == "Written by a volunteer after the migration."
     assert twice[0]["candidate_dates"][0]["answer"] == "accepted"
+    assert twice[0]["checklist"] == {"scheduled/T-30/visuals": {"assignee": "Anonymous"}}
 
 
 # --- the migration against the validator ----------------------------------

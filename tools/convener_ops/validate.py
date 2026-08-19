@@ -52,6 +52,14 @@ PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
 #: line on the read side.
 SPEAKER_TEXT_V4 = ("photo_url", "bio", "linkedin", "seed_questions")
 CANDIDATE_DATE_KEYS = frozenset({"date", "time", "answer"})
+#: What one line of the journey may say about itself. `assignee` is who owes
+#: that line -- not `assigned_to`, which is the board member who owns the
+#: lead. The two are different notions at different grains, they are never
+#: derived from one another, and this validator checks each against its own
+#: rule: `assigned_to` has to be a sitting board member, an item owner does
+#: not, because a line of a runbook can be owed by a host who never sat on
+#: the board.
+CHECKLIST_ITEM_KEYS = frozenset({"assignee"})
 #: What a speaker has said about one proposed slot. There is no 'pending' and
 #: no fourth value: an answer that has not come back is '', and nothing here
 #: can be read as a soft yes by the transition that locks the date in.
@@ -103,6 +111,47 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 EDITION_RE = re.compile(r"^MRG-\d+$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
+
+
+def _validate_checklist(checklist: Any, where: str) -> list[str]:
+    """Validate `Speaker.checklist` - who owes each line of the journey.
+
+    `{}` is the normal state and never an error: naming an owner is not
+    something the series has ever asked of anybody, and a line nobody is down
+    for stays the hosts' - which is the behaviour the app has always had. The
+    key itself is required all the same, as every other field is, because
+    `app/src/data/validate.ts` refuses a record with a key missing and the
+    two sides have to agree about what a complete record is. `{}` is the
+    answer "nobody is down for anything"; an absent key is a record nobody
+    finished.
+
+    What is checked is the shape of what is there: a mapping of runbook item
+    to a block carrying an `assignee`, and nothing else. The item keys are
+    free-form on purpose - they follow the runbook (`app/src/state/
+    phases.ts`), which changes - so only the block is constrained.
+    """
+    errors: list[str] = []
+    if not isinstance(checklist, dict):
+        errors.append(f"{where}.checklist: must be a mapping")
+        return errors
+
+    for item, entry in checklist.items():
+        iwhere = f"{where}.checklist[{item!r}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{iwhere}: not a mapping")
+            continue
+        extra = set(entry) - CHECKLIST_ITEM_KEYS
+        if extra:
+            errors.append(f"{iwhere}: unknown keys {sorted(extra)}")
+        if "assignee" not in entry:
+            errors.append(f"{iwhere}: missing assignee")
+            continue
+        assignee = entry["assignee"]
+        if not isinstance(assignee, str):
+            errors.append(f"{iwhere}: assignee must be a string")
+        elif assignee and not LOGIN_RE.match(assignee):
+            errors.append(f"{iwhere}: invalid assignee {assignee!r}")
+    return errors
 
 
 def _validate_objections(objections: Any, where: str) -> list[str]:
@@ -369,6 +418,11 @@ def validate_speakers(
                 errors.append(f"{where}: missing {key}")
             elif not isinstance(entry[key], str):
                 errors.append(f"{where}: {key} must be a string")
+
+        if "checklist" not in entry:
+            errors.append(f"{where}: missing checklist")
+        else:
+            errors.extend(_validate_checklist(entry["checklist"], where))
 
         if "candidate_dates" not in entry:
             errors.append(f"{where}: missing candidate_dates")

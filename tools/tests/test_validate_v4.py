@@ -28,8 +28,8 @@ from convener_ops.validate import DATE_ANSWERS, SPEAKER_TEXT_V4, validate_speake
 
 BOARD = frozenset({"Anonymous"})
 
-#: The five fields schema v4 adds, as a volunteer would name them.
-NEW_FIELDS = (*SPEAKER_TEXT_V4, "candidate_dates")
+#: The six fields schema v4 adds, as a volunteer would name them.
+NEW_FIELDS = (*SPEAKER_TEXT_V4, "candidate_dates", "checklist")
 
 
 def _slot(**overrides: Any) -> dict[str, Any]:
@@ -164,3 +164,82 @@ class TestCandidateDates:
         errors = validate_speakers([entry], BOARD)
         assert any("candidate_dates[1]" in e for e in errors), errors
         assert not any("candidate_dates[0]" in e for e in errors), errors
+
+
+class TestChecklist:
+    """Who owes each line of the journey.
+
+    The rule the rest of this module states -- absent is a defect, empty is
+    an answer -- holds here too, and the answer that matters is `{}`: nobody
+    is down for anything. That is not an unfinished record. It is what every
+    record has always been, because until now the app knew about two hosts
+    and nothing else, and it is where every line stays until somebody
+    chooses otherwise.
+    """
+
+    def test_an_empty_checklist_is_the_normal_state(self) -> None:
+        assert validate_speakers([speaker(checklist={})], BOARD) == []
+
+    def test_a_named_owner_is_accepted(self) -> None:
+        entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}})
+        assert validate_speakers([entry], BOARD) == []
+
+    def test_an_item_owner_is_not_checked_against_the_board(self) -> None:
+        # `assigned_to` has to be a sitting board member; an item owner does
+        # not, and the two rules are deliberately different. A line of a
+        # runbook is often owed by a host who never sat on the board, and
+        # making one field answer to the other's rule is the first step
+        # towards making one field answer to the other's value.
+        entry = speaker(
+            assigned_to="Anonymous",
+            checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}},
+        )
+        assert "Anonymous" not in BOARD
+        assert validate_speakers([entry], BOARD) == []
+
+    def test_a_blank_owner_is_an_answer(self) -> None:
+        entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": ""}})
+        assert validate_speakers([entry], BOARD) == []
+
+    def test_a_missing_checklist_is_reported(self) -> None:
+        entry = speaker()
+        del entry["checklist"]
+        errors = validate_speakers([entry], BOARD)
+        assert any("missing checklist" in e for e in errors), errors
+
+    def test_a_checklist_that_is_not_a_mapping_is_reported(self) -> None:
+        errors = validate_speakers([speaker(checklist=["Anonymous"])], BOARD)
+        assert any("checklist: must be a mapping" in e for e in errors), errors
+
+    def test_a_bare_name_where_a_block_belongs_is_reported(self) -> None:
+        entry = speaker(checklist={"scheduled/T-30/visuals": "Anonymous"})
+        errors = validate_speakers([entry], BOARD)
+        assert any("not a mapping" in e for e in errors), errors
+
+    def test_a_line_with_no_owner_key_at_all_is_reported(self) -> None:
+        entry = speaker(checklist={"scheduled/T-30/visuals": {}})
+        errors = validate_speakers([entry], BOARD)
+        assert any("missing assignee" in e for e in errors), errors
+
+    def test_a_key_this_app_does_not_use_is_reported(self) -> None:
+        entry = speaker(
+            checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous", "due": "soon"}}
+        )
+        errors = validate_speakers([entry], BOARD)
+        assert any("unknown keys ['due']" in e for e in errors), errors
+
+    def test_an_owner_that_is_not_a_login_is_reported(self) -> None:
+        entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": "e mma"}})
+        errors = validate_speakers([entry], BOARD)
+        assert any("invalid assignee" in e for e in errors), errors
+
+    def test_the_line_that_is_wrong_is_named(self) -> None:
+        entry = speaker(
+            checklist={
+                "scheduled/T-30/visuals": {"assignee": "Anonymous"},
+                "scheduled/T-21/linkedin": {"assignee": 7},
+            }
+        )
+        errors = validate_speakers([entry], BOARD)
+        assert any("'scheduled/T-21/linkedin'" in e for e in errors), errors
+        assert not any("'scheduled/T-30/visuals'" in e for e in errors), errors
