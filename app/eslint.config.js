@@ -66,11 +66,12 @@ export default defineConfig([
           // the exception below. The source walk in
           // `app/tests/decisions.test.ts` is the third net, over the text
           // rather than the types.
-          selector: "TSAsExpression > TSTypeReference > Identifier[name='Subject']",
+          selector:
+            "TSAsExpression > TSTypeReference > Identifier[name=/^(Subject|Identifier|ItemKey|FieldKey)$/]",
           message:
             'A commit subject is permanent and unrewritable: build it with ' +
             'formatDecision() or dataEdit() in src/state/decisions.ts rather ' +
-            'than casting a string to Subject.',
+            'than casting a string to Subject, Identifier, ItemKey or FieldKey.',
         },
       ],
     },
