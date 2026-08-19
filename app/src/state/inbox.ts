@@ -134,20 +134,18 @@ export function deriveInbox(
     // ── scheduled: checkbox items in their T-window
     if (s.status === 'scheduled' && s.date) {
       const days = daysBetween(today, s.date);
-      // A checkbox with no window of its own is due in the window of the
-      // line it follows. `channelItem` carries none deliberately -- where the
-      // promotion lines fall is the phase's placement, not the channel's --
-      // and `phaseItems` returns the journey in order, with the channels
-      // spliced in after the line `channelsAfter` names. Reading the window
-      // off that position is what the placement means. Without it the seven
-      // places an event is announced are the only lines of the journey that
-      // never reach anybody's inbox, and an unowned channel -- the default --
-      // is visible nowhere but the speaker page.
-      let placed: number | undefined;
+      // Every line of this phase is due in a window, the promotion channels
+      // included: `phaseItems` lends each channel the window of the line it
+      // is spliced after, because where the promotion lines fall is the
+      // phase's placement and not the channel's. That used to be worked out
+      // here, which made this the only screen that knew it -- the record
+      // page showed the same line with no window at all. Without a window
+      // the seven places an event is announced are the only lines of the
+      // journey that never reach anybody's inbox, and an unowned channel --
+      // the default -- is visible nowhere but the speaker page.
       for (const item of phaseItems(phase, config)) {
-        if (item.window !== undefined) placed = item.window;
         if (item.form !== 'checkbox') continue;
-        const window = item.window ?? placed;
+        const window = item.window;
         if (window === undefined) continue;
         if (s.runbook_progress[item.key]) continue;
         if (itemAssignee(s, item.key) !== '') continue;
@@ -168,6 +166,12 @@ export function deriveInbox(
     if (s.status === 'delivered') {
       for (const item of phaseItems(phase, config)) {
         if (!item.required) continue;
+        // Owned lines leave this list, exactly as they do in the scheduled
+        // branch above: a line with a name against it is that person's, and
+        // `itemsWaitingFor` raises it there -- for field lines as well as
+        // checkbox ones. Raising it here too would put it in front of
+        // everybody, which is what "nobody in particular" is supposed to
+        // mean and this is not.
         if (itemAssignee(s, item.key) !== '') continue;
         if (item.form === 'field' && item.fieldKey) {
           const val = fieldValue(s, item.fieldKey);

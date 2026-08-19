@@ -27,6 +27,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { PHASES, phaseItems } from '../src/state/phases';
+import { channelItem, channelsOf } from '../src/state/channels';
 import type { RunbookItem } from '../src/state/phases';
 import { config as double } from './data-doubles';
 
@@ -43,6 +44,13 @@ const SCHEDULED = PHASES.find(p => p.status === 'scheduled')!;
  *  test double's, so the number of channels the Board happens to have set
  *  today cannot change what this test asserts. */
 const ITEMS: RunbookItem[] = phaseItems(SCHEDULED, double());
+
+/** The channel lines, which the page stands in for with `CHANNELS_LINE`
+ *  rather than restating. They now carry the window they are placed in --
+ *  that is what puts them in the inbox and on the record page under the same
+ *  name -- so the step comparison below has to leave them out explicitly
+ *  instead of relying on them having no window at all. */
+const CHANNEL_KEYS = new Set(channelsOf(double()).map(c => channelItem(c).key));
 
 /** The windows the countdown covers: everything before the day itself. The
  *  `T-0` lines are the recording sequence, which the handbook keeps on the
@@ -89,7 +97,9 @@ describe('the preparation countdown and the journey the app runs', () => {
 
   it.each(WINDOWS)('lists the steps of T-%d, in order and word for word', window => {
     const section = countdown().find(s => s.window === window)!;
-    const expected = ITEMS.filter(i => i.window === window).map(i => i.label);
+    const expected = ITEMS.filter(i => i.window === window && !CHANNEL_KEYS.has(i.key)).map(
+      i => i.label,
+    );
     const listed = section.lines.filter(l => !l.startsWith(CHANNELS_LINE)).map(step);
     expect(listed).toEqual(expected);
   });

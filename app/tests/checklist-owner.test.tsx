@@ -10,7 +10,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Checklist } from '../src/components/Checklist';
-import { speaker } from './data-doubles';
+import { deriveInbox } from '../src/state/inbox';
+import { speaker, config } from './data-doubles';
 
 const VISUALS = 'scheduled/T-30/visuals';
 
@@ -97,6 +98,63 @@ describe('the owner of a journey line', () => {
     // to nobody without anyone choosing that.
     renderChecklist(scheduled({ [VISUALS]: { assignee: 'erin' } }));
     expect((screen.getAllByRole('combobox')[0] as HTMLSelectElement).value).toBe('erin');
+  });
+
+  it('gives a promotion channel the same name on both screens', () => {
+    // The record page and the inbox walk the same journey and used to name
+    // the same line differently: `Forum announcement` here, always
+    // tickable, and `Forum announcement (T-14)` in the inbox, withheld
+    // until its window opened. The window was derived in the inbox alone.
+    // It is `phaseItems` that lends a channel the window of the line it is
+    // spliced after, so both screens read the one answer.
+    const cfg = config({ channels: [{ key: 'forum', label: 'Forum announcement' }] });
+    const s = speaker({
+      status: 'scheduled',
+      date: '2026-09-01',
+      time: '12:30',
+      edition_code: 'MRG-1',
+      host_1: 'ada',
+    });
+    render(
+      <Checklist
+        speaker={s}
+        onToggle={() => {}}
+        onField={() => {}}
+        config={cfg}
+        today="2026-08-20"
+      />,
+    );
+    const inboxLabel = deriveInbox([s], cfg, 'ada', 'organizer', '2026-08-20')
+      .map(r => r.label)
+      .find(l => l.startsWith('Forum announcement'));
+    expect(inboxLabel).toBe('Forum announcement (T-14)');
+    expect(screen.getByText(inboxLabel!)).toBeTruthy();
+  });
+
+  it('shows no control for a name left under a channel the config no longer has', () => {
+    // What `docs/reference/schema.md` says about removing a channel: the
+    // owner already written under `promotion/<key>` stays in the file, on a
+    // line no screen shows -- so there is nothing here offering to clear it,
+    // and the appendix says which route does. The page used to claim the
+    // entry "can still be cleared", which is the shape of overclaim this
+    // branch spent three findings removing.
+    const cfg = config({ channels: [{ key: 'forum', label: 'Forum announcement' }] });
+    render(
+      <Checklist
+        speaker={speaker({
+          status: 'scheduled',
+          date: '2026-09-01',
+          checklist: { 'promotion/gone': { assignee: 'ada' } },
+        })}
+        onToggle={() => {}}
+        onField={() => {}}
+        onAssign={() => {}}
+        people={['ada']}
+        config={cfg}
+        today="2026-08-20"
+      />,
+    );
+    expect(document.body.textContent).not.toContain('promotion/gone');
   });
 
   it('is simply absent on a screen with no writer', () => {

@@ -90,13 +90,19 @@ export function channelsOf(config: Config): Channel[] {
  * out of it: the words a volunteer reads would stop being editable in the
  * file.
  *
- * No `window`: when the promotion lines fall relative to the event is where
- * the phase places them, not something a channel carries.
+ * The `window` is not the channel's: when the promotion lines fall relative
+ * to the event is where the phase places them, so it is `phaseItems` that
+ * reads it off the placement and hands it in here. It is carried on the item
+ * all the same, rather than worked out again by each screen, because two
+ * screens that each derive it are two screens that can disagree -- and did:
+ * the record page showed `Forum announcement`, always ticked-able, while the
+ * inbox said `Forum announcement (T-14)` and withheld it until T-14.
  */
-export function channelItem(channel: Channel): RunbookItem {
+export function channelItem(channel: Channel, window?: number): RunbookItem {
   return {
     key: `${CHANNEL_ITEM_PREFIX}${channel.key}`,
     form: 'checkbox',
     label: channel.label,
+    ...(window === undefined ? {} : { window }),
   };
 }

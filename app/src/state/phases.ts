@@ -453,7 +453,17 @@ export function phaseItems(phase: PhaseDef, config: Config | null): RunbookItem[
   }
   if (phase.channelsAfter === undefined || config === null) return items;
   const after = items.findIndex(item => item.key === phase.channelsAfter);
-  items.splice(after + 1, 0, ...channelsOf(config).map(channelItem));
+  // A channel carries no window of its own -- where the promotion lines fall
+  // is the phase's placement, not the channel's -- so the line they are
+  // spliced after lends them its own. Reading the window off the position is
+  // what the position means, and it is read here, once, rather than in each
+  // screen that walks the journey: the inbox derived it and the record page
+  // did not, so the same line read `Forum announcement (T-14)` in one place
+  // and `Forum announcement` in the other.
+  const placed = items
+    .slice(0, after + 1)
+    .reduce<number | undefined>((window, item) => item.window ?? window, undefined);
+  items.splice(after + 1, 0, ...channelsOf(config).map(c => channelItem(c, placed)));
   return items;
 }
 

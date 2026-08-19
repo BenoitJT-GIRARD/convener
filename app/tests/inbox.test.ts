@@ -271,6 +271,36 @@ describe('deriveInbox v2', () => {
     );
   });
 
+  it('leaves a delivered line somebody is named on to that person too', () => {
+    // The same rule as the scheduled branch, in the branch that was written
+    // without a test: a required wrap-up line with an owner is raised by
+    // `itemsWaitingFor` and must not also stand in the list of what is
+    // nobody's. Deleting the skip in the `delivered` branch of `inbox.ts`
+    // left all 961 tests green before this.
+    const owned = mk({
+      status: 'delivered' as SpeakerStatus,
+      date: '2026-05-01',
+      edition_code: 'MRG-1',
+      time: '12:30',
+      checklist: { 'delivered/forum-summary': { assignee: 'alice' } },
+    });
+    const labels = deriveInbox([owned], CFG, 'alice', 'organizer', '2026-05-23').map(r => r.label);
+    expect(labels).not.toContain('Forum summary posted');
+    expect(itemsWaitingFor([owned], 'alice', CFG).map(w => w.item.key)).toContain(
+      'delivered/forum-summary',
+    );
+    // Unowned, the same line is everybody's and is raised.
+    const unowned = mk({
+      status: 'delivered' as SpeakerStatus,
+      date: '2026-05-01',
+      edition_code: 'MRG-1',
+      time: '12:30',
+    });
+    expect(deriveInbox([unowned], CFG, 'alice', 'organizer', '2026-05-23').map(r => r.label)).toContain(
+      'Forum summary posted',
+    );
+  });
+
   it('leaves the record exactly as it found it', () => {
     const before = JSON.stringify(baseSpk);
     deriveInbox([baseSpk], CFG, 'alice', 'board', '2026-05-23');
