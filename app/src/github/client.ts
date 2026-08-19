@@ -1,4 +1,4 @@
-const REPO = 'example-instance/workshop-series';
+const REPO = 'example-instance/example-cockpit';
 
 export class GitHubError extends Error {
   status: number;

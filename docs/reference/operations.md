@@ -36,7 +36,7 @@ fully usable; onboarding is simply slower.
 
 **To create:**
 1. Register a GitHub App in the organisation. Permissions: *Contents: read &
-   write*, *Issues: read & write*, on `workshop-series` only. Enable device
+   write*, *Issues: read & write*, on `example-cockpit` only. Enable device
    flow.
 2. Create a Cloudflare account with the organisation address; deploy the
    worker from `services/auth-proxy/` (`npx wrangler deploy` from that
@@ -175,7 +175,7 @@ repository still needs to know they exist and where they live.
   (`.github/workflows/publish-vitrine.yml`) uses to push the public events
   feed there. Without it the workflow logs a message and exits cleanly —
   no vitrine publish happens, nothing else breaks. Set as a repository
-  secret on `workshop-series`.
+  secret on `example-cockpit`.
 - **`CLOUDFLARE_API_TOKEN`** — already introduced above under
   *Authentication relay*: used by *Deploy auth relay* to deploy the
   worker in `services/auth-proxy/`. Listed again here because it is the

@@ -20,7 +20,7 @@ events. Everything a volunteer needs sits inside the app.
 ```bash
 cd app
 npm install
-npm run dev           # http://localhost:5173/workshop-series/
+npm run dev           # http://localhost:5173/example-cockpit/
 ```
 
 You'll be prompted for a GitHub fine-grained PAT scoped to this repository

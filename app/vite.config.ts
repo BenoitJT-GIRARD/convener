@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/workshop-series/',
+  base: '/example-cockpit/',
   build: { outDir: 'dist' },
   test: {
     environment: 'jsdom',

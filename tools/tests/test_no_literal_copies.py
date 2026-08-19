@@ -209,7 +209,7 @@ def test_a_fenced_block_shared_by_two_pages_is_not_a_copy() -> None:
     """
     command = (
         "uv run convener-register --check --verbose --repository "
-        "example-instance/workshop-series --since 2026-01-01 --until 2026-12-31"
+        "example-instance/example-cockpit --since 2026-01-01 --until 2026-12-31"
     )
     assert len(normalise(command)) >= MIN_DUPLICATE_CHARS
     fenced = "\n".join(["# Page", "", "```bash", command, "```", ""])

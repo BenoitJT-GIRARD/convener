@@ -15,7 +15,7 @@ describe('gh', () => {
     const out = await gh('/contents/foo.yml', { token: 'tok', method: 'GET' });
     expect(out).toEqual({ hello: 'world' });
     const [url, opts] = fetchSpy.mock.calls[0];
-    expect(url).toBe('https://api.github.com/repos/example-instance/workshop-series/contents/foo.yml');
+    expect(url).toBe('https://api.github.com/repos/example-instance/example-cockpit/contents/foo.yml');
     expect(opts.headers.Authorization).toBe('Bearer tok');
   });
 

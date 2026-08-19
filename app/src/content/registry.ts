@@ -7,7 +7,7 @@ export interface ContentEntry {
 
 /** The repository the handbook is kept in. Both the "edit this page" link and
  *  the attribution line under an included passage are built from it. */
-export const REPO_URL = 'https://github.com/example-instance/workshop-series';
+export const REPO_URL = 'https://github.com/example-instance/example-cockpit';
 
 export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // governance
