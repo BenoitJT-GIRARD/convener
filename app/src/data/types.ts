@@ -73,6 +73,30 @@ export interface ChecklistAssignee {
   assignee: string;
 }
 
+/**
+ * One place an event gets announced.
+ *
+ * Promoting a workshop means posting it in several places -- the community
+ * forum, LinkedIn, mailing lists, institute newsletters, printed posters --
+ * and the app knew about two of them while the volunteers' own checklist
+ * runs to seven. The seven are *configuration*, not a constant: whether
+ * they are still the right seven cannot be confirmed without asking the
+ * collaborators, which this project never does, so the list lives in
+ * `data/config.yml` and a channel is added, renamed or dropped without a
+ * line of TypeScript changing.
+ *
+ * `key` is what the record stores -- it becomes the checklist key an owner
+ * is written against, so renaming it re-keys existing records and is a
+ * migration, not an edit. `label` is what a volunteer reads, and changing it
+ * costs nothing. The two are separate fields for exactly that reason.
+ *
+ * `state/channels.ts::channelsOf` is the only way to reach the list.
+ */
+export interface Channel {
+  key: string;
+  label: string;
+}
+
 export interface SpeakerMetrics {
   registrations: number | null;
   live_peak: number | null;
@@ -296,4 +320,8 @@ export interface Config {
     summary_after_delivery: number;
     recording_after_delivery: number;
   };
+  /** Where an event is announced, in the order the volunteers work through
+   *  them. Read only through `state/channels.ts::channelsOf`; an empty list
+   *  is a legal answer and means nothing is promoted through this app. */
+  channels: Channel[];
 }

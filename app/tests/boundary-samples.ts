@@ -50,6 +50,13 @@
  *   `assigned_to` already stand for, one grain further down.
  * - `SPEAKERS[0].checklist` carrying an `assignee: ''`: legal, and the same
  *   fact as no entry at all -- nobody in particular, which is the hosts.
+ * - `CONFIG.channels`, three of them and not seven: the list is
+ *   configuration, and a fixture with the seven of today would be the
+ *   boundary asserting a number the file is free to change. A key with an
+ *   underscore and a key with a hyphen, since both reach `speakers.yml` as
+ *   checklist keys, and a label carrying an apostrophe and accents -- the
+ *   apostrophe being what decides between a plain and a quoted scalar, on a
+ *   field of `config.yml` rather than of `speakers.yml`.
  */
 import type { Config, Speaker } from '../src/data/types';
 
@@ -234,6 +241,11 @@ export const CONFIG: Config = {
     summary_after_delivery: 7,
     recording_after_delivery: 14,
   },
+  channels: [
+    { key: 'forum', label: 'The Example Collective forum' },
+    { key: 'linkedin_page', label: "Page LinkedIn de l'équipe TEC" },
+    { key: 'posters-institutes', label: 'Affiches imprimées dans les instituts' },
+  ],
 };
 
 /** The board `speakers-from-app.yml` is validated against, taken from the

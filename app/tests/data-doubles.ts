@@ -40,6 +40,13 @@ export function config(overrides: Partial<Config> = {}): Config {
       summary_after_delivery: 7,
       recording_after_delivery: 14,
     },
+    // Two, where `data/config.yml` lists seven: a double that restated the
+    // seven would make every screen test depend on a list this task exists
+    // to leave editable. A test about the channels states its own.
+    channels: [
+      { key: 'forum', label: 'The Example Collective forum' },
+      { key: 'linkedin_page', label: 'TEC LinkedIn page' },
+    ],
     ...overrides,
   };
 }

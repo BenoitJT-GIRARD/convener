@@ -29,6 +29,7 @@ const config: Config = {
     summary_after_delivery: 7,
     recording_after_delivery: 14,
   },
+  channels: [],
 };
 
 // Through the shared double: a field added to `Speaker` reaches this

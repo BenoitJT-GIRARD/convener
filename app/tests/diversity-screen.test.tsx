@@ -169,6 +169,7 @@ describe('Diversity screen', () => {
         lead_decision: 14, invitation_follow_up: 7,
         summary_after_delivery: 5, recording_after_delivery: 10,
       },
+      channels: [],
     };
     const encode = (text: string) => {
       const bytes = new TextEncoder().encode(text);

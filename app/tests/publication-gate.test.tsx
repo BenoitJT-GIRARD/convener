@@ -48,6 +48,7 @@ function config(overrides: Partial<Config> = {}): Config {
       summary_after_delivery: 5,
       recording_after_delivery: 10,
     },
+    channels: [],
     ...overrides,
   };
 }

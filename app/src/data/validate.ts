@@ -35,6 +35,7 @@ import type {
   Ballot,
   BoardMember,
   CandidateDate,
+  Channel,
   ChecklistAssignee,
   Config,
   Nomination,
@@ -449,6 +450,64 @@ function readNomination(at: Cursor, entry: unknown): Nomination {
   };
 }
 
+/** A channel key as it may be written in the file.
+ *
+ *  Narrow on purpose: the key becomes a checklist key inside
+ *  `data/speakers.yml`, so it is read back by both languages and shows up in
+ *  hand-reviewed diffs. Spaces, capitals and punctuation would all survive a
+ *  YAML round-trip and all read as a different key to somebody skimming one.
+ *  The label carries whatever the volunteers want to see; this does not. */
+const CHANNEL_KEY = /^[a-z0-9][a-z0-9_-]*$/;
+
+/** One place an event is announced.
+ *
+ *  Both fields are required and neither may be blank. A channel with no
+ *  label is a line with no words on it, and a channel with no key is a line
+ *  no owner can be written against -- in a list whose whole purpose is to be
+ *  edited by hand, both are worth saying out loud rather than rendering as a
+ *  gap. */
+function readChannel(at: Cursor, entry: unknown): Channel {
+  const raw = object(at, entry);
+  keys(at, raw, ['key', 'label']);
+  const key = text(at, raw, 'key');
+  if (!CHANNEL_KEY.test(key)) {
+    fail(
+      at.file,
+      at.where,
+      `gives "key" as ${shown(key)}, but a channel key is lower-case letters, ` +
+        'digits, hyphens and underscores, starting with a letter or a digit',
+    );
+  }
+  const label = text(at, raw, 'label');
+  if (label.trim() === '') fail(at.file, at.where, 'has no label to show anyone');
+  return { key, label };
+}
+
+/** The channels, in file order, with no key used twice.
+ *
+ *  A repeated key is refused rather than deduplicated: the two entries would
+ *  share one checklist key, so ticking one would tick the other, and which
+ *  label the screen showed would come down to list order. Naming the earlier
+ *  entry is what lets somebody find the pair in a file they are reading by
+ *  hand. */
+function readChannels(at: Cursor, raw: Record<string, unknown>): Channel[] {
+  const here: Cursor = { file: at.file, where: 'the channels' };
+  const channels = listOf(here, raw, 'channels', readChannel);
+  const seen = new Map<string, number>();
+  channels.forEach((channel, index) => {
+    const first = seen.get(channel.key);
+    if (first !== undefined) {
+      fail(
+        at.file,
+        `channel ${index + 1}`,
+        `repeats the key "${channel.key}", which channel ${first + 1} already uses`,
+      );
+    }
+    seen.set(channel.key, index);
+  });
+  return channels;
+}
+
 const SLA_KEYS = [
   'lead_decision', 'invitation_follow_up', 'summary_after_delivery',
   'recording_after_delivery',
@@ -470,7 +529,7 @@ const CONFIG_KEYS = [
   'season', 'vw_counter', 'overlap_window_days', 'seminar_duration_minutes',
   'board', 'nominations', 'board_min', 'board_max', 'vote_window_days',
   'objection_window_working_days', 'inactivity_months', 'balance_window_months',
-  'sla_days',
+  'sla_days', 'channels',
 ] as const;
 
 /**
@@ -502,5 +561,6 @@ export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
     inactivity_months: whole(at, raw, 'inactivity_months'),
     balance_window_months: whole(at, raw, 'balance_window_months'),
     sla_days: readSlaDays(at, raw.sla_days),
+    channels: readChannels(at, raw),
   };
 }

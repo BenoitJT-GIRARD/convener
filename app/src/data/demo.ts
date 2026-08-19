@@ -61,6 +61,10 @@ export const DEMO_CONFIG: Config = {
     summary_after_delivery: 5,
     recording_after_delivery: 10,
   },
+  channels: [
+    { key: 'forum', label: 'The Example Collective forum' },
+    { key: 'linkedin_page', label: 'TEC LinkedIn page' },
+  ],
 };
 
 const blankMetrics = {
