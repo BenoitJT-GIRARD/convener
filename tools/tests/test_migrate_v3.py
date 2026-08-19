@@ -25,6 +25,7 @@ from migrate_v3 import (
     migrate_speaker,
     migrate_speakers,
 )
+from migrate_v4 import migrate_speakers as migrate_speakers_v4
 
 from convener_ops.cli import SPEAKERS_HEADER
 from convener_ops.validate import validate_config, validate_speakers
@@ -255,8 +256,14 @@ def test_the_migrated_data_passes_the_validator() -> None:
     The gap is named rather than tolerated: the errors this asserts are the
     exhaustive list of what schema v4 asks for and the v3 migration cannot
     know about -- the five fields that were never in a v2 file to migrate.
-    Anything else the validator finds still fails here, and the list itself
-    empties when the v4 migration fills those fields in.
+    Anything else the validator finds still fails here.
+
+    The gap is no longer open: `scripts/migrate_v4.py` closes it, and the
+    second half of this test runs the two one-shots in the order they were
+    actually run against `data/` and asserts the validator then finds
+    nothing at all. Naming the gap and naming what closes it is what keeps
+    this assertion exhaustive instead of merely tolerant -- a v3 output that
+    grew a sixth defect would still fail here, before and after v4.
     """
     expected_v4_gap = sorted(
         f"speakers[{index}] ({sid}): missing {field}"
@@ -278,6 +285,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
     logins = {m["login"] for m in config["board"]}
     assert sorted(validate_speakers(speakers, logins)) == expected_v4_gap
     assert validate_config(config) == []
+    assert validate_speakers(migrate_speakers_v4(speakers), logins) == []
 
 
 # --- the script as it is actually run -------------------------------------
