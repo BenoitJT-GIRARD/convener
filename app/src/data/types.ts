@@ -136,7 +136,17 @@ export interface SpeakerMetrics {
   live_peak: number | null;
   /** Views of the recording, read off the number of days after the talk that
    *  `view_count_window_days` sets. The key keeps its historical name; the
-   *  window it is read at is configuration. */
+   *  window it is read at is configuration.
+   *
+   *  Keeping it is a decision, not an oversight. `youtube_views_30d` is a
+   *  stored key: renaming it means migrating every record in
+   *  `data/speakers.yml`, both readers, both test doubles and the byte-exact
+   *  YAML boundary fixtures -- the same cost as any other schema change --
+   *  and it buys a name that reads slightly better. The number in it is
+   *  already contradicted by the two things that act on the value: the label
+   *  is derived (`viewCountLabel`) and the window is read from the config.
+   *  The rename can ride along with the next migration that has a reason of
+   *  its own; on its own it does not earn one. */
   youtube_views_30d: number | null;
   /** Replies on the forum thread. */
   forum_replies: number | null;
