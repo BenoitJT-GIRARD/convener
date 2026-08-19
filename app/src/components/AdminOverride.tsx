@@ -100,7 +100,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
         // read like an act of the register without being readable as one.
         // The status change *is* a decision and has its own act
         // (`override`), recorded by the button below.
-        dataEdit(identifier(draft.id), 'admin edit'),
+        dataEdit(identifier(draft.id), { part: 'admin-fields' }),
       );
       if (ok) setSaved(true);
     } finally {

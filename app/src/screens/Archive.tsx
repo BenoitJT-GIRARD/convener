@@ -291,7 +291,7 @@ function ArchiveMetricsEdit({ speaker }: { speaker: Speaker }) {
           ),
         // Bookkeeping, not a decision: the numbers are read off elsewhere
         // and written down here, and nothing about a person is said.
-        dataEdit(identifier(speaker.id), 'update post-archive metrics'),
+        dataEdit(identifier(speaker.id), { part: 'post-archive-metrics' }),
       );
       // A failure is surfaced via the saveError banner (see Layout) -- never
       // report success here unless the write actually went through.

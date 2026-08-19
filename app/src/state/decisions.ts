@@ -35,6 +35,7 @@ import type {
   ObjectionResolution,
   SpeakerStatus,
 } from '../data/types';
+import type { FieldKey } from './phases';
 import type {
   BallotPayload,
   ConsentPayload,
@@ -200,6 +201,89 @@ export const ACTS: Record<DecisionKind, string> = {
   'speaker-delete': 'delete the record of',
 };
 
+declare const subjectBrand: unique symbol;
+
+/**
+ * A commit subject this module assembled.
+ *
+ * The same move as `Identifier`, one level up. `mutateSpeakers` and
+ * `mutateConfig` (`data/DataContext.tsx`) take a `Subject`, not a `string`,
+ * so a subject written anywhere else does not compile -- however it is
+ * spelled. That matters because the alternatives are all spellings of one
+ * defect: `'data: add lead ' + name` concatenated rather than interpolated,
+ * a template split so the prefix sits in its own chunk, a `const prefix =
+ * 'data:'` in a helper module of its own. A source walk recognises the
+ * spellings somebody thought to write down; a brand recognises the position,
+ * and the position is what the rule is about. The walk in
+ * `app/tests/decisions.test.ts` stays as the second net, for the one route
+ * around the brand a compiler cannot close -- a cast.
+ */
+export type Subject = string & { readonly [subjectBrand]: true };
+
+declare const itemKeyBrand: unique symbol;
+
+/** A journey key: the name of one line of the runbook, as `phaseItems`
+ *  gives it. `promotion/forum`, `scheduled/T-30/visuals`. */
+export type ItemKey = string & { readonly [itemKeyBrand]: true };
+
+/** The shape of a journey key -- slash-separated segments of word
+ *  characters, dots and hyphens. No space, no `=`, no punctuation a sentence
+ *  would carry, so a field value cannot pass for a key even where the caller
+ *  holds an untyped `string` from a DOM event. */
+const ITEM_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/;
+
+/** The only way to obtain an `ItemKey`. */
+export function itemKey(value: string): ItemKey {
+  if (!ITEM_KEY.test(value)) {
+    throw new DecisionRejected(
+      `"${value}" is not a line of the journey. A subject names the line that ` +
+        'moved -- the key the runbook gives it -- never what was written on it.',
+    );
+  }
+  return value as ItemKey;
+}
+
+/**
+ * Which part of a record a bookkeeping edit moved.
+ *
+ * `what` used to be a bare `string`, with a sentence in the doc comment
+ * asking callers not to put a value in it. Prose is not a control: widening
+ * `SpeakerPage.tsx`'s `set ${k}` to `set ${k}=${v}` put the typed field
+ * value into a permanent commit subject and left every test green. So the
+ * parameter is a closed union instead, in the same shape as `Decision`: five
+ * parts, and where a part names something, the name is a `FieldKey` from the
+ * journey's own union or an `ItemKey` checked against `ITEM_KEY`. There is
+ * no slot a value fits in -- `runbook-box`'s `ticked` is the box's own state
+ * and says nothing about anyone.
+ *
+ * The rendered phrases are pinned against `commit_message_ordinary` in
+ * `tools/tests/fixtures/governance-cases.json`, so a reword here fails on
+ * the Python side too (D-14 rule 3).
+ */
+export type Edit =
+  | { part: 'admin-fields' }
+  | { part: 'post-archive-metrics' }
+  | { part: 'field'; key: FieldKey }
+  | { part: 'runbook-box'; key: ItemKey; ticked: boolean }
+  | { part: 'owner'; key: ItemKey; cleared: boolean };
+
+/** Total: every value `Edit` admits renders to one phrase, and no phrase
+ *  takes anything the caller wrote freehand. */
+function editPart(edit: Edit): string {
+  switch (edit.part) {
+    case 'admin-fields':
+      return 'admin edit';
+    case 'post-archive-metrics':
+      return 'update post-archive metrics';
+    case 'field':
+      return `set ${edit.key}`;
+    case 'runbook-box':
+      return `runbook ${edit.key}=${edit.ticked}`;
+    case 'owner':
+      return edit.cleared ? `owner cleared on ${edit.key}` : `owner for ${edit.key}`;
+  }
+}
+
 /**
  * The subject for a `data:` commit that records no decision.
  *
@@ -222,18 +306,19 @@ export const ACTS: Record<DecisionKind, string> = {
  * it back.
  *
  * `app/tests/decisions.test.ts` checks that no other `data:` subject is
- * assembled anywhere in `src/`.
+ * assembled anywhere in `src/`, and `Subject` above is what makes that check
+ * a backstop rather than the only net.
  */
-export function dataEdit(entity: Identifier, what: string): string {
-  return `data: ${entity} ${what}`;
+export function dataEdit(entity: Identifier, edit: Edit): Subject {
+  return `data: ${entity} ${editPart(edit)}` as Subject;
 }
 
 /** The exact line to commit. The `Decision` type admits nothing malformed, so
  *  this is total: every value it can be given produces a line
  *  `parse_decision` reads back to that same value. */
-export function formatDecision(d: Decision): string {
+export function formatDecision(d: Decision): Subject {
   const line = `data: ${ACTS[d.kind]} ${d.entity} by ${d.actor}`;
-  return 'detail' in d ? `${line} (${d.detail})` : line;
+  return ('detail' in d ? `${line} (${d.detail})` : line) as Subject;
 }
 
 /**

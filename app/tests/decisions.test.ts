@@ -9,7 +9,9 @@ import {
   isIdentifier,
   DecisionRejected,
   dataEdit,
+  itemKey,
   transitionDecision,
+  type Edit,
   type Decision,
   type DecisionKind,
   type PlainDecisionKind,
@@ -240,16 +242,58 @@ describe('the grammar of decision commits', () => {
         .map((text, i) => ({ file: f, line: i + 1, text }))
         // Code, not the comments that quote a subject to explain it.
         .filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l.text))
-        .filter(l => /`data: /.test(l.text)),
+        // Any quote, and no space required: the defect is a `data:` subject
+        // assembled outside this module, not the one spelling of it the
+        // guard was first written against. A backtick-only pattern let
+        // `'data: add lead ' + fields.name` through, and a split template
+        // (`` `data:` `` then the rest) with it.
+        .filter(l => /[`'"]data:/.test(l.text)),
     );
     expect(subjects.map(s => `${s.file}:${s.line}`)).toHaveLength(2);
     for (const s of subjects) expect(s.file).toMatch(/decisions\.ts$/);
   });
 
   it('writes a non-decision subject about the record and nobody else', () => {
-    expect(dataEdit(identifier('spk-001'), 'set title')).toBe('data: spk-001 set title');
+    expect(dataEdit(identifier('spk-001'), { part: 'field', key: 'title' })).toBe(
+      'data: spk-001 set title',
+    );
     // The same `Identifier` gate as the register: a person cannot be named
     // in one of these either.
-    expect(() => dataEdit(identifier('Jane Doe'), 'set title')).toThrow(DecisionRejected);
+    expect(() => dataEdit(identifier('Jane Doe'), { part: 'field', key: 'title' })).toThrow(
+      DecisionRejected,
+    );
+  });
+
+  it('has no slot for a field value in a bookkeeping subject', () => {
+    // The defect this closes: `set ${k}` widened to `set ${k}=${v}` put a
+    // researcher's typed answer into a permanent commit subject and left
+    // every test green, because `what` was a bare `string` with a doc
+    // comment asking callers not to. `Edit` names the part that moved and
+    // has nowhere to put what was written on it.
+    const edits: Edit[] = [
+      { part: 'admin-fields' },
+      { part: 'post-archive-metrics' },
+      { part: 'field', key: 'title' },
+      { part: 'runbook-box', key: itemKey('approved/invitation-sent'), ticked: true },
+      { part: 'owner', key: itemKey('scheduled/T-30/visuals'), cleared: false },
+      { part: 'owner', key: itemKey('scheduled/T-30/visuals'), cleared: true },
+    ];
+    // Every phrase the five parts can render is one the other language
+    // already reads back as bookkeeping. A reword on either side fails here.
+    const ordinary = new Set(cases.commit_message_ordinary.map(c => c.message));
+    for (const edit of edits) {
+      expect(ordinary, JSON.stringify(edit)).toContain(dataEdit(identifier('spk-001'), edit));
+    }
+  });
+
+  it('refuses a journey key that is a sentence about a person', () => {
+    // The one place an `Edit` takes a string: the runbook key comes off a
+    // DOM event, so it is checked rather than trusted. A value carries
+    // spaces, an `=`, or punctuation; a key does not.
+    expect(itemKey('promotion/forum')).toBe('promotion/forum');
+    expect(itemKey('scheduled/T-30/visuals')).toBe('scheduled/T-30/visuals');
+    for (const bad of ['title=Jane Doe', 'Jane Doe (CNRS)', 'set title=x', '', 'a b']) {
+      expect(() => itemKey(bad), bad).toThrow(DecisionRejected);
+    }
   });
 });

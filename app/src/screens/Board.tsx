@@ -17,7 +17,7 @@ import {
 } from '../state/board';
 import type { Config, Nomination } from '../data/types';
 import { parisToday } from '../state/derived';
-import { formatDecision, identifier } from '../state/decisions';
+import { formatDecision, identifier, type Subject } from '../state/decisions';
 
 const OUTCOME_LABEL: Record<Nomination['outcome'], string> = {
   '': 'Open',
@@ -71,7 +71,7 @@ export function Board() {
   // the candidate is two webinars short.
   const nominationHint = candidate.trim() === '' ? '' : nominationReason;
 
-  async function write(transform: (current: Config) => Config, message: string) {
+  async function write(transform: (current: Config) => Config, message: Subject) {
     setBusy(true);
     try {
       await mutateConfig(transform, message);
