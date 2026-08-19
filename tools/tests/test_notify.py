@@ -969,6 +969,7 @@ def test_a_partly_configured_environment_yields_no_channel(env: dict[str, str]) 
         "@volunteer",
         "@/convener-board",
         "@example-instance/",
+        "@example-instance/convener-board/extra",
         "",
         "   ",
     ],
@@ -978,6 +979,7 @@ def test_a_partly_configured_environment_yields_no_channel(env: dict[str, str]) 
         "bare-person-handle",
         "empty-org",
         "empty-team",
+        "extra-path-segment",
         "empty",
         "blank",
     ],
@@ -989,6 +991,18 @@ def test_a_mention_that_is_not_a_team_handle_yields_no_channel(mention: str) -> 
     like an absent mention -- no `Channel` is built."""
     env = {THREAD_ENV: "42", MENTION_ENV: mention}
     assert resolve_channel(env) is None
+
+
+def test_a_mention_with_an_uppercase_organisation_still_builds_a_channel() -> None:
+    """The real configuration will use a mixed-case organisation
+    (`The Example Collective`), not the all-lowercase fixture every other
+    positive test in this module uses -- so this pins that case directly
+    rather than leaving it to be exercised only by the negative cases
+    above."""
+    env = {THREAD_ENV: "42", MENTION_ENV: "@example-instance/convener-board"}
+    assert resolve_channel(env) == Channel(
+        thread="42", mention="@example-instance/convener-board"
+    )
 
 
 def test_nothing_can_be_dispatched_without_a_channel() -> None:
