@@ -1865,5 +1865,47 @@
       "due": "2026-08-15",
       "since": "2026-08-01"
     }
-  ]
+  ],
+  "_speaker_field_classification_comment": "Which speaker field may leave the repository, and on what. Written twice -- app/src/state/consent.ts and tools/convener_ops/public_data.py -- so it is pinned here and read from both: app/tests/consent-fields.test.ts and tools/tests/test_public_data.py. The three lists are disjoint and their union is exactly the set of keys of Speaker; a field added to the model without a line here fails a test on both sides instead of reaching the public feed by omission. The argument for each placement lives in the two modules, not here.",
+  "speaker_field_classification": {
+    "publishable_always": [
+      "edition_code",
+      "title",
+      "abstract",
+      "date",
+      "time",
+      "status",
+      "name",
+      "affiliation",
+      "country",
+      "zoom_link",
+      "forum_thread"
+    ],
+    "publishable_on_consent": [
+      "photo_url",
+      "bio",
+      "linkedin",
+      "links",
+      "seed_questions",
+      "youtube_url"
+    ],
+    "never_published": [
+      "id",
+      "gender",
+      "career_stage",
+      "email",
+      "conflicts_of_interest",
+      "source",
+      "proposed_by",
+      "assigned_to",
+      "host_1",
+      "host_2",
+      "selection",
+      "publication",
+      "candidate_dates",
+      "runbook_progress",
+      "metrics",
+      "notes"
+    ]
+  }
 }
