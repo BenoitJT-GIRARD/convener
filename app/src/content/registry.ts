@@ -39,6 +39,10 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'toolkit/slides/presentation-template.md',
     anchor: null,
   },
+  // toolkit -- visual kit. The page is markdown; the templates it links to are
+  // SVG and PNG files under `docs/assets/`, served from the same `handbook/`
+  // path by `scripts/copy-handbook.mjs`.
+  'toolkit/visual-kit': { file: 'toolkit/visual-kit.md', anchor: null },
 
   // handbook — long-read
   'handbook/overview': { file: 'start-here/index.md', anchor: null },

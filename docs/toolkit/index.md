@@ -1,6 +1,6 @@
 # Templates
 
-Ready-to-use templates for every outbound communication. **Copy, fill the placeholders, send.** Do not edit the templates in place — and in Canva, always *duplicate* a template rather than modifying it.
+Ready-to-use templates for every outbound communication. **Copy, fill the placeholders, send.** Do not edit a template in place — work on a copy, and leave the original for the next person.
 
 ## Placeholders
 
@@ -27,3 +27,4 @@ Templates use `{{double-brace}}` placeholders. Common ones: `{{speaker}}`, `{{sp
 - [Intro scripts](intro-scripts.md) — what the hosts say over the opening slides
 - [Run of show](run-of-show.md) — the session slide by slide, and the split between the two hosts
 - [Slide template](slides/presentation-template.md) — what goes on the hosts' own slides
+- [Visual kit](visual-kit.md) — the announcement image, the flyer and the video-call background, as source files you download and edit yourself

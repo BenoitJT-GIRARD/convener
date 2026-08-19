@@ -31,3 +31,6 @@ recuse
 recuses
 recusals
 unmodelled
+Inkscape
+wordmark
+Segoe

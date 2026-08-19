@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchContent, editUrlFor } from './fetch';
+import { fetchContent, editUrlFor, handbookUrl } from './fetch';
 import { substitute, type SubstitutionContext } from './render';
 import { useAuth } from '../auth/AuthContext';
 import { isDemoMode } from '../data/demo';
@@ -71,7 +71,12 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
         </div>
       )}
       <div className={wrapperCls}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{rendered}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          urlTransform={href => handbookUrl(contentKey, href)}
+        >
+          {rendered}
+        </ReactMarkdown>
       </div>
       {variant === 'inline' && (
         <div className="mt-2 flex justify-end gap-2">

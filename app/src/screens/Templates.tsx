@@ -18,6 +18,7 @@ const TEMPLATES = [
   { key: 'toolkit/intro-scripts', label: 'Intro scripts' },
   { key: 'toolkit/run-of-show', label: 'Run of show' },
   { key: 'toolkit/slides/presentation-template', label: 'Slide template' },
+  { key: 'toolkit/visual-kit', label: 'Visual kit' },
 ];
 
 export function Templates() {
