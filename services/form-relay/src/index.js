@@ -14,6 +14,14 @@
  * worker rather than another route on the existing one.
  *
  * It logs no request body and keeps nothing.
+ *
+ * 401 is reserved for a caller's own bad or missing Tally-Signature. Any
+ * failure to complete the dispatch to GitHub -- an expired
+ * CONVENER_DISPATCH_TOKEN, GitHub rejecting the call, GitHub being unreachable
+ * -- reports 502 instead, on purpose: GitHub answers a bad token with 401
+ * too, and if this worker passed that through unchanged, an expired
+ * dispatch token and a forged submission would look identical in Tally's
+ * webhook log, and an operator would go rotate the wrong secret.
  */
 
 const ROUTE = '/';
@@ -79,6 +87,15 @@ export async function handle(request, env) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  // R-6, extended to the second secret: a missing CONVENER_DISPATCH_TOKEN must
+  // not round-trip a literal "undefined" Authorization header to GitHub.
+  // Refused locally, in the same 502 bucket as any other failure to
+  // complete the dispatch -- never 401, which stays reserved for a bad
+  // Tally-Signature above.
+  if (!env.CONVENER_DISPATCH_TOKEN) {
+    return new Response('Bad Gateway', { status: 502 });
+  }
+
   const upstream = await fetch(DISPATCH_URL, {
     method: 'POST',
     headers: {
@@ -98,9 +115,15 @@ export async function handle(request, env) {
     }),
   });
 
-  // A successful dispatch is 204 No Content, not 200 -- pass the upstream
-  // status through rather than assuming one.
-  return new Response(upstream.body, { status: upstream.status });
+  if (!upstream.ok) {
+    // Never GitHub's status or body verbatim -- see the file-level comment
+    // for why 401 must not leak through, and a caller with a valid
+    // signature has no need to see GitHub's error detail either.
+    return new Response('Bad Gateway', { status: 502 });
+  }
+
+  // A successful dispatch is 204 No Content, not 200.
+  return new Response(null, { status: upstream.status });
 }
 
 export default { fetch: handle };

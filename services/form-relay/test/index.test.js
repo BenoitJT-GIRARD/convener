@@ -37,8 +37,8 @@ function requestAt(path, method) {
   return new Request(`https://relay.example${path}`, { method });
 }
 
-function env(secret) {
-  return { TALLY_WEBHOOK_SECRET: secret, CONVENER_DISPATCH_TOKEN: 'ghp_test-token' };
+function env(secret, token = 'ghp_test-token') {
+  return { TALLY_WEBHOOK_SECRET: secret, CONVENER_DISPATCH_TOKEN: token };
 }
 
 beforeEach(() => {
@@ -56,7 +56,11 @@ describe('form relay', () => {
     const [url, init] = globalThis.fetch.mock.calls[0];
     expect(url).toBe('https://api.github.com/repos/example-instance/example-cockpit/dispatches');
     expect(init.method).toBe('POST');
-    expect(init.headers['User-Agent']).toBeTruthy();
+    // This exact value matters: GitHub 403s a request with a wrong or
+    // absent User-Agent.
+    expect(init.headers['User-Agent']).toBe('convener-form-relay');
+    expect(init.headers.Accept).toBe('application/vnd.github+json');
+    expect(init.headers['Content-Type']).toBe('application/json');
     expect(init.headers.Authorization).toBe('Bearer ghp_test-token');
 
     const sent = JSON.parse(init.body);
@@ -80,15 +84,51 @@ describe('form relay', () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it('refuses every request when the secret is not configured, even one with a signature that would otherwise verify', async () => {
-    // R-6: fail closed. proposal.py::verify_signature is deliberately
-    // tolerant with no secret configured -- safe there only because it sits
-    // behind a repository_dispatch that already required an authenticated
-    // token. This worker is the internet-facing boundary, so that
-    // tolerance has no safe place here.
-    const res = await handle(post(VALID_CASE.body, VALID_CASE.signature), env(''));
-    expect(res.status).toBe(401);
+  it.each([
+    ['an empty string', ''],
+    ['unset (an undefined binding, as it is when a Wrangler secret was never put)', undefined],
+  ])(
+    'refuses every request when TALLY_WEBHOOK_SECRET is %s, even one with a signature that would otherwise verify',
+    async (_label, secret) => {
+      // R-6: fail closed. proposal.py::verify_signature is deliberately
+      // tolerant with no secret configured -- safe there only because it
+      // sits behind a repository_dispatch that already required an
+      // authenticated token. This worker is the internet-facing boundary,
+      // so that tolerance has no safe place here. Production absence of a
+      // Wrangler secret surfaces as `undefined`, not `''`, so both must
+      // refuse alike.
+      const res = await handle(post(VALID_CASE.body, VALID_CASE.signature), env(secret));
+      expect(res.status).toBe(401);
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('refuses to dispatch, without calling GitHub, when CONVENER_DISPATCH_TOKEN is not configured', async () => {
+    // Same reasoning as R-6, extended to the second secret: sending
+    // "Bearer undefined" to GitHub is not an option, so this is refused
+    // locally -- 502, not 401, since it is this worker's own
+    // misconfiguration and not a bad Tally-Signature.
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      { TALLY_WEBHOOK_SECRET: VALID_CASE.secret },
+    );
+    expect(res.status).toBe(502);
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('reports a failed dispatch as 502, without disclosing GitHub upstream detail to the caller', async () => {
+    // A bad or expired CONVENER_DISPATCH_TOKEN gets a 401 from GitHub. Passed
+    // through unchanged, that 401 would be indistinguishable from this
+    // worker's own 401 for a bad Tally-Signature -- so any non-2xx from
+    // GitHub is reported as 502 instead, and the caller never sees
+    // GitHub's response body.
+    globalThis.fetch = vi.fn(
+      async () => new Response(JSON.stringify({ message: 'Bad credentials' }), { status: 401 }),
+    );
+    const res = await handle(post(VALID_CASE.body, VALID_CASE.signature), env(VALID_CASE.secret));
+    expect(res.status).toBe(502);
+    const text = await res.text();
+    expect(text).not.toContain('Bad credentials');
   });
 
   it('refuses a method other than POST', async () => {

@@ -649,6 +649,13 @@
       "body": "{\"data\":{\"fields\":[{\"label\":\"Name\",\"value\":\"Grace Hopper\"}]}}",
       "signature": "1aa3651fbec0d829483a01a99554d2c0fe0e527e525c9b30097b8420370c2279",
       "valid": false
+    },
+    {
+      "name": "a name with non-ASCII characters signs and verifies, byte for byte in UTF-8",
+      "secret": "s3cr3t",
+      "body": "{\"data\":{\"fields\":[{\"label\":\"Name\",\"value\":\"Benoît Lefèvre\"}]}}",
+      "signature": "CmuAi0k7QdcujNNO0C3MIFtA9G9oTIRbDddtuRzBXpc=",
+      "valid": true
     }
   ],
   "_unsettled_comment": "Whether the board still has a nomination in front of it. app/src/state/board.ts::isUnsettled refuses a second nomination for the candidate while this is true, and tools/convener_ops/sweep.py::_unsettled_candidates keeps that same candidate off the inactivity proposal. One rule, two implementations, so both read these cases: the Python copy mirrored the narrower isPending until this fixture was written, and a seated member carrying a deferred nomination could be proposed inactive out of the very file that recorded the objection against them. `unsettled` is what isUnsettled returns for `nomination`; the Python side reads the same cases through _unsettled_candidates, which is this predicate applied to a list.",

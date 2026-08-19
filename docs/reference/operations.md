@@ -87,9 +87,10 @@ still holds.
 1. Deploy the worker from `services/form-relay/` (`npx wrangler deploy`
    from that folder — see its README) to the same Cloudflare account used
    for the authentication relay above.
-2. Configure Tally's webhook to `POST` to the worker's URL, and set the
-   same signing secret in Tally that is set below as
-   `TALLY_WEBHOOK_SECRET`.
+2. Configure Tally's webhook to `POST` to the worker's URL with no path
+   suffix (the worker's only route is its root) — any other path 404s and
+   the submission is silently lost — and set the same signing secret in
+   Tally that is set below as `TALLY_WEBHOOK_SECRET`.
 
 **Secrets to set:**
 - Wrangler secret `TALLY_WEBHOOK_SECRET` on the worker — set with

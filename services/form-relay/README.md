@@ -54,8 +54,11 @@ npx wrangler secret put CONVENER_DISPATCH_TOKEN
   the dispatch. Same name on both sides on purpose: it is the same secret.
 - `CONVENER_DISPATCH_TOKEN` — a GitHub token with permission to send a
   `repository_dispatch` to `example-instance/example-cockpit` (`Contents: read
-  & write` is sufficient — the same scope the authentication relay's
-  GitHub App already uses).
+  & write` is sufficient). This is not the same credential as the
+  authentication relay's: that relay holds no token of its own — it only
+  proxies GitHub's device-flow endpoints — and the user access token the
+  device flow itself issues carries the broader classic `repo` scope, not
+  this narrower one.
 
 Unlike the authentication relay, a missing `TALLY_WEBHOOK_SECRET` here
 refuses every request rather than accepting them: this worker is the
