@@ -25,3 +25,9 @@ tools/.venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local credentials. Never committed: the real values live in GitHub Secrets,
+# and a copy on disk is only ever for trying something out.
+.env
+.env.*
+!.env.example
