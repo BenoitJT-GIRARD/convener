@@ -36,7 +36,6 @@ export function config(overrides: Partial<Config> = {}): Config {
     balance_window_months: 24,
     view_count_window_days: 30,
     sla_days: {
-      lead_decision: 14,
       invitation_follow_up: 30,
       summary_after_delivery: 7,
       recording_after_delivery: 14,

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import ast
 import re
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -424,7 +424,9 @@ def test_the_overdue_list_alone_is_enough_to_produce_a_digest() -> None:
     ]
     digest = daily_digest(speakers, make_config(), NOW)
     assert digest is not None
-    assert "Board decision is 3 days overdue" in digest
+    # `vote_window_days: 10` in the double, and the board's decision deadline
+    # is that number and no other (F-13).
+    assert "Board decision is 7 days overdue" in digest
     assert "waiting since 2026-08-01" in digest
 
 
@@ -437,7 +439,7 @@ def test_the_overdue_wording_in_the_digest_is_the_wording_the_screens_use() -> N
         status="lead",
         selection={"ballots": [], "opened_on": "2026-08-01", "decided_on": ""},
     )
-    late = overdue(entry, make_config()["sla_days"], "2026-08-18")
+    late = overdue(entry, make_config(), "2026-08-18")
     assert late is not None
     digest = daily_digest([entry], make_config(), NOW)
     assert digest is not None
@@ -607,7 +609,13 @@ def test_a_nomination_objection_lodged_today_reaches_the_digest() -> None:
 
 @pytest.mark.parametrize(
     "sla_days",
-    [None, "fourteen", {"lead_decision": "fourteen"}, {"lead_decision": True}, {}],
+    [
+        None,
+        "thirty",
+        {"invitation_follow_up": "thirty"},
+        {"invitation_follow_up": True},
+        {},
+    ],
     ids=["absent", "not a mapping", "not a number", "a bool", "empty"],
 )
 def test_an_unusable_sla_configuration_produces_no_deadline(sla_days: Any) -> None:
@@ -616,11 +624,79 @@ def test_an_unusable_sla_configuration_produces_no_deadline(sla_days: Any) -> No
     pass, so an unchecked config reaches here."""
     entry = lead(
         id="spk-004",
+        status="invited",
+        selection={
+            "ballots": [],
+            "opened_on": "2026-06-01",
+            "decided_on": "2026-06-02",
+        },
+    )
+    cfg = make_config(sla_days=sla_days)
+    assert overdue(entry, cfg, "2026-08-18") is None
+    assert daily_digest([entry], cfg, NOW) is None
+
+
+@pytest.mark.parametrize("window", [7, 10, 14, 20], ids=str)
+def test_the_lead_goes_overdue_on_the_morning_the_sweep_parks_it(window: int) -> None:
+    """F-13. One deadline, so the two hands on it cannot disagree.
+
+    `sweep.expire_votes` parks a lead whose window ran out; `notify.overdue`
+    (and `app/src/state/sla.ts`, its twin) say the board decision is late.
+    Until this task those read two different config keys, both set to 14 in
+    `data/config.yml` with nothing saying they had to agree: setting
+    `sla_days.lead_decision` to 20 made the app call the board on time on the
+    very morning the job parked the lead, and neither CI nor a reader had any
+    way to notice.
+
+    Collapsing them to one key is what makes that unwritable rather than
+    merely detected, and this is the test that would fail if a second number
+    ever came back: it walks a real config through both modules for four
+    different windows and requires the first overdue morning to be exactly the
+    parking morning.
+    """
+    cfg = make_config(vote_window_days=window)
+    opened = date(2026, 8, 1)
+    entry = lead(
+        id="spk-004",
+        status="lead",
+        selection={"ballots": [], "opened_on": opened.isoformat(), "decided_on": ""},
+    )
+
+    parked_on = None
+    first_overdue = None
+    for offset in range(1, window + 5):
+        day = opened + timedelta(days=offset)
+        swept, changes = expire_votes(
+            [dict(entry)], cfg, datetime(day.year, day.month, day.day, 9, tzinfo=UTC)
+        )
+        if changes and parked_on is None:
+            parked_on = day
+            assert swept[0]["status"] == "parked"
+        if overdue(entry, cfg, day.isoformat()) is not None and first_overdue is None:
+            first_overdue = day
+
+    assert parked_on is not None
+    assert first_overdue == parked_on
+
+
+def test_the_board_decision_deadline_survives_an_unusable_sla_block() -> None:
+    """F-13. The board's clock is `vote_window_days`, not an `sla_days` key.
+
+    So a mangled `sla_days` cannot silence it, and the fallback it lands on is
+    `governance.vote_window_days` -- the number `sweep.expire_votes` will
+    really apply that morning, not a guess made up here. Silence would be the
+    worse answer: the job parks the lead either way, and a digest that says
+    nothing about it would be describing a different repository.
+    """
+    entry = lead(
+        id="spk-004",
         status="lead",
         selection={"ballots": [], "opened_on": "2026-08-01", "decided_on": ""},
     )
-    assert overdue(entry, sla_days, "2026-08-18") is None
-    assert daily_digest([entry], make_config(sla_days=sla_days), NOW) is None
+    late = overdue(entry, make_config(sla_days="thirty"), "2026-08-18")
+    assert late is not None
+    assert late.step == "Board decision"
+    assert late.due == "2026-08-11"
 
 
 @pytest.mark.parametrize(
@@ -632,11 +708,11 @@ def test_a_day_that_is_not_an_iso_date_yields_no_lateness(today: str) -> None:
         status="lead",
         selection={"ballots": [], "opened_on": "2026-08-01", "decided_on": ""},
     )
-    assert overdue(entry, make_config()["sla_days"], today) is None
+    assert overdue(entry, make_config(), today) is None
 
 
 def test_a_malformed_record_contributes_nothing_rather_than_raising() -> None:
-    assert overdue("not a record", make_config()["sla_days"], "2026-08-18") is None
+    assert overdue("not a record", make_config(), "2026-08-18") is None
     assert daily_digest(["not a record", 7, {}], make_config(), NOW) is None
 
 
@@ -1035,8 +1111,8 @@ CONFIG_YML = """
 season: 2026
 board: []
 nominations: []
+vote_window_days: 14
 sla_days:
-  lead_decision: 14
   invitation_follow_up: 30
   summary_after_delivery: 7
   recording_after_delivery: 14

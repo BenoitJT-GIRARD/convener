@@ -36,7 +36,6 @@ function config(board: BoardMember[]): Config {
     balance_window_months: 12,
     view_count_window_days: 30,
     sla_days: {
-      lead_decision: 14,
       invitation_follow_up: 7,
       summary_after_delivery: 5,
       recording_after_delivery: 10,

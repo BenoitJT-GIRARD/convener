@@ -1526,7 +1526,7 @@
       "message": ""
     }
   ],
-  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
+  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. Each case carries the whole `config` the two readers take, not just `sla_days`: the board-decision step is timed by `vote_window_days` and the other three by `sla_days`, one number per deadline (F-13). The two cases with a vote window other than 14 are what makes that testable rather than merely stated: a reader that hard-coded fourteen days for the board, or read a `lead_decision` key of its own, passes every other case here and fails those two. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
   "lateness_cases": [
     {
       "name": "a lead past its board-decision deadline is overdue by whole calendar days",
@@ -1540,11 +1540,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "overdue",
@@ -1567,11 +1569,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-16",
       "state": "overdue",
@@ -1581,6 +1585,61 @@
       "days": 1,
       "overdue_text": "Board decision is 1 day overdue",
       "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "a longer vote window moves the board-decision deadline with it, because it is the same number",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "config": {
+        "vote_window_days": 20,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
+      },
+      "today": "2026-08-25",
+      "state": "overdue",
+      "step": "Board decision",
+      "due": "2026-08-21",
+      "since": "2026-08-01",
+      "days": 4,
+      "overdue_text": "Board decision is 4 days overdue",
+      "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "a shorter vote window brings it forward, and the closing day is still not late",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "config": {
+        "vote_window_days": 7,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
+      },
+      "today": "2026-08-08",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-08-08",
+      "since": "2026-08-01"
     },
     {
       "name": "the due day itself is still within the target, not yet late",
@@ -1594,11 +1653,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-15",
       "state": "due",
@@ -1618,11 +1679,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-05-01",
       "state": "due",
@@ -1642,11 +1705,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1663,11 +1728,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-07-05",
       "state": "overdue",
@@ -1690,11 +1757,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-02-01",
       "state": "overdue",
@@ -1719,11 +1788,13 @@
           "delivered/forum-summary": true
         }
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-02-01",
       "state": "overdue",
@@ -1748,11 +1819,13 @@
           "delivered/forum-summary": true
         }
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-02-01",
       "state": "none"
@@ -1769,11 +1842,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1790,11 +1865,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1811,11 +1888,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1832,11 +1911,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1853,11 +1934,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "soon",
       "state": "due",

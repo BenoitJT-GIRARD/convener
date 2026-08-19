@@ -113,9 +113,9 @@ def test_overdue_wording_matches_the_shared_fixture(case: dict[str, Any]) -> Non
     `notify.overdue` returns `None` and `Lateness` carries no count.
     """
     speaker = case["speaker"]
-    sla_days = case["sla_days"]
-    late = overdue(speaker, sla_days, case["today"])
-    deadline = due_date(speaker, sla_days)
+    config = case["config"]
+    late = overdue(speaker, config, case["today"])
+    deadline = due_date(speaker, config)
 
     if case["state"] == "none":
         assert deadline is None

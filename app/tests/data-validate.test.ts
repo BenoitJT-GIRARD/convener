@@ -243,6 +243,8 @@ describe('the repository this app actually reads', () => {
   it('reads data/config.yml as the model says it is', () => {
     const cfg = parseConfig(dataFile('config.yml'));
     expect(cfg.board.length).toBeGreaterThan(0);
-    expect(cfg.sla_days.lead_decision).toBeGreaterThan(0);
+    expect(cfg.sla_days.invitation_follow_up).toBeGreaterThan(0);
+    // The board's decision deadline is this one and no other (F-13).
+    expect(cfg.vote_window_days).toBeGreaterThan(0);
   });
 });

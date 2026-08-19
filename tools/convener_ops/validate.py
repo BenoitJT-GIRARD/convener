@@ -102,9 +102,16 @@ CHANNEL_KEYS = frozenset({"key", "label"})
 #: person. The `label`, which nothing stores, carries whatever wording the
 #: volunteers want.
 CHANNEL_KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+#: The turnaround targets the series sets, and the three it still stores.
+#:
+#: `lead_decision` is deliberately not among them (F-13). The board's
+#: decision deadline is `vote_window_days`, the number `sweep.expire_votes`
+#: actually parks a lead on; a second key holding the same deadline meant a
+#: file could say the board was on time on the very morning the job parked
+#: the lead. One deadline, one number: the contradiction is not detected
+#: here, it has no key left to be written in.
 SLA_DAYS_KEYS = frozenset(
     {
-        "lead_decision",
         "invitation_follow_up",
         "summary_after_delivery",
         "recording_after_delivery",
@@ -818,6 +825,16 @@ def validate_config(cfg: Any) -> list[str]:
         missing_sla = SLA_DAYS_KEYS - set(sla_days)
         if missing_sla:
             errors.append(f"config.yml: missing sla_days keys {sorted(missing_sla)}")
+        # Named rather than ignored, the way `vote_threshold` is above: a file
+        # that still carries it has a second board-decision deadline in it,
+        # and silently dropping the key would leave whoever set it to 20
+        # believing the board had 20 days.
+        if "lead_decision" in sla_days:
+            errors.append(
+                "config.yml: sla_days.lead_decision is obsolete, the board's "
+                "decision deadline is vote_window_days - the same number "
+                "convener-sweep parks an expired lead on"
+            )
 
     for path in CONFIG_INTS:
         value = _setting(cfg, path)

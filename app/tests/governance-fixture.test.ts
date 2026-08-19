@@ -55,7 +55,7 @@ interface LatenessCase {
     youtube_url: string;
     runbook_progress: Record<string, boolean>;
   };
-  sla_days: Config['sla_days'];
+  config: { vote_window_days: number; sla_days: Config['sla_days'] };
   today: string;
   state: 'none' | 'due' | 'overdue';
   step?: string;
@@ -68,13 +68,18 @@ interface LatenessCase {
 
 const latenessCases = cases.lateness_cases as unknown as LatenessCase[];
 
-function configFor(sla_days: Config['sla_days']): Config {
+/** The two windows the case names, in a config the reader will take. Both
+ *  come from the fixture, so a case that moves the vote window moves the
+ *  board-decision deadline with it -- there is no second number here that
+ *  could stay at 14 (F-13). */
+function configFor(c: LatenessCase): Config {
   return {
     season: 2026, vw_counter: 5, overlap_window_days: 7,
     seminar_duration_minutes: 90, board: [], nominations: [],
-    board_min: 5, board_max: 9, vote_window_days: 14,
+    board_min: 5, board_max: 9, vote_window_days: c.config.vote_window_days,
     objection_window_working_days: 3, inactivity_months: 6,
-    balance_window_months: 24, view_count_window_days: 30, sla_days, channels: [],
+    balance_window_months: 24, view_count_window_days: 30,
+    sla_days: c.config.sla_days, channels: [],
   };
 }
 
@@ -105,7 +110,7 @@ describe('the overdue wording, shared with the daily digest', () => {
    * readers: a reword that reaches only one side fails here and in
    * `tools/tests/test_governance_fixture.py` at the same time. */
   it.each(latenessCases)('$name', c => {
-    const l = lateness(speakerFor(c), configFor(c.sla_days), c.today);
+    const l = lateness(speakerFor(c), configFor(c), c.today);
     expect(l.state).toBe(c.state);
     if (l.state === 'none') return;
 

@@ -15,7 +15,7 @@ present or absent, never as an error after you press something.
 
 | Tab | What it answers |
 |---|---|
-| **Inbox** | What is waiting, mine first. Votes the Board owes, work an event owes, and the lines somebody has put their name against. Rows are ordered by how late they are against the turnaround times in `sla_days`. |
+| **Inbox** | What is waiting, mine first. Votes the Board owes, work an event owes, and the lines somebody has put their name against. Rows are ordered by how late they are against the turnaround times the series sets — `vote_window_days` for a Board decision, `sla_days` for the rest. |
 | **Pipeline** | Where every live speaker stands, one column per status from lead to scheduled. This is also where a new speaker is added by hand. |
 | **Agenda** | The dated webinars, month by month, and the gap the overlap window keeps between them. |
 | **Archive** | What is finished or set aside: past webinars, parked leads, and the two kinds of decline. The wrap-up numbers can still be filled in here weeks later. |

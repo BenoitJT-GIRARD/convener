@@ -25,7 +25,6 @@ const config: Config = {
   balance_window_months: 24,
   view_count_window_days: 30,
   sla_days: {
-    lead_decision: 14,
     invitation_follow_up: 30,
     summary_after_delivery: 7,
     recording_after_delivery: 14,
@@ -326,7 +325,12 @@ describe('the wording a volunteer reads', () => {
 
   it('labels every configured step, and labels none of them as a role', () => {
     expect(Object.keys(STEP_LABELS).sort()).toEqual([...SLA_STEPS].sort());
-    expect(Object.keys(STEP_LABELS).sort()).toEqual(Object.keys(config.sla_days).sort());
+    // Three of the four steps are read off `sla_days`; the board's decision
+    // is timed by `vote_window_days`, so the config has exactly one number
+    // per deadline and no key a second one could live in (F-13).
+    expect(Object.keys(STEP_LABELS).sort()).toEqual(
+      [...Object.keys(config.sla_days), 'lead_decision'].sort(),
+    );
     for (const label of Object.values(STEP_LABELS)) {
       expect(label).not.toMatch(/\b(board member|volunteer|host|you)\b/i);
     }

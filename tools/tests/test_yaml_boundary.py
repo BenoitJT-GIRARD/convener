@@ -305,8 +305,9 @@ def test_the_config_fixture_carries_every_window_the_two_languages_read() -> Non
         "view_count_window_days",
     ):
         assert isinstance(cfg[key], int), key
+    # Three, not four: the board's decision deadline is `vote_window_days`
+    # above, checked as an integer with the rest (F-13).
     assert set(cfg["sla_days"]) == {
-        "lead_decision",
         "invitation_follow_up",
         "summary_after_delivery",
         "recording_after_delivery",

@@ -162,7 +162,7 @@ describe('the acknowledgement is the first thing an outside person receives', ()
   });
 
   it('promises a window rather than a date, so a change of configuration cannot make it a lie', () => {
-    // The board's target lives in `sla_days.lead_decision`, which is
+    // The board's target lives in `vote_window_days`, which is
     // configuration and can be edited. A message naming a day would be a
     // promise the record never made.
     expect(source(PROPOSAL_KEY)).not.toMatch(/\bwithin 14 days\b/i);

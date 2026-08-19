@@ -170,7 +170,6 @@ One mapping, with the keys below.
 | `inactivity_months` | int | How many months without a ballot make a member inactive (G-09). |
 | `balance_window_months` | int | How far back the programme balance report looks, in months. |
 | `view_count_window_days` | int | How long after a talk its view count is read off, in days. |
-| `sla_days.lead_decision` | int | Days the board has to decide on a lead. |
 | `sla_days.invitation_follow_up` | int | Days before an unanswered invitation is followed up. |
 | `sla_days.summary_after_delivery` | int | Days after a talk before the forum summary is overdue. |
 | `sla_days.recording_after_delivery` | int | Days after a talk before the recording is overdue. |

@@ -434,7 +434,12 @@ export interface Config {
   /** Most members the board may hold. */
   board_max: number;
   /** How long a vote stays open, in days, counted from
-   *  `selection.opened_on`. */
+   *  `selection.opened_on`.
+   *
+   *  Also the board's decision deadline, which is why `sla_days` has no
+   *  `lead_decision` (F-13): `tools/convener_ops/sweep.py::expire_votes` parks a
+   *  lead the day after this window closes, and a second key holding the same
+   *  deadline let a file say the board was on time that very morning. */
   vote_window_days: number;
   /** How long an objection window runs, in working days rather than calendar
    *  days (G-10). */
@@ -451,10 +456,11 @@ export interface Config {
    *  configuration and not a constant, and why the field's label is built
    *  from it rather than typed. */
   view_count_window_days: number;
-  /** How long each piece of work is given before the inbox raises it. */
+  /** How long each piece of work is given before the inbox raises it.
+   *
+   *  Three keys, not four: the board's decision is timed by
+   *  `vote_window_days` above, the one number the sweep acts on. */
   sla_days: {
-    /** Days the board has to decide on a lead. */
-    lead_decision: number;
     /** Days before an unanswered invitation is followed up. */
     invitation_follow_up: number;
     /** Days after a talk before the forum summary is overdue. */

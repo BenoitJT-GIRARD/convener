@@ -508,8 +508,13 @@ function readChannels(at: Cursor, raw: Record<string, unknown>): Channel[] {
   return channels;
 }
 
+/** Three, not four: the board's decision deadline is `vote_window_days`
+ *  (F-13), the number the sweep parks an expired lead on. A file that still
+ *  carries `lead_decision` is refused by `keys()` below rather than having
+ *  the key quietly dropped -- whoever set it to 20 has to be told it was
+ *  never read. */
 const SLA_KEYS = [
-  'lead_decision', 'invitation_follow_up', 'summary_after_delivery',
+  'invitation_follow_up', 'summary_after_delivery',
   'recording_after_delivery',
 ] as const;
 
@@ -518,7 +523,6 @@ function readSlaDays(at: Cursor, value: unknown): Config['sla_days'] {
   const raw = object(inner, value);
   keys(inner, raw, SLA_KEYS);
   return {
-    lead_decision: whole(inner, raw, 'lead_decision'),
     invitation_follow_up: whole(inner, raw, 'invitation_follow_up'),
     summary_after_delivery: whole(inner, raw, 'summary_after_delivery'),
     recording_after_delivery: whole(inner, raw, 'recording_after_delivery'),

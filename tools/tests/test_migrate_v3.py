@@ -199,7 +199,9 @@ def test_the_new_configuration_keys_get_their_specified_values() -> None:
     assert migrated["board_max"] == 9
     assert migrated["balance_window_months"] == 24
     assert migrated["nominations"] == []
-    assert migrated["sla_days"]["lead_decision"] == 14
+    assert migrated["sla_days"]["invitation_follow_up"] == 30
+    # No `lead_decision`: the board's deadline is `vote_window_days` (F-13).
+    assert "lead_decision" not in migrated["sla_days"]
 
 
 def test_values_already_set_are_kept() -> None:
