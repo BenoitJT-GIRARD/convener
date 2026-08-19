@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
 from conftest import speaker
 
 import convener_ops.public_data as public_data
-from convener_ops.public_data import PUBLIC_FIELDS, to_public
+from convener_ops.public_data import (
+    NEVER_PUBLISHED,
+    PUBLIC_FIELD_SOURCES,
+    PUBLIC_FIELDS,
+    PUBLISHABLE_ALWAYS,
+    PUBLISHABLE_ON_CONSENT,
+    to_public,
+)
 
 
 def _scheduled(**overrides: Any) -> dict[str, Any]:
@@ -286,3 +295,194 @@ def test_a_forced_status_is_not_a_path_to_publication() -> None:
     forced = _scheduled(status="archived")
     assert forced["publication"]["outcome"] == ""
     assert to_public([forced])[0]["youtube_url"] == ""
+
+
+# --- The classification, and the gate it feeds -------------------------------
+
+CASES = json.loads(
+    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+        encoding="utf-8"
+    )
+)
+CLASSIFICATION = CASES["speaker_field_classification"]
+
+
+def _person(
+    publication: dict[str, Any] | None = None, **overrides: Any
+) -> dict[str, Any]:
+    """An archived record whose gate opened, with the personal fields filled in.
+
+    `_published` sends its keyword arguments into the *publication block*, so
+    the block goes in as one argument here and everything else is applied to
+    the speaker afterwards. Mixing the two would have written `photo_url` into
+    the publication block, where nothing reads it, and the tests below would
+    have passed by asserting that a field nobody set came out empty.
+    """
+    entry = _published(**(publication or {}))
+    entry.update(
+        {
+            "photo_url": "https://example.org/ada.jpg",
+            "bio": "Ada works on analytical engines.",
+            "linkedin": "ada-lovelace",
+            "seed_questions": "What would you ask an engine?",
+        }
+    )
+    entry.update(overrides)
+    return entry
+
+
+def test_the_classification_matches_the_shared_fixture() -> None:
+    # The same three sets are written in `app/src/state/consent.ts`, and
+    # `app/tests/consent-fields.test.ts` asserts them against this same file.
+    # A field moved on one side only fails in the language left behind.
+    assert frozenset(CLASSIFICATION["publishable_always"]) == PUBLISHABLE_ALWAYS
+    assert frozenset(CLASSIFICATION["publishable_on_consent"]) == PUBLISHABLE_ON_CONSENT
+    assert frozenset(CLASSIFICATION["never_published"]) == NEVER_PUBLISHED
+
+
+def test_the_three_sets_are_disjoint() -> None:
+    # Exhaustiveness over `keyof Speaker` is checked on the TypeScript side,
+    # where the model lives; what Python can check without inventing a second
+    # copy of that model is that no field is claimed twice -- which is what
+    # would let one placement quietly win over another.
+    assert not PUBLISHABLE_ALWAYS & PUBLISHABLE_ON_CONSENT
+    assert not PUBLISHABLE_ALWAYS & NEVER_PUBLISHED
+    assert not PUBLISHABLE_ON_CONSENT & NEVER_PUBLISHED
+
+
+def test_every_published_column_names_a_publishable_field() -> None:
+    for column, source in PUBLIC_FIELD_SOURCES.items():
+        assert source not in NEVER_PUBLISHED, column
+        assert source in PUBLISHABLE_ALWAYS or source in PUBLISHABLE_ON_CONSENT, column
+
+
+def test_a_column_drawn_from_an_internal_field_is_dropped_from_the_allowlist(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The derivation is the guarantee: somebody adding a column sourced from
+    # `notes` does not get a reported error, they get nothing published. This
+    # rebuilds PUBLIC_FIELDS exactly as the module does, from a mapping that
+    # has such a line in it.
+    sources = dict(PUBLIC_FIELD_SOURCES, leak="notes")
+    derived = frozenset(
+        name
+        for name, source in sources.items()
+        if source in PUBLISHABLE_ALWAYS or source in PUBLISHABLE_ON_CONSENT
+    )
+    assert "leak" not in derived
+    monkeypatch.setattr(public_data, "PUBLIC_FIELDS", derived)
+    out = public_data.to_public([_scheduled(notes="internal note")])
+    assert "leak" not in out[0]
+
+
+def test_the_personal_fields_wait_for_a_recorded_consent() -> None:
+    # A scheduled seminar, every personal field filled in, no consent
+    # recorded: the programme goes out and the person does not.
+    filled = _scheduled(
+        photo_url="https://example.org/ada.jpg",
+        bio="Ada works on analytical engines.",
+        linkedin="ada-lovelace",
+        seed_questions="What would you ask an engine?",
+    )
+    out = to_public([filled])[0]
+    assert out["photo_url"] == ""
+    assert out["bio"] == ""
+    assert out["linkedin"] == ""
+    assert out["seed_questions"] == ""
+    assert out["speaker_name"] == "Ada Lovelace"
+    assert out["title"] == "On analytical engines"
+
+
+def test_the_personal_fields_go_out_once_the_gate_has_opened() -> None:
+    out = to_public([_person()])[0]
+    assert out["photo_url"] == "https://example.org/ada.jpg"
+    assert out["bio"] == "Ada works on analytical engines."
+    assert out["linkedin"] == "ada-lovelace"
+    assert out["seed_questions"] == "What would you ask an engine?"
+
+
+def test_a_withdrawn_consent_pulls_the_person_as_well_as_the_recording() -> None:
+    # G-15 is not only about the video. A speaker who withdraws has their
+    # portrait, biography and questions taken out of the feed too; what stays
+    # is the programme of a talk that happened.
+    out = to_public([_person({"consent": "refused", "outcome": "withheld"})])[0]
+    assert out["photo_url"] == ""
+    assert out["bio"] == ""
+    assert out["seed_questions"] == ""
+    assert out["youtube_url"] == ""
+    assert out["title"] == "On analytical engines"
+    assert out["speaker_name"] == "Ada Lovelace"
+
+
+def test_silence_never_discloses_the_person() -> None:
+    # The same asymmetry the recording is gated on, asserted on the fields
+    # added for the volunteers' checklist: an unanswered, blank or
+    # unrecognised consent is not a permission, and neither is a record whose
+    # consent says yes but whose gate was never run.
+    for consent in ("pending", "", "unknown"):
+        out = to_public([_person({"consent": consent})])[0]
+        assert out["photo_url"] == "", consent
+        assert out["bio"] == "", consent
+    for outcome in ("", "withheld", "pending"):
+        out = to_public([_person({"outcome": outcome})])[0]
+        assert out["photo_url"] == "", outcome
+        assert out["bio"] == "", outcome
+    unreadable = _person()
+    unreadable["publication"] = "nonsense"
+    assert to_public([unreadable])[0]["bio"] == ""
+
+
+def test_a_standing_objection_pulls_the_person_too() -> None:
+    # An objection with no `resolved_on` still stands, and a hand-edited file
+    # that omits the key reads as standing too -- so the person comes out of
+    # the feed for exactly as long as the recording does.
+    out = to_public(
+        [
+            _person(
+                {
+                    "objections": [
+                        {"member": "carol", "reason": "wait", "date": "2026-01-10"}
+                    ]
+                }
+            )
+        ]
+    )[0]
+    assert out["bio"] == ""
+    assert out["youtube_url"] == ""
+
+
+def test_the_hosts_are_never_published_on_any_consent() -> None:
+    # `host_1` and `host_2` name volunteers. The consent this gate reads is
+    # the speaker's, and it cannot answer for somebody else -- so no value of
+    # the publication block puts a host in the feed.
+    assert "host_1" in NEVER_PUBLISHED
+    assert "host_2" in NEVER_PUBLISHED
+    serialised = repr(to_public([_person(host_1="H1", host_2="H2")]))
+    assert "H1" not in serialised
+    assert "H2" not in serialised
+
+
+def test_the_availability_and_the_deliberation_stay_in_the_repository() -> None:
+    # `candidate_dates` records which slots a speaker turned down: their
+    # availability, not the programme. `publication` is the record of a
+    # permission and is never published by the gate that reads it.
+    out = to_public(
+        [
+            _person(
+                candidate_dates=[
+                    {"date": "2026-02-05", "time": "16:00", "answer": "no"}
+                ],
+                notes="internal note",
+                conflicts_of_interest="advises the funder",
+            )
+        ]
+    )
+    serialised = repr(out)
+    for forbidden in (
+        "2026-02-05",
+        "candidate_dates",
+        "publication",
+        "internal note",
+        "advises the funder",
+    ):
+        assert forbidden not in serialised

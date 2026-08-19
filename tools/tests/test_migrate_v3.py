@@ -25,6 +25,7 @@ from migrate_v3 import (
     migrate_speaker,
     migrate_speakers,
 )
+from migrate_v4 import migrate_speakers as migrate_speakers_v4
 
 from convener_ops.cli import SPEAKERS_HEADER
 from convener_ops.validate import validate_config, validate_speakers
@@ -198,7 +199,9 @@ def test_the_new_configuration_keys_get_their_specified_values() -> None:
     assert migrated["board_max"] == 9
     assert migrated["balance_window_months"] == 24
     assert migrated["nominations"] == []
-    assert migrated["sla_days"]["lead_decision"] == 14
+    assert migrated["sla_days"]["invitation_follow_up"] == 30
+    # No `lead_decision`: the board's deadline is `vote_window_days` (F-13).
+    assert "lead_decision" not in migrated["sla_days"]
 
 
 def test_values_already_set_are_kept() -> None:
@@ -246,7 +249,36 @@ def test_migrating_the_config_twice_changes_nothing() -> None:
 # --- the two halves together ----------------------------------------------
 
 
+V4_FIELDS = (
+    "photo_url",
+    "bio",
+    "linkedin",
+    "seed_questions",
+    "candidate_dates",
+    "checklist",
+)
+
+
 def test_the_migrated_data_passes_the_validator() -> None:
+    """What this one-shot produces is v3, and the validator now reads v4.
+
+    The gap is named rather than tolerated: the errors this asserts are the
+    exhaustive list of what schema v4 asks for and the v3 migration cannot
+    know about -- the six fields that were never in a v2 file to migrate.
+    Anything else the validator finds still fails here.
+
+    The gap is no longer open: `scripts/migrate_v4.py` closes it, and the
+    second half of this test runs the two one-shots in the order they were
+    actually run against `data/` and asserts the validator then finds
+    nothing at all. Naming the gap and naming what closes it is what keeps
+    this assertion exhaustive instead of merely tolerant -- a v3 output that
+    grew a sixth defect would still fail here, before and after v4.
+    """
+    expected_v4_gap = sorted(
+        f"speakers[{index}] ({sid}): missing {field}"
+        for index, sid in enumerate(("spk-001", "spk-002"))
+        for field in V4_FIELDS
+    )
     speakers = migrate_speakers(
         [
             v2_speaker(
@@ -260,8 +292,15 @@ def test_the_migrated_data_passes_the_validator() -> None:
     )
     config = migrate_config(v2_config(), ballot_voters(speakers))
     logins = {m["login"] for m in config["board"]}
-    assert validate_speakers(speakers, logins) == []
-    assert validate_config(config) == []
+    assert sorted(validate_speakers(speakers, logins)) == expected_v4_gap
+    # The config has one gap of the same kind, and it is named the same way.
+    # The promotion channels are configuration somebody writes, not data a
+    # migration can derive: there was nothing in a v2 config to turn into
+    # them, and inventing seven here would be this script deciding on the
+    # collaborators' behalf what the list holds. A v3 config that grew any
+    # other defect still fails this line.
+    assert validate_config(config) == ["config.yml: missing keys ['channels']"]
+    assert validate_speakers(migrate_speakers_v4(speakers), logins) == []
 
 
 # --- the script as it is actually run -------------------------------------

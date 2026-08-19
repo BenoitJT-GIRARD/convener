@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { deriveInbox } from '../src/state/inbox';
+import { itemsWaitingFor } from '../src/state/assignment';
 import type { Config, Speaker, SpeakerStatus } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /** Four active members, so `thresholdFor(4)` is 3. */
 const CFG: Config = {
@@ -21,15 +23,19 @@ const CFG: Config = {
   objection_window_working_days: 3,
   inactivity_months: 6,
   balance_window_months: 12,
+  view_count_window_days: 30,
   sla_days: {
-    lead_decision: 14,
     invitation_follow_up: 7,
     summary_after_delivery: 5,
     recording_after_delivery: 10,
   },
+  channels: [],
 };
 
-const baseSpk: Speaker = {
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
+const baseSpk: Speaker = double({
   id: 's',
   name: 'S',
   gender: 'undisclosed',
@@ -58,7 +64,7 @@ const baseSpk: Speaker = {
   runbook_progress: {},
   metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
   notes: '',
-};
+});
 
 const mk = (o: Partial<Speaker>): Speaker => ({ ...baseSpk, ...o });
 
@@ -221,6 +227,78 @@ describe('deriveInbox v2', () => {
     });
     const labels = deriveInbox([s], null, 'alice', 'board', '2026-05-23').map(r => r.label);
     expect(labels).not.toContain('Threshold already reached, still open: S');
+  });
+
+  it('walks the phase through phaseItems, so a promotion channel reaches the inbox', () => {
+    // `state/phases.ts` says everything that walks a phase's lines walks
+    // them from `phaseItems`, and names the inbox as one of the three. This
+    // one walked `phase.items`, so the places an event is announced -- which
+    // live in `data/config.yml` and enter the journey only through
+    // `phaseItems` -- raised no reminder anywhere. The channel line has no
+    // window of its own; it is due in the window of the line it follows,
+    // which is where the phase places it.
+    const cfg: Config = { ...CFG, channels: [{ key: 'forum', label: 'Forum announcement' }] };
+    const s = mk({
+      status: 'scheduled' as SpeakerStatus,
+      date: '2026-06-01',
+      edition_code: 'MRG-1',
+      time: '12:30',
+    });
+    const labels = deriveInbox([s], cfg, 'alice', 'organizer', '2026-05-23').map(r => r.label);
+    expect(labels).toContain('Forum announcement (T-14)');
+    // And not before its window opens.
+    const early = deriveInbox([s], cfg, 'alice', 'organizer', '2026-05-01').map(r => r.label);
+    expect(early).not.toContain('Forum announcement (T-14)');
+  });
+
+  it('leaves a line somebody is named on to the list of what they are down for', () => {
+    // `Inbox.tsx` shows this list beside `assignment.itemsWaitingFor`. A line
+    // with an owner belongs to the second, so raising it in both put the same
+    // line twice on one screen -- the common case, since a host is exactly
+    // who gets named on the lines of their own record. An unowned line is
+    // the hosts', which is what it has always meant, and that one is raised.
+    const s = mk({
+      status: 'scheduled' as SpeakerStatus,
+      date: '2026-06-22',
+      edition_code: 'MRG-1',
+      time: '12:30',
+      checklist: { 'scheduled/T-30/visuals': { assignee: 'alice' } },
+    });
+    const labels = deriveInbox([s], CFG, 'alice', 'organizer', '2026-05-23').map(r => r.label);
+    expect(labels.some(l => l.includes('T-30'))).toBe(false);
+    expect(itemsWaitingFor([s], 'alice', CFG).map(w => w.item.key)).toContain(
+      'scheduled/T-30/visuals',
+    );
+  });
+
+  it('leaves a delivered line somebody is named on to that person too', () => {
+    // The same rule as the scheduled branch, in the branch that was written
+    // without a test: a required wrap-up line with an owner is raised by
+    // `itemsWaitingFor` and must not also stand in the list of what is
+    // nobody's. Deleting the skip in the `delivered` branch of `inbox.ts`
+    // left all 961 tests green before this.
+    const owned = mk({
+      status: 'delivered' as SpeakerStatus,
+      date: '2026-05-01',
+      edition_code: 'MRG-1',
+      time: '12:30',
+      checklist: { 'delivered/forum-summary': { assignee: 'alice' } },
+    });
+    const labels = deriveInbox([owned], CFG, 'alice', 'organizer', '2026-05-23').map(r => r.label);
+    expect(labels).not.toContain('Forum summary posted');
+    expect(itemsWaitingFor([owned], 'alice', CFG).map(w => w.item.key)).toContain(
+      'delivered/forum-summary',
+    );
+    // Unowned, the same line is everybody's and is raised.
+    const unowned = mk({
+      status: 'delivered' as SpeakerStatus,
+      date: '2026-05-01',
+      edition_code: 'MRG-1',
+      time: '12:30',
+    });
+    expect(deriveInbox([unowned], CFG, 'alice', 'organizer', '2026-05-23').map(r => r.label)).toContain(
+      'Forum summary posted',
+    );
   });
 
   it('leaves the record exactly as it found it', () => {

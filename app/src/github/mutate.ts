@@ -12,7 +12,16 @@
  * assigned, say) may stash it in a variable in its own closure — the value
  * from the call that actually produced the returned result is the one that
  * matters, and each replay simply overwrites it with a fresh answer.
+ *
+ * The store is a git repository, so the message this carries is a commit
+ * subject: permanent, unrewritable, and mailed to every watcher. It is a
+ * `Subject` (`state/decisions.ts`) rather than a `string` for that reason —
+ * here as well as at `mutateSpeakers`, so that reaching past the data layer
+ * to this function is not a way around the grammar.
  */
+
+import { DecisionRejected, isSubject } from '../state/decisions';
+import type { Subject } from '../state/decisions';
 
 export interface FileStore {
   read(path: string): Promise<{ text: string; sha: string }>;
@@ -20,7 +29,7 @@ export interface FileStore {
     path: string,
     text: string,
     sha: string,
-    message: string,
+    message: Subject,
   ): Promise<{ sha: string }>;
 }
 
@@ -30,7 +39,14 @@ export interface MutateOptions<T> {
   parse: (text: string) => T;
   serialize: (value: T) => string;
   transform: (current: T) => T;
-  message: string;
+  /** The commit subject, or a function from the value about to be written to
+   *  it. The function form exists for a subject that has to name something
+   *  the transformation assigned -- the id of a record just created, which
+   *  `nextSpeakerId(current)` only settles inside the transform and only for
+   *  the attempt that actually gets written. Without it the caller would have
+   *  to build the subject from a value read before the replay, which is the
+   *  one value that may be stale. */
+  message: Subject | ((next: T) => Subject);
   attempts?: number;
 }
 
@@ -72,7 +88,20 @@ export async function mutate<T>(options: MutateOptions<T>): Promise<MutateResult
     }
 
     try {
-      const written = await store.write(path, nextText, sha, message);
+      const subject = typeof message === 'function' ? message(next) : message;
+      // Asked of the string, not of its type. `Subject` is a compile-time
+      // fact and a cast is past it in one keystroke; this is the last point
+      // before a commit subject becomes permanent, so the grammar is asked
+      // here as well. It costs one regex per write and it is the only check
+      // in the chain that does not depend on how a defeat was spelled.
+      if (!isSubject(subject)) {
+        throw new DecisionRejected(
+          `"${subject}" is not a commit subject this app assembles. Build it with ` +
+            'formatDecision() or dataEdit() in src/state/decisions.ts: a commit ' +
+            'subject is permanent and cannot be taken back.',
+        );
+      }
+      const written = await store.write(path, nextText, sha, subject);
       return { value: next, sha: written.sha, changed: true, attempts: attempt };
     } catch (error) {
       if (isConflict(error)) continue;

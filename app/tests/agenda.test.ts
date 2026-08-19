@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { findOverlaps, nextEditionCode } from '../src/state/agenda';
 import type { Speaker, SpeakerStatus } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 const mk = (
   id: string,
   status: SpeakerStatus,
   date: string,
   ed = '',
-): Speaker => ({
+): Speaker => double({
   id,
   name: id,
   gender: 'undisclosed',

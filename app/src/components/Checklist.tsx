@@ -1,6 +1,14 @@
 import { useState } from 'react';
-import type { Speaker } from '../data/types';
-import { phaseOf, fieldValue, type RunbookItem, type FieldKey } from '../state/phases';
+import type { Config, Speaker } from '../data/types';
+import {
+  phaseOf,
+  phaseItems,
+  fieldValue,
+  stepBefore,
+  type RunbookItem,
+  type FieldKey,
+} from '../state/phases';
+import { itemAssignee } from '../state/assignment';
 import { parisToday } from '../state/derived';
 import { InlineContent } from '../content/InlineContent';
 
@@ -8,11 +16,34 @@ interface Props {
   speaker: Speaker;
   onToggle: (key: string, value: boolean) => void;
   onField: (field: FieldKey, value: string) => void;
+  /** Records who owes one line. Absent -- on a screen with no writer, or
+   *  before anyone is signed in -- simply hides the control; the journey
+   *  reads exactly as it did before. */
+  onAssign?: (key: string, login: string) => void;
+  /** The people who can be put down for a line, as logins. A closed list
+   *  rather than a text box: an owner this app cannot recognise is one the
+   *  inbox would never match, so a typo would silently file the work with
+   *  nobody. */
+  people?: string[];
+  /** The loaded configuration, for the lines of the journey that live in it:
+   *  the places an event is announced. Absent -- nothing loaded -- shows the
+   *  static journey, which is what the screen showed before those lines
+   *  existed. */
+  config?: Config | null;
   disabled?: boolean;
   today?: string;
 }
 
-export function Checklist({ speaker, onToggle, onField, disabled, today }: Props) {
+export function Checklist({
+  speaker,
+  onToggle,
+  onField,
+  onAssign,
+  people,
+  config,
+  disabled,
+  today,
+}: Props) {
   const phase = phaseOf(speaker.status);
   if (!phase) return null;
   const todayStr = today ?? parisToday();
@@ -25,16 +56,26 @@ export function Checklist({ speaker, onToggle, onField, disabled, today }: Props
   return (
     <div className="space-y-3">
       <h2 className="font-serif text-xl mb-3">{phase.label}</h2>
-      {phase.items.map(item => (
-        <Row
-          key={item.key}
-          item={item}
-          speaker={speaker}
-          inWindow={item.window === undefined || daysUntil === null || daysUntil <= item.window}
-          disabled={disabled}
-          onToggle={onToggle}
-          onField={onField}
-        />
+      {phaseItems(phase, config ?? null).map(item => (
+        <div key={item.key}>
+          <Row
+            item={item}
+            speaker={speaker}
+            inWindow={item.window === undefined || daysUntil === null || daysUntil <= item.window}
+            disabled={disabled}
+            onToggle={onToggle}
+            onField={onField}
+          />
+          {onAssign && (
+            <Owner
+              item={item}
+              speaker={speaker}
+              people={people ?? []}
+              disabled={disabled}
+              onAssign={onAssign}
+            />
+          )}
+        </div>
       ))}
     </div>
   );
@@ -68,6 +109,58 @@ function Row({ item, speaker, inWindow, disabled, onToggle, onField }: RowProps)
     case 'button-group':
       return null;
   }
+}
+
+/**
+ * Who owes this line.
+ *
+ * Nobody is the default and reads as a plain statement of fact -- "Nobody in
+ * particular (hosts)" -- in the same muted type as every other label on the
+ * row. There is no warning colour, no asterisk and no count of unassigned
+ * lines anywhere: not naming an owner is what the series has always done, and
+ * a tool that scolds volunteers over a field they never asked for is a tool
+ * they stop using.
+ *
+ * The wording is about the work and the arrangement, never about a person's
+ * standing. `state/sla.ts` keeps the same discipline for lateness, and there
+ * is no sentence here a name could turn into a judgement.
+ */
+function Owner({
+  item,
+  speaker,
+  people,
+  disabled,
+  onAssign,
+}: {
+  item: RunbookItem;
+  speaker: Speaker;
+  people: string[];
+  disabled?: boolean;
+  onAssign: (key: string, login: string) => void;
+}) {
+  const current = itemAssignee(speaker, item.key);
+  // A name already on the record that is no longer among the people offered --
+  // a volunteer who has left the board, say -- stays selectable, because
+  // dropping it from the list would silently reassign the line to nobody.
+  const options = people.includes(current) || current === '' ? people : [current, ...people];
+  return (
+    <label className="flex items-baseline gap-2 px-2 pt-1 pb-2 text-xs text-ink-muted">
+      <span className="font-display font-bold uppercase tracking-widest">Owner</span>
+      <select
+        value={current}
+        disabled={disabled}
+        onChange={e => onAssign(item.key, e.target.value)}
+        className="text-xs bg-transparent border-b border-border"
+      >
+        <option value="">Nobody in particular (hosts)</option>
+        {options.map(login => (
+          <option key={login} value={login}>
+            {login}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 function ContentRow({ item, speaker }: { item: RunbookItem; speaker: Speaker }) {
@@ -112,7 +205,7 @@ function FieldRow({
     <label className="block border border-border rounded p-3">
       <span className="font-display font-bold text-xs uppercase tracking-widest text-ink-muted">
         {item.label}
-        {item.required && <span className="text-danger ml-1">*</span>}
+        {mustBeDone(item) && <span className="text-danger ml-1">*</span>}
       </span>
       {long ? (
         <textarea
@@ -135,6 +228,14 @@ function FieldRow({
   );
 }
 
+/** The asterisk means "this one is not optional", and a line that stops the
+ *  archive from three weeks before the talk is as far from optional as the
+ *  journey gets. Reading only `required` would have left the one line the
+ *  volunteers write in capitals looking like every other tick. */
+function mustBeDone(item: RunbookItem): boolean {
+  return item.required === true || item.blocksFinalisation === true;
+}
+
 function CheckboxRow({
   item,
   speaker,
@@ -149,7 +250,13 @@ function CheckboxRow({
   onToggle: (key: string, value: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  // Released by the volunteer, for this row, for as long as the screen is
+  // open. Nothing about it is written down: what the record keeps is which
+  // steps happened, and "the order was odd" is not a fact about the event.
+  const [released, setReleased] = useState(false);
   const checked = !!speaker.runbook_progress[item.key];
+  const previous = stepBefore(speaker, item);
+  const held = previous !== undefined && !released;
   const label = item.window !== undefined ? `${item.label} (T-${item.window})` : item.label;
   const today = parisToday();
   return (
@@ -158,15 +265,30 @@ function CheckboxRow({
         <input
           type="checkbox"
           checked={checked}
-          disabled={disabled}
+          disabled={disabled || held}
           onChange={e => onToggle(item.key, e.target.checked)}
           className="mt-1 accent-primary"
         />
         <div className="flex-1">
           <p className="text-sm">
             {label}
-            {item.required && <span className="text-danger ml-1">*</span>}
+            {mustBeDone(item) && <span className="text-danger ml-1">*</span>}
           </p>
+          {item.note && <p className="text-xs text-ink-muted mt-1">{item.note}</p>}
+          {previous !== undefined && (
+            <div className="mt-1">
+              <p className="text-xs text-ink-muted">Comes after “{previous.label}”.</p>
+              {held && (
+                <button
+                  type="button"
+                  onClick={() => setReleased(true)}
+                  className="text-xs text-primary-hover underline mt-1"
+                >
+                  It happened in another order — tick it anyway
+                </button>
+              )}
+            </div>
+          )}
           {item.contentKey && (
             <button
               type="button"

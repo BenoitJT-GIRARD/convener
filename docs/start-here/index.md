@@ -13,7 +13,9 @@ We run online behavioural-science webinars — Thursdays, 12:30 CET. Volunteers 
 - **Editorial Board** — validates speakers and steers the series.
 - **Architecte** — looks after the system itself.
 
-There is no ladder to climb. Most volunteers are Contributors and Event Hosts. After a few events, anyone who wants to can put themselves forward for the Editorial Board, or as Architecte. See [Roles](../roles.md) for the detail.
+{{> fragments/roles-no-ladder }}
+
+See [Roles](../roles.md) for the detail.
 
 ## The way we work
 

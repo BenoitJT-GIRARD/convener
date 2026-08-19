@@ -34,6 +34,9 @@
 import type {
   Ballot,
   BoardMember,
+  CandidateDate,
+  Channel,
+  ChecklistAssignee,
   Config,
   Nomination,
   Objection,
@@ -43,7 +46,7 @@ import type {
   SpeakerMetrics,
   SpeakerSelection,
 } from './types';
-import { BALLOT_VALUES, CAREER_STAGES, GENDERS } from './types';
+import { BALLOT_VALUES, CAREER_STAGES, DATE_ANSWERS, GENDERS, SPEAKER_FIELDS } from './types';
 
 /**
  * A data file the app cannot read as the model it is meant to hold.
@@ -190,6 +193,52 @@ function ticks(at: Cursor, raw: Record<string, unknown>, key: string): Record<st
   return out;
 }
 
+/** `checklist`: free-form step names again, each carrying the person who owes
+ *  that line. The names are not a closed vocabulary for the same reason
+ *  `runbook_progress` has none -- they follow the runbook -- and the owner is
+ *  read as plain text: it is a login typed by a volunteer, not a value this
+ *  app can enumerate from the file it is reading.
+ *
+ *  An entry whose `assignee` is `''` is legal and means the same as no entry
+ *  at all: nobody in particular, which is the hosts. It is not an error,
+ *  because not naming an owner is the default this repository has always had
+ *  and the state most lines will stay in.
+ *
+ *  A name that is there is a GitHub login and nothing else -- the same rule
+ *  `tools/convener_ops/validate.py` applies, and it lived only there, so the
+ *  browser could accept and write a file `convener-validate` then refuses.
+ *  `checklist_assignee_cases` in `tools/tests/fixtures/governance-cases.json`
+ *  is the two sides' shared statement of it. Refusing `Anonymous Dupont` here is
+ *  also what keeps a person's name out of a field the app puts on screen
+ *  beside a line of work. */
+/** A GitHub login, as `LOGIN_RE` in `tools/convener_ops/validate.py` spells it. */
+const LOGIN = /^[a-zA-Z0-9-]+$/;
+
+function assignees(
+  at: Cursor,
+  raw: Record<string, unknown>,
+  key: string,
+): Record<string, ChecklistAssignee> {
+  const value = object({ ...at, where: `${at.where} "${key}"` }, raw[key]);
+  const out: Record<string, ChecklistAssignee> = {};
+  for (const [step, entry] of Object.entries(value)) {
+    const block = object({ ...at, where: `${at.where} "${key}" step "${step}"` }, entry);
+    for (const extra of Object.keys(block)) {
+      if (extra !== 'assignee') {
+        fail(at.file, at.where, `gives "${key}" step "${step}" a "${extra}", which this app does not use`);
+      }
+    }
+    if (typeof block.assignee !== 'string') {
+      fail(at.file, at.where, `gives "${key}" step "${step}" an owner that reads as ${shown(block.assignee)} instead of a name`);
+    }
+    if (block.assignee !== '' && !LOGIN.test(block.assignee)) {
+      fail(at.file, at.where, `gives "${key}" step "${step}" the owner "${block.assignee}", which is not a GitHub username`);
+    }
+    out[step] = { assignee: block.assignee };
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------------ *
  * The closed vocabularies, written as records rather than arrays.
  *
@@ -288,13 +337,57 @@ function readMetrics(at: Cursor, value: unknown): SpeakerMetrics {
   };
 }
 
-const SPEAKER_KEYS = [
-  'id', 'name', 'gender', 'career_stage', 'email', 'affiliation', 'country',
-  'title', 'abstract', 'conflicts_of_interest', 'source', 'proposed_by',
-  'assigned_to', 'links', 'host_1', 'host_2', 'status', 'selection',
-  'publication', 'edition_code', 'date', 'time', 'zoom_link', 'youtube_url',
-  'forum_thread', 'runbook_progress', 'metrics', 'notes',
-] as const;
+/** One list of speaker keys for the whole app, kept in `data/types.ts` where
+ *  the compiler holds it against `Speaker` itself. It used to be restated
+ *  here, which meant a field could be added to the model and silently
+ *  refused by the reader that is supposed to accept the model. */
+const SPEAKER_KEYS: readonly string[] = SPEAKER_FIELDS;
+
+/** One proposed slot: a day, an hour, and what the speaker said about it.
+ *
+ *  `answer` is checked against the closed vocabulary rather than read as
+ *  text -- `maybe` typed into the file would otherwise reach the lock-in,
+ *  which has no reading for it. The day and the hour are checked as text
+ *  here and as formats by `tools/convener_ops/validate.py`, the same division of
+ *  labour as `date` and `time` on the record itself. */
+function readCandidateDate(at: Cursor, entry: unknown): CandidateDate {
+  const raw = object(at, entry);
+  keys(at, raw, ['date', 'time', 'answer']);
+  return {
+    date: text(at, raw, 'date'),
+    time: text(at, raw, 'time'),
+    answer: oneOf(at, raw, 'answer', DATE_ANSWERS),
+  };
+}
+
+/** The slots a record offers, checked to hold each day once.
+ *
+ *  The day is what identifies a slot, here and in
+ *  `tools/convener_ops/validate.py`. `state/dates.ts` finds a slot by its date,
+ *  writes an answer to every entry carrying that date, and locks the hour of
+ *  the day it locked; `proposeDates` refuses to offer the same day twice for
+ *  exactly that reason. So a file holding two hours on one day would carry
+ *  one reply recorded against both -- and `lockDate` would freeze whichever
+ *  came first, committing the speaker to an evening they may have declined.
+ *  It is a contradiction in the file rather than a bad field, which is why it
+ *  is caught here and not in `readCandidateDate`. Pinned across both
+ *  languages by `candidate_date_cases` in
+ *  `tools/tests/fixtures/governance-cases.json`. */
+function oneSlotPerDay(at: Cursor, slots: CandidateDate[]): CandidateDate[] {
+  const seen = new Set<string>();
+  for (const slot of slots) {
+    if (seen.has(slot.date)) {
+      fail(
+        at.file,
+        at.where,
+        `offers ${slot.date} twice in "candidate_dates". A date is offered once, ` +
+          'so the reply recorded about it cannot be ambiguous',
+      );
+    }
+    seen.add(slot.date);
+  }
+  return slots;
+}
 
 function readSpeaker(at: Cursor, entry: unknown): Speaker {
   const raw = object(at, entry);
@@ -311,8 +404,12 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     email: text(here, raw, 'email'),
     affiliation: text(here, raw, 'affiliation'),
     country: text(here, raw, 'country'),
+    photo_url: text(here, raw, 'photo_url'),
+    bio: text(here, raw, 'bio'),
+    linkedin: text(here, raw, 'linkedin'),
     title: text(here, raw, 'title'),
     abstract: text(here, raw, 'abstract'),
+    seed_questions: text(here, raw, 'seed_questions'),
     conflicts_of_interest: text(here, raw, 'conflicts_of_interest'),
     source: oneOf(here, raw, 'source', SOURCES),
     proposed_by: text(here, raw, 'proposed_by'),
@@ -324,12 +421,14 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     selection: readSelection(here, raw.selection),
     publication: readPublication(here, raw.publication),
     edition_code: text(here, raw, 'edition_code'),
+    candidate_dates: oneSlotPerDay(here, listOf(here, raw, 'candidate_dates', readCandidateDate)),
     date: text(here, raw, 'date'),
     time: text(here, raw, 'time'),
     zoom_link: text(here, raw, 'zoom_link'),
     youtube_url: text(here, raw, 'youtube_url'),
     forum_thread: text(here, raw, 'forum_thread'),
     runbook_progress: ticks(here, raw, 'runbook_progress'),
+    checklist: assignees(here, raw, 'checklist'),
     metrics: readMetrics(here, raw.metrics),
     notes: text(here, raw, 'notes'),
   };
@@ -394,8 +493,71 @@ function readNomination(at: Cursor, entry: unknown): Nomination {
   };
 }
 
+/** A channel key as it may be written in the file.
+ *
+ *  Narrow on purpose: the key becomes a checklist key inside
+ *  `data/speakers.yml`, so it is read back by both languages and shows up in
+ *  hand-reviewed diffs. Spaces, capitals and punctuation would all survive a
+ *  YAML round-trip and all read as a different key to somebody skimming one.
+ *  The label carries whatever the volunteers want to see; this does not. */
+const CHANNEL_KEY = /^[a-z0-9][a-z0-9_-]*$/;
+
+/** One place an event is announced.
+ *
+ *  Both fields are required and neither may be blank. A channel with no
+ *  label is a line with no words on it, and a channel with no key is a line
+ *  no owner can be written against -- in a list whose whole purpose is to be
+ *  edited by hand, both are worth saying out loud rather than rendering as a
+ *  gap. */
+function readChannel(at: Cursor, entry: unknown): Channel {
+  const raw = object(at, entry);
+  keys(at, raw, ['key', 'label']);
+  const key = text(at, raw, 'key');
+  if (!CHANNEL_KEY.test(key)) {
+    fail(
+      at.file,
+      at.where,
+      `gives "key" as ${shown(key)}, but a channel key is lower-case letters, ` +
+        'digits, hyphens and underscores, starting with a letter or a digit',
+    );
+  }
+  const label = text(at, raw, 'label');
+  if (label.trim() === '') fail(at.file, at.where, 'has no label to show anyone');
+  return { key, label };
+}
+
+/** The channels, in file order, with no key used twice.
+ *
+ *  A repeated key is refused rather than deduplicated: the two entries would
+ *  share one checklist key, so ticking one would tick the other, and which
+ *  label the screen showed would come down to list order. Naming the earlier
+ *  entry is what lets somebody find the pair in a file they are reading by
+ *  hand. */
+function readChannels(at: Cursor, raw: Record<string, unknown>): Channel[] {
+  const here: Cursor = { file: at.file, where: 'the channels' };
+  const channels = listOf(here, raw, 'channels', readChannel);
+  const seen = new Map<string, number>();
+  channels.forEach((channel, index) => {
+    const first = seen.get(channel.key);
+    if (first !== undefined) {
+      fail(
+        at.file,
+        `channel ${index + 1}`,
+        `repeats the key "${channel.key}", which channel ${first + 1} already uses`,
+      );
+    }
+    seen.set(channel.key, index);
+  });
+  return channels;
+}
+
+/** Three, not four: the board's decision deadline is `vote_window_days`
+ *  (F-13), the number the sweep parks an expired lead on. A file that still
+ *  carries `lead_decision` is refused by `keys()` below rather than having
+ *  the key quietly dropped -- whoever set it to 20 has to be told it was
+ *  never read. */
 const SLA_KEYS = [
-  'lead_decision', 'invitation_follow_up', 'summary_after_delivery',
+  'invitation_follow_up', 'summary_after_delivery',
   'recording_after_delivery',
 ] as const;
 
@@ -404,7 +566,6 @@ function readSlaDays(at: Cursor, value: unknown): Config['sla_days'] {
   const raw = object(inner, value);
   keys(inner, raw, SLA_KEYS);
   return {
-    lead_decision: whole(inner, raw, 'lead_decision'),
     invitation_follow_up: whole(inner, raw, 'invitation_follow_up'),
     summary_after_delivery: whole(inner, raw, 'summary_after_delivery'),
     recording_after_delivery: whole(inner, raw, 'recording_after_delivery'),
@@ -415,7 +576,7 @@ const CONFIG_KEYS = [
   'season', 'vw_counter', 'overlap_window_days', 'seminar_duration_minutes',
   'board', 'nominations', 'board_min', 'board_max', 'vote_window_days',
   'objection_window_working_days', 'inactivity_months', 'balance_window_months',
-  'sla_days',
+  'view_count_window_days', 'sla_days', 'channels',
 ] as const;
 
 /**
@@ -446,6 +607,8 @@ export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
     objection_window_working_days: whole(at, raw, 'objection_window_working_days'),
     inactivity_months: whole(at, raw, 'inactivity_months'),
     balance_window_months: whole(at, raw, 'balance_window_months'),
+    view_count_window_days: whole(at, raw, 'view_count_window_days'),
     sla_days: readSlaDays(at, raw.sla_days),
+    channels: readChannels(at, raw),
   };
 }

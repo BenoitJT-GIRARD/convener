@@ -1,6 +1,6 @@
 # Email — Talk details
 
-*Sent once the speaker has accepted. CC the Zoom responsible for a heads-up.*
+*Sent once the speaker has accepted.*
 
 ---
 

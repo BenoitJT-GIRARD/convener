@@ -13,6 +13,7 @@ import {
   type Overdue,
 } from '../src/state/sla';
 import type { Config, Speaker, SpeakerStatus } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /** The values `data/config.yml` actually carries, so the arithmetic is pinned
  *  against the real turnaround times and not against round numbers. */
@@ -22,16 +23,20 @@ const config: Config = {
   board_min: 5, board_max: 9, vote_window_days: 14,
   objection_window_working_days: 3, inactivity_months: 6,
   balance_window_months: 24,
+  view_count_window_days: 30,
   sla_days: {
-    lead_decision: 14,
     invitation_follow_up: 30,
     summary_after_delivery: 7,
     recording_after_delivery: 14,
   },
+  channels: [],
 };
 
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
 function speaker(status: SpeakerStatus, overrides: Partial<Speaker> = {}): Speaker {
-  return {
+  return double({
     id: 'spk-001', name: 'A Speaker', gender: 'undisclosed', career_stage: 'undisclosed',
     email: '', affiliation: '', country: '', title: '', abstract: '',
     conflicts_of_interest: '', source: 'organizer', proposed_by: '', assigned_to: '',
@@ -44,7 +49,7 @@ function speaker(status: SpeakerStatus, overrides: Partial<Speaker> = {}): Speak
     forum_thread: '', runbook_progress: {}, notes: '',
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
     ...overrides,
-  };
+  });
 }
 
 function lead(opened_on: string): Speaker {
@@ -320,7 +325,12 @@ describe('the wording a volunteer reads', () => {
 
   it('labels every configured step, and labels none of them as a role', () => {
     expect(Object.keys(STEP_LABELS).sort()).toEqual([...SLA_STEPS].sort());
-    expect(Object.keys(STEP_LABELS).sort()).toEqual(Object.keys(config.sla_days).sort());
+    // Three of the four steps are read off `sla_days`; the board's decision
+    // is timed by `vote_window_days`, so the config has exactly one number
+    // per deadline and no key a second one could live in (F-13).
+    expect(Object.keys(STEP_LABELS).sort()).toEqual(
+      [...Object.keys(config.sla_days), 'lead_decision'].sort(),
+    );
     for (const label of Object.values(STEP_LABELS)) {
       expect(label).not.toMatch(/\b(board member|volunteer|host|you)\b/i);
     }

@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" font-family="Archivo, 'Segoe UI', Arial, Helvetica, sans-serif">
+  <title>TEC Monthly Reading Group — announcement image</title>
+  <desc>Square announcement image, 1200x1200, for the forum and LinkedIn. Edit
+  the text in any SVG editor (Inkscape, Figma, Illustrator, a browser plus a
+  text editor). Everything inside id="variable" changes for each event;
+  everything inside id="fixed" is the series identity and stays put.</desc>
+
+  <!-- Palette: the same tokens as the app (app/src/design/tokens.css).
+       turquoise #3FB1C2 · deep purple #3D2D7C · cream #F4F1E6 -->
+  <g id="fixed">
+    <rect width="1200" height="1200" fill="#3FB1C2"/>
+    <rect y="0" width="1200" height="168" fill="#F4F1E6"/>
+    <rect y="400" width="1200" height="146" fill="#F4F1E6"/>
+
+    <!-- Decorative loops. Two open circles bled off the left and right edges,
+         as on the reference flyer. Move or delete them; they carry no text. -->
+    <g fill="none" stroke="#3D2D7C" stroke-width="17">
+      <circle cx="1105" cy="120" r="115"/>
+      <path d="M120 40 C 20 130, 20 250, 120 330 C 220 410, 220 530, 120 610"/>
+      <circle cx="70" cy="700" r="120"/>
+      <path d="M70 820 C 170 900, 170 1030, 70 1110"/>
+    </g>
+
+    <!-- Wordmark. The mark is three squares and a link, drawn rather than
+         embedded: an SVG that references an external logo file is an SVG that
+         travels broken. -->
+    <g transform="translate(168 52)">
+      <rect x="0" y="6" width="26" height="26" fill="#3FB1C2"/>
+      <rect x="34" y="0" width="26" height="26" fill="#3FB1C2"/>
+      <rect x="6" y="42" width="26" height="26" fill="#3FB1C2"/>
+      <rect x="44" y="36" width="26" height="26" fill="#3FB1C2"/>
+      <path d="M18 18 C 46 12, 62 26, 58 48" fill="none" stroke="#3D2D7C" stroke-width="5"/>
+      <circle cx="16" cy="20" r="7" fill="none" stroke="#3D2D7C" stroke-width="5"/>
+      <circle cx="58" cy="46" r="7" fill="none" stroke="#3D2D7C" stroke-width="5"/>
+    </g>
+    <text x="268" y="112" font-size="58" font-weight="500" fill="#3D2D7C">www.<tspan fill="#3FB1C2">TheBehaviour</tspan>Forum.org</text>
+    <rect x="268" y="130" width="690" height="4" fill="#3D2D7C"/>
+
+    <text x="600" y="262" text-anchor="middle" font-size="66" font-weight="900" fill="#3D2D7C" letter-spacing="1">READ TOGETHER</text>
+    <text x="600" y="330" text-anchor="middle" font-size="31" fill="#0f172a">Join the discussion before and after the talk at</text>
+    <text x="600" y="372" text-anchor="middle" font-size="31" font-weight="700" fill="#0f172a">forum.example.test</text>
+  </g>
+
+  <g id="variable">
+    <!-- TALK TITLE. Two lines, split by hand — SVG does not wrap text. A very
+         long title: drop the font-size to 40 and use three lines. -->
+    <text text-anchor="middle" font-size="44" font-weight="700" fill="#3D2D7C">
+      <tspan x="600" y="458">{{speaker.title}}</tspan>
+      <tspan x="600" y="512"></tspan>
+    </text>
+
+    <!-- DATE AND TIME. Written out the way it is said aloud; the app holds
+         {{speaker.date}} as 2026-11-12 and {{speaker.time}} as 12:30 (CET). -->
+    <text x="600" y="600" text-anchor="middle" font-size="40" font-weight="700" fill="#3D2D7C">{{speaker.date}} at {{speaker.time}} (CET)</text>
+
+    <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
+         File &gt; Import, then send the image behind this white frame. Keep the
+         tilt. No photo yet? Leave the frame; it reads as a placeholder. -->
+    <g transform="rotate(4 900 900)">
+      <rect x="700" y="690" width="420" height="470" fill="#ffffff"/>
+      <rect x="722" y="712" width="376" height="376" fill="#d6e5e7"/>
+      <text x="910" y="912" text-anchor="middle" font-size="26" fill="#475569">speaker photo</text>
+      <text x="1098" y="1128" text-anchor="end" font-size="30" font-weight="800" fill="#0f172a">{{speaker.name}}</text>
+      <text x="1098" y="1152" text-anchor="end" font-size="19" fill="#0f172a">{{speaker.affiliation}}</text>
+    </g>
+  </g>
+
+  <g id="fixed-what-to-expect">
+    <text x="240" y="730" font-size="34" font-weight="800" fill="#0f172a">WHAT TO EXPECT?</text>
+    <text font-size="29" fill="#0f172a">
+      <tspan x="310" y="796" font-weight="800" fill="#3D2D7C">BEFORE: </tspan><tspan>Ask your</tspan>
+      <tspan x="310" y="832">questions to the speaker</tspan>
+      <tspan x="310" y="868">at </tspan><tspan fill="#3FB1C2">forum.example.test</tspan>
+      <tspan x="310" y="944" font-weight="800" fill="#3D2D7C">D-DAY: </tspan><tspan>Presentation</tspan>
+      <tspan x="310" y="980">followed by a discussion</tspan>
+      <tspan x="310" y="1016">with the audience</tspan>
+      <tspan x="310" y="1092" font-weight="800" fill="#3D2D7C">AFTER: </tspan><tspan>Continue the</tspan>
+      <tspan x="310" y="1128">discussion and connect</tspan>
+      <tspan x="310" y="1164">with peers</tspan>
+    </text>
+
+    <!-- REGISTRATION QR. Generate it from the registration link with any
+         offline generator, or in the app; then drop it over this square. -->
+    <text x="40" y="928" font-size="32" font-weight="800" fill="#0f172a">REGISTER</text>
+    <text x="40" y="966" font-size="32" font-weight="800" fill="#0f172a">HERE</text>
+    <rect x="40" y="990" width="200" height="200" fill="#ffffff"/>
+    <rect x="60" y="1010" width="160" height="160" fill="none" stroke="#94a3b8" stroke-width="3" stroke-dasharray="10 8"/>
+    <text x="140" y="1098" text-anchor="middle" font-size="22" fill="#475569">QR code</text>
+  </g>
+</svg>

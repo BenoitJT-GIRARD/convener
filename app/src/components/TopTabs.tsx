@@ -7,6 +7,7 @@ const LINKS = [
   { to: '/archive', label: 'Archive' },
   { to: '/board', label: 'Board' },
   { to: '/diversity', label: 'Diversity' },
+  { to: '/consent', label: 'Consent' },
   { to: '/handbook', label: 'Handbook' },
   { to: '/templates', label: 'Templates' },
 ];

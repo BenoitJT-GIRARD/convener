@@ -8,24 +8,22 @@ import { TopTabs } from '../src/components/TopTabs';
 import { distribution } from '../src/state/diversity';
 import { serializeConfig, serializeSpeakers } from '../src/data/yaml';
 import { parisToday } from '../src/state/derived';
+import { speaker as double } from './data-doubles';
 import type { CareerStage, Config, Gender, Speaker } from '../src/data/types';
 
 const TODAY = '2026-08-18';
 const WINDOW = 24;
 
+/** A lead opened today, from the shared double. `opened_on` is what puts it
+ *  inside the reporting window, and it is the one field this screen needs
+ *  set on every record. */
 function speaker(id: string, overrides: Partial<Speaker> = {}): Speaker {
-  return {
-    id, name: id, gender: 'undisclosed', career_stage: 'undisclosed', email: '', affiliation: '',
-    country: '', title: '', abstract: '', conflicts_of_interest: '', source: 'organizer',
-    proposed_by: '', assigned_to: '', links: [], host_1: '', host_2: '', status: 'lead',
+  return double({
+    id,
+    name: id,
     selection: { ballots: [], opened_on: TODAY, decided_on: '' },
-    publication: { consent: 'pending', approved_by: '', approved_on: '', objections: [], outcome: '' },
-    edition_code: '', date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
-    runbook_progress: {},
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-    notes: '',
     ...overrides,
-  };
+  });
 }
 
 /** The repository as it stands today: everyone `undisclosed` on both declared
@@ -167,10 +165,12 @@ describe('Diversity screen', () => {
       board: [{ login: 'alice', joined_on: '2024-01-01', status: 'active', unavailable_until: '' }],
       nominations: [], board_min: 3, board_max: 9, vote_window_days: 10,
       objection_window_working_days: 3, inactivity_months: 6, balance_window_months: WINDOW,
+      view_count_window_days: 30,
       sla_days: {
-        lead_decision: 14, invitation_follow_up: 7,
+        invitation_follow_up: 7,
         summary_after_delivery: 5, recording_after_delivery: 10,
       },
+      channels: [],
     };
     const encode = (text: string) => {
       const bytes = new TextEncoder().encode(text);

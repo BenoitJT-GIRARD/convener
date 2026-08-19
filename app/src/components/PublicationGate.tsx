@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { parisToday } from '../state/derived';
 import { formatDecision, identifier, transitionDecision } from '../state/decisions';
 import { canArchive, objectionWindowCloses, standingObjections } from '../state/governance';
-import { canFinalize } from '../state/phases';
+import { blockers } from '../state/phases';
 import {
   applyTransition,
   canTransition,
@@ -374,13 +374,14 @@ function ArchiveBlock({
   onArchive: () => void;
 }) {
   if (!canTransition(speaker, 'finalize-archive', role)) return null;
-  const checklistDone = speaker.status !== 'delivered' || canFinalize(speaker);
-  const blocked = !allowed || !checklistDone;
-  const message = !allowed
-    ? reason
-    : checklistDone
-      ? ''
-      : 'Fill in the required fields of the delivered checklist above first.';
+  // Naming what is in the way, rather than pointing at the checklist above:
+  // one of the things that can be in the way is not in the checklist above.
+  // The registration check sits two weeks before the talk, and a volunteer
+  // told to fill in the delivered fields would have gone looking for a field
+  // that is already filled in.
+  const outstanding = speaker.status === 'delivered' ? blockers(speaker) : [];
+  const blocked = !allowed || outstanding.length > 0;
+  const message = !allowed ? reason : outstanding.map(b => b.why).join(' ');
 
   return (
     <div className="border-t border-border pt-4 space-y-2">

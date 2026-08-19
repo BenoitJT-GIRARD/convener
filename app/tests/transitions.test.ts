@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { canTransition, applyTransition } from '../src/state/transitions';
 import type { Transition, TransitionPayload } from '../src/state/transitions';
 import { BallotRejected } from '../src/state/ballots';
+import { DateRejected } from '../src/state/dates';
 import type { Ballot, BallotValue, Config, Speaker } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /** Four active board members, so `thresholdFor(4)` is 3 — the same bar the
  *  old fixed `voteThreshold: 3` argument stood for. */
@@ -24,12 +26,13 @@ const cfg: Config = {
   objection_window_working_days: 3,
   inactivity_months: 6,
   balance_window_months: 12,
+  view_count_window_days: 30,
   sla_days: {
-    lead_decision: 14,
     invitation_follow_up: 7,
     summary_after_delivery: 5,
     recording_after_delivery: 10,
   },
+  channels: [],
 };
 
 function ballot(voter: string, value: BallotValue = 'yes'): Ballot {
@@ -41,7 +44,10 @@ function cast(value: BallotValue = 'yes', coiReason = '', comment = '') {
   return { value, comment, coiReason };
 }
 
-const base: Speaker = {
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
+const base: Speaker = double({
   id: 'x',
   name: 'X',
   gender: 'undisclosed',
@@ -76,7 +82,7 @@ const base: Speaker = {
   runbook_progress: {},
   metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
   notes: '',
-};
+});
 
 describe('transitions v2', () => {
   it('allows board to vote on a lead; refuses organizer', () => {
@@ -216,17 +222,45 @@ describe('transitions v2', () => {
     expect(applyTransition(s, 'invited-decline', '', cfg, '2026-05-23').status).toBe('decline-speaker');
   });
 
-  it('lock-date locks date + time + edition', () => {
-    const s: Speaker = { ...base, status: 'confirmed' };
+  it('lock-date locks the accepted slot, hour included, and the edition', () => {
+    const s: Speaker = {
+      ...base,
+      status: 'confirmed',
+      candidate_dates: [{ date: '2026-08-01', time: '14:30', answer: 'accepted' }],
+    };
     const next = applyTransition(s, 'lock-date', '', cfg, '2026-05-23', {
       date: '2026-08-01',
       edition_code: 'MRG-07',
-      time: '14:30',
     });
     expect(next.status).toBe('scheduled');
     expect(next.date).toBe('2026-08-01');
     expect(next.edition_code).toBe('MRG-07');
+    // The hour is the one that was offered and agreed, not a second field
+    // the payload could have disagreed with.
     expect(next.time).toBe('14:30');
+  });
+
+  it('lock-date refuses a date the speaker has not accepted', () => {
+    // The guarantee of `state/dates.ts` seen from the transition layer: the
+    // date is looked up among the accepted ones, and free text has no route
+    // in. Locking commits an unpaid outside researcher to that evening.
+    const unanswered: Speaker = {
+      ...base,
+      status: 'confirmed',
+      candidate_dates: [{ date: '2026-08-01', time: '14:30', answer: '' }],
+    };
+    expect(() =>
+      applyTransition(unanswered, 'lock-date', '', cfg, '2026-05-23', {
+        date: '2026-08-01',
+        edition_code: 'MRG-07',
+      }),
+    ).toThrow(DateRejected);
+    expect(() =>
+      applyTransition(unanswered, 'lock-date', '', cfg, '2026-05-23', {
+        date: '2026-09-09',
+        edition_code: 'MRG-07',
+      }),
+    ).toThrow(/not a date this speaker has accepted/);
   });
 
   it('finalize-archive moves delivered → archived once the publication gate opens', () => {
@@ -303,7 +337,7 @@ describe('transitions v2', () => {
     ];
     const payloads: Partial<Record<Transition, TransitionPayload>> = {
       'ballot-cast': cast(),
-      'lock-date': { date: '2026-06-01', edition_code: 'MRG-09', time: '12:30' },
+      'lock-date': { date: '2026-06-01', edition_code: 'MRG-09' },
       'consent-set': { consent: 'granted' },
       'publication-object': { reason: 'wait' },
       'publication-resolve': { resolution: 'lift', note: 'ok' },

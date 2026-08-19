@@ -58,8 +58,8 @@ CONFIG_DEFAULTS: dict[str, Any] = {
     "objection_window_working_days": 3,
     "inactivity_months": 6,
     "balance_window_months": 24,
+    "view_count_window_days": 30,
     "sla_days": {
-        "lead_decision": 14,
         "invitation_follow_up": 30,
         "summary_after_delivery": 7,
         "recording_after_delivery": 14,

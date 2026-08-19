@@ -7,6 +7,8 @@ import { AdminOverride } from '../components/AdminOverride';
 import { PublicationGate } from '../components/PublicationGate';
 import { Checklist } from '../components/Checklist';
 import { setField, phaseOf, type FieldKey } from '../state/phases';
+import { assignItem } from '../state/assignment';
+import { dataEdit, identifier, itemKey } from '../state/decisions';
 import { effectiveStatus } from '../state/derived';
 import { LoadError } from '../components/LoadError';
 import type { Speaker } from '../data/types';
@@ -33,7 +35,10 @@ export function SpeakerPage() {
             ? { ...sp, runbook_progress: { ...sp.runbook_progress, [key]: value } }
             : sp,
         ),
-      `data: ${id} runbook ${key}=${value}`,
+      // A box ticked on the runbook is the record catching up with work
+      // already done, not an act of the register. The key is the journey's
+      // own, from `state/phases.ts`, and names no one.
+      dataEdit(identifier(id), { part: 'runbook-box', key: itemKey(key), ticked: value }),
     );
   }
 
@@ -41,7 +46,32 @@ export function SpeakerPage() {
     if (!login || !id) return;
     await mutateSpeakers(
       current => current.map(sp => (sp.id === id ? setField(sp, k, v) : sp)),
-      `data: ${id} set ${k}`,
+      // A talk detail typed in. `k` is a field name, never its value: the
+      // value is in the diff, where the consent classification governs it.
+      // `Edit` is what holds that -- `part: 'field'` carries a `FieldKey`
+      // and has nowhere to put `v` -- rather than the care of whoever edits
+      // this line next.
+      dataEdit(identifier(id), { part: 'field', key: k }),
+    );
+  }
+
+  // Who can be put down for a line: the board, plus whichever hosts this
+  // record already names. Hosts are here because a host is who a runbook line
+  // usually belongs to and is not necessarily a board member; the record's own
+  // `host_1`/`host_2` are read as the *candidates offered*, never as an
+  // answer -- an unassigned line stays unassigned until somebody chooses.
+  const people = Array.from(
+    new Set([...(config?.board ?? []).map(m => m.login), s.host_1, s.host_2].filter(Boolean)),
+  );
+
+  async function assign(key: string, who: string) {
+    if (!login || !id) return;
+    await mutateSpeakers(
+      current => assignItem(current, id, key, who, config),
+      // Who owes a line is not a decision of the register, and the login
+      // put down is deliberately left out of the subject -- the line is
+      // named, the person is not.
+      dataEdit(identifier(id), { part: 'owner', key: itemKey(key), cleared: who === '' }),
     );
   }
 
@@ -85,7 +115,14 @@ export function SpeakerPage() {
 
       {hasPhase && (
         <div className="mt-10">
-          <Checklist speaker={s} onToggle={toggle} onField={onField} />
+          <Checklist
+            speaker={s}
+            onToggle={toggle}
+            onField={onField}
+            onAssign={assign}
+            people={people}
+            config={config}
+          />
         </div>
       )}
 

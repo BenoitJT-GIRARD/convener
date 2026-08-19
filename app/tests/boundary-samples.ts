@@ -29,6 +29,34 @@
  *   recorded are different facts, and one must not serialise as the other.
  * - a multi-line abstract, the one shape whose *formatting* the two writers
  *   disagreed on until `cli.py::_Dumper` was taught js-yaml's literal block.
+ * - a multi-line `bio`, so the literal block is pinned on a second field
+ *   and not on the one field that happened to be tested first.
+ * - a `seed_questions` carrying an apostrophe and accents: the apostrophe
+ *   is what decides between a plain and a quoted scalar, and the two
+ *   writers have to make that call the same way.
+ * - `candidate_dates`, a block sequence of *mappings* nested under a
+ *   speaker -- the shape `noArrayIndent` governs, one level deeper than
+ *   `links` and `ballots` reach.
+ * - `SPEAKERS[2].seed_questions: '12:30'`, the sexagesimal defect on a
+ *   field nobody thinks of as a time.
+ * - `checklist`, a mapping of mappings nested under a speaker, whose keys
+ *   are runbook item names carrying slashes and hyphens -- the one shape in
+ *   the model that is a block map inside a block map, and the only place a
+ *   `/` appears in a key.
+ * - `SPEAKERS[2].assigned_to: 'bob'` beside a checklist owned by `erin`: the
+ *   item owner and the lead owner are different notions, and a record where
+ *   they hold different values is what proves the boundary carries both
+ *   rather than one written twice. The same guard `proposed_by` and
+ *   `assigned_to` already stand for, one grain further down.
+ * - `SPEAKERS[0].checklist` carrying an `assignee: ''`: legal, and the same
+ *   fact as no entry at all -- nobody in particular, which is the hosts.
+ * - `CONFIG.channels`, three of them and not seven: the list is
+ *   configuration, and a fixture with the seven of today would be the
+ *   boundary asserting a number the file is free to change. A key with an
+ *   underscore and a key with a hyphen, since both reach `speakers.yml` as
+ *   checklist keys, and a label carrying an apostrophe and accents -- the
+ *   apostrophe being what decides between a plain and a quoted scalar, on a
+ *   field of `config.yml` rather than of `speakers.yml`.
  */
 import type { Config, Speaker } from '../src/data/types';
 
@@ -41,8 +69,12 @@ export const SPEAKERS: Speaker[] = [
     email: 'b.angstrom@example.org',
     affiliation: 'Université de Genève',
     country: 'Suisse',
+    photo_url: 'https://example.org/portraits/angstrom.jpg',
+    bio: 'Directrice de recherche à Genève.\nElle étudie le campagnol depuis 2011.',
+    linkedin: 'benedicte-angstrom',
     title: 'Réponses sociales chez le campagnol',
     abstract: 'First paragraph of the abstract.\nSecond paragraph, after a break.',
+    seed_questions: "Qu'est-ce qui vous a menée à ce modèle ? L'élevage a-t-il changé ?",
     conflicts_of_interest: '',
     source: 'form',
     proposed_by: 'Émilie Dupré',
@@ -72,12 +104,21 @@ export const SPEAKERS: Speaker[] = [
       outcome: '',
     },
     edition_code: 'MRG-11',
+    candidate_dates: [
+      { date: '2026-05-18', time: '12:30', answer: 'declined' },
+      { date: '2026-06-01', time: '12:30', answer: 'accepted' },
+      { date: '2026-06-15', time: '09:05', answer: '' },
+    ],
     date: '2026-06-01',
     time: '12:30',
     zoom_link: 'https://example.org/zoom/11',
     youtube_url: 'https://example.org/watch/11',
     forum_thread: 'https://example.org/forum/11',
     runbook_progress: { 'approved/invitation-sent': true, 'delivered/summary-posted': false },
+    checklist: {
+      'scheduled/T-30/visuals': { assignee: 'ada' },
+      'delivered/forum-summary': { assignee: '' },
+    },
     metrics: { registrations: 0, live_peak: 60, youtube_views_30d: 148, forum_replies: 3 },
     notes: 'TEC review: Y',
   },
@@ -89,8 +130,12 @@ export const SPEAKERS: Speaker[] = [
     email: '',
     affiliation: '',
     country: '',
+    photo_url: '',
+    bio: '',
+    linkedin: '',
     title: '',
     abstract: '',
+    seed_questions: '',
     conflicts_of_interest: '',
     source: 'organizer',
     proposed_by: '',
@@ -102,12 +147,14 @@ export const SPEAKERS: Speaker[] = [
     selection: { ballots: [], opened_on: '', decided_on: '' },
     publication: { consent: '', approved_by: '', approved_on: '', objections: [], outcome: '' },
     edition_code: '',
+    candidate_dates: [],
     date: '',
     time: '',
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
     runbook_progress: {},
+    checklist: {},
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
     notes: '',
   },
@@ -119,8 +166,12 @@ export const SPEAKERS: Speaker[] = [
     email: 'no@example.org',
     affiliation: '0123',
     country: 'NO',
+    photo_url: '~',
+    bio: 'n',
+    linkedin: 'Y',
     title: 'yes',
     abstract: 'null',
+    seed_questions: '12:30',
     conflicts_of_interest: 'off',
     source: 'outreach',
     proposed_by: 'on',
@@ -138,12 +189,16 @@ export const SPEAKERS: Speaker[] = [
     },
     publication: { consent: 'pending', approved_by: '', approved_on: '', objections: [], outcome: '' },
     edition_code: 'MRG-12',
+    candidate_dates: [
+      { date: '2026-07-02', time: '09:05', answer: 'accepted' },
+    ],
     date: '2026-07-02',
     time: '09:05',
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
     runbook_progress: {},
+    checklist: { 'scheduled/T-21/linkedin': { assignee: 'erin' } },
     metrics: { registrations: 0, live_peak: null, youtube_views_30d: null, forum_replies: null },
     notes: '3.14',
   },
@@ -180,12 +235,17 @@ export const CONFIG: Config = {
   objection_window_working_days: 3,
   inactivity_months: 6,
   balance_window_months: 24,
+  view_count_window_days: 30,
   sla_days: {
-    lead_decision: 14,
     invitation_follow_up: 30,
     summary_after_delivery: 7,
     recording_after_delivery: 14,
   },
+  channels: [
+    { key: 'forum', label: 'The Example Collective forum' },
+    { key: 'linkedin_page', label: "Page LinkedIn de l'équipe TEC" },
+    { key: 'posters-institutes', label: 'Affiches imprimées dans les instituts' },
+  ],
 };
 
 /** The board `speakers-from-app.yml` is validated against, taken from the

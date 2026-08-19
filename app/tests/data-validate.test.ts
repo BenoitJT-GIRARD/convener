@@ -101,7 +101,12 @@ describe('what a volunteer is told when data/config.yml is malformed', () => {
   });
 
   it('reads the sla_days block, and says so by name when it is not a block', () => {
-    const message = refusal(() => parseConfig(configYaml().replace(/sla_days:[\s\S]*$/, 'sla_days: 14\n')));
+    // Only the block, not everything after it: `channels` sits below
+    // `sla_days` in the file the app writes, and swallowing it would make
+    // this test read a config missing a key instead of one whose block is
+    // not a block.
+    const text = configYaml().replace(/sla_days:[\s\S]*?(?=channels:)/, 'sla_days: 14\n');
+    const message = refusal(() => parseConfig(text));
     expect(message).toContain('"sla_days"');
     expect(message).toContain('block of settings');
   });
@@ -238,6 +243,8 @@ describe('the repository this app actually reads', () => {
   it('reads data/config.yml as the model says it is', () => {
     const cfg = parseConfig(dataFile('config.yml'));
     expect(cfg.board.length).toBeGreaterThan(0);
-    expect(cfg.sla_days.lead_decision).toBeGreaterThan(0);
+    expect(cfg.sla_days.invitation_follow_up).toBeGreaterThan(0);
+    // The board's decision deadline is this one and no other (F-13).
+    expect(cfg.vote_window_days).toBeGreaterThan(0);
   });
 });

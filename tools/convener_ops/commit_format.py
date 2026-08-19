@@ -55,6 +55,14 @@ ACTS: Final[dict[str, str]] = {
     "send-invitation": "send the invitation for",
     "invited-accept": "record an accepted invitation for",
     "invited-decline": "record a declined invitation for",
+    # The date negotiation. Neither act carries the day: which evenings a
+    # researcher was offered, and which they turned down, is their
+    # availability rather than the programme -- `candidate_dates` is
+    # classified NEVER_PUBLISHED for that reason -- and a commit subject is
+    # the one thing here nothing can take back. The day is in the diff, as
+    # `lock-date`'s is.
+    "date-propose": "propose a date for",
+    "date-answer": "record a date reply for",
     "lock-date": "lock the date of",
     # Publishing a recording (G-10, G-15).
     "consent-set": "record the recording consent of",
@@ -62,13 +70,26 @@ ACTS: Final[dict[str, str]] = {
     "publication-object": "record an objection to publishing",
     "publication-resolve": "resolve the objections on",
     "finalize-archive": "publish the recording of",
-    # Who sits on the board (G-08).
+    # Who sits on the board (G-08), and who is available to vote (G-09).
+    #
+    # `availability-set` is a decision like the rest and not a diary entry
+    # (F-16): `unavailable_until` is read by `activeBoard`, so declaring
+    # oneself away changes `N` and with it the majority a speaker needs. An
+    # act that moves the threshold belongs in the register. The day it runs
+    # to is not in the subject, for the same reason `lock-date` does not
+    # carry the date it locked: the subject names the record and the actor,
+    # and the value is in the diff the commit carries.
+    "availability-set": "record the availability of",
     "nomination-open": "open a nomination for",
     "nomination-object": "record an objection to the nomination of",
     "nomination-withdraw-objection": "withdraw an objection to the nomination of",
     "nomination-resolve": "settle the nomination of",
     # Administrative acts, which the register records exactly like the rest.
     "override": "override the status of",
+    # Creating a record names the record, never the person in it: the browser
+    # knows the lead's full name at this point and the subject carries the id
+    # it has just assigned instead.
+    "speaker-create": "record a new lead for",
     "speaker-delete": "delete the record of",
 }
 
@@ -78,7 +99,12 @@ ACTS: Final[dict[str, str]] = {
 #: this grammar can express, nor one it will accept.
 QUALIFIERS: Final[dict[str, frozenset[str]]] = {
     "ballot-cast": frozenset({"yes", "abstain", "recused"}),
+    "availability-set": frozenset({"away", "back"}),
     "consent-set": frozenset({"granted", "refused"}),
+    # `cleared` is a reply taken back, which the record stores as `answer:
+    # ""`. The act records what happened, so it has a word the field does
+    # not.
+    "date-answer": frozenset({"accepted", "declined", "cleared"}),
     "publication-resolve": frozenset({"lift", "withhold"}),
     "override": frozenset(
         {

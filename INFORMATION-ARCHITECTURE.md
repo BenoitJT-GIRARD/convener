@@ -6,6 +6,14 @@ This is the contract the handbook and the app honour. Five rules.
 
 Each concept, term, rule, step has exactly one home file. If two places talk about it, one is generated from the other.
 
+**Repetition is allowed; copying is not.** A reader who lands halfway down a page needs the rule in front of them, not a link to it — so a passage may appear on two pages, provided the second one **includes** it from the first. A page includes a passage by naming a registry fragment on a line of its own:
+
+```
+{{> fragments/board-rules-publication-gate }}
+```
+
+The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: the same file as the page that owns the passage, scoped to one of its headings. The app replaces the line with the passage, under a line saying which page and section it came from and linking to it. Two rules hold this up, and both are tests: every include resolves to a registered, anchored fragment (`app/tests/transclusion.test.ts`), and no run of prose of a hundred characters or more appears in two served pages (`tools/tests/test_no_literal_copies.py`).
+
 | Topic | Canonical home |
 |---|---|
 | Editorial line | `docs/governance/editorial-line.md` |
@@ -17,6 +25,7 @@ Each concept, term, rule, step has exactly one home file. If two places talk abo
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |
 | T-minus runbook steps | `app/src/state/phases.ts` |
 | Templates | `docs/toolkit/` |
+| What each screen of the app is for | `docs/reference/the-workspace.md` |
 | Live speaker & event data | `data/speakers.yml` |
 | External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
 
@@ -39,7 +48,7 @@ The nav reflects how soon a volunteer needs the page:
 
 - **First** (essential, 5 min read): Start here · Editorial line · Roles.
 - **When you act**: Workflow phases · Governance · Templates.
-- **Reference, occasional**: Decision log · Tools & access · Contacts · Glossary.
+- **Reference, occasional**: Decision log · The workspace · Tools & access · Contacts · Operations · Glossary.
 
 ## 5 · Coherent terminology
 
@@ -49,7 +58,7 @@ A single glossary at `docs/start-here/glossary.md` defines every term. Every oth
 - **Editorial Board** — the curatorial body. Always capitalised.
 - **Architecte** — the system-design role (intentionally kept in French).
 - **Gate** — one of the two Board approvals (lowercase as a common noun).
-- **Lead / Approved / Invited / Confirmed / Scheduled / Delivered / Archived / Parked / Decline (board or speaker)** — pipeline statuses, lowercase in prose, kebab-cased in data.
+- **Lead / Approved / Invited / Confirmed / Scheduled / Delivered / Archived / Parked / Decline (board or speaker)** — pipeline statuses, lowercase in prose, kebab-cased in data. There is no *parking lot* and no bare *declined*: both were renamed and a page still using them sends a reader looking for a column that is not there.
 
 ---
 

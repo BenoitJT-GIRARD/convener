@@ -4,6 +4,7 @@ import { useData } from '../data/DataContext';
 import { assignLead } from '../state/board';
 import { parisToday } from '../state/derived';
 import { useAuth } from '../auth/AuthContext';
+import { formatDecision, identifier } from '../state/decisions';
 import { CAREER_STAGES } from '../data/types';
 import type { Speaker, Gender, CareerStage } from '../data/types';
 
@@ -63,8 +64,17 @@ export function NewSpeaker() {
         email: form.email.trim(),
         affiliation: form.affiliation.trim(),
         country: form.country.trim(),
+        // Written as answers, not left out. This form does not ask for the
+        // portrait, the biography or the handle -- they are asked for once
+        // the speaker is invited, not while the board is still deciding --
+        // and `''` says "none on record" where an absent key would say the
+        // file is incomplete.
+        photo_url: '',
+        bio: '',
+        linkedin: '',
         title: form.title.trim(),
         abstract: form.abstract.trim(),
+        seed_questions: '',
         conflicts_of_interest: form.conflicts_of_interest.trim(),
         source: form.source,
         proposed_by: form.proposed_by.trim(),
@@ -88,12 +98,17 @@ export function NewSpeaker() {
           outcome: '',
         },
         edition_code: '',
+        // No slot has been put to anyone yet: the board has not voted.
+        candidate_dates: [],
         date: '',
         time: '',
         zoom_link: '',
         youtube_url: '',
         forum_thread: '',
         runbook_progress: {},
+        // Nobody is down for any line, which is where every record starts and
+        // where most lines stay: an item with no owner is the hosts'.
+        checklist: {},
         metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
         notes: form.notes.trim(),
       };
@@ -104,21 +119,37 @@ export function NewSpeaker() {
       // records whatever id the transform that actually got written used,
       // for navigation below.
       let assignedId = '';
-      const ok = await mutateSpeakers(current => {
-        assignedId = nextSpeakerId(current);
-        // A lead created here gets an owner by the same rotation the public
-        // form uses (`tools/convener_ops/proposal.py::to_lead`), so the two intake
-        // routes cannot produce differently-owned leads. Computed from
-        // `current`, since the rotation counts the open leads that exist at
-        // write time -- not the ones a stale render remembered. `config` is
-        // read from the load cycle instead: the board lives in config.yml and
-        // `mutate` operates on speakers.yml alone, and board composition
-        // changes a handful of times a year. `assignLead` returns '' when no
-        // member is available, which leaves the lead unassigned rather than
-        // failing the creation.
-        const owner = assignLead(current, config, today);
-        return [...current, { ...fields, id: assignedId, assigned_to: owner }];
-      }, `data: add lead ${fields.name}`);
+      const ok = await mutateSpeakers(
+        current => {
+          assignedId = nextSpeakerId(current);
+          // A lead created here gets an owner by the same rotation the public
+          // form uses (`tools/convener_ops/proposal.py::to_lead`), so the two intake
+          // routes cannot produce differently-owned leads. Computed from
+          // `current`, since the rotation counts the open leads that exist at
+          // write time -- not the ones a stale render remembered. `config` is
+          // read from the load cycle instead: the board lives in config.yml and
+          // `mutate` operates on speakers.yml alone, and board composition
+          // changes a handful of times a year. `assignLead` returns '' when no
+          // member is available, which leaves the lead unassigned rather than
+          // failing the creation.
+          const owner = assignLead(current, config, today);
+          return [...current, { ...fields, id: assignedId, assigned_to: owner }];
+        },
+        // The subject is a function of what is about to be written, because
+        // that is the only moment `assignedId` is the id that actually got
+        // saved. It names that id and not the researcher: their full name is
+        // on this form, and `data: add lead Jane Doe` -- which is what stood
+        // here -- would put it in a subject line nothing rewrites and every
+        // watcher is mailed. That is the defect `state/decisions.ts` exists
+        // to make unconstructible, so the line is written through the
+        // grammar like every other act.
+        () =>
+          formatDecision({
+            kind: 'speaker-create',
+            entity: identifier(assignedId),
+            actor: identifier(login),
+          }),
+      );
       if (ok) nav(`/speakers/${assignedId}`);
     } finally {
       setBusy(false);

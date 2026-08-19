@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchContent, editUrlFor } from './fetch';
-import { substitute, type SubstitutionContext } from './render';
+import { fetchContent, editUrlFor, handbookUrl } from './fetch';
+import { substitute, substituteConsent, type SubstitutionContext } from './render';
 import { useAuth } from '../auth/AuthContext';
 import { isDemoMode } from '../data/demo';
 
@@ -40,7 +40,7 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
   if (err) return <p className="text-danger text-sm">{err}</p>;
   if (text === null) return <p className="text-ink-muted text-sm">Loading content…</p>;
 
-  const rendered = ctx ? substitute(text, ctx) : text;
+  const rendered = ctx ? substitute(text, ctx) : substituteConsent(text);
   const wrapperCls = variant === 'page' ? 'prose prose-page' : 'prose prose-inline';
   const editUrl = editUrlFor(contentKey);
   const showEdit = !!editUrl && !isDemoMode();
@@ -71,7 +71,12 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
         </div>
       )}
       <div className={wrapperCls}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{rendered}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          urlTransform={href => handbookUrl(contentKey, href)}
+        >
+          {rendered}
+        </ReactMarkdown>
       </div>
       {variant === 'inline' && (
         <div className="mt-2 flex justify-end gap-2">

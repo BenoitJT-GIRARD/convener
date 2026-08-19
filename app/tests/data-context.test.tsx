@@ -5,6 +5,13 @@ import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider, useData } from '../src/data/DataContext';
 import { DEMO_SPEAKERS } from '../src/data/demo';
 import { configYaml, speakersYaml } from './data-doubles';
+import { dataEdit, identifier } from '../src/state/decisions';
+
+/** These tests are about the write plumbing -- what is PUT, which sha comes
+ *  back, how a conflict surfaces -- and not about what the subject says. It
+ *  is a real one all the same: `mutateSpeakers`/`mutateConfig` take a
+ *  `Subject`, so there is no string to pass here either. */
+const SUBJECT = dataEdit(identifier('spk-001'), { part: 'admin-fields' });
 
 function Providers({ children }: { children: ReactNode }) {
   return (
@@ -36,7 +43,7 @@ describe('DataProvider (demo mode)', () => {
     await act(async () => {
       await result.current.mutateSpeakers(
         current => current.map(s => ({ ...s, notes: 'edited' })),
-        'edit',
+        SUBJECT,
       );
     });
     expect(result.current.speakers[0].notes).toBe('edited');
@@ -46,7 +53,7 @@ describe('DataProvider (demo mode)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vw_counter: 5 }), 'edit config');
+      await result.current.mutateConfig(current => ({ ...current, vw_counter: 5 }), SUBJECT);
     });
     expect(result.current.config?.vw_counter).toBe(5);
   });
@@ -59,7 +66,7 @@ describe('DataProvider (demo mode)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.mutateSpeakers(current => current.map(s => ({ ...s, notes: 'x' })), 'x');
+      await result.current.mutateSpeakers(current => current.map(s => ({ ...s, notes: 'x' })), SUBJECT);
     });
     expect(result.current.speakers[0].notes).toBe('x');
     await act(async () => {
@@ -85,11 +92,11 @@ describe('DataProvider (no session)', () => {
     });
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.mutateSpeakers(current => current, 'noop');
+      ok = await result.current.mutateSpeakers(current => current, SUBJECT);
     });
     expect(ok).toBe(false);
     await act(async () => {
-      ok = await result.current.mutateConfig(current => current, 'noop');
+      ok = await result.current.mutateConfig(current => current, SUBJECT);
     });
     expect(ok).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -299,7 +306,7 @@ describe('DataProvider (real GitHub backend)', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 7 }), 'msg');
+      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 7 }), SUBJECT);
     });
     expect(ok).toBe(true);
     expect(result.current.cfgSha).toBe('newcfgsha');
@@ -330,7 +337,7 @@ describe('DataProvider (real GitHub backend)', () => {
     await act(async () => {
       ok = await result.current.mutateSpeakers(
         current => current.map(s => ({ ...s, notes: 'changed' })),
-        'msg',
+        SUBJECT,
       );
     });
     expect(ok).toBe(true);
@@ -367,7 +374,7 @@ describe('DataProvider (real GitHub backend)', () => {
     await act(async () => {
       ok = await result.current.mutateSpeakers(
         current => current.map(s => ({ ...s, notes: 'will never land' })),
-        'msg',
+        SUBJECT,
       );
     });
 
@@ -509,7 +516,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), 'msg');
+      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), SUBJECT);
     });
 
     expect(ok).toBe(false);
@@ -538,7 +545,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), 'msg');
+      await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), SUBJECT);
     });
     expect(result.current.saveError).not.toBeNull();
     act(() => result.current.clearSaveError());

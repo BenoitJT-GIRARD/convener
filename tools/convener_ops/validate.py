@@ -39,6 +39,31 @@ CAREER_STAGES = frozenset(
 #: '' is a legal consent: the migration sets it for any speaker whose status
 #: never reached a publishable state (see scripts/migrate_v3.py, Task 5).
 PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
+#: Schema v4. The fields the checklists have always asked for and the model
+#: never had, so they travelled by e-mail and were lost: a portrait, a short
+#: biography, a handle, and the questions the speaker wants the forum
+#: discussion opened with.
+#:
+#: Checked with `in`, never with `entry.get(key)`. An empty value is an
+#: answer -- "no biography" is a thing a speaker can say, and the file has to
+#: be able to hold it -- while an absent key is a record nobody finished.
+#: Truthiness cannot tell those apart, and reading one as the other is how a
+#: field ends up silently optional. `app/src/data/validate.ts` draws the same
+#: line on the read side.
+SPEAKER_TEXT_V4 = ("photo_url", "bio", "linkedin", "seed_questions")
+CANDIDATE_DATE_KEYS = frozenset({"date", "time", "answer"})
+#: What one line of the journey may say about itself. `assignee` is who owes
+#: that line -- not `assigned_to`, which is the board member who owns the
+#: lead. The two are different notions at different grains, they are never
+#: derived from one another, and this validator checks each against its own
+#: rule: `assigned_to` has to be a sitting board member, an item owner does
+#: not, because a line of a runbook can be owed by a host who never sat on
+#: the board.
+CHECKLIST_ITEM_KEYS = frozenset({"assignee"})
+#: What a speaker has said about one proposed slot. There is no 'pending' and
+#: no fourth value: an answer that has not come back is '', and nothing here
+#: can be read as a soft yes by the transition that locks the date in.
+DATE_ANSWERS = frozenset({"accepted", "declined", ""})
 PUBLICATION_OUTCOMES = frozenset({"published", "withheld", ""})
 NOMINATION_OUTCOMES = frozenset({"accepted", "deferred", "waiting", ""})
 BOARD_STATUSES = frozenset({"active", "inactive"})
@@ -57,28 +82,69 @@ CONFIG_REQUIRED = frozenset(
         "objection_window_working_days",
         "inactivity_months",
         "balance_window_months",
+        "view_count_window_days",
         "sla_days",
+        "channels",
     }
 )
-CONFIG_INTS = (
-    "season",
-    "vw_counter",
-    "overlap_window_days",
-    "seminar_duration_minutes",
-    "board_min",
-    "board_max",
-    "vote_window_days",
-    "objection_window_working_days",
-    "inactivity_months",
-    "balance_window_months",
-)
+#: The two fields one promotion channel carries, and the only two.
+#:
+#: The seven channels the spec named are configuration and not a constant:
+#: whether they are still the right seven cannot be confirmed without asking
+#: the collaborators, which this project never does. So nothing here counts
+#: them, and nothing here names one - a channel added, renamed or dropped in
+#: `data/config.yml` passes this validator unchanged, which is the whole
+#: point of the list being data.
+CHANNEL_KEYS = frozenset({"key", "label"})
+#: A channel `key` becomes a checklist key inside `data/speakers.yml`, read
+#: back by both languages and skimmed in hand-reviewed diffs. Spaces and
+#: capitals would survive the round-trip and read as a different key to a
+#: person. The `label`, which nothing stores, carries whatever wording the
+#: volunteers want.
+CHANNEL_KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+#: The turnaround targets the series sets, and the three it still stores.
+#:
+#: `lead_decision` is deliberately not among them (F-13). The board's
+#: decision deadline is `vote_window_days`, the number `sweep.expire_votes`
+#: actually parks a lead on; a second key holding the same deadline meant a
+#: file could say the board was on time on the very morning the job parked
+#: the lead. One deadline, one number: the contradiction is not detected
+#: here, it has no key left to be written in.
 SLA_DAYS_KEYS = frozenset(
     {
-        "lead_decision",
         "invitation_follow_up",
         "summary_after_delivery",
         "recording_after_delivery",
     }
+)
+#: Every setting counted rather than named, written as the path to it.
+#:
+#: A dotted path because the four turnaround targets sit one level down and
+#: are day counts in exactly the same sense as the windows above: the browser
+#: reads all of them with the same `whole()`, which refuses anything that is
+#: not a whole number, so a setting checked only for presence here is a
+#: hand edit CI waves through and the app then refuses to load on. One list,
+#: walked one way, rather than a second mechanism growing beside this one.
+#:
+#: `bool` is refused although Python counts it as an `int`: `true` is not a
+#: number of days, `Number.isInteger(true)` is `false` in the browser's
+#: reader, and `governance._is_count` already refuses it on the other side of
+#: this package.
+CONFIG_INTS = (
+    *(
+        "season",
+        "vw_counter",
+        "overlap_window_days",
+        "seminar_duration_minutes",
+        "board_min",
+        "board_max",
+        "vote_window_days",
+        "objection_window_working_days",
+        "inactivity_months",
+        "balance_window_months",
+        "view_count_window_days",
+    ),
+    *(f"sla_days.{key}" for key in sorted(SLA_DAYS_KEYS)),
 )
 NEEDS_SCHEDULE = frozenset({"scheduled", "delivered", "archived"})
 
@@ -86,6 +152,68 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 EDITION_RE = re.compile(r"^MRG-\d+$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
+
+#: "no such setting", which is a different fact from "the setting is None".
+#: A missing key is `CONFIG_REQUIRED`'s business and is reported once, by
+#: name, rather than a second time as a type error.
+_ABSENT = object()
+
+
+def _setting(cfg: Any, path: str) -> Any:
+    """The value at a dotted `path` in the config, or `_ABSENT`.
+
+    Walks one level per dot and gives up quietly the moment a step is not a
+    mapping or is not there: `sla_days: "later"` is already reported as not
+    being a mapping, and a second sentence about each of its four keys would
+    bury the one that says what is actually wrong.
+    """
+    value: Any = cfg
+    for step in path.split("."):
+        if not isinstance(value, dict) or step not in value:
+            return _ABSENT
+        value = value[step]
+    return value
+
+
+def _validate_checklist(checklist: Any, where: str) -> list[str]:
+    """Validate `Speaker.checklist` - who owes each line of the journey.
+
+    `{}` is the normal state and never an error: naming an owner is not
+    something the series has ever asked of anybody, and a line nobody is down
+    for stays the hosts' - which is the behaviour the app has always had. The
+    key itself is required all the same, as every other field is, because
+    `app/src/data/validate.ts` refuses a record with a key missing and the
+    two sides have to agree about what a complete record is. `{}` is the
+    answer "nobody is down for anything"; an absent key is a record nobody
+    finished.
+
+    What is checked is the shape of what is there: a mapping of runbook item
+    to a block carrying an `assignee`, and nothing else. The item keys are
+    free-form on purpose - they follow the runbook (`app/src/state/
+    phases.ts`), which changes - so only the block is constrained.
+    """
+    errors: list[str] = []
+    if not isinstance(checklist, dict):
+        errors.append(f"{where}.checklist: must be a mapping")
+        return errors
+
+    for item, entry in checklist.items():
+        iwhere = f"{where}.checklist[{item!r}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{iwhere}: not a mapping")
+            continue
+        extra = set(entry) - CHECKLIST_ITEM_KEYS
+        if extra:
+            errors.append(f"{iwhere}: unknown keys {sorted(extra)}")
+        if "assignee" not in entry:
+            errors.append(f"{iwhere}: missing assignee")
+            continue
+        assignee = entry["assignee"]
+        if not isinstance(assignee, str):
+            errors.append(f"{iwhere}: assignee must be a string")
+        elif assignee and not LOGIN_RE.match(assignee):
+            errors.append(f"{iwhere}: invalid assignee {assignee!r}")
+    return errors
 
 
 def _validate_objections(objections: Any, where: str) -> list[str]:
@@ -128,6 +256,66 @@ def _validate_objections(objections: Any, where: str) -> list[str]:
             errors.append(
                 f"{owhere}: resolved_on must be YYYY-MM-DD, got {resolved_on!r}"
             )
+
+    return errors
+
+
+def _validate_candidate_dates(dates: Any, where: str) -> list[str]:
+    """Validate `Speaker.candidate_dates` - the slots put to the speaker.
+
+    The invitation has always proposed several dates while the record held
+    one, so the negotiation lived in a mailbox and only its conclusion was
+    ever written down. A slot is a day, an hour and an answer, and all three
+    are required: a proposal with no day is not a proposal, and an answer
+    outside the vocabulary would reach the transition that freezes `date`,
+    which has no reading for it.
+
+    One slot per day: the day is what identifies a slot, in both languages.
+    """
+    errors: list[str] = []
+    if not isinstance(dates, list):
+        errors.append(f"{where}.candidate_dates: must be a list")
+        return errors
+
+    seen: set[str] = set()
+    for index, slot in enumerate(dates):
+        swhere = f"{where}.candidate_dates[{index}]"
+        if not isinstance(slot, dict):
+            errors.append(f"{swhere}: not a mapping")
+            continue
+
+        missing = CANDIDATE_DATE_KEYS - set(slot)
+        if missing:
+            errors.append(f"{swhere}: missing keys {sorted(missing)}")
+
+        date = slot.get("date")
+        if not isinstance(date, str) or not DATE_RE.match(date):
+            errors.append(f"{swhere}: date must be YYYY-MM-DD, got {date!r}")
+
+        time = slot.get("time")
+        if not isinstance(time, str) or not TIME_RE.match(time):
+            errors.append(f"{swhere}: time must be HH:MM, got {time!r}")
+
+        answer = slot.get("answer")
+        if answer not in DATE_ANSWERS:
+            errors.append(f"{swhere}: invalid answer {answer!r}")
+
+        # A slot is identified by its day, not by the pair (day, hour).
+        # That is the reading of the record on the other side --
+        # `app/src/state/dates.ts` finds a slot by `date`, writes an answer
+        # to every entry with that date, and takes the hour from the day it
+        # locks -- and it is the reading `proposeDates` enforces when it
+        # refuses the same day twice. A file holding two hours on one day
+        # would therefore carry one answer written against both, and
+        # `lockDate` would freeze whichever hour came first: an evening the
+        # speaker may have declined. This check kept the pair, so such a
+        # file passed here and broke there. Pinned across both languages by
+        # `candidate_date_cases` in tests/fixtures/governance-cases.json.
+        if isinstance(date, str):
+            if date in seen:
+                errors.append(f"{swhere}: duplicate date {date!r}")
+            else:
+                seen.add(date)
 
     return errors
 
@@ -294,6 +482,25 @@ def validate_speakers(
         career_stage = entry.get("career_stage")
         if career_stage not in CAREER_STAGES:
             errors.append(f"{where}: invalid career_stage {career_stage!r}")
+
+        # Schema v4. Absent is a defect; empty is an answer. Anything that
+        # asked `entry.get(key)` here would report the two as one thing, and
+        # the field would be optional in everything but its documentation.
+        for key in SPEAKER_TEXT_V4:
+            if key not in entry:
+                errors.append(f"{where}: missing {key}")
+            elif not isinstance(entry[key], str):
+                errors.append(f"{where}: {key} must be a string")
+
+        if "checklist" not in entry:
+            errors.append(f"{where}: missing checklist")
+        else:
+            errors.extend(_validate_checklist(entry["checklist"], where))
+
+        if "candidate_dates" not in entry:
+            errors.append(f"{where}: missing candidate_dates")
+        else:
+            errors.extend(_validate_candidate_dates(entry["candidate_dates"], where))
 
         publication = entry.get("publication")
         pub_where = f"{where}.publication"
@@ -581,6 +788,47 @@ def validate_config(cfg: Any) -> list[str]:
                     f"has an unsettled nomination at nominations[{seen_at}]"
                 )
 
+    # The channels an event is announced on. The list is validated; its
+    # contents are not judged. An empty list is legal and means nothing is
+    # promoted through this app - the "absent configuration does nothing"
+    # side of the standing pattern. A list that cannot be read is an error,
+    # because a broken list read as an empty one would show a volunteer a
+    # promotion phase with no lines in it and nothing to say the file, not
+    # the plan, is what is missing.
+    channels = cfg.get("channels")
+    if "channels" in cfg and not isinstance(channels, list):
+        errors.append("config.yml: channels must be a list")
+    elif isinstance(channels, list):
+        first_seen: dict[str, int] = {}
+        for cindex, channel in enumerate(channels):
+            cwhere = f"config.yml: channels[{cindex}]"
+            if not isinstance(channel, dict):
+                errors.append(f"{cwhere}: not a mapping")
+                continue
+
+            unknown = sorted(set(channel) - CHANNEL_KEYS)
+            if unknown:
+                errors.append(f"{cwhere}: unknown keys {unknown}")
+
+            key = channel.get("key")
+            if not isinstance(key, str) or not CHANNEL_KEY_RE.match(key):
+                errors.append(f"{cwhere}: invalid channel key {key!r}")
+            else:
+                # Two entries sharing a key share one checklist key: ticking
+                # one would tick the other, and which label a screen showed
+                # would come down to list order.
+                seen_at = first_seen.get(key)
+                if seen_at is None:
+                    first_seen[key] = cindex
+                else:
+                    errors.append(
+                        f"{cwhere}: {key!r} already used at channels[{seen_at}]"
+                    )
+
+            label = channel.get("label")
+            if not isinstance(label, str) or not label.strip():
+                errors.append(f"{cwhere}: channel {key!r} has no label")
+
     sla_days = cfg.get("sla_days")
     if "sla_days" in cfg and not isinstance(sla_days, dict):
         errors.append("config.yml: sla_days must be a mapping")
@@ -588,9 +836,24 @@ def validate_config(cfg: Any) -> list[str]:
         missing_sla = SLA_DAYS_KEYS - set(sla_days)
         if missing_sla:
             errors.append(f"config.yml: missing sla_days keys {sorted(missing_sla)}")
+        # Named rather than ignored, the way `vote_threshold` is above: a file
+        # that still carries it has a second board-decision deadline in it,
+        # and silently dropping the key would leave whoever set it to 20
+        # believing the board had 20 days.
+        if "lead_decision" in sla_days:
+            errors.append(
+                "config.yml: sla_days.lead_decision is obsolete, the board's "
+                "decision deadline is vote_window_days - the same number "
+                "convener-sweep parks an expired lead on"
+            )
 
-    for key in CONFIG_INTS:
-        if key in cfg and not isinstance(cfg[key], int):
-            errors.append(f"config.yml: {key} must be an integer")
+    for path in CONFIG_INTS:
+        value = _setting(cfg, path)
+        if value is _ABSENT:
+            continue
+        # `bool` first: `isinstance(True, int)` is true in Python and `true`
+        # is not a number of days anywhere else in this repository.
+        if isinstance(value, bool) or not isinstance(value, int):
+            errors.append(f"config.yml: {path} must be an integer")
 
     return errors

@@ -144,6 +144,7 @@ def test_an_empty_string_is_kept_as_an_empty_string_not_as_none() -> None:
     assert blank["publication"]["consent"] == ""
     assert blank["links"] == []
     assert blank["runbook_progress"] == {}
+    assert blank["checklist"] == {}
     assert blank["selection"]["ballots"] == []
 
 
@@ -179,6 +180,29 @@ def test_proposed_by_and_assigned_to_are_two_fields_and_stay_two() -> None:
     assert full["proposed_by"] not in _board_logins()
 
 
+def test_the_item_owner_and_the_lead_owner_cross_as_two_separate_fields() -> None:
+    """The same defect one grain further down, pinned before it happens.
+
+    `assigned_to` is who owns the *lead*; `checklist[...]["assignee"]` is who
+    owes *one line of the runbook*. On `spk-103` they hold different logins,
+    so a writer -- on either side -- that derived one from the other could not
+    produce this file. `spk-101` carries an owner that is the empty string,
+    which is legal and means the same as no entry: nobody in particular.
+    """
+    full, blank, odd = _speakers()
+    assert odd["assigned_to"] == "bob"
+    assert odd["checklist"] == {"scheduled/T-21/linkedin": {"assignee": "erin"}}
+    assert full["checklist"]["scheduled/T-30/visuals"]["assignee"] == "ada"
+    assert full["checklist"]["delivered/forum-summary"]["assignee"] == ""
+    # A block map inside a block map, whose keys carry slashes: the one shape
+    # in the model nothing else has, and the indentation both writers have to
+    # agree on.
+    assert "\n".join(
+        ("  checklist:", "    scheduled/T-30/visuals:", "      assignee: ada")
+    ) in _text(SPEAKERS_FIXTURE)
+    assert blank["checklist"] == {}
+
+
 def test_a_multi_line_abstract_is_written_as_a_literal_block_by_both_sides() -> None:
     """The one shape whose formatting the two writers disagreed on.
 
@@ -191,6 +215,62 @@ def test_a_multi_line_abstract_is_written_as_a_literal_block_by_both_sides() -> 
     assert _speakers()[0]["abstract"] == (
         "First paragraph of the abstract.\nSecond paragraph, after a break."
     )
+
+
+def test_a_multi_line_bio_is_written_as_a_literal_block_too() -> None:
+    """The same disagreement, on the field it would next have shown up on.
+
+    A biography is the one new field a speaker writes at length, so it is
+    the one that would have been rewritten by whichever side saved last.
+    Pinned here rather than left to the abstract, which is the field the
+    two writers happened to be compared on first.
+    """
+    assert "bio: |-\n" in _text(SPEAKERS_FIXTURE)
+    assert _speakers()[0]["bio"] == (
+        "Directrice de recherche à Genève.\nElle étudie le campagnol depuis 2011."
+    )
+
+
+def test_an_apostrophe_and_an_accent_cross_together() -> None:
+    """`seed_questions` is free text a speaker typed, in their own language.
+
+    The apostrophe is what decides between a plain and a quoted scalar and
+    the accent is what decides between the character and an escape; both
+    writers have to make both calls the same way, which is what the byte
+    comparison above is asserting and what this reads back.
+    """
+    questions = _speakers()[0]["seed_questions"]
+    assert questions.startswith("Qu'est-ce")
+    assert "modèle" in questions
+    assert "élevage" in questions.lower()
+    # As the characters themselves, not as \\uXXXX escapes.
+    assert "Qu'est-ce" in _text(SPEAKERS_FIXTURE)
+
+
+def test_the_proposed_slots_cross_as_a_block_sequence_of_mappings() -> None:
+    """A list of mappings nested under a speaker: one level deeper than any
+    list this fixture carried before, and the shape `noArrayIndent` governs.
+
+    The hours are quoted for the same reason `time` is: `09:05` and `12:30`
+    are text, and a slot read back as the integer 750 would be proposed to
+    nobody.
+    """
+    slots = _speakers()[0]["candidate_dates"]
+    assert slots == [
+        {"date": "2026-05-18", "time": "12:30", "answer": "declined"},
+        {"date": "2026-06-01", "time": "12:30", "answer": "accepted"},
+        {"date": "2026-06-15", "time": "09:05", "answer": ""},
+    ]
+    assert all(isinstance(slot["time"], str) for slot in slots)
+    text = _text(SPEAKERS_FIXTURE)
+    assert "candidate_dates:\n  - date: '2026-05-18'\n" in text
+    # No answer at all is the empty answer, written out rather than left out.
+    assert "answer: ''\n" in text
+    assert _speakers()[1]["candidate_dates"] == []
+
+
+def test_a_seed_question_that_reads_like_a_time_is_still_text() -> None:
+    assert _speakers()[2]["seed_questions"] == "12:30"
 
 
 def test_the_speaker_fixture_carries_the_whole_governance_record() -> None:
@@ -222,10 +302,12 @@ def test_the_config_fixture_carries_every_window_the_two_languages_read() -> Non
         "objection_window_working_days",
         "inactivity_months",
         "balance_window_months",
+        "view_count_window_days",
     ):
         assert isinstance(cfg[key], int), key
+    # Three, not four: the board's decision deadline is `vote_window_days`
+    # above, checked as an integer with the rest (F-13).
     assert set(cfg["sla_days"]) == {
-        "lead_decision",
         "invitation_follow_up",
         "summary_after_delivery",
         "recording_after_delivery",

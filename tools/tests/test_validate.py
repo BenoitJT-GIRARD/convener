@@ -73,6 +73,67 @@ def test_config_missing_keys_are_reported() -> None:
     assert any("missing keys ['season']" in e for e in errors)
 
 
+def test_the_view_counting_window_is_configuration_on_this_side_too() -> None:
+    """The window a view count is read off is a convention, so it is a setting.
+
+    Both languages have to require it, or the browser writes a file the
+    scheduled jobs refuse - or, worse, the other way round, and a config
+    without the key reaches `data/` where the app then reads `undefined`
+    into a label. `docs/workflow/4-after.md` states the convention itself.
+    """
+    cfg = config()
+    del cfg["view_count_window_days"]
+    errors = validate_config(cfg)
+    assert any("missing keys ['view_count_window_days']" in e for e in errors)
+
+    errors = validate_config(config(view_count_window_days="thirty"))
+    assert any("view_count_window_days must be an integer" in e for e in errors)
+
+    assert validate_config(config(view_count_window_days=90)) == []
+
+
+def test_a_turnaround_target_must_be_a_whole_number() -> None:
+    """F-14. The four `sla_days` values are day counts, and nothing said so.
+
+    `validate_config` used to check the four keys were *present* and never
+    what they held, while `app/src/data/validate.ts::readSlaDays` reads each
+    one with `whole()`. So `invitation_follow_up: "thirty"` passed CI and
+    then took the whole app down on load - the one place a data error must
+    not surface, because a volunteer reading it has no way back to the file.
+
+    The message names the key by its path, because "sla_days must be a
+    mapping" would send somebody looking at the wrong line of a file whose
+    four lines look alike.
+    """
+    for key in ("invitation_follow_up", "summary_after_delivery"):
+        sla = {**config()["sla_days"], key: "fourteen"}
+        errors = validate_config(config(sla_days=sla))
+        assert any(f"sla_days.{key} must be an integer" in e for e in errors), errors
+
+
+def test_a_turnaround_target_is_not_a_flag() -> None:
+    """`True` is an `int` in Python and is a day count nowhere.
+
+    Left unrefused it would pass here and fail in the browser, which reads
+    the same value with `Number.isInteger`; `governance._is_count` already
+    turns it away on the other side of this package.
+    """
+    sla = {**config()["sla_days"], "recording_after_delivery": True}
+    errors = validate_config(config(sla_days=sla))
+    wanted = "sla_days.recording_after_delivery must be an integer"
+    assert any(wanted in e for e in errors), errors
+
+    errors = validate_config(config(vote_window_days=False))
+    assert any("vote_window_days must be an integer" in e for e in errors)
+
+
+def test_an_unreadable_sla_days_is_reported_once() -> None:
+    """One sentence about the mapping, not five about a mapping that is not one."""
+    errors = validate_config(config(sla_days="later"))
+    assert any("sla_days must be a mapping" in e for e in errors)
+    assert not any("must be an integer" in e for e in errors), errors
+
+
 def test_config_board_member_must_look_like_a_login() -> None:
     # Schema v3: board_members (flat login list) was replaced by board
     # (a list of BoardMember mappings) in Task 1 / Task 4. The rule this

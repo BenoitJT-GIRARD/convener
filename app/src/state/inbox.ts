@@ -1,7 +1,8 @@
 import type { Config, Speaker } from '../data/types';
 import { activeBoard } from './board';
 import { decide } from './governance';
-import { phaseOf, fieldValue } from './phases';
+import { phaseItems, phaseOf, fieldValue } from './phases';
+import { itemAssignee } from './assignment';
 
 export type InboxKind = 'vote' | 'action' | 'awareness';
 
@@ -33,6 +34,22 @@ function daysBetween(from: string, to: string): number {
  * board member recording their own ballot on it is what moves the record. No
  * decision is taken on the board's behalf anywhere in this module -- nothing
  * here writes at all.
+ *
+ * **The lines of a phase are read through `phaseItems`, never `phase.items`.**
+ * `state/phases.ts` says so of everything that walks them, and names this
+ * module among the three. It did not: the promotion channels live in
+ * `data/config.yml` and enter the journey through `phaseItems`, so the seven
+ * places an event is announced were the only T-window boxes in the whole
+ * journey that never raised a reminder here -- invisible everywhere but the
+ * speaker page, which is where nobody goes looking for what is due.
+ *
+ * **A line somebody is named on is not raised here.** `Inbox.tsx` shows two
+ * lists side by side: this one, "what is due on the records I look after",
+ * and `assignment.itemsWaitingFor`, "what I am down for". A line with an
+ * owner belongs to the second, so raising it in both put the same line twice
+ * on one screen -- which was the common case, since a host is exactly the
+ * person named on lines of their own record. An unowned line is the hosts',
+ * which is what it has always meant, and that is the one this module raises.
  */
 export function deriveInbox(
   speakers: Speaker[],
@@ -117,14 +134,26 @@ export function deriveInbox(
     // ── scheduled: checkbox items in their T-window
     if (s.status === 'scheduled' && s.date) {
       const days = daysBetween(today, s.date);
-      for (const item of phase.items) {
-        if (item.form !== 'checkbox' || item.window === undefined) continue;
+      // Every line of this phase is due in a window, the promotion channels
+      // included: `phaseItems` lends each channel the window of the line it
+      // is spliced after, because where the promotion lines fall is the
+      // phase's placement and not the channel's. That used to be worked out
+      // here, which made this the only screen that knew it -- the record
+      // page showed the same line with no window at all. Without a window
+      // the seven places an event is announced are the only lines of the
+      // journey that never reach anybody's inbox, and an unowned channel --
+      // the default -- is visible nowhere but the speaker page.
+      for (const item of phaseItems(phase, config)) {
+        if (item.form !== 'checkbox') continue;
+        const window = item.window;
+        if (window === undefined) continue;
         if (s.runbook_progress[item.key]) continue;
-        if (days <= item.window) {
+        if (itemAssignee(s, item.key) !== '') continue;
+        if (days <= window) {
           rows.push({
             kind: 'action',
             speaker: s,
-            label: `${item.label} (T-${item.window})`,
+            label: `${item.label} (T-${window})`,
             itemKey: item.key,
             daysUntil: days,
             urgency: days,
@@ -135,8 +164,15 @@ export function deriveInbox(
 
     // ── delivered: required fields + required checkboxes
     if (s.status === 'delivered') {
-      for (const item of phase.items) {
+      for (const item of phaseItems(phase, config)) {
         if (!item.required) continue;
+        // Owned lines leave this list, exactly as they do in the scheduled
+        // branch above: a line with a name against it is that person's, and
+        // `itemsWaitingFor` raises it there -- for field lines as well as
+        // checkbox ones. Raising it here too would put it in front of
+        // everybody, which is what "nobody in particular" is supposed to
+        // mean and this is not.
+        if (itemAssignee(s, item.key) !== '') continue;
         if (item.form === 'field' && item.fieldKey) {
           const val = fieldValue(s, item.fieldKey);
           if (val === '' || val === null || val === undefined) {

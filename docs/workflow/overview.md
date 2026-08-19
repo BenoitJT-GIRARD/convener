@@ -25,7 +25,7 @@ Lead → [ Gate: the Board validates ] → Approved → Invited → Confirmed �
 - **Invited / Confirmed** — invitation sent; the speaker accepts and sends their details.
 - **Scheduled** — date locked. The webinar now exists, and preparation begins.
 
-Two side outcomes: **Parking Lot** (a good idea, kept for later) and **Declined**.
+Three side outcomes: **Parked** (a good idea, kept for later, and reversible), **Declined (board)** and **Declined (speaker)** — who said no is kept, because the two lead to different messages and different second chances.
 
 ## The two gates
 

@@ -2,13 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fetchContent, invalidateContent } from '../src/content/fetch';
 import { substitute } from '../src/content/render';
 import type { Speaker } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 beforeEach(() => {
   invalidateContent();
   vi.unstubAllGlobals();
 });
 
-const BASE_SPEAKER: Speaker = {
+// Through the shared double: a field added to `Speaker` reaches this
+// record on its own, instead of leaving the file describing a shape
+// the reader would refuse.
+const BASE_SPEAKER: Speaker = double({
   id: 'sp-1',
   name: '',
   gender: 'undisclosed',
@@ -43,7 +47,7 @@ const BASE_SPEAKER: Speaker = {
   runbook_progress: {},
   metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
   notes: '',
-};
+});
 
 function makeSpeaker(overrides: Partial<Speaker>): Speaker {
   return { ...BASE_SPEAKER, ...overrides };

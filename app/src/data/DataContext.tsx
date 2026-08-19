@@ -14,6 +14,7 @@ import {
 } from './yaml';
 import { isDemoMode, DEMO_SPEAKERS, DEMO_CONFIG } from './demo';
 import type { Speaker, Config } from './types';
+import type { Subject } from '../state/decisions';
 
 interface State {
   loading: boolean;
@@ -37,13 +38,24 @@ interface Ctx extends State {
    *  surfaced via `saveError` — callers whose code after the write has a
    *  user-visible success side effect (a confirmation, a navigation) must
    *  guard it on this, so a failed write never reports success. */
+  /** `message` may be a function of the list about to be written, for a
+   *  subject that names something the transformation assigned -- the id of a
+   *  record just created. It is called once, on the value that actually goes
+   *  to GitHub.
+   *
+   *  It is a `Subject`, not a `string`: a commit subject is permanent and
+   *  unrewritable, and `state/decisions.ts` is where the two forms one can
+   *  take are assembled. Anything else -- a template literal here, a
+   *  concatenation, a helper of its own -- fails to compile rather than
+   *  being noticed later by a source walk that has to guess how the defect
+   *  was spelled. */
   mutateSpeakers: (
     transform: (current: Speaker[]) => Speaker[],
-    message: string,
+    message: Subject | ((next: Speaker[]) => Subject),
   ) => Promise<boolean>;
   mutateConfig: (
     transform: (current: Config) => Config,
-    message: string,
+    message: Subject,
   ) => Promise<boolean>;
   /** Dismiss the current save-error banner without touching anything else. */
   clearSaveError: () => void;
@@ -170,7 +182,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   async function mutateSpeakers(
     transform: (current: Speaker[]) => Speaker[],
-    message: string,
+    message: Subject | ((next: Speaker[]) => Subject),
   ): Promise<boolean> {
     if (!token) return false;
     if (isDemoMode()) {
@@ -196,7 +208,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   async function mutateConfig(
     transform: (current: Config) => Config,
-    message: string,
+    message: Subject,
   ): Promise<boolean> {
     if (!token) return false;
     if (isDemoMode()) {

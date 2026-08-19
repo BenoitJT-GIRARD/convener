@@ -16,6 +16,7 @@ import {
   type Publication,
   type Speaker,
 } from '../src/data/types';
+import { speaker as double } from './data-doubles';
 
 /* ------------------------------------------------------------------ *
  * Fixtures
@@ -41,12 +42,13 @@ function config(overrides: Partial<Config> = {}): Config {
     objection_window_working_days: 3,
     inactivity_months: 6,
     balance_window_months: 12,
+    view_count_window_days: 30,
     sla_days: {
-      lead_decision: 14,
       invitation_follow_up: 7,
       summary_after_delivery: 5,
       recording_after_delivery: 10,
     },
+    channels: [],
     ...overrides,
   };
 }
@@ -65,8 +67,7 @@ function publication(overrides: Partial<Publication> = {}): Publication {
 /** A delivered seminar with the delivered-phase checklist already satisfied,
  *  so the only thing standing between it and the archive is this gate. */
 function speaker(overrides: Partial<Speaker> = {}): Speaker {
-  return {
-    id: 'spk-001',
+  return double({
     name: 'Dr Ada Lovelace',
     gender: 'F',
     career_stage: 'independent',
@@ -75,11 +76,9 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     country: 'UK',
     title: 'A talk',
     abstract: 'An abstract',
-    conflicts_of_interest: '',
     source: 'outreach',
     proposed_by: 'bob',
     assigned_to: 'bob',
-    links: [],
     host_1: 'alice',
     host_2: 'bob',
     status: 'delivered',
@@ -88,17 +87,20 @@ function speaker(overrides: Partial<Speaker> = {}): Speaker {
     edition_code: 'MRG-05',
     date: '2026-01-05',
     time: '12:30',
-    zoom_link: '',
     youtube_url: 'https://youtu.be/x',
     forum_thread: 'https://forum/x',
     runbook_progress: {
+      // Three weeks before this talk, somebody checked that the speaker was
+      // on the forum and signed up to their own seminar. A record where that
+      // was never done does not reach the archive at all -- which is the
+      // subject of its own test below, not of these.
+      'scheduled/T-14/speaker_registered': true,
       'delivered/forum-summary': true,
       'delivered/thank-you': true,
     },
     metrics: { registrations: 40, live_peak: 22, youtube_views_30d: 5, forum_replies: 2 },
-    notes: '',
     ...overrides,
-  };
+  });
 }
 
 /** Far enough in the past that the objection window has run under any clock
@@ -583,6 +585,25 @@ describe('PublicationGate on the speaker page', () => {
     expect(await screen.findByRole('button', { name: PUBLISH })).toBeDisabled();
     expect(screen.getByText(/not given permission/)).toBeInTheDocument();
     // Nothing was written, and in particular nothing was published.
+    expect(backend.current()[0].publication.outcome).toBe('');
+  });
+
+  it('names the step in the way, including one from three weeks before the talk', async () => {
+    // The volunteer is on the wrap-up screen. What is missing is not on it:
+    // pointing at "the required fields of the delivered checklist" would have
+    // sent them looking through fields that are all filled in.
+    const backend = makeBackend(config(), [
+      speaker({
+        publication: publication({ consent: 'granted', approved_by: 'alice', approved_on: LONG_AGO }),
+        runbook_progress: { 'delivered/forum-summary': true, 'delivered/thank-you': true },
+      }),
+    ]);
+    renderSpeaker(backend);
+
+    expect(await screen.findByRole('button', { name: PUBLISH })).toBeDisabled();
+    expect(
+      screen.getByText(/Speaker registered on the forum and to their own talk is not ticked\./),
+    ).toBeInTheDocument();
     expect(backend.current()[0].publication.outcome).toBe('');
   });
 

@@ -5,6 +5,7 @@ import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider } from '../src/data/DataContext';
 import { Board } from '../src/screens/Board';
 import { parseConfig, serializeConfig } from '../src/data/yaml';
+import { speaker as double } from './data-doubles';
 import type { BoardMember, Config, Nomination, Speaker } from '../src/data/types';
 
 function member(login: string, overrides: Partial<BoardMember> = {}): BoardMember {
@@ -25,28 +26,21 @@ function config(overrides: Partial<Config> = {}): Config {
     objection_window_working_days: 3,
     inactivity_months: 6,
     balance_window_months: 12,
+    view_count_window_days: 30,
     sla_days: {
-      lead_decision: 14,
       invitation_follow_up: 7,
       summary_after_delivery: 5,
       recording_after_delivery: 10,
     },
+    channels: [],
     ...overrides,
   };
 }
 
+/** A delivered seminar hosted by `host` -- the only two facts this screen
+ *  reads off a speaker. Everything else comes from the shared double. */
 function speaker(id: string, host: string): Speaker {
-  return {
-    id, name: id, gender: 'undisclosed', career_stage: 'undisclosed', email: '', affiliation: '',
-    country: '', title: '', abstract: '', conflicts_of_interest: '', source: 'organizer',
-    proposed_by: '', assigned_to: '', links: [], host_1: host, host_2: '', status: 'delivered',
-    selection: { ballots: [], opened_on: '', decided_on: '' },
-    publication: { consent: 'pending', approved_by: '', approved_on: '', objections: [], outcome: '' },
-    edition_code: '', date: '', time: '', zoom_link: '', youtube_url: '', forum_thread: '',
-    runbook_progress: {},
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-    notes: '',
-  };
+  return double({ id, name: id, host_1: host, status: 'delivered' });
 }
 
 function encodeUtf8(text: string): string {
@@ -187,6 +181,36 @@ describe('Board screen', () => {
       ),
     );
     expect(backend.current().board.map(m => m.login)).toEqual(['alice', 'bob', 'carol', 'dan']);
+
+    // F-16. `unavailable_until` is read by `activeBoard`, so an absence
+    // moves `N` and with it the majority a speaker needs: it is a decision,
+    // and its subject comes out of `formatDecision` like every other one.
+    // It used to be the free prose `data: mark alice unavailable until ...`,
+    // which `parse_decision` could not read back, so the register lost it.
+    const subject = (backend.fetchMock.mock.calls
+      .filter(([, opts]) => (opts as RequestInit | undefined)?.method === 'PUT')
+      .map(([, opts]) => JSON.parse((opts as RequestInit).body as string).message as string))[0];
+    expect(subject).toBe('data: record the availability of alice by alice (away)');
+  });
+
+  it('records coming back as the same act, with the other value', async () => {
+    const backend = makeBackend(
+      config({ board: [member('alice', { unavailable_until: '2099-02-01' }), member('bob')] }),
+      [],
+    );
+    renderBoard(backend);
+
+    // The field starts empty, and an empty field is the way back: the
+    // control says so rather than needing a second act.
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark me available' }));
+    await waitFor(() =>
+      expect(backend.current().board.find(m => m.login === 'alice')?.unavailable_until).toBe(''),
+    );
+
+    const subject = (backend.fetchMock.mock.calls
+      .filter(([, opts]) => (opts as RequestInit | undefined)?.method === 'PUT')
+      .map(([, opts]) => JSON.parse((opts as RequestInit).body as string).message as string))[0];
+    expect(subject).toBe('data: record the availability of alice by alice (back)');
   });
 
   it('keeps the nomination control disabled and says why, rather than failing on submit', async () => {

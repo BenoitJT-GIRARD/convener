@@ -49,8 +49,15 @@ vote_window_days: 14
 objection_window_working_days: 3
 inactivity_months: 6
 balance_window_months: 24
+view_count_window_days: 30
 sla_days:
-  lead_decision: 14
   invitation_follow_up: 30
   summary_after_delivery: 7
   recording_after_delivery: 14
+channels:
+- key: forum
+  label: The Example Collective forum
+- key: linkedin_page
+  label: Page LinkedIn de l'équipe TEC
+- key: posters-institutes
+  label: Affiches imprimées dans les instituts

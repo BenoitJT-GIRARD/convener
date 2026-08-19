@@ -178,6 +178,15 @@ def to_lead(
         "email": email,
         "affiliation": _get(fields, "Institution", "Affiliation"),
         "country": _get(fields, "Country"),
+        # Written as answers, not left out. The public form does not ask for
+        # a portrait, a biography, a handle or seed questions -- those are
+        # asked for once the Board has approved the lead and the speaker has
+        # accepted -- and '' says "none on record" where a missing key would
+        # say the record was never finished.
+        "photo_url": "",
+        "bio": "",
+        "linkedin": "",
+        "seed_questions": "",
         "title": _get(fields, "Preliminary title", "(preliminary) Title", "Title"),
         "abstract": _get(fields, "Short abstract", "Summary", "Abstract"),
         "conflicts_of_interest": _get(fields, "Conflicts of interest"),
@@ -204,12 +213,17 @@ def to_lead(
             "outcome": "",
         },
         "edition_code": "",
+        # No slot has been put to anyone: the Board has not voted yet.
+        "candidate_dates": [],
         "date": "",
         "time": "",
         "zoom_link": "",
         "youtube_url": "",
         "forum_thread": "",
         "runbook_progress": {},
+        # Nobody is down for any line yet, and nobody has to be: an item with
+        # no owner is the hosts', which is what every line has always meant.
+        "checklist": {},
         "metrics": {
             "registrations": None,
             "live_peak": None,

@@ -5,6 +5,10 @@ export interface ContentEntry {
   anchor: string | null;
 }
 
+/** The repository the handbook is kept in. Both the "edit this page" link and
+ *  the attribution line under an included passage are built from it. */
+export const REPO_URL = 'https://github.com/example-instance/workshop-series';
+
 export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // governance
   'governance/selection-criteria': { file: 'governance/selection-criteria.md', anchor: null },
@@ -17,9 +21,18 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // toolkit — emails
   'toolkit/emails/invitation': { file: 'toolkit/emails/invitation.md', anchor: null },
   'toolkit/emails/talk-details': { file: 'toolkit/emails/talk-details.md', anchor: null },
-  'toolkit/emails/zoom-request': { file: 'toolkit/emails/zoom-request.md', anchor: null },
   'toolkit/emails/reminder': { file: 'toolkit/emails/reminder.md', anchor: null },
   'toolkit/emails/thank-you': { file: 'toolkit/emails/thank-you.md', anchor: null },
+  'toolkit/emails/proposal-received': {
+    file: 'toolkit/emails/proposal-received.md',
+    anchor: null,
+  },
+  'toolkit/emails/promotion-starting': {
+    file: 'toolkit/emails/promotion-starting.md',
+    anchor: null,
+  },
+  'toolkit/emails/consent-request': { file: 'toolkit/emails/consent-request.md', anchor: null },
+  'toolkit/emails/video-online': { file: 'toolkit/emails/video-online.md', anchor: null },
   'toolkit/emails/outreach-sourcing': { file: 'toolkit/emails/outreach-sourcing.md', anchor: null },
   'toolkit/emails/decision-declined': { file: 'toolkit/emails/decision-declined.md', anchor: null },
   'toolkit/emails/decision-parked': { file: 'toolkit/emails/decision-parked.md', anchor: null },
@@ -33,6 +46,15 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'toolkit/forum-post-summary': { file: 'toolkit/forum-post-summary.md', anchor: null },
   'toolkit/linkedin-post': { file: 'toolkit/linkedin-post.md', anchor: null },
   'toolkit/intro-scripts': { file: 'toolkit/intro-scripts.md', anchor: null },
+  'toolkit/run-of-show': { file: 'toolkit/run-of-show.md', anchor: null },
+  'toolkit/slides/presentation-template': {
+    file: 'toolkit/slides/presentation-template.md',
+    anchor: null,
+  },
+  // toolkit -- visual kit. The page is markdown; the templates it links to are
+  // SVG and PNG files under `docs/assets/`, served from the same `handbook/`
+  // path by `scripts/copy-handbook.mjs`.
+  'toolkit/visual-kit': { file: 'toolkit/visual-kit.md', anchor: null },
 
   // handbook — long-read
   'handbook/overview': { file: 'start-here/index.md', anchor: null },
@@ -44,7 +66,26 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'handbook/preparation': { file: 'workflow/2-preparation.md', anchor: null },
   'handbook/hosting': { file: 'workflow/3-hosting.md', anchor: null },
   'handbook/after': { file: 'workflow/4-after.md', anchor: null },
+  'handbook/workspace': { file: 'reference/the-workspace.md', anchor: null },
   'handbook/tools': { file: 'reference/tools.md', anchor: null },
   'handbook/contacts': { file: 'reference/contacts.md', anchor: null },
   'handbook/schema': { file: 'reference/schema.md', anchor: null },
+
+  // fragments -- one section of a page, so that a passage two pages need is
+  // written on one of them and included by the other. An entry with an anchor
+  // is not a second file: it is the same file, scoped to one heading, which is
+  // why an included passage cannot hold a version of its own. See
+  // `content/transclude.ts`. The keys name their source, so an editor who
+  // meets `{{> fragments/roles-no-ladder }}` in a page knows where to go
+  // without opening this file.
+  'fragments/board-rules-publication-gate': {
+    file: 'governance/board-rules.md',
+    anchor: 'publishing-a-recording-two-permissions-and-they-are-not-alike',
+  },
+  'fragments/board-rules-objection': {
+    file: 'governance/board-rules.md',
+    anchor: 'objecting-and-what-deferral-means',
+  },
+  'fragments/roles-host-pair': { file: 'roles.md', anchor: 'two-event-hosts-per-webinar' },
+  'fragments/roles-no-ladder': { file: 'roles.md', anchor: 'no-ladder-to-climb' },
 };

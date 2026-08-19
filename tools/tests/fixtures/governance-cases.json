@@ -1239,8 +1239,231 @@
       "identifier": false
     }
   ],
-  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned.",
+  "_candidate_date_comment": "What identifies one slot of the date negotiation: the day, and never the pair (day, hour). The question put to a speaker is whether a day suits them, the reply is recorded against the day, and the hour of the evening locked is read off the slot that day names. The two readers of data/speakers.yml disagreed about this: tools/convener_ops/validate.py de-duplicated on (date, time) while app/src/state/dates.ts keyed on date alone, so a file holding two hours on one day validated clean and then had one recorded reply marked against both -- with lockDate freezing whichever hour came first, an evening the speaker may have declined. `valid` is read by both readers (app/src/data/validate.ts, tools/convener_ops/validate.py); `answered` is what app/src/state/dates.ts must do with the slots, and says why the same-day pair is a file no reader accepts: the reply lands on the day, so both hours carry it.",
+  "candidate_date_cases": [
+    {
+      "name": "one day, one hour, no reply yet -- where every negotiation starts",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": null
+    },
+    {
+      "name": "several days, one hour each, is the offer the invitation makes",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-08",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-15",
+          "time": "18:00",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": null
+    },
+    {
+      "name": "a reply is recorded against the day it answers, and leaves the other days alone",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-08",
+          "time": "12:30",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": {
+        "date": "2026-06-01",
+        "answer": "declined",
+        "slots": [
+          {
+            "date": "2026-06-01",
+            "time": "12:30",
+            "answer": "declined"
+          },
+          {
+            "date": "2026-06-08",
+            "time": "12:30",
+            "answer": ""
+          }
+        ],
+        "accepted_dates": []
+      }
+    },
+    {
+      "name": "two hours on one day is one question asked twice, so no file may hold it",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-01",
+          "time": "18:00",
+          "answer": ""
+        }
+      ],
+      "valid": false,
+      "answered": {
+        "date": "2026-06-01",
+        "answer": "accepted",
+        "slots": [
+          {
+            "date": "2026-06-01",
+            "time": "12:30",
+            "answer": "accepted"
+          },
+          {
+            "date": "2026-06-01",
+            "time": "18:00",
+            "answer": "accepted"
+          }
+        ],
+        "accepted_dates": [
+          "2026-06-01",
+          "2026-06-01"
+        ]
+      }
+    },
+    {
+      "name": "the same day and the same hour twice is the same slot twice",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": ""
+        },
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": "accepted"
+        }
+      ],
+      "valid": false,
+      "answered": null
+    },
+    {
+      "name": "a day already answered keeps its answer beside the days still open",
+      "slots": [
+        {
+          "date": "2026-06-01",
+          "time": "12:30",
+          "answer": "declined"
+        },
+        {
+          "date": "2026-06-08",
+          "time": "12:30",
+          "answer": "accepted"
+        },
+        {
+          "date": "2026-06-15",
+          "time": "12:30",
+          "answer": ""
+        }
+      ],
+      "valid": true,
+      "answered": {
+        "date": "2026-06-15",
+        "answer": "accepted",
+        "slots": [
+          {
+            "date": "2026-06-01",
+            "time": "12:30",
+            "answer": "declined"
+          },
+          {
+            "date": "2026-06-08",
+            "time": "12:30",
+            "answer": "accepted"
+          },
+          {
+            "date": "2026-06-15",
+            "time": "12:30",
+            "answer": "accepted"
+          }
+        ],
+        "accepted_dates": [
+          "2026-06-08",
+          "2026-06-15"
+        ]
+      }
+    }
+  ],
+  "_checklist_assignee_comment": "Who may be named against a line of the journey. A GitHub login and nothing else: tools/convener_ops/validate.py refuses an assignee outside ^[a-zA-Z0-9-]+$, while app/src/data/validate.ts accepted any string and app/src/state/assignment.ts any non-empty trimmed one -- so the browser could write a record its own validator passes and convener-validate rejects. `''` is not in these cases: it is the answer 'nobody in particular, which is the hosts', legal on both sides and the state most lines stay in. Read by tools/tests/test_validate_v4.py and app/tests/assignment.test.ts. `assignItem` trims what a volunteer typed before applying the rule, so surrounding whitespace is not one of these cases: it is normalised on the writing side and refused on the reading one.",
+  "checklist_assignee_cases": [
+    {
+      "name": "a plain login",
+      "login": "ada",
+      "valid": true
+    },
+    {
+      "name": "digits and hyphens, as GitHub allows",
+      "login": "ada-lovelace-1815",
+      "valid": true
+    },
+    {
+      "name": "a person's name is not a login",
+      "login": "Anonymous Dupont",
+      "valid": false
+    },
+    {
+      "name": "an e-mail address is not a login",
+      "login": "ada@example.org",
+      "valid": false
+    },
+    {
+      "name": "an underscore, which a GitHub login does not carry",
+      "login": "ada_lovelace",
+      "valid": false
+    },
+    {
+      "name": "an at-sign the way a mention is written",
+      "login": "@ada",
+      "valid": false
+    },
+    {
+      "name": "a sentence about who is doing it",
+      "login": "ada, once she is back",
+      "valid": false
+    }
+  ],
+  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned. A member's own absence used to sit in that last list as free prose; it is a decision (it moves `N`, and with it the majority a speaker needs), so it is now `availability-set` and reads like every other line of the register (F-16).",
   "commit_message_cases": [
+    {
+      "name": "a member declaring themselves away records it about their own entry",
+      "kind": "availability-set",
+      "entity": "ada",
+      "actor": "ada",
+      "detail": "away",
+      "message": "data: record the availability of ada by ada (away)"
+    },
+    {
+      "name": "and coming back is the same act with the other value, never a second verb",
+      "kind": "availability-set",
+      "entity": "ada",
+      "actor": "ada",
+      "detail": "back",
+      "message": "data: record the availability of ada by ada (back)"
+    },
     {
       "name": "a ballot names the lead, the voter and the value cast",
       "kind": "ballot-cast",
@@ -1440,6 +1663,46 @@
       "actor": "ada",
       "detail": "",
       "message": "data: delete the record of spk-005 by ada"
+    },
+    {
+      "name": "creating a lead names the record the id was assigned to, never the person in it",
+      "kind": "speaker-create",
+      "entity": "spk-032",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: record a new lead for spk-032 by ada"
+    },
+    {
+      "name": "offering a date names the record, and leaves the day to the diff",
+      "kind": "date-propose",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "",
+      "message": "data: propose a date for spk-007 by ada"
+    },
+    {
+      "name": "a reply the speaker accepted",
+      "kind": "date-answer",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "accepted",
+      "message": "data: record a date reply for spk-007 by ada (accepted)"
+    },
+    {
+      "name": "a reply the speaker declined -- which evening is in the diff, not the subject",
+      "kind": "date-answer",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "declined",
+      "message": "data: record a date reply for spk-007 by ada (declined)"
+    },
+    {
+      "name": "a reply taken back, which the record spells as an empty answer",
+      "kind": "date-answer",
+      "entity": "spk-007",
+      "actor": "ada",
+      "detail": "cleared",
+      "message": "data: record a date reply for spk-007 by ada (cleared)"
     }
   ],
   "commit_message_rejects": [
@@ -1482,6 +1745,14 @@
     {
       "name": "an attribution trailer, on a decision or anywhere else",
       "message": "app: tidy the ballot list\n\nCo-authored-by: Someone <someone@example.org>"
+    },
+    {
+      "name": "a date reply that does not say what was replied",
+      "message": "data: record a date reply for spk-007 by ada"
+    },
+    {
+      "name": "a date in the subject line instead of a qualifier the act admits",
+      "message": "data: record a date reply for spk-007 by ada (2026-06-01)"
     }
   ],
   "commit_message_ordinary": [
@@ -1502,10 +1773,6 @@
       "message": "data: sweep elapsed events and expired vote windows"
     },
     {
-      "name": "a member's own diary entry is not a decision about anybody",
-      "message": "data: mark ada unavailable until 2026-02-01"
-    },
-    {
       "name": "a runbook tick is bookkeeping",
       "message": "data: spk-001 runbook approved/invitation-sent=true"
     },
@@ -1524,9 +1791,29 @@
     {
       "name": "an empty message is not the grammar's problem",
       "message": ""
+    },
+    {
+      "name": "a talk detail typed into the record is bookkeeping",
+      "message": "data: spk-001 set title"
+    },
+    {
+      "name": "a name put against a line of the journey decides nothing",
+      "message": "data: spk-001 owner for scheduled/T-30/visuals"
+    },
+    {
+      "name": "and taking it off again is the same kind of edit",
+      "message": "data: spk-001 owner cleared on scheduled/T-30/visuals"
+    },
+    {
+      "name": "the numbers read off after the archive are a record of what happened",
+      "message": "data: spk-001 update post-archive metrics"
+    },
+    {
+      "name": "the admin form saves the fields it was given",
+      "message": "data: spk-001 admin edit"
     }
   ],
-  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
+  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest (spec section 7): one sentence, two readers, so a reword that reaches only one side fails here. Each case carries the whole `config` the two readers take, not just `sla_days`: the board-decision step is timed by `vote_window_days` and the other three by `sla_days`, one number per deadline (F-13). The two cases with a vote window other than 14 are what makes that testable rather than merely stated: a reader that hard-coded fourteen days for the board, or read a `lead_decision` key of its own, passes every other case here and fails those two. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
   "lateness_cases": [
     {
       "name": "a lead past its board-decision deadline is overdue by whole calendar days",
@@ -1540,11 +1827,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "overdue",
@@ -1567,11 +1856,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-16",
       "state": "overdue",
@@ -1581,6 +1872,61 @@
       "days": 1,
       "overdue_text": "Board decision is 1 day overdue",
       "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "a longer vote window moves the board-decision deadline with it, because it is the same number",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "config": {
+        "vote_window_days": 20,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
+      },
+      "today": "2026-08-25",
+      "state": "overdue",
+      "step": "Board decision",
+      "due": "2026-08-21",
+      "since": "2026-08-01",
+      "days": 4,
+      "overdue_text": "Board decision is 4 days overdue",
+      "waiting_since": "waiting since 2026-08-01"
+    },
+    {
+      "name": "a shorter vote window brings it forward, and the closing day is still not late",
+      "speaker": {
+        "status": "lead",
+        "selection": {
+          "opened_on": "2026-08-01",
+          "decided_on": ""
+        },
+        "date": "",
+        "youtube_url": "",
+        "runbook_progress": {}
+      },
+      "config": {
+        "vote_window_days": 7,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
+      },
+      "today": "2026-08-08",
+      "state": "due",
+      "step": "Board decision",
+      "due": "2026-08-08",
+      "since": "2026-08-01"
     },
     {
       "name": "the due day itself is still within the target, not yet late",
@@ -1594,11 +1940,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-15",
       "state": "due",
@@ -1618,11 +1966,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-05-01",
       "state": "due",
@@ -1642,11 +1992,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1663,11 +2015,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-07-05",
       "state": "overdue",
@@ -1690,11 +2044,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-02-01",
       "state": "overdue",
@@ -1719,11 +2075,13 @@
           "delivered/forum-summary": true
         }
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-02-01",
       "state": "overdue",
@@ -1748,11 +2106,13 @@
           "delivered/forum-summary": true
         }
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-02-01",
       "state": "none"
@@ -1769,11 +2129,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1790,11 +2152,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1811,11 +2175,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1832,11 +2198,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "2026-08-18",
       "state": "none"
@@ -1853,11 +2221,13 @@
         "youtube_url": "",
         "runbook_progress": {}
       },
-      "sla_days": {
-        "lead_decision": 14,
-        "invitation_follow_up": 30,
-        "summary_after_delivery": 7,
-        "recording_after_delivery": 14
+      "config": {
+        "vote_window_days": 14,
+        "sla_days": {
+          "invitation_follow_up": 30,
+          "summary_after_delivery": 7,
+          "recording_after_delivery": 14
+        }
       },
       "today": "soon",
       "state": "due",
@@ -1865,5 +2235,48 @@
       "due": "2026-08-15",
       "since": "2026-08-01"
     }
-  ]
+  ],
+  "_speaker_field_classification_comment": "Which speaker field may leave the repository, and on what. Written twice -- app/src/state/consent.ts and tools/convener_ops/public_data.py -- so it is pinned here and read from both: app/tests/consent-fields.test.ts and tools/tests/test_public_data.py. The three lists are disjoint and their union is exactly the set of keys of Speaker; a field added to the model without a line here fails a test on both sides instead of reaching the public feed by omission. The argument for each placement lives in the two modules, not here.",
+  "speaker_field_classification": {
+    "publishable_always": [
+      "edition_code",
+      "title",
+      "abstract",
+      "date",
+      "time",
+      "status",
+      "name",
+      "affiliation",
+      "country",
+      "zoom_link",
+      "forum_thread"
+    ],
+    "publishable_on_consent": [
+      "photo_url",
+      "bio",
+      "linkedin",
+      "links",
+      "seed_questions",
+      "youtube_url"
+    ],
+    "never_published": [
+      "id",
+      "gender",
+      "career_stage",
+      "email",
+      "conflicts_of_interest",
+      "source",
+      "proposed_by",
+      "assigned_to",
+      "host_1",
+      "host_2",
+      "selection",
+      "publication",
+      "candidate_dates",
+      "runbook_progress",
+      "checklist",
+      "metrics",
+      "notes"
+    ]
+  }
 }

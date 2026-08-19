@@ -2,25 +2,25 @@
 
 Quick and simple beats slow and polished. Aim to finish within a few days.
 
-## Save the discussion
+## Note the discussion as it happens
 
-During the questions, turn on Zoom's live transcript — **CC / Live Transcript → Enable Auto-Transcription** — and **Save Transcript** at the end. Turn it on right as the discussion starts; it only records from that point.
+Nobody writes the discussion down for you, so the two of you do — in a few lines, while hosting. Notes that cost more than a couple of seconds each will not be taken, so keep them cheap:
+
+- **Agree beforehand who holds the notes.** The host reading the questions out cannot write at the same time; the other one can. Swap when you swap roles.
+- **Write the question in a few words, and the point of the answer in one line.** Not the wording — the point. If a name, a paper or a link is mentioned, that is the one thing worth catching in full.
+- **Mark what comes back twice.** A theme that returns in three questions is a paragraph of the summary; a one-off is a line, or nothing.
+- **Half of it is already written.** The questions from the forum are in the thread, in the askers' own words, and the host watching the chat can paste the ones asked there straight into the notes as they come.
+- **Give it five minutes at the end**, before closing anything: fill the gaps while it is all still fresh. This is the step people skip, and it is the one that makes the write-up easy.
 
 ## Post a summary on the forum
 
-Turn the transcript into a short, readable summary and post it under the announcement thread — [template](../toolkit/forum-post-summary.md). It is a **summary, not a transcript**: give context, be tactful, organise it well.
+Write your notes up into a short, readable summary and post it under the announcement thread — [template](../toolkit/forum-post-summary.md), which says how to structure it and what to check before posting. It is a **summary, not a record of everything said**: give context, be tactful, organise it well. Show the draft to the speaker before you post it.
 
 ## 🚪 The gate — publishing the recording
 
-Two separate permissions are needed, and neither stands in for the other.
+{{> fragments/board-rules-publication-gate }}
 
-**The speaker's.** Ask them, in writing, whether the recording may be published, and record their answer in the app. Not hearing back is not a yes: with no answer, the recording stays offline. They may withdraw their agreement later, at any time, and the recording then comes down.
-
-**The Board's.** A member of the **Editorial Board** gives a green light — a quick check on conflicts of interest and commercial content. It becomes final unless another member objects within **three working days** (weekends do not count). An objection stops publication until a Board member resolves it, either lifting it or deciding the talk is kept off YouTube.
-
-The app will not let a recording be archived until both are in hand, and says which one is missing. The full mechanics — how the three working days are counted, how an objection is closed — are in [the Board's rules](../governance/board-rules.md).
-
-Once cleared, send the recording to the YouTube contact for the TEATIME channel, and announce it on the forum.
+Once cleared, publish the recording on the series' own video channel and announce it on the forum. There is nobody outside the team to send it to — see [Contacts](../reference/contacts.md).
 
 ## Thank the speaker
 
@@ -28,14 +28,18 @@ Send a short, warm thank-you — [template](../toolkit/emails/thank-you.md). Men
 
 ## Note the numbers
 
-Add the four numbers for this webinar to the event list: registrations, peak live attendance, YouTube views after a month, and forum replies. They feed the Board's yearly review.
+Add the four numbers for this webinar to the event list: registrations, peak live attendance, video views once the counting window has passed, and forum replies. They feed the Board's yearly review.
+
+**The counting window is a convention.** Views keep arriving for years, so a view count is not a fact about a talk until somebody says when it was read off; without an agreed moment the four numbers are not comparable with each other, and a session from March quietly outranks one from November for no reason but its age. The series reads them **30 days after the talk**. There is nothing behind the 30: it is long enough that most of the views have arrived and short enough that somebody still remembers to look, and any other number chosen once would do the same job. What matters is that it is the same number every time.
+
+Because it is a convention and not a law, it is configuration: `view_count_window_days` in `data/config.yml`. Change it there and both the app and the validator follow: the Archive's field relabels itself, and the number stated above is read out of this page and checked against the file (`tools/tests/test_handbook_claims.py`), so the handbook and the form cannot end up claiming different windows. Change it rarely, and know that counts taken under the old window and the new one are not comparable, which is exactly the problem the convention exists to avoid.
 
 ## Checklist
 
-- [ ] Transcript saved
-- [ ] Recording sent to the YouTube contact (TEATIME channel)
+- [ ] Notes from the discussion written up while fresh
+- [ ] Draft summary shown to the speaker
 - [ ] Summary posted on the forum thread
-- [ ] Recording published on YouTube — only after the Board's green light
+- [ ] Recording published on the video channel — only after the Board's green light
 - [ ] Thank-you sent to the speaker
 - [ ] Numbers noted in the event list
 - [ ] **Handbook improved** — fix anything that was unclear or could be smoother. This is what keeps the handbook trustworthy.

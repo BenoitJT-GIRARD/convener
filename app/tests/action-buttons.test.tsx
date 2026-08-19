@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { boardYaml } from './data-doubles';
+import { boardYaml, speaker } from './data-doubles';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
@@ -12,43 +12,14 @@ function ballot(voter: string, value: BallotValue = 'yes'): Ballot {
   return { voter, value, comment: '', coi_reason: '', date: '2026-05-20' };
 }
 
+/** A lead with its vote open, built from the shared double rather than from
+ *  a copy of the model: a field added to `Speaker` reaches this file on its
+ *  own, instead of leaving it describing a record the reader now refuses. */
 function lead(ballots: Ballot[] = []): Speaker {
-  return {
-    id: 'spk-001',
+  return speaker({
     name: 'Lead One',
-    gender: 'undisclosed',
-    career_stage: 'undisclosed',
-    email: '',
-    affiliation: '',
-    country: '',
-    title: '',
-    abstract: '',
-    conflicts_of_interest: '',
-    source: 'organizer',
-    proposed_by: '',
-    assigned_to: '',
-    links: [],
-    host_1: '',
-    host_2: '',
-    status: 'lead',
     selection: { ballots, opened_on: '2026-05-01', decided_on: '' },
-    publication: {
-      consent: 'pending',
-      approved_by: '',
-      approved_on: '',
-      objections: [],
-      outcome: '',
-    },
-    edition_code: '',
-    date: '',
-    time: '',
-    zoom_link: '',
-    youtube_url: '',
-    forum_thread: '',
-    runbook_progress: {},
-    metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
-    notes: '',
-  };
+  });
 }
 
 /** Four active members, so `thresholdFor(4)` is 3 yes votes. */
@@ -193,5 +164,129 @@ describe('ActionButtons ballot form', () => {
     await waitFor(() => expect(backend.current()[0].status).toBe('approved'));
     expect(backend.current()[0].selection.ballots).toHaveLength(3);
     expect(backend.current()[0].selection.decided_on).not.toBe('');
+  });
+});
+
+/** A speaker whose invitation has been accepted, with the slots put to them
+ *  and whatever they have replied so far. */
+function confirmed(candidate_dates: Speaker['candidate_dates']): Speaker {
+  return speaker({
+    id: 'spk-001',
+    name: 'Confirmed One',
+    status: 'confirmed',
+    title: 'A talk',
+    abstract: 'About something',
+    candidate_dates,
+  });
+}
+
+describe('ActionButtons date negotiation', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    localStorage.setItem('convener.token', 'tok');
+  });
+
+  it('offers to lock only the slots the speaker accepted', async () => {
+    // The one thing this panel exists to prevent: a volunteer committing an
+    // unpaid outside researcher to an evening they never agreed to. There is
+    // no field to type a date into, and the two slots without an acceptance
+    // carry no lock button at all.
+    const s = confirmed([
+      { date: '2027-03-02', time: '18:00', answer: '' },
+      { date: '2027-03-09', time: '18:00', answer: 'declined' },
+      { date: '2027-03-16', time: '20:30', answer: 'accepted' },
+    ]);
+    renderFor(s, makeBackend([s]));
+
+    const locks = await screen.findAllByRole('button', { name: /Lock this date/ });
+    expect(locks).toHaveLength(1);
+    expect(screen.getByText('2027-03-16 20:30')).toBeInTheDocument();
+  });
+
+  it('locks the accepted slot with its own hour', async () => {
+    const s = confirmed([
+      { date: '2027-03-09', time: '18:00', answer: 'declined' },
+      { date: '2027-03-16', time: '20:30', answer: 'accepted' },
+    ]);
+    const backend = makeBackend([s]);
+    renderFor(s, backend);
+
+    // Disabled until the edition number is there: a rule the volunteer can
+    // satisfy disables the control instead of failing the save.
+    expect(await screen.findByRole('button', { name: /Lock this date/ })).toBeDisabled();
+    await waitFor(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'suggest' }));
+      expect(screen.getByRole('button', { name: /Lock this date/ })).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Lock this date/ }));
+
+    await waitFor(() => expect(backend.current()[0].status).toBe('scheduled'));
+    expect(backend.current()[0].date).toBe('2027-03-16');
+    expect(backend.current()[0].time).toBe('20:30');
+    // The offer and the replies survive the lock-in: which dates were put to
+    // the speaker is the record of how this one was chosen.
+    expect(backend.current()[0].candidate_dates).toHaveLength(2);
+  });
+
+  it('refuses a clashing date at the offer, naming the event in the way', async () => {
+    const s = confirmed([]);
+    const other = speaker({
+      id: 'spk-009',
+      name: 'Other One',
+      status: 'scheduled',
+      date: '2027-03-18',
+      time: '18:00',
+      edition_code: 'MRG-09',
+    });
+    renderFor(s, makeBackend([s, other]));
+
+    fireEvent.change(await screen.findByLabelText('Offer date'), {
+      target: { value: '2027-03-16' },
+    });
+
+    expect(await screen.findByText(/clashes with MRG-09/)).toBeInTheDocument();
+    // Read before clicking, not after a failed save.
+    expect(screen.getByRole('button', { name: 'Offer this date' })).toBeDisabled();
+  });
+
+  it('writes an offered date with no answer against it', async () => {
+    const s = confirmed([]);
+    const backend = makeBackend([s]);
+    renderFor(s, backend);
+
+    fireEvent.change(await screen.findByLabelText('Offer date'), {
+      target: { value: '2027-03-16' },
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Offer this date' })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Offer this date' }));
+
+    await waitFor(() => expect(backend.current()[0].candidate_dates).toHaveLength(1));
+    expect(backend.current()[0].candidate_dates[0]).toEqual({
+      date: '2027-03-16',
+      time: '12:30',
+      answer: '',
+    });
+    // Offering is not agreeing: nothing is lockable until the speaker replies.
+    expect(screen.queryByRole('button', { name: /Lock this date/ })).toBeNull();
+  });
+
+  it('records the speaker s reply against the slot it belongs to', async () => {
+    const s = confirmed([
+      { date: '2027-03-09', time: '18:00', answer: '' },
+      { date: '2027-03-16', time: '18:00', answer: '' },
+    ]);
+    const backend = makeBackend([s]);
+    renderFor(s, backend);
+
+    const accepts = await screen.findAllByRole('button', { name: 'they accepted' });
+    await waitFor(() => expect(accepts[1]).not.toBeDisabled());
+    fireEvent.click(accepts[1]);
+
+    await waitFor(() =>
+      expect(backend.current()[0].candidate_dates.map(c => c.answer)).toEqual(['', 'accepted']),
+    );
   });
 });

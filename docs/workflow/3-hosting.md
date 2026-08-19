@@ -6,18 +6,15 @@ The webinar runs on a **Thursday, 12:30–14:00 CET**, hosted by its **two Event
 
 | Time (CET) | What happens |
 |---|---|
-| 12:00 | Zoom room opens — the hosts can join. |
-| 12:15 | Hosts check everything works; apply the [Zoom background](../assets/zoom-background.png). |
+| 12:00 | The meeting room opens — the hosts can join. |
+| 12:15 | Hosts check everything works; apply the [video-call background](../assets/zoom-background.png). |
 | 12:20 | Speaker joins (at least 10 minutes early). |
 | 12:25 | Quick tech check with the speaker — screen sharing, sound. |
 | 12:30 | Webinar starts — **on time**. |
 
 ## How the two hosts split it
 
-Both Event Hosts are hosts — there is no separate technical role (the Zoom contact handles the recording). They split the work however suits them; the usual division:
-
-- **Host 1** — introduces the speaker, runs the questions, closes.
-- **Host 2** — introduces The Example Collective and the series, keeps an eye on the chat and forum for questions.
+{{> fragments/roles-host-pair }}
 
 ## Final check — before going live
 
@@ -27,22 +24,25 @@ Run this about a minute before 12:30:
 - [ ] Speaker's sound is clear
 - [ ] Speaker's screen sharing works
 - [ ] Registration link still works (latecomers can still join)
-- [ ] Both Event Hosts have co-host rights in Zoom
-- [ ] Zoom background applied
+- [ ] Both Event Hosts have co-host rights in the meeting room
+- [ ] Video-call background applied
 - [ ] Forum open in a tab, to catch questions
 
 ## Plan for the day (~90 minutes)
 
-| Time | What | Who |
-|---|---|---|
-| 0:00 | Welcome + housekeeping (recording notice, how to ask questions) | Host 1 |
-| 0:02 | Introduce The Example Collective and the series | Host 2 |
-| 0:04 | Introduce the speaker | Host 1 |
-| 0:06 | The talk | Speaker |
-| ~0:50 | Questions & discussion | Both hosts |
-| ~1:25 | Closing | Host 1 |
+The session slide by slide, with the timings and the split between the two
+hosts, is the [run of show](../toolkit/run-of-show.md) — one page, kept in one
+place, so that a change to the order is a change in one file and not in three.
+It is a template and not a rule; agree your own split if it suits you better.
 
-Use the [intro scripts](../toolkit/intro-scripts.md) for the two introductions.
+Three pages cover the day between them:
+
+- **[Run of show](../toolkit/run-of-show.md)** — what happens when, and who
+  does it.
+- **[Intro scripts](../toolkit/intro-scripts.md)** — what the hosts say over
+  the opening slides.
+- **[Slide template](../toolkit/slides/presentation-template.md)** — what goes
+  on the hosts' own slides.
 
 ## Running the questions
 

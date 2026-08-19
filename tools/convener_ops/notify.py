@@ -97,7 +97,14 @@ from convener_ops.governance import paris_today, vote_window_days
 # real days.
 # ------------------------------------------------------------------ #
 
-#: The four steps `config.sla_days` sets a turnaround time for.
+#: The four steps the series sets a turnaround time for.
+#:
+#: Three of them are read off `config.sla_days`. The fourth, `lead_decision`,
+#: is read off `config.vote_window_days` (F-13): the day the board's decision
+#: becomes late is the day `sweep.expire_votes` parks the lead, and those were
+#: two separate numbers in `config.yml` until this stopped being possible.
+#: `sla_days.lead_decision` no longer exists, so the digest cannot call a lead
+#: on time on the morning the job parks it.
 SLA_STEPS: Final[tuple[str, ...]] = (
     "lead_decision",
     "invitation_follow_up",
@@ -159,16 +166,29 @@ def _iso(value: Any) -> date | None:
         return None
 
 
-def _days(sla: Any, key: str) -> int | None:
+def _target(config: Any, step: str) -> int | None:
+    """How many days `step` is allowed, or `None` when the config does not say.
+
+    `lead_decision` is not looked up in `sla_days`: it is
+    `governance.vote_window_days`, the one definition `sweep.expire_votes`
+    parks on, fallback and all. So an unusable config gives this step the
+    spec's fourteen days rather than no deadline -- which is not a guess but
+    the number the sweep will really apply that morning, and the digest naming
+    a different day than the job acts on is the failure this exists to
+    prevent.
+    """
+    if step == "lead_decision":
+        return vote_window_days(config)
+    sla = config.get("sla_days") if isinstance(config, Mapping) else None
     if not isinstance(sla, Mapping):
         return None
-    raw = sla.get(key)
+    raw = sla.get(step)
     if isinstance(raw, bool) or not isinstance(raw, int):
         return None
     return raw
 
 
-def _maybe(step: str, since: Any, sla: Any) -> Deadline | None:
+def _maybe(step: str, since: Any, config: Any) -> Deadline | None:
     """The deadline for `step`, or `None` when it cannot be computed.
 
     A deadline that cannot be computed is *absent*, never guessed. Seven of the
@@ -176,7 +196,7 @@ def _maybe(step: str, since: Any, sla: Any) -> Deadline | None:
     inventing an anchor for them would manufacture a number a volunteer would
     then read as if the record held it.
     """
-    days = _days(sla, step)
+    days = _target(config, step)
     start = _iso(since)
     if days is None or start is None:
         return None
@@ -187,7 +207,7 @@ def _maybe(step: str, since: Any, sla: Any) -> Deadline | None:
     )
 
 
-def due_date(speaker: Any, sla_days: Any) -> Deadline | None:
+def due_date(speaker: Any, config: Any) -> Deadline | None:
     """The step this record is currently waiting on, and the day it was due.
 
     Anchors, mirroring `sla.ts::dueDate` exactly:
@@ -211,23 +231,21 @@ def due_date(speaker: Any, sla_days: Any) -> Deadline | None:
     status = speaker.get("status")
 
     if status == "lead":
-        return _maybe("lead_decision", selection.get("opened_on"), sla_days)
+        return _maybe("lead_decision", selection.get("opened_on"), config)
 
     if status == "invited":
-        return _maybe("invitation_follow_up", selection.get("decided_on"), sla_days)
+        return _maybe("invitation_follow_up", selection.get("decided_on"), config)
 
     if status == "delivered":
         open_steps: list[Deadline] = []
         runbook = speaker.get("runbook_progress")
         runbook = runbook if isinstance(runbook, Mapping) else {}
         if not runbook.get(SUMMARY_ITEM):
-            summary = _maybe("summary_after_delivery", speaker.get("date"), sla_days)
+            summary = _maybe("summary_after_delivery", speaker.get("date"), config)
             if summary is not None:
                 open_steps.append(summary)
         if not speaker.get("youtube_url"):
-            recording = _maybe(
-                "recording_after_delivery", speaker.get("date"), sla_days
-            )
+            recording = _maybe("recording_after_delivery", speaker.get("date"), config)
             if recording is not None:
                 open_steps.append(recording)
         if not open_steps:
@@ -237,14 +255,14 @@ def due_date(speaker: Any, sla_days: Any) -> Deadline | None:
     return None
 
 
-def overdue(speaker: Any, sla_days: Any, today: str) -> Overdue | None:
+def overdue(speaker: Any, config: Any, today: str) -> Overdue | None:
     """How far past its deadline this record's current step is, or `None`.
 
     `None` both when no deadline applies and when the deadline has not passed
     -- including on the due day itself, which is still within the target. The
     day count therefore only ever exists on a step that really is late.
     """
-    deadline = due_date(speaker, sla_days)
+    deadline = due_date(speaker, config)
     day = _iso(today)
     if deadline is None or day is None:
         return None
@@ -558,13 +576,12 @@ def _overdue_lines(speakers: Sequence[Any], config: Any, today: str) -> list[str
     the twin of the screens' and are pinned to them by the shared fixture.
     Longest-waiting first, which is `byUrgency`'s order for the overdue arm.
     """
-    sla_days = config.get("sla_days") if isinstance(config, Mapping) else None
     late: list[tuple[str, Overdue]] = []
     for entry in speakers:
         rid = _record_id(entry)
         if not rid:
             continue
-        item = overdue(entry, sla_days, today)
+        item = overdue(entry, config, today)
         if item is not None:
             late.append((rid, item))
     late.sort(key=lambda pair: (pair[1].due, pair[0]))

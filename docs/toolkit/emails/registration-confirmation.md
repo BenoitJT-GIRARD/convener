@@ -12,7 +12,7 @@ Dear {{ speaker.first_name }},
 
 Thank you for all the information. We have just posted the details of your talk on The Example Collective: {{ speaker.forum_thread }}
 
-A similar post is scheduled on LinkedIn for {{linkedin_date}}. Please also sign up for your own talk (Zoom link: {{ speaker.zoom_link }}).
+A similar post is scheduled on LinkedIn for [the day the LinkedIn post goes out]. Please also sign up for your own talk (Zoom link: {{ speaker.zoom_link }}).
 
 Could you confirm whether you are already registered on The Example Collective (forum.example.test)? The idea of our series is to foster discussion both before and after the talk, so it would be great if you could start engaging with participants ahead of the day.
 
@@ -31,7 +31,7 @@ Dear {{ speaker.first_name }},
 
 Thank you for all the information. We have just posted the details of your talk on The Example Collective: {{ speaker.forum_thread }}
 
-A similar post is scheduled on LinkedIn for {{linkedin_date}}. Please also don't forget to sign up for your own talk: {{ speaker.zoom_link }}
+A similar post is scheduled on LinkedIn for [the day the LinkedIn post goes out]. Please also don't forget to sign up for your own talk: {{ speaker.zoom_link }}
 
 Since we know you are already on the forum, here is how we would love you to engage: our series is built on discussion before and after the talk, so it would be great if you could start engaging with participants ahead of the day. Any suggestion on how to make it interactive is welcome — we will also post core questions your talk explores in the coming weeks.
 

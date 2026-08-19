@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { activeBoard } from '../state/board';
 import { applyTransition, canTransition } from '../state/transitions';
 import { parisToday } from '../state/derived';
-import { formatDecision, identifier } from '../state/decisions';
+import { dataEdit, formatDecision, identifier } from '../state/decisions';
 import { CAREER_STAGES, GENDERS } from '../data/types';
 import type { Speaker, SpeakerStatus, Gender, CareerStage } from '../data/types';
 
@@ -95,7 +95,12 @@ function EditFields({ speaker }: { speaker: Speaker }) {
                 }
               : s,
           ),
-        `data: ${draft.id} admin edit by ${login}`,
+        // Not a decision, and no longer written as one: this form saves the
+        // fields it was handed, and `by ${login}` made a bookkeeping edit
+        // read like an act of the register without being readable as one.
+        // The status change *is* a decision and has its own act
+        // (`override`), recorded by the button below.
+        dataEdit(identifier(draft.id), { part: 'admin-fields' }),
       );
       if (ok) setSaved(true);
     } finally {

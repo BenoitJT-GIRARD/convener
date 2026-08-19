@@ -11,11 +11,13 @@ Roles are jobs, not people — the same setup works whether we are 4 volunteers 
 | **Editorial Board** | Validates speakers, approves recordings, steers the series. |
 | **Architecte** | Designs and maintains the handbook and the tools behind it. |
 
+## No ladder to climb
+
 There is no ladder to climb. Most volunteers are Contributors and Event Hosts. After a few events, anyone who wants to can put themselves forward for the Editorial Board, or as Architecte.
 
 ## Two Event Hosts per webinar
 
-Every webinar is run by **two Event Hosts**, working as a pair from preparation through to the live day. Both are hosts — there is no separate "technical" role (the Zoom contact handles the recording).
+Every webinar is run by **two Event Hosts**, working as a pair from preparation through to the live day. Both are hosts — there is no separate "technical" role; the meeting platform does the recording, and starting and stopping it is one of the things the pair agree beforehand.
 
 How they split the work is up to them — two equal hosts, or one main host and a second. The usual split on the day:
 

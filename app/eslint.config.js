@@ -55,6 +55,70 @@ export default defineConfig([
             'A UTC calendar day, not a Paris one (P2-9). Use parisToday() from ' +
             'src/state/derived.ts, or parisDayOf(instant) for an instant other than now.',
         },
+        {
+          // A `Subject` is a commit subject that `state/decisions.ts`
+          // assembled, and a commit subject is permanent, unrewritable and
+          // mailed to every watcher. The brand is what makes one built
+          // anywhere else fail to compile whatever spelling it is written in
+          // -- concatenated, split across chunks, hidden in a helper module
+          // of its own -- and a cast is the one way past a brand, so the cast
+          // is refused here. `decisions.ts`, where the brand is applied, is
+          // the exception below. The source walk in
+          // `app/tests/decisions.test.ts` is the third net, over the text
+          // rather than the types.
+          selector:
+            "TSAsExpression > TSTypeReference > Identifier[name=/^(Subject|Identifier|ItemKey|FieldKey)$/]",
+          message:
+            'A commit subject is permanent and unrewritable: build it with ' +
+            'formatDecision() or dataEdit() in src/state/decisions.ts rather ' +
+            'than casting a string to Subject, Identifier, ItemKey or FieldKey.',
+        },
+      ],
+    },
+  },
+  {
+    // Where the brand is applied, and the only place a cast to `Subject` is
+    // one. The P2-9 selector is restated because a flat-config block
+    // replaces a rule's options rather than adding to them.
+    files: ['src/state/decisions.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.object.callee.property.name='toISOString'][callee.property.name='slice']",
+          message:
+            'A UTC calendar day, not a Paris one (P2-9). Use parisToday() from ' +
+            'src/state/derived.ts, or parisDayOf(instant) for an instant other than now.',
+        },
+      ],
+    },
+  },
+  {
+    // The tests may build a fixed calendar day any way they like -- that is
+    // why P2-9 is scoped to `src/` -- but a subject cast into existence here
+    // would be a subject the app could be given.
+    files: ['tests/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          // A `Subject` is a commit subject that `state/decisions.ts`
+          // assembled, and a commit subject is permanent, unrewritable and
+          // mailed to every watcher. The brand is what makes one built
+          // anywhere else fail to compile whatever spelling it is written in
+          // -- concatenated, split across chunks, hidden in a helper module
+          // of its own -- and a cast is the one way past a brand, so the cast
+          // is refused here. `decisions.ts`, where the brand is applied, is
+          // the exception below. The source walk in
+          // `app/tests/decisions.test.ts` is the third net, over the text
+          // rather than the types.
+          selector: "TSAsExpression > TSTypeReference > Identifier[name='Subject']",
+          message:
+            'A commit subject is permanent and unrewritable: build it with ' +
+            'formatDecision() or dataEdit() in src/state/decisions.ts rather ' +
+            'than casting a string to Subject.',
+        },
       ],
     },
   },

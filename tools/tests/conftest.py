@@ -63,7 +63,13 @@ def nomination(**overrides: Any) -> dict[str, Any]:
 
 
 def speaker(**overrides: Any) -> dict[str, Any]:
-    """A minimal valid speaker (schema v3); override any field per test."""
+    """A minimal valid speaker (schema v4); override any field per test.
+
+    Minimal, not partial: every key the model declares is here, with the
+    empty value where the record has nothing to say. A double that left keys
+    out would be a record the validator refuses, and tests written against
+    it would agree with each other about a file the repository cannot hold.
+    """
     base: dict[str, Any] = {
         "id": "spk-001",
         "name": "Ada Lovelace",
@@ -71,6 +77,11 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "email": "ada@example.org",
         "affiliation": "Example University",
         "country": "UK",
+        "photo_url": "",
+        "bio": "",
+        "linkedin": "",
+        "seed_questions": "",
+        "candidate_dates": [],
         "title": "On analytical engines",
         "abstract": "",
         "conflicts_of_interest": "",
@@ -97,6 +108,9 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "youtube_url": "",
         "forum_thread": "",
         "runbook_progress": {},
+        # Nobody down for any line, which is the state every record starts in
+        # and most lines stay in.
+        "checklist": {},
         "metrics": {
             "registrations": None,
             "live_peak": None,
@@ -128,12 +142,20 @@ def config(**overrides: Any) -> dict[str, Any]:
         "objection_window_working_days": 5,
         "inactivity_months": 6,
         "balance_window_months": 12,
+        "view_count_window_days": 30,
         "sla_days": {
-            "lead_decision": 14,
             "invitation_follow_up": 7,
             "summary_after_delivery": 5,
             "recording_after_delivery": 10,
         },
+        # Two, where `data/config.yml` lists seven: the channels are
+        # configuration, and a double that restated the seven of today would
+        # make every unrelated test depend on a list this repository leaves
+        # editable. A test about the channels states its own.
+        "channels": [
+            {"key": "forum", "label": "The Example Collective forum"},
+            {"key": "linkedin_page", "label": "TEC LinkedIn page"},
+        ],
     }
     base.update(overrides)
     return base

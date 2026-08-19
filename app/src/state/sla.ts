@@ -66,8 +66,12 @@
  */
 import type { Config, Speaker } from '../data/types';
 
-/** The four steps the series sets a turnaround time for, keyed as in
- *  `config.sla_days`. */
+/** The four steps the series sets a turnaround time for.
+ *
+ *  Three are keyed as in `config.sla_days`. `lead_decision` is not a key of
+ *  it: the board's deadline is `config.vote_window_days`, the number
+ *  `tools/convener_ops/sweep.py` parks an expired lead on, and holding it twice is
+ *  what F-13 was. */
 export const SLA_STEPS = [
   'lead_decision',
   'invitation_follow_up',
@@ -215,7 +219,11 @@ export function dueDate(s: Speaker, config: Config): Deadline | null {
 
   if (s.status === 'lead') {
     if (!s.selection.opened_on) return null;
-    return deadline('lead_decision', s.selection.opened_on, sla.lead_decision);
+    // `vote_window_days`, not an `sla_days` key of its own (F-13): the day
+    // this step becomes late is the day `tools/convener_ops/sweep.py` parks the
+    // lead, and while those were two numbers a config could set one to 20 and
+    // have this screen call the board on time the morning the job parked it.
+    return deadline('lead_decision', s.selection.opened_on, config.vote_window_days);
   }
 
   if (s.status === 'invited') {
