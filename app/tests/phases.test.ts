@@ -129,6 +129,9 @@ describe('the journey the volunteers actually keep', () => {
       'scheduled/T-3/reminder',
       'scheduled/T-3/plan-day',
       'scheduled/T-1/final-reminder',
+      'scheduled/T-0/recording-talk-started',
+      'scheduled/T-0/recording-stopped-before-discussion',
+      'scheduled/T-0/recording-discussion-started',
     ]);
   });
 

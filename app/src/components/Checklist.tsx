@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import type { Config, Speaker } from '../data/types';
-import { phaseOf, phaseItems, fieldValue, type RunbookItem, type FieldKey } from '../state/phases';
+import {
+  phaseOf,
+  phaseItems,
+  fieldValue,
+  stepBefore,
+  type RunbookItem,
+  type FieldKey,
+} from '../state/phases';
 import { itemAssignee } from '../state/assignment';
 import { parisToday } from '../state/derived';
 import { InlineContent } from '../content/InlineContent';
@@ -243,7 +250,13 @@ function CheckboxRow({
   onToggle: (key: string, value: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  // Released by the volunteer, for this row, for as long as the screen is
+  // open. Nothing about it is written down: what the record keeps is which
+  // steps happened, and "the order was odd" is not a fact about the event.
+  const [released, setReleased] = useState(false);
   const checked = !!speaker.runbook_progress[item.key];
+  const previous = stepBefore(speaker, item);
+  const held = previous !== undefined && !released;
   const label = item.window !== undefined ? `${item.label} (T-${item.window})` : item.label;
   const today = parisToday();
   return (
@@ -252,7 +265,7 @@ function CheckboxRow({
         <input
           type="checkbox"
           checked={checked}
-          disabled={disabled}
+          disabled={disabled || held}
           onChange={e => onToggle(item.key, e.target.checked)}
           className="mt-1 accent-primary"
         />
@@ -261,6 +274,21 @@ function CheckboxRow({
             {label}
             {mustBeDone(item) && <span className="text-danger ml-1">*</span>}
           </p>
+          {item.note && <p className="text-xs text-ink-muted mt-1">{item.note}</p>}
+          {previous !== undefined && (
+            <div className="mt-1">
+              <p className="text-xs text-ink-muted">Comes after “{previous.label}”.</p>
+              {held && (
+                <button
+                  type="button"
+                  onClick={() => setReleased(true)}
+                  className="text-xs text-primary-hover underline mt-1"
+                >
+                  It happened in another order — tick it anyway
+                </button>
+              )}
+            </div>
+          )}
           {item.contentKey && (
             <button
               type="button"

@@ -29,6 +29,18 @@ export interface RunbookItem {
    *  it: `required` is the ordinary "not finished yet", this is "do not
    *  publish without it". */
   blocksFinalisation?: true;
+  /** One short sentence, shown under the label, saying why the line is there.
+   *  For the handful of steps whose reason is not obvious from the wording
+   *  and whose cost, when they are skipped, cannot be paid back afterwards.
+   *  A control whose reason nobody knows is a control people tick without
+   *  reading it. */
+  note?: string;
+  /** The key of the line this one comes after. The journey is written in
+   *  order everywhere else and nothing enforces it, because ticking the
+   *  T-7 forum post before the T-14 one costs nothing. This exists for the
+   *  one sequence where being out of order is not a scheduling detail but a
+   *  sign that something irreversible has already gone wrong. */
+  after?: string;
   contentKey?: string;
   window?: number;
   fieldKey?: FieldKey;
@@ -192,6 +204,33 @@ export const PHASES: PhaseDef[] = [
         label: 'Final reminder + registration check',
         window: 1,
       },
+      // The recording sequence, on the day. Three steps and not one tick,
+      // because a single "recording done" box cannot say which of the three
+      // was missed, and which one was missed is the whole question: a talk
+      // nobody recorded is gone, and a discussion recorded by mistake holds
+      // people speaking freely on the understanding that they were not.
+      // Neither can be repaired afterwards.
+      {
+        key: 'scheduled/T-0/recording-talk-started',
+        form: 'checkbox',
+        label: 'Recording started for the talk',
+        window: 0,
+      },
+      {
+        key: 'scheduled/T-0/recording-stopped-before-discussion',
+        form: 'checkbox',
+        label: 'Recording stopped before the discussion begins',
+        window: 0,
+        note: 'The discussion is not published, and a discussion recorded by mistake cannot be unrecorded.',
+        after: 'scheduled/T-0/recording-talk-started',
+      },
+      {
+        key: 'scheduled/T-0/recording-discussion-started',
+        form: 'checkbox',
+        label: 'Recording started again for the discussion',
+        window: 0,
+        after: 'scheduled/T-0/recording-stopped-before-discussion',
+      },
     ],
   },
   {
@@ -316,6 +355,36 @@ export function isItemDone(s: Speaker, item: RunbookItem): boolean {
   }
   if (item.form === 'checkbox') return !!s.runbook_progress[item.key];
   return true;
+}
+
+/** The line the journey knows under this key, from anywhere in it. */
+export function itemByKey(key: string): RunbookItem | undefined {
+  for (const phase of PHASES) {
+    const found = phase.items.find(item => item.key === key);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * The step this one comes after, when that step has not been ticked yet.
+ *
+ * `undefined` -- the ordinary case -- means nothing comes before this line and
+ * the volunteer is free to work down the list however the day goes. A line
+ * that is already ticked is never held back either: the constraint is about
+ * ticking the next thing, not about keeping a record from being corrected.
+ *
+ * This names the step rather than answering yes or no, because the screen has
+ * to say *which* one comes first. "You cannot tick this" with no further
+ * explanation, on a sequence a volunteer has just lived through, is how a tool
+ * teaches people that it is broken.
+ */
+export function stepBefore(s: Speaker, item: RunbookItem): RunbookItem | undefined {
+  if (item.after === undefined) return undefined;
+  if (isItemDone(s, item)) return undefined;
+  const previous = itemByKey(item.after);
+  if (previous === undefined || isItemDone(s, previous)) return undefined;
+  return previous;
 }
 
 /** One reason the archive cannot be finalised yet. */
