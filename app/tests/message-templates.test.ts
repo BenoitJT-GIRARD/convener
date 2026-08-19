@@ -197,3 +197,41 @@ describe('nothing announces a publication nobody agreed to', () => {
     expect(body).not.toMatch(/YouTube|recording/i);
   });
 });
+
+describe('the discussion summary is written from notes, not from a tool', () => {
+  const SUMMARY_KEY = 'toolkit/forum-post-summary';
+
+  it('no page the app serves promises an automatic transcript', () => {
+    // The transcript came from a paid feature of a meeting platform the
+    // series no longer has. A half-removed procedure is worse than the old
+    // one: it sends a volunteer looking for a tool that is not there. The
+    // sweep is over the whole served tree, not over the two pages that
+    // mentioned it, so a page written next month cannot bring it back.
+    const promising = servedPages.filter(p => /transcript|transcription|auto-?caption/i.test(page(p)));
+    expect(promising).toEqual([]);
+  });
+
+  it('tells the note-taker what to write down while co-hosting', () => {
+    const after = page('workflow/4-after.md');
+    expect(after).toMatch(/who holds the notes/i);
+    expect(after).toMatch(/forum/i);
+  });
+
+  it('keeps the draft going to the speaker before it is posted', () => {
+    expect(source(SUMMARY_KEY)).toMatch(/before posting it|before you post it/i);
+    expect(page('workflow/4-after.md')).toMatch(/shown to the speaker/i);
+  });
+
+  it('puts the assistant after the procedure ends, never inside it', () => {
+    // Placement is the requirement, not the wording: a volunteer who wants
+    // nothing to do with an assistant must be able to read the procedure to
+    // its end without meeting one as a step. So the only mention sits below
+    // the final checks, under a heading that says it is optional.
+    const text = source(SUMMARY_KEY);
+    const [procedure, optional] = text.split(/^## Optional/m);
+    expect(optional).toBeDefined();
+    expect(procedure).not.toMatch(/\bAI\b|assistant|prompt/i);
+    expect(optional).toMatch(/no account|nothing here needs an account/i);
+    expect(optional).toMatch(/complete without this section/i);
+  });
+});
