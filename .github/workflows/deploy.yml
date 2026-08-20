@@ -5,6 +5,31 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Three other workflows push to main, so two "Deploy app" runs overlapping is
+# ordinary, not exotic. That is a different race from the one the retry loop
+# below handles: this job and `publish-vitrine.yml` write disjoint subtrees
+# of example-showcase (`app/` here, `src/_data/` there), so a rebase between them
+# always replays cleanly and both pushes must land -- which is exactly what
+# that loop is for, and it is untouched. Two *deploy* runs are not disjoint:
+# both rewrite all of `app/`, so a rebase between them either conflicts on
+# `index.html` (different hashed asset names from the same base, a red job)
+# or replays cleanly and lets the *older* build silently overwrite the
+# newer one -- worse, because nothing reports it.
+#
+# `cancel-in-progress: true` removes that case by construction rather than
+# serialising the two runs and hoping the order holds: once a newer commit
+# has started its own deploy, the older run's build has no reason to exist
+# any more, so cancelling it is correct, not just cheaper (though it is also
+# cheaper -- no runner minutes spent building something about to be
+# overwritten). The group is scoped to `github.workflow`, this workflow's
+# own name, so pasting this block into a future workflow file gives that
+# workflow its own group automatically instead of silently colliding with
+# this one -- and it is deliberately not shared with `publish-vitrine.yml`,
+# which would serialise two jobs where only their pushes need ordering.
+concurrency:
+  group: deploy-app-${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
