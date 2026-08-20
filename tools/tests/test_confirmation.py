@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import smtplib
 from pathlib import Path
 from typing import Any, ClassVar
@@ -7,6 +8,7 @@ from typing import Any, ClassVar
 import pytest
 
 from convener_ops.confirmation import (
+    CONTACT_EMAIL,
     FIELD_LABELS,
     MATCHING_INSTRUCTION,
     UPDATE_WARNING,
@@ -215,6 +217,20 @@ def test_compose_carries_the_matching_code_and_its_exact_instruction() -> None:
     assert f"{MATCHING_INSTRUCTION}: WXYZ-2345" in message.body
 
 
+def test_compose_gives_a_worked_example_built_from_the_registrants_name() -> None:
+    """Review round 1, Important 7: the instruction alone leaves open
+    whether the hyphen is part of the code and whether the participant's
+    own name stays in the field. The worked example answers both."""
+    message = compose(
+        Registration("Ada", "Lovelace", "ada@example.org", "", False),
+        _EVENT,
+        "WXYZ-2345",
+    )
+    assert "So your display name should read exactly: Ada Lovelace WXYZ-2345" in (
+        message.body
+    )
+
+
 def test_compose_names_the_fallback_cascade_with_no_code() -> None:
     """Spec S:5's documented fallback when `CONVENER_MATCHING_SALT` is unset
     (an ordinary D-13 absence, `registration.matching_code`'s own
@@ -230,6 +246,7 @@ def test_compose_carries_the_data_protection_notice_and_the_rights_notice() -> N
     assert "Data protection." in message.body
     assert "90 days" in message.body
     assert "reply to this message" in message.body
+    assert CONTACT_EMAIL in message.body
 
 
 def test_compose_says_nothing_about_an_update_when_nothing_changed() -> None:
@@ -240,10 +257,17 @@ def test_compose_says_nothing_about_an_update_when_nothing_changed() -> None:
 
 def test_compose_names_what_changed_and_warns_when_something_did() -> None:
     """R-9: the only detection channel for a silent overwrite has to name
-    the change and tell the reader what to do if it was not them."""
+    the change and tell the reader what to do if it was not them.
+
+    Asserts the whole sentence, not a bare substring (review round 1,
+    Important 6): "institution" also appears in `_DATA_PROTECTION`, which
+    every message ever composed carries, so a mutant naming the *wrong*
+    changed field would still satisfy a check for that word alone."""
     message = compose(_registration(), _EVENT, "WXYZ-2345", changed=("institution",))
-    assert "This confirms an update" in message.body
-    assert "institution" in message.body
+    assert (
+        "This confirms an update to an earlier registration for this "
+        "event: we changed the institution."
+    ) in message.body
     assert UPDATE_WARNING in message.body
 
 
@@ -472,6 +496,9 @@ def test_smtp_transport_uses_starttls_on_an_ordinary_port(
     assert client.starttls_called is True
     assert client.login_calls == [("u", "p")]
     assert len(client.sent) == 1
+    # Review round 1, minor 5: "reply to this message" must be true
+    # regardless of what `config.sender` (CONVENER_SMTP_FROM) happens to be.
+    assert client.sent[0]["Reply-To"] == CONTACT_EMAIL
 
 
 def test_smtp_transport_uses_implicit_tls_on_port_465(
@@ -541,3 +568,57 @@ def test_the_matching_instruction_matches_the_documentation_copy() -> None:
 
 def test_the_update_warning_matches_the_documentation_copy() -> None:
     assert UPDATE_WARNING in _normalised_docs_template()
+
+
+# ------------------------------------------------------------------ #
+# Two more unbound copies review round 1 found: the contact address and
+# the retention window, both restated in `SignupForm.tsx` (the page a
+# participant reads *before* registering) rather than read from one place.
+# Pinned the same D-14 way, across a third file this time.
+# ------------------------------------------------------------------ #
+
+_SIGNUP_FORM = (
+    Path(__file__).resolve().parents[2] / "app" / "src" / "signup" / "SignupForm.tsx"
+)
+
+
+def test_the_contact_email_matches_the_signup_pages_own_notice() -> None:
+    """`SignupForm.tsx` already names a concrete address for "access,
+    correct or erase your data" before anyone registers; the confirmation
+    email's own rights notice must name the same one, not a second address
+    nobody chose to keep in step."""
+    source = _SIGNUP_FORM.read_text(encoding="utf-8")
+    match = re.search(r"CONTACT_EMAIL = '([^']+)'", source)
+    assert match is not None, "SignupForm.tsx no longer declares CONTACT_EMAIL"
+    assert match.group(1) == CONTACT_EMAIL
+
+
+def test_the_retention_window_is_the_same_number_everywhere() -> None:
+    """The paragraph with legal weight (review round 1): "90 days" is
+    restated in `confirmation.py`, the docs copy, and `SignupForm.tsx`
+    (which a participant reads *before* registering) -- and all three must
+    match `eventkeys.py`'s own citation of the same number
+    (`RSA_KEY_BITS`'s docstring: "this project's retention window (90
+    days, see the phase 4 spec)"). Nothing here reads a shared constant --
+    none exists yet, since the retention job itself is a later task -- so
+    this test is what keeps the three prose copies from drifting apart
+    until one does.
+    """
+    from convener_ops.confirmation import _DATA_PROTECTION
+
+    signup_source = _SIGNUP_FORM.read_text(encoding="utf-8")
+    eventkeys_source = (
+        Path(__file__).resolve().parents[2] / "tools" / "convener_ops" / "eventkeys.py"
+    ).read_text(encoding="utf-8")
+
+    def _days(text: str) -> str:
+        match = re.search(r"(\d+) days", text)
+        assert match is not None, f"no '<N> days' found in: {text[:200]!r}"
+        return match.group(1)
+
+    code = _days(_DATA_PROTECTION)
+    docs = _days(_normalised_docs_template())
+    signup = _days(signup_source)
+    eventkeys = _days(eventkeys_source)
+
+    assert code == docs == signup == eventkeys == "90"

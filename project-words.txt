@@ -40,3 +40,4 @@ redeployability
 eventkeys
 ratelimits
 STARTTLS
+WXYZ

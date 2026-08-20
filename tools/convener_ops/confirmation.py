@@ -72,12 +72,20 @@ with it: writing it anywhere is `cli.py`'s job, to a single fixed,
 `.gitignore`d file inside the job's own ephemeral workspace, never to
 stdout and never committed. `.github/workflows/registration.yml`
 additionally uploads that file as a short-retention, access-controlled
-build artifact when it exists, which is what keeps "inspectable" true in
+build artefact when it exists, which is what keeps "inspectable" true in
 the sense that matters -- a volunteer with the same access as the job log
 already has can still read the message -- without the address or the code
 ever entering the log stream itself, which is copy-pasteable, greppable by
 anyone who can read Actions logs, and effectively permanent in a way a
-short-retention artifact is not.
+short-retention artefact is not.
+
+Fourteen days, not a longer number chosen for safety's own sake: nothing
+this artefact carries is ever lost when it expires. `convener-resend-confirmation`
+reproduces the identical message from the *stored* registration and the
+same deterministic matching code (see `deliver`'s own docstring below), so
+the artefact is a convenience for diagnosing why a send failed, never the
+only copy of anything -- which is what makes a short retention window the
+right default rather than merely an arbitrary one.
 
 `deliver` catches only `smtplib.SMTPException` and `OSError` -- a real
 network or protocol failure, never a caller mistake such as a bad argument
@@ -100,8 +108,10 @@ from .platform import EventNotFoundError, Platform, Room, find_speaker
 from .registration import Registration
 
 __all__ = [
+    "CONTACT_EMAIL",
     "FIELD_LABELS",
     "MATCHING_INSTRUCTION",
+    "UPDATE_WARNING",
     "Confirmation",
     "EmailTransport",
     "EventDetails",
@@ -231,6 +241,13 @@ class Confirmation:
 #: `test_confirmation.py` can pin the same words against
 #: `docs/toolkit/emails/registration-confirmed.md` without a second,
 #: hand-copied sentence living in the test file too.
+#:
+#: `compose` follows it with a worked example built from the registrant's
+#: own name (review round 1, Important 7): the instruction alone leaves
+#: two things open -- whether the hyphen is part of the code, and whether
+#: the participant's own name stays in the field or is replaced by it --
+#: and a concrete "Ada Lovelace WXYZ-2345" answers both without a second
+#: sentence of rules.
 MATCHING_INSTRUCTION: Final = (
     "Put this exact code into the display name you type when you join, and nowhere else"
 )
@@ -245,6 +262,18 @@ _NO_CODE_FALLBACK: Final = (
     "registration instead."
 )
 
+#: The organisation's own contact address -- not invented for this
+#: message: it is the same address `app/src/signup/SignupForm.tsx` already
+#: names on the registration page itself ("To access, correct or erase
+#: your data before that date, write to..."), so the confirmation's rights
+#: notice and the page a participant read before registering agree on
+#: where to write. `test_confirmation.py` pins the two literals together
+#: (D-14) so a future change to one is not a silent disagreement with the
+#: other. Also set as the `Reply-To` header on every delivered message
+#: (`_SmtpTransport.send`), so "reply to this message" is true regardless
+#: of what `CONVENER_SMTP_FROM` happens to be.
+CONTACT_EMAIL: Final = "reading-group@example.test"
+
 _DATA_PROTECTION = (
     "Data protection. We hold your name, e-mail address and institution "
     "only for this event, encrypted under a key that exists only for it; "
@@ -256,7 +285,7 @@ _DATA_PROTECTION = (
 
 _RIGHTS_NOTICE = (
     "To see, correct, withdraw or erase your data before then, or for "
-    "any other question, reply to this message."
+    f"any other question, reply to this message or write to {CONTACT_EMAIL}."
 )
 
 
@@ -303,6 +332,10 @@ def compose(
 
     if matching_code:
         lines.append(f"{MATCHING_INSTRUCTION}: {matching_code}")
+        lines.append(
+            "So your display name should read exactly: "
+            f"{registration.first_name} {registration.surname} {matching_code}"
+        )
         lines.append(
             "We compare that name against our attendance record after the "
             "seminar to issue your certificate, so a display name that "
@@ -416,6 +449,11 @@ class _SmtpTransport:
         email["Subject"] = message.subject
         email["From"] = config.sender
         email["To"] = message.to
+        # Explicit, not left to default to whatever `config.sender`
+        # happens to be (review round 1, minor 5): `_RIGHTS_NOTICE` says
+        # "reply to this message", and this is what makes that literally
+        # true regardless of which mailbox `CONVENER_SMTP_FROM` names.
+        email["Reply-To"] = CONTACT_EMAIL
         email.set_content(message.body)
         if config.port == _IMPLICIT_TLS_PORT:
             with smtplib.SMTP_SSL(
