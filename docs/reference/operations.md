@@ -427,6 +427,90 @@ this up so removing the secret and recording the destruction happen
 together; done by hand, it is these two steps, always together, in that
 order.
 
+## Handling a registration
+
+**Without it:** the signup relay (see *Signup relay* above) has nowhere to
+send the `registration-submitted` dispatch it produces; the encrypted
+envelope it forwards is simply never turned into a stored registration.
+There is no D-13 fallback here for the same reason there is none for the
+event key itself — this is the one place the ciphertext a participant sent
+is ever read.
+
+*Handle registration* (`.github/workflows/registration.yml`) runs on that
+dispatch and does exactly two things: it decrypts, and it re-encrypts —
+`tools/convener_ops/registration.py`'s module docstring explains why the stored
+file (`data/events/<event id>/registrations.enc`) holds one independent
+hybrid envelope per registration rather than one for the whole event, and
+what that costs and buys. The plaintext never touches disk, a log, or
+standard output at any point; a test
+(`tools/tests/test_registration.py`, `tools/tests/test_cli.py`) pins that
+directly by asserting no submitted name or address appears anywhere the
+job prints, on both the success and the failure paths.
+
+The job runs in two steps because of a GitHub Actions constraint, not a
+design preference: a workflow can only select *which* repository secret a
+step reads through an expression evaluated in the workflow file itself
+(`secrets[...]`), and that expression cannot be computed from inside the
+step whose `env:` it appears in. So the first step
+(`convener-registration-secret-name`) reads only the event id out of the
+dispatch payload and hands back the *name* of that event's key secret
+(`convener_ops.eventkeys.secret_name`) as a step output — never the key itself
+— for the second step's `env:` to look up by
+(`secrets[steps.resolve.outputs.secret_name]`). An event with no such
+secret set resolves to an empty string, exactly like a literal
+`secrets.SOME_NAME` reference to a secret that does not exist, and the
+second step treats that the same way `tools/convener_ops/eventkeys.py` says an
+absent event key must be treated: the job exits in error rather than doing
+anything with the ciphertext it was handed.
+
+Two registrations landing at the same moment are the ordinary case here,
+not an edge case — every submission dispatches its own workflow run, with
+no batching. The workflow declares `concurrency: { group:
+registration-handler, queue: max }` so that runs queue and execute one at
+a time rather than racing to decrypt, update and push against the same
+file; without `queue: max`, GitHub Actions' own default (`queue: single`)
+keeps only the most recently queued run in a group and silently cancels
+any others still waiting behind whichever run is in progress, which would
+drop a registration outright rather than merely delay it.
+
+**To verify:** submit the registration form for an event with a published
+key (see *Signup relay* above); *Handle registration* runs, and
+`data/events/<event id>/registrations.enc` gains one entry. Submitting
+again with the same address updates that same entry rather than adding a
+second one.
+
+## Registration matching salt
+
+**Without it:** `tools/convener_ops/registration.py::matching_code` returns
+nothing — no matching code is derived, printed anywhere, or included in
+the confirmation email a registration triggers (see task 7). Attendance
+matching falls back to the address-and-name cascade the phase 4 spec
+describes (§5) instead of the typed code. This is an ordinary D-13
+absence: nothing here fails closed, because that cascade is a documented,
+working fallback, not personal data landing somewhere it should not — see
+`config/integrations.yml`'s own comment on why this row exists at all
+despite that.
+
+**Why a secret, and not a constant:** the matching code has to prove that
+whoever typed it into a meeting platform's display name actually holds our
+confirmation email for that address. A code anyone could derive from an
+address alone — the way it would be if the salt were a literal string in
+the source — proves nothing at all; it would be exactly as guessable by
+someone who never registered as by the person who did.
+
+**To create:** generate a long random string once (for example `openssl
+rand -base64 32`) and set it as the repository secret below. It is not
+per-event — one value salts every event's matching codes — and it must
+never change once registrations exist under it: changing it would silently
+change every already-issued code, so a resend of the confirmation email
+(which recomputes the code rather than storing it) would no longer match
+what the participant was already told.
+
+**Secrets to set:** `CONVENER_MATCHING_SALT`.
+
+**To verify:** run `cd tools && uv run convener-check-config`; *Registration
+matching salt* moves from `absent` to `production`.
+
 ## CI-only secrets
 
 These gate GitHub Actions workflow behaviour rather than anything the

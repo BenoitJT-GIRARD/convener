@@ -19,6 +19,18 @@
 # CI-only-secrets section of the handbook would make it too easy to miss.
 # See tools/convener_ops/eventkeys.py for the reason its absence is not a normal
 # state at all.
+#
+# matching_salt is CI-only too, and unlike event_keys its own absence *is*
+# ordinary noise -- registration.py::matching_code has a documented,
+# working fallback (S:5's cascade) and nothing here needs to fail closed
+# over it. It earns a row anyway, for a narrower reason than event_keys':
+# a secret documented only in prose (as the three excluded above are) is a
+# promise nothing checks, and the requirement this secret exists to satisfy
+# is precisely that the matching code's salt must never quietly become a
+# hard-coded constant. Declaring it here makes "is this actually a secret,
+# not a literal" a structural fact `convener-check-config` and its tests can
+# see, not only a sentence a future edit could silently stop being true
+# under.
 integrations:
   - name: auth_proxy
     label: Authentication relay
@@ -100,3 +112,18 @@ integrations:
       that job fails closed and exits in error: it does not fall back to
       writing personal data to disk unencrypted. See
       tools/convener_ops/eventkeys.py for the reasoning.
+
+  - name: matching_salt
+    label: Registration matching salt
+    secrets:
+      - CONVENER_MATCHING_SALT
+    absent_behaviour: >-
+      tools/convener_ops/registration.py::matching_code returns nothing: no
+      matching code is derived, printed, or put in the confirmation email
+      (task 7). Attendance falls back to task 8's cascade -- exact address,
+      then normalised name -- instead of the typed code. Unlike
+      CONVENER_EVENT_KEY_<ID> above, this row is an ordinary D-13 absence: the
+      salt exists so the code cannot be forged or guessed by anyone who
+      knows an address, not so a job can refuse to run without it, and the
+      cascade it degrades to is a documented, working fallback rather than
+      personal data landing somewhere it should not.
