@@ -236,6 +236,7 @@ export const CONFIG: Config = {
   inactivity_months: 6,
   balance_window_months: 24,
   view_count_window_days: 30,
+  instructions: 'Dial +33 1 23 45 67 89, code 0000# if the video link fails.',
   sla_days: {
     invitation_follow_up: 30,
     summary_after_delivery: 7,

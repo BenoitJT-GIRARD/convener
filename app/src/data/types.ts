@@ -466,6 +466,21 @@ export interface Config {
    *  configuration and not a constant, and why the field's label is built
    *  from it rather than typed. */
   view_count_window_days: number;
+  /** How to join the permanent room beyond the link itself -- a dial-in
+   *  number, an access code, anything the room needs that the URL alone
+   *  does not say. `''` is a legal answer: nothing more to add.
+   *
+   *  One value for the whole series, not one per event (phase 4, D-06):
+   *  the chosen platform's account *is* the permanent room, so these
+   *  instructions describe a room that never changes. Read by
+   *  `tools/convener_ops/platform.py::ManualPlatform.get_room`, which pairs
+   *  this with `data/speakers.yml`'s per-event `zoom_link`.
+   *
+   *  Kept immediately before `sla_days`, never between it and `channels`:
+   *  `data-validate.test.ts` regex-matches from `sla_days:` up to the next
+   *  `channels:` to isolate that block, which only works if nothing else
+   *  is serialised between the two. */
+  instructions: string;
   /** How long each piece of work is given before the inbox raises it.
    *
    *  Three keys, not four: the board's decision is timed by
@@ -480,6 +495,13 @@ export interface Config {
   };
   /** Where an event is announced, in the order the volunteers work through
    *  them. Read only through `state/channels.ts::channelsOf`; an empty list
-   *  is a legal answer and means nothing is promoted through this app. */
+   *  is a legal answer and means nothing is promoted through this app.
+   *
+   *  Kept as the *last* field, here and in `readConfig` / `data-doubles.ts`'s
+   *  `config()`: several `channels.test.ts` cases build a malformed file by
+   *  regex-replacing from `channels:` to the end of a real, valid
+   *  `serializeConfig` output, which only isolates the channels block if
+   *  nothing else is serialised after it. Add a field after this one and
+   *  those tests silently start asserting the wrong error. */
   channels: Channel[];
 }

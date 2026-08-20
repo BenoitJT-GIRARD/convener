@@ -33,6 +33,7 @@ const cfg: Config = {
     recording_after_delivery: 10,
   },
   channels: [],
+  instructions: '',
 };
 
 function ballot(voter: string, value: BallotValue = 'yes'): Ballot {

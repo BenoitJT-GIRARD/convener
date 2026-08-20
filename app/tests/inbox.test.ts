@@ -30,6 +30,7 @@ const CFG: Config = {
     recording_after_delivery: 10,
   },
   channels: [],
+  instructions: '',
 };
 
 // Through the shared double: a field added to `Speaker` reaches this

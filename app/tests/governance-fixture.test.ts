@@ -80,6 +80,7 @@ function configFor(c: LatenessCase): Config {
     objection_window_working_days: 3, inactivity_months: 6,
     balance_window_months: 24, view_count_window_days: 30,
     sla_days: c.config.sla_days, channels: [],
+    instructions: '',
   };
 }
 

@@ -51,6 +51,7 @@ function cfg(logins: string[]): Config {
       recording_after_delivery: 10,
     },
     channels: [],
+    instructions: '',
   };
 }
 

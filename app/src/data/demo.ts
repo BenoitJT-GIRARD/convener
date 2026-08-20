@@ -56,6 +56,7 @@ export const DEMO_CONFIG: Config = {
   inactivity_months: 12,
   balance_window_months: 12,
   view_count_window_days: 30,
+  instructions: '',
   sla_days: {
     invitation_follow_up: 7,
     summary_after_delivery: 5,

@@ -293,13 +293,18 @@ def test_the_migrated_data_passes_the_validator() -> None:
     config = migrate_config(v2_config(), ballot_voters(speakers))
     logins = {m["login"] for m in config["board"]}
     assert sorted(validate_speakers(speakers, logins)) == expected_v4_gap
-    # The config has one gap of the same kind, and it is named the same way.
+    # The config has gaps of the same kind, and they are named the same way.
     # The promotion channels are configuration somebody writes, not data a
     # migration can derive: there was nothing in a v2 config to turn into
     # them, and inventing seven here would be this script deciding on the
-    # collaborators' behalf what the list holds. A v3 config that grew any
-    # other defect still fails this line.
-    assert validate_config(config) == ["config.yml: missing keys ['channels']"]
+    # collaborators' behalf what the list holds. `instructions` (phase 4,
+    # R-6) is the same story a season later: this migration predates it
+    # entirely and has no more business inventing join instructions than it
+    # does channels. A v3 config that grew any other defect still fails
+    # this line.
+    assert validate_config(config) == [
+        "config.yml: missing keys ['channels', 'instructions']"
+    ]
     assert validate_speakers(migrate_speakers_v4(speakers), logins) == []
 
 

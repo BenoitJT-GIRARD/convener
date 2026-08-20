@@ -576,7 +576,7 @@ const CONFIG_KEYS = [
   'season', 'vw_counter', 'overlap_window_days', 'seminar_duration_minutes',
   'board', 'nominations', 'board_min', 'board_max', 'vote_window_days',
   'objection_window_working_days', 'inactivity_months', 'balance_window_months',
-  'view_count_window_days', 'sla_days', 'channels',
+  'view_count_window_days', 'instructions', 'sla_days', 'channels',
 ] as const;
 
 /**
@@ -608,6 +608,7 @@ export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
     inactivity_months: whole(at, raw, 'inactivity_months'),
     balance_window_months: whole(at, raw, 'balance_window_months'),
     view_count_window_days: whole(at, raw, 'view_count_window_days'),
+    instructions: text(at, raw, 'instructions'),
     sla_days: readSlaDays(at, raw.sla_days),
     channels: readChannels(at, raw),
   };

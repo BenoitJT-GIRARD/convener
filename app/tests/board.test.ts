@@ -41,6 +41,7 @@ function config(board: BoardMember[]): Config {
       recording_after_delivery: 10,
     },
     channels: [],
+    instructions: '',
   };
 }
 

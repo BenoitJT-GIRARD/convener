@@ -83,6 +83,11 @@ CONFIG_REQUIRED = frozenset(
         "inactivity_months",
         "balance_window_months",
         "view_count_window_days",
+        # Phase 4 (R-6): how to join the permanent room beyond the link
+        # itself. One value for the whole series, not one per event -- D-06
+        # makes the account itself the permanent room, so per-event
+        # instructions would describe a room that never changes.
+        "instructions",
         "sla_days",
         "channels",
     }
