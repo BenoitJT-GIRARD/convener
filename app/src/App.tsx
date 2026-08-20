@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Route, Routes, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { Login } from './auth/Login';
 import { Layout } from './components/Layout';
@@ -48,6 +48,25 @@ function Shell() {
   );
 }
 
+/**
+ * `useParams` only resolves inside a matched route's own element, so this
+ * reads it and keys `SignupForm` by it, forcing a full remount whenever the
+ * event id in the URL changes. `HashRouter` makes that reachable without a
+ * page load -- editing `#/signup/mrg-042` to `#/signup/mrg-043` in the
+ * address bar re-runs `SignupForm`'s effect on the same mounted component
+ * otherwise, and nothing there resets `keyState` back to `'loading'`: the
+ * previous event's fetched key would still answer while the new event id
+ * is what gets sent, producing a registration encrypted under a key that
+ * cannot decrypt it and destroyed on the wrong event's retention date.
+ * Remounting resets every hook `SignupForm` holds from scratch, which
+ * closes the whole class rather than threading an `eventId` comparison
+ * through each place `KeyState` is read.
+ */
+function SignupRoute() {
+  const { eventId } = useParams<{ eventId: string }>();
+  return <SignupForm key={eventId} />;
+}
+
 export function App() {
   return (
     <AuthProvider>
@@ -56,8 +75,12 @@ export function App() {
           {/* Public, by construction: a participant registering for an
               event has no account, and nothing on this route ever reaches
               `Shell`'s auth gate above -- matched first, and never falls
-              through to it. */}
-          <Route path="/signup/:eventId" element={<SignupForm />} />
+              through to it. (`AuthProvider` still wraps the whole router,
+              including this route -- it only reads `localStorage` and, for
+              a legacy stored token, validates it; no participant data is
+              involved, and this route never reaches `Shell` or
+              `DataProvider`, which is the gate that actually matters here.) */}
+          <Route path="/signup/:eventId" element={<SignupRoute />} />
           <Route path="/*" element={<Shell />} />
         </Routes>
       </HashRouter>
