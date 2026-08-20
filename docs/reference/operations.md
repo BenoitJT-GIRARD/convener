@@ -766,6 +766,116 @@ full, including what to do instead if this secret ever leaks.
 **To verify:** run `cd tools && uv run convener-check-config`; *Registration
 matching salt* moves from `absent` to `production`.
 
+## Matching attendance
+
+`convener-match-attendance` (`tools/convener_ops/cli.py::match_attendance`) reads one
+event's stored registrations and its attendance export -- the platform's own
+API, or, with no `CONVENER_MEETING_API_TOKEN` configured, the manual
+implementation's `data/events/<event id>/attendance-import.csv` -- and joins
+them through the phase 4 spec's own cascade (§5: matching code, then
+address, then normalised name). It is the diagnostic step an operator runs
+before issuing certificates for an event: it reports only counts on
+stdout (matched, unmatched, unreachable, rows read) and writes the host's
+short list of ties and unmatched attendees to `unmatched-attendance.md`, at
+the repository root -- `.gitignore`'d, and never printed, because it names
+people. `convener-issue-certificates` (below) re-runs the same join internally
+and never reads this file; it exists for a human to resolve an ambiguity by
+hand before certificates are minted, not as an input to anything automated.
+
+Like every other command in this section, it needs `EVENT_PRIVATE_KEY` to
+decrypt `registrations.enc` -- and per *Event registration keys* above, that
+key "must never... be written to a file outside a CI job's environment", so
+this command is not meant to be run against a real event from a laptop.
+**No workflow currently invokes it** -- unlike `convener-issue-certificates`,
+`convener-reissue-certificate` and `convener-revoke-certificate` below, all three
+wired to a `workflow_dispatch` this same round (fix round 2, task 12,
+R-23), `convener-match-attendance` still has no caller in this repository. Noted
+here rather than silently left undocumented; wiring it up is not this
+round's scope.
+
+## Issuing, reissuing and revoking certificates
+
+Three operator actions, three workflows, none scheduled: an operator
+decides an event's attendance is settled and triggers each one by hand from
+the Actions tab (`workflow_dispatch`). All three re-derive registrations and
+attendance from scratch on every run (spec §8's own guarantee that a
+corrected match recalculates without re-registering), the same way
+*Handling a registration* re-derives rather than trusts a prior run's own
+answer, and all three commit straight to `data/events/<event
+id>/certificates.yml` with the same re-derive-rather-than-rebase retry
+*Handling a registration* uses for `registrations.enc` -- see that section
+above for why a rejected push is never resolved with `git pull --rebase`
+here either.
+
+**No workflow input is ever an address.** A `workflow_dispatch` input is
+rendered on its own run's page and retained for as long as that run's
+history exists -- longer than the 14-day artefact this project uses
+everywhere else it has to carry personal data at all, and exactly the
+exposure named in this same document's own history (task 7's Important 4).
+`convener-reissue-certificate` and `convener-revoke-certificate` both take a
+certificate id instead: random, public by design, already printed on the
+document and already published in `certificates-public.json`, so it names
+exactly one certificate without naming a person.
+`convener-reissue-certificate` resolves that id to a registration the same way
+`convener_ops.certificate.issue` computes a fingerprint in the first place, run
+in the other direction -- see that module's own docstring and
+`convener_ops.cli.reissue_certificate`'s.
+
+- **Issue certificates** (`.github/workflows/issue-certificates.yml`,
+  `convener-issue-certificates`). Input: the event id. Signs a certificate for
+  every currently eligible attendee not already on record (spec §5's threshold,
+  computed the same way `convener-match-attendance` computes it), and commits
+  the register only when at least one certificate was freshly minted.
+  Reading `CONVENER_SIGNING_KEY` absent, or `CONVENER_MATCHING_SALT` absent, are both
+  ordinary D-13 states -- nothing issued, a clean exit -- the latter for a
+  stronger reason than the former: `certificate.py`'s own module docstring
+  explains why a certificate fingerprint may never be computed without a
+  real salt, so an absent salt forbids writing rather than licensing an
+  unsafe write.
+- **Reissue a certificate** (`.github/workflows/reissue-certificate.yml`,
+  `convener-reissue-certificate`). Inputs: the event id, and the certificate id
+  to correct. An operator's deliberate action for one person, never a
+  scheduled job -- reusing `convener-issue-certificates`'s own idempotent lookup
+  for a correction would let a routine re-run silently resurrect it. Mints
+  a fresh identifier and a fresh signed token, and refuses (without
+  writing anything) unless the standing row for that id is already
+  revoked.
+- **Revoke a certificate** (`.github/workflows/revoke-certificate.yml`,
+  `convener-revoke-certificate`). Inputs: the event id, and the certificate id
+  to revoke. Flips one register row to `revoked` and nothing else -- no
+  signing key or matching salt is read at all, because revocation touches
+  only the register, never the token a revoked certificate's holder still
+  carries (spec §7's own guarantee: the signature stays valid -- it is the
+  register that has the final say on state). Added this round (R-21, fix
+  round 2, task 12): before it, the only way to revoke a certificate was a
+  hand edit of the committed-clear register, which this project's own
+  standing constraint against depending on a collaborator's goodwill or
+  their post rules out, and which made `certificate.revoke`'s own guard
+  against naming an identifier that is not on record unreachable from a
+  text editor -- the one place that mistake actually gets made.
+
+All three share one `concurrency` group per event
+(`certificates-<event id>`), the same reasoning `recording.yml` and
+`discard-recording.yml` (*Meeting platform* above) already share one for
+the FCC conference recording those two touch: all three read and write the
+same `certificates.yml`, so a run mid-write must finish before another one
+starts.
+
+**Secrets read:** issuing and reissuing both read `CONVENER_EVENT_KEY_<EVENT
+ID>` (via the same `convener-registration-secret-name` resolve step *Handling a
+registration* uses), `CONVENER_SIGNING_KEY`, `CONVENER_MATCHING_SALT` and
+`CONVENER_MEETING_API_TOKEN` -- none new; all four are already documented in
+their own sections above. Revoking reads neither an event key nor either
+certificate secret, exactly as its own bullet above says: revocation never
+touches anything that would need one.
+
+**To verify:** run one of the three workflows for a test event with a
+published key and a settled attendance export; `data/events/<event
+id>/certificates.yml` gains, changes or flips the state of one row, and
+*Publish vitrine data* (triggered by that same commit, since its own
+`paths:` trigger names `data/events/*/certificates.yml`) republishes
+`certificates-public.json` with the new state.
+
 ## CI-only secrets
 
 These gate GitHub Actions workflow behaviour rather than anything the
