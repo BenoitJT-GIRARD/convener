@@ -119,8 +119,16 @@ function pemToDer(pem: string): Uint8Array<ArrayBuffer> {
  * encryption: `keyUsages` names `['encrypt']` alone, so nothing downstream
  * of this call could be handed a key WebCrypto itself would let decrypt --
  * the capability was never asked for, not merely unused.
+ *
+ * Exported so `SignupForm` can use it as the validity check on a fetched
+ * PEM, rather than a substring sniff on the header line: a truncated body
+ * or a non-RSA key (an EC public key carries the identical
+ * `BEGIN PUBLIC KEY` label) both fail `importKey` with the exact algorithm
+ * and format this module actually needs, so a sniff-based check would have
+ * let either through to fail later, mid-submission, with a message that
+ * blames encryption for what was really an unusable key.
  */
-async function importEventPublicKey(publicKeyPem: string): Promise<CryptoKey> {
+export async function importEventPublicKey(publicKeyPem: string): Promise<CryptoKey> {
   const der = pemToDer(publicKeyPem);
   return crypto.subtle.importKey('spki', der, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, [
     'encrypt',

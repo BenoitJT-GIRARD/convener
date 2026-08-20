@@ -92,12 +92,35 @@ describe('encryptRegistration -- the wire format eventkeys.py documents', () => 
   it('draws a fresh AES key and a fresh nonce on every call', async () => {
     const { publicPem } = await generateEventKeyPair();
 
+    // RSA-OAEP's own randomised padding makes `encrypted_key` differ on
+    // every call even when the *same* AES key is encrypted twice -- so
+    // these three assertions alone would still pass a mutant with a
+    // hard-coded AES key: the reviewer ran that exact mutant and confirmed
+    // it. `drawnAesKeys` below pins the raw bytes `getRandomValues` actually
+    // produced, which is the only thing that catches it.
+    const drawnAesKeys: Uint8Array[] = [];
+    const realGetRandomValues = crypto.getRandomValues.bind(crypto) as (
+      array: ArrayBufferView,
+    ) => void;
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation(
+      ((array: ArrayBufferView | null) => {
+        if (array) realGetRandomValues(array);
+        if (array instanceof Uint8Array && array.length === AES_KEY_BYTES) {
+          drawnAesKeys.push(new Uint8Array(array));
+        }
+        return array;
+      }) as typeof crypto.getRandomValues,
+    );
+
     const first = JSON.parse(await encryptRegistration(publicPem, FIELDS));
     const second = JSON.parse(await encryptRegistration(publicPem, FIELDS));
 
     expect(first.iv).not.toBe(second.iv);
     expect(first.encrypted_key).not.toBe(second.encrypted_key);
     expect(first.ciphertext).not.toBe(second.ciphertext);
+
+    expect(drawnAesKeys).toHaveLength(2);
+    expect(drawnAesKeys[0]).not.toEqual(drawnAesKeys[1]);
   });
 
   it('round-trips through the matching private half, entirely via crypto.subtle', async () => {
@@ -226,6 +249,25 @@ describe('cannot decrypt what it just encrypted -- the page only ever holds the 
     expect(envelopeJson).not.toContain(aesKeyHex);
     expect(envelopeJson).not.toContain(FIELDS.surname);
     expect(envelopeJson).not.toContain(FIELDS.email);
+  });
+
+  it('touches no console method and writes nothing to storage -- there is no sink for the plaintext to leak into', async () => {
+    // Nothing here does this today; the gap this closes is that nothing
+    // stops the *next* edit from doing it -- a stray `console.debug`, or a
+    // `localStorage.setItem('draft', …)` added "so the participant does not
+    // lose their typing" -- on the one page where it matters most. Spying on
+    // `Storage.prototype` catches both `localStorage` and `sessionStorage`,
+    // since jsdom implements both as instances of the same class.
+    const { publicPem } = await generateEventKeyPair();
+    const consoleSpies = (['log', 'warn', 'error', 'debug', 'info'] as const).map(m =>
+      vi.spyOn(console, m).mockImplementation(() => {}),
+    );
+    const storageSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+    await encryptRegistration(publicPem, FIELDS);
+
+    for (const spy of consoleSpies) expect(spy).not.toHaveBeenCalled();
+    expect(storageSpy).not.toHaveBeenCalled();
   });
 });
 
