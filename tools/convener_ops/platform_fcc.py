@@ -130,13 +130,15 @@ optimisation -- confirmed by direct measurement. `get_recording` reports
 what the provider says about the conference's recording (`recording_url`,
 `file_size`, `is_recorded`, `deleted`); `delete_recording` calls
 `DELETE /conferences/{id}`, verified to remove the recording while leaving
-the conference record and every `/calls` row intact. What this module does
-*not* do is decide **when** it is safe to call `delete_recording` -- never
-before the host's own downloaded copy is confirmed to exist, the ordering
-a later task's own step names as non-negotiable. That sequencing is the
-caller's job, exactly as it already is for `ManualPlatform.delete_recording`
-(a documented no-op there, for a different reason: nothing is held on our
-side to reclaim).
+the conference record and every `/calls` row intact -- but the deletion
+itself is real and irreversible, with no confirmation parameter and no
+precondition, see its own docstring. What this module does *not* do is
+decide **when** it is safe to call it -- never before the host's own
+downloaded copy is confirmed to exist, the ordering a later task's own
+step names as non-negotiable. `Platform`'s four-method shape is fixed by
+task 2, so that sequencing cannot live in this method's signature; it is
+the caller's job, carried into a later task as a structural guard at the
+call site, not a weak analogy to anything this module already does.
 
 No transport is exercised by a test
 -------------------------------------
@@ -261,7 +263,18 @@ def _iso_utc(epoch_seconds: Any) -> str:
 def _is_telephone_joiner(call: Mapping[str, Any]) -> bool:
     """The rule is keyed on `service_types`, exactly `["toll"]" -- not on
     whatever the `email` field happens to hold, so a payload that sends an
-    empty string instead of `null` for a toll row still gets `None`."""
+    empty string instead of `null` for a toll row still gets `None`.
+
+    Deliberately an exact match, not `"toll" in service_types`: only
+    `["toll"]` was ever empirically verified as the telephone-joiner shape.
+    An absent key, an empty list, and a multi-value list that includes
+    `"toll"` alongside another type (someone whose audio fell back to the
+    phone line while still connected some other way) all fall through to
+    the non-toll branch below and keep whatever `email` the payload sent --
+    the safe default, since it never manufactures a telephone joiner the
+    verified fact does not describe. Pinned by
+    `test_platform_fcc.py::test_non_exact_toll_service_types_keep_the_raw_email`
+    against a future "tidy-up" that widens the match."""
     service_types = call.get("service_types")
     return isinstance(service_types, list) and service_types == ["toll"]
 
@@ -277,6 +290,16 @@ def _row_from_call(call: Mapping[str, Any]) -> AttendanceRow:
         duration_seconds = int(call.get("audio_duration", 0) or 0)
     except (TypeError, ValueError):
         duration_seconds = 0
+    # Not clamped or rejected when negative, unlike `platform.py`'s CSV
+    # path, which drops a negative `duration_seconds` because a person
+    # typed it. `audio_duration` here is computed by the provider from its
+    # own two timestamps, has never been observed negative, and if it ever
+    # were, that would be a fact about the response worth seeing, not a
+    # typo to quietly correct. This reader builds no second per-row
+    # issue-reporting mechanism for API data (see the module docstring);
+    # an anomalous value is returned exactly as received, the same "give
+    # the truth, however odd" rule already applied to `display_name` and
+    # to the reconnection rows themselves.
     return AttendanceRow(
         display_name=display_name,
         email=email,
@@ -392,9 +415,24 @@ class PlatformFCC:
         """Calls `DELETE /conferences/{id}`, verified empirically to
         remove the recording while leaving the conference record and every
         `/calls` row intact -- deleting the recording never loses
-        attendance. This is the raw primitive: deciding *when* it is safe
-        to call it (never before the host's own download is confirmed) is
-        the caller's job, not this method's -- see the module docstring."""
+        attendance.
+
+        **This is irreversible.** There is no undo, no trash, no soft
+        delete: once this call succeeds, the recording is gone from the
+        provider for good, and nothing in this codebase can get it back. A
+        90-minute session recorded once is not recoverable a second time.
+
+        This method performs the deletion unconditionally. It does not
+        check whether the host's own copy was ever downloaded, accepts no
+        confirmation parameter, and raises nothing to stop a caller who has
+        not verified retrieval -- because it structurally cannot: nothing
+        this class holds can tell it whether a file landed safely on
+        someone's laptop. **A caller MUST confirm the recording was
+        retrieved before invoking this method.** Deciding how, and on what
+        evidence, is deliberately not this method's job: `Platform`'s
+        four-method shape is fixed by task 2 and this class does not
+        extend it, so the structural guard belongs at the call site, in a
+        later task, not in this primitive."""
         conference_id = self._conference_id(event_id)
         self.transport.delete(f"/conferences/{conference_id}", self.access_token)
 

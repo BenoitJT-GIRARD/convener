@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import urllib.error
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
+from email.message import Message
 from typing import Any
 
 import pytest
@@ -18,6 +20,7 @@ from convener_ops.platform_fcc import (
     TOKEN_ENV,
     FCCRequestError,
     PlatformFCC,
+    _UrllibTransport,
     platform_from_env,
 )
 
@@ -306,6 +309,54 @@ def test_a_toll_row_is_forced_to_none_even_if_the_payload_sends_an_empty_string(
     assert rows[0].email is None
 
 
+@pytest.mark.parametrize(
+    ("label", "service_types"),
+    [
+        ("absent", None),
+        ("empty", []),
+        ("multi-value-with-toll", ["toll", "voip"]),
+    ],
+)
+def test_non_exact_toll_service_types_keep_the_raw_email(
+    label: str, service_types: list[str] | None
+) -> None:
+    """`_is_telephone_joiner` matches `service_types == ["toll"]` exactly.
+    None of these three near-misses is the empirically verified telephone
+    shape, so none of them forces `email` to `None` -- the raw address the
+    payload sent is kept. Guards against a future "tidy-up" that widened
+    the match to `"toll" in service_types`, which would pass every other
+    test in this file while silently changing behaviour for someone whose
+    audio fell back to the phone line while still connected some other
+    way."""
+    call = _call(custom_name="Ada Lovelace", email="ada@example.org")
+    if service_types is None:
+        del call["service_types"]
+    else:
+        call["service_types"] = service_types
+    transport = FakeTransport(get_responses={"/conferences/618515381/calls": [call]})
+
+    rows = _platform(transport=transport).get_attendance("mrg-901")
+
+    assert rows[0].email == "ada@example.org", label
+
+
+def test_a_call_with_a_negative_duration_is_returned_verbatim() -> None:
+    """Deliberate, not an oversight: `platform.py`'s CSV path drops a
+    negative `duration_seconds` because a person might mistype a minus
+    sign. `audio_duration` here is computed by the provider from its own
+    two timestamps, has never been observed negative, and if it ever were,
+    that would be a fact about the response worth seeing, not a typo to
+    quietly correct. This reader builds no second per-row issue-reporting
+    mechanism for API data -- see the module docstring -- so an anomalous
+    value is returned exactly as received."""
+    call = _call(audio_duration=-5)
+    transport = FakeTransport(get_responses={"/conferences/618515381/calls": [call]})
+
+    rows = _platform(transport=transport).get_attendance("mrg-901")
+
+    assert rows[0].duration_seconds == -5
+
+
 def test_get_attendance_raises_when_the_event_has_no_recorded_conference() -> None:
     platform = _platform(speakers=[_speaker(edition_code="MRG-901")], conference_ids={})
     with pytest.raises(EventNotFoundError, match="mrg-901"):
@@ -526,6 +577,118 @@ def test_delete_recording_raises_when_the_event_has_no_recorded_conference() -> 
     platform = _platform(speakers=[_speaker(edition_code="MRG-901")], conference_ids={})
     with pytest.raises(EventNotFoundError, match="mrg-901"):
         platform.delete_recording("mrg-901")
+
+
+def test_get_recording_raises_when_the_event_has_no_recorded_conference() -> None:
+    """Cheap to pin even though it walks the same `_conference_id` path
+    `get_attendance` and `delete_recording` already exercise: a reader
+    checking `get_recording` alone should not have to trust that the third
+    caller of a shared helper behaves like the first two."""
+    platform = _platform(speakers=[_speaker(edition_code="MRG-901")], conference_ids={})
+    with pytest.raises(EventNotFoundError, match="mrg-901"):
+        platform.get_recording("mrg-901")
+
+
+# ------------------------------------------------------------------ #
+# _UrllibTransport -- the real HTTP implementation. Still no socket: every
+# test below substitutes `urllib.request.urlopen` itself via monkeypatch,
+# the same technique that keeps the rest of this suite off the network,
+# extended to the one class the rest of the suite never constructs.
+# ------------------------------------------------------------------ #
+
+
+class _FakeHTTPResponse:
+    def __init__(self, body: bytes) -> None:
+        self._body = body
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self) -> _FakeHTTPResponse:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        return None
+
+
+def test_urllib_transport_sends_bearer_auth_and_accept_headers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        captured["url"] = request.full_url
+        captured["method"] = request.get_method()
+        captured["authorization"] = request.get_header("Authorization")
+        captured["accept"] = request.get_header("Accept")
+        return _FakeHTTPResponse(b'{"ok": true}')
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    result = _UrllibTransport().get_json("/conferences/1/calls", "tok123")
+
+    assert result == {"ok": True}
+    expected_url = "https://www.freeconferencecall.com/api/v4/conferences/1/calls"
+    assert captured["url"] == expected_url
+    assert captured["method"] == "GET"
+    assert captured["authorization"] == "Bearer tok123"
+    assert captured["accept"] == "application/json"
+
+
+def test_urllib_transport_delete_uses_the_delete_method(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        captured["method"] = request.get_method()
+        captured["authorization"] = request.get_header("Authorization")
+        return _FakeHTTPResponse(b"")
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    _UrllibTransport().delete("/conferences/1", "tok123")
+
+    assert captured["method"] == "DELETE"
+    assert captured["authorization"] == "Bearer tok123"
+
+
+def test_urllib_transport_maps_an_http_error_to_fcc_request_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.HTTPError(
+            request.full_url, 401, "Unauthorized", Message(), None
+        )
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    with pytest.raises(FCCRequestError, match="401"):
+        _UrllibTransport().get_json("/conferences/1/calls", "tok")
+
+
+def test_urllib_transport_maps_a_url_error_to_fcc_request_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    with pytest.raises(FCCRequestError, match="failed"):
+        _UrllibTransport().get_json("/conferences/1/calls", "tok")
+
+
+def test_urllib_transport_maps_invalid_json_to_fcc_request_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(b"not json")
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    with pytest.raises(FCCRequestError, match="valid JSON"):
+        _UrllibTransport().get_json("/conferences/1/calls", "tok")
 
 
 # ------------------------------------------------------------------ #
