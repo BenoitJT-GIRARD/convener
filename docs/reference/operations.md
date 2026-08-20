@@ -321,9 +321,23 @@ remember (task 10):
 **`convener-release-recording`** — for a talk headed to YouTube, only.
 (`tools/convener_ops/cli.py::release_recording`, run through
 `.github/workflows/recording.yml`.) Retrieves, verifies the retrieval,
-then deletes, in that order. The two-trace shape it checks is a design
-ruling recorded in `.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19
-— DESIGN RULING for the spec: who deletes the recording, and on what
+then deletes, in that order. Before either trace is even checked, it
+first refuses unless publication is actually cleared: `publication.consent`
+must be `"granted"` **and** `publication.outcome` must be `"published"`
+on the event's own speaker record — the same predicate
+(`tools/convener_ops/public_data.py::recording_withheld`) that keeps a link
+out of the public feed, reused here rather than restated, so an
+unpublishable recording cannot leave FCC through this command either.
+**This means the command will typically refuse for a fresh talk right
+after its own event**, because `outcome` is not written until
+`finalize-archive` runs, well after the event — read the refusal message
+and the record's own `publication` block before deciding whether to wait
+or to use `convener-discard-recording` instead; the two are not the same
+decision, and only one of them is reversible by waiting.
+
+The two-trace shape checked once publication clears is a design ruling
+recorded in `.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19 —
+DESIGN RULING for the spec: who deletes the recording, and on what
 evidence"), carried into code rather than re-derived: it refuses to
 delete unless both
 
@@ -358,7 +372,12 @@ Its guard is a **typed operator affirmation** instead: the
 repository-deletion page uses for its own irreversible action. It never
 reads the retrieval tick above, and never accepts it as a substitute — a
 ticked `delivered/recording-retrieved` cannot make this command decide
-there is nothing to affirm.
+there is nothing to affirm. **Known limit:** typing the same wrong event
+id into both `event_id` and `confirm_discard` satisfies the confirmation
+on its own terms — a non-existent event is still caught (`convener_ops`'s own
+existence and "has a recording" checks run regardless), but a typo that
+happens to name a *different, real* recorded event is not. Read the event
+id back before submitting.
 
 **To run either:** trigger the matching workflow's `workflow_dispatch`,
 supplying the event id and the FreeConferenceCall conference id (visible
