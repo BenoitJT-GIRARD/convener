@@ -127,15 +127,21 @@ def test_email_transport_declares_the_smtp_port() -> None:
     }
 
 
-def test_exactly_one_row_declares_itself_an_exception_and_it_is_event_keys() -> None:
+def test_exactly_these_two_rows_declare_themselves_an_exception() -> None:
     """Pinned as data, not left to a reader noticing prose: two years from
     now, a new integration copied from a neighbouring row inherits
     `absent_is_normal: true` by default (see `Integration`), so this only
-    breaks if someone deliberately declares a second exception -- which is
-    exactly when this test should make them explain why."""
+    breaks if someone deliberately declares a third exception -- which is
+    exactly when this test should make them explain why.
+
+    Two, not one, since fix round 1 (Important 5): certificate_fingerprint
+    was split out of matching_salt because the two consumers of
+    CONVENER_MATCHING_SALT disagree about whether their own absence is ordinary
+    -- a single row could only carry one `absent_is_normal` value, so it
+    necessarily lied about whichever consumer disagreed with it."""
     declaration = load_declaration(repo_root() / "config" / "integrations.yml")
     exceptions = [i.name for i in declaration if not i.absent_is_normal]
-    assert exceptions == ["event_keys"]
+    assert exceptions == ["event_keys", "certificate_fingerprint"]
 
 
 def test_email_transport_is_absent_when_only_the_port_is_missing() -> None:

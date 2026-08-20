@@ -33,20 +33,28 @@
 # why this key's lifecycle -- and therefore its absent_is_normal value --
 # runs opposite to event_keys'.
 #
-# matching_salt is CI-only too. For registration.py::matching_code its own
-# absence *is* ordinary noise -- a documented, working fallback (S:5's
-# cascade) -- and nothing there needs to fail closed over it. certificate.py
-# (task 12) reads the same secret for a second, unrelated derivation
-# (the certificate register's salted fingerprint) whose absence is not
-# ordinary in the same sense: see that row's own absent_behaviour below for
-# why, and tools/convener_ops/certificate.py for the reasoning in full. It earns
-# a row anyway, for a narrower reason than event_keys': a secret documented
-# only in prose (as the three excluded above are) is a promise nothing
-# checks, and the requirement this secret exists to satisfy is precisely
-# that neither derivation's salt may quietly become a hard-coded constant.
-# Declaring it here makes "is this actually a secret, not a literal" a
-# structural fact `convener-check-config` and its tests can see, not only a
-# sentence a future edit could silently stop being true under.
+# matching_salt is CI-only too, and (fix round 1, Important 5) is now two
+# rows sharing one secret, not one row describing two behaviours in prose.
+# CONVENER_MATCHING_SALT has two independent consumers with two different shapes
+# of absence: registration.py::matching_code's own absence *is* ordinary
+# noise -- a documented, working fallback (S:5's cascade) -- and nothing
+# there needs to fail closed over it; certificate.py::fingerprint (task 12)
+# reads the same secret for a second, unrelated derivation (the certificate
+# register's salted fingerprint) whose absence is *not* ordinary -- see the
+# certificate_fingerprint row's own absent_behaviour below, and
+# tools/convener_ops/certificate.py for the reasoning in full. A single row could
+# only carry `absent_is_normal` once, so it necessarily lied about whichever
+# consumer disagreed with that one value -- `convener-check-config` reported this
+# secret as ordinary D-13 noise even after certificate.py made half of its
+# absence a fail-closed requirement, and test_integrations.py actively
+# enforced that the row stay that way (round 1's own review caught this: a
+# secret documented only in prose, as the three excluded above are, is a
+# promise nothing checks -- and one row here had quietly become exactly
+# that promise again for its second consumer). Two rows sharing one
+# `secrets` entry -- nothing in `resolve_states` keys on secret uniqueness
+# across rows -- makes both consumers' `absent_is_normal` a structural fact
+# `convener-check-config` and its tests can see, not only a sentence a future
+# edit could silently stop being true under.
 integrations:
   - name: auth_proxy
     label: Authentication relay
@@ -169,22 +177,35 @@ integrations:
     secrets:
       - CONVENER_MATCHING_SALT
     absent_behaviour: >-
-      Two consumers, two different shapes of absence.
       tools/convener_ops/registration.py::matching_code returns nothing: no
       matching code is derived, printed, or put in the confirmation email
       (task 7). Attendance falls back to task 8's cascade -- exact address,
-      then normalised name -- instead of the typed code. Unlike
-      CONVENER_EVENT_KEY_<ID> above, that half is an ordinary D-13 absence: the
-      salt exists so the code cannot be forged or guessed by anyone who
-      knows an address, not so a job can refuse to run without it, and the
-      cascade it degrades to is a documented, working fallback rather than
-      personal data landing somewhere it should not. tools/convener_ops/
-      certificate.py::fingerprint (task 12) reads the same secret for a
-      second, domain-separated purpose -- the certificate register's own
-      salted trace of an address -- and there the absence is not ordinary:
-      a fingerprint that cannot be salted cannot be written to a register
-      that must never carry an address in the clear, so
-      convener-issue-certificates issues nothing this run rather than write one
-      unsafely. Outwardly the two consumers still degrade the same way (a
-      printed line, a clean exit, nothing partially written) -- only the
-      reason differs, named in each job's own message.
+      then normalised name -- instead of the typed code. An ordinary D-13
+      absence: the salt exists so the code cannot be forged or guessed by
+      anyone who knows an address, not so a job can refuse to run without
+      it, and the cascade it degrades to is a documented, working fallback
+      rather than personal data landing somewhere it should not. The same
+      secret has a second, unrelated consumer with a different, non-ordinary
+      shape of absence -- see the certificate_fingerprint row below, which
+      declares that difference structurally rather than in this row's own
+      prose.
+
+  - name: certificate_fingerprint
+    label: Certificate register fingerprint
+    secrets:
+      - CONVENER_MATCHING_SALT
+    absent_is_normal: false
+    absent_behaviour: >-
+      tools/convener_ops/certificate.py::fingerprint (task 12) reads the same
+      CONVENER_MATCHING_SALT as the matching_salt row above, for a second,
+      domain-separated purpose: the certificate register's own salted trace
+      of an address. Here the absence is *not* ordinary: a fingerprint that
+      cannot be salted cannot be written to a register that must never
+      carry an address in the clear, so convener-issue-certificates and
+      convener-reissue-certificate issue nothing this run rather than write one
+      unsafely. Outwardly this still degrades the same way as an ordinary
+      absence (a printed line, a clean exit, nothing partially written) --
+      only the reason differs, named in each job's own message. This is one
+      of this project's rare exceptions to D-13's "an absent integration is
+      a normal state": an absent secret here forbids writing, it does not
+      license writing insecurely.
