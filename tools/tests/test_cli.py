@@ -27,6 +27,8 @@ from convener_ops.cli import (
     sweep,
     validate,
 )
+from convener_ops.platform import AttendanceRow
+from convener_ops.platform_fcc import FCCRequestError
 from convener_ops.registration import (
     Registration,
     RegistrationFile,
@@ -1488,6 +1490,69 @@ def test_match_attendance_reports_a_missing_attendance_export(
 
     assert match_attendance() == 1
     assert "no attendance export" in capsys.readouterr().err
+
+
+def test_match_attendance_catches_a_platform_request_failure_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`get_attendance` can fail two different ways depending on which
+    `Platform` implementation answers it: `AttendanceImportError` from the
+    manual path (covered above), or `FCCRequestError` from the chosen
+    platform's own network/API failure. Both must be caught the same
+    clean way -- a real API outage must not escape as an uncaught
+    traceback. No network touched: `platform_from_env` itself is
+    substituted, the same seam other tests in this module already use for
+    a dependency `match_attendance` does not construct a fake for on its
+    own."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+
+    class _FailingPlatform:
+        def get_attendance(self, event_id: str) -> list[AttendanceRow]:
+            raise FCCRequestError(f"GET /conferences/{event_id}/calls failed: timeout")
+
+    monkeypatch.setattr(
+        "convener_ops.cli.platform_from_env",
+        lambda *args, **kwargs: _FailingPlatform(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert match_attendance() == 1
+    assert "failed" in capsys.readouterr().err.lower()
+
+
+def test_match_attendance_names_tied_candidates_in_the_host_list(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tie the cascade refused to guess between is not left as a bare
+    "unmatched" in the host's own file -- both candidates' addresses are
+    named, so the host is resolving a specific ambiguity."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    first_marie = Registration("Marie", "Martin", "marie.m1@example.org", "", False)
+    second_marie = Registration("Marie", "Martin", "marie.m2@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, first_marie, second_marie)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Marie Martin,someone-else@example.org,"
+        "2026-08-20T18:00:00Z,2026-08-20T18:30:00Z,1800",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert match_attendance() == 0
+
+    host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
+    assert "marie.m1@example.org" in host_list
+    assert "marie.m2@example.org" in host_list
+    assert host_list.endswith("\n")
+    assert not host_list.endswith("\n\n")
 
 
 def test_match_attendance_prints_only_counts_and_writes_the_host_list(

@@ -24,7 +24,7 @@ from convener_ops.integrations import ABSENT, Integration, load_declaration, res
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
 from convener_ops.platform import AttendanceImportError, Room
-from convener_ops.platform_fcc import platform_from_env
+from convener_ops.platform_fcc import FCCRequestError, platform_from_env
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
 from convener_ops.register import (
@@ -758,6 +758,16 @@ def resend_confirmation() -> int:
 #: Written only when there is something to report; unlinked otherwise, so a
 #: stale file from an earlier run of this same job workspace is never
 #: mistaken for this run's answer.
+#:
+#: WARNING for whoever wires this into a workflow next (task 17's own
+#: enchaînement, most likely): `unsent-confirmation.eml`'s own upload step
+#: (`.github/workflows/registration.yml`) is a short-retention *private*
+#: build artefact, restricted to the run's own collaborators -- never a
+#: public one. This file carries the same kind of data and must be
+#: uploaded the identical way if it ever is; inheriting the artefact
+#: *pattern* without also inheriting that access restriction would publish
+#: names and addresses this whole module exists to keep out of anything a
+#: stranger can read.
 UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
 
 
@@ -823,7 +833,16 @@ def match_attendance() -> int:
 
     try:
         rows = platform.get_attendance(event_id)
-    except AttendanceImportError as exc:
+    except (AttendanceImportError, FCCRequestError) as exc:
+        # Both are "the platform did not answer", from this caller's own
+        # point of view -- the manual path's missing-file/malformed-header
+        # failure, or the chosen platform's own network/API failure
+        # (`platform_fcc.py`'s own docstring: named generically for
+        # exactly this, so a caller does not have to know which
+        # implementation it is holding to handle "no data" uniformly).
+        # Catching only the first would leave a real API outage as an
+        # uncaught traceback instead of the same clean one-line failure
+        # every other error path in this function already gives.
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -838,16 +857,26 @@ def match_attendance() -> int:
 
     unmatched_path = root / UNMATCHED_ATTENDANCE
     if result.unmatched or result.unreachable:
-        lines = [f"# Attendance to resolve -- event {event_id}", ""]
+        lines = [f"# Attendance to resolve -- event {event_id}"]
         if result.unmatched:
+            lines.append("")
             lines.append("## Unmatched -- the host can resolve these by hand")
             for unmatched in result.unmatched:
                 minutes = unmatched.duration_seconds // 60
-                lines.append(
+                line = (
                     f"- {unmatched.display_name} <{unmatched.email}> -- {minutes} min"
                 )
-            lines.append("")
+                if unmatched.tied_with:
+                    # A tie the cascade refused to guess between (spec S:5:
+                    # "empêche de revendiquer la présence d'autrui") --
+                    # named here rather than left as a bare "unmatched",
+                    # since the host is resolving a specific ambiguity, not
+                    # starting from nothing. See attendance.py's own
+                    # "Ties are never resolved by guessing" section.
+                    line += f" -- ties: {', '.join(unmatched.tied_with)}"
+                lines.append(line)
         if result.unreachable:
+            lines.append("")
             lines.append(
                 "## Unreachable -- joined by phone, no address on file, "
                 "cannot be matched"
@@ -855,8 +884,11 @@ def match_attendance() -> int:
             for unreachable in result.unreachable:
                 minutes = unreachable.duration_seconds // 60
                 lines.append(f"- {unreachable.display_name} -- {minutes} min")
-            lines.append("")
-        unmatched_path.write_text("\n".join(lines), encoding="utf-8", newline="")
+        # One explicit trailing newline, appended once, here -- not left to
+        # depend on a section happening to end its own list with a blank
+        # entry, which is the same "content plus one trailing newline"
+        # idiom `dump_registration_file` already uses for a committed file.
+        unmatched_path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="")
         print(
             f"{len(result.unmatched)} unmatched and {len(result.unreachable)} "
             f"unreachable attendee(s) written to {UNMATCHED_ATTENDANCE} for the "
