@@ -68,6 +68,34 @@ key.
 the event id, the address and a salt (see its own docstring), so a resend
 recomputes exactly the same code from exactly the same three inputs, and
 nothing here ever writes it down.
+
+A length cap, and why it is a threat-model line, not a data-quality one
+--------------------------------------------------------------------------
+This task turns the signup relay into something it was not before: a way
+to make the organisation's own mailbox deliver text to an arbitrary
+address. `to_registration` is the first and only gate a submission passes
+before `confirmation.compose` writes `first_name` straight into
+`Dear {name},`, and, before this, that gate checked *shape* only --
+present, a string, non-empty after stripping -- never *size*.
+`services/signup-relay/src/index.js::MAX_CIPHERTEXT_BYTES` allows 16 KB of
+ciphertext per submission, and `PER_EVENT_CEILING`/its burst limiter do not
+bound the length of any one field inside it, only how often a submission
+can be made. So anyone who knows a published event id could already,
+before this cap, have every field padded out to most of that budget,
+addressed to any string containing `@`, delivered by the organisation's
+real mailbox -- a reputation and phishing exposure new to this task, not
+inherited from an earlier one.
+
+`_MAX_FIELD_LENGTH` closes it the same way every other malformed-shape
+case in this function is refused: silently, by `to_registration` returning
+`None`, exactly as an empty name already does. 200 characters is generous
+for a real first name, surname or institution (the longest is refused, not
+truncated -- truncating would still deliver an attacker's text, only
+shorter) and small enough that even a submission built entirely of
+near-maximum fields cannot come close to `MAX_CIPHERTEXT_BYTES`. It is not
+a data-quality rule -- nothing here should second-guess a genuine name --
+it is a bound on how much of a stranger's text this project's own mailbox
+will ever be made to carry.
 """
 
 from __future__ import annotations
@@ -116,6 +144,11 @@ _FIELDS: Final = frozenset(
 )
 _STRING_FIELDS: Final = ("first_name", "surname", "email", "institution")
 
+#: The reputation-exposure bound the module docstring's "A length cap"
+#: section explains. Applied to every string field after stripping, so a
+#: field padded out with leading/trailing whitespace does not dodge it.
+_MAX_FIELD_LENGTH: Final = 200
+
 
 def normalize_email(email: str) -> str:
     """The form `upsert`, `find_by_email` and `matching_code` all compare or
@@ -150,12 +183,15 @@ def to_registration(ciphertext: str, private_pem: str) -> Registration | None:
     that does not decrypt at all (`eventkeys.DecryptionError` -- wrong key,
     wrong event, tampered, truncated), a plaintext that is not the JSON
     object this module writes, one with a field missing, extra, or of the
-    wrong type, or one whose required text is empty once whitespace is
-    stripped. This function is the first code that ever reads what a
-    stranger encrypted with a *public* key -- anyone who knows an event's
-    id can produce a syntactically valid envelope carrying anything at all
-    -- so every one of those causes is treated as untrusted input, never as
-    a bug worth raising on. Nothing here raises for a malformed submission;
+    wrong type, one whose required text is empty once whitespace is
+    stripped, or one where any string field is longer than
+    `_MAX_FIELD_LENGTH` once stripped (see the module docstring's "A length
+    cap" section -- this is a reputation bound, not a data-quality check).
+    This function is the first code that ever reads what a stranger
+    encrypted with a *public* key -- anyone who knows an event's id can
+    produce a syntactically valid envelope carrying anything at all -- so
+    every one of those causes is treated as untrusted input, never as a
+    bug worth raising on. Nothing here raises for a malformed submission;
     only `eventkeys.decrypt`'s own `DecryptionError` is caught, and only
     that one.
     """
@@ -191,6 +227,11 @@ def to_registration(ciphertext: str, private_pem: str) -> Registration | None:
     email = data["email"].strip()
     institution = data["institution"].strip()
     if not first_name or not surname or "@" not in email:
+        return None
+    if any(
+        len(value) > _MAX_FIELD_LENGTH
+        for value in (first_name, surname, email, institution)
+    ):
         return None
 
     return Registration(
@@ -345,6 +386,16 @@ def find_by_email(
     early-exit `upsert`'s own loop performs; an entry that fails to decrypt
     under `private_pem` is skipped rather than treated as a match, mirroring
     `upsert`'s own handling of a stray undecryptable entry.
+
+    Costs what `upsert`'s own module-docstring section already prices --
+    up to 500 RSA-OAEP decrypts, milliseconds each -- and `cli.py`'s
+    `handle_registration` calls this immediately before `upsert`, so one
+    submission now pays that cost twice, roughly a thousand decrypts at
+    the relay's per-event ceiling (review round 1, minor 6). Still cheap
+    against the ten-minute job timeout; noted here rather than optimised
+    away, because the alternative -- one combined find-and-replace pass --
+    would have `upsert` hand back the entry it is about to overwrite,
+    which is a real API change this task's review did not ask for.
     """
     target = normalize_email(email)
     for entry in file.entries:

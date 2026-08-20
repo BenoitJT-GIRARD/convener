@@ -10,6 +10,7 @@ import pytest
 from convener_ops import eventkeys
 from convener_ops.registration import (
     _CODE_ALPHABET,
+    _MAX_FIELD_LENGTH,
     FILE_VERSION,
     Registration,
     RegistrationFile,
@@ -224,6 +225,57 @@ def test_to_registration_returns_none_for_a_plaintext_that_is_not_an_object() ->
     ciphertext = eventkeys.encrypt(public_pem, b"[1, 2, 3]")
 
     assert to_registration(ciphertext, private_pem) is None
+
+
+# ------------------------------------------------------------------ #
+# to_registration(): the length cap -- a reputation bound, not a
+# data-quality check (review round 1, Important 5).
+# ------------------------------------------------------------------ #
+
+
+def test_to_registration_accepts_a_field_at_exactly_the_cap() -> None:
+    private_pem, public_pem = eventkeys.generate()
+    ciphertext = _envelope(public_pem, first_name="A" * _MAX_FIELD_LENGTH)
+
+    registration = to_registration(ciphertext, private_pem)
+
+    assert registration is not None
+    assert registration.first_name == "A" * _MAX_FIELD_LENGTH
+
+
+@pytest.mark.parametrize("field", ["first_name", "surname", "email", "institution"])
+def test_to_registration_returns_none_for_a_field_one_over_the_cap(
+    field: str,
+) -> None:
+    """The attacker-reachable case the cap exists for: a single field
+    padded past the bound is refused whole, not truncated -- truncating
+    would still deliver a stranger's text through the organisation's own
+    mailbox, only a little shorter."""
+    private_pem, public_pem = eventkeys.generate()
+    overrides: dict[str, Any] = {field: "A" * (_MAX_FIELD_LENGTH + 1)}
+    if field == "email":
+        # A field one over the cap that is still shaped like an address --
+        # the cap must fire on length alone, not ride along on the "@"
+        # check catching it for an unrelated reason.
+        overrides["email"] = ("a" * (_MAX_FIELD_LENGTH - 11)) + "@example.org"
+        assert len(overrides["email"]) == _MAX_FIELD_LENGTH + 1
+    ciphertext = _envelope(public_pem, **overrides)
+
+    assert to_registration(ciphertext, private_pem) is None
+
+
+def test_to_registration_length_cap_is_checked_after_stripping() -> None:
+    """A field padded with whitespace out to just past the cap, but whose
+    stripped content is well inside it, must be accepted -- the cap is
+    about what a reader (or a mailbox) actually receives, and `compose`
+    only ever sees the stripped value."""
+    private_pem, public_pem = eventkeys.generate()
+    ciphertext = _envelope(public_pem, first_name=" " * 50 + "Ada" + " " * 50)
+
+    registration = to_registration(ciphertext, private_pem)
+
+    assert registration is not None
+    assert registration.first_name == "Ada"
 
 
 # ------------------------------------------------------------------ #
