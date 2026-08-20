@@ -90,6 +90,16 @@ CONFIG_REQUIRED = frozenset(
         "instructions",
         "sla_days",
         "channels",
+        # Phase 4 S:5's configurable eligibility threshold: a share of
+        # seminar_duration_minutes a matched attendee's summed duration must
+        # reach to count as present. Required, not merely validated when
+        # present, as an earlier version of this check had it: the spec's
+        # own reason for making this configuration at all is that it must
+        # be able to align with accreditation requirements this project
+        # does not yet know - and alignment happens by editing this file,
+        # not by editing tools/convener_ops/attendance.py. A threshold that only
+        # ever lives as a Python default is a constant with extra steps.
+        "eligibility_share",
     }
 )
 #: The two fields one promotion channel carries, and the only two.
@@ -863,15 +873,18 @@ def validate_config(cfg: Any) -> list[str]:
 
     # Phase 4 S:5's configurable eligibility threshold: a share of
     # `seminar_duration_minutes` a matched attendee's summed duration must
-    # reach to count as present. Deliberately not in `CONFIG_REQUIRED`,
-    # unlike `sla_days`: the spec says the real number "devra s'aligner sur
-    # des exigences d'accréditation encore inconnues" - nobody has a number
-    # to write yet, and `tools/convener_ops/attendance.py::DEFAULT_ELIGIBILITY_SHARE`
-    # (the spec's own "par défaut deux tiers") is what applies until somebody
-    # does. Validated the same way regardless of whether the file carries it:
-    # a *present* value outside ]0, 1] is refused, by name, at `convener-validate`
-    # time - the day this key stops being hypothetical, it is already
-    # enforced, the same guarantee `sla_days` gets by being required outright.
+    # reach to count as present. `eligibility_share` is now in
+    # `CONFIG_REQUIRED` above (round 1 review: a threshold that only ever
+    # lives as a Python default is a constant with extra steps, and the
+    # spec's own rationale - alignment with accreditation requirements not
+    # yet known - happens by editing this file, not by editing
+    # `tools/convener_ops/attendance.py`). The `"eligibility_share" in cfg` guard
+    # below is not a leftover of the old, optional shape: it still has to
+    # be here, the same way `sla_days`'s own "must be a mapping" check is
+    # guarded the same way - a missing key is `CONFIG_REQUIRED`'s to
+    # report, once, by name; this block's job is only the range of a value
+    # that *is* present, so a config still missing the key must not also
+    # be told the missing value is out of range.
     if "eligibility_share" in cfg:
         eligibility_share = cfg["eligibility_share"]
         if (

@@ -153,10 +153,21 @@ The threshold itself is `EligibilityThreshold`: `seminar_duration_minutes`
 reads "the session's own length") and `share`, spec S:5's configurable
 fraction -- configuration, not a constant, because the real number "devra
 s'aligner sur des exigences d'accréditation encore inconnues" (spec S:5).
-`validate.py::validate_config` refuses a configured `share` outside
-``]0, 1]`` at write time, the same way it already refuses a malformed
-`sla_days` entry, naming the key; `DEFAULT_ELIGIBILITY_SHARE` is what
-applies for as long as nobody has a number to write.
+`eligibility_share` is required in `data/config.yml` (round 1 review: a
+threshold that only ever lived as a Python default would have been a
+constant with extra steps, and alignment with an accreditation body's
+requirement has to happen by editing that file, not this one).
+`validate.py::validate_config` refuses a value outside ``]0, 1]`` at
+write time, the same way it already refuses a malformed `sla_days` entry,
+naming the key. `data/config.yml` itself carries `0.6666666666666666`,
+not the mathematically exact two thirds -- a `float` cannot hold that
+exactly, and this project chose to round *down* rather than up: a
+duration of exactly two thirds of the session must read as eligible, and
+rounding up would have refused exactly that person over a rounding
+artefact nobody typing `0.6667` into a file could see or contest. See
+`data/config.yml`'s own comment beside the key, and
+`DEFAULT_ELIGIBILITY_SHARE`'s, for the fuller reasoning and the fallback
+this constant is for once the key stopped being optional.
 
 Eligibility answers a question only a matched attendee can be asked
 -------------------------------------------------------------------------
@@ -551,16 +562,22 @@ def match(
     )
 
 
-#: Spec S:5's own words: "par défaut deux tiers" (by default, two thirds).
-#: Kept as an exact `Fraction`, never the `float` `2 / 3` (0.6666666666666666
-#: in Python -- a value that is *not* exactly two thirds): a session whose
-#: length divides evenly by three then lands exactly on its threshold, with
-#: no rounding drift of this constant's own making. Applied by
-#: `EligibilityThreshold.from_config` only when `data/config.yml` carries
-#: no `eligibility_share` of its own -- see the module docstring's
-#: "Eligibility is a calculation, not a decision" for why that is not a
-#: gap in the configuration but the configuration's normal state today.
-DEFAULT_ELIGIBILITY_SHARE: Final = Fraction(2, 3)
+#: `data/config.yml` carries `eligibility_share: 0.6666666666666666` for
+#: real (round 1 review) -- the reasoning for that exact sixteen-digit
+#: literal lives beside the key itself, in the file, and is not repeated
+#: here. This constant matches it digit for digit on purpose: it is
+#: reached only when a caller builds an `EligibilityThreshold` from a
+#: config that skips the now-required key entirely -- a hand-built dict in
+#: a test, or a fixture predating this key -- never by `data/config.yml`
+#: itself, which `validate.py::CONFIG_REQUIRED` refuses to load without
+#: it. A fallback using the mathematically exact `Fraction(2, 3)` instead
+#: would be quietly *stricter* than production (see the module docstring's
+#: "Eligibility is a calculation, not a decision" for why
+#: `0.6666666666666666` -- fractionally below two thirds -- is the
+#: direction this project chose to round in), which would make a test
+#: passing against this default a false assurance about the real file's
+#: own, slightly more forgiving, threshold.
+DEFAULT_ELIGIBILITY_SHARE: Final = 0.6666666666666666
 
 
 @dataclass(frozen=True)
@@ -574,16 +591,15 @@ class EligibilityThreshold:
     -- read once by the caller and passed in rather than read from the file
     here, this module is pure like every `convener_ops` module but `cli.py`).
 
-    `share` accepts a `Fraction` or a `float` rather than only a `float`:
-    `DEFAULT_ELIGIBILITY_SHARE` is a `Fraction` so the *default* threshold
-    is exact, and a value read out of `data/config.yml` is a `float`
-    because that is what YAML gives back for `0.6667`. `threshold_seconds`
-    below converts whichever it was handed to a `Fraction` and never back
-    to a `float`, so neither path loses precision converting itself to the
-    other's shape."""
+    `share` is a plain `float`, matching what YAML gives back for
+    `data/config.yml`'s own `eligibility_share`. An earlier version of this
+    dataclass accepted `Fraction | float` so the *default* could stay
+    mathematically exact; round 1 review dropped that once the key became
+    required -- see `DEFAULT_ELIGIBILITY_SHARE`'s own comment for why an
+    exact fallback would have been the wrong kind of precise."""
 
     seminar_duration_minutes: int
-    share: Fraction | float = DEFAULT_ELIGIBILITY_SHARE
+    share: float = DEFAULT_ELIGIBILITY_SHARE
 
     @property
     def threshold_seconds(self) -> Fraction:
@@ -591,27 +607,30 @@ class EligibilityThreshold:
         exactly -- never rounded through a `float` -- so a duration
         engineered to land precisely on the threshold compares equal to
         it rather than drifting by a fraction of a second under
-        floating-point multiplication. `Fraction(self.share)` captures
-        whatever `share` actually is, exactly: the default's own
-        `Fraction(2, 3)` stays exact, and a configured `float` (`0.6667`,
-        say) is read as the exact binary value that decimal parsed to,
-        not silently rounded to some "intended" fraction it never
-        carried."""
+        floating-point multiplication. `Fraction(self.share)` reads
+        `share` as the exact binary value its `float` actually holds, not
+        silently rounded to some "intended" decimal it never carried --
+        which is what lets a duration of exactly 3600 seconds compare
+        correctly against a 90-minute session's `0.6666666666666666`
+        threshold instead of a naive `float` multiplication's own
+        rounding error deciding the answer."""
         return self.seminar_duration_minutes * 60 * Fraction(self.share)
 
     @classmethod
     def from_config(cls, cfg: Mapping[str, Any]) -> EligibilityThreshold:
         """Build the threshold from an already-loaded `data/config.yml`.
 
-        `seminar_duration_minutes` is required
-        (`validate.py::CONFIG_REQUIRED`) and read as-is: a config that has
-        already passed `validate_config` carries a real integer there, and
-        this module trusts that the same way it trusts every other
-        already-validated fact it is handed. `eligibility_share` is not
-        required -- its absence means spec S:5's own default applies, not
-        that the file is incomplete; `validate_config` refuses a *present*
-        value outside ``]0, 1]``, by name, but never demands the key
-        itself."""
+        Both fields are required (`validate.py::CONFIG_REQUIRED`);
+        `seminar_duration_minutes` is read directly, and `eligibility_share`
+        is read the same way in every path this project actually exercises
+        -- a config that has already passed `validate_config` carries a
+        real number at both keys, and this module trusts that the same way
+        it trusts every other already-validated fact it is handed.
+        `DEFAULT_ELIGIBILITY_SHARE` is kept as `.get`'s fallback anyway, for
+        a caller building a threshold from a hand-built config that
+        predates or skips the key -- `data/config.yml` itself is never
+        that caller, once `validate_config` refuses to load a file missing
+        it."""
         return cls(
             seminar_duration_minutes=cfg["seminar_duration_minutes"],
             share=cfg.get("eligibility_share", DEFAULT_ELIGIBILITY_SHARE),
