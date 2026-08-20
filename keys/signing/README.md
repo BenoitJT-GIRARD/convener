@@ -113,15 +113,22 @@ never collapse two of them together:
 - **Valid** (`result.valid` is `True`, `result.payload` holds the dict) --
   some key in `public_pems` produced a matching signature. Display the
   certificate's contents.
-- **`MALFORMED`** (`result.reason == "malformed"`) -- the code is not even
-  shaped like something this system ever produced: not JSON, the wrong
-  fields, bad base64, an unsupported version, or (deliberately, so a
-  hostile paste can never crash the page) a token above a size cap or one
-  using deeply nested JSON to exhaust a parser. Display something like
-  "this does not look like a valid certificate code."
-- **`NO_MATCHING_KEY`** (`result.reason == "no_matching_key"`) -- the code
-  is shaped correctly but no key offered confirms it. **This is not the
-  same as "forged," and must never be shown as one.** A well-formed token
+- **`MALFORMED`** (`result.reason == "malformed"`) -- either the
+  *envelope* is not even shaped like something this system ever produced
+  (not JSON, the wrong fields, bad base64, an unsupported version, or,
+  deliberately, so a hostile paste can never crash the page, a token above
+  a size cap or one using deeply nested JSON to exhaust a parser), or a
+  key genuinely confirmed the signed bytes and they still do not parse as
+  a JSON object -- which only happens on this system's own signing
+  mistake, never a forger's, since nothing else can get that far (see
+  step 5 above). Display something like "this does not look like a valid
+  certificate code" either way.
+- **`NO_MATCHING_KEY`** (`result.reason == "no_matching_key"`) -- the
+  envelope is shaped correctly but no key offered confirms the signed
+  bytes. This is also what a token gets whose payload, had it ever been
+  parsed, would not even be valid JSON: unless a key first confirms the
+  bytes, this system never checks. **This is not the same as "forged," and
+  must never be shown as one.** A well-formed token
   that fails every key in the list looks *identical*, from here, to a
   genuine certificate signed under a key this list simply does not
   include yet -- which is a real, reachable state: sign the certificate,
