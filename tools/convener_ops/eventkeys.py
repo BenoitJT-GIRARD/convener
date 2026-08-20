@@ -1,0 +1,352 @@
+"""Per-event key pairs: generation, publication, and provable destruction.
+
+Phase 4 lets a stranger register for an event without their answers ever
+existing in plain text outside a CI job. That promise rests on one fact this
+module exists to guarantee: a public key published in the repository cannot
+decrypt anything, only encrypt -- so the static registration page, which
+holds nothing but the published half, genuinely cannot read what it just
+sent.
+
+Why RSA-OAEP + AES-GCM, and not RSA-OAEP alone
+-----------------------------------------------
+The hard constraint is that the **browser** encrypts, with `WebCrypto` and no
+library, and **Python** decrypts; the two have to speak one wire format
+without either side adding a dependency. RSA-OAEP with SHA-256 is available
+on both sides for free -- natively in `crypto.subtle`, and in `cryptography`
+here, which this task's dispatch flagged as a dependency to *verify* rather
+than assume: it was neither declared nor installed before this change (see
+`pyproject.toml`). Python has no asymmetric primitive of its own -- `hashlib`,
+`hmac` and `secrets` are hashing and symmetric only -- and a symmetric key a
+public registration page could hold would not be a key, so the real choice
+was between this well-audited library and hand-rolling RSA in the one module
+that handles a stranger's personal data. That is not a choice a project
+should make quietly, so it is written down here for whoever finds it next.
+
+RSA-OAEP only ever encrypts one short block -- with a 2048-bit key and
+SHA-256 (see `RSA_KEY_BITS` below), 190 bytes at most. A registration today
+fits inside that with room to spare, but relying on that headroom is exactly
+how a field added two years from now would silently break encryption for
+whoever adds it, at the moment they can least afford to notice. So `encrypt`
+never puts the payload through RSA at all: it generates a throwaway
+AES-256-GCM key, encrypts the payload with *that*, and encrypts only the
+32-byte AES key with RSA-OAEP. This is the ordinary hybrid construction, not
+a departure from "keep it simple" -- removing it to save a few lines is the
+simplification a successor should not make.
+
+The wire format
+----------------
+`encrypt`'s return value, and `decrypt`'s `ciphertext` argument, is one
+compact JSON string, because both `JSON.stringify` and `json.loads` read and
+write it without a library on either side::
+
+    {"v": 1, "encrypted_key": "<base64>", "iv": "<base64>", "ciphertext": "<base64>"}
+
+- ``v`` -- format version; 1 today, so a later change has somewhere to
+  signal itself.
+- ``encrypted_key`` -- the 32-byte AES-256 key, RSA-OAEP-encrypted (SHA-256
+  hash and MGF1, no label) with the event's public key.
+- ``iv`` -- the AES-GCM nonce: 12 random bytes (96 bits), the size
+  `crypto.subtle` and `cryptography` both default to and NIST recommends for
+  GCM. A fresh one is drawn for every call to `encrypt`; nothing here ever
+  reuses one.
+- ``ciphertext`` -- the AES-256-GCM output, with its 16-byte authentication
+  tag appended -- exactly how both `crypto.subtle.encrypt` and
+  `AESGCM.encrypt` already return it, so there is no separate tag field to
+  keep in sync between the two implementations.
+
+Every base64 field uses the standard alphabet, decodable in the browser over
+the raw bytes (`atob`/`btoa`, or `Uint8Array` conversion). These parameters
+are a cross-language contract: the browser implementation (task 4) has to
+reproduce this exactly, so a change here is a change there too.
+
+The public half is a file, not a secret
+----------------------------------------
+`public_key_path` returns `keys/events/<id>.pub`, committed PEM. It is not a
+secret -- publishing it is what lets a static registration page encrypt
+without asking a server for anything first.
+
+The private half, and the one place D-13 does not apply
+---------------------------------------------------------
+The private half lives only as `CONVENER_EVENT_KEY_<ID>`, a repository secret
+declared in `config/integrations.yml` alongside every other integration --
+`convener-check-config` reports it absent exactly like any other missing secret.
+
+Everywhere else in this project a missing integration is D-13's normal
+state: the job says so and exits 0, because the feature it powers has a
+documented, harmless fallback. **There is no harmless fallback here.**
+Without the private key, a job cannot decrypt a registration -- and it must
+not write the ciphertext, or any part of it, to disk unencrypted instead.
+That would be personal data reaching plain text for want of a key, which is
+the one outcome this whole design exists to prevent. So the job that decrypts
+an event's registrations exits in *error*, not zero, when its key is absent.
+D-13 exists so a missing integration does not stop the system from working;
+it was never meant to let personal data fall back to plain text because a
+secret was not set.
+
+`decrypt` already enforces the sharper half of this by construction: called
+with anything that is not a real RSA private key -- an empty string, a stray
+placeholder, the public half by mistake -- it raises `DecryptionError` rather
+than returning anything. A caller that reads `CONVENER_EVENT_KEY_<ID>` from the
+environment and finds it unset has nothing it could pass to `decrypt` that
+would succeed by accident; the only way to get plaintext out of this module
+is to already hold the real key.
+
+Destruction is an operation, not a procedure
+-----------------------------------------------
+`destroy` and `key_status` are pure, like `validate.py`'s functions and for
+the same reason its own docstring gives: "nothing here touches the
+filesystem -- that belongs to `cli.py`." Deciding whether an event's key is
+`NEVER_CREATED`, `ACTIVE` or `DESTROYED`, and producing the record a
+destruction should write, do not need a disk read to be correct -- they need
+the two facts a caller already has cheaply: whether `public_key_path
+(event_id)` exists, and what the on-disk registry already says. Actually
+removing `CONVENER_EVENT_KEY_<ID>` from the repository's secrets, and persisting
+the record `destroy` returns, are real side effects, and belong to the
+retention job that calls this module, the same way `cli.py` -- not
+`validate.py` -- is the one that writes `data/speakers.yml`.
+
+The distinction the registry has to preserve is `DESTROYED` versus
+`NEVER_CREATED`: without it, an event with no key two years from now could
+mean "protected, on schedule" or "the key was simply lost," and nothing
+short of the registry can tell those two apart. `destroy` refuses to
+manufacture a `DESTROYED` record for an event whose key was never created
+(`key_was_published=False`) -- that is not destruction, it is a typo in an
+event id, and recording it as destruction would erase the very difference
+the registry exists to keep. Once a record exists, calling `destroy` again
+for the same event returns the existing record rather than raising or
+minting a second one: a retention job that reruns after a partial failure
+must be able to repeat the call safely, and the record's date is the day it
+was first destroyed, never the day of the retry.
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+from secrets import token_bytes
+from typing import Any, Final
+
+from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+from .governance import paris_today
+from .paths import repo_root
+
+#: RSA modulus size. 2048 bits keeps key generation and RSA-OAEP fast in
+#: both a browser and a CI job, and is accepted by NIST guidance well past
+#: this project's retention window (90 days, see the phase 4 spec). It is
+#: also the OAEP block size the wire format's `encrypted_key` field assumes:
+#: with SHA-256 (32-byte digest) the usable payload is
+#: 256 - 2*32 - 2 = 190 bytes, comfortably more than the 32-byte AES-256 key
+#: this module ever encrypts with it.
+RSA_KEY_BITS: Final = 2048
+
+#: The AES key size in bytes (AES-256).
+AES_KEY_BYTES: Final = 32
+
+#: The AES-GCM nonce size in bytes (96 bits) -- the size `crypto.subtle` and
+#: `cryptography` both default to, and NIST SP 800-38D recommends.
+GCM_NONCE_BYTES: Final = 12
+
+#: The wire format version written into every ciphertext's `"v"` field.
+WIRE_VERSION: Final = 1
+
+#: Where the published public half of an event's key pair lives, relative to
+#: the repository root.
+KEYS_DIR: Final = Path("keys") / "events"
+
+#: The RSA-OAEP parameters both sides of the wire format use: SHA-256 for
+#: both the hash and the MGF1 mask, no label. `crypto.subtle`'s
+#: `RsaOaepParams` defaults to the same hash for both when only `hash` is
+#: given, which is what makes this reproducible without a library in the
+#: browser.
+_OAEP: Final = padding.OAEP(
+    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+    algorithm=hashes.SHA256(),
+    label=None,
+)
+
+#: An event id: a plain token, the same shape `commit_format._TOKEN` accepts
+#: for a decision register entity. No `Identifier` type exists yet anywhere
+#: in this codebase (Python or TypeScript) -- event ids are new to phase 4 --
+#: so this module treats one as a validated `str` rather than inventing a
+#: wrapper type nothing else uses. The validation exists because this
+#: string becomes a path component (`public_key_path`) and, in the caller's
+#: hands, an environment variable suffix (`CONVENER_EVENT_KEY_<ID>`): an id that
+#: is not a plain token could otherwise walk out of `keys/events/` or forge
+#: an unrelated variable name.
+_EVENT_ID_RE: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+#: `key_status` and the registry `destroy` reasons about: the key exists,
+#: was never made, or was made and has since been destroyed on purpose.
+NEVER_CREATED: Final = "never_created"
+ACTIVE: Final = "active"
+DESTROYED: Final = "destroyed"
+
+
+class DecryptionError(Exception):
+    """A ciphertext could not be decrypted.
+
+    Wrong private key, wrong event, truncated, tampered, or structurally
+    malformed -- every one of those becomes this same exception, with no
+    detail that would let a caller tell them apart. A caller able to
+    distinguish "wrong key" from "corrupted data" by exception type would
+    have an oracle a real attacker could use to probe which failure mode
+    they hit; there is exactly one way for this function to fail on purpose,
+    and it never carries plaintext, key material, or a fragment of either.
+    """
+
+
+@dataclass(frozen=True)
+class DestructionRecord:
+    """What `destroy` records, and nothing else: an event id and the day its
+    private key was destroyed. No actor, on purpose -- the retention job
+    that calls this runs unattended, and a `by <someone>` column with no one
+    in it is worse than no column at all."""
+
+    event_id: str
+    destroyed_on: date
+
+
+def _validate_event_id(event_id: str) -> None:
+    if not _EVENT_ID_RE.fullmatch(event_id):
+        raise ValueError(f"not a valid event id: {event_id!r}")
+
+
+def generate() -> tuple[str, str]:
+    """A fresh RSA key pair, PEM-encoded: `(private, public)`.
+
+    The private half is PKCS8, unencrypted -- its protection is the
+    repository secret it is stored as (`CONVENER_EVENT_KEY_<ID>`), not a
+    password on the PEM itself, which would only move the secret one layer
+    down. The public half is `SubjectPublicKeyInfo`, the form
+    `crypto.subtle.importKey("spki", ...)` expects.
+    """
+    key = rsa.generate_private_key(public_exponent=65537, key_size=RSA_KEY_BITS)
+    private_pem = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("ascii")
+    public_pem = (
+        key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("ascii")
+    )
+    return private_pem, public_pem
+
+
+def encrypt(public_pem: str, plaintext: bytes) -> str:
+    """Hybrid-encrypt `plaintext` for the holder of the matching private key.
+
+    See the module docstring for the wire format and why it is hybrid
+    rather than RSA-OAEP alone.
+    """
+    public_key = serialization.load_pem_public_key(public_pem.encode("ascii"))
+    if not isinstance(public_key, rsa.RSAPublicKey):
+        raise ValueError("not an RSA public key")
+
+    aes_key = token_bytes(AES_KEY_BYTES)
+    nonce = token_bytes(GCM_NONCE_BYTES)
+    body = AESGCM(aes_key).encrypt(nonce, plaintext, None)
+    encrypted_key = public_key.encrypt(aes_key, _OAEP)
+
+    envelope = {
+        "v": WIRE_VERSION,
+        "encrypted_key": base64.b64encode(encrypted_key).decode("ascii"),
+        "iv": base64.b64encode(nonce).decode("ascii"),
+        "ciphertext": base64.b64encode(body).decode("ascii"),
+    }
+    return json.dumps(envelope, separators=(",", ":"))
+
+
+def decrypt(private_pem: str, ciphertext: str) -> bytes:
+    """The inverse of `encrypt`, or `DecryptionError` -- never a guess.
+
+    Every expected way this can fail (wrong key, wrong event, truncated,
+    tampered, malformed) is caught here and re-raised as `DecryptionError`;
+    see that exception's docstring for why they are not told apart.
+    """
+    try:
+        return _decrypt(private_pem, ciphertext)
+    except (ValueError, TypeError, KeyError, InvalidTag) as exc:
+        raise DecryptionError("ciphertext could not be decrypted") from exc
+
+
+def _decrypt(private_pem: str, ciphertext: str) -> bytes:
+    private_key = serialization.load_pem_private_key(
+        private_pem.encode("ascii"), password=None
+    )
+    if not isinstance(private_key, rsa.RSAPrivateKey):
+        raise DecryptionError("not an RSA private key")
+
+    envelope: Any = json.loads(ciphertext)
+    if not isinstance(envelope, dict):
+        raise DecryptionError("malformed ciphertext")
+
+    encrypted_key = base64.b64decode(envelope["encrypted_key"], validate=True)
+    nonce = base64.b64decode(envelope["iv"], validate=True)
+    body = base64.b64decode(envelope["ciphertext"], validate=True)
+
+    aes_key = private_key.decrypt(encrypted_key, _OAEP)
+    return AESGCM(aes_key).decrypt(nonce, body, None)
+
+
+def public_key_path(event_id: str) -> Path:
+    """Where the published public half for `event_id` lives: `keys/events/
+    <event_id>.pub`, relative to the repository root. Pure path computation
+    -- this reads nothing, and callers decide whether to check `.exists()`
+    or read it."""
+    _validate_event_id(event_id)
+    return repo_root() / KEYS_DIR / f"{event_id}.pub"
+
+
+def key_status(
+    event_id: str, *, key_was_published: bool, registry: Mapping[str, date]
+) -> str:
+    """`NEVER_CREATED`, `ACTIVE`, or `DESTROYED`, from state the caller
+    already read: whether `public_key_path(event_id)` exists
+    (`key_was_published`), and the destruction registry
+    (`event_id -> destroyed_on`). Pure -- see the module docstring."""
+    _validate_event_id(event_id)
+    if event_id in registry:
+        return DESTROYED
+    return ACTIVE if key_was_published else NEVER_CREATED
+
+
+def destroy(
+    event_id: str,
+    now: datetime,
+    *,
+    key_was_published: bool,
+    registry: Mapping[str, date],
+) -> DestructionRecord:
+    """The record a destruction should write: `event_id` and today's Paris
+    day. Pure -- see the module docstring for why, and for what still has to
+    happen outside this function (removing the secret, persisting this
+    record).
+
+    Raises `ValueError` if `key_was_published` is false: destroying a key
+    that was never created would erase the distinction the registry exists
+    to preserve. Idempotent once a record exists: calling this again for an
+    already-destroyed event returns that same record rather than a new one.
+    """
+    _validate_event_id(event_id)
+    destroyed_on = registry.get(event_id)
+    if destroyed_on is not None:
+        return DestructionRecord(event_id=event_id, destroyed_on=destroyed_on)
+    if not key_was_published:
+        raise ValueError(
+            f"cannot destroy a key that was never created for event {event_id!r}"
+        )
+    return DestructionRecord(event_id=event_id, destroyed_on=paris_today(now))

@@ -8,6 +8,14 @@ dependencies = [
   # zoneinfo has no bundled tz database; Windows (and minimal Linux images)
   # have none on disk, so this ships one. Required for sweep.py's DST handling.
   "tzdata>=2025.1; sys_platform == 'win32'",
+  # No asymmetric primitive exists in the standard library (hashlib, hmac and
+  # secrets are hashing and symmetric only), and eventkeys.py's whole design
+  # depends on one: the browser only ever holds the public half, which is
+  # only true if a public key cannot decrypt -- a property no symmetric
+  # scheme has. The choice was between this well-audited library and
+  # hand-rolling RSA in the one module that handles other people's personal
+  # data; see tools/convener_ops/eventkeys.py for the rest of that reasoning.
+  "cryptography>=43",
 ]
 
 [project.scripts]

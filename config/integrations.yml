@@ -1,6 +1,7 @@
 # Every external dependency the *application code* (tools/convener_ops and
 # app/src) reads at runtime, and what happens without it. Absent is a normal
-# state: the feature degrades visibly, nothing breaks.
+# state: the feature degrades visibly, nothing breaks -- with one exception,
+# event_keys below, whose absent_behaviour says so explicitly.
 #
 # This deliberately excludes secrets that only CI ever reads (a workflow
 # step's `env:`, never something convener-check-config's own process sees) --
@@ -9,6 +10,13 @@
 # on every machine that isn't the CI runner, which is noise, not
 # information. They are documented instead in docs/reference/operations.md,
 # with what each is for and where it is set.
+#
+# event_keys is deliberately not excluded by that same reasoning, even
+# though it is also per-event and CI-only in practice: its absence is not
+# ordinary noise the way the three above are, and burying it in the
+# CI-only-secrets section of the handbook would make it too easy to miss.
+# See tools/convener_ops/eventkeys.py for the reason its absence is not a normal
+# state at all.
 integrations:
   - name: auth_proxy
     label: Authentication relay
@@ -60,3 +68,18 @@ integrations:
       constructed at all. Both are needed because a thread with no mention
       posts into a page nobody is watching, and a mention with no thread has
       nowhere to be written.
+
+  - name: event_keys
+    label: Event registration encryption
+    secrets:
+      - CONVENER_EVENT_KEY_<ID>
+    absent_behaviour: >-
+      Unlike every other row here, this is not a normal state to degrade out
+      of. CONVENER_EVENT_KEY_<ID> is set once per event -- <ID> stands for the
+      event's own identifier, never a literal name -- so this row reports
+      absent everywhere, on every day no event's secret happens to be named
+      exactly that; its real check is per event, inside the job that
+      decrypts that event's registrations. Without the matching private key
+      that job fails closed and exits in error: it does not fall back to
+      writing personal data to disk unencrypted. See
+      tools/convener_ops/eventkeys.py for the reasoning.
