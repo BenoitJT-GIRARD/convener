@@ -322,20 +322,23 @@ remember (task 10):
 (`tools/convener_ops/cli.py::release_recording`, run through
 `.github/workflows/recording.yml`.) Retrieves, verifies the retrieval,
 then deletes, in that order. Before either trace is even checked, it
-first refuses unless publication is actually cleared: `publication.consent`
-must be `"granted"` **and** `publication.outcome` must be `"published"`
-on the event's own speaker record — the same predicate
-(`tools/convener_ops/public_data.py::recording_withheld`) that keeps a link
-out of the public feed, reused here rather than restated, so an
-unpublishable recording cannot leave FCC through this command either.
-**This means the command will typically refuse for a fresh talk right
-after its own event**, because `outcome` is not written until
-`finalize-archive` runs, well after the event — read the refusal message
-and the record's own `publication` block before deciding whether to wait
-or to use `convener-discard-recording` instead; the two are not the same
-decision, and only one of them is reversible by waiting.
+first refuses unless the speaker's own consent is on record:
+`publication.consent` must be `"granted"` on the event's own speaker
+record (`tools/convener_ops/cli.py::_consent_granted`) — **not**
+`publication.outcome`, which the board's own, later `finalize-archive`
+step writes and which governs a different question entirely (whether the
+talk is *linked in the public feed*, not whether our copy may leave the
+provider). An earlier version of this gate required both, modelled on
+`tools/convener_ops/public_data.py::recording_withheld`; that was wrong,
+because it held the quota hostage to the board's own timeline and refused
+every fresh talk regardless of consent. `pending`, an unanswered field,
+and any value this project does not recognise are all silence, and
+silence is never a permission — a talk whose consent has not yet been
+answered is refused the same as one that was declined; read the refusal
+message and the record's own `publication.consent` value before deciding
+whether to wait for an answer or to use `convener-discard-recording` instead.
 
-The two-trace shape checked once publication clears is a design ruling
+The two-trace shape checked once consent is granted is a design ruling
 recorded in `.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19 —
 DESIGN RULING for the spec: who deletes the recording, and on what
 evidence"), carried into code rather than re-derived: it refuses to
