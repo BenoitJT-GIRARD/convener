@@ -60,7 +60,10 @@ npx wrangler secret put CONVENER_DISPATCH_TOKEN
   device flow itself issues carries the broader classic `repo` scope, not
   this narrower one.
 
-Unlike the authentication relay, a missing `TALLY_WEBHOOK_SECRET` here
-refuses every request rather than accepting them: this worker is the
-internet-facing boundary, so an unconfigured secret must fail closed, not
-open.
+Unlike `tools/convener_ops/proposal.py::verify_signature`, whose own copy of
+`TALLY_WEBHOOK_SECRET` accepts everything when unset (D-13: an absent
+integration is a normal state, not an error), a missing
+`TALLY_WEBHOOK_SECRET` here refuses every request rather than accepting
+them: this worker is the internet-facing boundary, so an unconfigured
+secret must fail closed here even though the Actions side, reached only
+after this worker already let the request through, fails open.
