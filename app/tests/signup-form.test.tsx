@@ -468,6 +468,63 @@ describe('SignupForm -- sending', () => {
     expect(screen.getByLabelText(/surname/i)).toHaveValue('Lovelace');
     expect(screen.getByLabelText(/email address/i)).toHaveValue('ada@example.org');
   });
+
+  it('a hung submit eventually refuses too, rather than saying "Sending…" forever', async () => {
+    // `AbortSignal.timeout`'s internal timer is not driven by the global
+    // `setTimeout` vitest's fake timers patch (confirmed directly: it never
+    // calls a monkey-patched `setTimeout`), so -- unlike the key-fetch
+    // timeout test above, which owns its own `AbortController` -- this
+    // stubs `AbortSignal.timeout` itself to hand back a controller this
+    // test drives, and fires it directly rather than waiting real time.
+    const controller = new AbortController();
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+    try {
+      vi.stubEnv('VITE_SIGNUP_RELAY_URL', 'https://signup-relay.example/');
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string, opts?: RequestInit) => {
+          if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
+            return { ok: true, text: async () => VALID_PEM } as Response;
+          }
+          if (String(url) === 'https://signup-relay.example/') {
+            // Never resolves on its own -- the only way out is the signal
+            // this test fires below, exactly like a stalled relay
+            // connection would leave a real `fetch` pending indefinitely.
+            return new Promise<Response>((_resolve, reject) => {
+              opts?.signal?.addEventListener('abort', () => {
+                reject(new DOMException('The operation was aborted.', 'TimeoutError'));
+              });
+            });
+          }
+          throw new Error(`unexpected fetch in test: ${url}`);
+        }),
+      );
+
+      renderSignup('mrg-042');
+      await fillForm();
+      fireEvent.click(screen.getByRole('button', { name: /register/i }));
+
+      expect(await screen.findByRole('button', { name: /sending/i })).toBeDisabled();
+
+      // The fetch itself -- and the timeout signal passed to it -- only
+      // happens after the (async) encryption step above resolves, so this
+      // waits for it rather than asserting immediately after the click.
+      // Mirrors SignupForm's own SUBMIT_TIMEOUT_MS -- pins the actual
+      // duration wired in, not just that some timeout exists.
+      await vi.waitFor(() => expect(timeoutSpy).toHaveBeenCalledWith(15_000));
+
+      act(() => controller.abort());
+
+      // "Could not be sent", not "could not be encrypted": a network-layer
+      // timeout must not be blamed on the encryption half of `submit`,
+      // which never ran again after the fetch was already sent.
+      await screen.findByText(/could not be sent/i);
+      expect(screen.queryByText(/sending…/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/could not be encrypted/i)).not.toBeInTheDocument();
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
 });
 
 describe('SignupForm -- reachable with no eventId at all', () => {

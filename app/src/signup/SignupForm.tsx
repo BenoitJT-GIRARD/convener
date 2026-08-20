@@ -48,6 +48,13 @@ function eventPublicKeyUrl(eventId: string): string {
 // refusal requirement 4 asks for.
 const KEY_FETCH_TIMEOUT_MS = 15_000;
 
+// Same reasoning as KEY_FETCH_TIMEOUT_MS, applied to the submit POST beside
+// it: a relay that never answers -- rather than answering with an error --
+// would otherwise leave the button reading "Sending…" forever, which is
+// exactly the silence requirement 4 refuses to allow for the key fetch and
+// no more acceptable here.
+const SUBMIT_TIMEOUT_MS = 15_000;
+
 /**
  * Fetches an event's published public half and confirms it is actually
  * usable, in one step: `response.text()` and the validity check both sit
@@ -191,11 +198,24 @@ export function SignupForm() {
         return;
       }
       const envelope: unknown = JSON.parse(envelopeJson);
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ event_id: eventId, ...(envelope as object) }),
-      });
+      let response: Response;
+      try {
+        // A timeout here is a network-layer failure, not an encryption
+        // one -- it has its own try/catch, and its own message below,
+        // rather than falling into the outer catch's "could not be
+        // encrypted", which would blame the wrong half of this function
+        // for a relay that simply never answered.
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ event_id: eventId, ...(envelope as object) }),
+          signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+        });
+      } catch {
+        setSubmitState('error');
+        setSubmitError('Your registration could not be sent. Please try again.');
+        return;
+      }
       if (!response.ok) {
         setSubmitState('error');
         setSubmitError('Your registration could not be sent. Please try again.');
