@@ -93,6 +93,67 @@ def test_validate_reports_a_board_under_its_target_without_failing(
     assert out.isascii()
 
 
+def test_validate_handles_a_missing_config_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # config.yml can be absent -- a fresh checkout before it is ever
+    # written, or a broken deploy -- and validate() must still run speakers
+    # validation and report the load error, not crash resolving
+    # cfg["board"] or calling validate_config(None).
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "speakers.yml").write_text(
+        yaml.safe_dump([speaker()]), encoding="utf-8"
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 1
+    out = capsys.readouterr().out
+    assert "config.yml: file missing" in out
+    # validate_config(None) would itself report "top-level must be a
+    # mapping" gracefully rather than raise -- so calling it unconditionally
+    # (skipping `if cfg is not None:`) would not crash here, it would just
+    # add a second, redundant message. This line is what tells the two
+    # apart.
+    assert "top-level must be a mapping" not in out
+
+
+def test_validate_handles_a_missing_speakers_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 1
+    out = capsys.readouterr().out
+    assert "speakers.yml: file missing" in out
+    # validate_speakers(None) would itself report "top-level must be a
+    # list" gracefully rather than raise -- so calling it unconditionally
+    # (skipping `if speakers is not None:`) would not crash here, it would
+    # just add a second, redundant message. This line is what tells the
+    # two apart.
+    assert "top-level must be a list" not in out
+
+
+def test_validate_handles_a_config_with_no_board_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # board_logins seeds validate_speakers's login checks (assigned_to /
+    # ballot voter). A config.yml with no "board" key at all -- a hand-edit
+    # or an in-progress migration -- must fall back to an empty set rather
+    # than raise iterating None.
+    cfg = config()
+    del cfg["board"]
+    _write_data(tmp_path, [speaker()], cfg)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 1
+    out = capsys.readouterr().out
+    assert "Data validation FAILED" in out
+
+
 def test_sweep_reports_nothing_to_sweep_when_no_change(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -326,6 +387,25 @@ def test_handle_proposal_with_a_json_array_payload_returns_1(
 
     assert handle_proposal() == 1
     assert "invalid JSON payload" in capsys.readouterr().err
+
+
+def test_handle_proposal_treats_a_non_list_fields_value_as_no_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Tally always sends "fields" as a list, but the signature only proves
+    # who sent the body, not its shape (see handle_proposal's docstring). A
+    # payload where "fields" is null (present but not a list, and not even
+    # iterable) must degrade to "no fields" rather than raise TypeError
+    # iterating it. A string would be iterable by accident and pass this
+    # test even with the guard removed -- null does not.
+    _write_data(tmp_path, [], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", json.dumps({"data": {"fields": None}}))
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+    assert "skipping: empty name" in capsys.readouterr().out
 
 
 def test_handle_proposal_resolves_a_picker_shaped_gender_field(

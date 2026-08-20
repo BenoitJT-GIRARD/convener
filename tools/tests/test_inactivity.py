@@ -187,6 +187,21 @@ def test_the_most_recent_ballot_across_all_speakers_is_the_one_read() -> None:
     )
 
 
+def test_the_most_recent_ballot_is_found_regardless_of_list_order() -> None:
+    # last_ballot_on must find the true maximum, not merely the last one
+    # processed -- speakers.yml's record order has nothing to do with when
+    # a member cast each ballot. The test above puts the later date last;
+    # this one puts it first, so a "just keep the last value seen"
+    # implementation would fail it.
+    assert (
+        last_ballot_on(
+            [voted("ada", "2026-03-04"), voted("ada", "2024-01-01")],
+            "ada",
+        )
+        == "2026-03-04"
+    )
+
+
 def test_a_ballot_with_an_unusable_date_is_skipped_not_trusted() -> None:
     # An unparsable date must never be the thing that calls someone silent.
     assert last_ballot_on([voted("ada", "not-a-date")], "ada") == ""

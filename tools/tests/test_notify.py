@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import ast
 import re
+import shutil
+import subprocess  # nosec B404
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -128,6 +130,16 @@ def test_an_administrative_override_is_not_announced_as_a_vote() -> None:
     assert immediate_events(before, after) == []
 
 
+def test_a_record_with_no_selection_block_is_not_announced_as_a_vote() -> None:
+    # "selection" is required by the schema, but notify_immediate reads
+    # speakers.yml straight off disk (convener_ops.cli._load), unvalidated -- a
+    # legacy or hand-edited record with no "selection" key at all must not
+    # crash _selection_day, and must not read as "decided_on is set".
+    before = [{"id": "spk-001", "status": "lead", "source": "form"}]
+    after = [{"id": "spk-001", "status": "approved", "source": "form"}]
+    assert immediate_events(before, after) == []
+
+
 def test_a_decision_already_recorded_is_not_announced_a_second_time() -> None:
     """A record that was already decided and is moved back to `lead` and
     forward again by a reopening carries its old `decided_on`; only a
@@ -140,6 +152,31 @@ def test_a_decision_already_recorded_is_not_announced_a_second_time() -> None:
 
 def test_an_objection_lodged_on_a_publication_is_an_immediate_event() -> None:
     before = [lead(id="spk-001", status="delivered")]
+    after = [
+        lead(
+            id="spk-001",
+            status="delivered",
+            publication={
+                "consent": "granted",
+                "approved_by": "ada",
+                "approved_on": "2026-08-10",
+                "objections": [
+                    objection(member="grace", reason="the consent is unclear")
+                    | {"resolved_on": ""}
+                ],
+                "outcome": "",
+            },
+        )
+    ]
+    assert kinds(immediate_events(before, after)) == [OBJECTION_FILED]
+
+
+def test_a_publication_with_no_objections_key_stands_for_none() -> None:
+    # publication.objections is required by the schema, but this reads
+    # unvalidated data (see the note above) -- a publication block that
+    # predates the field, or was hand-edited, must read as "no standing
+    # objections" rather than raise iterating something that is not a list.
+    before = [lead(id="spk-001", status="delivered", publication={"consent": ""})]
     after = [
         lead(
             id="spk-001",
@@ -343,6 +380,22 @@ def test_a_lead_parked_on_another_day_does_not_reach_todays_digest() -> None:
         ]
         digest = daily_digest(speakers, make_config(), NOW)
         assert digest is None or "was parked" not in digest, opened_on
+
+
+def test_a_parked_lead_with_no_opened_on_is_not_dated() -> None:
+    # expire_votes always stamps opened_on before it ever writes "parked"
+    # (see sweep.py), but this reads unvalidated data -- a hand-set
+    # "parked" status with no window ever opened must not be dated at all,
+    # rather than crash adding a timedelta to nothing.
+    speakers = [
+        lead(
+            id="spk-004",
+            status="parked",
+            selection={"ballots": [], "opened_on": "", "decided_on": ""},
+        )
+    ]
+    digest = daily_digest(speakers, make_config(), NOW)
+    assert digest is None or "was parked" not in digest
 
 
 def test_the_parked_line_follows_the_window_the_sweep_actually_applies() -> None:
@@ -591,6 +644,61 @@ def test_an_objection_lodged_and_one_closed_today_both_reach_the_digest() -> Non
     assert "spk-007: an objection on the publication was closed" in digest
 
 
+def test_a_malformed_objection_entry_is_skipped_when_composing_the_digest() -> None:
+    # publication.objections is a list of mappings by schema, but this
+    # reads unvalidated data -- a stray non-mapping item (a hand-edit gone
+    # wrong) must be skipped, not crash the whole day's digest.
+    speakers = [
+        lead(
+            id="spk-007",
+            status="delivered",
+            date="2026-07-01",
+            runbook_progress={"delivered/forum-summary": True},
+            youtube_url="https://example.org/watch",
+            publication={
+                "consent": "granted",
+                "approved_by": "",
+                "approved_on": "",
+                "objections": [
+                    "not-a-mapping",
+                    objection(member="ada", reason="today", date="2026-08-18")
+                    | {"resolved_on": ""},
+                ],
+                "outcome": "",
+            },
+        )
+    ]
+    digest = daily_digest(speakers, make_config(), NOW)
+    assert digest is not None
+    assert "spk-007: an objection was lodged on the publication" in digest
+
+
+def test_an_objection_unrelated_to_today_contributes_no_digest_line() -> None:
+    # Silence is the property this whole module rests on (see the module
+    # docstring): an objection neither lodged nor closed today must not
+    # appear in today's digest, whatever else it says.
+    speakers = [
+        lead(
+            id="spk-007",
+            status="delivered",
+            date="2026-07-01",
+            runbook_progress={"delivered/forum-summary": True},
+            youtube_url="https://example.org/watch",
+            publication={
+                "consent": "granted",
+                "approved_by": "ada",
+                "approved_on": "2026-07-05",
+                "objections": [
+                    objection(member="grace", reason="old", date="2026-07-02")
+                    | {"resolved_on": "2026-07-03"}
+                ],
+                "outcome": "",
+            },
+        )
+    ]
+    assert daily_digest(speakers, make_config(), NOW) is None
+
+
 def test_a_nomination_objection_lodged_today_reaches_the_digest() -> None:
     cfg = make_config(
         nominations=[
@@ -605,6 +713,20 @@ def test_a_nomination_objection_lodged_today_reaches_the_digest() -> None:
     digest = daily_digest([], cfg, NOW)
     assert digest is not None
     assert "nomination 1: an objection was lodged" in digest
+
+
+def test_a_nomination_objection_from_another_day_contributes_no_digest_line() -> None:
+    cfg = make_config(
+        nominations=[
+            nomination(
+                candidate="grace",
+                sponsor="ada",
+                opened_on="2026-07-01",
+                objections=[objection(member="ada", reason="old", date="2026-07-02")],
+            )
+        ]
+    )
+    assert daily_digest([], cfg, NOW) is None
 
 
 @pytest.mark.parametrize(
@@ -1301,6 +1423,28 @@ def test_unreadable_data_is_reported_and_notifies_nothing(
 
     assert "invalid YAML" in capsys.readouterr().out
     assert not (root / cli.NOTIFY_BODY).exists()
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not on PATH")
+def test_git_show_reports_an_error_rather_than_raising_on_a_repository_with_no_head(
+    tmp_path: Path,
+) -> None:
+    # The subprocess-failure half of `_git_show` itself, not the caller's
+    # handling of it (the two tests below mock `_git_show` entirely, so
+    # neither exercises this). A freshly `git init`-ed directory has no HEAD
+    # yet -- exactly "an initial commit" from the docstring, one commit
+    # earlier -- so `git show` exits non-zero and this must come back as an
+    # error string, not raise.
+    subprocess.run(  # nosec B603 B607
+        ["git", "init", "--quiet", "--initial-branch=main"],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    text, error = cli._git_show(tmp_path, "HEAD:data/speakers.yml")
+
+    assert text == ""
+    assert error != ""
 
 
 def test_immediate_says_nothing_when_there_is_no_previous_revision(

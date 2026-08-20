@@ -25,14 +25,46 @@ def test_top_level_must_be_a_list() -> None:
     assert errors == ["speakers.yml: top-level must be a list"]
 
 
+def test_config_top_level_must_be_a_mapping() -> None:
+    # Symmetric with validate_speakers's own "top-level must be a list"
+    # above -- a config.yml that is a YAML list or scalar at the top level
+    # (a hand-edit gone wrong) must be named as the defect it is.
+    assert validate_config([1, 2, 3]) == ["config.yml: top-level must be a mapping"]
+
+
+def test_a_non_mapping_entry_in_speakers_is_rejected_not_skipped() -> None:
+    errors = validate_speakers(["not-a-mapping", speaker()])
+    assert any(e == "speakers[0]: not a mapping" for e in errors)
+
+
 def test_duplicate_id_is_rejected() -> None:
     errors = validate_speakers([speaker(), speaker(name="Grace Hopper")])
     assert any("duplicate id 'spk-001'" in e for e in errors)
 
 
+def test_a_missing_id_is_reported() -> None:
+    s = speaker()
+    del s["id"]
+    errors = validate_speakers([s])
+    assert any("missing id" in e for e in errors)
+
+
 def test_unknown_status_is_rejected() -> None:
     errors = validate_speakers([speaker(status="bogus-status")])
     assert any("invalid status 'bogus-status'" in e for e in errors)
+
+
+@pytest.mark.parametrize("key", ["name", "status"])
+def test_a_missing_required_field_is_reported(key: str) -> None:
+    s = speaker()
+    del s[key]
+    errors = validate_speakers([s])
+    assert any(f"missing {key}" in e for e in errors)
+
+
+def test_an_invalid_gender_is_reported() -> None:
+    errors = validate_speakers([speaker(gender="not-a-gender")])
+    assert any("invalid gender 'not-a-gender'" in e for e in errors)
 
 
 def test_scheduled_requires_edition_date_and_two_hosts() -> None:
@@ -64,6 +96,17 @@ def test_malformed_date_and_time_are_rejected() -> None:
     joined = " | ".join(errors)
     assert "date must be YYYY-MM-DD" in joined
     assert "time must be HH:MM" in joined
+
+
+def test_a_malformed_edition_code_is_reported() -> None:
+    errors = validate_speakers([speaker(edition_code="5")])
+    assert any("edition_code must match MRG-N" in e for e in errors)
+
+
+@pytest.mark.parametrize("key", ["host_1", "host_2"])
+def test_a_non_string_host_is_reported(key: str) -> None:
+    errors = validate_speakers([speaker(**{key: 123})])
+    assert any(f"{key} must be a string" in e for e in errors)
 
 
 def test_config_missing_keys_are_reported() -> None:
@@ -134,6 +177,24 @@ def test_an_unreadable_sla_days_is_reported_once() -> None:
     assert not any("must be an integer" in e for e in errors), errors
 
 
+def test_a_config_with_no_sla_days_key_skips_sla_validation() -> None:
+    cfg = config()
+    del cfg["sla_days"]
+    errors = validate_config(cfg)
+    assert any("missing keys ['sla_days']" in e for e in errors)
+    assert not any("sla_days." in e for e in errors)
+
+
+def test_a_stored_lead_decision_sla_is_reported_as_obsolete() -> None:
+    # F-14/schema v3: the board's decision deadline is vote_window_days, not
+    # a fourth sla_days entry -- a file that still carries the old key would
+    # leave whoever set it believing the board had that many days instead.
+    cfg = config()
+    cfg["sla_days"] = {**cfg["sla_days"], "lead_decision": 20}
+    errors = validate_config(cfg)
+    assert any("sla_days.lead_decision is obsolete" in e for e in errors)
+
+
 def test_config_board_member_must_look_like_a_login() -> None:
     # Schema v3: board_members (flat login list) was replaced by board
     # (a list of BoardMember mappings) in Task 1 / Task 4. The rule this
@@ -141,6 +202,27 @@ def test_config_board_member_must_look_like_a_login() -> None:
     # shape of the data it is expressed against has moved.
     errors = validate_config(config(board=[board_member(login="not a login!")]))
     assert any("invalid board member" in e for e in errors)
+
+
+def test_a_non_list_board_is_reported() -> None:
+    errors = validate_config(config(board="not-a-list"))
+    assert any("board must be a list" in e for e in errors)
+
+
+def test_a_non_mapping_board_member_is_reported() -> None:
+    errors = validate_config(config(board=["not-a-mapping"]))
+    assert any("invalid board member" in e for e in errors)
+
+
+def test_a_config_with_no_board_key_skips_board_member_validation() -> None:
+    # A config.yml with no "board" key at all -- a hand-edit or an
+    # in-progress migration -- is reported once, by the missing-keys check,
+    # not iterated as an empty or None board.
+    cfg = config()
+    del cfg["board"]
+    errors = validate_config(cfg)
+    assert any("missing keys ['board']" in e for e in errors)
+    assert not any("invalid board member" in e for e in errors)
 
 
 def test_valid_config_produces_no_error() -> None:
