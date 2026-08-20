@@ -203,6 +203,54 @@ so this is a documented operational constraint -- do not rotate the signing
 key twice in one day -- rather than something this module can detect; it
 holds no registry of what is already committed to check against.
 
+Verify before you parse: the envelope is unauthenticated, the payload never is
+------------------------------------------------------------------------------
+`verify` checks the signature against the decoded `payload` bytes
+*before* it ever calls `json.loads` on them. Two different parses happen
+inside this function, and they are not the same kind of parse:
+
+- The **envelope** -- the outer `{"v":..., "payload":..., "signature":...}`
+  object -- is necessarily parsed unauthenticated. There is no signature
+  to check until one has been read out of that structure, so this parse
+  has to come first; this is the same position a JWS envelope occupies.
+- The **payload** -- what `payload` base64-decodes to -- is never parsed
+  until some key in `public_pems` has confirmed that the bytes about to
+  be parsed are the exact bytes that key signed. Nothing this module ever
+  does authenticates a payload *after* reading it; the order is the
+  guarantee.
+
+This module's first review round got the second half backwards:
+`json.loads(canonical)` ran inside the same `try` as the envelope parse,
+ahead of the signature loop, so every token's payload was parsed whether
+or not any key ever confirmed it. In Python the gap was harmless --
+bounded by `MAX_TOKEN_BYTES`, and `RecursionError` was caught either way
+-- and that is exactly why it is worth fixing anyway rather than filing
+away as low-severity: this module is the reference implementation for
+task 13's browser-side verifier, and a verifier ported from the control
+flow rather than from `keys/signing/README.md`'s numbered steps inherits
+"parse untrusted bytes before authenticating them" in a language whose
+JSON parser this project does not control -- the one habit this module's
+whole design argues against. One consequence fell out by accident, not by
+design: once the payload parse only ever runs after a signature has
+matched, a hostile deeply-nested payload can no longer reach `json.loads`
+at all unless it was signed by one of our own keys -- see the
+`RecursionError` bullet below for what that leaves as the one deep-nesting
+path an outside attacker still has.
+
+Reordering moved one outcome, deliberately, and it is worth naming so
+nobody mistakes it for a regression later: transported bytes that are
+valid base64 but not JSON used to return `MALFORMED` on their own,
+because `verify` peeked at them regardless of who signed them. Now, an
+*unsigned* token of that shape returns `NO_MATCHING_KEY`, and only a
+token that *is* signed by one of our own keys and still fails to parse
+returns `MALFORMED`. That is the more honest taxonomy, not a loosening:
+for an unsigned blob, "no key confirms this" is true, and "this is
+malformed" is a claim this module could only make by doing the thing it
+says it will not do -- reading a payload before a key has vouched for it.
+And `MALFORMED` now means what it always should have: *we* signed
+something we cannot read, which is this module's bug, never the token
+holder's.
+
 Three outcomes, not two: `verify` returns a `VerifyResult`
 ---------------------------------------------------------------
 A public verification page has to say something different for "this
@@ -212,15 +260,24 @@ this" itself is not one thing. `verify` reports three outcomes, not the
 `dict | None` this module's first cut returned:
 
 - **Valid** (`reason is None`, `payload` holds the dict): some key in
-  `public_pems` produced a matching signature.
-- **`MALFORMED`**: the token is not even shaped like something this module
-  ever produced -- not JSON, the wrong top-level shape, an unsupported
-  `"v"`, `payload`/`signature` that will not base64-decode, or decoded
-  `payload` bytes that are not themselves a JSON object. This is the
-  "outright garbage" case.
-- **`NO_MATCHING_KEY`**: the token *is* shaped correctly -- it parses, its
-  version is understood, its payload is a JSON object -- but no key in
-  `public_pems` produces a signature that matches it.
+  `public_pems` produced a matching signature over the decoded `payload`
+  bytes, and those bytes, only now parsed, are a JSON object.
+- **`MALFORMED`**: either (a) the *envelope* is not even shaped like
+  something this module ever produced -- not JSON, the wrong top-level
+  shape, an unsupported `"v"`, or `payload`/`signature` that will not
+  base64-decode -- or (b) a key in `public_pems` genuinely confirmed the
+  decoded `payload` bytes, but those bytes do not parse as a JSON object
+  once read. Case (b) can only happen if something signed by one of our
+  own keys was never valid JSON to begin with -- our bug, never a
+  forger's, and see "verify before you parse" above for why a token an
+  outside attacker controls can never reach this case at all.
+- **`NO_MATCHING_KEY`**: the envelope parses correctly -- it is JSON, its
+  version is understood, `payload` and `signature` are valid base64 -- but
+  no key in `public_pems` produces a signature that matches the decoded
+  `payload` bytes. This is the outcome for a token whose decoded payload,
+  had anyone gone looking, would not even be JSON: unlike this module's
+  first cut, `verify` never learns that about a token no offered key
+  confirms, because it never parses it.
 
 **`NO_MATCHING_KEY` is not "forged," and must never be presented as
 one.** A well-formed token that no offered key validates is exactly what a
@@ -259,12 +316,16 @@ Two more properties `verify` guarantees regardless of input:
   shapes, this module bounds the raw token to `MAX_TOKEN_BYTES` before
   parsing anything (a legitimate token is a few hundred bytes; nothing
   this module ever produces approaches the bound) and catches
-  `RecursionError` alongside the ordinary parsing exceptions, because
-  Python's JSON decoder recurses on nested structures and a short,
-  deliberately deeply-nested string can exhaust the interpreter's
-  recursion limit well under any reasonable size cap. `MALFORMED` is the
-  outcome for all of it -- a public verification page must never crash
-  because someone pasted an adversarial string into it.
+  `RecursionError` around *both* parses -- the envelope's and, separately,
+  the payload's -- because Python's JSON decoder recurses on nested
+  structures and a short, deliberately deeply-nested string can exhaust
+  the interpreter's recursion limit well under any reasonable size cap.
+  `MALFORMED` is the outcome for all of it -- a public verification page
+  must never crash because someone pasted an adversarial string into it.
+  Only the envelope's `RecursionError` is reachable by an attacker who
+  does not hold a signing key, per "verify before you parse" above: a
+  deeply-nested `payload` never reaches the second parse unless a key
+  already confirmed it, which no forged or unsigned token can arrange.
 
 The private half, and why its absence is an ordinary D-13 state here
 ------------------------------------------------------------------------
@@ -501,6 +562,13 @@ def sign(payload: dict[str, Any], private_pem: str) -> str:
     `PAYLOAD_FIELDS` -- checked before the private key is even loaded, so a
     malformed payload never touches key material at all. Raises
     `SigningError` if `private_pem` is not a usable RSA private key.
+    `PAYLOAD_FIELDS` pins the key *set*, not each value's type, so a
+    payload can still carry a value `json.dumps` itself cannot serialise
+    (a `date` object where a caller should have passed an ISO string, for
+    instance) -- `sign` raises whatever `json.dumps` raises (`TypeError`)
+    for that unwrapped, rather than translating it into `SigningError` or
+    a domain-specific error: it is a mistake in what the caller built, not
+    a signing failure.
     """
     _validate_payload_fields(payload)
     private_key = _load_private_key(private_pem)
@@ -555,13 +623,23 @@ def verify(token: str, public_pems: list[str]) -> VerifyResult:
     """Verify `token` against every key in `public_pems`, in order.
 
     Returns a `VerifyResult` -- never raises, for any input, including a
-    hostile one. See the module docstring's "three outcomes" section for
-    what `MALFORMED` and `NO_MATCHING_KEY` each mean and, critically, that
-    they are not interchangeable: `MALFORMED` is "not shaped like a signing
-    token at all"; `NO_MATCHING_KEY` is "shaped correctly, but no key
-    offered confirms it" -- which covers both a forged token and a
-    genuine one signed under a key this caller does not yet have. A
-    verification page must never present the second as the first.
+    hostile one. See the module docstring's "verify before you parse" and
+    "three outcomes" sections for what `MALFORMED` and `NO_MATCHING_KEY`
+    each mean and, critically, that they are not interchangeable:
+    `MALFORMED` is "not shaped like a signing token at all, or signed by
+    one of our own keys and still unreadable"; `NO_MATCHING_KEY` is
+    "shaped correctly, but no key offered confirms it" -- which covers
+    both a forged token and a genuine one signed under a key this caller
+    does not yet have. A verification page must never present the second
+    as the first.
+
+    The payload is decoded and checked against every key in `public_pems`
+    *before* it is ever parsed as JSON -- `json.loads` on the decoded
+    `payload` bytes runs only once a key has confirmed those exact bytes
+    are what it signed, never before. The outer envelope (`"v"`,
+    `"payload"`, `"signature"`) is the one thing here parsed
+    unauthenticated, of necessity: there is nothing to check a signature
+    against until it has been read out of that structure.
 
     This is the one function this whole module exists for: **rotation must
     never invalidate the past.** A certificate signed under a key since
@@ -581,15 +659,24 @@ def verify(token: str, public_pems: list[str]) -> VerifyResult:
             return VerifyResult(None, MALFORMED)
         canonical = base64.b64decode(parsed["payload"], validate=True)
         signature = base64.b64decode(parsed["signature"], validate=True)
-        payload: Any = json.loads(canonical)
-        if not isinstance(payload, dict):
-            return VerifyResult(None, MALFORMED)
     except (KeyError, ValueError, TypeError, binascii.Error, RecursionError):
         return VerifyResult(None, MALFORMED)
 
     for public_pem in public_pems:
-        if _verifies_with(public_pem, canonical, signature):
-            return VerifyResult(payload, None)
+        if not _verifies_with(public_pem, canonical, signature):
+            continue
+        # A key has just confirmed these are genuinely the signed bytes --
+        # only now is it safe to read them. See the module docstring's
+        # "verify before you parse" section: this ordering, not merely the
+        # size cap or the recursion guard, is what keeps an unauthenticated
+        # payload from ever reaching `json.loads`.
+        try:
+            payload: Any = json.loads(canonical)
+        except (ValueError, TypeError, RecursionError):
+            return VerifyResult(None, MALFORMED)
+        if not isinstance(payload, dict):
+            return VerifyResult(None, MALFORMED)
+        return VerifyResult(payload, None)
     return VerifyResult(None, NO_MATCHING_KEY)
 
 

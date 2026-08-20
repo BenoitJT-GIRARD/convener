@@ -296,6 +296,21 @@ def test_sign_checks_the_payload_shape_before_touching_the_private_key() -> None
         sign(bad_payload, "not a key at all")
 
 
+def test_sign_lets_a_json_encoding_failure_pass_through_unwrapped() -> None:
+    """Not a domain-specific failure mode -- `PAYLOAD_FIELDS` pins the key
+    *set*, not each value's type, so a payload holding something
+    `json.dumps` itself cannot serialise (a `date` object rather than an
+    ISO string, here) still passes the field check and reaches
+    `_canonical_bytes`. That is the caller's own mistake in what it built,
+    and surfaces as whatever `json.dumps` raises rather than being
+    translated into `SigningError` or any error this module defines."""
+    private_pem, _ = generate()
+    bad_payload: dict[str, Any] = {**CERT_PAYLOAD, "date": date(2026, 8, 20)}
+
+    with pytest.raises(TypeError):
+        sign(bad_payload, private_pem)
+
+
 # ------------------------------------------------------------------ #
 # generate(): supporting properties
 # ------------------------------------------------------------------ #
@@ -464,7 +479,19 @@ def test_verify_returns_malformed_for_a_token_missing_a_field() -> None:
     assert result.reason == MALFORMED
 
 
-def test_verify_returns_malformed_when_the_decoded_payload_is_not_an_object() -> None:
+def test_verify_returns_no_matching_key_when_a_tampered_payload_is_not_an_object() -> (
+    None
+):
+    """R-15 (fix round 2): swapping in a payload that will not even parse
+    as a JSON object, while leaving the *original* signature untouched,
+    used to return `MALFORMED` -- because `verify` parsed the payload
+    before checking any key. Now the signature check runs first, and this
+    tampered payload's bytes do not match the signature at all (it was
+    computed over the real `CERT_PAYLOAD` bytes, not `[1, 2, 3]`), so no
+    key in `public_pems` ever confirms it: `NO_MATCHING_KEY`, the same
+    outcome any other tampered-but-unsigned payload gets. `verify` never
+    learns this payload is not an object, because it never gets far enough
+    to look."""
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
     parsed = json.loads(token)
@@ -473,10 +500,17 @@ def test_verify_returns_malformed_when_the_decoded_payload_is_not_an_object() ->
 
     result = verify(json.dumps(parsed), [public_pem])
 
-    assert result.reason == MALFORMED
+    assert result.reason == NO_MATCHING_KEY
+    assert result.payload is None
 
 
-def test_verify_returns_malformed_when_the_decoded_payload_is_not_json_at_all() -> None:
+def test_verify_returns_no_matching_key_when_a_tampered_payload_is_not_json() -> None:
+    """R-15 (fix round 2): same reasoning as the test above, for payload
+    bytes that are not JSON at all rather than JSON-but-not-an-object. The
+    original signature does not match these substituted bytes, so
+    `verify`'s signature loop rejects it as `NO_MATCHING_KEY` before ever
+    attempting to parse it -- it used to return `MALFORMED` only because
+    the old code parsed first and checked signatures second."""
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
     parsed = json.loads(token)
@@ -484,7 +518,60 @@ def test_verify_returns_malformed_when_the_decoded_payload_is_not_json_at_all() 
 
     result = verify(json.dumps(parsed), [public_pem])
 
+    assert result.reason == NO_MATCHING_KEY
+    assert result.payload is None
+
+
+def test_verify_returns_malformed_when_a_signed_payload_is_not_json_at_all() -> None:
+    """The genuine, post-reorder `MALFORMED` case: bytes that a key in
+    `public_pems` really did sign (the signature is computed directly over
+    these exact bytes, bypassing `sign`'s own JSON-producing
+    `_canonical_bytes`), but that are not JSON at all. This can only arise
+    from our own signing mistake -- `sign` never hands RSA anything but
+    JSON-encoded bytes -- which is exactly why it is `MALFORMED` rather
+    than `NO_MATCHING_KEY`: a key did confirm these bytes, and we still
+    cannot read them."""
+    private_pem, public_pem = generate()
+    key = serialization.load_pem_private_key(private_pem.encode("ascii"), password=None)
+    assert isinstance(key, rsa.RSAPrivateKey)
+    canonical = b"not json at all"
+    signature = key.sign(canonical, padding.PKCS1v15(), hashes.SHA256())
+    token = json.dumps(
+        {
+            "v": 1,
+            "payload": base64.b64encode(canonical).decode("ascii"),
+            "signature": base64.b64encode(signature).decode("ascii"),
+        }
+    )
+
+    result = verify(token, [public_pem])
+
     assert result.reason == MALFORMED
+    assert result.payload is None
+
+
+def test_verify_returns_malformed_when_a_signed_payload_is_not_an_object() -> None:
+    """The other half of the genuine `MALFORMED` case above: the signed
+    bytes are valid JSON, just not an object -- still our own mistake, not
+    a forger's, and still confirmed by a real signature before `verify`
+    ever looks at what it says."""
+    private_pem, public_pem = generate()
+    key = serialization.load_pem_private_key(private_pem.encode("ascii"), password=None)
+    assert isinstance(key, rsa.RSAPrivateKey)
+    canonical = b"[1, 2, 3]"
+    signature = key.sign(canonical, padding.PKCS1v15(), hashes.SHA256())
+    token = json.dumps(
+        {
+            "v": 1,
+            "payload": base64.b64encode(canonical).decode("ascii"),
+            "signature": base64.b64encode(signature).decode("ascii"),
+        }
+    )
+
+    result = verify(token, [public_pem])
+
+    assert result.reason == MALFORMED
+    assert result.payload is None
 
 
 def test_verify_returns_malformed_for_an_unknown_wire_format_version() -> None:
