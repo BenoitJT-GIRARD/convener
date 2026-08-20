@@ -40,7 +40,7 @@ from convener_ops.cli import (
     validate,
 )
 from convener_ops.governance import paris_today
-from convener_ops.platform import AttendanceRow
+from convener_ops.platform import AttendanceRow, EventNotFoundError
 from convener_ops.platform_fcc import RETRIEVED_TICK, FCCRequestError, PlatformFCC
 from convener_ops.registration import (
     Registration,
@@ -1538,6 +1538,41 @@ def test_match_attendance_catches_a_platform_request_failure_too(
     assert "failed" in capsys.readouterr().err.lower()
 
 
+def test_match_attendance_catches_an_unresolved_conference_id_too(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Critical B (fix round 3): `match_attendance` never populates
+    `conference_ids` (it has no workflow to receive a `conference_id`
+    input from at all -- out of this round's own scope), so the FCC path
+    always raises `EventNotFoundError` today when it is in play, and this
+    function did not catch it -- the identical hole `issue_certificates`
+    and `reissue_certificate` had, closed the same way in all three
+    places. Asserted on the message, not only the return code, so a fix
+    that merely swallows the traceback would still fail this test."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+
+    class _FailingPlatform:
+        def get_attendance(self, event_id: str) -> list[AttendanceRow]:
+            raise EventNotFoundError(
+                f"no FCC conference is recorded for event {event_id!r}"
+            )
+
+    monkeypatch.setattr(
+        "convener_ops.cli.platform_from_env",
+        lambda *args, **kwargs: _FailingPlatform(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert match_attendance() == 1
+    assert "no FCC conference is recorded for event 'mrg-042'" in (
+        capsys.readouterr().err
+    )
+
+
 def test_match_attendance_names_tied_candidates_in_the_host_list(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1785,11 +1820,24 @@ def _certificates_register_path(tmp_path: Path, event_id: str = "mrg-042") -> Pa
     return tmp_path / "data" / "events" / event_id / "certificates.yml"
 
 
+#: Minor 2, fix round 3: `CERTIFICATE_ID` is now shape-checked
+#: (`certificate.is_valid_identifier`) before `reissue_certificate` and
+#: `revoke_certificate` do anything else with it, so every certificate id
+#: a test hands either command through this env var must have
+#: `_new_identifier`'s own shape -- 32 lowercase hex characters -- where
+#: the old, human-readable "cert-under-test" would have done just as well
+#: before this round. `_CERT_ID` is reused everywhere a test only needs
+#: *some* valid id; `_CERT_ID_OTHER` is a second, distinct one for the few
+#: tests that need two.
+_CERT_ID = "1" * 32
+_CERT_ID_OTHER = "2" * 32
+
+
 def _write_certificate_register(
     tmp_path: Path,
     event_id: str = "mrg-042",
     *,
-    identifier: str = "cert-under-test",
+    identifier: str = _CERT_ID,
     fingerprint_value: str = "f" * 64,
     state: str = "issued",
     issued_on: str = "2026-08-20",
@@ -2057,6 +2105,138 @@ def test_issue_certificates_issues_one_certificate_for_an_eligible_attendee(
     assert entry["state"] == "issued"
     assert entry["issued_on"] == paris_today(datetime.now(UTC)).isoformat()
     _assert_no_personal_data_leaked(register_text)
+
+
+# ------------------------------------------------------------------ #
+# Critical B, fix round 3: nothing populated `conference_ids` before this
+# round, so the FCC path (`CONVENER_MEETING_API_TOKEN` configured) always
+# raised `EventNotFoundError` before it ever reached the network -- task
+# 10's own review found exactly this value stubbed out of every test and
+# invisible to branch coverage for `release_recording`; the identical gap
+# existed here, unnoticed, until the re-review actually ran the wired job
+# rather than only reading it. `_FakeFCCTransport` is a minimal
+# `FCCTransport`-shaped fake for the one method `get_attendance` calls
+# (`get_json`), keyed by the exact path it is asked for -- the same
+# discipline `_FakeRecordingTransport` below uses for `release_recording`'s
+# own tests, kept separate here rather than reused across ~1200 lines of
+# this file for locality.
+# ------------------------------------------------------------------ #
+
+
+class _FakeFCCTransport:
+    def __init__(self, path: str, calls: list[dict[str, Any]]) -> None:
+        self._path = path
+        self._calls = calls
+        self.get_calls: list[str] = []
+
+    def get_json(self, path: str, token: str) -> Any:
+        self.get_calls.append(path)
+        if path != self._path:
+            raise AssertionError(f"unexpected GET {path}")
+        return self._calls
+
+
+def _fcc_call(
+    *,
+    display_name: str = "Ada Lovelace",
+    email: str = "ada@example.org",
+    start: datetime = datetime(2026, 8, 20, 18, 0, 0, tzinfo=UTC),
+    duration_seconds: int = 5400,
+) -> dict[str, Any]:
+    return {
+        "custom_name": display_name,
+        "email": email,
+        "service_types": ["voip"],
+        "time_created_utc": int(start.timestamp()),
+        "time_disconnected_utc": int(start.timestamp()) + duration_seconds,
+        "audio_duration": duration_seconds,
+        "is_host": False,
+    }
+
+
+def _patch_fcc_platform(
+    monkeypatch: pytest.MonkeyPatch, transport: _FakeFCCTransport
+) -> None:
+    def fake_platform_from_env(
+        env: Any,
+        speakers: Any = (),
+        config: Any = None,
+        conference_ids: Any = None,
+    ) -> PlatformFCC:
+        return PlatformFCC(
+            access_token="tok",
+            speakers=speakers,
+            config=config,
+            conference_ids=dict(conference_ids or {}),
+            transport=transport,  # type: ignore[arg-type]
+        )
+
+    monkeypatch.setattr("convener_ops.cli.platform_from_env", fake_platform_from_env)
+
+
+def test_issue_certificates_uses_the_conference_id_named_by_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Proves `CONVENER_FCC_CONFERENCE_ID` genuinely reaches `conference_ids`:
+    the fake transport only answers under one specific, non-hardcoded
+    path. A version of `issue_certificates` that ignores the input (builds
+    `{}` regardless, or hardcodes a different conference id) reaches the
+    wrong path -- `PlatformFCC._conference_id` then raises
+    `EventNotFoundError` for `event_id`, and this test fails on the return
+    code and the empty register alike, never silently passing."""
+    conference_id = "618515381"
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path, registrations=(ada,)
+    )
+    transport = _FakeFCCTransport(f"/conferences/{conference_id}/calls", [_fcc_call()])
+    _patch_fcc_platform(monkeypatch, transport)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("CONVENER_MEETING_API_TOKEN", "test-token")
+    monkeypatch.setenv("CONVENER_FCC_CONFERENCE_ID", conference_id)
+
+    assert issue_certificates() == 0
+    assert transport.get_calls == [f"/conferences/{conference_id}/calls"]
+    captured = capsys.readouterr()
+    assert "1 issued, 0 already on record (1 eligible)" in captured.out
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_issue_certificates_reports_cleanly_when_no_conference_id_is_configured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Critical B (fix round 3): before this round, `EventNotFoundError`
+    was not in `issue_certificates`'s own `except` tuple, so this exact
+    situation -- a token configured, no conference id for this event --
+    crashed with an unhandled traceback instead of the one-line refusal
+    `issue_certificates`'s own docstring already promised every other
+    failure. Asserted on the message, not only the return code, so a fix
+    that merely swallows the traceback without naming the reason would
+    still fail this test."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path, registrations=(ada,)
+    )
+    transport = _FakeFCCTransport("/conferences/000000/calls", [])
+    _patch_fcc_platform(monkeypatch, transport)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("CONVENER_MEETING_API_TOKEN", "test-token")
+    monkeypatch.delenv("CONVENER_FCC_CONFERENCE_ID", raising=False)
+
+    assert issue_certificates() == 1
+    assert "no FCC conference is recorded for event 'mrg-042'" in (
+        capsys.readouterr().err
+    )
+    assert transport.get_calls == []
+    assert not _certificates_register_path(tmp_path).exists()
 
 
 def test_issue_certificates_clamps_a_double_counted_duration_at_the_seminar_length(
@@ -2547,6 +2727,30 @@ def test_reissue_certificate_without_a_certificate_id_returns_1(
     assert "no certificate id supplied" in capsys.readouterr().err
 
 
+def test_reissue_certificate_refuses_a_malformed_certificate_id_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Minor 2 (fix round 3): `is_valid_identifier` refuses anything that
+    is not exactly 32 lowercase hex characters -- checked before this
+    value is ever echoed into a log line. The refusal message never
+    repeats the malformed value back (the same "no valid event id
+    supplied" idiom `eventkeys.secret_name`'s own caller already uses),
+    which also proves an embedded newline could not have reached a log
+    line through this path."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+
+    assert reissue_certificate() == 1
+    captured = capsys.readouterr()
+    assert "not a valid certificate id" in captured.err
+    assert "cert-under-test" not in captured.err
+
+
 def test_reissue_certificate_with_nothing_recorded_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2556,7 +2760,7 @@ def test_reissue_certificate_with_nothing_recorded_returns_1(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert reissue_certificate() == 1
     assert "no registrations recorded" in capsys.readouterr().err
@@ -2574,7 +2778,7 @@ def test_reissue_certificate_rejects_a_malformed_committed_registrations_file(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert reissue_certificate() == 1
     assert "registrations.enc" in capsys.readouterr().err
@@ -2601,7 +2805,7 @@ def test_reissue_certificate_refuses_when_the_certificate_id_is_not_on_record(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-never-issued")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert reissue_certificate() == 1
@@ -2623,7 +2827,7 @@ def test_reissue_certificate_with_a_missing_config_returns_1(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert reissue_certificate() == 1
     assert "config.yml" in capsys.readouterr().err
@@ -2651,10 +2855,85 @@ def test_reissue_certificate_catches_a_platform_request_failure(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert reissue_certificate() == 1
     assert "failed" in capsys.readouterr().err.lower()
+
+
+def test_reissue_certificate_uses_the_conference_id_named_by_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The reissue-side twin of `issue_certificates`'s own equivalent test
+    (Critical B, fix round 3) -- see that test's own docstring for the
+    full reasoning. `reissue_certificate` shares `_conference_ids_from_env`
+    with `issue_certificates`, so this proves the shared helper is
+    genuinely wired into both callers, not only one."""
+    conference_id = "618515381"
+    salt = "s3cr3t-salt-value"
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path, registrations=(ada,)
+    )
+    _write_certificate_register(
+        tmp_path,
+        identifier=_CERT_ID,
+        fingerprint_value=certificate_fingerprint("mrg-042", "ada@example.org", salt),
+        state="revoked",
+    )
+    transport = _FakeFCCTransport(f"/conferences/{conference_id}/calls", [_fcc_call()])
+    _patch_fcc_platform(monkeypatch, transport)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", salt)
+    monkeypatch.setenv("CONVENER_MEETING_API_TOKEN", "test-token")
+    monkeypatch.setenv("CONVENER_FCC_CONFERENCE_ID", conference_id)
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
+
+    assert reissue_certificate() == 0
+    assert transport.get_calls == [f"/conferences/{conference_id}/calls"]
+    captured = capsys.readouterr()
+    assert "reissued" in captured.out
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_reissue_certificate_reports_cleanly_when_no_conference_id_is_configured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Critical B (fix round 3): the reissue-side twin of
+    `issue_certificates`'s own equivalent test -- see that test's own
+    docstring. Before this round, this exact situation -- a token
+    configured, no conference id for this event -- crashed with an
+    unhandled traceback instead of refusing cleanly."""
+    salt = "s3cr3t-salt-value"
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path, registrations=(ada,)
+    )
+    _write_certificate_register(
+        tmp_path,
+        identifier=_CERT_ID,
+        fingerprint_value=certificate_fingerprint("mrg-042", "ada@example.org", salt),
+        state="revoked",
+    )
+    transport = _FakeFCCTransport("/conferences/000000/calls", [])
+    _patch_fcc_platform(monkeypatch, transport)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", salt)
+    monkeypatch.setenv("CONVENER_MEETING_API_TOKEN", "test-token")
+    monkeypatch.delenv("CONVENER_FCC_CONFERENCE_ID", raising=False)
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
+
+    assert reissue_certificate() == 1
+    assert "no FCC conference is recorded for event 'mrg-042'" in (
+        capsys.readouterr().err
+    )
+    assert transport.get_calls == []
 
 
 def test_reissue_certificate_refuses_when_the_certificate_id_matches_nobody_eligible(
@@ -2680,7 +2959,7 @@ def test_reissue_certificate_refuses_when_the_certificate_id_matches_nobody_elig
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert reissue_certificate() == 1
@@ -2709,7 +2988,7 @@ def test_reissue_certificate_rejects_a_malformed_committed_register(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert reissue_certificate() == 1
@@ -2740,7 +3019,7 @@ def test_reissue_certificate_rejects_a_register_of_the_wrong_version(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert reissue_certificate() == 1
@@ -2770,7 +3049,7 @@ def test_reissue_certificate_refuses_when_no_speaker_record_supplies_a_title_and
     salt = "s3cr3t-salt-value"
     _write_certificate_register(
         tmp_path,
-        identifier="cert-ada",
+        identifier=_CERT_ID,
         fingerprint_value=certificate_fingerprint("mrg-042", "ada@example.org", salt),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2778,7 +3057,7 @@ def test_reissue_certificate_refuses_when_no_speaker_record_supplies_a_title_and
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
     monkeypatch.setenv("CONVENER_MATCHING_SALT", salt)
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-ada")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert reissue_certificate() == 1
@@ -2805,7 +3084,7 @@ def test_reissue_certificate_refuses_and_names_the_parse_failure_of_speakers_yml
     salt = "s3cr3t-salt-value"
     _write_certificate_register(
         tmp_path,
-        identifier="cert-ada",
+        identifier=_CERT_ID,
         fingerprint_value=certificate_fingerprint("mrg-042", "ada@example.org", salt),
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2813,7 +3092,7 @@ def test_reissue_certificate_refuses_and_names_the_parse_failure_of_speakers_yml
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
     monkeypatch.setenv("CONVENER_MATCHING_SALT", salt)
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-ada")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert reissue_certificate() == 1
@@ -3072,6 +3351,21 @@ def test_revoke_certificate_without_a_certificate_id_returns_1(
     assert "no certificate id supplied" in capsys.readouterr().err
 
 
+def test_revoke_certificate_refuses_a_malformed_certificate_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Minor 2 (fix round 3): the same shape check `reissue_certificate`
+    applies, checked before this value could ever be echoed into a log
+    line -- see that test's own docstring for the full reasoning."""
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+
+    assert revoke_certificate() == 1
+    captured = capsys.readouterr()
+    assert "not a valid certificate id" in captured.err
+    assert "cert-under-test" not in captured.err
+
+
 def test_revoke_certificate_rejects_a_malformed_committed_register(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -3080,7 +3374,7 @@ def test_revoke_certificate_rejects_a_malformed_committed_register(
     register_path.write_text("not yaml at all: [unclosed", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert revoke_certificate() == 1
     assert "certificates.yml" in capsys.readouterr().err
@@ -3096,7 +3390,7 @@ def test_revoke_certificate_rejects_a_register_of_the_wrong_version(
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-under-test")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert revoke_certificate() == 1
     assert "certificates.yml" in capsys.readouterr().err
@@ -3109,16 +3403,41 @@ def test_revoke_certificate_refuses_an_unknown_identifier_returns_1(
     guard R-21's whole ruling turns on: unreachable from a text editor,
     reachable here. The one register row on file must come back
     unchanged."""
-    _write_certificate_register(tmp_path, identifier="cert-real")
+    _write_certificate_register(tmp_path, identifier=_CERT_ID)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-does-not-exist")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID_OTHER)
 
     assert revoke_certificate() == 1
     captured = capsys.readouterr()
     assert "cannot revoke" in captured.err
-    assert "cert-does-not-exist" in captured.err
+    assert _CERT_ID_OTHER in captured.err
     register_text = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
+    assert yaml.safe_load(register_text)["certificates"][0]["state"] == "issued"
+
+
+def test_revoke_certificate_refuses_a_row_naming_a_different_event(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Minor 1 (fix round 3), exercised through the real CLI command, not
+    only `certificate.revoke` directly (see `test_certificate.py`'s own
+    unit-level pair): `data/events/mrg-042/certificates.yml` can still
+    carry a row whose own `event_id` field names a different event --
+    `register_from_data` does not itself refuse one -- and this event's
+    own revoke command must not be able to touch it."""
+    _write_certificate_register(tmp_path, event_id="mrg-042", identifier=_CERT_ID)
+    foreign_path = _certificates_register_path(tmp_path, event_id="mrg-042")
+    data = yaml.safe_load(foreign_path.read_text(encoding="utf-8"))
+    data["certificates"][0]["event_id"] = "mrg-999"
+    foreign_path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
+
+    assert revoke_certificate() == 1
+    captured = capsys.readouterr()
+    assert "cannot revoke" in captured.err
+    register_text = foreign_path.read_text(encoding="utf-8")
     assert yaml.safe_load(register_text)["certificates"][0]["state"] == "issued"
 
 
@@ -3127,7 +3446,7 @@ def test_revoke_certificate_writes_no_file_when_it_refuses(
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-does-not-exist")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID_OTHER)
 
     assert revoke_certificate() == 1
     capsys.readouterr()
@@ -3137,20 +3456,20 @@ def test_revoke_certificate_writes_no_file_when_it_refuses(
 def test_revoke_certificate_revokes_the_named_certificate_and_returns_0(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_certificate_register(tmp_path, identifier="cert-real", state="issued")
+    _write_certificate_register(tmp_path, identifier=_CERT_ID, state="issued")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-real")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert revoke_certificate() == 0
     captured = capsys.readouterr()
-    assert "cert-real" in captured.out
+    assert _CERT_ID in captured.out
     assert "revoked" in captured.out
 
     register_text = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
     assert register_text.endswith("\n")
     [entry] = yaml.safe_load(register_text)["certificates"]
-    assert entry["identifier"] == "cert-real"
+    assert entry["identifier"] == _CERT_ID
     assert entry["state"] == "revoked"
 
 
@@ -3170,14 +3489,14 @@ def test_revoke_certificate_only_revokes_the_named_identifier(
                 "v": 1,
                 "certificates": [
                     {
-                        "identifier": "cert-a",
+                        "identifier": _CERT_ID,
                         "event_id": "mrg-042",
                         "issued_on": "2026-08-20",
                         "fingerprint": "a" * 64,
                         "state": "issued",
                     },
                     {
-                        "identifier": "cert-b",
+                        "identifier": _CERT_ID_OTHER,
                         "event_id": "mrg-042",
                         "issued_on": "2026-08-20",
                         "fingerprint": "b" * 64,
@@ -3190,7 +3509,7 @@ def test_revoke_certificate_only_revokes_the_named_identifier(
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("CERTIFICATE_ID", "cert-a")
+    monkeypatch.setenv("CERTIFICATE_ID", _CERT_ID)
 
     assert revoke_certificate() == 0
     capsys.readouterr()
@@ -3199,9 +3518,9 @@ def test_revoke_certificate_only_revokes_the_named_identifier(
         _certificates_register_path(tmp_path).read_text(encoding="utf-8")
     )["certificates"]
     by_identifier = {row["identifier"]: row for row in certificates}
-    assert by_identifier["cert-a"]["state"] == "revoked"
-    assert by_identifier["cert-b"] == {
-        "identifier": "cert-b",
+    assert by_identifier[_CERT_ID]["state"] == "revoked"
+    assert by_identifier[_CERT_ID_OTHER] == {
+        "identifier": _CERT_ID_OTHER,
         "event_id": "mrg-042",
         "issued_on": "2026-08-20",
         "fingerprint": "b" * 64,

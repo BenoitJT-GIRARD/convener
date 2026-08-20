@@ -422,8 +422,19 @@ class ManualPlatform:
     def get_attendance(self, event_id: str) -> list[AttendanceRow]:
         path = self._event_dir(event_id) / "attendance-import.csv"
         if not path.exists():
+            # Small item 2, fix round 3: named relative to the repository,
+            # never as the absolute `path` this class actually checked --
+            # that would carry CONVENER_REPO_ROOT (a CI runner's own filesystem
+            # layout, or a test's tmp_path) into a job's log for no reason,
+            # the same leak minor 5 of fix round 1 already closed for
+            # `cli.py`'s own register-path messages. `_validate_event_id`
+            # inside `_event_dir` above has already accepted `event_id` by
+            # this point, so it is safe to reuse verbatim in a relative,
+            # hand-built path rather than in `path` itself.
+            relative = Path("data") / "events" / event_id / "attendance-import.csv"
             raise AttendanceImportError(
-                f"no attendance export for event {event_id!r}: expected {path}"
+                f"no attendance export for event {event_id!r}: expected "
+                f"{relative.as_posix()}"
             )
         #: Not "utf-8" -- see the module docstring's note on the BOM a
         #: Windows or Excel-adjacent export tool commonly writes.

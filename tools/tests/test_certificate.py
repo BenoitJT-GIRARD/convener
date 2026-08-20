@@ -25,6 +25,7 @@ from convener_ops.certificate import (
     certificates_path,
     duration_hours,
     fingerprint,
+    is_valid_identifier,
     issue,
     public_register,
     register_from_data,
@@ -321,6 +322,48 @@ def test_issue_mints_a_fresh_random_identifier_each_time_no_register_matches() -
         assert all(c in "0123456789abcdef" for c in identifier)
 
 
+# ------------------------------------------------------------------ #
+# is_valid_identifier() -- minor 2, fix round 3: the same one-line shape
+# check eventkeys.secret_name already gives EVENT_ID, applied to
+# CERTIFICATE_ID before cli.py ever echoes it into a job's own log.
+# ------------------------------------------------------------------ #
+
+
+def test_is_valid_identifier_accepts_a_genuine_identifier() -> None:
+    private_pem, _ = generate()
+    result = issue(
+        _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+    assert is_valid_identifier(result.entry.identifier)
+
+
+@pytest.mark.parametrize(
+    "candidate",
+    [
+        "",
+        "abc",
+        "g" * 32,  # right length, not hex
+        "A" * 32,  # uppercase -- token_hex is always lowercase
+        "a" * 31,
+        "a" * 33,
+        "a" * 32 + "\n::add-mask::secret",
+        "a" * 16 + "\n" + "a" * 15,  # an embedded newline, right length overall
+    ],
+    ids=[
+        "empty",
+        "too-short-and-not-hex",
+        "right-length-not-hex",
+        "uppercase",
+        "one-short",
+        "one-long",
+        "trailing-junk-after-newline",
+        "embedded-newline-same-length",
+    ],
+)
+def test_is_valid_identifier_refuses_anything_else(candidate: str) -> None:
+    assert not is_valid_identifier(candidate)
+
+
 def test_issue_never_derives_the_same_identifier_twice_from_a_fresh_register() -> None:
     """Calling `issue` twice for the *same* address against two
     independent, empty registers (never told about each other) still
@@ -435,7 +478,7 @@ def test_a_revoked_certificate_still_verifies_but_reports_revoked() -> None:
         _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
     )
 
-    register = revoke((issued.entry,), issued.entry.identifier)
+    register = revoke((issued.entry,), _EVENT.event_id, issued.entry.identifier)
 
     # Half one: the signature never stopped being valid. revoke() never
     # touched the token, and could not have -- it has no signing key.
@@ -452,16 +495,49 @@ def test_a_revoked_certificate_still_verifies_but_reports_revoked() -> None:
 
 def test_revoking_an_unknown_identifier_raises() -> None:
     with pytest.raises(ValueError, match="nope"):
-        revoke((), "nope")
+        revoke((), "mrg-042", "nope")
 
 
 def test_revoke_leaves_every_other_entry_untouched() -> None:
     a = CertificateEntry("aaa", "mrg-042", date(2026, 8, 20), "fa", STATE_ISSUED)
     b = CertificateEntry("bbb", "mrg-042", date(2026, 8, 20), "fb", STATE_ISSUED)
-    register = revoke((a, b), "aaa")
+    register = revoke((a, b), "mrg-042", "aaa")
     assert register == (
         CertificateEntry("aaa", "mrg-042", date(2026, 8, 20), "fa", STATE_REVOKED),
         b,
+    )
+
+
+def test_revoke_refuses_an_identifier_that_belongs_to_a_different_event() -> None:
+    """Minor 1 (fix round 3): before this, `revoke` matched on `identifier`
+    alone, while `reissue` above already filters on `event_id` too -- two
+    commands disagreeing about what "this event's certificate" means. A
+    register merged from more than one file by mistake, or hand-edited,
+    could carry a foreign-event row that happens to share an identifier;
+    this event's own revoke must not be able to touch it."""
+    foreign = CertificateEntry(
+        "shared-id", "mrg-999", date(2026, 8, 20), "f" * 64, STATE_ISSUED
+    )
+    with pytest.raises(ValueError, match="mrg-042"):
+        revoke((foreign,), "mrg-042", "shared-id")
+
+
+def test_revoke_matches_the_right_event_when_two_share_an_identifier() -> None:
+    """The positive half of the guard above: given two entries that happen
+    to share an identifier across two different events (never possible in
+    practice -- `_new_identifier`'s 128 bits of randomness -- but the
+    register type does not itself forbid it), `revoke` must touch only the
+    row for the event it was asked about."""
+    this_event = CertificateEntry(
+        "shared-id", "mrg-042", date(2026, 8, 20), "fa", STATE_ISSUED
+    )
+    other_event = CertificateEntry(
+        "shared-id", "mrg-999", date(2026, 8, 20), "fb", STATE_ISSUED
+    )
+    register = revoke((this_event, other_event), "mrg-042", "shared-id")
+    assert register == (
+        CertificateEntry("shared-id", "mrg-042", date(2026, 8, 20), "fa", STATE_REVOKED),
+        other_event,
     )
 
 
@@ -478,7 +554,7 @@ def test_issuing_again_after_revocation_reproduces_it_without_resurrecting() -> 
     issued = issue(
         _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
     )
-    register = revoke((issued.entry,), issued.entry.identifier)
+    register = revoke((issued.entry,), _EVENT.event_id, issued.entry.identifier)
 
     [revoked_entry] = register
     replayed = issue(
@@ -537,7 +613,7 @@ def test_reissue_mints_a_new_identifier_while_the_old_row_stays_revoked() -> Non
     issued = issue(
         _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
     )
-    revoked_register = revoke((issued.entry,), issued.entry.identifier)
+    revoked_register = revoke((issued.entry,), _EVENT.event_id, issued.entry.identifier)
     [old_entry] = revoked_register
 
     corrected = reissue(

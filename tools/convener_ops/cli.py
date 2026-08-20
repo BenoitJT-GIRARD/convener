@@ -32,6 +32,7 @@ from convener_ops.certificate import (
     CertificateEvent,
     certificates_path,
     fingerprint,
+    is_valid_identifier,
     issue,
     public_register,
     register_from_data,
@@ -871,7 +872,7 @@ def match_attendance() -> int:
 
     try:
         rows = platform.get_attendance(event_id)
-    except (AttendanceImportError, FCCRequestError) as exc:
+    except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
         # Both are "the platform did not answer", from this caller's own
         # point of view -- the manual path's missing-file/malformed-header
         # failure, or the chosen platform's own network/API failure
@@ -881,6 +882,14 @@ def match_attendance() -> int:
         # Catching only the first would leave a real API outage as an
         # uncaught traceback instead of the same clean one-line failure
         # every other error path in this function already gives.
+        # `EventNotFoundError` joined the tuple in fix round 3 (Critical B):
+        # this function never populates `conference_ids` (out of this
+        # round's own scope -- it has no workflow to receive a
+        # `conference_id` input from at all), so `PlatformFCC._conference_id`
+        # always raises it today when the FCC path is in play, and it was
+        # not caught here -- the identical hole `issue_certificates` and
+        # `reissue_certificate` had, closed the same way in all three
+        # places.
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -938,6 +947,31 @@ def match_attendance() -> int:
     return 0
 
 
+def _conference_ids_from_env(event_id: str) -> dict[str, str]:
+    """`conference_ids` for `platform_from_env`, folded from
+    `CONVENER_FCC_CONFERENCE_ID` exactly the way `release_recording` already
+    does (task 10) -- Critical B, fix round 3: `issue_certificates` and
+    `reissue_certificate` both need the identical resolution, so it is
+    factored out here rather than retyped a third and fourth time, per
+    this round's own ruling ("reuse that code path rather than writing a
+    second one").
+
+    Before this round, neither `issue_certificates` nor `reissue_certificate`
+    passed any `conference_ids` at all, so `PlatformFCC._conference_id`
+    always raised `EventNotFoundError` the moment the FCC path was in play
+    -- uncaught until this same round also added `EventNotFoundError` to
+    both functions' own `except` tuples. An event with no FCC conference
+    configured is the ordinary D-13 shape either way: this returns `{}`,
+    the same "nothing to resolve" `release_recording` and
+    `discard_recording` already treat identically.
+
+    `release_recording` and `discard_recording` (task 10, a closed round)
+    keep their own inline versions rather than being rewritten to call
+    this -- not reopened here."""
+    conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
+    return {event_id: conference_id} if conference_id else {}
+
+
 def issue_certificates() -> int:
     """`convener-issue-certificates`: match this event's attendance, work out
     who is eligible (spec S:5), and issue -- or reproduce -- a certificate
@@ -948,6 +982,23 @@ def issue_certificates() -> int:
     rather than trusting a prior run's own answer, so a corrected
     registration or a corrected attendance export is picked up for free
     (spec S:8: "un appariement corrigé se recalcule sans réinscrire").
+
+    **Critical B, fix round 3.** Also reads `CONVENER_FCC_CONFERENCE_ID`
+    (`_conference_ids_from_env`, shared with `reissue_certificate`), the
+    same optional `workflow_dispatch` input `recording.yml` already gives
+    `release_recording` (task 10) -- without it, nothing ever populated
+    `conference_ids`, so the FCC path (`CONVENER_MEETING_API_TOKEN` configured)
+    could never issue a certificate at all: `PlatformFCC._conference_id`
+    raised `EventNotFoundError` before any network call, and this function
+    did not catch it. Both are fixed together here: the input is now
+    threaded through, and `EventNotFoundError` joins the exception tuple
+    below alongside `AttendanceImportError` and `FCCRequestError`. A
+    conference id is a provider identifier, not personal data -- none of
+    R-22's "never an address" reasoning applies to it, the same conclusion
+    `recording.yml`'s own header comment already reached. **The manual
+    path (no `CONVENER_MEETING_API_TOKEN`) stays blocked regardless**: its own
+    attendance export is `.gitignore`d and cannot exist in a CI checkout
+    at all -- see `docs/superpowers/deferred-work.md` entry 10.
 
     Two secrets gate whether *anything* is issued this run, checked before
     any registration is even decrypted:
@@ -1061,10 +1112,18 @@ def issue_certificates() -> int:
         )
         return 1
 
-    platform = platform_from_env(os.environ, speaker_list, cfg)
+    platform = platform_from_env(
+        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+    )
     try:
         rows = platform.get_attendance(event_id)
-    except (AttendanceImportError, FCCRequestError) as exc:
+    except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
+        # `EventNotFoundError` joined this tuple in fix round 3 (Critical
+        # B): with no `CONVENER_FCC_CONFERENCE_ID` configured for this event,
+        # `PlatformFCC._conference_id` raises it, and before this round
+        # nothing here caught it -- `issue_certificates`'s own docstring
+        # already promised every failure is "reported on one line and
+        # exit 1", and this was the one hole in that promise.
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -1241,10 +1300,22 @@ def reissue_certificate() -> int:
     refusing to resurrect a revoked certificate on a routine re-run, which
     is only true as long as reissuing never happens inside its loop.
 
-    Reads `EVENT_ID`, `EVENT_PRIVATE_KEY`, `CONVENER_SIGNING_KEY` and
-    `CONVENER_MATCHING_SALT` exactly as `convener-issue-certificates` does -- the
-    same D-13 shapes apply, for the same reasons -- plus `CERTIFICATE_ID`,
-    the certificate this run corrects (R-22, fix round 2).
+    Reads `EVENT_ID`, `EVENT_PRIVATE_KEY`, `CONVENER_SIGNING_KEY`,
+    `CONVENER_MATCHING_SALT` and `CONVENER_FCC_CONFERENCE_ID` exactly as
+    `convener-issue-certificates` does -- the same D-13 shapes, and the same
+    `_conference_ids_from_env` resolution (Critical B, fix round 3) --
+    plus `CERTIFICATE_ID`, the certificate this run corrects (R-22, fix
+    round 2).
+
+    **`CERTIFICATE_ID` is shape-checked before it is ever echoed (minor 2,
+    fix round 3).** `certificate.is_valid_identifier` -- the exact 32
+    lowercase hex characters `_new_identifier` always produces -- is
+    checked immediately after this value is read, the same one-line
+    discipline `eventkeys.secret_name` already gives `EVENT_ID`.
+    `.strip()` alone only removes a *leading or trailing* newline; an id
+    shaped `"abc\\n::add-mask::secret"` would otherwise put a GitHub
+    Actions workflow command at the start of a log line the moment this
+    function's own refusal or success message printed it back.
 
     **`CERTIFICATE_ID`, never an address (R-22).** A `workflow_dispatch`
     input is rendered on the run page and retained with the run for as
@@ -1314,6 +1385,12 @@ def reissue_certificate() -> int:
     if not certificate_id:
         print("no certificate id supplied", file=sys.stderr)
         return 1
+    if not is_valid_identifier(certificate_id):
+        # Minor 2, fix round 3: never echo a malformed value back -- the
+        # same "no valid event id supplied" idiom `eventkeys.secret_name`'s
+        # own caller above already uses for the identical reason.
+        print("not a valid certificate id supplied", file=sys.stderr)
+        return 1
 
     root = repo_root()
     rel_path = Path("data") / "events" / event_id / "registrations.enc"
@@ -1363,10 +1440,14 @@ def reissue_certificate() -> int:
         )
         return 1
 
-    platform = platform_from_env(os.environ, speaker_list, cfg)
+    platform = platform_from_env(
+        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+    )
     try:
         rows = platform.get_attendance(event_id)
-    except (AttendanceImportError, FCCRequestError) as exc:
+    except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
+        # See `issue_certificates`'s own comment on the identical
+        # `EventNotFoundError` addition (Critical B, fix round 3).
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -1467,8 +1548,10 @@ def revoke_certificate() -> int:
     Reads `EVENT_ID` and `CERTIFICATE_ID` -- both public identifiers,
     never an address (R-22; see `reissue_certificate`'s own docstring for
     why an address is never accepted by any command in this module that a
-    `workflow_dispatch` form could expose). Needs no signing key and no
-    matching salt: revocation touches the register alone
+    `workflow_dispatch` form could expose). `CERTIFICATE_ID` is
+    shape-checked the same way `reissue_certificate` checks it (minor 2,
+    fix round 3) -- see that function's own docstring for why. Needs no
+    signing key and no matching salt: revocation touches the register alone
     (`certificate.py`'s own "revocation touches the register, never the
     signature" section) -- the token a revoked certificate's holder
     carries keeps verifying forever; only the register's own `state`
@@ -1485,6 +1568,9 @@ def revoke_certificate() -> int:
     if not certificate_id:
         print("no certificate id supplied", file=sys.stderr)
         return 1
+    if not is_valid_identifier(certificate_id):
+        print("not a valid certificate id supplied", file=sys.stderr)
+        return 1
 
     root = repo_root()
     loaded_register = _load_certificate_register(root, event_id)
@@ -1493,7 +1579,12 @@ def revoke_certificate() -> int:
     register_path, existing = loaded_register
 
     try:
-        updated = revoke(existing, certificate_id)
+        # `event_id` is passed alongside `certificate_id` since fix round
+        # 3 (minor 1): `revoke` now filters on both, the same "this
+        # event's own certificate" `reissue` already required, rather than
+        # matching an identifier alone across whatever `existing` happens
+        # to hold.
+        updated = revoke(existing, event_id, certificate_id)
     except ValueError as exc:
         print(f"cannot revoke for event {event_id}: {exc}", file=sys.stderr)
         return 1

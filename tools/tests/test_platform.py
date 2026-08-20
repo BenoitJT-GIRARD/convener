@@ -295,6 +295,24 @@ def test_missing_attendance_file_raises_and_names_the_event(tmp_path: Path) -> N
         _platform(tmp_path).get_attendance("mrg-915")
 
 
+def test_missing_attendance_file_message_does_not_leak_the_repository_root(
+    tmp_path: Path,
+) -> None:
+    """Small item 2 (fix round 3): the message used to interpolate the
+    absolute `path` this class actually checked, which carries
+    `CONVENER_REPO_ROOT` -- here, `tmp_path` itself, standing in for a CI
+    runner's own filesystem layout -- into a job's own log for no reason,
+    the same leak minor 5 of fix round 1 already closed for `cli.py`'s own
+    register-path messages. Only the repository-relative form should ever
+    appear; `tmp_path`'s own absolute string must not."""
+    with pytest.raises(AttendanceImportError) as excinfo:
+        _platform(tmp_path).get_attendance("mrg-918")
+
+    message = str(excinfo.value)
+    assert str(tmp_path) not in message
+    assert "data/events/mrg-918/attendance-import.csv" in message
+
+
 def test_missing_column_raises_and_names_it(tmp_path: Path) -> None:
     event_dir = tmp_path / "events" / "mrg-916"
     event_dir.mkdir(parents=True)

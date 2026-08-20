@@ -349,6 +349,7 @@ check themselves against instead.
 from __future__ import annotations
 
 import hmac
+import re
 import secrets
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
@@ -445,6 +446,31 @@ _ENTRY_FIELDS: Final = frozenset(
 #: nothing about it needs to be short or unambiguous by ear.
 _IDENTIFIER_BYTES: Final = 16
 
+#: `_new_identifier`'s own output shape, by construction: `token_hex(16)`
+#: is always exactly 32 lowercase hex characters. Minor 2, fix round 3:
+#: `CERTIFICATE_ID` reaches `cli.py::reissue_certificate` and
+#: `cli.py::revoke_certificate` straight from an operator's own
+#: `workflow_dispatch` input, validated by nothing before this, and echoed
+#: into the job's own log once a lookup succeeds. `.strip()` alone removes
+#: a *leading or trailing* newline but not one embedded in the middle, so
+#: an id shaped `"abc\n::add-mask::secret"` would put a GitHub Actions
+#: workflow command at the start of a log line -- the same class of gap
+#: `eventkeys.secret_name` already closes for `EVENT_ID` with its own
+#: one-line shape check (`_EVENT_ID_RE.fullmatch`, which a value carrying
+#: an embedded newline also fails, since the token alphabet admits none).
+_CERTIFICATE_ID_RE: Final = re.compile(r"^[0-9a-f]{32}$")
+
+
+def is_valid_identifier(identifier: str) -> bool:
+    """Whether `identifier` has the exact shape `_new_identifier` produces
+    -- 32 lowercase hex characters, nothing more, nothing embedded. Callers
+    that read a certificate id from an untrusted source (an operator's own
+    `workflow_dispatch` input, in practice) call this immediately, before
+    that value is ever echoed into a log line -- see this module's own
+    `_CERTIFICATE_ID_RE` for the guard this checks."""
+    return bool(_CERTIFICATE_ID_RE.fullmatch(identifier))
+
+
 #: This derivation's own domain -- see the module docstring's "fingerprint
 #: domain" section for why this exists at all: `registration.matching_code`
 #: already claims `CONVENER_MATCHING_SALT` for one HMAC input space, and this is
@@ -490,9 +516,10 @@ class CertificateEntry:
     though `certificates.yml` already lives at
     `data/events/<event_id>/certificates.yml`: it is what lets
     `public_register`'s aggregation over *every* event's file still be
-    traced back to the right one internally, and what lets `issue` refuse
-    to match a fingerprint against the wrong event's entry if a caller ever
-    hands it a register merged from more than one file by mistake."""
+    traced back to the right one internally, and what lets `issue`, `reissue`
+    and `revoke` (fix round 3) all refuse to match against the wrong
+    event's entry if a caller ever hands one of them a register merged
+    from more than one file by mistake."""
 
     identifier: str
     event_id: str
@@ -768,23 +795,46 @@ def reissue(
 
 
 def revoke(
-    existing: Sequence[CertificateEntry], identifier: str
+    existing: Sequence[CertificateEntry], event_id: str, identifier: str
 ) -> tuple[CertificateEntry, ...]:
-    """`existing`, with the entry named by `identifier` marked
-    `STATE_REVOKED` -- see the module docstring's "revocation touches the
-    register, never the signature" section for why this function has no
-    signing key parameter at all and cannot touch the token a revoked
-    certificate's holder still carries.
+    """`existing`, with the entry named by `identifier` **for `event_id`**
+    marked `STATE_REVOKED` -- see the module docstring's "revocation
+    touches the register, never the signature" section for why this
+    function has no signing key parameter at all and cannot touch the
+    token a revoked certificate's holder still carries.
 
-    Raises `ValueError` naming `identifier` when no entry in `existing`
-    carries it -- revoking a certificate that was never issued is a
-    caller mistake worth surfacing, not a silent no-op. Every other entry
-    is returned unchanged, in its original order and as the same object
-    (dataclasses are immutable, so there is nothing to copy defensively)."""
-    if not any(entry.identifier == identifier for entry in existing):
-        raise ValueError(f"no certificate {identifier!r} in this register")
+    Filters on `event_id` too, not on `identifier` alone (minor 1, fix
+    round 3): `reissue` above already requires both
+    (`entry.event_id == event.event_id and entry.fingerprint ==
+    entry_fingerprint`) precisely because `existing` is not guaranteed to
+    hold only this event's own rows -- a register merged from more than
+    one file by mistake, or hand-edited, could carry a foreign-event row
+    that happens to share an identifier. Before this, `revoke` was the one
+    command in this module that disagreed with `reissue` about what "this
+    event's certificate" means; two commands answering that question
+    differently is exactly the kind of drift this module is otherwise
+    careful about. `identifier` alone is already effectively unique
+    (`_new_identifier`'s 128 bits of randomness), so this changes no
+    ordinary call's outcome -- it only closes a case that should never
+    have mattered but, until now, silently could have.
+
+    Raises `ValueError` naming both `identifier` and `event_id` when no
+    entry in `existing` carries that exact pair -- revoking a certificate
+    that was never issued for this event is a caller mistake worth
+    surfacing, not a silent no-op. Every other entry is returned
+    unchanged, in its original order and as the same object (dataclasses
+    are immutable, so there is nothing to copy defensively)."""
+    if not any(
+        entry.event_id == event_id and entry.identifier == identifier
+        for entry in existing
+    ):
+        raise ValueError(
+            f"no certificate {identifier!r} on record for event {event_id!r}"
+        )
     return tuple(
-        replace(entry, state=STATE_REVOKED) if entry.identifier == identifier else entry
+        replace(entry, state=STATE_REVOKED)
+        if entry.event_id == event_id and entry.identifier == identifier
+        else entry
         for entry in existing
     )
 
