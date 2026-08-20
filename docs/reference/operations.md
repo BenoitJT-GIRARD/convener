@@ -2,7 +2,9 @@
 
 Everything the *application code* needs from the outside world. Each
 integration is optional: without it the feature degrades visibly and
-nothing breaks.
+nothing breaks -- with one exception, *Event registration keys* below,
+which fails closed rather than degrading, because what it protects is
+personal data rather than a feature.
 
 Run `cd tools && uv run convener-check-config` at any time to see what is
 configured and what is still waiting. That declaration
@@ -243,6 +245,55 @@ address, affiliation, country, talk title or board login is ever included —
 notifications* moves from `absent` to `production`. Run
 `uv run convener-notify-digest --dry-run` to read the day's message without
 sending anything.
+
+## Event registration keys
+
+**Without it:** there is no fallback, and this row means something
+different from every other one on this page. A registration page cannot
+encrypt without the event's *public* half, and a job cannot decrypt without
+its *private* half — and unlike an absent SMTP host or an absent meeting
+token, there is no degraded mode a missing key falls back to. The job that
+would decrypt an event's registrations exits in error instead, rather than
+writing personal data to disk unencrypted for want of a key. See
+`tools/convener_ops/eventkeys.py` for the full reasoning, including why this is
+the one place in this codebase where an absent integration (D-13) is not
+treated as a normal state.
+
+**To create:** for each event that will take registrations, generate a
+fresh key pair (`convener_ops.eventkeys.generate()`) — never reuse one event's
+pair for another, since a per-event key that read another event's data
+would not be a per-event key at all.
+
+1. Commit the public half as `keys/events/<event id>.pub`. This is not a
+   secret: it is what lets the static registration page encrypt in the
+   browser without asking a server for anything first.
+2. Store the private half as the repository secret
+   `CONVENER_EVENT_KEY_<EVENT ID>` (the event id, uppercased). Never commit it,
+   never write it to a file outside a CI job's environment, and never let
+   it appear in a job log.
+
+**Secrets to set:** `CONVENER_EVENT_KEY_<EVENT ID>`, one per event, set only for
+as long as that event's registrations need decrypting.
+
+**To verify:** run `cd tools && uv run convener-check-config`; *Event
+registration encryption* is always reported `absent` here, on every
+machine, because the declared name is a pattern (`CONVENER_EVENT_KEY_<ID>`) and
+not a literal secret — the real per-event check happens inside the job that
+decrypts that event's registrations, not in this general-purpose report.
+
+**Destroying a key:** at the end of an event's retention window (see the
+phase 4 spec, §4), remove `CONVENER_EVENT_KEY_<EVENT ID>` from the repository's
+secrets. The encrypted registrations already committed under
+`data/events/<event id>/` stay in git, with no history rewrite, and become
+permanently unreadable the moment the secret is gone — nothing else needs
+to happen to the repository itself. Record the destruction
+(`convener_ops.eventkeys.destroy`) so the register can tell "destroyed on purpose" apart
+from "this event never had a key" two years from now — the two look
+identical from the repository alone, and only the register carries the
+difference. A scheduled retention workflow (see phase 4) is meant to wire
+this up so removing the secret and recording the destruction happen
+together; done by hand, it is these two steps, always together, in that
+order.
 
 ## CI-only secrets
 

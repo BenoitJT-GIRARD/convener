@@ -37,3 +37,4 @@ Segoe
 HMAC
 redeployable
 redeployability
+eventkeys
