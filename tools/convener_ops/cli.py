@@ -23,8 +23,18 @@ from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
-from convener_ops.platform import AttendanceImportError, Room
-from convener_ops.platform_fcc import FCCRequestError, platform_from_env
+from convener_ops.platform import (
+    AttendanceImportError,
+    EventNotFoundError,
+    Room,
+    find_speaker,
+)
+from convener_ops.platform_fcc import (
+    FCCRequestError,
+    PlatformFCC,
+    missing_retrieval_evidence,
+    platform_from_env,
+)
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
 from convener_ops.register import (
@@ -897,6 +907,148 @@ def match_attendance() -> int:
     else:
         unmatched_path.unlink(missing_ok=True)
 
+    return 0
+
+
+def release_recording() -> int:
+    """`convener-release-recording`: retrieve, verify the retrieval, then
+    delete -- the one place in this whole package allowed to call
+    `Platform.delete_recording` (pinned by
+    `tools/tests/test_cli.py::test_delete_recording_has_exactly_one_call_site_in_the_whole_package`).
+    `delete_recording` exists because of the chosen platform's
+    storage quota (spec Section 2/9: a 90-minute recording costs roughly
+    1.6x the free tier's entire 1 GB allowance) -- freeing it after every
+    event is a condition of operation, not an optimisation, and getting
+    the order wrong loses a recording forever.
+
+    The order is not negotiable, and it is not a comment above a function
+    call -- it is the only order this function's own control flow can
+    produce: `platform.get_recording` is called, then
+    `missing_retrieval_evidence` is checked and must come back empty, and
+    only then is `platform.delete_recording` reached. Every early return
+    above that call -- a bad or unknown event id, a data file that will
+    not load, no meeting-platform account configured, nothing currently
+    recorded, or evidence still missing -- exits before it, never after.
+
+    "Verified" means two independent, host-driven traces
+    (`missing_retrieval_evidence`'s own docstring gives the full
+    reasoning): `youtube_url` pasted onto the event's speaker record, and
+    a successful, body-free `HEAD` confirming the provider's own converted
+    copy is reachable -- proof the host's own Download click already
+    happened. This function never downloads the recording itself, and
+    calls nothing that could trigger a conversion -- see
+    `platform_fcc.py`'s module docstring for why that matters even more
+    for the (never converted, never published) discussion segment than
+    for the talk.
+
+    The quota is checked *after* deletion, deliberately (spec Section 9:
+    "alerte si l'espace reste occupe"), because a saturated quota breaks
+    the *next* session's recording -- discovered on the far side of a
+    month otherwise. `platform.get_recording` is called a second time
+    once `delete_recording` returns; if it still reports the recording
+    `available`, this prints a `::error::`-prefixed line (surfaced by
+    GitHub Actions in the run's own summary, not merely a stray line in a
+    log nobody reads) and returns 1 -- a signal, not silence.
+
+    `CONVENER_FCC_CONFERENCE_ID` is `platform_fcc.py`'s open seam
+    (`conference_ids`, "the one thing this module does not attempt" to
+    resolve on its own) filled in the simplest available way: typed once,
+    by the human running `.github/workflows/recording.yml`'s
+    `workflow_dispatch`, for the one event that run is about -- never a
+    persisted mapping, never resolved from an unverified listing
+    endpoint.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    if errors or cfg_errors:
+        for error in errors + cfg_errors:
+            print(f"  - {error}")
+        return 1
+    speaker_list = speakers if isinstance(speakers, list) else []
+    config_map = cfg if isinstance(cfg, dict) else None
+
+    try:
+        record = find_speaker(speaker_list, event_id)
+    except EventNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    youtube_url = str(record.get("youtube_url", "") or "")
+
+    conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
+    conference_ids = {event_id: conference_id} if conference_id else {}
+    platform = platform_from_env(os.environ, speaker_list, config_map, conference_ids)
+
+    if not isinstance(platform, PlatformFCC):
+        # D-13: no account configured is the ordinary state. The manual
+        # implementation holds no recording storage of its own
+        # (`ManualPlatform.delete_recording`'s own docstring), so there is
+        # nothing here to retrieve, verify or free.
+        print(
+            f"no meeting-platform account is configured for event {event_id} "
+            "-- the manual implementation holds no recording storage of "
+            "its own, so there is nothing to release"
+        )
+        return 0
+
+    try:
+        recording = platform.get_recording(event_id)
+    except (EventNotFoundError, FCCRequestError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    if not recording.available:
+        print(
+            f"no recording is currently held for event {event_id} -- nothing to release"
+        )
+        return 0
+
+    problems = missing_retrieval_evidence(platform, recording, youtube_url)
+    if problems:
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        print(
+            f"recording for event {event_id} was NOT deleted -- retrieval "
+            "is not yet confirmed",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        platform.delete_recording(event_id)
+    except (EventNotFoundError, FCCRequestError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    try:
+        after = platform.get_recording(event_id)
+    except (EventNotFoundError, FCCRequestError) as exc:
+        print(
+            f"recording for event {event_id} was deleted, but the freed "
+            f"space could not be confirmed: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if after.available:
+        print(
+            f"::error::space for event {event_id} is still occupied after "
+            "deletion -- the next session's recording may fail",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(
+        f"recording for event {event_id} retrieved, verified, and released "
+        f"({recording.size} bytes freed)"
+    )
     return 0
 
 

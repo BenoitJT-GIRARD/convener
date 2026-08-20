@@ -21,6 +21,8 @@ from convener_ops.platform_fcc import (
     FCCRequestError,
     PlatformFCC,
     _UrllibTransport,
+    converted_recording_is_reachable,
+    missing_retrieval_evidence,
     platform_from_env,
 )
 
@@ -131,11 +133,14 @@ class FakeTransport:
         self,
         get_responses: Mapping[str, Any] | None = None,
         get_errors: Mapping[str, Exception] | None = None,
+        exists_responses: Mapping[str, bool] | None = None,
     ) -> None:
         self.get_responses = dict(get_responses or {})
         self.get_errors = dict(get_errors or {})
+        self.exists_responses = dict(exists_responses or {})
         self.get_calls: list[tuple[str, str]] = []
         self.delete_calls: list[tuple[str, str]] = []
+        self.exists_calls: list[str] = []
 
     def get_json(self, path: str, token: str) -> Any:
         self.get_calls.append((path, token))
@@ -147,6 +152,10 @@ class FakeTransport:
 
     def delete(self, path: str, token: str) -> None:
         self.delete_calls.append((path, token))
+
+    def exists(self, url: str) -> bool:
+        self.exists_calls.append(url)
+        return self.exists_responses.get(url, False)
 
 
 def _speaker(**overrides: Any) -> dict[str, Any]:
@@ -590,6 +599,139 @@ def test_get_recording_raises_when_the_event_has_no_recorded_conference() -> Non
 
 
 # ------------------------------------------------------------------ #
+# converted_recording_is_reachable / missing_retrieval_evidence -- task
+# 10's whole answer to "what does verified retrieval mean". Two
+# independent, host-driven traces: youtube_url on the speaker record, and
+# a successful open of the converted recording at the provider. Neither
+# function here ever calls get_recording or delete_recording itself --
+# the caller (cli.py::release_recording) already holds `recording` from
+# its own earlier call, and decides what to do with the result.
+# ------------------------------------------------------------------ #
+
+
+def test_converted_recording_is_reachable_when_the_transport_confirms_it() -> None:
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
+    )
+
+    assert converted_recording_is_reachable(recording, transport) is True
+
+
+def test_converted_recording_is_reachable_checks_the_video_mp4_suffix() -> None:
+    """Verified empirically (phase-4-prep-notes.md, 2026-08-19): the
+    pattern is `recording_url + ".video.mp4"`, not `.mp4` alone."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport()
+
+    converted_recording_is_reachable(recording, transport)
+
+    assert transport.exists_calls == ["https://cdn.example.org/rec/618515381.video.mp4"]
+
+
+def test_converted_recording_is_reachable_is_false_when_the_transport_denies_it() -> (
+    None
+):
+    """An untouched recording's `.video.mp4` answers 404 -- verified
+    empirically. The host has not clicked Download yet."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(exists_responses={})
+
+    assert converted_recording_is_reachable(recording, transport) is False
+
+
+def test_converted_recording_is_reachable_is_false_with_no_recording_url() -> None:
+    """Nothing to check when the provider never reported a `recording_url`
+    at all -- there is no converted artefact that could be reachable."""
+    recording = Recording(url="", size=0, available=False)
+    transport = FakeTransport()
+
+    assert converted_recording_is_reachable(recording, transport) is False
+    assert transport.exists_calls == []
+
+
+def test_missing_retrieval_evidence_is_empty_when_both_traces_agree() -> None:
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
+    )
+    platform = _platform(transport=transport)
+
+    problems = missing_retrieval_evidence(
+        platform, recording, "https://youtu.be/abc123"
+    )
+
+    assert problems == []
+
+
+def test_missing_retrieval_evidence_names_a_missing_youtube_url() -> None:
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
+    )
+    platform = _platform(transport=transport)
+
+    problems = missing_retrieval_evidence(platform, recording, "")
+
+    assert len(problems) == 1
+    assert "youtube_url" in problems[0]
+
+
+def test_missing_retrieval_evidence_names_an_unreached_conversion() -> None:
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    platform = _platform(transport=FakeTransport())
+
+    problems = missing_retrieval_evidence(
+        platform, recording, "https://youtu.be/abc123"
+    )
+
+    assert len(problems) == 1
+    assert "converted recording" in problems[0]
+
+
+def test_missing_retrieval_evidence_names_both_when_neither_trace_agrees() -> None:
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    platform = _platform(transport=FakeTransport())
+
+    problems = missing_retrieval_evidence(platform, recording, "")
+
+    assert len(problems) == 2
+
+
+def test_missing_retrieval_evidence_never_calls_get_json_or_delete() -> None:
+    """The whole point of this function: it only reads what the caller
+    already holds (`recording`, `youtube_url`) and the transport's
+    existence check -- it never itself asks the platform for anything, and
+    it never deletes anything."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
+    )
+    platform = _platform(transport=transport)
+
+    missing_retrieval_evidence(platform, recording, "https://youtu.be/abc123")
+
+    assert transport.get_calls == []
+    assert transport.delete_calls == []
+
+
+# ------------------------------------------------------------------ #
 # _UrllibTransport -- the real HTTP implementation. Still no socket: every
 # test below substitutes `urllib.request.urlopen` itself via monkeypatch,
 # the same technique that keeps the rest of this suite off the network,
@@ -598,8 +740,9 @@ def test_get_recording_raises_when_the_event_has_no_recorded_conference() -> Non
 
 
 class _FakeHTTPResponse:
-    def __init__(self, body: bytes) -> None:
+    def __init__(self, body: bytes, status: int = 200) -> None:
         self._body = body
+        self.status = status
 
     def read(self) -> bytes:
         return self._body
@@ -689,6 +832,88 @@ def test_urllib_transport_maps_invalid_json_to_fcc_request_error(
 
     with pytest.raises(FCCRequestError, match="valid JSON"):
         _UrllibTransport().get_json("/conferences/1/calls", "tok")
+
+
+# ------------------------------------------------------------------ #
+# _UrllibTransport.exists -- task 10's HEAD check. No socket, and no
+# Authorization header (the recording's own media URLs need none,
+# verified empirically): a caller must not send the bearer token to an
+# address it did not build from base_url itself.
+# ------------------------------------------------------------------ #
+
+
+def test_urllib_transport_exists_sends_a_head_request_with_no_auth_header(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        captured["url"] = request.full_url
+        captured["method"] = request.get_method()
+        captured["authorization"] = request.get_header("Authorization")
+        return _FakeHTTPResponse(b"", status=200)
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    result = _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4")
+
+    assert result is True
+    assert captured["url"] == "https://cdn.example.org/rec/1.video.mp4"
+    assert captured["method"] == "HEAD"
+    assert captured["authorization"] is None
+
+
+def test_urllib_transport_exists_reads_no_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The whole point: never download any part of the recording."""
+
+    class _ExplodingBodyResponse(_FakeHTTPResponse):
+        def read(self) -> bytes:
+            raise AssertionError("exists() must never read a response body")
+
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _ExplodingBodyResponse(b"", status=200)
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    assert _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4") is True
+
+
+def test_urllib_transport_exists_is_false_on_a_404(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verified empirically: an untouched recording's `.video.mp4`
+    answers 404."""
+
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.HTTPError(
+            request.full_url, 404, "Not Found", Message(), None
+        )
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    assert _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4") is False
+
+
+def test_urllib_transport_exists_is_false_on_a_network_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    assert _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4") is False
+
+
+def test_urllib_transport_exists_is_false_and_never_opens_a_non_https_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise AssertionError("a non-https URL must never be opened")
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    assert _UrllibTransport().exists("http://cdn.example.org/rec/1.video.mp4") is False
 
 
 # ------------------------------------------------------------------ #

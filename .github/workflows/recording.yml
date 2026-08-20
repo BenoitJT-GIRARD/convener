@@ -1,0 +1,70 @@
+name: Release a recording
+
+# Task 10 (D-05, spec Section 2/9): retrieve, verify the retrieval, then
+# delete -- freeing the meeting provider's ~1 GB free quota, which a
+# 90-minute recording alone consumes 1.6x over on its own
+# (phase-4-prep-notes.md, 2026-08-19). `convener-release-recording` is the one
+# place in the whole tools/ package allowed to call
+# `Platform.delete_recording`, and it refuses unless both the event's
+# `youtube_url` is set and the provider's own converted recording is
+# reachable -- see tools/convener_ops/platform_fcc.py's module docstring for
+# the full reasoning and tools/convener_ops/cli.py::release_recording's own
+# docstring for the order this enforces.
+#
+# This workflow never downloads the recording and never triggers a
+# conversion -- both are the host's own actions, done by hand once, in
+# FreeConferenceCall's and YouTube's own web interfaces (Download, then
+# upload), before this run is ever started.
+#
+# `conference_id` is the hand-maintained mapping platform_fcc.py's own
+# module docstring names as "the one thing this module does not attempt"
+# to resolve on its own (no listing endpoint was ever verified) -- supplied
+# here in its simplest form: typed once, by the human who already has to
+# look at FreeConferenceCall's own web interface to trigger this run, for
+# the one event it is about.
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Event id, exactly as published (e.g. mrg-042)'
+        required: true
+        type: string
+      conference_id:
+        description: >-
+          The FreeConferenceCall conference id for this event (visible in
+          its own web-interface URL for the conference).
+        required: true
+        type: string
+
+# A second run for the same event, started while one is still in flight,
+# must never race the first through get_recording / delete_recording /
+# get_recording again -- queued, not cancelled: a run mid-delete must
+# finish, never be cut off with the recording gone but the confirmation
+# never read.
+concurrency:
+  group: recording-${{ inputs.event_id }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Checkout, `uv sync`, one attendance-free GET/GET/DELETE/GET cycle
+    # against the provider -- generous.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Retrieve, verify, then release the recording
+        working-directory: tools
+        env:
+          EVENT_ID: ${{ inputs.event_id }}
+          CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
+          # Absent is D-13's ordinary state: with no token configured,
+          # convener-release-recording finds the manual implementation instead,
+          # which holds no recording storage of its own, and exits 0.
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+        run: uv run convener-release-recording

@@ -132,13 +132,55 @@ what the provider says about the conference's recording (`recording_url`,
 `DELETE /conferences/{id}`, verified to remove the recording while leaving
 the conference record and every `/calls` row intact -- but the deletion
 itself is real and irreversible, with no confirmation parameter and no
-precondition, see its own docstring. What this module does *not* do is
-decide **when** it is safe to call it -- never before the host's own
-downloaded copy is confirmed to exist, the ordering a later task's own
-step names as non-negotiable. `Platform`'s four-method shape is fixed by
-task 2, so that sequencing cannot live in this method's signature; it is
-the caller's job, carried into a later task as a structural guard at the
-call site, not a weak analogy to anything this module already does.
+precondition, see its own docstring. Neither method decides **when** it is
+safe to call `delete_recording` -- `Platform`'s four-method shape is fixed
+by task 2, so that sequencing cannot live in either method's signature.
+
+Verifying retrieval before delete_recording (task 10)
+-------------------------------------------------------
+`missing_retrieval_evidence` below is the sequencing task 3 deferred: the
+caller-side check that must come back empty before `delete_recording` may
+be invoked at all. Its own docstring gives the full reasoning; the
+governing choice, stated once here, is that "verified" means **two
+independent traces, neither producible by this module or by any code path
+in this repository, only by the host's own hands**:
+
+1. `youtube_url` is set on the event's own speaker record -- the address
+   the host pastes by hand once the upload finishes. Cheap to check (no
+   network call at all, the same already-loaded speaker record every
+   other method here reads), but alone it is only a claim: nothing stops
+   a stray or premature value from sitting in that field.
+2. `converted_recording_is_reachable` confirms, independently, that the
+   provider's own side shows a *successful open* of the converted
+   recording -- proof the host's Download click actually happened, not
+   merely that someone typed an address somewhere. This is deliberately
+   the stronger of the two, per the reasoning task 10's own brief asked
+   for: a byte count and a checksum are unavailable (this module never
+   downloads the recording, and holds no local copy to hash or count);
+   a bare "the platform still reports it as available" proves the
+   *source* still has the file, never that anyone retrieved a copy of
+   it. A successful open of the *converted* artefact is the strongest
+   signal obtainable without downloading anything or trusting a
+   human-typed field on its own.
+
+**Never trigger a conversion.** Neither this check nor anything else in
+this module ever requests one: verified empirically, an untouched
+recording's `<recording_url>.video.mp4` answers 404, and merely asking
+for it (a `HEAD` request, reading no body) does not change that --
+conversion only ever starts from the host's own click inside
+FreeConferenceCall's web interface, a UI action this codebase has no
+route to and never will. This matters beyond correctness: a converted
+recording stays publicly reachable at that address **even after the
+conference itself is deleted** (verified empirically), which is harmless
+for a talk (already destined for YouTube) and never acceptable for the
+unpublished discussion segment. No function here can cause that; the only
+human action that can is the host's, by hand, once, deliberately.
+
+The single call site is `cli.py::release_recording` -- `Platform`'s shape
+is fixed by task 2, so the guard cannot live in `delete_recording`'s own
+signature, and `tools/tests/test_cli.py` pins that it is the *only* place
+in the whole package that calls `delete_recording` at all, immediately
+after `missing_retrieval_evidence` has already come back empty.
 
 No transport is exercised by a test
 -------------------------------------
@@ -192,14 +234,18 @@ class FCCRequestError(Exception):
 
 class FCCTransport(Protocol):
     """What `PlatformFCC` needs from an HTTP client: one authenticated GET
-    that returns parsed JSON, one authenticated DELETE. The real
-    implementation (`_UrllibTransport`) wraps `urllib.request`; every test
-    substitutes a fake, which is what keeps this whole suite off the
+    that returns parsed JSON, one authenticated DELETE, and one
+    unauthenticated existence check against an arbitrary absolute URL
+    (task 10's `exists` -- see `converted_recording_is_reachable`). The
+    real implementation (`_UrllibTransport`) wraps `urllib.request`; every
+    test substitutes a fake, which is what keeps this whole suite off the
     network (task 3 brief, step 2)."""
 
     def get_json(self, path: str, token: str) -> Any: ...
 
     def delete(self, path: str, token: str) -> None: ...
+
+    def exists(self, url: str) -> bool: ...
 
 
 @dataclass(frozen=True)
@@ -244,6 +290,49 @@ class _UrllibTransport:
 
     def delete(self, path: str, token: str) -> None:
         self._request(path, token, "DELETE")
+
+    def exists(self, url: str) -> bool:
+        """Whether `url` -- an absolute address the provider's own API
+        already returned in a prior response, never built from anything a
+        caller typed -- answers with a successful status. The one caller
+        (`converted_recording_is_reachable`) uses this to check whether the
+        host's own Download click in FreeConferenceCall's web interface has
+        already happened; this method reads no response body, ever, so it
+        never pulls any part of a multi-hundred-megabyte recording across
+        the wire, and issuing it triggers nothing on the provider's side --
+        see the module docstring's "never trigger a conversion" section.
+
+        No `Authorization` header: `url` is not necessarily under
+        `base_url` (the recording's own media URLs are public, verified to
+        need no token -- phase-4-prep-notes.md, 2026-08-19), and this class
+        never sends the bearer token to an address it did not build from
+        `base_url` itself.
+
+        Any failure -- a non-2xx status, a network error, a timeout, a
+        non-`https` address -- reads as `False`, the same "not yet" a
+        genuinely unconverted recording answers with. A caller deciding
+        whether to delete something irreversible must never be able to
+        mistake "this check itself broke" for "verified".
+        """
+        if not url.startswith("https://"):
+            return False
+        request = urllib.request.Request(url, method="HEAD")
+        try:
+            # `url` is validated https-only immediately above, and always
+            # originates from this same class's own prior authenticated GET
+            # to the provider's fixed `base_url` -- never from anything a
+            # caller typed -- so this is not the "URL built from unchecked
+            # input" bandit's urlopen check (B310) exists to catch.
+            with urllib.request.urlopen(  # nosec B310
+                request, timeout=self.timeout
+            ) as response:
+                return bool(200 <= response.status < 300)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            # urllib.error.HTTPError subclasses URLError, so a non-2xx
+            # status (404 on an unconverted recording, verified empirically)
+            # is caught here too, alongside a genuine network failure --
+            # both read as "not yet", never as a crash.
+            return False
 
 
 def _iso_utc(epoch_seconds: Any) -> str:
@@ -431,10 +520,89 @@ class PlatformFCC:
         retrieved before invoking this method.** Deciding how, and on what
         evidence, is deliberately not this method's job: `Platform`'s
         four-method shape is fixed by task 2 and this class does not
-        extend it, so the structural guard belongs at the call site, in a
-        later task, not in this primitive."""
+        extend it, so the structural guard lives at the call site instead
+        -- `missing_retrieval_evidence` below, and `cli.py::release_recording`,
+        the one place in this package that is allowed to call this
+        method at all (pinned by
+        `tools/tests/test_cli.py::test_delete_recording_has_exactly_one_call_site_in_the_whole_package`)."""
         conference_id = self._conference_id(event_id)
         self.transport.delete(f"/conferences/{conference_id}", self.access_token)
+
+
+def converted_recording_is_reachable(
+    recording: Recording, transport: FCCTransport
+) -> bool:
+    """Whether the recording's converted MP4 already exists at the
+    provider's own storage -- the stronger of the two independent traces
+    `missing_retrieval_evidence` requires before `delete_recording` may be
+    called (see that function, and the module docstring's "Verifying
+    retrieval before delete_recording" section for the full reasoning).
+
+    Verified empirically (phase-4-prep-notes.md, 2026-08-19): an untouched
+    recording's `<recording_url>.video.mp4` answers 404; once the host has
+    clicked Download in FreeConferenceCall's own web interface, the same
+    address answers 200, content type `video/mp4`, no token required --
+    and stays reachable there even after the conference's own recording is
+    later deleted through this module (also verified). That is proof the
+    host's own click already happened; nothing here can trigger it -- the
+    check reads no body, and hitting this address was itself confirmed,
+    against a real untouched recording, to leave it untouched (still 404
+    afterwards, never converted by the mere asking).
+
+    `recording.url` with no `recording_url` reported at all (never
+    recorded, or `get_recording`'s payload was malformed) has nothing to
+    check and reads as `False` -- there is no converted artefact to be
+    reachable in the first place."""
+    if not recording.url:
+        return False
+    return transport.exists(recording.url + ".video.mp4")
+
+
+def missing_retrieval_evidence(
+    platform: PlatformFCC, recording: Recording, youtube_url: str
+) -> list[str]:
+    """What must still be true before `delete_recording` may be called for
+    this conference's recording. An empty list means both independent,
+    host-driven traces agree the recording has already been retrieved;
+    any non-empty list names, in plain words, what is still missing --
+    never raises, so a caller can report every gap at once rather than
+    stopping at the first.
+
+    This is the whole answer to the ordering task 10 exists to enforce
+    (`delete_recording`'s own docstring: "A caller MUST confirm the
+    recording was retrieved before invoking this method"). Two checks,
+    neither producible by this function, by `PlatformFCC`, or by anything
+    else in this repository -- only by the host's own hands, once, by
+    hand, in FreeConferenceCall's and YouTube's own interfaces:
+
+    1. `youtube_url` -- the address the host pastes onto the event's own
+       speaker record after uploading. Free to check (no network call:
+       the same already-loaded record every other method here reads), but
+       alone it is a claim, not a fact -- a stray or premature value would
+       satisfy it without anyone having retrieved anything.
+    2. `converted_recording_is_reachable` -- a genuine, independent,
+       provider-side confirmation that the host's Download click already
+       happened. See its own docstring for what makes this the strongest
+       signal available without downloading the recording itself (which
+       this module never does) or trusting a human-typed field alone.
+
+    Calls no method on `platform` other than reading its `transport` --
+    never `get_recording`, never `delete_recording`. The caller already
+    holds `recording` (from its own earlier `get_recording` call) and
+    decides what to do with an empty or non-empty result; this function
+    only answers the question, it never acts on it."""
+    problems: list[str] = []
+    if not youtube_url:
+        problems.append(
+            "no youtube_url is recorded for this event yet -- the host has "
+            "not pasted the address of the uploaded video"
+        )
+    if not converted_recording_is_reachable(recording, platform.transport):
+        problems.append(
+            "the converted recording is not reachable at the provider yet "
+            "-- the host may not have clicked Download in FreeConferenceCall"
+        )
+    return problems
 
 
 def platform_from_env(
