@@ -267,10 +267,14 @@ would not be a per-event key at all.
 1. Commit the public half as `keys/events/<event id>.pub`. This is not a
    secret: it is what lets the static registration page encrypt in the
    browser without asking a server for anything first.
-2. Store the private half as the repository secret
-   `CONVENER_EVENT_KEY_<EVENT ID>` (the event id, uppercased). Never commit it,
-   never write it to a file outside a CI job's environment, and never let
-   it appear in a job log.
+2. Store the private half as the repository secret named by
+   `convener_ops.eventkeys.secret_name(event_id)` -- **not** simply the event id
+   uppercased: GitHub Actions secret names may only contain letters, digits
+   and underscore, but an event id may legally contain `.` and `-` (the
+   tests' own canonical id, `mrg-042`, does), so `secret_name` folds both to
+   `_` before uppercasing. Never commit the private half, never write it to
+   a file outside a CI job's environment, and never let it appear in a job
+   log.
 
 **Secrets to set:** `CONVENER_EVENT_KEY_<EVENT ID>`, one per event, set only for
 as long as that event's registrations need decrypting.
@@ -280,6 +284,10 @@ registration encryption* is always reported `absent` here, on every
 machine, because the declared name is a pattern (`CONVENER_EVENT_KEY_<ID>`) and
 not a literal secret — the real per-event check happens inside the job that
 decrypts that event's registrations, not in this general-purpose report.
+The row is marked `(not a normal absence -- see below)` and the report's
+closing line names it explicitly, because — unlike the other five rows —
+this absence is not a harmless fallback (`absent_is_normal: false` in
+`config/integrations.yml`).
 
 **Destroying a key:** at the end of an event's retention window (see the
 phase 4 spec, §4), remove `CONVENER_EVENT_KEY_<EVENT ID>` from the repository's
