@@ -17,6 +17,7 @@ from typing import Any, Final
 
 import yaml
 
+from convener_ops import eventkeys
 from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
@@ -28,6 +29,13 @@ from convener_ops.register import (
     REGISTER_PATH,
     entries_from_log,
     render_register,
+)
+from convener_ops.registration import (
+    dump_registration_file,
+    event_id_from_payload,
+    load_registration_file,
+    to_registration,
+    upsert,
 )
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
@@ -377,6 +385,108 @@ def handle_proposal() -> int:
     speakers.append(lead)
     speakers_path.write_text(dump_speakers(speakers), encoding="utf-8", newline="")
     print(f"created {lead['id']} from form proposal")
+    return 0
+
+
+def resolve_registration_secret() -> int:
+    """`convener-registration-secret-name`: the first of the two steps
+    `.github/workflows/registration.yml` runs for one incoming
+    registration.
+
+    GitHub Actions can only select a *secret* through an expression
+    evaluated in the workflow file itself (`secrets[...]`), never from
+    inside a running step -- there is no way to hand a step "the secret
+    named by this string I just computed". So this step's only job is to
+    read `event_id` out of the dispatch payload and hand back the *name*
+    of the secret that holds that event's private key -- never the key
+    itself, which this step never touches -- for the next step's `env:`
+    block to look up by. Written to `$GITHUB_OUTPUT` as
+    `event_id=...\nsecret_name=...\n`; printed to stdout instead when
+    `$GITHUB_OUTPUT` is unset (a run outside Actions), the same
+    "inspectable instead of silent" idiom `_notify` uses for its own
+    absent channel.
+
+    Neither line carries anything a stranger could not already read from
+    the repository: `event_id` is public (`keys/events/<id>.pub` names it
+    openly) and `secret_name` is a *name*, not a value.
+    """
+    payload = os.environ.get("REGISTRATION_PAYLOAD", "")
+    event_id = event_id_from_payload(payload)
+    if event_id is None:
+        print("no valid event id in the registration payload", file=sys.stderr)
+        return 1
+
+    line = f"event_id={event_id}\nsecret_name={eventkeys.secret_name(event_id)}\n"
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if output_path:
+        with open(output_path, "a", encoding="utf-8") as handle:
+            handle.write(line)
+    else:
+        print(line, end="")
+    return 0
+
+
+def handle_registration() -> int:
+    """`convener-handle-registration`: the second step -- decrypt one
+    registration and store it re-encrypted in
+    `data/events/<id>/registrations.enc`.
+
+    Reads `REGISTRATION_PAYLOAD` (the raw relayed body -- see
+    `convener_ops.registration.to_registration` for why it is passed through
+    whole) and `EVENT_PRIVATE_KEY` (the PEM the workflow selected using
+    `resolve_registration_secret`'s own output). Never prints either of
+    them, or anything decrypted from them: every message below names only
+    the event id -- already public, the same identifier every workflow run
+    and every `keys/events/<id>.pub` filename already carry in the clear
+    -- and a count.
+
+    An absent `EVENT_PRIVATE_KEY` is not D-13's normal state here, the same
+    exception `eventkeys.py`'s module docstring names: this job exits in
+    error rather than doing anything at all with the ciphertext it was
+    handed, the same as a genuinely undecryptable one.
+    """
+    payload = os.environ.get("REGISTRATION_PAYLOAD", "")
+    event_id = event_id_from_payload(payload)
+    if event_id is None:
+        print("no valid event id in the registration payload", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    registration = to_registration(payload, private_pem)
+    if registration is None:
+        print(
+            f"registration for event {event_id} could not be decrypted", file=sys.stderr
+        )
+        return 1
+
+    root = repo_root()
+    public_path = eventkeys.public_key_path(event_id)
+    if not public_path.exists():
+        print(f"no published public key for event {event_id}", file=sys.stderr)
+        return 1
+    public_pem = public_path.read_text(encoding="ascii")
+
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    existing_text = enc_path.read_text(encoding="utf-8") if enc_path.exists() else None
+    try:
+        current = load_registration_file(existing_text)
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    updated, replaced = upsert(
+        current, registration, public_pem=public_pem, private_pem=private_pem
+    )
+    enc_path.parent.mkdir(parents=True, exist_ok=True)
+    enc_path.write_text(dump_registration_file(updated), encoding="utf-8", newline="")
+
+    verb = "updated" if replaced else "recorded"
+    print(f"{verb} a registration for event {event_id} ({len(updated.entries)} total)")
     return 0
 
 

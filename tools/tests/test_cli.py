@@ -11,7 +11,17 @@ import pytest
 import yaml
 from conftest import board_member, config, speaker
 
-from convener_ops.cli import _load, handle_proposal, public_data, sweep, validate
+from convener_ops import eventkeys
+from convener_ops.cli import (
+    _load,
+    handle_proposal,
+    handle_registration,
+    public_data,
+    resolve_registration_secret,
+    sweep,
+    validate,
+)
+from convener_ops.registration import load_registration_file, to_registration
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -517,3 +527,264 @@ def test_handle_proposal_never_writes_a_stringified_list_for_an_unresolvable_opt
     assert "['unknown-id']" not in text
     written = yaml.safe_load(text)
     assert written[-1]["gender"] == "undisclosed"
+
+
+# ------------------------------------------------------------------ #
+# resolve_registration_secret() and handle_registration(): the two steps
+# .github/workflows/registration.yml runs for one incoming registration.
+#
+# The job that decrypts a registration is the one place in this project a
+# stranger's name and address ever exist as plaintext. These tests are the
+# ones the task exists for: no name and no address may appear anywhere the
+# job prints, on any path -- success, a fresh registration, a resend that
+# updates one, or a failure -- and the same address must never produce a
+# second record.
+# ------------------------------------------------------------------ #
+
+
+def _registration_fields(**overrides: object) -> dict[str, object]:
+    base: dict[str, object] = {
+        "first_name": "Ada",
+        "surname": "Lovelace",
+        "email": "ada@example.org",
+        "institution": "Analytical Engines Institute",
+        "membership_opt_in": True,
+    }
+    base.update(overrides)
+    return base
+
+
+def _registration_payload(event_id: str, public_pem: str, **overrides: object) -> str:
+    """The whole body `services/signup-relay/src/index.js` forwards:
+    `{event_id, v, encrypted_key, iv, ciphertext}`."""
+    plaintext = json.dumps(_registration_fields(**overrides)).encode("utf-8")
+    envelope = json.loads(eventkeys.encrypt(public_pem, plaintext))
+    return json.dumps({"event_id": event_id, **envelope})
+
+
+def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, str]:
+    private_pem, public_pem = eventkeys.generate()
+    keys_dir = tmp_path / "keys" / "events"
+    keys_dir.mkdir(parents=True)
+    (keys_dir / f"{event_id}.pub").write_text(public_pem, encoding="ascii")
+    return private_pem, public_pem
+
+
+#: Every string that would identify Ada personally, in the fields the
+#: fixture above submits. Checked case-insensitively against whatever the
+#: job printed -- never against the encrypted file, whose base64 content
+#: can legitimately contain a short substring like "ada" by pure chance;
+#: `eventkeys.py`'s own tests already cover the file's confidentiality
+#: property directly, and a leak test on this job belongs on what the job
+#: prints, exactly what the task asks for.
+_LEAK_STRINGS = (
+    "Ada",
+    "Lovelace",
+    "ada@example.org",
+    "Analytical Engines Institute",
+)
+
+
+def _assert_no_leak(capsys: pytest.CaptureFixture[str]) -> str:
+    captured = capsys.readouterr()
+    combined = (captured.out + captured.err).lower()
+    for secret in _LEAK_STRINGS:
+        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+    return captured.out
+
+
+def test_resolve_registration_secret_with_no_payload_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("REGISTRATION_PAYLOAD", raising=False)
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+    assert resolve_registration_secret() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_resolve_registration_secret_rejects_an_invalid_event_id(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("REGISTRATION_PAYLOAD", json.dumps({"event_id": "../escape"}))
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+    assert resolve_registration_secret() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_resolve_registration_secret_writes_to_github_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, public_pem = eventkeys.generate()
+    output_file = tmp_path / "gh_output"
+    output_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_file))
+
+    assert resolve_registration_secret() == 0
+
+    text = output_file.read_text(encoding="utf-8")
+    assert "event_id=mrg-042\n" in text
+    assert "secret_name=CONVENER_EVENT_KEY_MRG_042\n" in text
+
+
+def test_resolve_registration_secret_prints_when_github_output_is_unset(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A local run outside Actions -- the same "inspectable instead of
+    silent" idiom `_notify` uses for its own absent channel."""
+    _, public_pem = eventkeys.generate()
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+    assert resolve_registration_secret() == 0
+
+    out = capsys.readouterr().out
+    assert "event_id=mrg-042" in out
+    assert "secret_name=CONVENER_EVENT_KEY_MRG_042" in out
+
+
+def test_handle_registration_with_no_payload_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.delenv("REGISTRATION_PAYLOAD", raising=False)
+
+    assert handle_registration() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_handle_registration_fails_closed_without_a_configured_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """D-13 does not apply here -- `eventkeys.py`'s own exception: an
+    absent private key must not fall back to writing anything, encrypted
+    or not."""
+    _, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert handle_registration() == 1
+
+    err = capsys.readouterr().err
+    assert "no private key configured for event mrg-042" in err
+    assert not (tmp_path / "data").exists()
+
+
+def test_handle_registration_without_a_published_public_key_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = eventkeys.generate()
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_registration() == 1
+    assert "no published public key for event mrg-042" in capsys.readouterr().err
+
+
+def test_handle_registration_rejects_an_undecryptable_payload_and_leaks_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_a, _ = _publish_event_key(tmp_path)
+    _, public_b = eventkeys.generate()
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    # Encrypted under a *different* event's public key: a real registrant
+    # would never do this, but the relay's own shape check cannot rule it
+    # out, so this job must refuse it, not garble it.
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_b)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_a)
+
+    assert handle_registration() == 1
+
+    out = _assert_no_leak(capsys)
+    assert out == ""
+
+
+def test_handle_registration_writes_the_record_and_prints_no_name_or_address(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The test the task exists for: a job that decrypts a registration
+    and then prints even one of its fields would pass every other test in
+    this file and still leak personal data into a public Actions log."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_registration() == 0
+
+    out = _assert_no_leak(capsys)
+    assert "recorded a registration for event mrg-042 (1 total)" in out
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    assert enc_path.exists()
+    file = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    assert len(file.entries) == 1
+    recovered = to_registration(json.dumps(file.entries[0]), private_pem)
+    assert recovered is not None
+    assert recovered.email == "ada@example.org"
+
+
+def test_handle_registration_a_resend_updates_the_one_record_and_still_leaks_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Step 3 end to end, through the same entry point the workflow calls
+    twice for two submissions: same address, same event -> the second
+    updates the first rather than adding a second row."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    assert handle_registration() == 0
+
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD",
+        _registration_payload("mrg-042", public_pem, institution="Somewhere Else"),
+    )
+    assert handle_registration() == 0
+
+    out = _assert_no_leak(capsys)
+    assert "recorded a registration for event mrg-042 (1 total)" in out
+    assert "updated a registration for event mrg-042 (1 total)" in out
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    file = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    assert len(file.entries) == 1
+    recovered = to_registration(json.dumps(file.entries[0]), private_pem)
+    assert recovered is not None
+    assert recovered.institution == "Somewhere Else"
+
+
+def test_handle_registration_rejects_a_malformed_committed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_registration() == 1
+    assert "registrations.enc" in capsys.readouterr().err

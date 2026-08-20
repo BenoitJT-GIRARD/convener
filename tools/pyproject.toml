@@ -29,6 +29,8 @@ convener-commit-range = "convener_ops.commit_format:commit_range"
 convener-register = "convener_ops.cli:register"
 convener-notify-immediate = "convener_ops.cli:notify_immediate"
 convener-notify-digest = "convener_ops.cli:notify_digest"
+convener-registration-secret-name = "convener_ops.cli:resolve_registration_secret"
+convener-handle-registration = "convener_ops.cli:handle_registration"
 
 [build-system]
 requires = ["hatchling"]
