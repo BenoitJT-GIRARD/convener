@@ -300,10 +300,13 @@ def test_the_migrated_data_passes_the_validator() -> None:
     # collaborators' behalf what the list holds. `instructions` (phase 4,
     # R-6) is the same story a season later: this migration predates it
     # entirely and has no more business inventing join instructions than it
-    # does channels. A v3 config that grew any other defect still fails
-    # this line.
+    # does channels. `eligibility_share` (phase 4 S:5, round 1 review) is a
+    # third instance of the identical shape: an accreditation-driven number
+    # nobody has decided yet, so `migrate_config` has no more business
+    # inventing it than it does the other two. A v3 config that grew any
+    # other defect still fails this line.
     assert validate_config(config) == [
-        "config.yml: missing keys ['channels', 'instructions']"
+        "config.yml: missing keys ['channels', 'eligibility_share', 'instructions']"
     ]
     assert validate_speakers(migrate_speakers_v4(speakers), logins) == []
 

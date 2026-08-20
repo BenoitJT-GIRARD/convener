@@ -199,13 +199,22 @@ def test_a_stored_lead_decision_sla_is_reported_as_obsolete() -> None:
     assert any("sla_days.lead_decision is obsolete" in e for e in errors)
 
 
-def test_eligibility_share_is_optional_and_absent_by_default() -> None:
-    # Phase 4 S:5: nobody has an accreditation-driven number to write yet,
-    # so `config()` (like `data/config.yml` itself) carries no
-    # eligibility_share, and that is not a defect -- unlike every key in
-    # CONFIG_REQUIRED, its absence produces no error at all.
-    assert "eligibility_share" not in config()
-    assert validate_config(config()) == []
+def test_eligibility_share_is_required_configuration_not_a_constant() -> None:
+    """Phase 4 S:5, round 2 review: a threshold that only ever lives as a
+    Python default is a constant with extra steps, and alignment with an
+    accreditation body's requirement has to happen by editing this file.
+
+    Both languages have to require it, or the browser writes a file the
+    certificate calculation refuses -- or, worse, the other way round, and
+    a config without the key reaches `data/` where the eligibility
+    calculation then falls back to a default nobody chose to write down.
+    """
+    cfg = config()
+    del cfg["eligibility_share"]
+    errors = validate_config(cfg)
+    assert any("missing keys ['eligibility_share']" in e for e in errors)
+
+    assert validate_config(config(eligibility_share=0.6666666666666666)) == []
 
 
 def test_a_configured_eligibility_share_within_range_is_valid() -> None:

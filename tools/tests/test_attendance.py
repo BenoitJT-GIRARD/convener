@@ -710,15 +710,18 @@ def test_zero_seconds_is_never_eligible() -> None:
     assert eligible(_attendee(0), threshold) is False
 
 
-def test_the_default_share_is_exactly_two_thirds_with_no_floating_point_drift() -> None:
-    """`2 / 3` in Python is 0.6666666666666666, not two thirds -- a session
-    whose length divides evenly by three has to land exactly on its
-    threshold, not a fraction of a second short of it under float
-    rounding."""
+def test_the_default_share_matches_data_config_ymls_own_chosen_literal() -> None:
+    """`DEFAULT_ELIGIBILITY_SHARE` is `data/config.yml`'s own
+    `0.6666666666666666`, digit for digit (round 2 review) -- the closest
+    float64 to two thirds, chosen fractionally *below* the exact value so
+    a duration of exactly 3600 seconds against a 90-minute session still
+    reads as eligible, not refused by a rounding artefact. Not `Fraction(2,
+    3)`: an exact fallback would be quietly stricter than the real file's
+    own, slightly more forgiving, threshold."""
     threshold = EligibilityThreshold(seminar_duration_minutes=90)
 
-    assert threshold.share == DEFAULT_ELIGIBILITY_SHARE
-    assert threshold.threshold_seconds == Fraction(3600)
+    assert threshold.share == DEFAULT_ELIGIBILITY_SHARE == 0.6666666666666666
+    assert threshold.threshold_seconds < Fraction(3600)
     assert eligible(_attendee(3600), threshold) is True
     assert eligible(_attendee(3599), threshold) is False
 

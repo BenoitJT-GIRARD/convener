@@ -130,6 +130,7 @@ def config(**overrides: Any) -> dict[str, Any]:
         "vw_counter": 5,
         "overlap_window_days": 7,
         "seminar_duration_minutes": 90,
+        "eligibility_share": 0.6666666666666666,
         "board": [
             board_member(login="Anonymous"),
             board_member(login="grace"),
