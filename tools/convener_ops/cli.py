@@ -404,6 +404,21 @@ def handle_proposal() -> int:
 UNSENT_CONFIRMATION: Final = "unsent-confirmation.eml"
 
 
+def _write_github_output(line: str) -> None:
+    """`line` (already `key=value\n`-shaped, one or more) to
+    `$GITHUB_OUTPUT`, or printed when that path is unset -- a run outside
+    Actions, the "inspectable instead of silent" idiom
+    `resolve_registration_secret` originated. Shared with
+    `handle_registration` now, so the fallback cannot drift between the
+    two call sites."""
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if output_path:
+        with open(output_path, "a", encoding="utf-8") as handle:
+            handle.write(line)
+    else:
+        print(line, end="")
+
+
 def _send_confirmation(
     event_id: str, registration: Registration, changed: Sequence[str]
 ) -> None:
@@ -416,63 +431,70 @@ def _send_confirmation(
 
     `changed` is the field labels the caller already worked out
     (`confirmation.changed_fields`) -- this function does not compute it,
-    so a resend (`resend_confirmation`, always `changed=()`) and a fresh or
-    updated registration (`handle_registration`) share one code path with
-    no branch of their own in here.
+    so `resend_confirmation` (always `changed=()`) and `send_confirmation`
+    (a fresh or updated registration, this task's own step) share one code
+    path with no branch of their own in here.
 
     Never lets a room lookup that fails (`confirmation.EventNotFoundError`
     -- no speaker record matches `event_id`) stop the confirmation from
-    being composed and sent: the registration this call follows was already
-    decrypted and stored, and a missing speaker record must not lose it a
-    second time. The message that goes out in that case simply has no room
-    link, which the print line below says plainly.
+    being composed and sent: the caller already holds the registration
+    itself, and a missing speaker record must not lose the message too.
+    The message that goes out in that case simply has no room link, which
+    the print line below says plainly.
 
-    Nothing below this docstring is allowed to raise past this function,
-    caught by one broad `except Exception` around the compose-deliver-write
-    sequence: `handle_registration` calls this only *after* it has already
-    written `registrations.enc` to disk, inside a workflow step run under
-    `set -e`. An exception escaping here would abort that step before its
-    `git add`/`commit`/`push` ever run -- turning a registration that was
-    genuinely decrypted and stored into one silently dropped from the
-    repository entirely, which is a strictly worse failure than "the
-    confirmation could not be composed". A confirmation that failed this
-    way is recoverable by hand (`convener-resend-confirmation`, once whatever
-    broke is fixed); a registration git never saw is not recoverable at
-    all. Every failure this function already anticipates -- no room, no
-    transport, a transport that raises -- is handled above this comment and
-    never reaches the broad catch; it exists for what nobody anticipated.
+    Nothing in this function is allowed to raise past it: the whole body,
+    not only the compose-deliver-write sequence, is wrapped in one broad
+    `except Exception`. That catch is no longer a defence against `set -e`
+    aborting a commit -- since review round 1 (Important 2), sending is a
+    separate, non-retried step from storing, so a failure here can no
+    longer reach back and threaten a registration already on the branch by
+    the time this runs. It stays for the same reason `notify.py`'s own
+    functions are documented as never raising: both this function's
+    callers -- `send_confirmation` (an unattended job step) and
+    `resend_confirmation` (a volunteer's manual run) -- are contexts
+    nobody is watching for a Python traceback, and this turns whatever
+    goes wrong into the one sentence a reader actually needs, instead:
+    that the confirmation failed for a reason this job did not anticipate,
+    and that a resend, once the reason is understood, is how to recover.
+    Every failure this function already anticipates -- no room, no
+    transport, a transport that raises -- is handled above the broad catch
+    and never reaches it; it exists for what nobody anticipated.
     """
-    root = repo_root()
-    speakers, _errors = _load(root / "data" / "speakers.yml")
-    cfg, _errors = _load(root / "data" / "config.yml")
-    speaker_list = speakers if isinstance(speakers, list) else []
-    config_map = cfg if isinstance(cfg, dict) else None
-    platform = platform_from_env(os.environ, speaker_list, config_map)
-
     try:
-        event = confirmation.event_details(speaker_list, event_id, platform)
-    except confirmation.EventNotFoundError:
-        print(
-            f"no speaker record matches event {event_id} -- confirmation "
-            "composed with no room link"
-        )
-        event = confirmation.EventDetails(
-            title="", date="", room=Room(join_url="", instructions="")
-        )
+        root = repo_root()
+        speakers, _errors = _load(root / "data" / "speakers.yml")
+        cfg, _errors = _load(root / "data" / "config.yml")
+        speaker_list = speakers if isinstance(speakers, list) else []
+        config_map = cfg if isinstance(cfg, dict) else None
+        platform = platform_from_env(os.environ, speaker_list, config_map)
 
-    try:
+        try:
+            event = confirmation.event_details(speaker_list, event_id, platform)
+        except confirmation.EventNotFoundError:
+            print(
+                f"no speaker record matches event {event_id} -- confirmation "
+                "composed with no room link"
+            )
+            event = confirmation.EventDetails(
+                title="", date="", room=Room(join_url="", instructions="")
+            )
+
         salt = os.environ.get("CONVENER_MATCHING_SALT")
         code = matching_code(event_id, registration.email, salt)
         message = confirmation.compose(registration, event, code, changed)
         result = confirmation.deliver(message, os.environ)
 
+        unsent_path = root / UNSENT_CONFIRMATION
         if result.sent:
+            # A previous attempt in this same workspace may have left a
+            # file behind (review round 1, Important 1): once a message
+            # has genuinely gone out, nothing should remain that an
+            # `if: always()` step would then upload as though it had not.
+            unsent_path.unlink(missing_ok=True)
             print(f"confirmation for event {event_id} sent")
             return
 
-        (root / UNSENT_CONFIRMATION).write_text(
-            result.unsent_body or "", encoding="utf-8", newline=""
-        )
+        unsent_path.write_text(result.unsent_body or "", encoding="utf-8", newline="")
         print(
             f"confirmation for event {event_id} not sent -- no email "
             f"transport configured or delivery failed; composed message "
@@ -487,7 +509,7 @@ def _send_confirmation(
 
 
 def resolve_registration_secret() -> int:
-    """`convener-registration-secret-name`: the first of the two steps
+    """`convener-registration-secret-name`: the first of the three steps
     `.github/workflows/registration.yml` runs for one incoming
     registration.
 
@@ -497,12 +519,12 @@ def resolve_registration_secret() -> int:
     named by this string I just computed". So this step's only job is to
     read `event_id` out of the dispatch payload and hand back the *name*
     of the secret that holds that event's private key -- never the key
-    itself, which this step never touches -- for the next step's `env:`
-    block to look up by. Written to `$GITHUB_OUTPUT` as
-    `event_id=...\nsecret_name=...\n`; printed to stdout instead when
-    `$GITHUB_OUTPUT` is unset (a run outside Actions), the same
-    "inspectable instead of silent" idiom `_notify` uses for its own
-    absent channel.
+    itself, which this step never touches -- for the other two steps'
+    `env:` blocks to look up by (`convener-handle-registration` and
+    `convener-send-confirmation` both need it). Written to `$GITHUB_OUTPUT` via
+    `_write_github_output`; printed to stdout instead when `$GITHUB_OUTPUT`
+    is unset (a run outside Actions), the same "inspectable instead of
+    silent" idiom `_notify` uses for its own absent channel.
 
     Neither line carries anything a stranger could not already read from
     the repository: `event_id` is public (`keys/events/<id>.pub` names it
@@ -514,20 +536,25 @@ def resolve_registration_secret() -> int:
         print("no valid event id in the registration payload", file=sys.stderr)
         return 1
 
-    line = f"event_id={event_id}\nsecret_name={eventkeys.secret_name(event_id)}\n"
-    output_path = os.environ.get("GITHUB_OUTPUT")
-    if output_path:
-        with open(output_path, "a", encoding="utf-8") as handle:
-            handle.write(line)
-    else:
-        print(line, end="")
+    _write_github_output(
+        f"event_id={event_id}\nsecret_name={eventkeys.secret_name(event_id)}\n"
+    )
     return 0
 
 
 def handle_registration() -> int:
-    """`convener-handle-registration`: the second step -- decrypt one
-    registration and store it re-encrypted in
-    `data/events/<id>/registrations.enc`.
+    """`convener-handle-registration`: the second of the three steps
+    `.github/workflows/registration.yml` runs -- decrypt one registration
+    and store it re-encrypted in `data/events/<id>/registrations.enc`.
+
+    The confirmation itself is sent by a *separate* step
+    (`convener-send-confirmation`, gated `if: success()` so it runs at most once
+    per job, only after this step's own push-retry loop has actually
+    landed the record on the branch). Split this way on review (R-9 round
+    1, Important 2): this step's workflow retries on a rejected push,
+    re-running the whole step up to three times, and a step that both
+    stored and sent would send one confirmation per attempt -- or, worse,
+    send one for a registration a later, failed attempt then discarded.
 
     Reads `REGISTRATION_PAYLOAD` (the raw relayed body -- see
     `convener_ops.registration.to_registration` for why it is passed through
@@ -543,14 +570,14 @@ def handle_registration() -> int:
     error rather than doing anything at all with the ciphertext it was
     handed, the same as a genuinely undecryptable one.
 
-    Once the record is stored, this also composes and attempts to deliver
-    the confirmation (task 7) -- and, on an update (R-9), names which
-    fields changed rather than which values, from the *prior* entry read
-    via `find_by_email` before `upsert` overwrites it. Delivery is best
-    effort: whatever `_send_confirmation` finds -- sent, logged instead, or
-    a missing speaker record -- never changes this function's own return
-    value, because the registration is already safely stored by the point
-    it runs.
+    Writes `changed=<comma-joined field labels>` to `$GITHUB_OUTPUT` -- the
+    R-9 diff between the prior stored registration (read via
+    `find_by_email`, before `upsert` overwrites it) and this one, for
+    `send_confirmation` to read back and hand to `confirmation.compose`
+    unchanged. Field labels are not personal data (that is the whole point
+    of naming rather than quoting, R-9), so this is the one thing this
+    function ever writes anywhere a stranger could, in principle, also
+    read.
     """
     payload = os.environ.get("REGISTRATION_PAYLOAD", "")
     event_id = event_id_from_payload(payload)
@@ -589,6 +616,58 @@ def handle_registration() -> int:
     print(f"{verb} a registration for event {event_id} ({len(updated.entries)} total)")
 
     changed = confirmation.changed_fields(old, registration) if old is not None else ()
+    _write_github_output(f"changed={','.join(changed)}\n")
+    return 0
+
+
+def send_confirmation() -> int:
+    """`convener-send-confirmation`: the third of the three steps
+    `.github/workflows/registration.yml` runs -- and the only one gated
+    `if: success()`, so it runs at most once per job, only once
+    `convener-handle-registration`'s own push-retry loop has actually landed
+    the record on the branch. See `handle_registration`'s own docstring
+    for why sending was split into its own step (R-9 review round 1,
+    Important 2).
+
+    Reads `REGISTRATION_PAYLOAD` and `EVENT_PRIVATE_KEY` again -- the
+    workflow already holds both for the step that ran before this one, so
+    reading them again here needs no new secret -- and decrypts the
+    registration a second time. Not wasted work an oversight left behind:
+    the registration's plaintext lives only in one process's memory at a
+    time (the phase 4 spec's whole design; `registration.py`'s own module
+    docstring), so a later step that needs it again has no way to ask for
+    it except by decrypting it again from the same ciphertext, exactly as
+    `resend_confirmation` already does for a manual resend.
+
+    `CHANGED_FIELDS` is the comma-joined field labels
+    `handle_registration` wrote to `$GITHUB_OUTPUT` as `changed=...`, read
+    back here and split on the comma -- safe because none of
+    `confirmation.FIELD_LABELS`'s values ever contains one. An empty
+    string (a first registration, or an update that changed nothing this
+    module tracks) splits to nothing, `changed=()`, the same empty tuple a
+    resend always passes.
+    """
+    payload = os.environ.get("REGISTRATION_PAYLOAD", "")
+    event_id = event_id_from_payload(payload)
+    if event_id is None:
+        print("no valid event id in the registration payload", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    registration = to_registration(payload, private_pem)
+    if registration is None:
+        print(
+            f"registration for event {event_id} could not be decrypted", file=sys.stderr
+        )
+        return 1
+
+    changed = tuple(
+        field for field in os.environ.get("CHANGED_FIELDS", "").split(",") if field
+    )
     _send_confirmation(event_id, registration, changed)
     return 0
 
@@ -605,6 +684,19 @@ def resend_confirmation() -> int:
     input), never a public endpoint, so there is nothing here for a
     stranger to reach. `EVENT_PRIVATE_KEY` is the same per-event secret
     `handle_registration` reads.
+
+    `REGISTRATION_EMAIL` is retained by GitHub on the run page for as long
+    as the run's history exists -- longer than the 14-day artefact
+    `resend-confirmation.yml` uploads specifically so an address does not
+    have to sit in a retained Actions surface (`config/integrations.yml`,
+    `docs/reference/operations.md`). This is a deliberate, narrow
+    exception, not an oversight: `registration.py`'s own module docstring
+    explains why no other identifier for one registration is stored at
+    all ("No stored identifier for whose entry is this"), so an address
+    is the only handle a resend can name a registration by, and
+    `workflow_dispatch` is restricted to collaborators with repository
+    write access -- the same trust boundary as anyone who could already
+    read the job log or a delivered artefact.
 
     Finds the one entry for `REGISTRATION_EMAIL` in `registrations.enc`
     (`registration.find_by_email`) and re-composes the message

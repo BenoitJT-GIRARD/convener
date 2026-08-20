@@ -36,9 +36,10 @@ jobs:
     # A serialised queue (above) means one run that never finishes blocks
     # every other registration for the same event behind it, up to
     # GitHub's own six-hour default. Ten minutes is generous for a job that
-    # is checkout, `uv sync`, one decrypt/re-encrypt, and a commit -- see
-    # the retry loop below for the one part of this job with any real
-    # variance, bounded at three attempts.
+    # is checkout, `uv sync`, one decrypt/re-encrypt/commit, and -- once
+    # that has landed (`if: success()` below) -- one more decrypt and one
+    # send attempt. See the retry loop below for the one part of this job
+    # with any real variance, bounded at three attempts.
     timeout-minutes: 10
     permissions:
       contents: write
@@ -74,6 +75,7 @@ jobs:
           REGISTRATION_PAYLOAD: ${{ github.event.client_payload.body }}
         run: uv run convener-registration-secret-name
       - name: Decrypt, store and commit the registration
+        id: handle
         env:
           REGISTRATION_PAYLOAD: ${{ github.event.client_payload.body }}
           # GitHub Actions can only select a secret through an expression
@@ -129,12 +131,44 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- this registration was not saved"
           exit 1
+      - name: Send the registration confirmation
+        # `if: success()` -- the default for a step with no `if:` at all,
+        # spelled out here because what it buys is the point of this step
+        # existing on its own (review round 1, Important 2): the step
+        # above retries on a rejected push, so a step that both stored and
+        # sent would send once per attempt, and could send a confirmation
+        # for a registration a later, failed attempt then discarded. This
+        # step runs at most once, and only once the record has actually
+        # landed on the branch.
+        if: success()
+        working-directory: tools
+        env:
+          # The workflow already holds both of these for the step above;
+          # re-reading them here needs no new secret. See
+          # `convener_ops.cli.send_confirmation`'s own docstring for why
+          # re-decrypting is correct, not wasted work.
+          REGISTRATION_PAYLOAD: ${{ github.event.client_payload.body }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          # The R-9 diff `convener-handle-registration` already worked out --
+          # field labels, never values, so this is not personal data
+          # travelling through a build log's own output mechanism.
+          CHANGED_FIELDS: ${{ steps.handle.outputs.changed }}
+          # `email_transport` (config/integrations.yml) and
+          # `matching_salt`: absent here is D-13's ordinary state, handled
+          # by `convener-send-confirmation` itself -- see
+          # `tools/convener_ops/confirmation.py`'s module docstring.
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
+          CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
+          CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
+          CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
+          CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
+        run: uv run convener-send-confirmation
       - name: Preserve an unsent confirmation for inspection
-        # `always()`: this file exists exactly when the confirmation this
-        # run composed (task 7) could not be delivered -- unrelated to
-        # whether the registration itself was stored, so it must be kept
-        # even on a failed run above, not skipped because an earlier step
-        # did not succeed.
+        # `always()`: this file exists exactly when the step above ran and
+        # the confirmation it composed could not be delivered -- so it
+        # must be kept even if a *later* step in this job were to fail,
+        # not skipped because something else did.
         #
         # This is `config/integrations.yml`'s "an inspectable log" for
         # `email_transport`, made concrete for the one message here that
@@ -145,7 +179,15 @@ jobs:
         # retention, access-controlled artefact, never as a line in the
         # log stream itself. `if-no-files-found: ignore` because the
         # ordinary case -- a confirmation that sent -- leaves no file at
-        # all.
+        # all (and `send_confirmation` removes one a stale, earlier
+        # attempt left behind, before ever reporting success).
+        #
+        # Fourteen days, not a longer number chosen for safety's own sake:
+        # nothing this artefact carries is ever lost when it expires.
+        # `convener-resend-confirmation` reproduces the identical message from
+        # the *stored* registration and the same deterministic matching
+        # code, so this artefact is a convenience for diagnosing why a
+        # send failed, never the only copy of anything.
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

@@ -317,9 +317,12 @@ inspection" here does not mean the job's own log: that message carries a
 participant's address and their matching code, and this project never puts
 personal data into a GitHub Actions log, on purpose.
 `.github/workflows/registration.yml` uploads that file as a short-retention
-(14 days), access-controlled build artifact whenever it exists, which is
-where a volunteer reads it instead. See `tools/convener_ops/confirmation.py`'s
-module docstring for the full reasoning.
+(14 days), access-controlled build artefact whenever it exists, which is
+where a volunteer reads it instead. Fourteen days, not longer for safety's
+own sake: a manual resend (below) reproduces the identical message from
+the stored registration and the same deterministic matching code, so
+nothing here is ever the only copy of anything. See
+`tools/convener_ops/confirmation.py`'s module docstring for the full reasoning.
 
 **To create:** an organisation mailbox reachable over SMTP (D-07's
 arbitration: no external transactional-email service, no subscription).
@@ -341,6 +344,15 @@ the address and `CONVENER_MATCHING_SALT`, so it is always exactly the code the
 first message carried. Use it when a confirmation is reported missing;
 spec S:9's own reasoning is that a certificate in the spam folder does not
 exist.
+
+One exception to the no-personal-data-in-a-retained-surface rule above:
+`workflow_dispatch`'s own `email` input is retained by GitHub on the run
+page for as long as the run's history exists, longer than the 14-day
+artefact this design otherwise relies on. Deliberate, not an oversight —
+no other identifier for one registration exists to name it by instead
+(`tools/convener_ops/registration.py`'s own module docstring), and
+`workflow_dispatch` is restricted to collaborators with repository write
+access, the same trust boundary as the job log itself.
 
 ## Video channel
 

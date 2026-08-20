@@ -85,8 +85,11 @@ integrations:
       or not; a message that could not be sent is written to a single
       local, .gitignore'd file inside the job's own workspace instead, and
       .github/workflows/registration.yml uploads that file as a short-
-      retention, access-controlled build artifact when it exists, which is
-      what "inspectable" means for this row specifically.
+      retention, access-controlled build artefact when it exists, which is
+      what "inspectable" means for this row specifically. Fourteen days,
+      not longer for safety's own sake: a resend reproduces the identical
+      message from the stored registration and the same deterministic
+      matching code, so nothing here is ever the only copy of anything.
 
   - name: video_publishing
     label: Video channel

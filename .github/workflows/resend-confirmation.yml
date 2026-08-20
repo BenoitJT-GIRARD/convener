@@ -16,6 +16,18 @@ on:
         required: true
         type: string
       email:
+        # Review round 1, Important 4: GitHub renders and retains a
+        # workflow_dispatch input on the run page for as long as the run's
+        # history exists -- longer than the 14-day artefact this same
+        # design uses everywhere else specifically so an address does not
+        # have to sit in a retained Actions surface. Accepted here anyway,
+        # deliberately: registration.py's own module docstring explains
+        # why no other identifier for one registration is stored at all
+        # ("No stored identifier for whose entry is this"), so an address
+        # is the only handle a resend can name a registration by, and
+        # `workflow_dispatch` is restricted to collaborators with
+        # repository write access -- the same trust boundary as anyone
+        # who could already read the job log or a delivered artefact.
         description: "The registrant's e-mail address, exactly as they typed it at signup"
         required: true
         type: string
@@ -66,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: unsent-confirmation-resend-${{ github.run_id }}
+          name: unsent-confirmation-resend-${{ github.run_id }}-${{ github.run_attempt }}
           path: unsent-confirmation.eml
           if-no-files-found: ignore
           retention-days: 14

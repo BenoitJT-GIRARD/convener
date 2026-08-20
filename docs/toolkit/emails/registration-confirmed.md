@@ -32,6 +32,9 @@ Join here: [the room link]
 **Put this exact code into the display name you type when you join, and
 nowhere else:** [the matching code]
 
+So your display name should read exactly: [your first name] [your surname]
+[the matching code] — for example, Ada Lovelace WXYZ-2345.
+
 We compare that name against our attendance record after the seminar to
 issue your certificate, so a display name that does not carry this code
 means we may not be able to find you in the room. If no code could be
@@ -64,7 +67,8 @@ unreadable. It is never published, and it is only ever decrypted
 automatically, to record your registration and to issue your certificate.
 
 To see, correct, withdraw or erase your data before then, or for any other
-question, reply to this message.
+question, reply to this message or write to reading-group@example.test —
+the same address the registration page itself names for this right.
 
 Best regards,
 The Example Collective team
@@ -73,13 +77,19 @@ The Example Collective team
 
 ## Notes for whoever reads this page
 
-- Nothing here is sent by a volunteer. `tools/convener_ops/cli.py::handle_registration`
-  composes and sends it the moment a registration is decrypted and stored;
-  `resend_confirmation` (the `convener-resend-confirmation` command) re-sends the
-  same, current message by hand — a certificate in the spam folder does not
-  exist (spec S:9) — without regenerating the matching code: it is a pure
-  function of the event, the address and a secret salt, so calling it again
-  reproduces exactly the code the first message carried.
+- Nothing here is sent by a volunteer. Two steps compose and send it, not
+  one: `convener-handle-registration` decrypts and stores the registration, then
+  `convener-send-confirmation` — its own step in `.github/workflows/
+  registration.yml`, run only once the record has actually landed on the
+  branch — composes and delivers this message. Split into two on review
+  (round 1, Important 2): the storing step retries on a rejected push, and
+  a step that both stored and sent would have sent one confirmation per
+  retry. `resend_confirmation` (the `convener-resend-confirmation` command)
+  re-sends the same, current message by hand — a certificate in the spam
+  folder does not exist (spec S:9) — without regenerating the matching
+  code: it is a pure function of the event, the address and a secret salt,
+  so calling it again reproduces exactly the code the first message
+  carried.
 - Without `email_transport`'s five secrets configured
   (`config/integrations.yml`), nothing here is actually sent: the composed
   message is written to a local file inside the job's own workspace instead,
