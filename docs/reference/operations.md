@@ -130,6 +130,72 @@ Neither Wrangler secret belongs in `wrangler.toml` — both are set with
 **To verify:** submit the Tally form; a new lead should appear in
 `data/speakers.yml` shortly after, committed by *Handle proposal*.
 
+## Signup relay
+
+**Without it:** the registration page has nowhere to send an encrypted
+registration. `SignupForm.tsx` still fetches an event's public key and
+still encrypts in the browser — nothing about that depends on this worker —
+but with `VITE_SIGNUP_RELAY_URL` unset it says so and sends nothing: an
+ordinary D-13 absence, not an error, and never a fallback to sending
+anything unencrypted.
+
+This is a third Cloudflare Worker, `services/signup-relay/`, separate from
+both the authentication relay and the form relay above, for two different
+reasons rather than one. Like the form relay, turning a submission into a
+`repository_dispatch` needs a GitHub token, so it cannot be the stateless,
+secret-free authentication relay. Unlike the form relay, there is no
+shared secret its caller could sign with — a static registration page
+cannot hold one — so its endpoint is open by construction where the form
+relay's is not; see `services/signup-relay/README.md` for the abuse
+protection chosen for that (a per-event ceiling held in Workers KV) and
+the reasoning recorded alongside it, including the Workers KV free-tier
+numbers checked while choosing it.
+
+Unlike the other two, this worker cannot read what it forwards at all —
+the body is ciphertext the browser encrypted under the target event's
+public key (`tools/convener_ops/eventkeys.py`), and this worker holds no
+private key. Its validation is a shape check, not a content check: see
+its README for exactly what that does and does not verify.
+
+**To create:**
+1. Deploy the worker from `services/signup-relay/`: `npm install`, then
+   `npx wrangler kv namespace create SIGNUP_RELAY_KV` once and paste the
+   printed id into that folder's `wrangler.toml`, then `npx wrangler
+   deploy` — see its README — to the same Cloudflare account used for the
+   other two workers.
+2. Set repository **variable** `VITE_SIGNUP_RELAY_URL` (Settings → Secrets
+   and variables → Actions → Variables) to the deployed worker's URL. Public
+   by construction, like `VITE_AUTH_PROXY_URL` above — a relay URL ships
+   inside the bundle — so it belongs in Variables, not Secrets. Like those,
+   it is read only at build time; setting or changing it has no effect
+   until the application is rebuilt.
+
+**Secrets to set:**
+- Wrangler secret `CONVENER_DISPATCH_TOKEN` on the worker — set with
+  `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from
+  `services/signup-relay/`. A GitHub token scoped to *Contents: read &
+  write* on `example-cockpit` only — the same scope the form relay's own
+  `CONVENER_DISPATCH_TOKEN` uses, since this worker both reads
+  `keys/events/<id>.pub` to confirm an event is known and sends the
+  `repository_dispatch` itself. It may be the same credential already
+  created for the form relay's token, or a separate one with the same
+  scope; either way it is set here independently, since Wrangler secrets
+  are per-worker.
+- Repository secret `CLOUDFLARE_API_TOKEN` — the same one already set for
+  *Deploy auth relay* and *Deploy form relay* above; *Deploy signup relay*
+  reads it too, since all three workers deploy to the same Cloudflare
+  account.
+
+`SIGNUP_RELAY_KV` is not a secret — a namespace id is not sensitive — but
+it is specific to the Cloudflare account this worker deploys to, so it is
+set directly in `services/signup-relay/wrangler.toml` rather than as a
+Wrangler secret; see that file's own comments.
+
+**To verify:** with `VITE_SIGNUP_RELAY_URL` set and the app rebuilt, submit
+the registration form for an event with a published key; the worker
+answers `204` and the `registration-submitted` dispatch it sends triggers
+the workflow that handles it (see phase 4).
+
 ## Publishing the application (GitHub Pages)
 
 **Without it:** nothing else is affected here — this is how the app itself
@@ -384,9 +450,11 @@ repository still needs to know they exist and where they live.
   on `example-cockpit`.
 - **`CLOUDFLARE_API_TOKEN`** — already introduced above under
   *Authentication relay*: used by *Deploy auth relay* to deploy the
-  worker in `services/auth-proxy/`, and by *Deploy form relay* to deploy
-  `services/form-relay/` to the same account. Listed again here because it
-  is the same kind of CI-only, cross-account credential as the other two.
+  worker in `services/auth-proxy/`, by *Deploy form relay* to deploy
+  `services/form-relay/`, and by *Deploy signup relay* to deploy
+  `services/signup-relay/` — all three to the same account. Listed again
+  here because it is the same kind of CI-only, cross-account credential as
+  the other two.
 
 ## Inactivity (G-09)
 
