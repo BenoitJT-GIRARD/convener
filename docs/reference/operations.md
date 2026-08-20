@@ -128,7 +128,7 @@ Neither Wrangler secret belongs in `wrangler.toml` — both are set with
 **To verify:** submit the Tally form; a new lead should appear in
 `data/speakers.yml` shortly after, committed by *Handle proposal*.
 
-## GitHub Pages
+## Publishing the application (GitHub Pages)
 
 **Without it:** nothing else is affected here — this is how the app itself
 is published, not an optional integration.
@@ -157,7 +157,7 @@ constraints already forbid resting on any one collaborator's goodwill or
 position. `example-showcase` costs nothing new to add: it already exists, under
 the same organisation, to serve the public events feed.
 
-**Also correct, outside this repository:** the GitHub App's homepage URL
+**Also needs correcting, outside this repository:** the GitHub App's homepage URL
 (the organisation's Settings → Developer settings → GitHub Apps → the app
 registered above under *Authentication relay*) still reads
 `.../example-cockpit/`. Point it at the address above instead. This is a
@@ -254,19 +254,27 @@ repository still needs to know they exist and where they live.
 - **`TALLY_WEBHOOK_SECRET`** — verifies that a `proposal-submitted`
   `repository_dispatch` reaching *Handle proposal*
   (`.github/workflows/candidate-form.yml`) really came from the public
-  Tally form and not a forged request. Set as a repository secret; its
-  value is the signing secret Tally shows when the webhook is configured.
-  The same value is also set as a Wrangler secret on
-  `services/form-relay/` (see *Form relay* above), which checks this
-  signature first, before it ever sends the dispatch this workflow reads.
+  Tally form and not a forged request. Without this repository secret set,
+  that Actions-side check is skipped and any dispatch is accepted (D-13:
+  an absent integration is a normal state, not an error) — the Worker's
+  own copy of the same secret has no such fallback and refuses every
+  request outright without it, because the Worker is the one thing
+  standing between this whole chain and the public internet, while the
+  Actions side only ever sees what the Worker already let through. Set as
+  a repository secret; its value is the signing secret Tally shows when
+  the webhook is configured. The same value is also set as a Wrangler
+  secret on `services/form-relay/` (see *Form relay* above), which checks
+  this signature first, before it ever sends the dispatch this workflow
+  reads.
 - **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
   scoped to the separate `example-instance/example-showcase` repository
   (contents: read & write only), that both *Publish vitrine data*
   (`.github/workflows/publish-vitrine.yml`) and *Deploy app*
   (`.github/workflows/deploy.yml`) use to push into it — the public events
   feed under `src/_data/`, and, since the app is now published through
-  this same repository (see *GitHub Pages* above), the built application
-  under `app/`. It is no longer only the events feed at stake: without it,
+  this same repository (see *Publishing the application (GitHub Pages)*
+  above), the built application under `app/`. It is no longer only the
+  events feed at stake: without it,
   *Deploy app* still logs a message and exits cleanly rather than failing
   loudly, but nothing is pushed anywhere and there is no fallback
   publishing route, so there is no site at all. Set as a repository secret
