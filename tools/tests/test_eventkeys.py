@@ -469,9 +469,7 @@ def test_the_shared_encryption_fixture_still_has_cases() -> None:
     assert len(_FIXTURE["cases"]) > 0
 
 
-@pytest.mark.parametrize(
-    "case", _FIXTURE["cases"], ids=lambda c: c["name"]
-)
+@pytest.mark.parametrize("case", _FIXTURE["cases"], ids=lambda c: c["name"])
 def test_a_browser_encrypted_envelope_from_the_shared_fixture_decrypts_here(
     case: dict[str, Any],
 ) -> None:
