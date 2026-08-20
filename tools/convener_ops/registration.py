@@ -473,6 +473,36 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
     )
 
 
+def looks_like_a_matching_code(token: str) -> bool:
+    """Whether `token` has a matching code's own shape -- eight symbols,
+    every one drawn from `_CODE_ALPHABET` -- once punctuation is stripped
+    and case is folded the same way `attendance.py`'s own
+    `_code_signature` does. Deliberately shape, not proof: this never
+    decides that `token` IS a real code for any particular registrant
+    (only `matching_code` recomputed for a specific address can say that),
+    only that it looks enough like one to have been typed as one.
+
+    `attendance.py`'s level 3 (normalised name) uses this to drop a code
+    typed alongside a name -- the confirmation e-mail's own worked example
+    (`confirmation.MATCHING_INSTRUCTION`) keeps the participant's name IN
+    the display name next to the code, not instead of it, so a genuine
+    registrant's display name is expected to carry one extra token that
+    level must not hold against them. Shape-only also means a *mistyped*
+    code -- one wrong symbol, still drawn from the alphabet -- is still
+    dropped: level 3 exists for when the code did not work, so refusing to
+    recognise a near-miss as "a code was attempted here" would defeat the
+    reason this function exists.
+
+    Public rather than module-private, the same reasoning `normalize_email`
+    gives for its own visibility: a second, hand-written notion of "looks
+    like a code" in `attendance.py` would risk disagreeing with this one
+    about what the alphabet is, and the alphabet is defined once, here."""
+    stripped = "".join(ch for ch in token.upper() if ch.isalnum())
+    return len(stripped) == _CODE_SYMBOLS and all(
+        ch in _CODE_ALPHABET for ch in stripped
+    )
+
+
 def event_id_from_payload(payload: str) -> str | None:
     """The `event_id` field of a raw registration dispatch payload -- the
     same JSON string `to_registration` also reads in full as `ciphertext`

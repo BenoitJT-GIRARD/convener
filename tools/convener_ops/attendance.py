@@ -39,6 +39,25 @@ directly, not just level by level in isolation: a code is tested as
 *winning* against an address that names someone else, and an address is
 tested as winning against a name that reads as someone else.
 
+Ties are never resolved by guessing
+----------------------------------------
+"The level above found nothing" means zero candidates, specifically --
+finding *more than one* equally-good candidate at a level is a third
+outcome, not a variant of "found nothing" that falls through to try the
+next level anyway. Two registrants who normalise to the same word set
+("Marie Martin" twice, or, since level 3 compares a *set*, "Jean Martin"
+against "Martin Jean") are a real, reviewed case: resolving either tie by
+position in `registrations` would let who signed up first -- a fact with
+no relationship to who was in the room -- silently decide whose
+certificate names whose presence, and the tie would flip if the file's
+entries were simply written in the other order. So a tie stops the
+cascade exactly where an unambiguous match would: `_settle` returns no
+registration and every tied candidate; `_resolve` does not then try a
+weaker level to break it, the same way it does not let a weaker level
+override an unambiguous answer. The row lands in `unmatched`, and
+`UnmatchedAttendee.tied_with` carries every tied candidate's address, so
+the host is resolving a named ambiguity, not restarting from nothing.
+
 Why level 1 alone is tried for a telephone row
 ------------------------------------------------
 `AttendanceRow.email` is `None` for a telephone joiner (`platform.py`'s
@@ -124,7 +143,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from .platform import AttendanceRow
-from .registration import Registration, matching_code, normalize_email
+from .registration import (
+    Registration,
+    looks_like_a_matching_code,
+    matching_code,
+    normalize_email,
+)
 
 
 @dataclass(frozen=True)
@@ -167,6 +191,19 @@ class UnmatchedAttendee:
     display_name: str
     email: str
     duration_seconds: int
+    #: The registered addresses that tied at whichever cascade level
+    #: produced this outcome -- non-empty only when a level found more
+    #: than one equally-good candidate (two registrants sharing a
+    #: normalised name, say) and the cascade refused to guess between
+    #: them; empty when no level found any candidate at all. Gives the
+    #: host something concrete to act on beyond "this address matched
+    #: nobody" -- see the module docstring's "Ties are never resolved by
+    #: guessing" section. When several summed rows disagree on which tie
+    #: was found (rare: it would mean the same address appeared alongside
+    #: two different ambiguous display names), the first one seen wins,
+    #: the same "first spelling seen" rule `display_name` already
+    #: follows.
+    tied_with: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -208,68 +245,185 @@ def _name_tokens(text: str) -> frozenset[str]:
     the normalised-name level to compare on: NFKD-decompose so an accented
     letter splits into its base letter plus a combining mark, drop every
     combining mark, casefold, then split into a set of words -- a set, not
-    a sequence, so word order plays no part in the comparison at all."""
+    a sequence, so word order plays no part in the comparison at all.
+
+    Used as-is for a registrant's own `first_name`/`surname`: a matching
+    code is never part of anyone's real name, so there is nothing to strip
+    there. `_name_tokens_for_matching` below is the display-name-only
+    variant that does strip one."""
     decomposed = unicodedata.normalize("NFKD", text)
     stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
     return frozenset(stripped.casefold().split())
 
 
-def _match_by_code(
+def _name_tokens_for_matching(display_name: str) -> frozenset[str]:
+    """Level 3's own tokenisation of a display name: `_name_tokens`, minus
+    any token shaped like a matching code (`looks_like_a_matching_code`).
+
+    The confirmation e-mail's worked example
+    (`confirmation.MATCHING_INSTRUCTION`) reads `Ada Lovelace WXYZ-2345` --
+    the participant's real name *plus* the code, never the code instead of
+    the name. Comparing that display name's raw token set against a
+    two-word registrant name would make the exact instruction being
+    followed the reason a match fails, and would leave level 3's only
+    reachable population as people who ignored the e-mail -- the opposite
+    of what `_NO_CODE_FALLBACK` (`cli.py`) promises. Shape-only, not
+    correctness: a *mistyped* code is still dropped, because level 3
+    exists precisely for when the code did not work at level 1."""
+    return frozenset(
+        token
+        for token in _name_tokens(display_name)
+        if not looks_like_a_matching_code(token)
+    )
+
+
+def _code_candidates(
     display_name: str, registrations: Sequence[Registration], event: MatchEvent
-) -> Registration | None:
-    """Cascade level 1. The first registration (input order) whose own
-    code the display name carries -- a display name that somehow carried
-    two different registrants' codes at once is not a case this cascade
-    tries to disambiguate, the same first-match idiom
-    `registration.find_by_email` and `platform.find_speaker` already use
-    rather than proving uniqueness."""
-    for registration in registrations:
-        code = matching_code(event.event_id, registration.email, event.salt)
-        if code is not None and _display_name_carries_code(display_name, code):
-            return registration
-    return None
+) -> list[Registration]:
+    """Cascade level 1: every registration whose own code the display name
+    carries -- not collapsed to a single answer here. `_resolve` decides
+    what zero, one, or more than one candidate means at this level; a
+    display name carrying two different registrants' codes at once is not
+    a person to guess about either -- see `_settle`."""
+    return [
+        registration
+        for registration in registrations
+        if (code := matching_code(event.event_id, registration.email, event.salt))
+        is not None
+        and _display_name_carries_code(display_name, code)
+    ]
 
 
-def _match_by_address(
+def _address_candidates(
     email: str, registrations: Sequence[Registration]
-) -> Registration | None:
-    """Cascade level 2: the row's own address, compared through
-    `normalize_email` -- the same comparison `upsert` and `find_by_email`
-    already use."""
+) -> list[Registration]:
+    """Cascade level 2: every registration whose own address, compared
+    through `normalize_email` -- the same comparison `upsert` and
+    `find_by_email` already use -- equals the row's. `upsert` deduplicates
+    addresses within one event, so two registrations sharing an address
+    should not occur in practice; `_settle` guards it anyway, for free,
+    against a caller that hands `match` a list built some other way."""
     target = normalize_email(email)
-    for registration in registrations:
-        if normalize_email(registration.email) == target:
-            return registration
-    return None
+    return [
+        registration
+        for registration in registrations
+        if normalize_email(registration.email) == target
+    ]
 
 
-def _match_by_name(
+def _name_candidates(
     display_name: str, registrations: Sequence[Registration]
-) -> Registration | None:
+) -> list[Registration]:
     """Cascade level 3, the weakest rung by design (spec S:5 ranks it
-    last): the display name's word set against the registrant's own first
-    name and surname as a set."""
-    target = _name_tokens(display_name)
-    for registration in registrations:
-        candidate = _name_tokens(f"{registration.first_name} {registration.surname}")
-        if candidate == target:
-            return registration
-    return None
+    last): every registration whose first name and surname, as a word
+    set, equal the display name's -- with any token shaped like a
+    matching code dropped first (`_name_tokens_for_matching`), since the
+    confirmation e-mail's own instruction keeps the participant's real
+    name in the display name *alongside* the code, not instead of it. Two
+    registrants who happen to share a normalised name is exactly the case
+    `_settle` exists for: this level is a coincidence of spelling, not
+    proof of identity, so more than one equally-good candidate must never
+    be resolved by which one happens to come first in the list."""
+    target = _name_tokens_for_matching(display_name)
+    if not target:
+        return []
+    return [
+        registration
+        for registration in registrations
+        if _name_tokens(f"{registration.first_name} {registration.surname}") == target
+    ]
+
+
+@dataclass(frozen=True)
+class _Resolution:
+    """One row's answer from the cascade. `registration` is set when
+    exactly one candidate was found at some level; `tied` holds every
+    candidate found at whichever level stopped the cascade with more than
+    one -- an ambiguous signal is never overridden by trying a weaker
+    level next, the same way an unambiguous signal already overrides a
+    contradicting weaker one. Both `registration is None` and `tied ==
+    ()` together means no level found any candidate at all."""
+
+    registration: Registration | None
+    tied: tuple[Registration, ...] = ()
+
+
+def _settle(candidates: list[Registration]) -> _Resolution:
+    """The tie rule every cascade level shares: a single candidate is the
+    answer, and more than one is not a person to guess about -- so the
+    row lands in `unmatched`, carrying every tied candidate's address,
+    where a host with the room roster can tell two same-named registrants
+    apart. Reviewed and found wanting: the first-match idiom `find_speaker`
+    and `find_by_email` use elsewhere in this package resolves on keys
+    unique by construction (an event id, a deduplicated address); a code
+    or a normalised name carries no such guarantee, and picking the first
+    candidate in input order would let who signed up first -- a fact with
+    no relationship to who was in the room -- silently decide whose
+    certificate gets whose presence."""
+    if len(candidates) == 1:
+        return _Resolution(registration=candidates[0])
+    return _Resolution(registration=None, tied=tuple(candidates))
+
+
+def _address(row: AttendanceRow) -> str | None:
+    """`row.email`, with a blank string folded into `None`. `platform.py`'s
+    own reader already upholds "a blank cell is `None`, never `''`" (its
+    "email boundary" section), so a well-formed `AttendanceRow` never
+    exercises the blank branch here -- this is `match` *enforcing* that
+    invariant rather than only trusting the one caller this package ships
+    to have already kept it, against a hand-built row (a test double, or a
+    future `Platform` implementation) that does not."""
+    if row.email is None:
+        return None
+    stripped = row.email.strip()
+    return stripped or None
+
+
+def _duration(row: AttendanceRow) -> int:
+    """`row.duration_seconds`, floored at zero. `platform.py`'s CSV reader
+    rejects a negative duration outright, as a malformed row; `platform_fcc.py`
+    deliberately does not -- it returns the provider's own figure exactly as
+    received, anomalous or not, because a reader has no side channel of its
+    own to report it through and correcting it there would hide a fact
+    about the response. `match` is the one place both paths' rows are
+    summed into a total this project may put in front of an accreditation
+    body, and a negative contribution has no reading as time spent present
+    -- so it is floored here, at the aggregation step, without touching or
+    rejecting the row itself: `AttendanceRow.duration_seconds` stays
+    exactly what was read, for anyone who inspects the row directly."""
+    return max(0, row.duration_seconds)
 
 
 def _resolve(
     row: AttendanceRow, registrations: Sequence[Registration], event: MatchEvent
-) -> Registration | None:
-    """The cascade, in order, each level tried only once the one above it
-    found nothing. Level 1 is tried unconditionally; levels 2 and 3 are
-    tried only when `row.email` is not `None` -- see the module
-    docstring's "Why level 1 alone is tried for a telephone row" section."""
-    by_code = _match_by_code(row.display_name, registrations, event)
-    if by_code is not None or row.email is None:
-        return by_code
-    return _match_by_address(row.email, registrations) or _match_by_name(
-        row.display_name, registrations
-    )
+) -> _Resolution:
+    """The cascade, in order. Each level is tried only once the level
+    above it found *no* candidate at all -- finding exactly one candidate
+    at any level stops the cascade with a match, and finding more than
+    one stops it with a tie: a level-1 tie (two codes in one display
+    name) is not overridden by trying the address next, the same
+    reasoning that already keeps a clean level-1 match from being
+    overridden by a contradicting address. Level 1 is tried
+    unconditionally; levels 2 and 3 are tried only when the row carries
+    an address -- see the module docstring's "Why level 1 alone is tried
+    for a telephone row" section."""
+    code_candidates = _code_candidates(row.display_name, registrations, event)
+    if code_candidates:
+        return _settle(code_candidates)
+
+    address = _address(row)
+    if address is None:
+        return _Resolution(registration=None)
+
+    address_candidates = _address_candidates(address, registrations)
+    if address_candidates:
+        return _settle(address_candidates)
+
+    name_candidates = _name_candidates(row.display_name, registrations)
+    if name_candidates:
+        return _settle(name_candidates)
+
+    return _Resolution(registration=None)
 
 
 def match(
@@ -286,33 +440,37 @@ def match(
     sense: within each of the three output sequences, entries appear in
     the order their person was first seen in `rows`."""
     matched_totals: dict[Registration, int] = {}
-    unmatched_totals: dict[str, tuple[str, str, int]] = {}
+    unmatched_totals: dict[str, tuple[str, str, int, tuple[str, ...]]] = {}
     unreachable: list[UnreachableAttendee] = []
 
     for row in rows:
-        registration = _resolve(row, registrations, event)
-        if registration is not None:
-            matched_totals[registration] = (
-                matched_totals.get(registration, 0) + row.duration_seconds
-            )
+        resolution = _resolve(row, registrations, event)
+        if resolution.registration is not None:
+            matched_totals[resolution.registration] = matched_totals.get(
+                resolution.registration, 0
+            ) + _duration(row)
             continue
 
-        if row.email is not None:
-            key = normalize_email(row.email)
-            seen_name, seen_email, total = unmatched_totals.get(
-                key, (row.display_name, row.email, 0)
+        address = _address(row)
+        if address is not None:
+            key = normalize_email(address)
+            seen_name, seen_email, total, seen_tied = unmatched_totals.get(
+                key, (row.display_name, address, 0, ())
             )
+            if not seen_tied and resolution.tied:
+                seen_tied = tuple(candidate.email for candidate in resolution.tied)
             unmatched_totals[key] = (
                 seen_name,
                 seen_email,
-                total + row.duration_seconds,
+                total + _duration(row),
+                seen_tied,
             )
             continue
 
         unreachable.append(
             UnreachableAttendee(
                 display_name=row.display_name,
-                duration_seconds=row.duration_seconds,
+                duration_seconds=_duration(row),
             )
         )
 
@@ -323,9 +481,12 @@ def match(
         ),
         unmatched=tuple(
             UnmatchedAttendee(
-                display_name=seen_name, email=seen_email, duration_seconds=total
+                display_name=seen_name,
+                email=seen_email,
+                duration_seconds=total,
+                tied_with=seen_tied,
             )
-            for seen_name, seen_email, total in unmatched_totals.values()
+            for seen_name, seen_email, total, seen_tied in unmatched_totals.values()
         ),
         unreachable=tuple(unreachable),
     )
