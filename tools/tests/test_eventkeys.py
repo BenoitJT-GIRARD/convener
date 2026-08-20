@@ -446,3 +446,41 @@ def test_destroy_is_idempotent_on_an_already_destroyed_event() -> None:
 
     expected = DestructionRecord(event_id="mrg-042", destroyed_on=date(2026, 8, 20))
     assert record == expected
+
+
+# ------------------------------------------------------------------ #
+# D-14: what the browser encrypts, this module must be able to decrypt.
+# `tools/tests/fixtures/governance-cases.json::event_registration_encryption`
+# is the shared contract -- see its own `_event_registration_encryption_comment`
+# for how the fixture was built. `app/tests/signup-encrypt.test.ts` reads the
+# same cases on the other side.
+# ------------------------------------------------------------------ #
+
+_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "governance-cases.json"
+_FIXTURE = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))[
+    "event_registration_encryption"
+]
+
+
+def test_the_shared_encryption_fixture_still_has_cases() -> None:
+    """Guards the fixture itself: an emptied `cases` list would let the
+    parametrized test below collect zero tests and still exit green, which
+    is exactly the silent loss D-14 exists to prevent."""
+    assert len(_FIXTURE["cases"]) > 0
+
+
+@pytest.mark.parametrize(
+    "case", _FIXTURE["cases"], ids=lambda c: c["name"]
+)
+def test_a_browser_encrypted_envelope_from_the_shared_fixture_decrypts_here(
+    case: dict[str, Any],
+) -> None:
+    """`case["envelope"]` is not built by this test, or by anything in this
+    module: it is the literal, captured output of the real `encryptRegistration`
+    in `app/src/signup/encrypt.ts`, run once under Node's own `crypto.subtle`.
+    Decrypting it here with the fixture's `private_pem`, through the real
+    `decrypt`, is the one place that proves a browser-encrypted registration
+    is actually readable by the job that has to read it -- not merely that
+    both languages pass their own, separately-written tests."""
+    plaintext = decrypt(_FIXTURE["private_pem"], case["envelope"])
+    assert json.loads(plaintext) == case["fields"]
