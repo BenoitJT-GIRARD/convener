@@ -418,11 +418,16 @@ def test_nominations_must_be_a_list() -> None:
     assert any("nominations must be a list" in e for e in errors)
 
 
-def test_a_config_with_no_nominations_key_skips_nomination_validation() -> None:
+def test_a_missing_nominations_key_is_reported_once_not_twice() -> None:
+    # Reported once, by the missing-keys check -- must not also trip
+    # "nominations must be a list" (guarded by `"nominations" in cfg`, for
+    # the same reason as the board and sla_days checks in test_validate.py)
+    # or be iterated as an empty list.
     cfg = config()
     del cfg["nominations"]
     errors = validate_config(cfg)
     assert any("missing keys ['nominations']" in e for e in errors)
+    assert not any("nominations must be a list" in e for e in errors)
     assert not any("nominations[" in e for e in errors)
 
 

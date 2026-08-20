@@ -11,7 +11,7 @@ import pytest
 import yaml
 from conftest import board_member, config, speaker
 
-from convener_ops.cli import _load, handle_proposal, sweep, validate
+from convener_ops.cli import _load, handle_proposal, public_data, sweep, validate
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -143,15 +143,19 @@ def test_validate_handles_a_config_with_no_board_key(
     # board_logins seeds validate_speakers's login checks (assigned_to /
     # ballot voter). A config.yml with no "board" key at all -- a hand-edit
     # or an in-progress migration -- must fall back to an empty set rather
-    # than raise iterating None.
+    # than raise iterating None. assigned_to="ada" makes that fallback
+    # observable: with board_logins genuinely empty, "ada" cannot be in it,
+    # so the speaker-side error names it -- proof the fallback ran, not
+    # just that *some* error appeared.
     cfg = config()
     del cfg["board"]
-    _write_data(tmp_path, [speaker()], cfg)
+    _write_data(tmp_path, [speaker(assigned_to="ada")], cfg)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
 
     assert validate() == 1
     out = capsys.readouterr().out
     assert "Data validation FAILED" in out
+    assert "assigned_to is not a board member ('ada')" in out
 
 
 def test_sweep_reports_nothing_to_sweep_when_no_change(
@@ -195,6 +199,48 @@ def test_sweep_reports_load_errors_and_returns_1(
 
     assert sweep() == 1
     assert "file missing" in capsys.readouterr().out
+
+
+def test_public_data_writes_the_allowlisted_feed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The entry point `convener-public-data` runs, wired end to end: a lead is
+    # excluded (not a public status), a scheduled talk is included and
+    # named by its edition_code (to_public's own id mapping, see
+    # test_public_data.py) -- proving this writes to_public's *output*,
+    # not merely that to_public itself works in isolation.
+    speakers = [
+        speaker(id="spk-001", status="lead"),
+        speaker(
+            id="spk-002",
+            status="scheduled",
+            edition_code="MRG-05",
+            date="2026-01-08",
+            host_1="H1",
+            host_2="H2",
+        ),
+    ]
+    _write_data(tmp_path, speakers, config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert public_data() == 0
+    assert "wrote 1 events" in capsys.readouterr().out
+
+    written = json.loads(
+        (tmp_path / "public-data" / "events-public.json").read_text(encoding="utf-8")
+    )
+    assert [row["id"] for row in written] == ["MRG-05"]
+
+
+def test_public_data_reports_load_errors_and_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    (tmp_path / "data").mkdir()
+
+    assert public_data() == 1
+    assert "file missing" in capsys.readouterr().out
+    assert not (tmp_path / "public-data").exists()
 
 
 def test_handle_proposal_with_no_payload_returns_1(

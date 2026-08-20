@@ -394,8 +394,7 @@ def test_a_parked_lead_with_no_opened_on_is_not_dated() -> None:
             selection={"ballots": [], "opened_on": "", "decided_on": ""},
         )
     ]
-    digest = daily_digest(speakers, make_config(), NOW)
-    assert digest is None or "was parked" not in digest
+    assert daily_digest(speakers, make_config(), NOW) is None
 
 
 def test_the_parked_line_follows_the_window_the_sweep_actually_applies() -> None:

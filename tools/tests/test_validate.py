@@ -177,11 +177,15 @@ def test_an_unreadable_sla_days_is_reported_once() -> None:
     assert not any("must be an integer" in e for e in errors), errors
 
 
-def test_a_config_with_no_sla_days_key_skips_sla_validation() -> None:
+def test_a_missing_sla_days_key_is_reported_once_not_twice() -> None:
+    # Reported once, by the missing-keys check -- must not also trip
+    # "sla_days must be a mapping" (guarded by `"sla_days" in cfg`, for the
+    # same reason as the board check above) or be read as an empty mapping.
     cfg = config()
     del cfg["sla_days"]
     errors = validate_config(cfg)
     assert any("missing keys ['sla_days']" in e for e in errors)
+    assert not any("sla_days must be a mapping" in e for e in errors)
     assert not any("sla_days." in e for e in errors)
 
 
@@ -214,14 +218,18 @@ def test_a_non_mapping_board_member_is_reported() -> None:
     assert any("invalid board member" in e for e in errors)
 
 
-def test_a_config_with_no_board_key_skips_board_member_validation() -> None:
+def test_a_missing_board_key_is_reported_once_not_twice() -> None:
     # A config.yml with no "board" key at all -- a hand-edit or an
-    # in-progress migration -- is reported once, by the missing-keys check,
-    # not iterated as an empty or None board.
+    # in-progress migration -- is reported once, by the missing-keys check.
+    # It must not also trip "board must be a list" (that check is guarded
+    # by `"board" in cfg`, precisely so an absent key doesn't double up with
+    # a present-but-wrong-type one), and must not be iterated as an empty
+    # or None board either.
     cfg = config()
     del cfg["board"]
     errors = validate_config(cfg)
     assert any("missing keys ['board']" in e for e in errors)
+    assert not any("board must be a list" in e for e in errors)
     assert not any("invalid board member" in e for e in errors)
 
 
