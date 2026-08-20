@@ -11,7 +11,7 @@ import base64
 import hashlib
 import hmac
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from convener_ops.governance import active_board
@@ -155,7 +155,7 @@ def field_value(field: dict[str, Any]) -> str:
     return str(value)
 
 
-def _get(fields: dict[str, str], *keys: str) -> str:
+def _get(fields: Mapping[str, object], *keys: str) -> str:
     for key in keys:
         value = fields.get(key)
         if not value:

@@ -83,6 +83,16 @@ def test_a_non_ascii_signature_is_refused_not_crashed() -> None:
     assert verify_signature(body, "h\u00e9llo-not-a-real-signature", secret) is False
 
 
+def test_a_lone_surrogate_signature_is_refused_not_crashed() -> None:
+    """A lone surrogate half (possible from a header carrying invalid
+    UTF-8) cannot be encoded at all -- `UnicodeEncodeError`, not the
+    `TypeError` the non-ASCII case above raises -- and this is the only
+    test that reaches that `except` branch."""
+    secret = "s3cr3t"
+    body = '{"data":{"fields":[]}}'
+    assert verify_signature(body, "\ud800", secret) is False
+
+
 def test_a_signature_with_a_trailing_space_is_refused() -> None:
     secret = "s3cr3t"
     body = '{"data":{"fields":[]}}'
@@ -351,10 +361,17 @@ def test_field_value_on_a_missing_value_is_an_empty_string() -> None:
 def test_get_still_degrades_a_raw_unresolved_list_to_recognisable_text() -> None:
     # The last line of defence: field_value is meant to run first, but if a
     # caller ever skips it, `_get` (exercised here through to_lead) must not
-    # let "['uuid']" reach a record.
-    fields = {"Name": "Ada Lovelace", "Gender": ["opt-nb"]}
+    # let "['FR', 'BE']" reach a record.
+    #
+    # Gender was the wrong field to prove this through: "opt-nb" and
+    # "['opt-nb']" are *both* outside GENDERS, so to_lead's fallback to
+    # "undisclosed" produces the same result whether or not `_get`'s list
+    # branch ever runs -- a `_get` rewritten without that branch still
+    # passes. Country passes its resolved value straight through with no
+    # such fallback, so a joined "FR, BE" and an unjoined "['FR', 'BE']"
+    # are distinguishable, and this test actually depends on the branch it
+    # names.
+    fields = {"Name": "Ada Lovelace", "Country": ["FR", "BE"]}
     lead = to_lead(fields, [], config(), TODAY)  # type: ignore[arg-type]
     assert lead is not None
-    # "opt-nb" is not a member of GENDERS, so it falls back to undisclosed
-    # -- but the point of this test is what it is *not*: "['opt-nb']".
-    assert lead["gender"] == "undisclosed"
+    assert lead["country"] == "FR, BE"
