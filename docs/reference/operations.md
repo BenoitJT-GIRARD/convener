@@ -307,48 +307,78 @@ phase-4 task; this section documents the procedure a volunteer or that later
 task follows, and `tools/convener_ops/platform_fcc.py`'s module docstring
 documents the same reasoning from the code's side.
 
-**Releasing a recording — manual, per event, and why it stays that way.**
-The provider's free tier is 1 GB; a 90-minute recording alone is roughly
-1,645 MB, so freeing the space after every event is a condition of
-operation, not an optimisation (spec Section 2/9). `convener-release-recording`
-(`tools/convener_ops/cli.py::release_recording`, run through
-`.github/workflows/recording.yml`) retrieves, verifies the retrieval, then
-deletes — in that order, structurally, not by convention (task 10).
+**Two routes free the recording quota, never one.** The provider's free
+tier is 1 GB; a 90-minute recording alone is roughly 1,645 MB, so freeing
+the space after every event is a condition of operation, not an
+optimisation (spec Section 2/9). Phase 3's own recording discipline —
+recording started for the talk, stopped before the discussion, started
+again for the discussion — means an event routinely produces **two**
+recordings that both cost quota, and only one of them may ever be
+converted to MP4. That is why there are two commands, not one, with
+opposite guards, both structural rather than a convention a caller has to
+remember (task 10):
 
-The two-trace shape it checks is a design ruling recorded in
-`.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19 — DESIGN RULING for
-the spec: who deletes the recording, and on what evidence"), carried into
-code rather than re-derived: it refuses to delete unless both
+**`convener-release-recording`** — for a talk headed to YouTube, only.
+(`tools/convener_ops/cli.py::release_recording`, run through
+`.github/workflows/recording.yml`.) Retrieves, verifies the retrieval,
+then deletes, in that order. The two-trace shape it checks is a design
+ruling recorded in `.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19
+— DESIGN RULING for the spec: who deletes the recording, and on what
+evidence"), carried into code rather than re-derived: it refuses to
+delete unless both
 
 1. the `delivered/recording-retrieved` step is ticked on the event's own
-   `runbook_progress` — set by hand once the host has downloaded the
-   recording and archived it somewhere durable, independent of whether it
-   will ever be published (**not** `youtube_url`, which records where a
-   *published* recording lives and is legitimately empty for one that
-   never will be — a speaker who withholds consent, or the discussion
-   segment, which is never uploaded anywhere at all); and
+   `runbook_progress` — **there is no cockpit checkbox for this yet; a
+   volunteer sets it today by editing `data/speakers.yml`'s
+   `runbook_progress` map directly**, the same raw-YAML edit `youtube_url`
+   itself already requires when set by hand, until a later task adds a
+   journey item for it. Ticked once the host has downloaded the recording
+   and archived it somewhere durable, independent of whether it will ever
+   be published — **not** `youtube_url`, which records where a *published*
+   recording lives, is legitimately empty for one that never will be, and
+   is read nowhere in this guard; and
 2. the provider's own converted copy answers with `video/mp4` and
    `Accept-Ranges: bytes` — proof the host's Download click in
    FreeConferenceCall's own web interface already happened. Nothing in
    this codebase ever triggers that conversion itself; only the host's
    own click does.
 
-**To run it:** trigger `.github/workflows/recording.yml`'s
-`workflow_dispatch`, supplying the event id and the FreeConferenceCall
-conference id (visible in the conference's own URL inside
-FreeConferenceCall's web interface — a numeric id, e.g. `618515381`).
+**`convener-discard-recording`** — for the discussion segment, always, and for
+a talk whose publication consent was withheld. (`tools/convener_ops/cli.py::discard_recording`,
+run through `.github/workflows/discard-recording.yml`.) Neither of these
+may ever be converted: the only way to satisfy trace 2 above is a
+conversion, and a converted file stays *publicly reachable at its own URL
+even after the conference itself is deleted* (verified empirically) —
+never acceptable for content nobody agreed to publish. So this command
+asks for no proof of retrieval at all, because for these two cases none
+may ever exist without doing the exact harm the command exists to avoid.
+Its guard is a **typed operator affirmation** instead: the
+`confirm_discard` input must read exactly `discard <event_id>` (e.g.
+`discard mrg-042`), the same "type the name to confirm" discipline a
+repository-deletion page uses for its own irreversible action. It never
+reads the retrieval tick above, and never accepts it as a substitute — a
+ticked `delivered/recording-retrieved` cannot make this command decide
+there is nothing to affirm.
 
-**Why this is a manual, per-event trigger, not a schedule.** Nothing ties
-an event id to its FreeConferenceCall conference id anywhere in the
+**To run either:** trigger the matching workflow's `workflow_dispatch`,
+supplying the event id and the FreeConferenceCall conference id (visible
+in the conference's own URL inside FreeConferenceCall's web interface —
+a numeric id, e.g. `618515381`); `discard-recording.yml` additionally
+asks for the typed confirmation above. Running the wrong one for a
+recording is not reversible: check which route an event's recording
+needs *before* triggering either.
+
+**Why both stay manual, per-event triggers, never a schedule.** Nothing
+ties an event id to its FreeConferenceCall conference id anywhere in the
 provider's documented or undocumented API in a way this project has been
 able to verify (task 3's own refusal to build a resolver on the unverified
 conference-listing endpoint, upheld on review). Until a verified way to
 make that resolution exists, a human supplies the conference id by hand,
-once, when running this workflow — so releasing a recording remains a
-runbook step, not something this project promises to do unattended. This
-does not fully close the "the quota problem is a forgetting problem" risk
-the design ruling above names; it is a known, disclosed limit, not an
-oversight.
+once, when running either workflow — so releasing or discarding a
+recording remains a runbook step, not something this project promises to
+do unattended. This does not fully close the "the quota problem is a
+forgetting problem" risk the design ruling above names; it is a known,
+disclosed limit, not an oversight.
 
 ## Outbound email
 
