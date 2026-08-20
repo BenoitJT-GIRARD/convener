@@ -55,6 +55,14 @@ Thumbs.db
 keys/events/*
 !keys/events/*.pub
 
+# Certificate signing private key (tools/convener_ops/signing.py never writes one
+# to disk either). Unlike keys/events/, every .pub ever committed here stays
+# forever -- rotation retires a key from service, never from this directory
+# -- but the rule protecting the private half from an accidental commit is
+# the same one.
+keys/signing/*
+!keys/signing/*.pub
+
 # Raw attendance export (tools/convener_ops/platform.py::ManualPlatform). Contains
 # personal data -- display names and addresses off the meeting platform --
 # and is dropped here only for one read, never committed. The room link and
