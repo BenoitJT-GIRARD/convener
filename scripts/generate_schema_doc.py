@@ -324,10 +324,31 @@ _NESTED: dict[str, Interface] = {}
 #: fractional one; only the validator does (`whole()` versus `share()` in
 #: app/src/data/validate.ts, `isinstance(value, int)` versus the
 #: `]0, 1]` range check in tools/convener_ops/validate.py). So the type column
-#: says only what the type itself says, and each field's own doc comment
-#: -- already reproduced in the note column -- carries the real
-#: constraint: sla_days's says "in minutes"/"in days" alongside a plain
-#: number, eligibility_share's states its own ]0, 1] range outright.
+#: says only what the type itself says.
+#:
+#: A round 2 draft of this comment went on to claim each field's own doc
+#: comment "already carries the real constraint" -- sla_days's stating
+#: whole numbers, eligibility_share's stating ]0, 1]. Round 3 review found
+#: that false by checking the live files, not by trusting the sentence: no
+#: field in app/src/data/types.ts says "whole number", anywhere, and
+#: eligibility_share's own bound lived in its doc comment's *second*
+#: paragraph -- which _paragraph() below deliberately never reads, so it
+#: could not have reached this page regardless. The corrected rule is
+#: narrower and is the one actually enforced by this script: the note
+#: column carries whatever a field's *first* paragraph says, no more and
+#: no less, and this page does not otherwise carry a validator-enforced
+#: constraint on any field's behalf. Where a bound matters to a reader --
+#: eligibility_share's is the one field this schema has where the bound is
+#: the whole point -- it has to be written into that first paragraph by
+#: whoever adds the field, not asserted about the model in general here.
+#: The eighteen existing whole-number fields were left exactly as they
+#: were: none of them gained a "whole number" sentence for this, because
+#: that would only be manufacturing the old claim's truth after the fact,
+#: not fixing what was wrong with it. The real bound, for any field, is
+#: enforced by the validator, not stated by this table:
+#: `whole()`/`share()` in app/src/data/validate.ts,
+#: `isinstance(value, int)`/the `]0, 1]` check in
+#: tools/convener_ops/validate.py.
 _TYPE_WORDS: Final = {
     "string": "string",
     "number": "number",

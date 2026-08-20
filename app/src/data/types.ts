@@ -435,10 +435,11 @@ export interface Config {
   /** How long a seminar runs, in minutes. */
   seminar_duration_minutes: number;
   /** A share of `seminar_duration_minutes` a matched attendee's summed
-   *  duration must reach to earn a certificate (phase 4 S:5). Configuration,
-   *  not a constant: the real number has to align with accreditation
-   *  requirements this project does not yet know, and alignment happens by
-   *  editing this file, not by editing code.
+   *  duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`:
+   *  above zero, at most one. Configuration, not a constant: the real
+   *  number has to align with accreditation requirements this project does
+   *  not yet know, and alignment happens by editing this file, not by
+   *  editing code.
    *
    *  `0.6666666666666666`, not the tidier-looking `0.6667`: the closest
    *  float64 to exactly two thirds, chosen because it lands fractionally

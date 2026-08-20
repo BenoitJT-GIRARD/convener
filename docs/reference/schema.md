@@ -161,7 +161,7 @@ One mapping, with the keys below.
 | `vw_counter` | number | The next `MRG-N` to assign. |
 | `overlap_window_days` | number | Forbidden window around each scheduled date, in days. |
 | `seminar_duration_minutes` | number | How long a seminar runs, in minutes. |
-| `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate (phase 4 S:5). Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |
+| `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`: above zero, at most one. Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |
 | `board` | list&lt;BoardMember&gt; | The editorial board, one entry per member. Replaces the flat `board_members` list of logins. |
 | `nominations` | list&lt;Nomination&gt; | Candidates put forward for the board, with their objection windows. |
 | `board_min` | number | Fewest members the board may hold. |
