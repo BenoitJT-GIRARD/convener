@@ -7,15 +7,20 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
 from convener_ops.signing import (
+    MALFORMED,
+    MAX_TOKEN_BYTES,
+    NO_MATCHING_KEY,
+    PAYLOAD_FIELDS,
     RSA_KEY_BITS,
     SECRET_NAME,
     TOKEN_FIELDS,
     WIRE_VERSION,
     SigningError,
+    VerifyResult,
     derive_public_pem,
     generate,
     public_key_path,
@@ -27,9 +32,10 @@ from convener_ops.signing import (
 #: identifier, event, name, date, duration -- and nothing else. Used
 #: throughout this file instead of an arbitrary example dict, on purpose:
 #: this module's own docstring asks whoever builds a real payload
-#: (`certificate.py`, task 12) to keep exactly this discipline, and an
-#: address slipped into a convenience fixture here would be the wrong
-#: example to set. `test_the_shared_fixture_carries_no_address` pins it.
+#: (`certificate.py`, task 12) to keep exactly this discipline, and `sign`
+#: itself now enforces it via `PAYLOAD_FIELDS` -- so an address slipped
+#: into this fixture would fail every test in this file, not just the one
+#: that used to guard it alone.
 CERT_PAYLOAD: dict[str, Any] = {
     "identifier": "cert-2026-08-20-001",
     "event": "mrg-042",
@@ -39,17 +45,24 @@ CERT_PAYLOAD: dict[str, Any] = {
 }
 
 
-def test_the_shared_fixture_carries_no_address() -> None:
-    """Guards the discipline every other test in this file relies on: if a
-    future edit adds a convenience field to `CERT_PAYLOAD`, this is the
-    test that should fail, not something a reader has to notice by eye."""
-    assert set(CERT_PAYLOAD) == {
-        "identifier",
-        "event",
-        "name",
-        "date",
-        "duration_hours",
-    }
+def _retoken_with_tampered_payload(token: str, **overrides: Any) -> str:
+    """Rebuilds `token` with one or more payload fields changed, keeping
+    the *original* signature untouched -- exactly what an attacker gets
+    without the private key: a payload they can edit, and a signature that
+    no longer matches it. Used by the parametrized tamper test below."""
+    parsed = json.loads(token)
+    canonical = json.loads(base64.b64decode(parsed["payload"]))
+    canonical.update(overrides)
+    tampered_bytes = json.dumps(
+        canonical, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    tampered = dict(parsed)
+    tampered["payload"] = base64.b64encode(tampered_bytes).decode("ascii")
+    return json.dumps(tampered)
+
+
+def test_the_shared_fixture_matches_the_enforced_payload_schema() -> None:
+    assert set(CERT_PAYLOAD) == PAYLOAD_FIELDS
 
 
 # ------------------------------------------------------------------ #
@@ -61,8 +74,11 @@ def test_a_token_signed_with_the_private_half_verifies_with_the_public_half() ->
     private_pem, public_pem = generate()
 
     token = sign(CERT_PAYLOAD, private_pem)
+    result = verify(token, [public_pem])
 
-    assert verify(token, [public_pem]) == CERT_PAYLOAD
+    assert result.valid
+    assert result.payload == CERT_PAYLOAD
+    assert result.reason is None
 
 
 def test_a_certificate_signed_by_a_retired_key_still_verifies() -> None:
@@ -84,10 +100,10 @@ def test_a_certificate_signed_by_a_retired_key_still_verifies() -> None:
 
     token = sign(CERT_PAYLOAD, retired_private)
 
-    assert verify(token, [current_public, retired_public]) == CERT_PAYLOAD
+    assert verify(token, [current_public, retired_public]).payload == CERT_PAYLOAD
     # Order is a recommendation, not a requirement -- the retired key
     # working even listed first proves this is not an accident of order.
-    assert verify(token, [retired_public, current_public]) == CERT_PAYLOAD
+    assert verify(token, [retired_public, current_public]).payload == CERT_PAYLOAD
 
 
 def test_verifying_against_a_key_that_never_signed_the_token_fails() -> None:
@@ -96,26 +112,34 @@ def test_verifying_against_a_key_that_never_signed_the_token_fails() -> None:
     _private_b, public_b = generate()
 
     token = sign(CERT_PAYLOAD, private_a)
+    result = verify(token, [public_b])
 
-    assert verify(token, [public_b]) is None
+    assert not result.valid
+    assert result.reason == NO_MATCHING_KEY
+    assert result.payload is None
 
 
-def test_a_single_byte_changed_in_the_payload_fails_verification() -> None:
-    """Changer un octet de la charge, et verifier l'echec."""
+@pytest.mark.parametrize("field", sorted(PAYLOAD_FIELDS))
+def test_tampering_any_single_payload_field_fails_verification(field: str) -> None:
+    """The review round 2 finding this test exists to close: a mutant tree
+    that dropped one field at a time from what actually gets signed found
+    that only "identifier" was caught by this file's earlier, single-field
+    tamper test -- "event", "name", "date" and "duration_hours" all
+    survived, meaning the production code was correct (it signs the whole
+    payload) but nothing in the suite actually held it there. This test
+    tampers each of the five fields' *values* in turn and requires
+    verification to fail for every one, not just one."""
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
-    parsed = json.loads(token)
 
-    tampered_payload = dict(parsed["payload"])
-    tampered_payload["identifier"] = tampered_payload["identifier"][:-1] + (
-        "0" if tampered_payload["identifier"][-1] != "0" else "1"
-    )
-    tampered = json.dumps({**parsed, "payload": tampered_payload})
+    tampered_value: Any = 999.0 if field == "duration_hours" else "TAMPERED"
+    tampered = _retoken_with_tampered_payload(token, **{field: tampered_value})
 
-    assert verify(tampered, [public_pem]) is None
-    # The untampered token still verifies with the same key -- this is a
-    # property of the mutation, not of the key or of `verify` itself.
-    assert verify(token, [public_pem]) == CERT_PAYLOAD
+    result = verify(tampered, [public_pem])
+
+    assert not result.valid
+    assert result.reason == NO_MATCHING_KEY
+    assert result.payload is None
 
 
 def test_a_tampered_signature_fails_verification() -> None:
@@ -129,7 +153,147 @@ def test_a_tampered_signature_fails_verification() -> None:
         {**parsed, "signature": base64.b64encode(bytes(signature)).decode("ascii")}
     )
 
-    assert verify(tampered, [public_pem]) is None
+    result = verify(tampered, [public_pem])
+
+    assert not result.valid
+    assert result.reason == NO_MATCHING_KEY
+
+
+# ------------------------------------------------------------------ #
+# The wire format: transports the signed bytes, never recomputes them.
+# ------------------------------------------------------------------ #
+
+
+def test_wire_format_transports_the_signed_bytes_not_a_nested_object() -> None:
+    private_pem, _ = generate()
+    token = sign(CERT_PAYLOAD, private_pem)
+    parsed = json.loads(token)
+
+    assert set(parsed) == TOKEN_FIELDS
+    assert parsed["v"] == WIRE_VERSION == 1
+    assert isinstance(parsed["payload"], str)  # base64, not a nested JSON object
+    decoded = json.loads(base64.b64decode(parsed["payload"]))
+    assert decoded == CERT_PAYLOAD
+    assert len(base64.b64decode(parsed["signature"])) == RSA_KEY_BITS // 8
+
+
+def test_verify_accepts_payload_bytes_in_any_valid_json_formatting() -> None:
+    """Proves `verify` does not recompute or expect any specific
+    canonicalisation -- it checks the signature against exactly the
+    transported bytes, whatever their formatting, and only afterwards
+    parses them for display. Signs an alternately-formatted (indented,
+    unsorted-key) serialisation of the same payload directly, bypassing
+    `sign`'s own `_canonical_bytes` call entirely, to prove no specific
+    format is assumed anywhere in `verify`."""
+    private_pem, public_pem = generate()
+    alt_bytes = json.dumps(CERT_PAYLOAD, indent=2, sort_keys=False).encode("utf-8")
+    key = serialization.load_pem_private_key(private_pem.encode("ascii"), password=None)
+    assert isinstance(key, rsa.RSAPrivateKey)
+    signature = key.sign(alt_bytes, padding.PKCS1v15(), hashes.SHA256())
+    token = json.dumps(
+        {
+            "v": 1,
+            "payload": base64.b64encode(alt_bytes).decode("ascii"),
+            "signature": base64.b64encode(signature).decode("ascii"),
+        }
+    )
+
+    result = verify(token, [public_pem])
+
+    assert result.valid
+    assert result.payload == CERT_PAYLOAD
+
+
+def test_verify_does_not_care_about_outer_json_formatting_or_key_order() -> None:
+    """`JSON.stringify` on a future browser-side verifier is not guaranteed
+    to produce compact, insertion-ordered JSON the way `json.dumps(...,
+    separators=...)` does here; decoding the *outer* token must not
+    silently depend on either. (The inner `payload` bytes are transported
+    verbatim and never reformatted at all -- see the test above.)"""
+    private_pem, public_pem = generate()
+    token = sign(CERT_PAYLOAD, private_pem)
+    parsed = json.loads(token)
+    reordered = {
+        "signature": parsed["signature"],
+        "payload": parsed["payload"],
+        "v": parsed["v"],
+    }
+    reformatted = json.dumps(reordered, indent=2)
+    assert reformatted != token
+
+    result = verify(reformatted, [public_pem])
+
+    assert result.valid
+    assert result.payload == CERT_PAYLOAD
+
+
+def test_the_token_is_pure_ascii() -> None:
+    """The payload's accented name must not turn the token non-ASCII; see
+    the module docstring's "wire format" section. Base64 already guarantees
+    this regardless of the inner JSON's own escaping choice -- pinned here
+    directly rather than trusted by construction."""
+    private_pem, _ = generate()
+    token = sign(CERT_PAYLOAD, private_pem)
+    token.encode("ascii")  # raises UnicodeEncodeError if this is not pure ASCII
+
+
+def test_the_accented_name_round_trips_through_the_base64_payload() -> None:
+    private_pem, public_pem = generate()
+    token = sign(CERT_PAYLOAD, private_pem)
+
+    result = verify(token, [public_pem])
+
+    assert result.payload is not None
+    assert result.payload["name"] == "Élodie Fontâine"
+
+
+# ------------------------------------------------------------------ #
+# PAYLOAD_FIELDS: the certificate payload contract, enforced by `sign`.
+# ------------------------------------------------------------------ #
+
+
+def test_payload_fields_is_exactly_the_phase_4_certificate_schema() -> None:
+    assert {"identifier", "event", "name", "date", "duration_hours"} == PAYLOAD_FIELDS
+    assert "address" not in PAYLOAD_FIELDS
+    assert "postal_address" not in PAYLOAD_FIELDS
+
+
+def test_sign_rejects_a_payload_with_an_unexpected_field() -> None:
+    private_pem, _ = generate()
+    bad_payload = {**CERT_PAYLOAD, "address": "somewhere, never signed"}
+
+    with pytest.raises(ValueError, match="unexpected"):
+        sign(bad_payload, private_pem)
+
+
+def test_sign_rejects_a_payload_with_two_unexpected_fields() -> None:
+    """The exact scenario the review named: a payload carrying both
+    `address` and `postal_address` must not sign cleanly."""
+    private_pem, _ = generate()
+    bad_payload = {**CERT_PAYLOAD, "address": "x", "postal_address": "y"}
+
+    with pytest.raises(ValueError, match="unexpected"):
+        sign(bad_payload, private_pem)
+
+
+def test_sign_rejects_a_payload_missing_a_required_field() -> None:
+    private_pem, _ = generate()
+    bad_payload = dict(CERT_PAYLOAD)
+    del bad_payload["date"]
+
+    with pytest.raises(ValueError, match="missing"):
+        sign(bad_payload, private_pem)
+
+
+def test_sign_checks_the_payload_shape_before_touching_the_private_key() -> None:
+    """A malformed payload must be refused even when the private key handed
+    to `sign` is itself unusable garbage -- proving the field check runs
+    first. If key-loading ran first, this would raise `SigningError`
+    instead of `ValueError`."""
+    bad_payload = {**CERT_PAYLOAD, "address": "somewhere"}
+
+    with pytest.raises(ValueError):
+        sign(bad_payload, "not a key at all")
 
 
 # ------------------------------------------------------------------ #
@@ -217,34 +381,27 @@ def test_sign_rejects_a_private_key_of_the_wrong_kind() -> None:
         sign(CERT_PAYLOAD, ec_pem)
 
 
-def test_sign_lets_a_json_encoding_failure_pass_through_unwrapped() -> None:
-    """Not a domain-specific failure mode -- a payload holding something
-    `json.dumps` itself cannot serialise (a `date` object rather than an
-    ISO string, here) is the caller's own mistake in what it built, and
-    surfaces as whatever `json.dumps` raises rather than being translated
-    into `SigningError`."""
-    private_pem, _ = generate()
-    bad_payload: dict[str, Any] = {**CERT_PAYLOAD, "date": date(2026, 8, 20)}
-
-    with pytest.raises(TypeError):
-        sign(bad_payload, private_pem)
-
-
 # ------------------------------------------------------------------ #
-# verify(): malformed input is refused, never garbled, never raised
+# verify(): three outcomes, never an exception -- malformed input is
+# refused, never garbled, never raised.
 # ------------------------------------------------------------------ #
 
 
-def test_verify_returns_none_for_an_empty_key_list() -> None:
+def test_verify_returns_no_matching_key_for_an_empty_key_list() -> None:
     """Not only a defensive edge case: `keys/signing/` genuinely holds no
     key at all until an operator generates the first one (see that
     directory's own README), so a caller that built `public_pems` from an
-    empty directory listing must get this same clean refusal, never a
-    crash and never a token accepted for want of anything to check it
-    against."""
+    empty directory listing must get this same honest "cannot confirm"
+    outcome, never a crash and never a token accepted for want of anything
+    to check it against."""
     private_pem, _ = generate()
     token = sign(CERT_PAYLOAD, private_pem)
-    assert verify(token, []) is None
+
+    result = verify(token, [])
+
+    assert not result.valid
+    assert result.reason == NO_MATCHING_KEY
+    assert result.payload is None
 
 
 def test_verify_skips_an_unusable_key_and_keeps_trying_the_rest() -> None:
@@ -264,7 +421,10 @@ def test_verify_skips_an_unusable_key_and_keeps_trying_the_rest() -> None:
     )
     token = sign(CERT_PAYLOAD, private_pem)
 
-    assert verify(token, [ec_public_pem, public_pem]) == CERT_PAYLOAD
+    result = verify(token, [ec_public_pem, public_pem])
+
+    assert result.valid
+    assert result.payload == CERT_PAYLOAD
 
 
 def test_verify_skips_a_public_pem_that_will_not_even_load_and_keeps_trying() -> None:
@@ -274,112 +434,151 @@ def test_verify_skips_a_public_pem_that_will_not_even_load_and_keeps_trying() ->
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
 
-    assert verify(token, ["not a pem at all", public_pem]) == CERT_PAYLOAD
+    result = verify(token, ["not a pem at all", public_pem])
+
+    assert result.valid
+    assert result.payload == CERT_PAYLOAD
 
 
-def test_verify_returns_none_for_a_token_that_is_not_json() -> None:
+def test_verify_returns_malformed_for_a_token_that_is_not_json() -> None:
     _, public_pem = generate()
-    assert verify("not json at all", [public_pem]) is None
+    result = verify("not json at all", [public_pem])
+    assert result.reason == MALFORMED
+    assert result.payload is None
 
 
-def test_verify_returns_none_for_a_token_that_is_valid_json_but_not_an_object() -> None:
+def test_verify_returns_malformed_when_json_but_not_an_object() -> None:
     _, public_pem = generate()
-    assert verify("[1, 2, 3]", [public_pem]) is None
+    result = verify("[1, 2, 3]", [public_pem])
+    assert result.reason == MALFORMED
 
 
-def test_verify_returns_none_for_a_token_missing_a_field() -> None:
+def test_verify_returns_malformed_for_a_token_missing_a_field() -> None:
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
     parsed = json.loads(token)
     del parsed["signature"]
 
-    assert verify(json.dumps(parsed), [public_pem]) is None
+    result = verify(json.dumps(parsed), [public_pem])
+
+    assert result.reason == MALFORMED
 
 
-def test_verify_returns_none_when_the_payload_is_not_an_object() -> None:
+def test_verify_returns_malformed_when_the_decoded_payload_is_not_an_object() -> None:
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
     parsed = json.loads(token)
-    parsed["payload"] = ["not", "an", "object"]
+    not_an_object = base64.b64encode(b"[1, 2, 3]").decode("ascii")
+    parsed["payload"] = not_an_object
 
-    assert verify(json.dumps(parsed), [public_pem]) is None
+    result = verify(json.dumps(parsed), [public_pem])
+
+    assert result.reason == MALFORMED
 
 
-def test_verify_returns_none_for_an_unknown_wire_format_version() -> None:
+def test_verify_returns_malformed_when_the_decoded_payload_is_not_json_at_all() -> None:
+    private_pem, public_pem = generate()
+    token = sign(CERT_PAYLOAD, private_pem)
+    parsed = json.loads(token)
+    parsed["payload"] = base64.b64encode(b"not json at all").decode("ascii")
+
+    result = verify(json.dumps(parsed), [public_pem])
+
+    assert result.reason == MALFORMED
+
+
+def test_verify_returns_malformed_for_an_unknown_wire_format_version() -> None:
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
     parsed = json.loads(token)
     parsed["v"] = 2
 
-    assert verify(json.dumps(parsed), [public_pem]) is None
+    result = verify(json.dumps(parsed), [public_pem])
+
+    assert result.reason == MALFORMED
 
 
-def test_verify_returns_none_for_a_signature_that_is_not_valid_base64() -> None:
+def test_verify_returns_malformed_for_a_payload_field_that_is_not_valid_base64() -> (
+    None
+):
+    private_pem, public_pem = generate()
+    token = sign(CERT_PAYLOAD, private_pem)
+    parsed = json.loads(token)
+    parsed["payload"] = "not base64!!"
+
+    result = verify(json.dumps(parsed), [public_pem])
+
+    assert result.reason == MALFORMED
+
+
+def test_verify_returns_malformed_for_a_signature_that_is_not_valid_base64() -> None:
     private_pem, public_pem = generate()
     token = sign(CERT_PAYLOAD, private_pem)
     parsed = json.loads(token)
     parsed["signature"] = "not base64!!"
 
-    assert verify(json.dumps(parsed), [public_pem]) is None
+    result = verify(json.dumps(parsed), [public_pem])
 
-
-def test_verify_does_not_care_about_json_formatting_or_outer_key_order() -> None:
-    """`JSON.stringify` on a future browser-side verifier is not guaranteed
-    to produce compact, insertion-ordered JSON the way `json.dumps(...,
-    separators=...)` does here; decoding must not silently depend on
-    either."""
-    private_pem, public_pem = generate()
-    token = sign(CERT_PAYLOAD, private_pem)
-    parsed = json.loads(token)
-    reordered = {
-        "signature": parsed["signature"],
-        "payload": parsed["payload"],
-        "v": parsed["v"],
-    }
-    reformatted = json.dumps(reordered, indent=2)
-    assert reformatted != token
-
-    assert verify(reformatted, [public_pem]) == CERT_PAYLOAD
-
-
-def test_verify_does_not_care_about_payload_key_order() -> None:
-    """Canonicalisation (`sort_keys=True`) is what makes this hold even when
-    the *payload*'s own key order differs from what `sign` originally
-    produced -- not just the outer token's, which the test above already
-    covers."""
-    private_pem, public_pem = generate()
-    token = sign(CERT_PAYLOAD, private_pem)
-    parsed = json.loads(token)
-    parsed["payload"] = dict(reversed(list(parsed["payload"].items())))
-
-    assert verify(json.dumps(parsed), [public_pem]) == CERT_PAYLOAD
+    assert result.reason == MALFORMED
 
 
 # ------------------------------------------------------------------ #
-# The wire format: a cross-language contract, pinned by test
+# verify(): never raises, even for hostile input.
 # ------------------------------------------------------------------ #
 
 
-def test_wire_format_has_exactly_the_documented_fields() -> None:
+def test_verify_rejects_a_token_larger_than_the_size_cap_without_parsing_it() -> None:
+    huge = "x" * (MAX_TOKEN_BYTES + 1)
+
+    result = verify(huge, [])
+
+    assert result.reason == MALFORMED
+
+
+def test_verify_refuses_deeply_nested_json_without_raising() -> None:
+    """A short token can still exhaust Python's json decoder's recursion
+    depth well under any reasonable size cap: nesting the attack directly
+    in the *outer* token (in place of the `payload` string) skips the
+    base64 expansion that would otherwise dilute the byte-to-depth ratio,
+    so `MAX_TOKEN_BYTES` alone does not defend against this. `verify` must
+    catch `RecursionError` itself, not let it escape as an exception --
+    a public verification page must never crash because someone pasted an
+    adversarial string into it."""
+    depth = 3000
+    nested = "[" * depth + "]" * depth
+    hostile = '{"v":1,"payload":' + nested + ',"signature":"x"}'
+    assert len(hostile.encode("utf-8")) < MAX_TOKEN_BYTES
+
+    result = verify(hostile, [])
+
+    assert result.reason == MALFORMED
+
+
+# ------------------------------------------------------------------ #
+# VerifyResult: the tri-state contract itself
+# ------------------------------------------------------------------ #
+
+
+def test_verify_result_valid_property_reflects_reason() -> None:
+    assert VerifyResult(payload={"a": 1}, reason=None).valid is True
+    assert VerifyResult(payload=None, reason=MALFORMED).valid is False
+    assert VerifyResult(payload=None, reason=NO_MATCHING_KEY).valid is False
+
+
+def test_malformed_and_no_matching_key_are_distinct_reasons() -> None:
+    """The two failure outcomes must never collapse into one -- that is the
+    entire point of the review round-2 fix. Garbage input and a
+    well-formed-but-unconfirmable token must be told apart."""
+    _, public_pem = generate()
+    garbage = verify("not json at all", [public_pem])
+
     private_pem, _ = generate()
     token = sign(CERT_PAYLOAD, private_pem)
-    parsed = json.loads(token)
+    unconfirmable = verify(token, [])  # well-formed, but no key offered
 
-    assert set(parsed) == TOKEN_FIELDS
-    assert parsed["v"] == WIRE_VERSION == 1
-    assert parsed["payload"] == CERT_PAYLOAD
-    assert len(base64.b64decode(parsed["signature"])) == RSA_KEY_BITS // 8
-
-
-def test_the_token_is_pure_ascii() -> None:
-    """The payload's accented name must not turn the signed bytes -- or the
-    token that carries them -- non-ASCII; see the module docstring's "wire
-    format" section."""
-    private_pem, _ = generate()
-    token = sign(CERT_PAYLOAD, private_pem)
-    token.encode("ascii")  # raises UnicodeEncodeError if this is not pure ASCII
-    assert "É" not in token
-    assert "\\u00c9" in token  # the escaped "É" of "Élodie"
+    assert garbage.reason == MALFORMED
+    assert unconfirmable.reason == NO_MATCHING_KEY
+    assert garbage.reason != unconfirmable.reason
 
 
 # ------------------------------------------------------------------ #

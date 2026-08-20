@@ -82,48 +82,93 @@ high-throughput service), the larger size costs nothing that matters and
 buys margin on the one parameter that cannot be revised after the fact
 without minting a new key and asking a verification page to trust two.
 
-The wire format
-----------------
+The wire format transports what it signs -- it does not ask a verifier to rebuild it
+---------------------------------------------------------------------------------------
 `sign`'s return value, and `verify`'s `token` argument, is one compact JSON
 string -- the same idiom `eventkeys.py`'s wire format uses, for the same
 reason: `JSON.stringify` and `json.loads` read and write it on either side
 without a library::
 
-    {"v":1,"payload":{...},"signature":"<base64>"}
+    {"v":1,"payload":"<base64 of the exact bytes signed>","signature":"<base64>"}
 
 - ``v`` -- format version; 1 today, the same discipline as `eventkeys.py`'s
   own `"v"` field. `verify` rejects anything else.
-- ``payload`` -- a JSON object, embedded whole, not re-encoded as a nested
-  string. This is deliberate: a verifier that already parsed the token has
-  the payload as data immediately, with no second `JSON.parse` needed
-  before it can display it.
-- ``signature`` -- the raw PKCS1v15 signature over the *canonical bytes* of
-  `payload` (see below), standard base64.
+- ``payload`` -- standard base64, the *exact bytes `sign` computed once and
+  handed to RSA*. Not a nested JSON object.
+- ``signature`` -- the raw PKCS1v15 signature over those same bytes,
+  standard base64.
 
-Canonicalisation: the bytes actually signed are
-`json.dumps(payload, sort_keys=True, separators=(",", ":"))`, ASCII (JSON's
-default `ensure_ascii` escapes anything outside it as `\\uXXXX` rather than
-writing it literally) -- a certificate holder whose name carries an accent
-must not turn the signed bytes non-ASCII, since the whole token is meant to
-sit inside a machine-readable code on the printed certificate and this
-project prints nothing non-ASCII to a terminal either. `sort_keys=True` is
-what makes the result reproducible independent of the payload dict's own
-insertion order, or of how the *outer* token JSON happens to be formatted or
-reordered before `verify` sees it -- the same robustness `eventkeys.py`'s
-own wire-format test pins for its envelope. `verify` recomputes these same
-canonical bytes from the parsed `payload` before checking any signature, so
-signing and verifying are guaranteed to agree on what was actually signed,
-byte for byte.
+**This module's first cut got this wrong, and it is worth recording why, so
+nobody "simplifies" it back.** The original wire format embedded `payload`
+as a nested JSON object and had `verify` re-derive the signed bytes by
+re-serialising it (`json.dumps(payload, sort_keys=True, separators=(",",
+":"))`) before checking the signature. That makes the *exact byte sequence
+a signature covers* a cross-language contract every verifier must
+reproduce: `sort_keys`, `separators`, `ensure_ascii`, all of it, forever,
+independently, in Python here and eventually in whatever task 13 writes.
+Measured directly against this module's own certificate fixture: Python's
+`json.dumps` emits `2.0` for a duration where `JSON.stringify` emits `2`,
+and `\\u00c9` for an accented name where `JSON.stringify` emits the
+character literally -- and a French name and an hours figure are exactly
+the payload's *ordinary* content, not an edge case reachable only by
+misuse. A verifier built against that first design would reject genuine
+certificates the moment it hit real data, and the natural fix under time
+pressure -- loosen the comparison -- is exactly how a verifier stops
+verifying anything.
 
-This module does not itself decide what a certificate's payload contains --
-that is `certificate.py`'s job (task 12), and `sign`/`verify` are as
-content-agnostic about it as `eventkeys.encrypt`/`decrypt` are about a
-registration's fields. But every payload used as an example or a test
-fixture here holds exactly what the phase 4 spec's §7 lists and nothing
-else: identifier, event, name, date, duration. **No address.** The
-verification page (task 13) has no reason to display one, and a field that
-is never in the payload cannot leak from it -- a discipline worth keeping
-even though `sign` itself would happily sign whatever dict it is handed.
+The fix is not to document the cross-language byte contract more
+carefully. It is to not have one: `sign` computes the canonical bytes
+**once**, signs exactly those bytes, and hands the verifier the *same
+bytes*, base64-encoded, inside the token. `verify` never recomputes
+anything -- it base64-decodes `payload`, checks the signature against
+those decoded bytes directly, and only *then* `json.loads`es them to get a
+displayable dict. A verifier in any language needs three primitives every
+language already has for free (base64 decode, RSA-PKCS1v15-SHA256 verify,
+JSON parse) and zero shared formatting knowledge. This is the same
+discipline the PKCS1v15-over-PSS choice above already argues for one
+parameter (`saltLength`); applied here, it removes an entire parameter --
+canonicalisation -- rather than pin it.
+
+`_canonical_bytes` still exists and is still used -- by `sign`, exactly
+once, to decide what those bytes are. `verify` does not call it: there is
+nothing left in this module for it to recompute. Standard base64, not
+"base64url" -- this repository already has one base64 convention
+(`eventkeys.py`'s wire format: "every base64 field uses the standard
+alphabet"), and introducing a second dialect for a value that sits inside
+a JSON string, never a URL, would be a needless inconsistency for zero
+benefit.
+
+Only these three fields are ever read. **No other field in a token is
+ever consulted for anything**, and none should be added that would be --
+this is not JWT, there is no negotiable `alg`, and the algorithm
+(RSA-PKCS1v15-SHA256) is fixed by this module's own code, never read from
+the token. A verifier "helpfully" written by pattern-matching on JWT
+examples is the concrete risk this sentence exists to head off: JWT's own
+history includes exactly this mistake (a verifier that honours a
+token-supplied `alg`, including `"none"`). Grafting an `alg` field onto a
+token here would ride along unauthenticated (nothing outside `payload`'s
+bytes is ever covered by the signature) and must never be allowed to
+change what algorithm a verifier uses.
+
+The payload's shape is enforced here, not left to `certificate.py`
+----------------------------------------------------------------------
+`sign` refuses any payload whose key set is not exactly `PAYLOAD_FIELDS`
+below (`identifier`, `event`, `name`, `date`, `duration_hours` -- exactly
+what the phase 4 spec's §7 lists). This module's first cut left `sign`
+content-agnostic, the same way `eventkeys.encrypt` is agnostic about a
+registration's fields, and argued the discipline of "no address" belonged
+to `certificate.py` alone. That reasoning does not survive contact with
+what a generic signer actually permits: a payload carrying `address` and
+`postal_address` signs exactly as cleanly as one that does not, and
+travels inside the token **in the clear** for anyone holding the
+certificate to read -- which is precisely the property "what is not in the
+payload cannot leak from it" depends on never being true. `sign` is the
+one place in the whole certificate pipeline where that property can be
+made a checked fact instead of a convention a future `certificate.py` edit
+could quietly stop honouring. `verify` does not re-check this: its job is
+to authenticate whatever was genuinely signed, not to second-guess it, and
+every payload `sign` has ever accepted already satisfies it by
+construction.
 
 Key layout: `keys/signing/<YYYY-MM-DD>.pub`, and how a verifier chooses
 --------------------------------------------------------------------------
@@ -135,25 +180,21 @@ file to keep in sync. Every key this project ever generates is committed
 here, forever -- rotating a key out of *service* (no longer used to sign
 new certificates) never means removing its file. §7's rotation promise is
 kept entirely by this file simply staying put; there is no companion
-"retire" or "destroy" operation in this module, on purpose (see above).
+"retire" or "destroy" operation in this module, on purpose (see above). See
+`keys/signing/README.md` for the current, real state of that directory and
+what task 13 should do with it.
 
 `verify` accepts an ordered list, `public_pems: list[str]`, and tries each
-in turn, returning the payload from the first one that checks out (or
-`None` if none do). The order is the caller's choice, not this module's --
-but the convention this module's own layout implies, and the one task 13's
-build step and any future caller should follow, is **newest first**: list
-`keys/signing/*.pub`, sort filenames in *descending* order, and build the
-list from that. Almost every verification is of a certificate signed under
-the key currently in service, so that ordering makes the common case the
-cheapest one -- while correctness never depends on getting the order right,
-only on the right key being *somewhere* in the list, which is exactly what
-the rotation test below proves. There is deliberately no "key id" hint
-carried in the token that would let a verifier jump straight to the right
-key: such a hint is not itself authenticated by anything a reader could
-check before trying the key it names, so the only thing it could ever be is
-a speed optimisation -- and RSA verification over a handful of keys is not
-slow enough to be worth the added field and the added thing to keep
-consistent with the file layout.
+in turn, returning the payload from the first one that checks out. The
+order is the caller's choice, not this module's -- but the convention this
+module's own layout implies, and the one task 13's build step and any
+future caller should follow, is **newest first**: list `keys/signing/*.pub`,
+sort filenames in *descending* order, and build the list from that. Almost
+every verification is of a certificate signed under the key currently in
+service, so that ordering makes the common case the cheapest one --
+correctness never depends on getting the order right, only on the right key
+being *somewhere* in the list, which is exactly what the rotation test
+below proves.
 
 One naming collision to avoid, the same shape as `eventkeys.py`'s own:
 generating two signing keys on the same calendar day collides on the same
@@ -161,6 +202,69 @@ filename. Keys are rotated by deliberate operator action, not automation,
 so this is a documented operational constraint -- do not rotate the signing
 key twice in one day -- rather than something this module can detect; it
 holds no registry of what is already committed to check against.
+
+Three outcomes, not two: `verify` returns a `VerifyResult`
+---------------------------------------------------------------
+A public verification page has to say something different for "this
+certificate is genuine" than for "we could not confirm this," and those
+two must never look the same as each other -- but "we could not confirm
+this" itself is not one thing. `verify` reports three outcomes, not the
+`dict | None` this module's first cut returned:
+
+- **Valid** (`reason is None`, `payload` holds the dict): some key in
+  `public_pems` produced a matching signature.
+- **`MALFORMED`**: the token is not even shaped like something this module
+  ever produced -- not JSON, the wrong top-level shape, an unsupported
+  `"v"`, `payload`/`signature` that will not base64-decode, or decoded
+  `payload` bytes that are not themselves a JSON object. This is the
+  "outright garbage" case.
+- **`NO_MATCHING_KEY`**: the token *is* shaped correctly -- it parses, its
+  version is understood, its payload is a JSON object -- but no key in
+  `public_pems` produces a signature that matches it.
+
+**`NO_MATCHING_KEY` is not "forged," and must never be presented as
+one.** A well-formed token that no offered key validates is exactly what a
+tampered or forged certificate looks like from here -- and *exactly* what
+a genuine certificate looks like when it was signed under a key this
+caller's `public_pems` list does not (yet) include, which
+`docs/reference/operations.md`'s own publish-before-secret ordering
+warning names as a real, reachable failure mode: sign first, publish the
+`.pub` second, and every certificate issued in between is genuine and
+currently unconfirmable. This module has no way to tell those two apart --
+doing so would require trusting some claim inside the token about which
+key it was signed with, and a claim like that is exactly the kind of
+unauthenticated field the paragraph above warns against; a forger can
+write any claim they like into an unsigned field. So `NO_MATCHING_KEY`
+reports the honest, narrower fact: *this caller does not currently hold a
+key that confirms this token* -- not a verdict on the certificate itself.
+A verification page must show a "cannot confirm" state for this outcome,
+never an accusatory one, and must not collapse it together with
+`MALFORMED`: a stranger who mistypes a certificate code and a stranger
+holding a real, currently-unconfirmable certificate are not the same
+situation and should not read the same message.
+
+Two more properties `verify` guarantees regardless of input:
+
+- **`public_pems == []` is not a special case in the code below** -- the
+  trial loop simply never runs, falling straight to `NO_MATCHING_KEY` --
+  but it is a real, expected input, not only a theoretical one:
+  `keys/signing/` legitimately holds no key at all until an operator
+  generates the first one (see that directory's own `README.md`), and a
+  caller that built its list from an empty directory listing must get the
+  same honest "cannot confirm" outcome as any other unmatched token, never
+  an exception and never acceptance for want of anything to check against.
+- **`verify` never raises, for any input, including a hostile one.** A
+  token is untrusted, attacker-controlled input by construction -- it is
+  read off a document a stranger controls. Beyond refusing malformed
+  shapes, this module bounds the raw token to `MAX_TOKEN_BYTES` before
+  parsing anything (a legitimate token is a few hundred bytes; nothing
+  this module ever produces approaches the bound) and catches
+  `RecursionError` alongside the ordinary parsing exceptions, because
+  Python's JSON decoder recurses on nested structures and a short,
+  deliberately deeply-nested string can exhaust the interpreter's
+  recursion limit well under any reasonable size cap. `MALFORMED` is the
+  outcome for all of it -- a public verification page must never crash
+  because someone pasted an adversarial string into it.
 
 The private half, and why its absence is an ordinary D-13 state here
 ------------------------------------------------------------------------
@@ -176,10 +280,12 @@ never written to a file at any point. That is the same publish-before-secret
 ordering `eventkeys.py`'s own operations doc already argues for event keys,
 and for the same reason: setting the secret first would let a job sign a
 certificate under a key with no public half yet committed for anyone to
-verify it against. `generate` itself has no opinion on who calls it or how
-the result is handled -- it is `docs/reference/operations.md`'s
-"Certificate signing key" section, not this module, that is the place this
-constraint is a procedure rather than only a property of the function.
+verify it against -- see `NO_MATCHING_KEY` above for exactly what that
+produces on the verifying end. `generate` itself has no opinion on who
+calls it or how the result is handled -- it is
+`docs/reference/operations.md`'s "Certificate signing key" section, not
+this module, that is the place this constraint is a procedure rather than
+only a property of the function.
 
 `eventkeys.py`'s module docstring carves out one deliberate exception to
 D-13 ("an absent integration is a normal state"): a missing event key must
@@ -198,7 +304,9 @@ accordingly, with `absent_is_normal` left at its default of `true`.
 from __future__ import annotations
 
 import base64
+import binascii
 import json
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any, Final
@@ -218,16 +326,44 @@ RSA_KEY_BITS: Final = 3072
 #: The wire format version written into every token's `"v"` field.
 WIRE_VERSION: Final = 1
 
-#: A token's exact key set -- exported so another module pinning "this
-#: string is a signing token" has one definition to check against, the same
-#: role `eventkeys.ENVELOPE_FIELDS` plays for a ciphertext envelope. Not
-#: enforced as a strict equality inside `verify` itself (an unrecognised
-#: extra field is ignored, not refused -- the same forward-compatible
-#: tolerance `eventkeys.decrypt` already applies to its own envelope).
+#: A token's exact top-level key set -- exported so another module pinning
+#: "this string is a signing token" has one definition to check against,
+#: the same role `eventkeys.ENVELOPE_FIELDS` plays for a ciphertext
+#: envelope. Not enforced as a strict equality inside `verify` itself (an
+#: unrecognised extra field is ignored, never consulted -- see the module
+#: docstring's warning about a token acquiring an unauthenticated `"alg"`
+#: field or similar; `verify` must never start reading one).
 TOKEN_FIELDS: Final = frozenset({"v", "payload", "signature"})
+
+#: The certificate payload's exact field set -- everything the phase 4
+#: spec's §7 lists and nothing else. `sign` refuses any payload whose keys
+#: are not exactly this set. See the module docstring's "payload's shape"
+#: section for why this is enforced here rather than left to
+#: `certificate.py` (task 12) as a convention.
+PAYLOAD_FIELDS: Final = frozenset(
+    {"identifier", "event", "name", "date", "duration_hours"}
+)
+
+#: The largest raw token `verify` will attempt to parse, in UTF-8 bytes. A
+#: real token (the certificate fixtures in this module's own tests) is a
+#: few hundred bytes; this is generous headroom, not a realistic ceiling --
+#: its job is to refuse a hostile input outright, cheaply, before any
+#: parsing touches it, rather than to bound legitimate content.
+MAX_TOKEN_BYTES: Final = 8192
 
 #: Where the published public halves live, relative to the repository root.
 KEYS_DIR: Final = Path("keys") / "signing"
+
+#: `VerifyResult.reason` for a token that does not even parse as a signing
+#: token -- see `verify`'s docstring for the full list of what falls here.
+MALFORMED: Final = "malformed"
+
+#: `VerifyResult.reason` for a well-formed token that no offered key
+#: validates. Deliberately not called "invalid" or "forged" -- see the
+#: module docstring's "three outcomes" section for why that distinction
+#: cannot be made from here, and what a verification page must display
+#: instead.
+NO_MATCHING_KEY: Final = "no_matching_key"
 
 #: The repository secret holding the private half currently in service.
 #: Unlike `eventkeys.py`'s per-event `CONVENER_EVENT_KEY_<ID>`, there is exactly
@@ -246,11 +382,35 @@ class SigningError(Exception):
     """A key handed to `sign` (or re-derived by `derive_public_pem`) was not
     usable: not a real RSA private key at all -- an empty string, a public
     key by mistake, a key of another kind entirely. Never raised by
-    `verify`: an unverifiable token is reported through its `None` return,
+    `verify`: an unverifiable token is reported through `VerifyResult`,
     never an exception, because it is not this module's *caller's* mistake
-    the way an unusable signing key is -- it is what an ordinary
-    "invalid signature" outcome looks like from a public verification page
-    that should never need a `try`/`except` to check a certificate."""
+    the way an unusable signing key is -- it is what an ordinary, untrusted
+    input looks like to a public verification page that should never need
+    a `try`/`except` to check a certificate."""
+
+
+@dataclass(frozen=True)
+class VerifyResult:
+    """What `verify` returns -- always exactly one of three shapes, never
+    an exception. See the module docstring's "three outcomes" section for
+    what each means and, critically, what a verification page must display
+    for each; the difference between `MALFORMED` and `NO_MATCHING_KEY` is
+    not cosmetic.
+
+    - Valid: `payload` is the certificate's dict, `reason` is `None`.
+    - Not valid: `payload` is `None`, `reason` is `MALFORMED` or
+      `NO_MATCHING_KEY`.
+    """
+
+    payload: dict[str, Any] | None
+    reason: str | None
+
+    @property
+    def valid(self) -> bool:
+        """`True` exactly when `payload` is present -- the one boolean a
+        caller that only cares "is this genuine" needs, without having to
+        know `reason`'s two failure spellings apart."""
+        return self.reason is None
 
 
 def generate() -> tuple[str, str]:
@@ -287,11 +447,35 @@ def generate() -> tuple[str, str]:
 
 
 def _canonical_bytes(payload: dict[str, Any]) -> bytes:
-    """The exact bytes a signature covers: sorted keys, compact separators,
-    ASCII-escaped. See the module docstring's "wire format" section for why
-    each choice is load-bearing, not cosmetic -- both `sign` and `verify`
-    call this, so the two are guaranteed to agree on what was signed."""
+    """The exact bytes `sign` signs, computed once. Unlike this module's
+    first cut, `verify` never calls this -- there is nothing left for it
+    to recompute, because `sign` transports these same bytes, base64-
+    encoded, inside the token. See the module docstring's "wire format"
+    section for why that is the whole fix, not merely a smaller version of
+    the old cross-language contract. `sort_keys`/compact separators/ASCII
+    escaping are kept for a deterministic, easy-to-inspect internal
+    representation -- no longer load-bearing for interoperability, since
+    nothing outside this one call ever needs to reproduce them."""
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("ascii")
+
+
+def _validate_payload_fields(payload: dict[str, Any]) -> None:
+    """Refuses any payload whose key set is not exactly `PAYLOAD_FIELDS`.
+    See the module docstring's "payload's shape" section for why this
+    check lives in `sign` rather than in a future `certificate.py`."""
+    fields = set(payload)
+    if fields != PAYLOAD_FIELDS:
+        unexpected = sorted(fields - PAYLOAD_FIELDS)
+        missing = sorted(PAYLOAD_FIELDS - fields)
+        detail = "; ".join(
+            part
+            for part in (
+                f"unexpected field(s): {', '.join(unexpected)}" if unexpected else "",
+                f"missing field(s): {', '.join(missing)}" if missing else "",
+            )
+            if part
+        )
+        raise ValueError(f"payload does not match the certificate schema -- {detail}")
 
 
 def _load_private_key(private_pem: str) -> rsa.RSAPrivateKey:
@@ -310,25 +494,21 @@ def sign(payload: dict[str, Any], private_pem: str) -> str:
     """Sign `payload` with `private_pem`, returning a compact JSON token --
     see the module docstring for the exact wire format and what "signed"
     means here (authorship, not secrecy: the payload sits in the token in
-    the clear).
+    the clear, and is transported as the very bytes that were signed, not
+    re-derived by a verifier).
 
-    `payload` is content-agnostic here: any JSON-serialisable dict is
-    accepted. See the module docstring for why the *discipline* of what a
-    certificate payload actually holds belongs to `certificate.py`
-    (task 12), not to this generic signer -- the same division
-    `eventkeys.py` draws between `encrypt` and `registration.py`.
-
-    Raises `SigningError` if `private_pem` is not a usable RSA private key.
-    Raises whatever `json.dumps` itself raises (`TypeError`) for a payload
-    that is not JSON-serialisable -- a mistake in what the caller built, not
-    something this module tries to translate into a domain-specific error.
+    Raises `ValueError` if `payload`'s keys are not exactly
+    `PAYLOAD_FIELDS` -- checked before the private key is even loaded, so a
+    malformed payload never touches key material at all. Raises
+    `SigningError` if `private_pem` is not a usable RSA private key.
     """
+    _validate_payload_fields(payload)
     private_key = _load_private_key(private_pem)
     canonical = _canonical_bytes(payload)
     signature = private_key.sign(canonical, _PADDING, _HASH)
     token = {
         "v": WIRE_VERSION,
-        "payload": payload,
+        "payload": base64.b64encode(canonical).decode("ascii"),
         "signature": base64.b64encode(signature).decode("ascii"),
     }
     return json.dumps(token, separators=(",", ":"))
@@ -371,53 +551,46 @@ def _verifies_with(public_pem: str, canonical: bytes, signature: bytes) -> bool:
     return True
 
 
-def verify(token: str, public_pems: list[str]) -> dict[str, Any] | None:
-    """Verify `token` against every key in `public_pems`, in order, and
-    return the payload from the first one that checks out -- or `None` if
-    none do, or `token` is not well-formed at all.
+def verify(token: str, public_pems: list[str]) -> VerifyResult:
+    """Verify `token` against every key in `public_pems`, in order.
+
+    Returns a `VerifyResult` -- never raises, for any input, including a
+    hostile one. See the module docstring's "three outcomes" section for
+    what `MALFORMED` and `NO_MATCHING_KEY` each mean and, critically, that
+    they are not interchangeable: `MALFORMED` is "not shaped like a signing
+    token at all"; `NO_MATCHING_KEY` is "shaped correctly, but no key
+    offered confirms it" -- which covers both a forged token and a
+    genuine one signed under a key this caller does not yet have. A
+    verification page must never present the second as the first.
 
     This is the one function this whole module exists for: **rotation must
     never invalidate the past.** A certificate signed under a key since
     retired from service still verifies here as long as that key's public
-    half is somewhere in `public_pems` -- see the module docstring's "how a
-    verifier chooses" section for the recommended (but not required) order,
-    and `test_signing.py`'s rotation test for the property itself.
-
-    Returns `None`, never raises, for every failure mode: malformed JSON, an
-    unsupported `"v"`, a payload that is not itself a JSON object, a
-    signature that fails to base64-decode, a `public_pems` entry that is
-    not a usable RSA public key (skipped, not fatal -- trying the next one
-    is exactly what a rotated-key verifier needs), and, of course, a
-    signature that does not check out against any key offered. A public
-    verification page needs one boolean-shaped answer, not a `try`/`except`
-    around a call it cannot recover from differently either way.
-
-    `public_pems == []` is not a special case in the code below -- the loop
-    simply never runs -- but it is a real, expected input, not only a
-    theoretical one: `keys/signing/` legitimately holds no key at all until
-    an operator generates the first one (see that directory's own
-    `README.md`), and a caller that built its list by globbing an empty
-    directory must still get a clean `None` back, never an exception and
-    never a token accepted for want of anything to check it against.
+    half is somewhere in `public_pems` -- see the module docstring's "key
+    layout" section for the recommended (but not required) order, and
+    `test_signing.py`'s rotation test for the property itself.
     """
+    if len(token.encode("utf-8", errors="surrogatepass")) > MAX_TOKEN_BYTES:
+        return VerifyResult(None, MALFORMED)
+
     try:
         parsed: Any = json.loads(token)
         if not isinstance(parsed, dict):
-            return None
+            return VerifyResult(None, MALFORMED)
         if parsed.get("v") != WIRE_VERSION:
-            return None
-        payload = parsed["payload"]
-        if not isinstance(payload, dict):
-            return None
+            return VerifyResult(None, MALFORMED)
+        canonical = base64.b64decode(parsed["payload"], validate=True)
         signature = base64.b64decode(parsed["signature"], validate=True)
-    except (KeyError, ValueError, TypeError):
-        return None
+        payload: Any = json.loads(canonical)
+        if not isinstance(payload, dict):
+            return VerifyResult(None, MALFORMED)
+    except (KeyError, ValueError, TypeError, binascii.Error, RecursionError):
+        return VerifyResult(None, MALFORMED)
 
-    canonical = _canonical_bytes(payload)
     for public_pem in public_pems:
         if _verifies_with(public_pem, canonical, signature):
-            return payload
-    return None
+            return VerifyResult(payload, None)
+    return VerifyResult(None, NO_MATCHING_KEY)
 
 
 def public_key_path(generated_on: date) -> Path:
