@@ -267,6 +267,13 @@ def overdue(speaker: Any, config: Any, today: str) -> Overdue | None:
     if deadline is None or day is None:
         return None
     due = _iso(deadline.due)
+    # Deliberately uncovered: `_maybe` is the only place a Deadline is ever
+    # built, and it always stamps `due` from `(start + timedelta(...)).
+    # isoformat()` -- always a valid ISO day, never a value `_iso` refuses.
+    # No public input can make `due_date` return a Deadline this branch
+    # would catch. Kept, not deleted, so the type (`Deadline.due: str`)
+    # does not have to be trusted blindly if a second constructor is ever
+    # added.
     if due is None:
         return None
     days = (day - due).days
@@ -368,6 +375,14 @@ def _standing_objections(entry: Any) -> list[tuple[str, str, str]]:
     differ only in wording therefore compare equal, which at worst means one
     notification instead of two -- again the quiet direction.
     """
+    # Deliberately uncovered: `_standing_objections` is called only from
+    # `immediate_events`, twice, and both callers already guarantee a
+    # Mapping -- `entry` there passed the loop's own isinstance check, and
+    # `old` is `prior.get(rid)`, where `prior` only ever stores values for
+    # which `_record_id` returned a truthy id, which itself requires a
+    # Mapping. No call in this module can reach the branch below with
+    # anything else. Kept as a guard against a future caller that does not
+    # hold that invariant, since `entry: Any` invites exactly one.
     if not isinstance(entry, Mapping):
         return []
     publication = entry.get("publication")
@@ -413,6 +428,15 @@ def immediate_events(before: Any, after: Any) -> list[Event]:
     if isinstance(before, Sequence) and not isinstance(before, str | bytes):
         for entry in before:
             rid = _record_id(entry)
+            # Deliberately uncovered: `if rid:` False (a malformed `before`
+            # entry with no usable id) skips this assignment, but nothing
+            # would go wrong if it ran anyway -- `prior[""] = entry` is
+            # valid Python, and the only reader, `prior.get(rid)` below, is
+            # always called with a *non-empty* rid (the `after` loop's own
+            # filter, a few lines down, guarantees that). So this branch's
+            # two arms are behaviourally identical: no test could tell them
+            # apart without asserting on `prior`'s internal shape, which
+            # would be a test of implementation, not of behaviour.
             if rid:
                 prior[rid] = entry
     if not isinstance(after, Sequence) or isinstance(after, str | bytes):
