@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes, useParams } from 'react-router-dom';
+import { HashRouter, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { Login } from './auth/Login';
 import { Layout } from './components/Layout';
@@ -15,6 +15,7 @@ import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
 import { NewSpeaker } from './screens/NewSpeaker';
 import { SignupForm } from './signup/SignupForm';
+import { VerifyPage } from './verify/VerifyPage';
 
 /**
  * Everything the organiser cockpit needs: gated on `useAuth` before
@@ -67,6 +68,24 @@ function SignupRoute() {
   return <SignupForm key={eventId} />;
 }
 
+/**
+ * The same remount discipline `SignupRoute` applies to `eventId`, applied
+ * here to `identifier` *and* `token` together: editing either in the
+ * address bar (or clicking a second verification link without a full page
+ * load, which `HashRouter` makes reachable) must not leave `VerifyPage`'s
+ * own effects mid-flight against a token or identifier that no longer
+ * matches the URL -- a stale `sig`/`lookup` state briefly describing the
+ * *previous* certificate while the new check is still running. Keying by
+ * both, joined, forces a full remount -- and a fresh "Checking…" -- on any
+ * change to either.
+ */
+function VerifyRoute() {
+  const { identifier } = useParams<{ identifier: string }>();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+  return <VerifyPage key={`${identifier ?? ''}::${token ?? ''}`} />;
+}
+
 export function App() {
   return (
     <AuthProvider>
@@ -81,6 +100,14 @@ export function App() {
               involved, and this route never reaches `Shell` or
               `DataProvider`, which is the gate that actually matters here.) */}
           <Route path="/signup/:eventId" element={<SignupRoute />} />
+          {/* Public, by construction, the same way `/signup/:eventId` is
+              above: a stranger checking a certificate has no account
+              either, and this route never reaches `Shell`'s auth gate.
+              `certificate.VERIFICATION_BASE` ends `#/verify/`, matching
+              this path exactly -- see `VerifyPage.tsx`'s own module
+              comment for why the fragment is load-bearing for privacy,
+              not only for GitHub Pages routing. */}
+          <Route path="/verify/:identifier" element={<VerifyRoute />} />
           <Route path="/*" element={<Shell />} />
         </Routes>
       </HashRouter>
