@@ -567,6 +567,62 @@ this up so removing the secret and recording the destruction happen
 together; done by hand, it is these two steps, always together, in that
 order.
 
+## Certificate signing key
+
+**Do not confuse this with *Event registration keys* above.** That key
+*encrypts* a registration so only we can read it; this one *signs* a
+certificate so a stranger can confirm it came from us — attesting, not
+concealing. The two also run opposite lifecycles: an event key is destroyed
+at the end of retention; this one is never destroyed, because a certificate
+must still verify however long after it was issued someone checks it. See
+`tools/convener_ops/signing.py`'s module docstring for the full reasoning behind
+both differences, and for why the padding scheme, key size and wire format
+were each chosen the way they were.
+
+**Without it:** no certificate is issued. The job that would sign one
+(`tools/convener_ops/certificate.py`, task 12/14) cannot, and stops there —
+nothing partially written, nothing sensitive exposed. Unlike *Event
+registration keys*, this is an ordinary D-13 absence: there is no
+confidentiality risk a missing signing key could expose, only a feature
+(certificates) that does not run this time.
+
+**To create:** generate a fresh key pair (`convener_ops.signing.generate()`).
+There is exactly one of these in service at a time — unlike an event key,
+this is not per-event.
+
+1. Commit the public half as `keys/signing/<YYYY-MM-DD>.pub`, dated the day
+   it was generated (`convener_ops.signing.public_key_path`). This is not a
+   secret: it is what lets a public verification page (task 13) confirm a
+   certificate offline, with no request to us at all.
+2. Store the private half as the repository secret `CONVENER_SIGNING_KEY`.
+   Never commit it, never write it to a file outside a CI job's
+   environment, and never let it appear in a job log.
+
+**This order is load-bearing, the same way it is for an event key:**
+publish the public half before the private secret exists. Setting the
+secret first would let a job sign a certificate under a key nobody can yet
+verify against — the opposite failure of the event-key case (there, the
+danger is accepting a registration nothing can ever decrypt), but the same
+shaped bug, and the same fix: publish, then enable signing.
+
+**Rotating a key:** generating a new pair and publishing its public half
+(steps 1 and 2 above) does not, by itself, retire the old one — the old
+private half stays `CONVENER_SIGNING_KEY`'s value until it is deliberately
+replaced. Once it is, the certificates already signed under it keep
+verifying: `convener_ops.signing.verify` is handed every published
+`keys/signing/*.pub`, not only the one currently in service, and tries each
+in turn (see the module docstring's "how a verifier chooses" section for
+the recommended, but not required, newest-first order). **Never remove a
+`.pub` file from `keys/signing/`** — doing so is exactly what would make an
+already-issued certificate stop verifying, the one outcome §7 of the phase
+4 spec exists to prevent. Do not generate two signing keys on the same
+calendar day: the filename collides (see the module docstring).
+
+**Secrets to set:** `CONVENER_SIGNING_KEY`.
+
+**To verify:** run `cd tools && uv run convener-check-config`; *Certificate
+signing key* moves from `absent` to `production`.
+
 ## Handling a registration
 
 **Without it:** the signup relay (see *Signup relay* above) has nowhere to
