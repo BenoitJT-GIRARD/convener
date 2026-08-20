@@ -17,8 +17,20 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops import confirmation, eventkeys
-from convener_ops.attendance import MatchEvent, match
+from convener_ops import confirmation, eventkeys, signing
+from convener_ops.attendance import (
+    EligibilityThreshold,
+    MatchEvent,
+    eligible_attendees,
+    match,
+)
+from convener_ops.certificate import (
+    CertificateEvent,
+    issue,
+    public_register,
+    register_from_data,
+    register_to_data,
+)
 from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
@@ -68,6 +80,13 @@ from convener_ops.yaml_safe import safe_load as yaml_safe_load
 #: YAML-boundary fixture is written by one side and read by the other.
 SPEAKERS_HEADER = "# Speakers (unified schema v3 — see docs/reference/schema.md)\n"
 CONFIG_HEADER = "# Repo-wide config for the Convener app\n"
+#: certificates.yml holds no name and no address by construction -- see
+#: tools/convener_ops/certificate.py's module docstring for why this file
+#: survives task 15's retention sweep on registrations.enc, in the same
+#: directory, untouched.
+CERTIFICATES_HEADER = (
+    "# Certificate register -- no name, no address; see tools/convener_ops/certificate.py\n"
+)
 
 
 class _Dumper(yaml.SafeDumper):
@@ -908,6 +927,227 @@ def match_attendance() -> int:
     else:
         unmatched_path.unlink(missing_ok=True)
 
+    return 0
+
+
+def issue_certificates() -> int:
+    """`convener-issue-certificates`: match this event's attendance, work out
+    who is eligible (spec S:5), and issue -- or reproduce -- a certificate
+    for each of them (spec S:7, task 12).
+
+    Reads `EVENT_ID` and `EVENT_PRIVATE_KEY` exactly as `match_attendance`
+    does, for the same reason: this job re-derives the match from scratch
+    rather than trusting a prior run's own answer, so a corrected
+    registration or a corrected attendance export is picked up for free
+    (spec S:8: "un appariement corrigé se recalcule sans réinscrire").
+
+    Two secrets gate whether *anything* is issued this run, checked before
+    any registration is even decrypted:
+
+    - `signing.SECRET_NAME` (`CONVENER_SIGNING_KEY`) absent is the ordinary
+      D-13 shape `config/integrations.yml`'s own `signing_key` row
+      documents -- no certificate this run, nothing else affected.
+    - `CONVENER_MATCHING_SALT` absent is *not* ordinary here, unlike its own
+      row's documented behaviour for `matching_code`: see
+      `certificate.py`'s module docstring for why a certificate
+      fingerprint cannot be computed safely without it. Both absences
+      produce the same outward shape -- a printed line, a clean exit,
+      nothing written -- because both are D-13 states from the outside;
+      only the *reason* differs, and it is named in the message so an
+      operator reading the log knows which secret to set.
+
+    Every other failure mirrors `match_attendance`'s own handling: a bad
+    event id, a missing private key, a missing or malformed
+    `registrations.enc`, or a platform that cannot answer are all reported
+    on one line and exit 1. A missing or malformed `data/config.yml`
+    exits 1 too -- eligibility cannot be computed at all without
+    `seminar_duration_minutes`, unlike `match_attendance`, which never
+    needed the config file in the first place. A missing speaker record
+    for `event_id` is not fatal: certificates are still issued, with an
+    empty event title and date, and a line says so -- the same "never let
+    a missing room lookup stop the thing that matters" choice
+    `_send_confirmation` already makes for the confirmation e-mail.
+
+    Prints only counts, never a name or an address -- the same discipline
+    `match_attendance` already holds itself to for the same reason.
+    `data/events/<id>/certificates.yml` is rewritten, as a whole file
+    (never appended to a partial one), only when at least one certificate
+    was freshly minted; reissuing every attendee already on record writes
+    nothing and still exits 0.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    signing_key = os.environ.get(signing.SECRET_NAME, "")
+    if not signing_key:
+        print(f"{signing.SECRET_NAME} not configured -- no certificate issued this run")
+        return 0
+
+    salt = os.environ.get("CONVENER_MATCHING_SALT") or ""
+    if not salt:
+        print(
+            "CONVENER_MATCHING_SALT not configured -- no certificate issued this "
+            "run (a certificate fingerprint cannot be computed safely "
+            "without it)"
+        )
+        return 0
+
+    root = repo_root()
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    registrations: list[Registration] = []
+    for entry in current.entries:
+        registration = to_registration(json.dumps(entry), private_pem)
+        if registration is not None:
+            registrations.append(registration)
+
+    speakers, _errors = _load(root / "data" / "speakers.yml")
+    cfg, _errors = _load(root / "data" / "config.yml")
+    speaker_list = speakers if isinstance(speakers, list) else []
+    if not isinstance(cfg, dict):
+        print(
+            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            file=sys.stderr,
+        )
+        return 1
+
+    platform = platform_from_env(os.environ, speaker_list, cfg)
+    try:
+        rows = platform.get_attendance(event_id)
+    except (AttendanceImportError, FCCRequestError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    matched = match(rows, registrations, MatchEvent(event_id=event_id, salt=salt))
+    threshold = EligibilityThreshold.from_config(cfg)
+    eligible = eligible_attendees(matched, threshold)
+
+    record: Mapping[str, Any]
+    try:
+        record = find_speaker(speaker_list, event_id)
+    except EventNotFoundError:
+        print(
+            f"no speaker record matches event {event_id} -- certificates "
+            "issued with no title or date"
+        )
+        record = {}
+
+    register_path = root / "data" / "events" / event_id / "certificates.yml"
+    if register_path.exists():
+        try:
+            register_data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            print(f"{register_path.name}: invalid YAML - {exc}", file=sys.stderr)
+            return 1
+    else:
+        register_data = None
+    try:
+        existing = register_from_data(register_data)
+    except ValueError as exc:
+        print(f"{register_path.name}: {exc}", file=sys.stderr)
+        return 1
+
+    event = CertificateEvent(
+        event_id=event_id,
+        title=str(record.get("title", "") or ""),
+        date=str(record.get("date", "") or ""),
+    )
+    issued_on = paris_today(datetime.now(UTC))
+
+    entries = list(existing)
+    issued_count = 0
+    already_count = 0
+    for attendee in eligible:
+        result = issue(
+            attendee,
+            event,
+            signing_key,
+            salt,
+            tuple(entries),
+            issued_on=issued_on,
+        )
+        if result.already_registered:
+            already_count += 1
+        else:
+            entries.append(result.entry)
+            issued_count += 1
+
+    if issued_count:
+        register_path.parent.mkdir(parents=True, exist_ok=True)
+        register_path.write_text(
+            CERTIFICATES_HEADER + _dump(register_to_data(tuple(entries))),
+            encoding="utf-8",
+            newline="",
+        )
+
+    print(
+        f"certificates for event {event_id}: {issued_count} issued, "
+        f"{already_count} already on record ({len(eligible)} eligible)"
+    )
+    return 0
+
+
+def certificates_public_data() -> int:
+    """`convener-certificates-public-data`: rebuild
+    `public-data/certificates-public.json` from every event's own
+    `data/events/<id>/certificates.yml`, following `public_data`'s own
+    precedent for `events-public.json` (`certificate.public_register` is
+    the pure projection this calls, the same split `public_data.to_public`
+    draws for the speaker list).
+
+    Reads every `certificates.yml` under `data/events/*/` that exists --
+    an event with none yet contributes nothing, not an error, the ordinary
+    state for an event with no certificates issued -- and aggregates them
+    into one flat list before projecting: identifiers are drawn from
+    `secrets.token_hex`, so a collision between two events' identifiers is
+    not a case this function has to guard against (see
+    `certificate.py`'s own docstring for the entropy this relies on).
+    Malformed content in one event's register is reported and stops the
+    whole run rather than silently publishing a partial feed -- the same
+    "a malformed committed file is not a normal state to paper over"
+    choice `register_from_data` itself already makes.
+    """
+    root = repo_root()
+    events_dir = root / "data" / "events"
+    entries: list[Any] = []
+    if events_dir.is_dir():
+        for register_path in sorted(events_dir.glob("*/certificates.yml")):
+            try:
+                data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
+            except yaml.YAMLError as exc:
+                print(f"{register_path}: invalid YAML - {exc}", file=sys.stderr)
+                return 1
+            try:
+                entries.extend(register_from_data(data))
+            except ValueError as exc:
+                print(f"{register_path}: {exc}", file=sys.stderr)
+                return 1
+
+    rows = public_register(entries)
+    out_dir = root / "public-data"
+    out_dir.mkdir(exist_ok=True)
+    (out_dir / "certificates-public.json").write_text(
+        json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(rows)} certificates")
     return 0
 
 

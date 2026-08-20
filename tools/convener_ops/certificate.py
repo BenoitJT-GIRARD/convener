@@ -1,0 +1,686 @@
+"""Issue a certificate of attendance, and keep a register of it that could
+be published on a lamp-post.
+
+Phase 4 spec S:7 draws the line this whole module exists to enforce: the
+*document* a participant receives carries their name, because a certificate
+with no name on it is not a certificate. The *register* we keep about it --
+what survives here, in this repository, after the document has gone out --
+carries none of that. "Identifiant de certificat, identifiant d'événement,
+date d'émission, empreinte salée de l'adresse, état. Aucun nom, aucune
+adresse." Not redacted, not hashed-but-reversible, not encrypted-but-held:
+absent. `test_the_register_holds_no_name_and_no_address` below is written as
+a sweep over every field the register type has, not a check on the two
+fields a name or an address might have been tempted into -- see that test's
+own docstring for why the difference matters.
+
+How a document can name someone the register never stores
+-----------------------------------------------------------
+`issue` signs a payload -- `identifier`, `event`, `name`, `date`,
+`duration_hours` (`signing.PAYLOAD_FIELDS`, task 11) -- and hands the whole
+signed token back to its caller. The token is what goes on the document,
+printed as text and encoded as the machine-readable code spec S:7 asks for
+(`verification_url` below builds the address that carries it). Nothing
+about *that* trip through this module ever reaches disk here: `issue`
+returns the token, `cli.py` mails it (task 14), and this module's own
+persistence -- the register -- only ever receives the `CertificateEntry`
+this file defines, which has no field a name could occupy. The name lives
+exactly once, in the token, in the recipient's own inbox. We do not keep a
+second copy "just in case"; that copy is what spec S:1 forbids.
+
+Two numbers a stranger must never be able to confuse (ruling 3)
+-------------------------------------------------------------------
+This module computes two different values from the same registration, and
+conflating them would quietly undo the whole design:
+
+- **`identifier`** -- `secrets.token_hex(16)`, pure randomness, 128 bits.
+  Public: printed on the document, signed inside the payload, carried in
+  the verification URL, and the only column the public projection exposes
+  (`public_register` below). Its randomness is not a style choice --
+  see "why the identifier must not be deterministic" below.
+- **`fingerprint`** -- an HMAC of the participant's address, salted with
+  `CONVENER_MATCHING_SALT`. Private: it lives only in the internal register
+  (`data/events/<id>/certificates.yml`), is never signed into a payload,
+  never printed, and `public_register` strips it before anything leaves
+  this module for `public-data/certificates-public.json`.
+
+Why the identifier must not be deterministic
+-----------------------------------------------
+A first draft of this module derived `identifier` the same way
+`matching_code` derives its own value: HMAC the address, format the
+digest, done -- free idempotence, because the same address always
+produces the same identifier. That draft does not survive contact with
+where the identifier ends up: **printed on the document, and published in
+`certificates-public.json` for anyone to read.** A deterministic identifier
+is a public, reversible function of an address the moment its formula is
+known (and a formula this simple would not stay secret), which would let
+anyone holding a handful of guessed addresses test them against the public
+projection and learn who attended -- publishing exactly the fact this
+module exists to keep unpublished. So identifier and fingerprint are
+computed differently on purpose: `identifier` gets its guarantees from
+*true* randomness (nothing to invert, because nothing was derived), and
+`fingerprint` gets its privacy from a *salted* derivation that is only
+ever compared, never published. Idempotence -- not reissuing a second
+certificate to the same person for the same event -- is bought a different
+way instead: see "Idempotent without being deterministic" below.
+
+The fingerprint's own HMAC domain, and why it cannot reuse `matching_code`'s
+--------------------------------------------------------------------------------
+`registration.matching_code` already HMACs `event_id` and a normalised
+address under `CONVENER_MATCHING_SALT` -- and that value is **sent to the
+participant** in their confirmation e-mail (task 7), so it is not a secret
+from them, only from a stranger. If `fingerprint` below hashed the exact
+same bytes under the exact same key, it would not be a second value: it
+would be a second *name* for `matching_code`, and the "private, never
+published" half of the design above would be publishing the matching code
+itself the moment `public_register` (which strips `fingerprint`, not
+`identifier`... this sentence is about the *register* file, which is not
+public, but is read by anyone with repository access, and a certificate
+register whose "private" column was secretly the participant's own,
+already-mailed matching code would not be private at all).
+
+So `fingerprint` prefixes its input with `_FINGERPRINT_DOMAIN`, a constant
+naming this derivation's purpose and version, before the event id and the
+normalised address -- the same `salt`, a disjoint input space. Two HMACs
+under one key, computed over inputs that cannot collide because one of
+them starts with a string the other's input space cannot produce (`\0`
+after a name that itself contains no NUL), are two unrelated values as far
+as anything downstream can tell -- this is the ordinary domain-separation
+discipline for reusing one key across more than one derivation, applied
+here because `matching_code` already claimed the key for one purpose
+first.
+
+Idempotent without being deterministic
+------------------------------------------
+Spec S:8: "un appariement corrigé se recalcule sans réinscrire" -- a
+corrected match recalculates without re-registering. `issue` below is
+called with the *whole current register* for the event (`existing`), looks
+up `fingerprint` against every entry already in it, and reuses that
+entry's `identifier` and `issued_on` when found rather than minting a new
+one. A second call for the same person, whether because a match was
+corrected, a delivery is being retried (task 14), or the same job simply
+ran twice, produces `already_registered=True` and never grows the
+register -- `test_reissuing_the_same_attendee_does_not_grow_the_register`
+below is one of this task's mutation-tested guarantees.
+
+That lookup is also what makes a retried delivery reproduce the *same*
+document, not merely the same register row. `signing.sign` uses
+RSA-PKCS1v15, which is deterministic (see that module's own docstring for
+why PSS's randomised salt was rejected) -- so signing the same payload dict
+twice under the same key produces byte-identical tokens. Once `identifier`
+is pinned by the register lookup, every other payload field (`event`,
+`name`, `date`, `duration_hours`) is already a pure function of the same
+inputs `issue` was called with, so calling `issue` again for an
+already-registered attendee reproduces the exact token the first call
+did -- which is what lets task 14 say "a failed delivery replays without
+regenerating" and mean it literally: nothing is regenerated, because
+recomputing and regenerating give the same bytes.
+
+The register survives the data it was derived from (ruling 2, for task 15)
+--------------------------------------------------------------------------------
+`data/events/<id>/registrations.enc` is destroyed -- the event's private
+key deleted, its ciphertext left permanently unreadable -- 90 days after
+the event (spec S:4, task 15). `data/events/<id>/certificates.yml` is a
+**different file in the same directory, on a different, indefinite
+lifetime**, and task 15 must not treat the two alike. The whole reason
+this register holds no name and no address is so that its own survival
+past that destruction is unconditionally safe: a certificate has to remain
+checkable -- against revocation, at least -- for as long as an
+accreditation body might ask about it, which spec S:7 explicitly extends
+past the 90-day window ("les clés publiques antérieures restent
+publiées, pour que la rotation n'invalide jamais un certificat déjà
+émis"). Task 15's retention sweep must delete or rewrite
+`registrations.enc` and leave `certificates.yml` in the same directory
+completely untouched -- there is nothing in it retention could ever apply
+to, because there was never anything identifying in it to begin with.
+
+Revocation touches the register, never the signature (ruling 11)
+----------------------------------------------------------------------
+`revoke` flips one entry's `state` to `STATE_REVOKED` and returns a new
+register. It has no access to, and does not need, the signing key: the
+token issued earlier keeps verifying successfully forever, exactly as
+`signing.verify` was built to guarantee across a key *rotation* -- a
+revocation is not a rotation, but the same underlying fact applies, that a
+signature attests authorship, not current standing. "Currently standing"
+is answered by the register alone, and `state` is the only column that
+answers it. A verifier (task 13) must check both: the signature (is this
+genuine) and the register's state (is it still good) -- collapsing either
+check into the other is the one mistake this split is built to prevent,
+and `test_a_revoked_certificate_still_verifies_but_reports_revoked` below
+is the test that catches a future edit doing exactly that.
+
+The duration a document prints is rounded, on a written rule (ruling 10)
+------------------------------------------------------------------------------
+`duration_hours` rounds a summed attendance duration to the nearest
+**quarter hour**, ties rounding **up** (`ROUND_HALF_UP`, not Python's
+default banker's rounding, which would round a boundary case down as
+often as up and could not be described as a rule to an accreditation body
+in one sentence). Quarter-hour granularity, not a raw fraction: attendance
+is measured to the second, but nobody accredits continuing-education
+credit to five decimal places, and most accreditation schemes this project
+has seen quote credit in quarter- or half-hour units already. Rounding up
+on an exact tie -- rather than down, or to even -- is the direction that
+never shortchanges a real 3600-second attendee whose duration happens to
+land exactly between two quarter-hour marks; the alternative (round down
+on a tie) would be defensible too, but only one of the two can be *the*
+rule, and this module picks the one that never asks a participant to
+accept less credit than the boundary they actually reached.
+
+This is a genuinely signed, permanent value -- `duration_hours` is one of
+`signing.PAYLOAD_FIELDS`, transported inside the token exactly as
+`_canonical_bytes` renders it (see `signing.py`'s own docstring for why
+the *bytes* a Python `float` renders as, `2.0` where a browser's
+`JSON.stringify` would write `2`, cannot bite a verifier: the token
+transports bytes, it does not ask anything to re-render the number). What
+this module still has to get right, that transporting bytes does not fix
+for free, is the *value* those bytes hold -- a duration a human reads on a
+certificate for the rest of that certificate's life -- which is exactly
+why the rounding rule above is written down rather than left as whatever
+`duration_seconds / 3600` happens to produce.
+
+`CONVENER_MATCHING_SALT`'s absence is ordinary for `matching_code`, and is not ordinary here
+------------------------------------------------------------------------------------------
+`registration.matching_code` already documents its own salt as an
+ordinary D-13 absence: without it, no code is derived, and spec S:5's
+cascade (exact address, then normalised name) still finds the same
+attendees. `fingerprint` below takes `salt: str`, not `str | None` --
+deliberately narrower than `matching_code`'s own signature, because there
+is no equivalent fallback here. A register entry's `fingerprint` is a
+*mandatory* field (see `_ENTRY_FIELDS`); the only way to populate it
+without a salt would be to hash the address unsalted, which a small,
+guessable space of institutional addresses makes practically reversible --
+publishing the address in every sense that matters, from a register this
+whole module exists to keep clear of exactly that. So this is one of this
+project's rare exceptions to D-13's "an absent integration is a normal
+state": **`cli.py` must not call `issue` at all when `CONVENER_MATCHING_SALT`
+is unset** -- no certificate issued this run, the same *outward* shape as
+an ordinary D-13 absence (the job says so and exits cleanly), but for the
+stronger reason the global constraints name: an absent key here forbids
+writing, it does not license writing insecurely. `fingerprint` itself
+enforces the narrower type rather than trusting every future caller to
+remember the check; there is no code path in this module that can produce
+an unsalted fingerprint by omission.
+
+The public projection: identifiers and states, nothing else (ruling 5)
+-----------------------------------------------------------------------------
+`public_register` is this module's other pure output: a list of
+`{"identifier", "state"}` dicts, sorted by identifier, built from a
+register the same way `public_data.to_public` builds `events-public.json`
+from the speaker list -- an allowlist of exactly two columns, not a
+denylist of the one column (`fingerprint`) that must never leave. `cli.py`
+writes the result to `public-data/certificates-public.json`, following
+`events-public.json`'s own precedent (`publish-vitrine.yml` copies that
+file to the public showcase; a future workflow does the same for this
+one). Task 13's verification page fetches this file for exactly one
+purpose -- learning whether the identifier a certificate's own token
+already named is currently revoked -- and never sees `certificates.yml`
+itself, which is not published anywhere.
+
+The verification address: one URL, carrying the token (ruling 7)
+-----------------------------------------------------------------------
+Spec S:7 lists "adresse de vérification" as part of a certificate's
+printed content, and step 2 of this task separately asks for "un code
+lisible par machine, contenant le jeton" -- read together, this module
+treats the two as one element: `verification_url(identifier, token)`
+returns a single address, printed as readable text and encoded as this
+certificate's machine-readable code (a QR, rendered by whatever produces
+the document itself -- out of this module's scope), carrying **both** the
+identifier, as a path segment, and the token itself, as a query
+parameter.
+
+Both are needed, and for different reasons. Task 13's page must verify
+*entirely offline* the moment it loads (that task's own brief, step 2) --
+with no request to us for the payload or the signature -- which is only
+possible if the URL already carries the token; a page that had to fetch
+the token from us first would not be verifying "without owning anything",
+it would be asking us to hand a stranger a name on request, exactly the
+kind of on-demand disclosure this whole design exists to avoid. The
+identifier is redundant with the payload's own `identifier` field once the
+token has been verified (`signing.PAYLOAD_FIELDS` includes it) -- but it
+is what lets task 13's route match one certificate to one address *before*
+verification has run at all, so the page can be a plain, bookmarkable link
+rather than requiring the visitor to paste a token in by hand. Route shape
+matches `app/src/App.tsx`'s existing `/signup/:eventId` -- a `HashRouter`
+fragment segment, not a server path, because GitHub Pages serves no
+server-side routing and a bare path would 404 on a fresh load.
+`VERIFICATION_BASE` and the whole address are pinned into this module's
+shared fixture (`tools/tests/fixtures/certificate-verification.json`, see
+below) so task 13 is bound to the exact shape rather than trusted to
+reconstruct it from this docstring.
+
+The shared fixture (D-14) -- what stops task 13 verifying nothing
+------------------------------------------------------------------------
+`tools/tests/fixtures/certificate-verification.json` holds a **real
+signed token**, generated once by this task from a throwaway key pair
+whose private half was never written to disk and is not recoverable from
+anything committed -- only the public half and the token it produced are
+in the fixture, both of which are safe to publish by the very design
+`signing.py` argues for (a public key's whole job is to be public; a
+token's payload sits in the clear by construction, "signing is not
+encryption"). Committed rather than generated fresh by each test, because
+task 13 is TypeScript and cannot invoke `signing.generate()` to produce
+its own matching pair -- a fixture that regenerated itself every run would
+give the two languages two different tokens to agree about, which is no
+contract at all. The fixture also carries: the two `signing.verify`
+`reason` spellings (`MALFORMED`, `NO_MATCHING_KEY`) -- already pinned
+Python-side by `test_signing.py`'s own
+`test_the_two_reasons_keep_the_spelling_that_crosses_the_language_border`,
+which names this fixture as the thing that would eventually bind both
+sides -- this module's own two `state` spellings (`STATE_ISSUED`,
+`STATE_REVOKED`), a worked `public_register` shape, and `VERIFICATION_BASE`
+plus one complete `verification_url` example. A verification page built
+without ever reading this file could still compile, still render, and
+still verify nothing real; this file is the thing task 13's own tests
+check themselves against instead.
+"""
+
+from __future__ import annotations
+
+import hmac
+import secrets
+from collections.abc import Sequence
+from dataclasses import dataclass, replace
+from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
+from hashlib import sha256
+from typing import Any, Final
+from urllib.parse import quote
+
+from .attendance import MatchedAttendee
+from .registration import normalize_email
+from .signing import sign
+
+__all__ = [
+    "FILE_VERSION",
+    "ORGANISER",
+    "STATE_ISSUED",
+    "STATE_REVOKED",
+    "VERIFICATION_BASE",
+    "CertificateEntry",
+    "CertificateEvent",
+    "IssueResult",
+    "duration_hours",
+    "fingerprint",
+    "issue",
+    "public_register",
+    "register_from_data",
+    "register_to_data",
+    "revoke",
+    "verification_url",
+]
+
+#: The organisation's own name, printed on the document as spec S:7's
+#: "organisateur". A module constant, not a `data/config.yml` key: it does
+#: not vary between events (ruling 8), so a config key here would buy a
+#: TypeScript ripple -- `types.ts`, `validate.ts`, `CONFIG_KEYS`,
+#: `readConfig`, every hand-built `Config` literal in the app's tests, a
+#: regenerated `schema.md` -- for a value that is, in fact, a constant.
+ORGANISER: Final = "The Example Collective"
+
+#: The base of every certificate's verification address -- see the module
+#: docstring's "verification address" section for the full route shape and
+#: why it carries the token, not only the identifier. `HashRouter` (see
+#: `app/src/App.tsx`), the same fragment convention `/signup/:eventId`
+#: already uses, and the same base URL `docs/reference/operations.md`
+#: names for the deployed application.
+VERIFICATION_BASE: Final = (
+    "https://example-instance.github.io/example-showcase/app/#/verify/"
+)
+
+#: `certificates.yml`'s own format version -- the file-level analogue of
+#: `registration.FILE_VERSION`.
+FILE_VERSION: Final = 1
+
+#: `CertificateEntry.state` -- a certificate stands, cryptographically,
+#: forever (`signing.verify` never consults this register at all); these
+#: two values are the register's own answer to "does it currently stand".
+#: Spellings pinned into the shared fixture (see the module docstring) the
+#: same way `signing.MALFORMED`/`signing.NO_MATCHING_KEY` are, because
+#: task 13 (TypeScript) compares literal strings, never a Python constant.
+STATE_ISSUED: Final = "issued"
+STATE_REVOKED: Final = "revoked"
+_STATES: Final = frozenset({STATE_ISSUED, STATE_REVOKED})
+
+#: A certificate register entry's exact field set. See `register_from_data`.
+_ENTRY_FIELDS: Final = frozenset(
+    {"identifier", "event_id", "issued_on", "fingerprint", "state"}
+)
+
+#: The identifier's byte length (`secrets.token_hex`): 128 bits. See the
+#: module docstring's "two numbers" section for why this value is random
+#: rather than derived, and `registration._CODE_SYMBOLS` for the unrelated,
+#: much shorter, *spoken* code this is not trying to be -- an identifier
+#: here is read by a machine (a URL, a QR code), never read aloud, so
+#: nothing about it needs to be short or unambiguous by ear.
+_IDENTIFIER_BYTES: Final = 16
+
+#: This derivation's own domain -- see the module docstring's "fingerprint
+#: domain" section for why this exists at all: `registration.matching_code`
+#: already claims `CONVENER_MATCHING_SALT` for one HMAC input space, and this is
+#: a second, disjoint one under the same key. The version suffix exists so
+#: a future, incompatible change to what gets hashed (a fifth input added,
+#: say) can mint `-v2` rather than silently reusing `-v1`'s domain for
+#: different bytes.
+_FINGERPRINT_DOMAIN: Final = "convener-certificate-fingerprint-v1"
+
+#: The rounding grain `duration_hours` snaps to, and the tie-break rule --
+#: see the module docstring's "duration a document prints" section.
+_ROUNDING_INCREMENT: Final = Decimal("0.25")
+_SECONDS_PER_HOUR: Final = 3600
+
+
+@dataclass(frozen=True)
+class CertificateEvent:
+    """What `issue` needs to know about the event, beyond the attendee --
+    deliberately not `confirmation.EventDetails`: that dataclass also
+    carries a `Room`, which a certificate has no use for and which would
+    drag a `Platform` dependency into a module that otherwise touches
+    nothing but plain data.
+
+    `title` becomes the signed payload's `event` field (spec S:7:
+    "intitulé de l'événement" -- the human-readable name of the talk, not
+    `event_id`); `date` becomes the payload's own `date` field, sourced
+    from the same speaker record field `docs/reference/schema.md` documents
+    as "YYYY-MM-DD of the talk, frozen at scheduling" -- the day the
+    session happened, not the day a certificate for it was issued (that
+    second date is `CertificateEntry.issued_on`, a genuinely different
+    fact, which is why the two live on two different objects in this
+    module rather than sharing one field)."""
+
+    event_id: str
+    title: str
+    date: str
+
+
+@dataclass(frozen=True)
+class CertificateEntry:
+    """One register row -- see the module docstring's opening section for
+    what this deliberately does not carry. `event_id` is included even
+    though `certificates.yml` already lives at
+    `data/events/<event_id>/certificates.yml`: it is what lets
+    `public_register`'s aggregation over *every* event's file still be
+    traced back to the right one internally, and what lets `issue` refuse
+    to match a fingerprint against the wrong event's entry if a caller ever
+    hands it a register merged from more than one file by mistake."""
+
+    identifier: str
+    event_id: str
+    issued_on: date
+    fingerprint: str
+    state: str
+
+
+@dataclass(frozen=True)
+class IssueResult:
+    """What `issue` returns: the register row (freshly minted or reused --
+    see `already_registered`) and the signed token to hand to whoever
+    delivers it (task 14). `token` is recomputed on every call, never
+    cached anywhere in this module -- see the module docstring's
+    "idempotent without being deterministic" section for why recomputing
+    it is exactly as good as replaying a stored one."""
+
+    entry: CertificateEntry
+    token: str
+    #: `True` when `entry` already existed in the register `issue` was
+    #: given -- this attendee has already been issued a certificate for
+    #: this event, under this same fingerprint, and no new row was added.
+    #: `False` when `entry` is freshly minted. The caller (`cli.py`)
+    #: decides what to do with either: append `entry` to the register on
+    #: `False`, leave it untouched on `True`.
+    already_registered: bool
+
+
+def fingerprint(event_id: str, email: str, salt: str) -> str:
+    """The register's private, salted trace of one address -- see the
+    module docstring's "two numbers" and "fingerprint domain" sections for
+    what this is (an HMAC, domain-separated from `matching_code`'s own use
+    of the same salt) and is not (reversible, published, or derived the
+    same way `identifier` is).
+
+    `salt` is `str`, not `str | None` -- unlike `matching_code`, which
+    treats an absent `CONVENER_MATCHING_SALT` as an ordinary D-13 fallback, this
+    function has no fallback to offer: a mandatory register field cannot be
+    populated safely without a real salt (see the module docstring's
+    "absence is not ordinary here" section), so the type itself refuses to
+    let a caller pass `None` and get something back. `cli.py` must resolve
+    the secret's presence *before* calling this at all.
+
+    `normalize_email` keeps the same "same address, same value" property
+    `matching_code` and `upsert` already rely on: two submissions of one
+    address, differently capitalised, fingerprint identically."""
+    digest = hmac.new(
+        salt.encode("utf-8"),
+        f"{_FINGERPRINT_DOMAIN}\0{event_id}\0{normalize_email(email)}".encode(),
+        sha256,
+    ).digest()
+    return digest.hex()
+
+
+def duration_hours(duration_seconds: int) -> float:
+    """The signed `duration_hours` payload field -- see the module
+    docstring's "duration a document prints" section for the rule this
+    implements: round to the nearest quarter hour, ties rounding up.
+
+    Uses `Decimal` throughout, never a raw `float` division, so the
+    rounding decision is made against the exact rational value
+    `duration_seconds / 3600`, not against whatever binary approximation a
+    `float` division happened to land on either side of the boundary --
+    the same reasoning `attendance.EligibilityThreshold.threshold_seconds`
+    already applies to its own boundary comparison, via `Fraction` there
+    and `Decimal` here (a `Decimal` suffices in this direction: the result
+    is quantised to a fixed grain and then handed back as a `float` for
+    JSON, whereas `threshold_seconds` is compared against, never rounded,
+    so it keeps `Fraction`'s exactness all the way through).
+    """
+    hours = Decimal(duration_seconds) / Decimal(_SECONDS_PER_HOUR)
+    quarters = (hours / _ROUNDING_INCREMENT).quantize(
+        Decimal(1), rounding=ROUND_HALF_UP
+    )
+    return float(quarters * _ROUNDING_INCREMENT)
+
+
+def _new_identifier() -> str:
+    """A fresh, random certificate identifier -- see the module docstring's
+    "why the identifier must not be deterministic" section. `token_hex`,
+    not the spoken-safe alphabet `registration._CODE_ALPHABET` uses: this
+    identifier is read by a machine, never read aloud, so nothing about it
+    needs to avoid a confusable pair of characters."""
+    return secrets.token_hex(_IDENTIFIER_BYTES)
+
+
+def issue(
+    attendee: MatchedAttendee,
+    event: CertificateEvent,
+    private_pem: str,
+    salt: str,
+    existing: Sequence[CertificateEntry],
+    *,
+    issued_on: date,
+) -> IssueResult:
+    """Issue a certificate for `attendee`'s attendance at `event`, or
+    reproduce the one already on record -- see the module docstring's
+    "idempotent without being deterministic" section for what "reproduce"
+    means here and why it is safe to call this again for someone already
+    registered.
+
+    Looks `attendee`'s `fingerprint` up against `existing` (this event's
+    current register, in whatever order the caller holds it -- this
+    function never sorts or mutates it); a match reuses that entry's
+    `identifier` and `issued_on` rather than minting a new pair, so the
+    register never grows a second row for the same person at the same
+    event no matter how many times this is called (spec S:8: "recalcule
+    sans réinscrire"). `already_registered` on the result tells the caller
+    whether to append `entry` to the register at all.
+
+    Signs a payload of exactly `signing.PAYLOAD_FIELDS` -- `identifier`
+    (this entry's), `event` (`event.title`, spec S:7's "intitulé", not
+    `event.event_id`), `name` (`attendee.registration`'s first name and
+    surname, joined by one space -- the one place in this whole pipeline a
+    name is ever read, and it is never written to anything this function
+    returns except `token`), `date` (`event.date`) and `duration_hours`
+    (`duration_hours(attendee.duration_seconds)`). Raises whatever
+    `signing.sign` raises for a key that will not load
+    (`signing.SigningError`); never raises for a bad `attendee` or `event`,
+    because both are already-validated data by the time either reaches
+    this module.
+    """
+    entry_fingerprint = fingerprint(event.event_id, attendee.registration.email, salt)
+    reused: CertificateEntry | None = None
+    for entry in existing:
+        if entry.event_id == event.event_id and entry.fingerprint == entry_fingerprint:
+            reused = entry
+            break
+
+    if reused is not None:
+        target = reused
+    else:
+        target = CertificateEntry(
+            identifier=_new_identifier(),
+            event_id=event.event_id,
+            issued_on=issued_on,
+            fingerprint=entry_fingerprint,
+            state=STATE_ISSUED,
+        )
+
+    payload = {
+        "identifier": target.identifier,
+        "event": event.title,
+        "name": f"{attendee.registration.first_name} {attendee.registration.surname}",
+        "date": event.date,
+        "duration_hours": duration_hours(attendee.duration_seconds),
+    }
+    token = sign(payload, private_pem)
+    return IssueResult(entry=target, token=token, already_registered=reused is not None)
+
+
+def revoke(
+    existing: Sequence[CertificateEntry], identifier: str
+) -> tuple[CertificateEntry, ...]:
+    """`existing`, with the entry named by `identifier` marked
+    `STATE_REVOKED` -- see the module docstring's "revocation touches the
+    register, never the signature" section for why this function has no
+    signing key parameter at all and cannot touch the token a revoked
+    certificate's holder still carries.
+
+    Raises `ValueError` naming `identifier` when no entry in `existing`
+    carries it -- revoking a certificate that was never issued is a
+    caller mistake worth surfacing, not a silent no-op. Every other entry
+    is returned unchanged, in its original order and as the same object
+    (dataclasses are immutable, so there is nothing to copy defensively)."""
+    if not any(entry.identifier == identifier for entry in existing):
+        raise ValueError(f"no certificate {identifier!r} in this register")
+    return tuple(
+        replace(entry, state=STATE_REVOKED) if entry.identifier == identifier else entry
+        for entry in existing
+    )
+
+
+def public_register(entries: Sequence[CertificateEntry]) -> list[dict[str, Any]]:
+    """The public projection: `{"identifier", "state"}` for every entry in
+    `entries`, sorted by identifier for a stable, diff-friendly file --
+    see the module docstring's "public projection" section for why
+    `fingerprint`, `event_id` and `issued_on` are not columns this
+    function could ever be asked to add: it is an allowlist of exactly two
+    fields, the same discipline `public_data.to_public` applies to the
+    speaker list, not a denylist of the one field that must never leave.
+    """
+    return [
+        {"identifier": entry.identifier, "state": entry.state}
+        for entry in sorted(entries, key=lambda entry: entry.identifier)
+    ]
+
+
+def verification_url(identifier: str, token: str) -> str:
+    """The address printed on a certificate as both readable text and a
+    machine-readable code -- see the module docstring's "verification
+    address" section for why one URL serves both spec S:7's "adresse de
+    vérification" and this task's own "code lisible par machine, contenant
+    le jeton"."""
+    return (
+        f"{VERIFICATION_BASE}{quote(identifier, safe='')}?token={quote(token, safe='')}"
+    )
+
+
+def register_from_data(data: Any) -> tuple[CertificateEntry, ...]:
+    """Parse an already YAML-loaded `certificates.yml`, or start empty when
+    `data` is `None` -- the event's first certificate, which finds no
+    register on disk yet. This function never touches a filesystem path;
+    `cli.py` is the only place `certificates.yml` is ever opened, the same
+    split `registration.load_registration_file` draws for
+    `registrations.enc`.
+
+    Raises `ValueError` on anything that is not this exact format: unlike
+    a missing file, a malformed one is not a normal state for this
+    function to paper over. Every entry's key set must be exactly
+    `_ENTRY_FIELDS` -- the same "closed shape" discipline
+    `registration.to_registration` applies to a decrypted registration --
+    so a "helpful" extra column (a cleartext address sitting in plain
+    sight beside a fingerprint meant to replace it, say) is refused at
+    load rather than silently carried forward."""
+    if data is None:
+        return ()
+    if not isinstance(data, dict) or data.get("v") != FILE_VERSION:
+        raise ValueError("certificates.yml is not a supported format version")
+    raw_entries = data.get("certificates")
+    if not isinstance(raw_entries, list):
+        raise ValueError("certificates.yml is malformed")
+
+    entries: list[CertificateEntry] = []
+    for raw in raw_entries:
+        if not isinstance(raw, dict) or set(raw) != _ENTRY_FIELDS:
+            raise ValueError(
+                "certificates.yml holds an entry that is not exactly the "
+                "certificate register shape"
+            )
+        identifier, event_id, issued_on_raw, entry_fingerprint, state = (
+            raw["identifier"],
+            raw["event_id"],
+            raw["issued_on"],
+            raw["fingerprint"],
+            raw["state"],
+        )
+        if not (
+            isinstance(identifier, str)
+            and isinstance(event_id, str)
+            and isinstance(issued_on_raw, str)
+            and isinstance(entry_fingerprint, str)
+            and isinstance(state, str)
+        ):
+            raise ValueError("certificates.yml holds a field of the wrong type")
+        if state not in _STATES:
+            raise ValueError(f"certificates.yml holds an unknown state {state!r}")
+        try:
+            issued_on = date.fromisoformat(issued_on_raw)
+        except ValueError as exc:
+            raise ValueError(
+                "certificates.yml holds an invalid issued_on date"
+            ) from exc
+        entries.append(
+            CertificateEntry(
+                identifier=identifier,
+                event_id=event_id,
+                issued_on=issued_on,
+                fingerprint=entry_fingerprint,
+                state=state,
+            )
+        )
+    return tuple(entries)
+
+
+def register_to_data(entries: Sequence[CertificateEntry]) -> dict[str, Any]:
+    """The inverse of `register_from_data`: a plain, YAML-safe structure
+    `cli.py` hands to its own YAML writer (`cli._dump`). Field order is
+    fixed here so a diff on `certificates.yml` shows only what actually
+    changed, never a reordering."""
+    return {
+        "v": FILE_VERSION,
+        "certificates": [
+            {
+                "identifier": entry.identifier,
+                "event_id": entry.event_id,
+                "issued_on": entry.issued_on.isoformat(),
+                "fingerprint": entry.fingerprint,
+                "state": entry.state,
+            }
+            for entry in entries
+        ],
+    }

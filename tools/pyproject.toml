@@ -36,6 +36,8 @@ convener-resend-confirmation = "convener_ops.cli:resend_confirmation"
 convener-match-attendance = "convener_ops.cli:match_attendance"
 convener-release-recording = "convener_ops.cli:release_recording"
 convener-discard-recording = "convener_ops.cli:discard_recording"
+convener-issue-certificates = "convener_ops.cli:issue_certificates"
+convener-certificates-public-data = "convener_ops.cli:certificates_public_data"
 
 [build-system]
 requires = ["hatchling"]
