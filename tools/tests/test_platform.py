@@ -397,6 +397,52 @@ def test_a_row_with_a_negative_duration_is_reported_and_dropped(
     assert "duration_seconds" in issues[0].reason
 
 
+def test_a_malformed_durations_reason_never_echoes_the_cells_content(
+    tmp_path: Path,
+) -> None:
+    """A column shift -- an export tool that reorders a name or an
+    address into the `duration_seconds` column by mistake -- must not put
+    that cell's own content into the reported reason. The reason names
+    the column and what was wrong with it, and nothing else."""
+    rows, issues = parse_attendance_csv(
+        "\n".join(
+            (
+                CSV_HEADER,
+                "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+                "2026-08-20T19:00:00Z,ada@example.org",
+            )
+        )
+        + "\n"
+    )
+
+    assert rows == []
+    assert issues == [
+        AttendanceIssue(line_number=2, reason="duration_seconds is not a whole number")
+    ]
+
+
+def test_a_column_shift_never_prints_the_shifted_cells_content(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The same property, exercised through `ManualPlatform.get_attendance`
+    -- the path that actually prints a dropped row's reason to the job
+    log, which is where this leak would actually reach a reader."""
+    event_dir = tmp_path / "events" / "mrg-941"
+    event_dir.mkdir(parents=True)
+    _write_csv(
+        event_dir / "attendance-import.csv",
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+        "2026-08-20T19:00:00Z,ada@example.org",
+    )
+
+    rows = _platform(tmp_path).get_attendance("mrg-941")
+
+    assert rows == []
+    printed = capsys.readouterr().out
+    assert "ada@example.org" not in printed
+    assert "duration_seconds" in printed
+
+
 def test_a_row_with_no_joined_at_is_reported_and_dropped(tmp_path: Path) -> None:
     rows, issues = parse_attendance_csv(
         "\n".join(

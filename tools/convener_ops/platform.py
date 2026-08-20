@@ -284,11 +284,17 @@ def _parse_row(raw: Mapping[str, str | None]) -> AttendanceRow:
     try:
         duration_seconds = int(duration_raw)
     except ValueError:
-        raise _RowError(
-            f"duration_seconds is not a whole number: {duration_raw!r}"
-        ) from None
+        # Never echoes `duration_raw` itself: a column shift (an export
+        # tool that reorders a name or an address into this column by
+        # mistake) would otherwise put that cell's content straight into
+        # `ManualPlatform.get_attendance`'s printed report -- the same
+        # leak this whole module's "no plaintext to a log" rule exists to
+        # rule out, reached from an angle a header check cannot catch.
+        # The column name and what was wrong with it are always enough
+        # for a volunteer to fix the file; the cell's own text never is.
+        raise _RowError("duration_seconds is not a whole number") from None
     if duration_seconds < 0:
-        raise _RowError(f"duration_seconds is negative: {duration_raw!r}")
+        raise _RowError("duration_seconds is negative")
 
     #: A blank cell is a telephone joiner (see the module docstring); the
     #: `or None` is what keeps that case from ever becoming `""`.
