@@ -39,7 +39,10 @@ Verify this certificate at: **[the verification address]**
 
 [a machine-readable code -- a QR, encoding the verification address above,
 which itself carries the signed token -- so a reader can confirm this
-certificate offline, without an account and without asking us anything]
+certificate offline, without an account and without asking us anything.
+The address is meant to be scanned or clicked, never typed by hand: it
+carries the signed token itself, not only the identifier, so it is far
+longer than the identifier printed above it.]
 
 ---
 
@@ -82,8 +85,11 @@ certificate offline, without an account and without asking us anything]
   touches the register, never the signature".
 - **We keep no name and no address once this is issued.** Our own register
   holds the certificate's identifier, the event id, the date it was issued,
-  a salted fingerprint of the address (never published, never reversible
-  in practice), and its state. That register outlives the registration it
-  was derived from: `data/events/<id>/registrations.enc` is destroyed 90
-  days after the event (spec S:4); `certificates.yml`, in the same
-  directory, is not.
+  a salted fingerprint of the address (never published, and not reversible
+  by anyone who does not hold the matching salt -- see
+  `tools/convener_ops/certificate.py`'s own module docstring, "the fingerprint
+  is reversible, given the salt", for what that qualification means and
+  why the salt itself is never rotated), and its state. That register
+  outlives the registration it was derived from:
+  `data/events/<id>/registrations.enc` is destroyed 90 days after the
+  event (spec S:4); `certificates.yml`, in the same directory, is not.

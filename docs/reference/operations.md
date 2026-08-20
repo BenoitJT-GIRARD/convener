@@ -751,6 +751,16 @@ change every already-issued code, so a resend of the confirmation email
 (which recomputes the code rather than storing it) would no longer match
 what the participant was already told.
 
+Task 12 gives this same secret a second consumer: `tools/convener_ops/
+certificate.py::fingerprint`, the certificate register's own salted trace
+of an address. That is a second reason never to rotate it once any event's
+register exists, not merely the first — rotating it would also change
+every past attendee's fingerprint, so `convener-issue-certificates`' own
+idempotent lookup would stop finding any of them and mint each a second
+certificate on its next run. See `certificate.py`'s own module docstring,
+"the fingerprint is reversible, given the salt", for the reasoning in
+full, including what to do instead if this secret ever leaks.
+
 **Secrets to set:** `CONVENER_MATCHING_SALT`.
 
 **To verify:** run `cd tools && uv run convener-check-config`; *Registration
