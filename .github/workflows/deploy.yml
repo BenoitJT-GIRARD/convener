@@ -39,17 +39,36 @@ jobs:
             exit 0
           fi
           git config --global user.name "convener-publisher"
-          git config --global user.email "convener-publisher@forum.example.test"
+          git config --global user.email "convener-publisher@users.noreply.github.com"
           git clone --depth 1 \
             "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
           rm -rf /tmp/vit/app
           mkdir -p /tmp/vit/app
           cp -r app/dist/. /tmp/vit/app/
           cd /tmp/vit
-          git add app
+          # --force: `git add` still honours the *target* repository's own
+          # .gitignore, and a rule there matching a built asset name would
+          # silently drop it from the deploy with no error.
+          git add --force app
           if git diff --staged --quiet; then
             echo "no changes"
             exit 0
           fi
           git commit -m "app: refresh build"
-          git push
+          # This job and Publish vitrine data both clone example-showcase fresh
+          # and each only ever stages its own disjoint subtree (app/ here,
+          # src/_data/ there) -- but that makes the *commits* conflict-free,
+          # not the *push*. git push is branch-atomic, not path-atomic: two
+          # runs can each clone before the other pushes, and the loser's
+          # push is a plain non-fast-forward rejection. A rebase is safe
+          # here precisely because the subtrees never overlap, so replaying
+          # this commit on top of the other's can never conflict.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
+            git pull --rebase
+          done
+          echo "::error::push failed after 3 attempts -- the build was not published"
+          exit 1
