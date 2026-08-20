@@ -309,13 +309,30 @@ _NESTED: dict[str, Interface] = {}
 # The tables
 # --------------------------------------------------------------------------
 
-#: How a TypeScript type is spelled for a volunteer. The YAML file holds
-#: integers and booleans, so those are the words the page uses.
+#: How a TypeScript type is spelled for a volunteer.
+#:
+#: "number" stays "number" rather than becoming "int" (round 2 review of
+#: phase 4 task 9). It used to become "int": every "number" field this
+#: schema had ever declared happened to be a whole count, so the word was
+#: an editorialisation that was, until eligibility_share (phase 4 S:5),
+#: always true. eligibility_share can only ever hold a bounded fraction,
+#: and calling it an int would be a false statement on the one page whose
+#: entire purpose is that it cannot drift from the types it is generated
+#: from -- worse than a hand-written table would be, because a reader has
+#: been told this one is derived and therefore trustworthy. Nothing this
+#: script can read distinguishes a whole-number "number" field from a
+#: fractional one; only the validator does (`whole()` versus `share()` in
+#: app/src/data/validate.ts, `isinstance(value, int)` versus the
+#: `]0, 1]` range check in tools/convener_ops/validate.py). So the type column
+#: says only what the type itself says, and each field's own doc comment
+#: -- already reproduced in the note column -- carries the real
+#: constraint: sla_days's says "in minutes"/"in days" alongside a plain
+#: number, eligibility_share's states its own ]0, 1] range outright.
 _TYPE_WORDS: Final = {
     "string": "string",
-    "number": "int",
+    "number": "number",
     "boolean": "bool",
-    "number | null": "int | null",
+    "number | null": "number | null",
     "string | null": "string | null",
 }
 
