@@ -68,19 +68,104 @@ changing them has no effect until the application is rebuilt — push to
 **To verify:** sign out, reload; the screen should offer a short code rather
 than a token field.
 
-## GitHub Pages
+## Form relay
+
+**Without it:** the public Tally form has nowhere to send a submission. No
+proposal is turned into a lead, and *Handle proposal*
+(`.github/workflows/candidate-form.yml`) is never triggered.
+
+This is a second Cloudflare Worker, `services/form-relay/`, deliberately
+separate from the authentication relay above. That relay is stateless and
+secret-free by design, which is what lets anyone in the organisation
+redeploy it with one command (see its README). The form relay cannot make
+that claim — turning a Tally webhook into a `repository_dispatch` requires
+a GitHub token — so it holds one, and is kept in its own Worker rather than
+folded into the auth relay, so the secret-free property of the other one
+still holds.
+
+**To create:**
+1. Build the public form: `TALLY_API_KEY=tly-xxxx uv run python
+   ../scripts/create_tally_form.py` from `tools/`. It is created as a
+   `DRAFT`, deliberately — open it in Tally's dashboard and confirm the
+   hint text actually renders under *Gender* and *Career stage* before
+   publishing it. That text is placed on each dropdown's first option, a
+   location `scripts/create_tally_form.py`'s own docstring notes is
+   inferred from Tally's schema rather than confirmed against a worked
+   example, so the script cannot verify for itself that Tally renders it
+   as a hint rather than treating it as something else (Tally's OpenAPI
+   spec suggests that field may instead be reserved for an "Other"
+   sub-field on some block types) — if it does not render, the two
+   dropdowns still resolve correctly, but a respondent sees a bare token
+   with no explanation. Publish by hand once satisfied; a later run of
+   the script never touches `status`, so this is a one-time check.
+2. Deploy the worker from `services/form-relay/` (`npx wrangler deploy`
+   from that folder — see its README) to the same Cloudflare account used
+   for the authentication relay above.
+3. Configure Tally's webhook to `POST` to the worker's URL with no path
+   suffix (the worker's only route is its root) — any other path 404s and
+   the submission is silently lost — and set the same signing secret in
+   Tally that is set below as `TALLY_WEBHOOK_SECRET`.
+
+**Secrets to set:**
+- Wrangler secret `TALLY_WEBHOOK_SECRET` on the worker — set with
+  `npx wrangler secret put TALLY_WEBHOOK_SECRET` from
+  `services/form-relay/`. The same value must also be set as the
+  repository secret `TALLY_WEBHOOK_SECRET` (see *CI-only secrets* below):
+  Tally signs with it, the worker verifies it, and
+  `tools/convener_ops/proposal.py` verifies it again on the GitHub Actions side
+  — one secret, read in three places.
+- Wrangler secret `CONVENER_DISPATCH_TOKEN` on the worker — set with
+  `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from
+  `services/form-relay/`. A GitHub token scoped to *Contents: read & write*
+  on `example-cockpit` only, sufficient to send it a `repository_dispatch`.
+- Repository secret `CLOUDFLARE_API_TOKEN` — the same one already set for
+  *Deploy auth relay* above; *Deploy form relay* reads it too, since both
+  workers deploy to the same Cloudflare account.
+
+Neither Wrangler secret belongs in `wrangler.toml` — both are set with
+`npx wrangler secret put`, never committed.
+
+**To verify:** submit the Tally form; a new lead should appear in
+`data/speakers.yml` shortly after, committed by *Handle proposal*.
+
+## Publishing the application (GitHub Pages)
 
 **Without it:** nothing else is affected here — this is how the app itself
 is published, not an optional integration.
 
-**To create:** Settings → Pages → Source = *GitHub Actions*.
+**To create:** nothing, on this repository — Pages is not enabled here.
+`example-cockpit` stays private (see *Before anything else* above), and GitHub
+Pages will not serve a private repository without a paid plan, which the
+project's no-cost constraint rules out. This page was right to name a
+fallback for that case (Netlify, Cloudflare Pages, pointed at `app/dist`);
+the fallback was never needed, because a route already sat closer to hand.
 
-If the repository is private and the current GitHub plan does not offer
-private Pages, fall back to another static host (for example Netlify or
-Cloudflare Pages) pointed at the `app/dist` build output.
+Pages is instead enabled on the separate, public
+`example-instance/example-showcase` repository: Settings → Pages → Source =
+*Deploy from a branch*, branch `main`, folder `/ (root)`. The *Deploy app*
+workflow (`.github/workflows/deploy.yml`) builds the app here and pushes
+`app/dist` into `example-showcase`, under `app/` — the same pattern *Publish
+vitrine data* (`.github/workflows/publish-vitrine.yml`) already uses to
+push the public events feed under `src/_data/`. The site is at
+`https://example-instance.github.io/example-showcase/app/`.
+
+This route, and not a third-party static host, because it adds no account.
+A paid plan was already ruled out by the no-cost constraint; a third-party
+host such as Netlify or Cloudflare Pages would still need its own account,
+which is one more account somebody has to own, and the project's
+constraints already forbid resting on any one collaborator's goodwill or
+position. `example-showcase` costs nothing new to add: it already exists, under
+the same organisation, to serve the public events feed.
+
+**Also needs correcting, outside this repository:** the GitHub App's homepage URL
+(the organisation's Settings → Developer settings → GitHub Apps → the app
+registered above under *Authentication relay*) still reads
+`.../example-cockpit/`. Point it at the address above instead. This is a
+setting, not code — no test, no CI job and no type will ever notice it
+drifting, so this paragraph is the only mechanism that gets it corrected.
 
 **To verify:** push to `main`; the *Deploy app* workflow ends green and the
-site answers.
+site answers at the address above.
 
 ## Meeting platform
 
@@ -103,8 +188,8 @@ sent, and the interface says so. Nothing is silently dropped.
 
 **To create:** see phase 4.
 
-**Secrets to set:** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_USER`, `CONVENER_SMTP_PASSWORD`,
-`CONVENER_SMTP_FROM`.
+**Secrets to set:** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_PORT`, `CONVENER_SMTP_USER`,
+`CONVENER_SMTP_PASSWORD`, `CONVENER_SMTP_FROM`.
 
 **To verify:** run `cd tools && uv run convener-check-config`; *Outbound email*
 moves from `absent` to `production`.
@@ -169,19 +254,36 @@ repository still needs to know they exist and where they live.
 - **`TALLY_WEBHOOK_SECRET`** — verifies that a `proposal-submitted`
   `repository_dispatch` reaching *Handle proposal*
   (`.github/workflows/candidate-form.yml`) really came from the public
-  Tally form and not a forged request. Set as a repository secret; its
-  value is the signing secret Tally shows when the webhook is configured.
+  Tally form and not a forged request. Without this repository secret set,
+  that Actions-side check is skipped and any dispatch is accepted (D-13:
+  an absent integration is a normal state, not an error) — the Worker's
+  own copy of the same secret has no such fallback and refuses every
+  request outright without it, because the Worker is the one thing
+  standing between this whole chain and the public internet, while the
+  Actions side only ever sees what the Worker already let through. Set as
+  a repository secret; its value is the signing secret Tally shows when
+  the webhook is configured. The same value is also set as a Wrangler
+  secret on `services/form-relay/` (see *Form relay* above), which checks
+  this signature first, before it ever sends the dispatch this workflow
+  reads.
 - **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
   scoped to the separate `example-instance/example-showcase` repository
-  (contents: read & write only), that *Publish vitrine data*
-  (`.github/workflows/publish-vitrine.yml`) uses to push the public events
-  feed there. Without it the workflow logs a message and exits cleanly —
-  no vitrine publish happens, nothing else breaks. Set as a repository
-  secret on `example-cockpit`.
+  (contents: read & write only), that both *Publish vitrine data*
+  (`.github/workflows/publish-vitrine.yml`) and *Deploy app*
+  (`.github/workflows/deploy.yml`) use to push into it — the public events
+  feed under `src/_data/`, and, since the app is now published through
+  this same repository (see *Publishing the application (GitHub Pages)*
+  above), the built application under `app/`. It is no longer only the
+  events feed at stake: without it,
+  *Deploy app* still logs a message and exits cleanly rather than failing
+  loudly, but nothing is pushed anywhere and there is no fallback
+  publishing route, so there is no site at all. Set as a repository secret
+  on `example-cockpit`.
 - **`CLOUDFLARE_API_TOKEN`** — already introduced above under
   *Authentication relay*: used by *Deploy auth relay* to deploy the
-  worker in `services/auth-proxy/`. Listed again here because it is the
-  same kind of CI-only, cross-account credential as the other two.
+  worker in `services/auth-proxy/`, and by *Deploy form relay* to deploy
+  `services/form-relay/` to the same account. Listed again here because it
+  is the same kind of CI-only, cross-account credential as the other two.
 
 ## Inactivity (G-09)
 

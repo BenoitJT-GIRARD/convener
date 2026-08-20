@@ -30,7 +30,7 @@ const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
  * Handbook files are written to be read in the repository, so their links are
  * relative to the file: `../assets/flyer-template.svg` from
  * `toolkit/visual-kit.md`. Rendered in the app the browser would resolve that
- * against the *route* — `/example-cockpit/templates` — and hand the volunteer
+ * against the *route* — `/example-showcase/app/` — and hand the volunteer
  * a 404. Resolving it against the file's own directory instead, under the same
  * `handbook/` path the content was fetched from, makes the download link in
  * the handbook the download link in the app, with one file on disk behind

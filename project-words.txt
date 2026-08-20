@@ -34,3 +34,6 @@ unmodelled
 Inkscape
 wordmark
 Segoe
+HMAC
+redeployable
+redeployability

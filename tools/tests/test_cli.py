@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 from datetime import UTC, datetime, tzinfo
 from pathlib import Path
@@ -208,6 +211,41 @@ def test_handle_proposal_with_an_invalid_signature_returns_1(
     assert "invalid signature" in capsys.readouterr().err
 
 
+def test_handle_proposal_accepts_a_correctly_signed_tally_shaped_body(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The production path end to end: a secret is configured (so
+    # verify_signature cannot short-circuit through the D-13 empty-secret
+    # escape), the payload is Tally's own shape -- {"data": {"fields": [...]}}
+    # -- which is what the workflow now passes through untouched (cli.py
+    # reads payload["data"]["fields"], not the legacy payload["fields"]
+    # fallback every other test here exercises), and the signature is the
+    # real base64(HMAC-SHA256(secret, payload)) computed over that exact
+    # string. Reverting candidate-form.yml to toJSON(...), or adding a
+    # .strip() to the payload before verifying, would break this while every
+    # other handle_proposal test in this file stayed green.
+    _write_data(tmp_path, [speaker(id="spk-001")], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    secret = "s3cr3t"
+    payload = json.dumps(
+        {"data": {"fields": [{"label": "Name", "value": "Grace Hopper"}]}}
+    )
+    signature = base64.b64encode(
+        hmac.new(secret.encode(), payload.encode(), hashlib.sha256).digest()
+    ).decode()
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.setenv("PROPOSAL_SIGNATURE", signature)
+    monkeypatch.setenv("TALLY_WEBHOOK_SECRET", secret)
+
+    assert handle_proposal() == 0
+    out = capsys.readouterr().out
+    assert "created spk-002 from form proposal" in out
+
+    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    assert "spk-002" in text
+    assert "Grace Hopper" in text
+
+
 def test_handle_proposal_skips_a_duplicate_lead(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -258,3 +296,98 @@ def test_handle_proposal_reports_load_errors_and_returns_1(
 
     assert handle_proposal() == 1
     assert "file missing" in capsys.readouterr().out
+
+
+def test_handle_proposal_with_a_non_json_payload_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Reachable in production: with no TALLY_WEBHOOK_SECRET configured,
+    # verify_signature accepts any body (D-13), so a malformed one reaches
+    # json.loads unguarded unless this raises a clean message instead of an
+    # unhandled JSONDecodeError traceback.
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", "not json at all")
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 1
+    assert "invalid JSON payload" in capsys.readouterr().err
+
+
+def test_handle_proposal_with_a_json_array_payload_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Valid JSON, but not an object -- payload.get(...) would otherwise
+    # raise AttributeError on a list.
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", "[1, 2, 3]")
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 1
+    assert "invalid JSON payload" in capsys.readouterr().err
+
+
+def test_handle_proposal_resolves_a_picker_shaped_gender_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # R-9: a DROPDOWN answer's raw `value` is a list of option ids, not
+    # text -- this is the end-to-end proof that handle_proposal resolves it
+    # (via field_value) before to_lead ever sees it, using the exact shape
+    # Tally's webhook sends, not a plain string standing in for one.
+    _write_data(tmp_path, [speaker(id="spk-001")], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    payload = json.dumps(
+        {
+            "fields": [
+                {"label": "Name", "value": "Grace Hopper"},
+                {
+                    "label": "Gender",
+                    "value": ["opt-nb"],
+                    "options": [
+                        {"id": "opt-f", "text": "F"},
+                        {"id": "opt-m", "text": "M"},
+                        {"id": "opt-nb", "text": "NB"},
+                        {"id": "opt-undisclosed", "text": "undisclosed"},
+                    ],
+                },
+            ]
+        }
+    )
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+
+    written = yaml.safe_load((tmp_path / "data" / "speakers.yml").read_text("utf-8"))
+    assert written[-1]["gender"] == "NB"
+
+
+def test_handle_proposal_never_writes_a_stringified_list_for_an_unresolvable_option(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # An id absent from `options` (a malformed or truncated payload) must
+    # not resurrect the original bug: "['unknown-id']" landing in the
+    # record instead of the field being recognised as unmapped and falling
+    # back to "undisclosed" like any other unrecognised answer.
+    _write_data(tmp_path, [speaker(id="spk-001")], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    payload = json.dumps(
+        {
+            "fields": [
+                {"label": "Name", "value": "Grace Hopper"},
+                {"label": "Gender", "value": ["unknown-id"], "options": []},
+            ]
+        }
+    )
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", payload)
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+
+    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    assert "['unknown-id']" not in text
+    written = yaml.safe_load(text)
+    assert written[-1]["gender"] == "undisclosed"

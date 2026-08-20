@@ -16,5 +16,10 @@
     "data/speakers.yml",
     "tools/**"
   ],
-  "files": ["docs/**/*.md", "README.md", "INFORMATION-ARCHITECTURE.md"]
+  "files": [
+    "docs/**/*.md",
+    "README.md",
+    "INFORMATION-ARCHITECTURE.md",
+    "services/*/README.md"
+  ]
 }

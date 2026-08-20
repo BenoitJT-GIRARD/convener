@@ -8,11 +8,12 @@ events. Everything a volunteer needs sits inside the app.
 
 | Folder | What it holds |
 |---|---|
-| `app/` | The React app (Vite + TypeScript). Deployed to GitHub Pages. |
+| `app/` | The React app (Vite + TypeScript). Built here and published to the separate `example-showcase` repository — see *Publishing the application (GitHub Pages)* in `docs/reference/operations.md`. |
 | `data/` | `speakers.yml` (unified entity), `config.yml` (board, threshold, season). |
 | `docs/` | Handbook content as Markdown — rendered *inside* the app at the point of action and in the Handbook tab. Not a separate site. |
 | `tools/` | The `convener-ops` package: data validation, integration status, the sweep, the public-data filter, and the form-proposal handler. |
 | `services/auth-proxy/` | The Cloudflare Worker that relays the GitHub device-flow sign-in. |
+| `services/form-relay/` | The Cloudflare Worker that verifies a Tally webhook and relays it into a GitHub `repository_dispatch`. Holds a GitHub token. |
 | `.github/` | CI: data validation, Tally proposal handler, public-data filter, vitrine sync, quality and security gates. |
 
 ## How to work on it
@@ -20,7 +21,7 @@ events. Everything a volunteer needs sits inside the app.
 ```bash
 cd app
 npm install
-npm run dev           # http://localhost:5173/example-cockpit/
+npm run dev           # http://localhost:5173/example-showcase/app/
 ```
 
 You'll be prompted for a GitHub fine-grained PAT scoped to this repository

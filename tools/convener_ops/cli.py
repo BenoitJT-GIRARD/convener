@@ -21,7 +21,7 @@ from convener_ops.governance import paris_today
 from convener_ops.integrations import Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
-from convener_ops.proposal import skip_reason, to_lead, verify_signature
+from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
 from convener_ops.register import (
     LOG_FORMAT,
@@ -276,6 +276,16 @@ def public_data() -> int:
 
 
 def handle_proposal() -> int:
+    """Turn a signed Tally webhook into a lead, or refuse it.
+
+    ``PROPOSAL_PAYLOAD`` is the raw body Tally signed -- not a wrapper
+    around it -- so verifying the signature against it and then parsing it
+    as JSON are both operating on exactly what Tally sent. The workflow
+    (.github/workflows/candidate-form.yml) sets it from
+    ``client_payload.body``, which the relay (services/form-relay) sends
+    separately from ``client_payload.signature`` for exactly this reason: a
+    signature cannot verify a payload that contains that signature.
+    """
     payload_str = os.environ.get("PROPOSAL_PAYLOAD", "")
     signature = os.environ.get("PROPOSAL_SIGNATURE", "").strip()
     secret = os.environ.get("TALLY_WEBHOOK_SECRET", "").strip()
@@ -288,7 +298,20 @@ def handle_proposal() -> int:
         print("invalid signature", file=sys.stderr)
         return 1
 
-    payload = json.loads(payload_str)
+    # `payload_str` is signature-checked above, never schema-checked: a
+    # signature only proves who sent the body, not that it parses as JSON
+    # or that it is a JSON object rather than, say, an array. With no
+    # secret configured, verify_signature accepts anything (D-13), which
+    # makes this reachable in production, not just a defensive guess.
+    try:
+        payload = json.loads(payload_str)
+    except json.JSONDecodeError:
+        print("invalid JSON payload", file=sys.stderr)
+        return 1
+    if not isinstance(payload, dict):
+        print("invalid JSON payload", file=sys.stderr)
+        return 1
+
     fields_list = (
         payload.get("data", {}).get("fields")
         if isinstance(payload.get("data"), dict)
@@ -296,10 +319,15 @@ def handle_proposal() -> int:
     )
     if not isinstance(fields_list, list):
         fields_list = []
+    # field_value resolves a picker's chosen option id(s) against that
+    # field's own `options` array (R-9) -- without it, a DROPDOWN/
+    # MULTIPLE_CHOICE/CHECKBOXES/MULTI_SELECT answer's raw `value` is a list
+    # of ids, never the text `to_lead` compares against `GENDERS`/
+    # `CAREER_STAGES`, and every such answer would silently become
+    # "undisclosed". This is the one place in the repository that flattens
+    # a Tally field into `to_lead`'s `fields: dict[str, str]`.
     fields = {
-        f.get("label", ""): f.get("value", "")
-        for f in fields_list
-        if isinstance(f, dict)
+        f.get("label", ""): field_value(f) for f in fields_list if isinstance(f, dict)
     }
 
     root = repo_root()

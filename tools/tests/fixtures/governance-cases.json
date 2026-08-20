@@ -620,6 +620,44 @@
       "expected": ""
     }
   ],
+  "_webhook_signature_comment": "How the public form's webhook is authenticated. Tally signs a submission as base64(HMAC-SHA256(secret, rawBody)) in a Tally-Signature header, over the raw JSON body and nothing else -- not a wrapper, not a re-encoding. tools/convener_ops/proposal.py::verify_signature(body, signature, secret) checks this on the GitHub Actions side; services/form-relay/src/index.js checks the same rule inside the Cloudflare Worker that receives Tally's webhook directly, before it ever reaches GitHub. `signature` is the value handed to verify_signature exactly as given (correct, wrong, or from a different body); `valid` is what verify_signature(body, signature, secret) must return. Read by tools/tests/test_proposal.py and services/form-relay/test/.",
+  "webhook_signature_cases": [
+    {
+      "name": "a body signed the way tally signs it verifies",
+      "secret": "s3cr3t",
+      "body": "{\"data\":{\"fields\":[{\"label\":\"Name\",\"value\":\"Grace Hopper\"}]}}",
+      "signature": "GqNlH77A2ClIOgGplVTSwP4OUn5SXJswCXuEIDcMInk=",
+      "valid": true
+    },
+    {
+      "name": "a signature computed with the wrong secret is refused",
+      "secret": "s3cr3t",
+      "body": "{\"data\":{\"fields\":[{\"label\":\"Name\",\"value\":\"Grace Hopper\"}]}}",
+      "signature": "kCIjWlcY1jf3zfl0/CrWPWM5Lfn6tb/SBJGB92fDLSI=",
+      "valid": false
+    },
+    {
+      "name": "one changed byte in the body invalidates a signature computed on the original",
+      "secret": "s3cr3t",
+      "body": "{\"data\":{\"fields\":[{\"label\":\"Name\",\"value\":\"Bda Lovelace\"}]}}",
+      "signature": "ykwZr7rJXKKve/50BmB+OfVsE07SIPYUpGGSa2hyVec=",
+      "valid": false
+    },
+    {
+      "name": "a hexdigest is not a base64 signature, however correctly computed",
+      "secret": "s3cr3t",
+      "body": "{\"data\":{\"fields\":[{\"label\":\"Name\",\"value\":\"Grace Hopper\"}]}}",
+      "signature": "1aa3651fbec0d829483a01a99554d2c0fe0e527e525c9b30097b8420370c2279",
+      "valid": false
+    },
+    {
+      "name": "a name with non-ASCII characters signs and verifies, byte for byte in UTF-8",
+      "secret": "s3cr3t",
+      "body": "{\"data\":{\"fields\":[{\"label\":\"Name\",\"value\":\"Benoît Lefèvre\"}]}}",
+      "signature": "CmuAi0k7QdcujNNO0C3MIFtA9G9oTIRbDddtuRzBXpc=",
+      "valid": true
+    }
+  ],
   "_unsettled_comment": "Whether the board still has a nomination in front of it. app/src/state/board.ts::isUnsettled refuses a second nomination for the candidate while this is true, and tools/convener_ops/sweep.py::_unsettled_candidates keeps that same candidate off the inactivity proposal. One rule, two implementations, so both read these cases: the Python copy mirrored the narrower isPending until this fixture was written, and a seated member carrying a deferred nomination could be proposed inactive out of the very file that recorded the objection against them. `unsettled` is what isUnsettled returns for `nomination`; the Python side reads the same cases through _unsettled_candidates, which is this predicate applied to a list.",
   "unsettled_nomination_cases": [
     {

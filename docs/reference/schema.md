@@ -108,12 +108,12 @@ given" — and is well formed.
 |---|---|---|
 | `assignee` | string | Login of whoever owes this line. Empty -- and an item with no entry at all -- means nobody in particular, which means the hosts. |
 
-There is no stored vote threshold. It is computed from the eligible Board —
-active members, minus those who declared an absence, minus those recused on
-this lead — as two thirds rounded up, never fewer than three yes ballots. Below
-three eligible members the vote is suspended rather than decided on a bar that
-has stopped meaning anything. The rule lives in `app/src/state/governance.ts`
-and `tools/convener_ops/governance.py`, pinned in both languages by
+There is no stored vote threshold. It is computed from the
+eligible Board — active members, minus those who declared an absence, minus those
+recused on this lead — as two thirds rounded up, never fewer than three yes ballots.
+Below three eligible members the vote is suspended rather than decided on a bar that has
+stopped meaning anything. The rule lives in `app/src/state/governance.ts` and
+`tools/convener_ops/governance.py`, pinned in both languages by
 `tools/tests/fixtures/governance-cases.json`.
 
 ### Status values
@@ -209,11 +209,11 @@ One mapping, with the keys below.
 | `key` | string | What the record stores: it becomes the last segment of the promotion line's key, so renaming one re-keys what is already written and is a migration rather than an edit. |
 | `label` | string | What a volunteer reads. Only ever shown, so it can be reworded at any time without touching a stored record. |
 
-`board` replaces the former flat `board_members` list of logins: a member now
-carries the date they joined, whether they are still active, and any declared
-absence, because all three feed the vote threshold. There is no
-`vote_threshold` key — see the ballot table above for why it is computed rather
-than stored.
+`board` replaces the former flat `board_members` list of
+logins: a member now carries the date they joined, whether they are still active, and
+any declared absence, because all three feed the vote threshold. There is no
+`vote_threshold` key — see the ballot table above for why it is computed rather than
+stored.
 
 Each channel becomes one line of the promotion phase, keyed `promotion/<key>`,
 so it carries an owner in `checklist` exactly like every other line. The `key`

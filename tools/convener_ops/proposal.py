@@ -7,48 +7,171 @@ webhook secret.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from convener_ops.governance import active_board
 
-GENDERS = {"M", "F", "NB", "undisclosed"}
+# Iterating a `set` of `str` is `PYTHONHASHSEED`-dependent *across
+# processes* -- two runs of this interpreter can iterate the same set in a
+# different order. `GENDERS`/`CAREER_STAGES` are membership-tested only
+# here, but `scripts/create_tally_form.py` also needs a *stable* order to
+# build a DROPDOWN's options from (R-9): iterate the set there and the
+# option order, and each option's `index`, would differ run to run, so
+# every re-run would rewrite the live form for no reason. These tuples are
+# the one source of order; the sets below are derived from them, never a
+# second, hand-kept copy that could drift out of step.
+GENDER_ORDER: tuple[str, ...] = ("F", "M", "NB", "undisclosed")
+GENDERS = frozenset(GENDER_ORDER)
 
 # Mirrors CAREER_STAGES in app/src/data/types.ts. "undisclosed" is a real
 # answer, not a missing one: the form must be answerable without declaring a
 # career stage, and the balance figures count the people who did not answer
 # rather than dropping them (app/src/state/diversity.ts).
-CAREER_STAGES = {
+CAREER_STAGE_ORDER: tuple[str, ...] = (
     "phd",
     "postdoc",
     "independent",
     "group-leader",
     "other",
     "undisclosed",
-}
+)
+CAREER_STAGES = frozenset(CAREER_STAGE_ORDER)
+
+# The eleven labels ``to_lead`` reads a submission by -- canonical name first,
+# any alias this module also accepts after it. ``scripts/create_tally_form.py``
+# builds the live form's questions from these same tuples, not from a second,
+# hand-typed copy of them, so a label renamed on one side breaks a test
+# instead of breaking the form in production (R-3, D-03).
+LABEL_NAME = ("Name",)
+LABEL_EMAIL = ("Email",)
+LABEL_INSTITUTION = ("Institution", "Affiliation")
+LABEL_COUNTRY = ("Country",)
+LABEL_TITLE = ("Preliminary title", "(preliminary) Title", "Title")
+LABEL_ABSTRACT = ("Short abstract", "Summary", "Abstract")
+LABEL_CAREER_STAGE = ("Career stage", "Career level")
+LABEL_GENDER = ("Gender",)
+LABEL_LINKS = ("Links", "Profile links")
+LABEL_CONFLICTS = ("Conflicts of interest",)
+# The submitter, not the speaker being proposed -- distinct from LABEL_NAME
+# above. Kept as ``proposed_by`` on the resulting lead (G-17).
+LABEL_PROPOSED_BY = ("Your name", "Who are you", "How you propose")
+
+#: Every field ``to_lead`` reads, in the order the form asks them, each as
+#: ``(aliases, required)`` with the canonical label first in ``aliases``.
+#: ``Name`` is the only required one. ``scripts/create_tally_form.py`` walks
+#: this exact tuple to build the form's questions.
+FORM_FIELDS: tuple[tuple[tuple[str, ...], bool], ...] = (
+    (LABEL_NAME, True),
+    (LABEL_EMAIL, False),
+    (LABEL_INSTITUTION, False),
+    (LABEL_COUNTRY, False),
+    (LABEL_TITLE, False),
+    (LABEL_ABSTRACT, False),
+    (LABEL_CAREER_STAGE, False),
+    (LABEL_GENDER, False),
+    (LABEL_LINKS, False),
+    (LABEL_CONFLICTS, False),
+    (LABEL_PROPOSED_BY, False),
+)
 
 
-def verify_signature(payload: str, signature: str, secret: str) -> bool:
-    """Check the HMAC-SHA256 signature of a payload.
+def verify_signature(body: str, signature: str, secret: str) -> bool:
+    """Check the HMAC-SHA256 signature of a raw webhook body.
 
-    With no secret configured, the check is skipped and the payload is
+    ``body`` must be exactly the bytes Tally signed -- the raw JSON it POSTed,
+    untransformed -- and ``signature`` is base64, the encoding Tally sends in
+    its ``Tally-Signature`` header (never hex: that was a defect this
+    function used to have).
+
+    With no secret configured, the check is skipped and the body is
     accepted: the webhook secret is one of the integrations that may not
-    exist yet.
+    exist yet (D-13).
+
+    ``signature`` reaches here from an HTTP header, relayed verbatim by a
+    Cloudflare Worker -- it is attacker-controlled and may hold anything,
+    including bytes that are not valid ASCII. ``hmac.compare_digest`` raises
+    ``TypeError`` when given two ``str`` and either holds a non-ASCII
+    character, which would otherwise let a crafted header crash this
+    function instead of being refused. Comparing as ``bytes`` sidesteps that
+    restriction entirely -- ``bytes`` carries no such ASCII requirement --
+    so any string, ASCII or not, compares safely and still refuses to match.
     """
     if not secret:
         return True
-    expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature)
+    expected = base64.b64encode(
+        hmac.new(secret.encode(), body.encode(), hashlib.sha256).digest()
+    )
+    try:
+        given = signature.encode()
+    except UnicodeEncodeError:
+        # A lone surrogate (from a header carrying invalid UTF-8) cannot be
+        # encoded at all -- refuse it exactly as any other non-match, rather
+        # than letting the encode error escape as an unhandled crash.
+        return False
+    return hmac.compare_digest(expected, given)
 
 
-def _get(fields: dict[str, str], *keys: str) -> str:
+def field_value(field: dict[str, Any]) -> str:
+    """The text one raw Tally field means, resolving a picker's chosen
+    option id(s) against that same field's own ``options`` array when Tally
+    sent one.
+
+    Tally's webhook flattens a DROPDOWN/MULTIPLE_CHOICE/CHECKBOXES/
+    MULTI_SELECT answer to ``value: [<option id>, ...]`` -- never the
+    option's display text -- with the id-to-text mapping riding alongside
+    it, unresolved, as ``options: [{"id": ..., "text": ...}, ...]`` on that
+    same field. Resolving it *here*, before a submission ever reaches
+    ``to_lead``, is what keeps ``fields: dict[str, str]`` an honest
+    contract: without this step ``to_lead`` would be comparing a
+    stringified id list against ``GENDERS``/``CAREER_STAGES`` and losing
+    every declared answer to ``"undisclosed"`` silently -- for every
+    respondent, not an occasional one (R-9). This lives here rather than in
+    ``convener_ops.cli`` because it is knowledge about the shape of a
+    submission, this module's subject, and because it makes the behaviour
+    reachable from this file's own tests.
+
+    A single-select DROPDOWN's one-element ``value`` list resolves to a
+    bare string -- exactly what the membership tests below need. An id
+    absent from ``options`` (a malformed payload, or a field with no
+    ``options`` at all) falls back to the raw element rather than being
+    dropped, so a bug upstream reads as an odd value instead of a silent
+    loss.
+    """
+    value = field.get("value")
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        by_id = {
+            opt.get("id"): opt.get("text")
+            for opt in field.get("options") or []
+            if isinstance(opt, dict)
+        }
+        return ", ".join(str(by_id.get(item, item)) for item in value)
+    return str(value)
+
+
+def _get(fields: Mapping[str, object], *keys: str) -> str:
     for key in keys:
         value = fields.get(key)
-        if value:
-            return str(value).strip()
+        if not value:
+            continue
+        if isinstance(value, list):
+            # A last line of defence, not the intended path: `value` is
+            # meant to already be resolved by `field_value` before it ever
+            # reaches here (see `convener_ops.cli.handle_proposal`). If a picker
+            # is ever added somewhere that skips that step, `if value:`
+            # above is still truthy for `["uuid"]`, and `str(value).strip()`
+            # would silently yield `"['uuid']"` -- recognisable text instead
+            # is at least a value a human reading the record can make sense
+            # of. `[]` is already falsy and falls through to the next key
+            # correctly, without reaching this branch.
+            return ", ".join(str(v) for v in value).strip()
+        return str(value).strip()
     return ""
 
 
@@ -58,11 +181,11 @@ def skip_reason(fields: dict[str, str], existing: list[dict[str, Any]]) -> str |
     Distinguishes an empty name from a duplicate submission so the caller can
     log which one happened.
     """
-    name = _get(fields, "Name")
+    name = _get(fields, *LABEL_NAME)
     if not name:
         return "empty name"
 
-    email = _get(fields, "Email")
+    email = _get(fields, *LABEL_EMAIL)
     if email and any(
         isinstance(s, dict) and s.get("email") == email and s.get("status") == "lead"
         for s in existing
@@ -143,8 +266,8 @@ def to_lead(
     if skip_reason(fields, existing) is not None:
         return None
 
-    name = _get(fields, "Name")
-    email = _get(fields, "Email")
+    name = _get(fields, *LABEL_NAME)
+    email = _get(fields, *LABEL_EMAIL)
 
     nums: list[int] = []
     for s in existing:
@@ -154,7 +277,7 @@ def to_lead(
                 nums.append(int(match.group(1)))
     sid = f"spk-{(max(nums or [0]) + 1):03d}"
 
-    gender = _get(fields, "Gender") or "undisclosed"
+    gender = _get(fields, *LABEL_GENDER) or "undisclosed"
     if gender not in GENDERS:
         gender = "undisclosed"
 
@@ -163,11 +286,11 @@ def to_lead(
     # "undisclosed" rather than being kept verbatim: a value outside the
     # vocabulary would open a career stage of its own in the balance figures
     # and read as a finding.
-    career_stage = _get(fields, "Career stage", "Career level") or "undisclosed"
+    career_stage = _get(fields, *LABEL_CAREER_STAGE) or "undisclosed"
     if career_stage not in CAREER_STAGES:
         career_stage = "undisclosed"
 
-    raw_links = _get(fields, "Links", "Profile links")
+    raw_links = _get(fields, *LABEL_LINKS)
     links = [s.strip() for s in raw_links.split(",") if s.strip()]
 
     return {
@@ -176,8 +299,8 @@ def to_lead(
         "gender": gender,
         "career_stage": career_stage,
         "email": email,
-        "affiliation": _get(fields, "Institution", "Affiliation"),
-        "country": _get(fields, "Country"),
+        "affiliation": _get(fields, *LABEL_INSTITUTION),
+        "country": _get(fields, *LABEL_COUNTRY),
         # Written as answers, not left out. The public form does not ask for
         # a portrait, a biography, a handle or seed questions -- those are
         # asked for once the Board has approved the lead and the speaker has
@@ -187,11 +310,11 @@ def to_lead(
         "bio": "",
         "linkedin": "",
         "seed_questions": "",
-        "title": _get(fields, "Preliminary title", "(preliminary) Title", "Title"),
-        "abstract": _get(fields, "Short abstract", "Summary", "Abstract"),
-        "conflicts_of_interest": _get(fields, "Conflicts of interest"),
+        "title": _get(fields, *LABEL_TITLE),
+        "abstract": _get(fields, *LABEL_ABSTRACT),
+        "conflicts_of_interest": _get(fields, *LABEL_CONFLICTS),
         "source": "form",
-        "proposed_by": _get(fields, "Your name", "Who are you", "How you propose"),
+        "proposed_by": _get(fields, *LABEL_PROPOSED_BY),
         "assigned_to": assign_lead(existing, config, today),
         "links": links,
         "host_1": "",

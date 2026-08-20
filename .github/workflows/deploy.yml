@@ -5,10 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,7 +17,6 @@ jobs:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - name: Install
         working-directory: app
         run: npm ci
@@ -34,19 +29,46 @@ jobs:
           VITE_AUTH_PROXY_URL: ${{ vars.VITE_AUTH_PROXY_URL }}
           VITE_GITHUB_APP_CLIENT_ID: ${{ vars.VITE_GITHUB_APP_CLIENT_ID }}
         run: npm run build
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
-        with:
-          path: app/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+      - name: Push to example-showcase
+        env:
+          DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$DEPLOY_TOKEN" ]; then
+            echo "VITRINE_DEPLOY_TOKEN not set — skipping push (set up the secret to enable)."
+            exit 0
+          fi
+          git config --global user.name "convener-publisher"
+          git config --global user.email "convener-publisher@users.noreply.github.com"
+          git clone --depth 1 \
+            "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
+          rm -rf /tmp/vit/app
+          mkdir -p /tmp/vit/app
+          cp -r app/dist/. /tmp/vit/app/
+          cd /tmp/vit
+          # --force: `git add` still honours the *target* repository's own
+          # .gitignore, and a rule there matching a built asset name would
+          # silently drop it from the deploy with no error.
+          git add --force app
+          if git diff --staged --quiet; then
+            echo "no changes"
+            exit 0
+          fi
+          git commit -m "app: refresh build"
+          # This job and Publish vitrine data both clone example-showcase fresh
+          # and each only ever stages its own disjoint subtree (app/ here,
+          # src/_data/ there) -- but that makes the *commits* conflict-free,
+          # not the *push*. git push is branch-atomic, not path-atomic: two
+          # runs can each clone before the other pushes, and the loser's
+          # push is a plain non-fast-forward rejection. A rebase is safe
+          # here precisely because the subtrees never overlap, so replaying
+          # this commit on top of the other's can never conflict.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
+            git pull --rebase
+          done
+          echo "::error::push failed after 3 attempts -- the build was not published"
+          exit 1

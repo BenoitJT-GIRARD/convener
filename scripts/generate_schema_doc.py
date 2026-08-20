@@ -171,12 +171,11 @@ def parse_types(text: str) -> Model:
     interfaces: dict[str, Interface] = {}
     enums: dict[str, Enumeration] = {}
     lines = text.splitlines()
-    doc: list[str] = []
     index = 0
     while index < len(lines):
         line = lines[index]
         if line.strip().startswith("/**"):
-            index, doc = _read_doc(lines, index)
+            index, _doc = _read_doc(lines, index)
             continue
         alias = _ALIAS_OF_ARRAY.match(line)
         if alias:
@@ -185,7 +184,6 @@ def parse_types(text: str) -> Model:
                 enums[alias.group(1)] = Enumeration(
                     alias.group(1), source.values, source.notes
                 )
-            doc = []
             index += 1
             continue
         interface = _INTERFACE.match(line)
@@ -196,23 +194,18 @@ def parse_types(text: str) -> Model:
             interfaces[interface.group(1)] = Interface(
                 interface.group(1), (*base, *fields)
             )
-            doc = []
             continue
         const = _CONST_ARRAY.match(line)
         if const:
             index, enum = _read_enum(lines, index, const.group(1))
             enums[enum.name] = enum
-            doc = []
             continue
         type_alias = _TYPE_ALIAS.match(line)
         if type_alias:
             index, enum = _read_enum(lines, index, type_alias.group(1))
             if enum.values:
                 enums[enum.name] = enum
-            doc = []
             continue
-        if line.strip():
-            doc = []
         index += 1
     return Model(interfaces, enums)
 
@@ -502,12 +495,12 @@ record and both readers refuse the file; an empty value is an answer — "none
 given" — and is well formed.
 """
 
-_THRESHOLD: Final = """There is no stored vote threshold. It is computed from the eligible Board —
-active members, minus those who declared an absence, minus those recused on
-this lead — as two thirds rounded up, never fewer than three yes ballots. Below
-three eligible members the vote is suspended rather than decided on a bar that
-has stopped meaning anything. The rule lives in `app/src/state/governance.ts`
-and `tools/convener_ops/governance.py`, pinned in both languages by
+_THRESHOLD: Final = """There is no stored vote threshold. It is computed from the
+eligible Board — active members, minus those who declared an absence, minus those
+recused on this lead — as two thirds rounded up, never fewer than three yes ballots.
+Below three eligible members the vote is suspended rather than decided on a bar that has
+stopped meaning anything. The rule lives in `app/src/state/governance.ts` and
+`tools/convener_ops/governance.py`, pinned in both languages by
 `tools/tests/fixtures/governance-cases.json`.
 """
 
@@ -542,11 +535,11 @@ _CONFIG: Final = """## `data/config.yml`
 One mapping, with the keys below.
 """
 
-_CONFIG_PROSE: Final = """`board` replaces the former flat `board_members` list of logins: a member now
-carries the date they joined, whether they are still active, and any declared
-absence, because all three feed the vote threshold. There is no
-`vote_threshold` key — see the ballot table above for why it is computed rather
-than stored.
+_CONFIG_PROSE: Final = """`board` replaces the former flat `board_members` list of
+logins: a member now carries the date they joined, whether they are still active, and
+any declared absence, because all three feed the vote threshold. There is no
+`vote_threshold` key — see the ballot table above for why it is computed rather than
+stored.
 
 Each channel becomes one line of the promotion phase, keyed `promotion/<key>`,
 so it carries an owner in `checklist` exactly like every other line. The `key`
@@ -623,8 +616,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="write nothing; exit 1 if the committed page is not what the "
-        "types derive",
+        help="write nothing; exit 1 if the committed page is not what the types derive",
     )
     args = parser.parse_args(argv)
 
@@ -638,8 +630,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             # nothing: a check that wrote the file it was checking would pass
             # on a repository that still held the wrong page.
             print(
-                f"{DOC_PATH.as_posix()} is not what {TYPES_PATH.as_posix()}"
-                " derives.",
+                f"{DOC_PATH.as_posix()} is not what {TYPES_PATH.as_posix()} derives.",
                 file=sys.stderr,
             )
             print(
