@@ -17,6 +17,7 @@ from convener_ops.platform import (
     Room,
 )
 from convener_ops.platform_fcc import (
+    RETRIEVED_TICK,
     TOKEN_ENV,
     FCCRequestError,
     PlatformFCC,
@@ -133,14 +134,14 @@ class FakeTransport:
         self,
         get_responses: Mapping[str, Any] | None = None,
         get_errors: Mapping[str, Exception] | None = None,
-        exists_responses: Mapping[str, bool] | None = None,
+        head_responses: Mapping[str, Mapping[str, str] | None] | None = None,
     ) -> None:
         self.get_responses = dict(get_responses or {})
         self.get_errors = dict(get_errors or {})
-        self.exists_responses = dict(exists_responses or {})
+        self.head_responses = dict(head_responses or {})
         self.get_calls: list[tuple[str, str]] = []
         self.delete_calls: list[tuple[str, str]] = []
-        self.exists_calls: list[str] = []
+        self.head_calls: list[str] = []
 
     def get_json(self, path: str, token: str) -> Any:
         self.get_calls.append((path, token))
@@ -153,9 +154,9 @@ class FakeTransport:
     def delete(self, path: str, token: str) -> None:
         self.delete_calls.append((path, token))
 
-    def exists(self, url: str) -> bool:
-        self.exists_calls.append(url)
-        return self.exists_responses.get(url, False)
+    def head(self, url: str) -> Mapping[str, str] | None:
+        self.head_calls.append(url)
+        return self.head_responses.get(url)
 
 
 def _speaker(**overrides: Any) -> dict[str, Any]:
@@ -599,23 +600,83 @@ def test_get_recording_raises_when_the_event_has_no_recorded_conference() -> Non
 
 
 # ------------------------------------------------------------------ #
+# _conference_id -- digits-only validation (fix round 1, Important 2).
+# `conference_ids` has no production populator; its one caller
+# (cli.py::release_recording) reads an operator-typed value, and this is
+# where it is validated before it can reach a URL this module builds.
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.parametrize(
+    "bad_id",
+    [
+        "618/../999",
+        "THIS-IS-THE-WRONG-CONFERENCE",
+        "618515381 ",
+        "-618515381",
+        "",
+    ],
+)
+def test_conference_id_must_be_digits_only(bad_id: str) -> None:
+    transport = FakeTransport()
+    platform = _platform(transport=transport, conference_ids={"mrg-901": bad_id})
+
+    with pytest.raises(ValueError, match="not a valid FCC conference id"):
+        platform.get_recording("mrg-901")
+
+    assert transport.get_calls == []
+
+
+def test_a_path_traversal_shaped_conference_id_never_reaches_delete() -> None:
+    """The reviewer's own probe, round 1, Important 2: a hand-typed
+    conference id shaped like a path-traversal payload must be refused
+    before it can reach `DELETE /conferences/{id}`."""
+    transport = FakeTransport()
+    platform = _platform(transport=transport, conference_ids={"mrg-901": "618/../999"})
+
+    with pytest.raises(ValueError, match="not a valid FCC conference id"):
+        platform.delete_recording("mrg-901")
+
+    assert transport.delete_calls == []
+
+
+def test_a_valid_digits_only_conference_id_is_accepted() -> None:
+    transport = FakeTransport()
+    platform = _platform(transport=transport, conference_ids={"mrg-901": "618515381"})
+
+    platform.delete_recording("mrg-901")
+
+    assert transport.delete_calls == [("/conferences/618515381", "test-token")]
+
+
+# ------------------------------------------------------------------ #
 # converted_recording_is_reachable / missing_retrieval_evidence -- task
 # 10's whole answer to "what does verified retrieval mean". Two
-# independent, host-driven traces: youtube_url on the speaker record, and
-# a successful open of the converted recording at the provider. Neither
-# function here ever calls get_recording or delete_recording itself --
-# the caller (cli.py::release_recording) already holds `recording` from
-# its own earlier call, and decides what to do with the result.
+# independent, host-driven traces: a `runbook_progress` tick
+# (`RETRIEVED_TICK`), and a successful open of the converted recording at
+# the provider, checked against `video/mp4` + `Accept-Ranges: bytes`, not
+# a bare 2xx status (fix round 1, Important 3). Neither function here ever
+# calls get_recording or delete_recording itself -- the caller
+# (cli.py::release_recording) already holds `recording` from its own
+# earlier call, and decides what to do with the result.
 # ------------------------------------------------------------------ #
+
+_VIDEO_URL = "https://cdn.example.org/rec/618515381.video.mp4"
+
+
+def _video_headers(*, content_length: int = 900_000_000) -> dict[str, str]:
+    return {
+        "content_type": "video/mp4",
+        "accept_ranges": "bytes",
+        "content_length": str(content_length),
+    }
 
 
 def test_converted_recording_is_reachable_when_the_transport_confirms_it() -> None:
     recording = Recording(
         url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
     )
-    transport = FakeTransport(
-        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
-    )
+    transport = FakeTransport(head_responses={_VIDEO_URL: _video_headers()})
 
     assert converted_recording_is_reachable(recording, transport) is True
 
@@ -630,7 +691,7 @@ def test_converted_recording_is_reachable_checks_the_video_mp4_suffix() -> None:
 
     converted_recording_is_reachable(recording, transport)
 
-    assert transport.exists_calls == ["https://cdn.example.org/rec/618515381.video.mp4"]
+    assert transport.head_calls == [_VIDEO_URL]
 
 
 def test_converted_recording_is_reachable_is_false_when_the_transport_denies_it() -> (
@@ -641,7 +702,7 @@ def test_converted_recording_is_reachable_is_false_when_the_transport_denies_it(
     recording = Recording(
         url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
     )
-    transport = FakeTransport(exists_responses={})
+    transport = FakeTransport(head_responses={})
 
     assert converted_recording_is_reachable(recording, transport) is False
 
@@ -653,38 +714,125 @@ def test_converted_recording_is_reachable_is_false_with_no_recording_url() -> No
     transport = FakeTransport()
 
     assert converted_recording_is_reachable(recording, transport) is False
-    assert transport.exists_calls == []
+    assert transport.head_calls == []
+
+
+def test_converted_recording_is_reachable_is_false_for_a_200_html_error_page() -> None:
+    """Reviewer probe, round 1, Important 3: a bare 2xx status is not
+    proof of conversion. `urlopen` follows redirects transparently, so a
+    CDN answering an absent object with its own 200 error page must not
+    pass -- only a real `video/mp4` response does."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        head_responses={_VIDEO_URL: {"content_type": "text/html; charset=utf-8"}}
+    )
+
+    assert converted_recording_is_reachable(recording, transport) is False
+
+
+def test_converted_recording_is_reachable_is_false_without_accept_ranges() -> None:
+    """The prep notes record both `video/mp4` and `Accept-Ranges: bytes`
+    for a genuine converted file -- both are required, not just the
+    content type."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        head_responses={_VIDEO_URL: {"content_type": "video/mp4"}}
+    )
+
+    assert converted_recording_is_reachable(recording, transport) is False
+
+
+def test_converted_recording_is_reachable_is_false_with_a_zero_content_length() -> None:
+    """`content_length` is free from the same `HEAD`; a `0` means an
+    empty body behind headers that otherwise look right, and is rejected
+    the same way a missing header would be."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        head_responses={_VIDEO_URL: _video_headers(content_length=0)}
+    )
+
+    assert converted_recording_is_reachable(recording, transport) is False
+
+
+def test_converted_recording_is_reachable_ignores_a_content_type_parameter() -> None:
+    """A `;`-separated parameter (e.g. a charset a CDN adds) must not
+    defeat the exact `video/mp4` match."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        head_responses={
+            _VIDEO_URL: {
+                "content_type": "video/mp4; charset=binary",
+                "accept_ranges": "bytes",
+            }
+        }
+    )
+
+    assert converted_recording_is_reachable(recording, transport) is True
+
+
+def test_converted_recording_is_reachable_is_false_with_a_bad_content_length() -> None:
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(
+        head_responses={
+            _VIDEO_URL: {
+                "content_type": "video/mp4",
+                "accept_ranges": "bytes",
+                "content_length": "not-a-number",
+            }
+        }
+    )
+
+    assert converted_recording_is_reachable(recording, transport) is False
 
 
 def test_missing_retrieval_evidence_is_empty_when_both_traces_agree() -> None:
     recording = Recording(
         url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
     )
-    transport = FakeTransport(
-        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
-    )
+    transport = FakeTransport(head_responses={_VIDEO_URL: _video_headers()})
     platform = _platform(transport=transport)
 
-    problems = missing_retrieval_evidence(
-        platform, recording, "https://youtu.be/abc123"
-    )
+    problems = missing_retrieval_evidence(platform, recording, {RETRIEVED_TICK: True})
 
     assert problems == []
 
 
-def test_missing_retrieval_evidence_names_a_missing_youtube_url() -> None:
+def test_missing_retrieval_evidence_names_a_missing_tick() -> None:
     recording = Recording(
         url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
     )
-    transport = FakeTransport(
-        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
-    )
+    transport = FakeTransport(head_responses={_VIDEO_URL: _video_headers()})
     platform = _platform(transport=transport)
 
-    problems = missing_retrieval_evidence(platform, recording, "")
+    problems = missing_retrieval_evidence(platform, recording, {})
 
     assert len(problems) == 1
-    assert "youtube_url" in problems[0]
+    assert RETRIEVED_TICK in problems[0]
+
+
+def test_missing_retrieval_evidence_ignores_youtube_url() -> None:
+    """The concrete Important 4 fix, pinned at the unit level: this
+    function no longer takes or reads `youtube_url` at all -- only the
+    runbook tick and the provider's own confirmation. A caller with
+    `youtube_url` set but no tick is still refused; a caller with no
+    `youtube_url` but a tick set is still accepted."""
+    recording = Recording(
+        url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
+    )
+    transport = FakeTransport(head_responses={_VIDEO_URL: _video_headers()})
+    platform = _platform(transport=transport)
+
+    assert missing_retrieval_evidence(platform, recording, {RETRIEVED_TICK: True}) == []
 
 
 def test_missing_retrieval_evidence_names_an_unreached_conversion() -> None:
@@ -693,9 +841,7 @@ def test_missing_retrieval_evidence_names_an_unreached_conversion() -> None:
     )
     platform = _platform(transport=FakeTransport())
 
-    problems = missing_retrieval_evidence(
-        platform, recording, "https://youtu.be/abc123"
-    )
+    problems = missing_retrieval_evidence(platform, recording, {RETRIEVED_TICK: True})
 
     assert len(problems) == 1
     assert "converted recording" in problems[0]
@@ -707,25 +853,23 @@ def test_missing_retrieval_evidence_names_both_when_neither_trace_agrees() -> No
     )
     platform = _platform(transport=FakeTransport())
 
-    problems = missing_retrieval_evidence(platform, recording, "")
+    problems = missing_retrieval_evidence(platform, recording, {})
 
     assert len(problems) == 2
 
 
 def test_missing_retrieval_evidence_never_calls_get_json_or_delete() -> None:
     """The whole point of this function: it only reads what the caller
-    already holds (`recording`, `youtube_url`) and the transport's
+    already holds (`recording`, `runbook_progress`) and the transport's
     existence check -- it never itself asks the platform for anything, and
     it never deletes anything."""
     recording = Recording(
         url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
     )
-    transport = FakeTransport(
-        exists_responses={"https://cdn.example.org/rec/618515381.video.mp4": True}
-    )
+    transport = FakeTransport(head_responses={_VIDEO_URL: _video_headers()})
     platform = _platform(transport=transport)
 
-    missing_retrieval_evidence(platform, recording, "https://youtu.be/abc123")
+    missing_retrieval_evidence(platform, recording, {RETRIEVED_TICK: True})
 
     assert transport.get_calls == []
     assert transport.delete_calls == []
@@ -740,9 +884,15 @@ def test_missing_retrieval_evidence_never_calls_get_json_or_delete() -> None:
 
 
 class _FakeHTTPResponse:
-    def __init__(self, body: bytes, status: int = 200) -> None:
+    def __init__(
+        self,
+        body: bytes,
+        status: int = 200,
+        headers: Mapping[str, str] | None = None,
+    ) -> None:
         self._body = body
         self.status = status
+        self.headers: Mapping[str, str] = headers if headers is not None else {}
 
     def read(self) -> bytes:
         return self._body
@@ -835,14 +985,14 @@ def test_urllib_transport_maps_invalid_json_to_fcc_request_error(
 
 
 # ------------------------------------------------------------------ #
-# _UrllibTransport.exists -- task 10's HEAD check. No socket, and no
+# _UrllibTransport.head -- task 10's HEAD check. No socket, and no
 # Authorization header (the recording's own media URLs need none,
 # verified empirically): a caller must not send the bearer token to an
 # address it did not build from base_url itself.
 # ------------------------------------------------------------------ #
 
 
-def test_urllib_transport_exists_sends_a_head_request_with_no_auth_header(
+def test_urllib_transport_head_sends_a_head_request_with_no_auth_header(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, Any] = {}
@@ -851,34 +1001,62 @@ def test_urllib_transport_exists_sends_a_head_request_with_no_auth_header(
         captured["url"] = request.full_url
         captured["method"] = request.get_method()
         captured["authorization"] = request.get_header("Authorization")
-        return _FakeHTTPResponse(b"", status=200)
+        return _FakeHTTPResponse(
+            b"",
+            status=200,
+            headers={
+                "Content-Type": "video/mp4",
+                "Accept-Ranges": "bytes",
+                "Content-Length": "900000000",
+            },
+        )
 
     monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
 
-    result = _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4")
+    result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
 
-    assert result is True
+    assert result == {
+        "content_type": "video/mp4",
+        "accept_ranges": "bytes",
+        "content_length": "900000000",
+    }
     assert captured["url"] == "https://cdn.example.org/rec/1.video.mp4"
     assert captured["method"] == "HEAD"
     assert captured["authorization"] is None
 
 
-def test_urllib_transport_exists_reads_no_body(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_urllib_transport_head_reads_no_body(monkeypatch: pytest.MonkeyPatch) -> None:
     """The whole point: never download any part of the recording."""
 
     class _ExplodingBodyResponse(_FakeHTTPResponse):
         def read(self) -> bytes:
-            raise AssertionError("exists() must never read a response body")
+            raise AssertionError("head() must never read a response body")
 
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
-        return _ExplodingBodyResponse(b"", status=200)
+        return _ExplodingBodyResponse(b"", status=200, headers={})
 
     monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
 
-    assert _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4") is True
+    result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
+
+    assert result == {}
 
 
-def test_urllib_transport_exists_is_false_on_a_404(
+def test_urllib_transport_head_omits_a_header_the_response_never_sent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(b"", status=200, headers={"Content-Type": "video/mp4"})
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
+
+    assert result == {"content_type": "video/mp4"}
+    assert "accept_ranges" not in (result or {})
+
+
+def test_urllib_transport_head_is_none_on_a_404(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Verified empirically: an untouched recording's `.video.mp4`
@@ -891,10 +1069,25 @@ def test_urllib_transport_exists_is_false_on_a_404(
 
     monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
 
-    assert _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4") is False
+    assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
 
 
-def test_urllib_transport_exists_is_false_on_a_network_error(
+def test_urllib_transport_head_is_none_on_a_non_2xx_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`urlopen` itself only raises `HTTPError` for a non-2xx status in
+    the common case, but this must not assume that -- a response object
+    reporting a non-2xx `status` directly is handled the same way."""
+
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(b"", status=500, headers={})
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
+
+
+def test_urllib_transport_head_is_none_on_a_network_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
@@ -902,10 +1095,42 @@ def test_urllib_transport_exists_is_false_on_a_network_error(
 
     monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
 
-    assert _UrllibTransport().exists("https://cdn.example.org/rec/1.video.mp4") is False
+    assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
 
 
-def test_urllib_transport_exists_is_false_and_never_opens_a_non_https_url(
+def test_urllib_transport_head_is_none_on_a_bad_status_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fix round 1, minor 2: `http.client.BadStatusLine` is not an
+    `OSError` and previously propagated as an uncaught traceback instead
+    of reading as `None` -- reproduced by the reviewer, fixed by widening
+    the caught exceptions to `http.client.HTTPException`."""
+    import http.client
+
+    def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise http.client.BadStatusLine("garbage status line")
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+
+    assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
+
+
+def test_urllib_transport_head_is_none_on_a_malformed_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fix round 1, minor 2: `Request(...)` construction now lives inside
+    the same `try` as the request itself, so a `ValueError` it raises
+    (a malformed URL) reads as `None` too, never propagates."""
+
+    def fake_request(*args: Any, **kwargs: Any) -> Any:
+        raise ValueError("malformed URL")
+
+    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.Request", fake_request)
+
+    assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
+
+
+def test_urllib_transport_head_is_none_and_never_opens_a_non_https_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
@@ -913,7 +1138,7 @@ def test_urllib_transport_exists_is_false_and_never_opens_a_non_https_url(
 
     monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
 
-    assert _UrllibTransport().exists("http://cdn.example.org/rec/1.video.mp4") is False
+    assert _UrllibTransport().head("http://cdn.example.org/rec/1.video.mp4") is None
 
 
 # ------------------------------------------------------------------ #

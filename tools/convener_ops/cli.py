@@ -921,25 +921,42 @@ def release_recording() -> int:
     event is a condition of operation, not an optimisation, and getting
     the order wrong loses a recording forever.
 
+    The two-trace shape this enforces is not invented here: it reproduces
+    a design ruling already recorded in
+    `.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19 -- DESIGN RULING
+    for the spec: who deletes the recording, and on what evidence"), and
+    `platform_fcc.py`'s module docstring cites it in full; this function's
+    job is carrying that ruling into a real, tested call order.
+
     The order is not negotiable, and it is not a comment above a function
     call -- it is the only order this function's own control flow can
     produce: `platform.get_recording` is called, then
     `missing_retrieval_evidence` is checked and must come back empty, and
     only then is `platform.delete_recording` reached. Every early return
-    above that call -- a bad or unknown event id, a data file that will
-    not load, no meeting-platform account configured, nothing currently
-    recorded, or evidence still missing -- exits before it, never after.
+    above that call -- a bad or unknown event id, a malformed conference
+    id, a data file that will not load, no meeting-platform account
+    configured, nothing currently recorded, or evidence still missing --
+    exits before it, never after.
 
     "Verified" means two independent, host-driven traces
     (`missing_retrieval_evidence`'s own docstring gives the full
-    reasoning): `youtube_url` pasted onto the event's speaker record, and
-    a successful, body-free `HEAD` confirming the provider's own converted
-    copy is reachable -- proof the host's own Download click already
-    happened. This function never downloads the recording itself, and
-    calls nothing that could trigger a conversion -- see
-    `platform_fcc.py`'s module docstring for why that matters even more
-    for the (never converted, never published) discussion segment than
-    for the talk.
+    reasoning): the `RETRIEVED_TICK` step on the event's own
+    `runbook_progress`, and a successful `HEAD` confirming the provider's
+    own converted copy is reachable, checked against `video/mp4` and
+    `Accept-Ranges: bytes`, not merely a 2xx status. **Not `youtube_url`**
+    -- an earlier version of this function used it, and review found that
+    wrong: `youtube_url` is a publication signal (`app/src/state/phases.ts`'s
+    own `delivered/youtube-url` item, gated separately from
+    `publication.outcome`), so a recording that is legitimately never
+    published -- consent withheld, or the discussion segment, never
+    uploaded anywhere -- would never have satisfied it despite being
+    genuinely retrieved, and the quota it occupies would never have been
+    freed. This function never downloads the recording itself, and calls
+    nothing that could trigger a conversion -- see `platform_fcc.py`'s
+    module docstring for why that matters even more for the discussion
+    segment than for the talk, and for the discussion segment's own,
+    still-unresolved case (it can never pass trace 2 by the same "never
+    convert it" rule).
 
     The quota is checked *after* deletion, deliberately (spec Section 9:
     "alerte si l'espace reste occupe"), because a saturated quota breaks
@@ -956,7 +973,12 @@ def release_recording() -> int:
     by the human running `.github/workflows/recording.yml`'s
     `workflow_dispatch`, for the one event that run is about -- never a
     persisted mapping, never resolved from an unverified listing
-    endpoint.
+    endpoint, and never scheduled or unattended for that same reason
+    (`platform_fcc.py`'s module docstring says so plainly, as does
+    `docs/reference/operations.md`). `PlatformFCC._conference_id` validates
+    its shape (digits only) before it can reach a URL; a malformed value
+    surfaces here as a plain `ValueError`, caught the same way as every
+    other "the platform did not answer" case in this function.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
@@ -980,7 +1002,9 @@ def release_recording() -> int:
     except EventNotFoundError as exc:
         print(str(exc), file=sys.stderr)
         return 1
-    youtube_url = str(record.get("youtube_url", "") or "")
+    runbook_progress = record.get("runbook_progress")
+    if not isinstance(runbook_progress, dict):
+        runbook_progress = {}
 
     conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
     conference_ids = {event_id: conference_id} if conference_id else {}
@@ -1000,7 +1024,7 @@ def release_recording() -> int:
 
     try:
         recording = platform.get_recording(event_id)
-    except (EventNotFoundError, FCCRequestError) as exc:
+    except (EventNotFoundError, FCCRequestError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -1010,7 +1034,7 @@ def release_recording() -> int:
         )
         return 0
 
-    problems = missing_retrieval_evidence(platform, recording, youtube_url)
+    problems = missing_retrieval_evidence(platform, recording, runbook_progress)
     if problems:
         for problem in problems:
             print(problem, file=sys.stderr)
@@ -1023,13 +1047,13 @@ def release_recording() -> int:
 
     try:
         platform.delete_recording(event_id)
-    except (EventNotFoundError, FCCRequestError) as exc:
+    except (EventNotFoundError, FCCRequestError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
     try:
         after = platform.get_recording(event_id)
-    except (EventNotFoundError, FCCRequestError) as exc:
+    except (EventNotFoundError, FCCRequestError, ValueError) as exc:
         print(
             f"recording for event {event_id} was deleted, but the freed "
             f"space could not be confirmed: {exc}",
