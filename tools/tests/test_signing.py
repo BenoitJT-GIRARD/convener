@@ -65,6 +65,30 @@ def test_the_shared_fixture_matches_the_enforced_payload_schema() -> None:
     assert set(CERT_PAYLOAD) == PAYLOAD_FIELDS
 
 
+def test_the_two_reasons_keep_the_spelling_that_crosses_the_language_border() -> None:
+    """Asserts the literal strings, not the constants -- and that is the
+    whole point of the test.
+
+    Every other assertion in this file compares `result.reason` against
+    `MALFORMED` or `NO_MATCHING_KEY`, so it pins the *distinction* between
+    the two outcomes but not the *spelling* of either. Swap the two
+    constants' values and every one of those tests still passes: verified
+    by mutation, and the reason this test exists.
+
+    Task 13's verification page cannot import a Python constant. It
+    compares whatever string reaches the browser against a literal of its
+    own, and the two outcomes are displayed differently on purpose -- one
+    says "we cannot confirm this", the other says "this is not a token".
+    A silent drift here would make the page show the accusing message for
+    the reassuring case, which is the single failure the tri-state was
+    built to prevent. So the spellings are part of the contract, not an
+    implementation detail, and they are pinned here (D-14) until task 12's
+    shared fixture binds both sides directly.
+    """
+    assert MALFORMED == "malformed"
+    assert NO_MATCHING_KEY == "no_matching_key"
+
+
 # ------------------------------------------------------------------ #
 # The properties the whole design rests on.
 # ------------------------------------------------------------------ #
