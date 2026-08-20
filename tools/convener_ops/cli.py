@@ -37,7 +37,7 @@ from convener_ops.platform_fcc import (
     platform_from_env,
 )
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
-from convener_ops.public_data import recording_withheld, to_public
+from convener_ops.public_data import to_public
 from convener_ops.register import (
     LOG_FORMAT,
     REGISTER_PATH,
@@ -911,6 +911,30 @@ def match_attendance() -> int:
     return 0
 
 
+def _consent_granted(record: Mapping[str, Any]) -> bool:
+    """Whether this event's speaker explicitly agreed to publication --
+    read directly, not through `public_data.recording_withheld`, because
+    that function answers a different question and round 3 wiring it in
+    here was wrong (caught on review, round 4). `recording_withheld` has
+    no reusable, decomposed "consent alone" reader -- it is built on the
+    private `_gate_closed`, which combines consent with the board's own
+    archive gate and is not exported -- so this reads the field directly
+    rather than restating `recording_withheld`'s comparison inside a
+    second copy of it.
+
+    Keeps `recording_withheld`'s own documented asymmetry, because it
+    applies here too: **"not did they refuse but did they agree"**
+    (`public_data.py::recording_withheld`'s docstring). `pending`, `""`, a
+    missing or malformed `publication` block, and any value this project
+    does not recognise are all silence, and silence is never a
+    permission -- so a not-yet-answered consent must not release a
+    recording, the same as a refused one."""
+    publication = record.get("publication")
+    if not isinstance(publication, dict):
+        return False
+    return publication.get("consent") == "granted"
+
+
 def release_recording() -> int:
     """`convener-release-recording`: retrieve, verify the retrieval, then
     delete -- one of exactly two places in this whole package allowed to
@@ -954,29 +978,41 @@ def release_recording() -> int:
     retrieved, and the quota it occupies would never have been freed.
 
     **This function is only for a recording headed to YouTube, and it now
-    enforces that rather than only documenting it (fix round 3).** A
-    recording that must never become public -- the discussion segment
-    (recorded on purpose, phase 3's own three-step discipline, but never
-    published), or a talk whose publication consent was withheld -- must
-    never take this path: trace 2 can only be satisfied by converting to
-    MP4, and a converted file stays *publicly reachable at its own URL
-    even after the conference is deleted* (verified empirically). Proving
-    retrieval this way is exactly the exposure those two cases exist to
-    prevent. So before either trace is even checked, this function refuses
-    when `public_data.recording_withheld` -- the same predicate that keeps
-    a link out of the public feed, reused rather than restated -- reads
-    the event's own speaker record as not cleared: `publication.consent`
-    must be `"granted"` and `publication.outcome` must be `"published"`,
-    with silence on either counting as withheld. `discard_recording` below
-    is the other route: no proof of retrieval is asked for or accepted,
-    because none may ever exist. See its own docstring, and
-    `platform_fcc.py`'s module docstring's "Which recordings take which
-    route" section, for the full split and for why the refusal fires for
-    almost every fresh talk (`outcome` is not written until
-    `finalize-archive` runs, well after an event). This function never
-    downloads the recording itself, and calls nothing that could trigger a
-    conversion on its own -- only the host's Download click does that, and
-    only a cleared recording headed for YouTube should ever receive one.
+    enforces that rather than only documenting it (fix round 3; corrected
+    in round 4).** A recording that must never become public -- the
+    discussion segment (recorded on purpose, phase 3's own three-step
+    discipline, but never published), or a talk whose publication consent
+    was withheld -- must never take this path: trace 2 can only be
+    satisfied by converting to MP4, and a converted file stays *publicly
+    reachable at its own URL even after the conference is deleted*
+    (verified empirically). Proving retrieval this way is exactly the
+    exposure those two cases exist to prevent. So before either trace is
+    even checked, this function refuses unless `_consent_granted` reads
+    `publication.consent == "granted"` on the event's own speaker record.
+
+    **Consent alone, not `public_data.recording_withheld`.** Round 3
+    wired that function in here and it was wrong, caught on review:
+    `recording_withheld` answers a *different* question -- "must this
+    recording stay out of the public feed" -- and requires the board's
+    own archive gate too (`publication.outcome == "published"`, written
+    only by `finalize-archive`, which runs on its own, later timeline:
+    board approval, then an objection window). Freeing the platform's
+    quota is not publishing. The question this function actually needs
+    answered is only whether *converting* the recording was legitimate,
+    and converting is legitimate exactly when the speaker agreed to
+    publication -- nothing about whether the board has since finished
+    approving it for the public feed. Gating on the full publication gate
+    would hold the quota hostage to a board timeline the quota has no
+    relationship with, recreating the exact "refuses forever, quota fills"
+    failure this whole task exists to prevent, for every fresh talk, every
+    time. `discard_recording` below is the other route: no proof of
+    retrieval is asked for or accepted, because none may ever exist. See
+    its own docstring, and `platform_fcc.py`'s module docstring's "Which
+    recordings take which route" section, for the full split. This
+    function never downloads the recording itself, and calls nothing that
+    could trigger a conversion on its own -- only the host's Download
+    click does that, and only a consented recording headed for YouTube
+    should ever receive one.
 
     The quota is checked *after* deletion, deliberately (spec Section 9:
     "alerte si l'espace reste occupe"), because a saturated quota breaks
@@ -1026,24 +1062,19 @@ def release_recording() -> int:
     if not isinstance(runbook_progress, dict):
         runbook_progress = {}
 
-    # Enforced, not only documented (fix round 3): the same predicate
-    # `public_data.py` uses to keep a link out of the public feed, reused
-    # rather than restated, so the two questions -- "does this leave the
-    # public feed" and "does this leave FCC at all" -- cannot drift apart
-    # on what "cleared" means. See platform_fcc.py's module docstring's
-    # "Which recordings take which route" section for why neither
-    # `publication.consent` nor `publication.outcome` alone would do.
-    # find_speaker returns Mapping[str, Any] (platform.py); recording_withheld
-    # is typed dict[str, Any] (public_data.py). A shallow copy satisfies
-    # mypy without touching public_data.py's own signature for a predicate
-    # this task reuses rather than restates.
-    if recording_withheld(dict(record)):
+    # Enforced, not only documented (fix round 3; corrected round 4): the
+    # question here is only whether converting the recording was
+    # legitimate, which turns on consent alone -- not
+    # `public_data.recording_withheld`, which also waits on the board's
+    # own archive gate and would hold this quota hostage to that timeline.
+    # See `_consent_granted`'s own docstring, and this function's own
+    # docstring's "Consent alone" section, for the full reasoning.
+    if not _consent_granted(record):
         print(
-            f"publication is not cleared for event {event_id} "
-            "(publication.consent must be 'granted' and publication.outcome "
-            "must be 'published') -- release_recording refuses; if this "
-            "recording is never going to be published, use "
-            "discard_recording instead",
+            f"publication consent is not granted for event {event_id} "
+            "(publication.consent must be 'granted') -- release_recording "
+            "refuses; if this recording is never going to be published, "
+            "use discard_recording instead",
             file=sys.stderr,
         )
         return 1

@@ -258,26 +258,44 @@ confirmation phrase can substitute for the two traces it actually
 requires. The two operations share nothing but the primitive they both,
 separately, are allowed to call.
 
-The consent-withheld routing above is enforced, not only documented.
-`release_recording` refuses outright when `public_data.recording_withheld`
--- the same predicate that keeps a link out of the public feed -- reads
-this event's speaker record as not cleared: `publication.consent` must be
-`"granted"` **and** `publication.outcome` must be `"published"`, with any
-silence on either side, or a standing objection, counting as withheld.
-Neither field alone was sufficient (found on review): `outcome` stays
-`""` until `finalize-archive` runs, long after a recording may need
-releasing, so `consent` alone -- checked first, historically -- would have
-let a merely-not-yet-archived talk through, and `outcome` alone would
-reject a talk that was never going to be archived in the first place. The
-predicate is reused from `public_data.py`, not restated, so the two
-callers -- "does this leave the public feed" and "does this leave FCC at
-all" -- can never drift apart on what "cleared" means. **This means
-`release_recording` will typically refuse for a fresh talk immediately
-after its event**, since `finalize-archive` has not run yet regardless of
-consent -- an operator seeing the refusal has to read the actual
-`publication` block to tell "not yet decided" from "decided against"
-before choosing to wait or to run `discard_recording`; the refusal
-message names the exact condition rather than guessing which it is.
+The consent-withheld routing above is enforced, not only documented --
+and the gate that enforces it took two attempts to get right, both
+recorded here rather than only in the fix history, because the mistake is
+an easy one to make again.
+
+**The gate is consent alone (`cli.py::_consent_granted`), not
+`public_data.recording_withheld`.** Round 3 wired `recording_withheld` in
+here and it was wrong, caught on review in round 4: that function answers
+a different question -- "must this recording stay out of the public
+feed" -- and requires **both** `publication.consent == "granted"` **and**
+`publication.outcome == "published"`, the second written only by
+`finalize-archive`, on its own, later timeline (board approval, then an
+objection window). Freeing the platform's quota is not publishing. The
+question `release_recording` actually needs answered is only whether
+*converting* the recording -- the act that makes a copy permanently
+public, the whole reason this guard exists -- was legitimate, and
+converting is legitimate exactly when the speaker agreed to it. The
+board's approval and its objection window govern whether the talk is
+*linked in the feed*; they say nothing about whether a copy may leave the
+provider's storage. Gating on the full publication gate held the quota
+hostage to a board timeline the quota has no relationship with,
+recreating -- inside the very fix meant to prevent it -- the "refuses
+forever, quota fills" failure this task exists to stop, for every fresh
+talk, every time `finalize-archive` had not yet run.
+
+`_consent_granted` keeps `recording_withheld`'s own documented asymmetry,
+because it applies here too: **"not did they refuse but did they agree"**
+(`public_data.py::recording_withheld`'s own docstring). `pending`, `""`
+and any value this project does not recognise are all silence, and
+silence is never a permission -- a talk whose consent has not yet been
+answered must not release either, and in the ordinary case will not have
+its retrieval tick set yet regardless, since converting it would have
+been premature for the same reason. `recording_withheld` has no smaller,
+already-decomposed "consent alone" reader to reuse -- its own logic lives
+in the private, unexported `_gate_closed` -- so `_consent_granted` reads
+`publication.consent` directly rather than restating a comparison that
+already exists inside a function answering a different question; see its
+own docstring for the full reasoning.
 
 **A residual limit of `discard_recording`'s guard, accepted rather than
 solved.** A *self-consistent* fat-finger -- an operator who types the

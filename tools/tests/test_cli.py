@@ -1837,38 +1837,31 @@ def _write_speaker_for_recording(
     tmp_path: Path,
     event_id: str = "mrg-042",
     retrieved: bool = False,
-    cleared: bool = False,
+    consent_granted: bool = False,
 ) -> None:
     """`retrieved=True` ticks `RETRIEVED_TICK` on `runbook_progress` --
     trace 1, since fix round 1. Never sets `youtube_url`: that field is a
     publication signal, deliberately irrelevant to this guard now (see
     Important 4).
 
-    `cleared=True` (fix round 3) sets `publication.consent: "granted"`
-    and `publication.outcome: "published"` -- the two conditions
-    `public_data.recording_withheld` requires together before
-    `release_recording` will even attempt the two-trace check. Defaults
-    to `False` (the ordinary state for a fresh, unarchived talk, and the
-    only state `discard_recording`'s own tests need, since that function
-    never reads `publication` at all)."""
+    `consent_granted=True` (fix round 3, corrected round 4) sets
+    `publication.consent: "granted"` and nothing else -- the one condition
+    `cli.py::_consent_granted` requires before `release_recording` will
+    even attempt the two-trace check. `outcome` is deliberately left
+    blank even when `consent_granted=True`: round 4's whole point is that
+    `outcome` (the board's own, later archive gate) must not gate this
+    function at all. Defaults to `False` (the ordinary state for a fresh
+    talk whose speaker has not yet answered, and the only state
+    `discard_recording`'s own tests need, since that function never reads
+    `publication` at all)."""
     runbook_progress = {RETRIEVED_TICK: True} if retrieved else {}
-    publication = (
-        {
-            "consent": "granted",
-            "approved_by": "",
-            "approved_on": "",
-            "objections": [],
-            "outcome": "published",
-        }
-        if cleared
-        else {
-            "consent": "",
-            "approved_by": "",
-            "approved_on": "",
-            "objections": [],
-            "outcome": "",
-        }
-    )
+    publication: dict[str, Any] = {
+        "consent": "granted" if consent_granted else "",
+        "approved_by": "",
+        "approved_on": "",
+        "objections": [],
+        "outcome": "",
+    }
     _write_data(
         tmp_path,
         [
@@ -1910,6 +1903,36 @@ def _patch_platform(
         )
 
     monkeypatch.setattr("convener_ops.cli.platform_from_env", fake_platform_from_env)
+
+
+@pytest.mark.parametrize(
+    ("label", "publication"),
+    [
+        ("granted", {"consent": "granted"}),
+        ("refused", {"consent": "refused"}),
+        ("pending", {"consent": "pending"}),
+        ("blank", {"consent": ""}),
+        ("unrecognised", {"consent": "yes please"}),
+        ("missing_key", {}),
+        ("missing_block", None),
+        ("malformed_block", "not a mapping"),
+    ],
+)
+def test_consent_granted_is_the_narrow_silence_is_never_a_yes_rule(
+    label: str, publication: Any
+) -> None:
+    """`_consent_granted` is the one place this asymmetry is checked, so
+    it is pinned directly rather than only through `release_recording`'s
+    own behaviour: only the literal string `"granted"` is a yes; every
+    other value, including one this project has never seen before, and a
+    missing or malformed `publication` block entirely, is silence."""
+    from convener_ops.cli import _consent_granted
+
+    record: dict[str, Any] = {}
+    if publication is not None:
+        record["publication"] = publication
+
+    assert _consent_granted(record) == (label == "granted")
 
 
 def test_release_recording_with_no_event_id_returns_1(
@@ -1955,14 +1978,14 @@ def test_release_recording_reports_a_malformed_speakers_file_and_returns_1(
     assert "invalid YAML" in capsys.readouterr().out
 
 
-def test_release_recording_refuses_when_publication_is_not_cleared(
+def test_release_recording_refuses_when_consent_is_not_granted(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Fix round 3: enforced, not only documented. A fresh talk (the
-    default, unfixtured `publication` block -- consent and outcome both
-    blank, the ordinary state before `finalize-archive` has ever run) is
-    refused before any platform interaction at all -- not the two-trace
-    check that ran here before, a different, earlier one."""
+    """Fix round 3, corrected round 4: enforced, not only documented. A
+    fresh talk (the default, unfixtured `publication` block -- consent
+    blank, the ordinary state before a speaker has answered) is refused
+    before any platform interaction at all -- not the two-trace check
+    that ran here before, a different, earlier one."""
     _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
@@ -1975,9 +1998,45 @@ def test_release_recording_refuses_when_publication_is_not_cleared(
 
     assert release_recording() == 1
     err = capsys.readouterr().err
-    assert "publication is not cleared" in err
+    assert "publication consent is not granted" in err
     assert "discard_recording" in err
     assert transport.get_calls == []
+    assert transport.delete_calls == []
+
+
+def test_release_recording_refuses_when_consent_is_pending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Pins the asymmetry `_consent_granted`'s own docstring names --
+    "not did they refuse but did they agree" -- for the one value most
+    likely to be mistaken for a soft yes: a speaker who has been asked and
+    has not yet answered must not release either."""
+    _write_data(
+        tmp_path,
+        [
+            speaker(
+                edition_code="MRG-042",
+                publication={
+                    "consent": "pending",
+                    "approved_by": "",
+                    "approved_on": "",
+                    "objections": [],
+                    "outcome": "",
+                },
+                runbook_progress={RETRIEVED_TICK: True},
+            )
+        ],
+        config(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert release_recording() == 1
+    assert "publication consent is not granted" in capsys.readouterr().err
     assert transport.delete_calls == []
 
 
@@ -2015,17 +2074,19 @@ def test_release_recording_refuses_when_consent_is_refused_even_with_a_tick(
     _patch_platform(monkeypatch, transport)
 
     assert release_recording() == 1
-    assert "publication is not cleared" in capsys.readouterr().err
+    assert "publication consent is not granted" in capsys.readouterr().err
     assert transport.delete_calls == []
 
 
-def test_release_recording_refuses_when_consent_is_granted_but_outcome_is_not_published(
+def test_release_recording_succeeds_when_consent_is_granted_regardless_of_outcome(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Proves both halves of the predicate are required, not only
-    consent: a speaker who agreed, on a talk `finalize-archive` has not
-    yet run for (the ordinary state right after an event), still
-    refuses."""
+    """The concrete regression test for round 4's own correction: a
+    speaker who agreed, on a talk `finalize-archive` has not yet run for
+    (the ordinary state right after an event) -- exactly the scenario
+    round 3's wrong gate refused, and round 4 exists to fix. Freeing the
+    quota is not publishing, so this must succeed regardless of
+    `outcome`."""
     _write_data(
         tmp_path,
         [
@@ -2046,13 +2107,14 @@ def test_release_recording_refuses_when_consent_is_granted_but_outcome_is_not_pu
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
-        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
+        {_PATH: [_recording_payload(), _recording_payload(available=False)]},
+        head_responses={_VIDEO_URL: _video_headers()},
     )
     _patch_platform(monkeypatch, transport)
 
-    assert release_recording() == 1
-    assert "publication is not cleared" in capsys.readouterr().err
-    assert transport.delete_calls == []
+    assert release_recording() == 0
+    assert transport.delete_calls == [_PATH]
+    assert "retrieved, verified, and released" in capsys.readouterr().out
 
 
 def test_release_recording_without_a_configured_account_is_a_noop(
@@ -2060,9 +2122,9 @@ def test_release_recording_without_a_configured_account_is_a_noop(
 ) -> None:
     """D-13: no token is the ordinary state. ManualPlatform holds no
     recording storage of its own, so this is a harmless no-op, not a
-    failure. `cleared=True` so this test still reaches that branch rather
+    failure. `consent_granted=True` so this test still reaches that branch rather
     than the (new, earlier) publication gate."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", cleared=True)
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042", consent_granted=True)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
@@ -2074,7 +2136,7 @@ def test_release_recording_without_a_configured_account_is_a_noop(
 def test_release_recording_is_a_noop_when_nothing_is_recorded(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", cleared=True)
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042", consent_granted=True)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport({_PATH: [_recording_payload(available=False)]})
@@ -2090,7 +2152,7 @@ def test_release_recording_treats_a_malformed_runbook_progress_as_empty(
 ) -> None:
     """`runbook_progress` loaded as `None`, or any non-mapping, must
     refuse rather than crash -- the same "empty means missing" reading
-    `release_recording` gives a genuinely absent tick. Publication cleared
+    `release_recording` gives a genuinely absent tick. Consent granted
     so this test still reaches the retrieval-tick check, not the (new,
     earlier) publication gate."""
     _write_data(
@@ -2126,7 +2188,7 @@ def test_release_recording_refuses_without_the_retrieved_tick(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=False, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=False, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2146,7 +2208,7 @@ def test_release_recording_ignores_youtube_url_and_still_requires_the_tick(
 ) -> None:
     """Important 4, fix round 1: `youtube_url` is a publication signal,
     not a retrieval one, and must not satisfy this guard by itself --
-    even when it is set to something plausible. Publication cleared so
+    even when it is set to something plausible. Consent granted so
     this test still reaches the retrieval-tick check."""
     _write_data(
         tmp_path,
@@ -2178,16 +2240,16 @@ def test_release_recording_ignores_youtube_url_and_still_requires_the_tick(
     assert transport.delete_calls == []
 
 
-def test_release_recording_succeeds_once_publication_is_cleared_and_both_traces_agree(
+def test_release_recording_succeeds_once_consent_is_granted_and_both_traces_agree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The positive case fix round 3 still has to permit: a talk whose
-    publication gate genuinely opened (`consent: granted`,
-    `outcome: published`) and whose retrieval is genuinely verified must
-    still succeed -- the new gate narrows who may use this route, it does
-    not additionally weaken the two traces that already governed it."""
+    """The positive case the consent gate still has to permit: a talk
+    whose speaker agreed (`consent: granted`) and whose retrieval is
+    genuinely verified must still succeed -- the gate narrows who may use
+    this route, it does not additionally weaken the two traces that
+    already governed it."""
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2206,7 +2268,7 @@ def test_release_recording_refuses_when_the_converted_video_is_not_reachable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2228,7 +2290,7 @@ def test_release_recording_refuses_a_200_that_looks_like_an_error_page(
     `Content-Type: text/html` (a CDN's own error page, or a followed
     redirect to one) must not count as proof of conversion."""
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2249,7 +2311,7 @@ def test_release_recording_does_not_delete_when_get_recording_raises(
     """The mutation-B guard this task's own brief asks for: a failed
     retrieval must never still delete."""
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2273,7 +2335,7 @@ def test_release_recording_refuses_a_non_numeric_conference_id(
     transport call -- never silently deletes whatever the fake happens to
     have registered under a different, hardcoded path."""
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch, conference_id="THIS-IS-THE-WRONG-CONFERENCE")
@@ -2295,7 +2357,7 @@ def test_release_recording_refuses_a_path_shaped_conference_id(
     """Reviewer probe, round 1, Important 2: a hand-typed conference id
     shaped like a path-traversal payload must never reach `DELETE`."""
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch, conference_id="618/../999")
@@ -2321,7 +2383,7 @@ def test_release_recording_returns_1_when_no_conference_id_is_configured(
     silently resolve to whatever `conference_ids` happened to hold
     before."""
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
@@ -2348,7 +2410,7 @@ def test_release_recording_deletes_the_conference_named_by_the_environment(
     other_path = f"/conferences/{other_id}"
     other_video_url = "https://cdn.example.org/rec/777777.video.mp4"
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch, conference_id=other_id)
@@ -2377,7 +2439,7 @@ def test_release_recording_deletes_once_both_traces_agree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2396,7 +2458,7 @@ def test_release_recording_reports_when_delete_recording_itself_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2422,7 +2484,7 @@ def test_release_recording_alerts_when_space_stays_occupied_after_deletion(
     occupied after deletion -- checked *after*, since a saturated quota
     breaks the *next* session's recording."""
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
@@ -2443,7 +2505,7 @@ def test_release_recording_reports_when_the_post_delete_check_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_speaker_for_recording(
-        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+        tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
