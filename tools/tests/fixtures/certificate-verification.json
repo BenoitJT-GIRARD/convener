@@ -11,6 +11,8 @@
     "revoked": "revoked"
   },
   "verification_base": "https://example-instance.github.io/example-showcase/app/#/verify/",
+  "_identifier_pattern_comment": "Minor 3 (fix round 1, task 13): certificate.py's own _CERTIFICATE_ID_RE, the shape _new_identifier always produces and is_valid_identifier checks -- 32 lowercase hex characters, nothing more, nothing embedded. Before this, the token-less verification page printed the raw URL path segment as text under an official heading with no shape check at all, unable to tell a mistyped identifier from a genuinely absent one. A D-14-shaped mirror: the same rule, written once in Python (certificate.py) and once in TypeScript (register.ts), bound here rather than hand-retyped on either side.",
+  "identifier_pattern": "^[0-9a-f]{32}$",
   "_signed_example_comment": "A real token, verifiable right now with the public key below: json.loads(base64.b64decode(json.loads(token)['payload'])) reproduces 'payload' exactly, and the RSA-PKCS1v15-SHA256 signature over those bytes verifies against 'public_pem'. 'verification_url' is exactly certificate.verification_url(identifier, token) -- carries the token itself as a query parameter, so a page that has only ever seen this one URL can verify the signature fully offline before it ever requests certificates-public.json (and it requests that file for exactly one thing: this identifier's current state).",
   "signed_example": {
     "public_pem": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAoDL29hQq0vfgcLHbM8XC\nGNK+aKo26CjzoPpUFZl4+7o49Us6ZaOPa7Shy9saHqs1RnRGSPe8M4QaNgMa3J0l\noVvk9UcU6JHZOO8lqeBMOfwM1q1aLUadZ9IEm7mFgx6VyxGdcIqhEBsJtA6WKYgv\ni1qUFSObdjZwt90SwtNhw9xga8NgRTBfoxjSlE6JayijmBQFvAlab3BYXcQnAUkB\njo++TSWvzAIbGguE8IheWEQyPJbFiektusX6jysJVu/gd6q8sL+fBpZQJM+xHoxp\n6Zc7xqlITHxES/vXwM7VpwTSwQEDAnjrtexXFans+YPxVftVh9WoXiY0TIkgZjoJ\n2Jn0XXtKXOXV75eiTKsFxX9jfJcekFlJjj4pksDZGiU3cbtMNoXXeMgXHi8ZV74m\n0ZPxhUP9PTGjI7GTZsV0STw1rFdCUGt7CCR6a6/MeB7hnBsO/1EE6aLBz4HP7vkm\ncErrRpVNTUga5xFNhUYAKr8xLeCZJGI5E0vgnujb8WH1AgMBAAE=\n-----END PUBLIC KEY-----\n",
@@ -46,19 +48,17 @@
       "reason": "malformed"
     }
   ],
-  "_projection_example_comment": "The exact shape certificate.public_register produces, and public-data/certificates-public.json holds: identifier and state only, never a fingerprint, an event id, or an issue date. The first row is the certificate above, current; the second is an unrelated, revoked one -- included so a page's test fixture never has to invent its own 'what does a revoked row look like' example.",
-  "projection_example": {
-    "certificates": [
-      {
-        "identifier": "91ae17587fbbe80a664621946b839c9b",
-        "state": "issued"
-      },
-      {
-        "identifier": "0c4c6a2c8e6c4d6c9f7f6f2b8a1d5e3c",
-        "state": "revoked"
-      }
-    ]
-  },
+  "_projection_example_comment": "Important 4 (fix round 1, task 13): this used to nest these two rows under a 'certificates' key, which read as the wire shape but was not -- certificate.public_register returns a bare array, and cli.py::certificates_public_data writes json.dumps(rows) with no envelope (pinned by that function's own test_certificates_public_data_aggregates_every_events_register). A binding fixture that states the wrong shape is worse than no fixture, since the whole point is that the other side can trust it without reading Python -- so this key is now the exact shape certificate.public_register produces, and public-data/certificates-public.json holds: a bare array, identifier and state only, never a fingerprint, an event id, or an issue date. The first row is the certificate above, current; the second is an unrelated, revoked one -- included so a page's test fixture never has to invent its own 'what does a revoked row look like' example. The nested {'certificates': [...]} shape this key used to have is kept on purpose as a *rejected* wire shape in both languages' own test suites -- see verify-register.test.ts's own explicit literal for it -- as the cheapest guard against it being 'corrected' back.",
+  "projection_example": [
+    {
+      "identifier": "91ae17587fbbe80a664621946b839c9b",
+      "state": "issued"
+    },
+    {
+      "identifier": "0c4c6a2c8e6c4d6c9f7f6f2b8a1d5e3c",
+      "state": "revoked"
+    }
+  ],
   "_integer_duration_example_comment": "Minor 10 (fix round 1): the fixture's main signed_example carries duration_hours: 1.5, never an integer value -- the exact case where Python's float and a browser's JSON.stringify could render differently (2.0 vs 2; see signing.py's own docstring and certificate.py's duration_hours). Verification is over the raw transported bytes, never a re-serialised number, so this does not threaten signature verification either way -- but a page that *displays* the decoded number will differ from what Python printed unless it renders a whole float with one decimal place explicitly. A second, real, independently-verifiable token, from its own throwaway key pair (private half discarded, same practice as signed_example's own).",
   "integer_duration_example": {
     "public_pem": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAuMYF7FzIWi82Gap1tBBM\n6fAmV1Bap7C5/0LzDT8wlEiIm+Bn5MQMnffhk/pMjyILEHU96tlmWFrmJ5NXRxyX\n+BZsOD1ieZYio4rr7uaeQ2UNFPzcVodLH+Uq2ursSfjaGo0HRWqBn+XAZRJWnUlC\nF9iwBvCwg7SBiIoBiP6dsuqZIE07jKsgROv2DdV5W3OSvLEWeQpEmRYlBOOxtch6\nQYtFe4ltEEfOL8fl4z71yoFiQ+c3g0j4TNvzAYv5hmnrOZX0Eem9zVc3/xQLaUXu\nhQbLICyRKqEa5CWjIxQrjqph5+6P3du+XlS8sk4aFYBXapSu/T7yle+kjiR6nnE3\nxSKG00Go8sOVNgN9TP3lmflqhOhxsNpEgutkfItU8OycD9BkPNtXpbwxmrZb/MIz\nvLHtzZEgJT6Ip17av/61jkej9QUOB1SRo/6V7293JpRkU/09fJNnMGXloffgig/L\n3BHXD0Ru2dnOlBNI7xJ3B9TSo9VbqkFVO+MW/4J5FKihAgMBAAE=\n-----END PUBLIC KEY-----\n",

@@ -14,6 +14,7 @@ import pytest
 
 from convener_ops.attendance import MatchedAttendee
 from convener_ops.certificate import (
+    _CERTIFICATE_ID_RE,
     EVENTS_DIR,
     FILE_VERSION,
     ORGANISER,
@@ -993,9 +994,20 @@ def test_the_shared_fixtures_url_is_reproducible_from_this_modules_own_function(
 
 
 def test_the_shared_fixtures_projection_example_has_no_fingerprint_either() -> None:
-    for row in _FIXTURE["projection_example"]["certificates"]:
+    """Important 4 (fix round 1, task 13): `projection_example` is a bare
+    array -- see this key's own `_projection_example_comment` for why it
+    used to be nested under a `"certificates"` key and was wrong to be."""
+    assert isinstance(_FIXTURE["projection_example"], list)
+    for row in _FIXTURE["projection_example"]:
         assert frozenset(row) == frozenset({"identifier", "state"})
         assert row["state"] in (STATE_ISSUED, STATE_REVOKED)
+
+
+def test_the_shared_fixtures_identifier_pattern_matches_certificate_pys_own() -> None:
+    """Minor 3 (fix round 1, task 13): the D-14 binding for
+    `_CERTIFICATE_ID_RE` -- read from both sides rather than hand-retyped
+    on the TypeScript one, which is exactly how a fixture goes stale."""
+    assert _CERTIFICATE_ID_RE.pattern == _FIXTURE["identifier_pattern"]
 
 
 def test_the_shared_fixtures_iterable_sections_carry_no_comment_key() -> None:
@@ -1003,12 +1015,19 @@ def test_the_shared_fixtures_iterable_sections_carry_no_comment_key() -> None:
     `.reasons`) sweep expecting exactly the declared spellings must never
     see a stray `_comment` key mixed in among them -- every explanatory
     comment lives at the top level instead, as a sibling `_x_comment` key,
-    the same convention `governance-cases.json` already uses."""
+    the same convention `governance-cases.json` already uses.
+
+    `projection_example` is deliberately absent from this list (Important
+    4, fix round 1): it is a bare array now, not an object, so "no stray
+    `_comment` key among the ones this section's own keys are swept for"
+    is not a claim that means anything for it -- the array's own sibling
+    `_projection_example_comment` already keeps the array itself
+    comment-free, and each row is a plain `{"identifier", "state"}` object
+    the test above already pins exactly."""
     for section in (
         "reasons",
         "states",
         "signed_example",
-        "projection_example",
         "integer_duration_example",
     ):
         assert "_comment" not in _FIXTURE[section]
