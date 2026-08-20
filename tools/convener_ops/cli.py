@@ -32,6 +32,7 @@ from convener_ops.platform import (
 from convener_ops.platform_fcc import (
     FCCRequestError,
     PlatformFCC,
+    converted_recording_is_reachable,
     missing_retrieval_evidence,
     platform_from_env,
 )
@@ -948,15 +949,25 @@ def release_recording() -> int:
     wrong: `youtube_url` is a publication signal (`app/src/state/phases.ts`'s
     own `delivered/youtube-url` item, gated separately from
     `publication.outcome`), so a recording that is legitimately never
-    published -- consent withheld, or the discussion segment, never
-    uploaded anywhere -- would never have satisfied it despite being
-    genuinely retrieved, and the quota it occupies would never have been
-    freed. This function never downloads the recording itself, and calls
-    nothing that could trigger a conversion -- see `platform_fcc.py`'s
-    module docstring for why that matters even more for the discussion
-    segment than for the talk, and for the discussion segment's own,
-    still-unresolved case (it can never pass trace 2 by the same "never
-    convert it" rule).
+    published would never have satisfied it despite being genuinely
+    retrieved, and the quota it occupies would never have been freed.
+
+    **This function is only for a recording headed to YouTube.** A
+    recording that must never become public -- the discussion segment
+    (recorded on purpose, phase 3's own three-step discipline, but never
+    published), or a talk whose publication consent was withheld -- must
+    never take this path: trace 2 can only be satisfied by converting to
+    MP4, and a converted file stays *publicly reachable at its own URL
+    even after the conference is deleted* (verified empirically). Proving
+    retrieval this way is exactly the exposure those two cases exist to
+    prevent. `discard_recording` below is the other route: no proof of
+    retrieval is asked for or accepted, because none may ever exist. See
+    its own docstring, and `platform_fcc.py`'s module docstring's "Which
+    recordings take which route" section, for the full split. This
+    function never downloads the recording itself, and calls nothing that
+    could trigger a conversion on its own -- only the host's Download
+    click does that, and only a recording meant for YouTube should ever
+    receive one.
 
     The quota is checked *after* deletion, deliberately (spec Section 9:
     "alerte si l'espace reste occupe"), because a saturated quota breaks
@@ -1071,6 +1082,172 @@ def release_recording() -> int:
 
     print(
         f"recording for event {event_id} retrieved, verified, and released "
+        f"({recording.size} bytes freed)"
+    )
+    return 0
+
+
+def _discard_confirmation(event_id: str) -> str:
+    """The exact text `CONFIRM_DISCARD` must equal for `discard_recording`
+    to proceed. A single deliberate sentence rather than a boolean flag or
+    a repeated id alone -- "discard mrg-042" names both the irreversible
+    action and its target in one typed phrase, the same "type the name to
+    confirm" idea a repository-deletion UI uses, adapted so the text
+    itself states intent rather than only identity."""
+    return f"discard {event_id}"
+
+
+def discard_recording() -> int:
+    """`convener-discard-recording`: delete a recording that is never meant to
+    be retrieved -- one of exactly two places in this whole package
+    allowed to call `Platform.delete_recording`, the other being
+    `release_recording` above (pinned by
+    `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`).
+
+    **This is not `release_recording` with a shortcut.** The two
+    operations have opposite preconditions on purpose, and neither can
+    reach the other's call to `delete_recording`: `release_recording`
+    requires proof the recording *was* retrieved; this function requires
+    proof the operator is *choosing not to retrieve it at all*, because
+    for the two cases it exists for -- the discussion segment (recorded
+    on purpose, phase 3's own discipline, never published) and a talk
+    whose publication consent was withheld -- no such proof may ever be
+    manufactured. Converting to MP4 is the only way `release_recording`'s
+    trace 2 can be satisfied, and a converted file stays publicly
+    reachable at its own URL forever, even after the conference is
+    deleted (verified empirically) -- exactly what must never happen to
+    either case this function exists for. See `platform_fcc.py`'s module
+    docstring's "Which recordings take which route" section for where
+    this split is decided, not merely implemented.
+
+    **The guard is an explicit, typed operator affirmation, never the
+    retrieval traces.** `missing_retrieval_evidence`, `RETRIEVED_TICK` and
+    `runbook_progress` are not read anywhere in this function -- not
+    checked, not accepted as a substitute, not consulted at all, so a
+    ticked `RETRIEVED_TICK` can never make this function decide there is
+    nothing to affirm. What it asks for instead: `CONFIRM_DISCARD` must
+    equal `_discard_confirmation(event_id)` exactly -- "discard
+    mrg-042", say, typed by hand into
+    `.github/workflows/discard-recording.yml`'s `workflow_dispatch` form,
+    the same "type the name to confirm" discipline a repository-deletion
+    UI uses for its own irreversible action. A blank, a mismatch, or a
+    copy-paste of the wrong event's confirmation all refuse, before this
+    function touches the platform at all.
+
+    If the provider's converted video already answers (checked the same
+    way `release_recording` does, `converted_recording_is_reachable`),
+    this prints a `::warning::` -- not a refusal: whatever exposure
+    already happened cannot be undone by declining to delete, and leaving
+    the recording in place afterwards would only leave the quota occupied
+    too. Discarding still proceeds, because freeing the quota is still
+    the right next action regardless of an earlier mistake; a human still
+    needs to see that mistake named, which the warning is for.
+
+    The quota is checked *after* deletion, the same way and for the same
+    reason `release_recording` does (spec Section 9) -- a saturated quota
+    breaks the *next* session's recording.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    confirm_discard = os.environ.get("CONFIRM_DISCARD", "").strip()
+    expected = _discard_confirmation(event_id)
+    if confirm_discard != expected:
+        print(
+            f'CONFIRM_DISCARD must be exactly "{expected}" -- nothing was discarded',
+            file=sys.stderr,
+        )
+        return 1
+
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    if errors or cfg_errors:
+        for error in errors + cfg_errors:
+            print(f"  - {error}")
+        return 1
+    speaker_list = speakers if isinstance(speakers, list) else []
+    config_map = cfg if isinstance(cfg, dict) else None
+
+    try:
+        find_speaker(speaker_list, event_id)
+    except EventNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
+    # An `if`/`else` statement, not the `{...} if c else {}` conditional
+    # expression `release_recording` uses for the identical resolution:
+    # review found that shape invisible to `coverage --branch` (a single
+    # line, so both outcomes execute on it), and asked that no second one
+    # of the same shape be added rather than that the first be changed.
+    # `noqa: SIM108` -- ruff's own suggestion is exactly the shape being
+    # deliberately avoided here.
+    if conference_id:  # noqa: SIM108
+        conference_ids = {event_id: conference_id}
+    else:
+        conference_ids = {}
+    platform = platform_from_env(os.environ, speaker_list, config_map, conference_ids)
+
+    if not isinstance(platform, PlatformFCC):
+        print(
+            f"no meeting-platform account is configured for event {event_id} "
+            "-- the manual implementation holds no recording storage of "
+            "its own, so there is nothing to discard"
+        )
+        return 0
+
+    try:
+        recording = platform.get_recording(event_id)
+    except (EventNotFoundError, FCCRequestError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    if not recording.available:
+        print(
+            f"no recording is currently held for event {event_id} -- nothing to discard"
+        )
+        return 0
+
+    if converted_recording_is_reachable(recording, platform.transport):
+        print(
+            f"::warning::the converted recording for event {event_id} is "
+            "already reachable at the provider -- if it was never meant "
+            "to be converted, it may already be publicly exposed, which "
+            "discarding it now cannot undo; freeing the quota anyway",
+            file=sys.stderr,
+        )
+
+    try:
+        platform.delete_recording(event_id)
+    except (EventNotFoundError, FCCRequestError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    try:
+        after = platform.get_recording(event_id)
+    except (EventNotFoundError, FCCRequestError, ValueError) as exc:
+        print(
+            f"recording for event {event_id} was discarded, but the freed "
+            f"space could not be confirmed: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if after.available:
+        print(
+            f"::error::space for event {event_id} is still occupied after "
+            "discarding -- the next session's recording may fail",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(
+        f"recording for event {event_id} discarded, never retrieved "
         f"({recording.size} bytes freed)"
     )
     return 0

@@ -18,6 +18,7 @@ from convener_ops.cli import (
     UNMATCHED_ATTENDANCE,
     UNSENT_CONFIRMATION,
     _load,
+    discard_recording,
     handle_proposal,
     handle_registration,
     match_attendance,
@@ -2299,6 +2300,315 @@ def test_release_recording_reports_when_the_post_delete_check_fails(
     assert "could not be confirmed" in err
 
 
+# ------------------------------------------------------------------ #
+# discard_recording(): task 10 fix round 2 -- the other route, for a
+# recording that must never be retrieved (the discussion segment; a talk
+# whose publication consent was withheld). Gated on an explicit typed
+# operator confirmation, never on the retrieval traces -- every test
+# below that expects a refusal asserts directly on `transport.delete_calls`
+# and (where relevant) `transport.get_calls`, never only on the return
+# code.
+# ------------------------------------------------------------------ #
+
+
+def test_discard_confirmation_names_the_action_and_the_event() -> None:
+    from convener_ops.cli import _discard_confirmation
+
+    assert _discard_confirmation("mrg-042") == "discard mrg-042"
+
+
+def test_discard_recording_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+
+    assert discard_recording() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_discard_recording_with_an_invalid_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "../escape")
+
+    assert discard_recording() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_discard_recording_refuses_a_blank_confirmation(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """No `CONVENER_REPO_ROOT` is set up at all -- the confirmation is checked
+    before any data file is even opened, so a blank confirmation refuses
+    cleanly with no other setup required."""
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("CONFIRM_DISCARD", raising=False)
+
+    assert discard_recording() == 1
+    err = capsys.readouterr().err
+    assert "CONFIRM_DISCARD" in err
+    assert "discard mrg-042" in err
+
+
+def test_discard_recording_refuses_a_mismatched_confirmation(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("CONFIRM_DISCARD", "yes please")
+
+    assert discard_recording() == 1
+    assert "CONFIRM_DISCARD" in capsys.readouterr().err
+
+
+def test_discard_recording_refuses_a_confirmation_typed_for_another_event(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A copy-pasted confirmation from a different event's run must not
+    silently discard the wrong one."""
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-999")
+
+    assert discard_recording() == 1
+    assert "CONFIRM_DISCARD" in capsys.readouterr().err
+
+
+def test_discard_recording_with_an_unknown_event_id_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-999")
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-999")
+
+    assert discard_recording() == 1
+    assert "mrg-999" in capsys.readouterr().err
+
+
+def test_discard_recording_reports_a_malformed_speakers_file_and_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "speakers.yml").write_text("key: [unclosed\n", encoding="utf-8")
+    (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+
+    assert discard_recording() == 1
+    assert "invalid YAML" in capsys.readouterr().out
+
+
+def test_discard_recording_without_a_configured_account_is_a_noop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert discard_recording() == 0
+    assert "nothing to discard" in capsys.readouterr().out
+
+
+def test_discard_recording_is_a_noop_when_nothing_is_recorded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport({_PATH: [_recording_payload(available=False)]})
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 0
+    assert "nothing to discard" in capsys.readouterr().out
+    assert transport.delete_calls == []
+
+
+def test_discard_recording_refuses_a_non_numeric_conference_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The same probe `release_recording` was tested against: a hand-typed
+    conference id must be refused before any transport call, on this route
+    too."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch, conference_id="THIS-IS-THE-WRONG-CONFERENCE")
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport({_PATH: [_recording_payload()]})
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 1
+    err = capsys.readouterr().err
+    assert "not a valid FCC conference id" in err
+    assert transport.get_calls == []
+    assert transport.delete_calls == []
+
+
+def test_discard_recording_returns_1_when_no_conference_id_is_configured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Closes the branch of discard_recording's own `if conference_id: ...
+    else: ...` resolution (fix round 2 -- written as a statement, not the
+    ternary review round 1 found invisible to `coverage --branch`, so this
+    branch is not merely closed in substance but actually visible to the
+    coverage figure)."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("CONVENER_MEETING_API_TOKEN", "test-token")
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    monkeypatch.delenv("CONVENER_FCC_CONFERENCE_ID", raising=False)
+    transport = _FakeRecordingTransport({})
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 1
+    assert "mrg-042" in capsys.readouterr().err
+    assert transport.get_calls == []
+    assert transport.delete_calls == []
+
+
+def test_discard_recording_ignores_the_retrieval_tick_and_still_needs_confirmation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The review's own second constraint, behaviourally: a ticked
+    `RETRIEVED_TICK` must not let a missing or wrong confirmation through."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.delenv("CONFIRM_DISCARD", raising=False)
+    transport = _FakeRecordingTransport({_PATH: [_recording_payload()]})
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 1
+    assert transport.delete_calls == []
+
+
+def test_discard_recording_deletes_once_confirmed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """No retrieval tick at all -- the ordinary shape for the discussion
+    segment or a consent-withheld talk -- and no converted video either;
+    the typed confirmation alone is enough."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=False)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload(), _recording_payload(available=False)]}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 0
+    assert transport.delete_calls == [_PATH]
+    out = capsys.readouterr().out
+    assert "discarded, never retrieved" in out
+
+
+def test_discard_recording_warns_but_still_deletes_when_already_converted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """If the converted video already answers -- someone clicked Download
+    on a recording that should never have been converted -- discarding
+    still proceeds (declining would only leave the quota occupied for a
+    leak that already happened) but a warning names it."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload(), _recording_payload(available=False)]},
+        head_responses={_VIDEO_URL: _video_headers()},
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 0
+    assert transport.delete_calls == [_PATH]
+    err = capsys.readouterr().err
+    assert "::warning::" in err
+    assert "already reachable" in err
+
+
+def test_discard_recording_does_not_warn_when_never_converted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload(), _recording_payload(available=False)]}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 0
+    assert "::warning::" not in capsys.readouterr().err
+
+
+def test_discard_recording_reports_when_delete_recording_itself_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload()]},
+        delete_error=FCCRequestError("DELETE /conferences/618515381 returned HTTP 500"),
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 1
+    assert transport.delete_calls == [_PATH]
+    assert transport.get_calls == [_PATH]
+    assert "500" in capsys.readouterr().err
+
+
+def test_discard_recording_alerts_when_space_stays_occupied_after_deletion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload(), _recording_payload()]}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 1
+    assert transport.delete_calls == [_PATH]
+    err = capsys.readouterr().err
+    assert "occupied" in err
+    assert "::error::" in err
+
+
+def test_discard_recording_reports_when_the_post_delete_check_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-042")
+    transport = _FakeRecordingTransport(
+        {
+            _PATH: [
+                _recording_payload(),
+                FCCRequestError("GET /conferences/618515381 failed: timeout"),
+            ]
+        }
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 1
+    assert transport.delete_calls == [_PATH]
+    err = capsys.readouterr().err
+    assert "discarded" in err
+    assert "could not be confirmed" in err
+
+
 def _delete_recording_call_sites(package_dir: Path) -> list[str]:
     """Every `.py` file under `package_dir`, at any depth, that calls
     `delete_recording(` for real (excluding `def delete_recording(`
@@ -2316,15 +2626,15 @@ def _delete_recording_call_sites(package_dir: Path) -> list[str]:
     ]
 
 
-def test_delete_recording_has_exactly_one_call_site_in_the_whole_package() -> None:
-    """R-7's ruling, pinned rather than left to a docstring: the only call
-    to `Platform.delete_recording` anywhere in `convener_ops` is inside
-    `release_recording`, reached only after `missing_retrieval_evidence`
-    has already come back empty. A second call site anywhere else -- a
-    shortcut some future change adds -- would bypass the whole guard this
-    module exists to provide; this test reads every module's own source,
-    at any depth, and refuses to let a second one exist silently, the same
-    "read the module's own source" idiom
+def test_delete_recording_has_exactly_two_call_sites_both_in_cli() -> None:
+    """R-7's ruling, pinned rather than left to a docstring, now covering
+    both routes fix round 2 added: the only calls to
+    `Platform.delete_recording` anywhere in `convener_ops` are inside
+    `release_recording` and `discard_recording`, both in `cli.py`. A third
+    call site anywhere -- a shortcut some future change adds -- would
+    bypass whichever guard exists to provide; this test reads every
+    module's own source, at any depth, and refuses to let a third one
+    exist silently, the same "read the module's own source" idiom
     `test_notify.py::test_the_notification_module_holds_no_transport`
     already uses in this codebase.
 
@@ -2333,11 +2643,82 @@ def test_delete_recording_has_exactly_one_call_site_in_the_whole_package() -> No
     text `delete_recording(` (with the open paren) would also match here
     and fail this test even though it calls nothing. That is the safe
     direction to be brittle in -- it can only ever demand a closer look,
-    never hide a second real call site."""
+    never hide a real call site."""
     import convener_ops
 
     package_dir = Path(convener_ops.__file__).parent
-    assert _delete_recording_call_sites(package_dir) == ["cli.py"]
+    assert _delete_recording_call_sites(package_dir) == ["cli.py", "cli.py"]
+
+
+def test_release_recordings_delete_call_is_gated_on_missing_retrieval_evidence() -> (
+    None
+):
+    """Structural, not merely behavioural: `release_recording`'s own call
+    to `delete_recording` must textually follow the point where
+    `missing_retrieval_evidence` is checked, so the gate cannot be
+    reordered away from the call it exists to protect without this test
+    noticing."""
+    import inspect
+
+    from convener_ops.cli import release_recording
+
+    source = inspect.getsource(release_recording)
+    evidence_at = source.index("missing_retrieval_evidence(")
+    delete_at = source.index("platform.delete_recording(")
+    assert evidence_at < delete_at
+
+
+def test_discard_recordings_delete_call_is_gated_on_the_confirmation() -> None:
+    """The same structural pin, for the other route: `discard_recording`'s
+    call to `delete_recording` must textually follow the confirmation
+    comparison, not merely happen to pass a test today."""
+    import inspect
+
+    from convener_ops.cli import discard_recording
+
+    source = inspect.getsource(discard_recording)
+    confirm_at = source.index("confirm_discard != expected")
+    delete_at = source.index("platform.delete_recording(")
+    assert confirm_at < delete_at
+
+
+def _code_body_excluding_docstring(func: object) -> str:
+    """`inspect.getsource(func)` with the leading docstring stripped --
+    the two structural tests below search the *body* for a name, and both
+    functions' own docstrings name, in prose, exactly what must be absent
+    from the body, so a plain substring search over the whole source would
+    trip on its own explanation."""
+    import inspect
+
+    source = inspect.getsource(func)  # type: ignore[arg-type]
+    return source.split('"""', 2)[-1]
+
+
+def test_discard_recording_never_reads_the_retrieval_tick_or_evidence() -> None:
+    """The review's own second constraint, pinned structurally: a ticked
+    `RETRIEVED_TICK` must never be able to substitute for the typed
+    confirmation, because `discard_recording`'s own code body never
+    mentions `runbook_progress`, `RETRIEVED_TICK`, or
+    `missing_retrieval_evidence` at all -- as a name, an attribute, or a
+    string literal such as `record.get("runbook_progress")`."""
+    from convener_ops.cli import discard_recording
+
+    body = _code_body_excluding_docstring(discard_recording)
+    assert "missing_retrieval_evidence" not in body
+    assert "RETRIEVED_TICK" not in body
+    assert "runbook_progress" not in body
+
+
+def test_release_recording_never_reads_the_discard_confirmation() -> None:
+    """The mirror of the test above: `CONFIRM_DISCARD` and
+    `_discard_confirmation` must never appear in `release_recording`'s own
+    code body, so a typed discard confirmation can never substitute for
+    the two retrieval traces it actually requires."""
+    from convener_ops.cli import release_recording
+
+    body = _code_body_excluding_docstring(release_recording)
+    assert "CONFIRM_DISCARD" not in body
+    assert "_discard_confirmation" not in body
 
 
 def test_the_call_site_scan_is_recursive(tmp_path: Path) -> None:

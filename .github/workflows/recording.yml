@@ -3,13 +3,21 @@ name: Release a recording
 # Task 10 (D-05, spec Section 2/9): retrieve, verify the retrieval, then
 # delete -- freeing the meeting provider's ~1 GB free quota, which a
 # 90-minute recording alone consumes 1.6x over on its own
-# (phase-4-prep-notes.md, 2026-08-19). `convener-release-recording` is the one
-# place in the whole tools/ package allowed to call
+# (phase-4-prep-notes.md, 2026-08-19). `convener-release-recording` is one of
+# exactly two places in the whole tools/ package allowed to call
 # `Platform.delete_recording`, and it refuses unless both the event's
-# `youtube_url` is set and the provider's own converted recording is
-# reachable -- see tools/convener_ops/platform_fcc.py's module docstring for
-# the full reasoning and tools/convener_ops/cli.py::release_recording's own
-# docstring for the order this enforces.
+# `RETRIEVED_TICK` runbook step is ticked and the provider's own converted
+# recording is reachable, checked against `video/mp4` and
+# `Accept-Ranges: bytes` -- see tools/convener_ops/platform_fcc.py's module
+# docstring for the full reasoning and
+# tools/convener_ops/cli.py::release_recording's own docstring for the order
+# this enforces.
+#
+# This is the route for a talk headed to YouTube ONLY. The discussion
+# segment, and a talk whose publication consent was withheld, must never
+# run through this workflow -- discard-recording.yml is the other route,
+# for exactly those two cases; see platform_fcc.py's module docstring's
+# "Which recordings take which route" section.
 #
 # This workflow never downloads the recording and never triggers a
 # conversion -- both are the host's own actions, done by hand once, in

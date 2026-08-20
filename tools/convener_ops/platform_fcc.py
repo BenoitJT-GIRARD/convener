@@ -219,22 +219,44 @@ for a talk (already destined for YouTube) and never acceptable for the
 unpublished discussion segment. No function here can cause that; the only
 human action that can is the host's, by hand, once, deliberately.
 
-**The discussion segment is a separate, unresolved case, named rather than
-solved here.** Phase 3's own recording discipline stops the FCC recording
-after the talk and starts a fresh one for the discussion, so an event may
-have more than one FCC conference -- and the discussion's is, by the rule
-above, one that must *never* pass trace 2 (nothing ever converts it) and
-never gets a durable-archive destination either. Whether `release_recording`
-is even the right mechanism to reclaim *that* conference's quota, or
-whether it needs a distinct, narrower path of its own, is outside what
-this task's review asked it to resolve; flagged in the task 10 fix report
-for the controller rather than guessed at here.
+Which recordings take which route: release, or discard
+-----------------------------------------------------------
+Phase 3's own recording discipline -- "enregistrement lance pour l'expose,
+arrete avant la discussion, relance pour la discussion" -- means an event
+routinely produces **two** FCC recordings: the talk, and, deliberately, the
+discussion. Both cost quota; only one may ever be converted. That is not
+a corner case this module tolerates, it is the ordinary shape of every
+event, and it is why there are two call sites for `delete_recording`, not
+one, each with its own, opposite guard:
 
-The single call site is `cli.py::release_recording` -- `Platform`'s shape
-is fixed by task 2, so the guard cannot live in `delete_recording`'s own
-signature, and `tools/tests/test_cli.py` pins that it is the *only* place
-in the whole package that calls `delete_recording` at all, immediately
-after `missing_retrieval_evidence` has already come back empty.
+* **The talk goes through `cli.py::release_recording`** -- the two-trace
+  guard above, ending in a conversion to MP4 and a YouTube upload, both
+  intended. `RETRIEVED_TICK` and `converted_recording_is_reachable` are
+  both required because both are *supposed* to become true.
+* **Everything that must never be converted goes through
+  `cli.py::discard_recording`** -- the discussion segment, always; and a
+  talk whose publication consent was withheld, because the only way
+  `release_recording`'s trace 2 could ever be satisfied is by converting
+  it, and a converted file stays *publicly reachable at its own URL even
+  after the conference is deleted* (verified empirically) -- exactly the
+  exposure withheld consent exists to prevent. `discard_recording` asks
+  for no proof of retrieval at all, because for these two cases none may
+  ever be manufactured without doing the very harm the operation exists
+  to avoid; it is gated on an explicit, typed operator affirmation
+  instead. See its own docstring for the guard's full shape.
+
+Both call sites end in the same `delete_recording`, the same irreversible
+primitive, and both are pinned by
+`tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`
+-- `Platform`'s shape is fixed by task 2, so neither guard can live in
+`delete_recording`'s own signature. Neither function can reach the
+other's call: `discard_recording` never reads `runbook_progress`,
+`RETRIEVED_TICK` or calls `missing_retrieval_evidence`, so a ticked
+retrieval box can never substitute for the typed confirmation it actually
+requires, and `release_recording` never reads `CONFIRM_DISCARD`, so no
+confirmation phrase can substitute for the two traces it actually
+requires. The two operations share nothing but the primitive they both,
+separately, are allowed to call.
 
 No transport is exercised by a test
 -------------------------------------
