@@ -388,10 +388,7 @@ fresh key pair (`convener_ops.eventkeys.generate()`) — never reuse one event's
 pair for another, since a per-event key that read another event's data
 would not be a per-event key at all.
 
-1. Commit the public half as `keys/events/<event id>.pub`. This is not a
-   secret: it is what lets the static registration page encrypt in the
-   browser without asking a server for anything first.
-2. Store the private half as the repository secret named by
+1. Store the private half as the repository secret named by
    `convener_ops.eventkeys.secret_name(event_id)` -- **not** simply the event id
    uppercased: GitHub Actions secret names may only contain letters, digits
    and underscore, but an event id may legally contain `.` and `-` (the
@@ -399,6 +396,20 @@ would not be a per-event key at all.
    `_` before uppercasing. Never commit the private half, never write it to
    a file outside a CI job's environment, and never let it appear in a job
    log.
+2. Commit the public half as `keys/events/<event id>.pub`. This is not a
+   secret: it is what lets the static registration page encrypt in the
+   browser without asking a server for anything first.
+
+**This order is load-bearing, not incidental.** Committing the public half
+is what the signup relay checks before it will dispatch a submission at
+all -- its "is this a known event" check (*Signup relay* above) -- and the
+*private* half is what *Handle registration*'s job needs to ever read a
+submission again. Publish the public half before the private secret
+exists, and every registration accepted in that window is told "sent",
+genuinely encrypted, and can never be decrypted again — the job that
+would read it fails closed forever, not just until someone notices.
+Setting the private secret first closes that window: the relay has
+nothing to accept until step 2 opens it.
 
 **Secrets to set:** `CONVENER_EVENT_KEY_<EVENT ID>`, one per event, set only for
 as long as that event's registrations need decrypting.
@@ -461,23 +472,58 @@ secret set resolves to an empty string, exactly like a literal
 `secrets.SOME_NAME` reference to a secret that does not exist, and the
 second step treats that the same way `tools/convener_ops/eventkeys.py` says an
 absent event key must be treated: the job exits in error rather than doing
-anything with the ciphertext it was handed.
+anything with the ciphertext it was handed. That second step also decrypts,
+stores *and* commits — one step, not two, because the commit has to sit
+inside the same retry loop as the decrypt (below), and a step boundary
+cannot sit inside a loop.
 
 Two registrations landing at the same moment are the ordinary case here,
 not an edge case — every submission dispatches its own workflow run, with
 no batching. The workflow declares `concurrency: { group:
-registration-handler, queue: max }` so that runs queue and execute one at
-a time rather than racing to decrypt, update and push against the same
-file; without `queue: max`, GitHub Actions' own default (`queue: single`)
-keeps only the most recently queued run in a group and silently cancels
-any others still waiting behind whichever run is in progress, which would
-drop a registration outright rather than merely delay it.
+registration-<event id>, queue: max }`, one group *per event*, so that
+runs for the same event queue and execute one at a time rather than racing
+to decrypt, update and push against the same file; without `queue: max`,
+GitHub Actions' own default (`queue: single`) keeps only the most recently
+queued run in a group and cancels any others still waiting behind
+whichever run is in progress, which would drop a registration outright
+rather than merely delay it. `queue: max` itself still caps a group at 100
+pending runs and cancels anything past that — at the signup relay's own
+per-event burst limit (30/minute) and roughly a minute per run, a sustained
+blast against one event can approach that ceiling within several minutes;
+scoping the group per event at least keeps that from starving every other
+event's queue as well.
+
+Serialising the runs is necessary but not sufficient on its own —
+`actions/checkout` with no `ref:` reads the exact commit
+`repository_dispatch` pinned at the moment the event was created
+(`github.sha`), not the branch's current tip, so a run queued *because*
+`queue: max` is working still starts from a tree that predates whatever the
+run ahead of it in the same queue just pushed. The workflow checks out
+`github.event.repository.default_branch` explicitly instead, so a queued
+run always reads what the run before it actually wrote.
+
+That leaves the case `queue: max` cannot remove on its own: two different
+events' runs (different concurrency groups, so nothing serialises them)
+racing to push, or a run for the same event slipping in from outside the
+queue (a manual retry, for instance). A rejected push does **not** retry
+with `git pull --rebase`: rebasing a JSON array whose closing lines both
+commits rewrote reliably conflicts, and a conflicted rebase leaves the tree
+mid-merge with nothing committed — the registration is gone, not merely
+delayed. Instead the job fetches the branch tip, hard-resets to it,
+**re-runs the handler**, and recommits: `convener_ops.registration.upsert` is
+idempotent on the same address, so replaying it against the tree the other
+push just produced reproduces this registration's own entry (under a fresh
+AES key and nonce — encryption is never literally deterministic — but the
+same logical content) beside whatever the other push added, rather than
+asking git to merge two edits to one array by hand. Bounded at three
+attempts, the same as `candidate-form.yml`'s own retry loop.
 
 **To verify:** submit the registration form for an event with a published
 key (see *Signup relay* above); *Handle registration* runs, and
 `data/events/<event id>/registrations.enc` gains one entry. Submitting
 again with the same address updates that same entry rather than adding a
-second one.
+second one. Submitting for two different addresses to the same event in
+quick succession — the case the retry loop exists for — leaves both.
 
 ## Registration matching salt
 
