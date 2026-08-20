@@ -19,6 +19,20 @@ keeps this `README.md` itself committed even though the directory holds
 nothing else yet, for exactly that reason -- the contract needs to survive
 being empty.
 
+**No key that has ever existed in this repository's history was in
+service.** An earlier commit (`15a069b`) briefly committed a real
+`2026-08-20.pub` generated as a working bootstrap; its matching private
+half never became the `CONVENER_SIGNING_KEY` secret in any real environment --
+it existed only in an agent's own scratch workspace, was never used to
+sign anything, and was deleted before that commit's follow-up
+(`5e887cc`) removed the orphaned public file again. `git show
+15a069b:keys/signing/2026-08-20.pub` will still show that file if anyone
+goes looking, but it is not a "lost key" to account for or worry about
+recovering -- it never signed a single real certificate, and no verifier
+should ever need to know it existed. The real, first signing key is
+whichever one an operator generates by following the procedure in
+`docs/reference/operations.md`.
+
 ## Naming
 
 `<YYYY-MM-DD>.pub` -- the calendar day the pair was generated, ISO 8601,
@@ -46,14 +60,81 @@ collides. Keys are rotated by deliberate operator action, not automation,
 so this is a documented operational constraint, not something the naming
 scheme detects on its own.
 
+## The wire format: three primitives, and nothing to keep in sync
+
+A token (the machine-readable code a certificate carries) is one compact
+JSON object:
+
+```json
+{"v":1,"payload":"<base64>","signature":"<base64>"}
+```
+
+To verify one, in any language, without any knowledge of how Python
+serialises JSON:
+
+1. Parse the token as JSON. Confirm `"v"` is `1`; reject anything else.
+2. Base64-decode `"payload"`. These decoded bytes are the *exact* bytes
+   that were signed -- do not re-serialise, reformat, or re-derive them
+   from anything. This is deliberate: an earlier version of this format
+   had a verifier re-build those bytes itself (`sort_keys`, compact
+   separators, ASCII-escaping, all of it), which made "did I reproduce
+   Python's `json.dumps` exactly" a real, silent failure mode -- French
+   names and decimal hours numbers are the *ordinary* content that broke
+   it, not an edge case. Transporting the bytes verbatim removes the
+   whole problem: there is nothing left to reproduce.
+3. Base64-decode `"signature"`.
+4. RSA-PKCS1v15 / SHA-256, verify the decoded signature against the
+   decoded payload bytes from step 2, using one of this directory's
+   published public keys (see "How a verifier should use this directory"
+   below for which, and in what order). This is a fixed algorithm, not a
+   choice: see the warning below.
+5. Only *after* a signature check succeeds, `JSON.parse` (or equivalent)
+   the decoded payload bytes from step 2 to get the displayable fields
+   (`identifier`, `event`, `name`, `date`, `duration_hours`).
+
+**Never read or act on any field beyond `v`, `payload` and `signature`.**
+This is not JWT, and there is no negotiable `alg` field anywhere in this
+format -- the algorithm is fixed (RSA-PKCS1v15-SHA256) by this ecosystem's
+own code on both ends, never chosen by anything inside the token. A
+verifier written by adapting JWT sample code is the concrete risk this
+line exists to head off: JWT's own history includes verifiers that
+honoured a token-supplied algorithm, including `"none"`. If a token here
+ever carries an extra field (an `"alg"`, a `"kid"`, anything else), ignore
+it -- do not add code that reads it, however tempting a "helpful"
+optimisation it looks like.
+
 ## How a verifier should use this directory
 
 `convener_ops.signing.verify(token, public_pems)` takes an ordered list and
-tries each key in turn, returning the payload from the first one that
-checks out (or `None` if none do, including when the list is empty --
-see below). It is deliberately tolerant of order: a certificate signed
-under *any* key whose public half is somewhere in the list still verifies,
-regardless of where in the list that key sits.
+tries each key in turn. It returns a `VerifyResult` with exactly three
+possible shapes -- a page must show a different, distinct state for each,
+never collapse two of them together:
+
+- **Valid** (`result.valid` is `True`, `result.payload` holds the dict) --
+  some key in `public_pems` produced a matching signature. Display the
+  certificate's contents.
+- **`MALFORMED`** (`result.reason == "malformed"`) -- the code is not even
+  shaped like something this system ever produced: not JSON, the wrong
+  fields, bad base64, an unsupported version, or (deliberately, so a
+  hostile paste can never crash the page) a token above a size cap or one
+  using deeply nested JSON to exhaust a parser. Display something like
+  "this does not look like a valid certificate code."
+- **`NO_MATCHING_KEY`** (`result.reason == "no_matching_key"`) -- the code
+  is shaped correctly but no key offered confirms it. **This is not the
+  same as "forged," and must never be shown as one.** A well-formed token
+  that fails every key in the list looks *identical*, from here, to a
+  genuine certificate signed under a key this list simply does not
+  include yet -- which is a real, reachable state: sign the certificate,
+  then publish the `.pub` file, and every certificate issued in that
+  window is genuine and currently unconfirmable (see
+  `docs/reference/operations.md`'s publish-before-secret warning). Naming
+  a real attendee's certificate a forgery is the worst thing this feature
+  can do. Display a neutral "cannot confirm this certificate right now"
+  state instead -- not an accusation.
+
+It is deliberately tolerant of order: a certificate signed under *any* key
+whose public half is somewhere in the list still verifies, regardless of
+where in the list that key sits.
 
 The recommended order, for task 13's build step and any other caller, is
 **newest first**: list every `*.pub` file here, sort filenames in
@@ -83,9 +164,9 @@ off of). A build step for this directory should:
 
 An empty directory at build time -- the current, real state -- should
 produce an empty embedded list, not a build failure. `verify` handed an
-empty list returns `None` for every token, cleanly: no crash, and no token
-is ever treated as valid with nothing to check it against. A verification
-page built against zero published keys should show its own "cannot confirm
-this certificate" state rather than anything that could be read as
-"invalid" or "forged" -- there being no key yet published is an
-operational gap, not evidence about the certificate.
+empty list returns `NO_MATCHING_KEY` for every token, cleanly: no crash,
+and no token is ever treated as valid with nothing to check it against. A
+verification page built against zero published keys will show its
+"cannot confirm this certificate right now" state for every certificate it
+is asked to check -- see "How a verifier should use this directory" above
+for exactly that wording, and why it must not read as an accusation.
