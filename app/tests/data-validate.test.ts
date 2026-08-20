@@ -115,6 +115,27 @@ describe('what a volunteer is told when data/config.yml is malformed', () => {
     expect(refusal(() => parseConfig(configYaml().replace('inactivity_months: 6', 'inactivity_months: 6.5'))))
       .toContain('whole number');
   });
+
+  it('rejects an eligibility_share that is not a number', () => {
+    const text = configYaml().replace(/eligibility_share: [^\n]+\n/, "eligibility_share: 'two thirds'\n");
+    const message = refusal(() => parseConfig(text));
+    expect(message).toContain('"eligibility_share"');
+    expect(message).toContain(']0, 1]');
+  });
+
+  it('rejects an eligibility_share of zero, the excluded end of the range', () => {
+    const text = configYaml().replace(/eligibility_share: [^\n]+\n/, 'eligibility_share: 0\n');
+    expect(refusal(() => parseConfig(text))).toContain(']0, 1]');
+  });
+
+  it('rejects an eligibility_share above one', () => {
+    const text = configYaml().replace(/eligibility_share: [^\n]+\n/, 'eligibility_share: 1.5\n');
+    expect(refusal(() => parseConfig(text))).toContain(']0, 1]');
+  });
+
+  it('accepts an eligibility_share of exactly one, the included end of the range', () => {
+    expect(parseConfig(configYaml({ eligibility_share: 1 })).eligibility_share).toBe(1);
+  });
 });
 
 describe('what a volunteer is told when data/speakers.yml is malformed', () => {

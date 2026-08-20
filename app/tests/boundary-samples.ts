@@ -209,6 +209,7 @@ export const CONFIG: Config = {
   vw_counter: 12,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
+  eligibility_share: 0.6666666666666666,
   board: [
     { login: 'alice', joined_on: '2025-01-06', status: 'active', unavailable_until: '' },
     { login: 'bob', joined_on: '2025-03-10', status: 'active', unavailable_until: '2026-09-01' },

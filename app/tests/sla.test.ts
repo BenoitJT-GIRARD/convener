@@ -19,7 +19,7 @@ import { speaker as double } from './data-doubles';
  *  against the real turnaround times and not against round numbers. */
 const config: Config = {
   season: 2026, vw_counter: 5, overlap_window_days: 7,
-  seminar_duration_minutes: 90, board: [], nominations: [],
+  seminar_duration_minutes: 90, eligibility_share: 0.6666666666666666, board: [], nominations: [],
   board_min: 5, board_max: 9, vote_window_days: 14,
   objection_window_working_days: 3, inactivity_months: 6,
   balance_window_months: 24,

@@ -10,6 +10,7 @@ const CFG: Config = {
   vw_counter: 1,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
+  eligibility_share: 0.6666666666666666,
   board: ['alice', 'bob', 'carol', 'dan'].map(login => ({
     login,
     joined_on: '2024-01-01',
