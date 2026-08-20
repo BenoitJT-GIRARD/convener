@@ -13,22 +13,49 @@ on:
 # two of them, not merely delay them. `queue: max`
 # (docs.github.com/en/actions/using-jobs/using-concurrency, checked
 # 2026-08-20 -- "Up to 100 jobs or workflow runs can be pending in the
-# concurrency group") queues up to 100 runs instead of 1 and drops none of
-# them. `cancel-in-progress` stays false, its own default: the two options
-# are mutually exclusive by GitHub's own validation, and a run mid-decrypt
-# must finish, never be cut off mid-write.
+# concurrency group") queues up to 100 pending runs instead of 1 -- not
+# "none dropped" without limit, as an earlier version of this comment
+# claimed: the same page continues "When the queue is full, any additional
+# runs are canceled." At the relay's own per-event burst limiter (30/minute,
+# services/signup-relay/README.md) and roughly a minute per run end to end,
+# a sustained blast against one hot event can approach that ceiling within
+# several minutes -- this does not remove the limit, it only stops one such
+# event from starving every other event's queue too, which is why the group
+# is scoped per event below rather than left global. `cancel-in-progress`
+# stays false, its own default: it cannot combine with `queue: max` by
+# GitHub's own validation, and a run mid-decrypt must finish, never be cut
+# off mid-write.
 concurrency:
-  group: registration-handler
+  group: registration-${{ fromJSON(github.event.client_payload.body).event_id }}
   cancel-in-progress: false
   queue: max
 
 jobs:
   handle:
     runs-on: ubuntu-latest
+    # A serialised queue (above) means one run that never finishes blocks
+    # every other registration for the same event behind it, up to
+    # GitHub's own six-hour default. Ten minutes is generous for a job that
+    # is checkout, `uv sync`, one decrypt/re-encrypt, and a commit -- see
+    # the retry loop below for the one part of this job with any real
+    # variance, bounded at three attempts.
+    timeout-minutes: 10
     permissions:
       contents: write
+    env:
+      # Read once, used twice: by `actions/checkout` below (so this job
+      # reads the branch *tip*, not the commit `repository_dispatch`
+      # pinned `github.sha` to at the moment the event was created -- with
+      # `queue: max` genuinely serialising runs, a later run in the same
+      # group starts only after an earlier one has already pushed, and
+      # checking out a fixed SHA would read the tree from *before* that
+      # push, silently reverting it) and by the retry loop, so the two can
+      # never name different branches.
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
@@ -46,8 +73,7 @@ jobs:
           # candidate-form.yml already applies to PROPOSAL_PAYLOAD.
           REGISTRATION_PAYLOAD: ${{ github.event.client_payload.body }}
         run: uv run convener-registration-secret-name
-      - name: Decrypt and store the registration
-        working-directory: tools
+      - name: Decrypt, store and commit the registration
         env:
           REGISTRATION_PAYLOAD: ${{ github.event.client_payload.body }}
           # GitHub Actions can only select a secret through an expression
@@ -60,26 +86,46 @@ jobs:
           # exception and exits in error rather than doing anything with
           # the ciphertext it was handed.
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
-        run: uv run convener-handle-registration
-      - name: Commit
-        env:
           EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+        # A hung `set -e` script with no output can look like it is still
+        # working; every branch below prints something before it exits, so
+        # a run's own log always says which of "nothing to do", "saved" or
+        # "gave up" happened.
+        #
+        # The retry, on a rejected push, is a fetch-and-reset-hard followed
+        # by *re-running the handler*, not `git pull --rebase`. Rebasing a
+        # JSON array is the defect this replaces: two concurrent writers'
+        # hunks both rewrite the closing lines of `registrations.enc`'s
+        # array, the rebase conflicts, `git pull --rebase` returns 1, and
+        # `set -e` kills the step before the retry loop's own `::error::`
+        # line is ever reached -- the record is gone and the tree is left
+        # mid-rebase. Discarding the local commit and re-deriving instead
+        # is safe specifically because `convener_ops.registration.upsert` is
+        # idempotent on the same address: re-running against the tip
+        # someone else just pushed reproduces this registration's own
+        # entry (fresh ciphertext, since AES-GCM never reuses a key or
+        # nonce, but the same logical content) beside whatever that other
+        # push added, rather than merging two conflicting edits to one
+        # array by hand.
         run: |
           set -e
           git config user.name "convener-registration"
           git config user.email "convener-registration@users.noreply.github.com"
-          git add "data/events/$EVENT_ID/registrations.enc"
-          if git diff --staged --quiet; then
-            echo "no change to commit"
-            exit 0
-          fi
-          git commit -m "data: record a registration for $EVENT_ID"
+
           for attempt in 1 2 3; do
+            (cd tools && uv run convener-handle-registration)
+            git add "data/events/$EVENT_ID/registrations.enc"
+            if git diff --staged --quiet; then
+              echo "no change to commit"
+              exit 0
+            fi
+            git commit -m "data: record a registration for $EVENT_ID"
             if git push; then
               exit 0
             fi
-            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
-            git pull --rebase
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
           done
           echo "::error::push failed after 3 attempts -- this registration was not saved"
           exit 1
