@@ -27,10 +27,14 @@ jobs:
         run: uv sync --all-extras
       - name: Lint
         working-directory: tools
-        run: uv run ruff check .
+        # `../scripts` too: it is Python, holds the one-shot migrations and
+        # the schema-doc generator run below, and is not a package of its
+        # own with a gate of its own -- `tools/pyproject.toml` is the only
+        # ruff config in the repository, and this is the job that has `uv`.
+        run: uv run ruff check . ../scripts
       - name: Format check
         working-directory: tools
-        run: uv run ruff format --check .
+        run: uv run ruff format --check . ../scripts
       - name: Types
         working-directory: tools
         run: uv run mypy
