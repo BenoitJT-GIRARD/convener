@@ -21,12 +21,14 @@ Two things are asserted instead of the two things the brief names:
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from convener_ops import platform_fcc, signing
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
 
@@ -367,3 +369,253 @@ def test_automated_commit_identity_pairs_a_name_with_its_address(
             f'{workflow.name} sets user.email "{email}" without a '
             f'matching user.name "{local}"'
         )
+
+
+# ------------------------------------------------------------------ #
+# issue-certificates.yml / reissue-certificate.yml / revoke-certificate.yml
+# (R-23, fix round 2): the finding that opened this round --
+# `certificate.issue` had a tested, correct implementation and no caller
+# anywhere in this repository, because no workflow ever set
+# CONVENER_SIGNING_KEY in a step that ran it. **The check below is the single
+# most important one in this round**: task 7 shipped a workflow forwarding
+# three of the nine environment variables its own command read, its whole
+# suite stayed green, and the gap went unnoticed until a human read the
+# workflow file directly, not a test failure. Derived from each command's
+# own source (`ast`, the same tool this project's import-graph test in
+# test_notify.py already uses to read a module rather than trust a
+# docstring) rather than a hand-typed list -- a hand-copied list is the
+# same defect one layer up, and would not have caught task 7's own bug
+# either, since a list copied *from the workflow* reproduces exactly the
+# workflow's own mistake.
+# ------------------------------------------------------------------ #
+
+CLI_MODULE_PATH = Path("tools/convener_ops/cli.py")
+ISSUE_CERTIFICATES_WORKFLOW = Path(".github/workflows/issue-certificates.yml")
+REISSUE_CERTIFICATE_WORKFLOW = Path(".github/workflows/reissue-certificate.yml")
+REVOKE_CERTIFICATE_WORKFLOW = Path(".github/workflows/revoke-certificate.yml")
+
+#: `os.environ.get(signing.SECRET_NAME, ...)` cannot be read as a string
+#: literal by the AST walk below -- it is an attribute access, not a
+#: constant -- so this maps the one dotted name `issue_certificates` and
+#: `reissue_certificate` read that way onto the actual secret name it
+#: resolves to, itself read from `signing.py`, never retyped by hand.
+_DOTTED_ENV_NAMES: dict[tuple[str, str], str] = {
+    ("signing", "SECRET_NAME"): signing.SECRET_NAME
+}
+
+
+def _function_node(path: Path, name: str) -> ast.FunctionDef:
+    tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    raise AssertionError(f"no function named {name!r} in {path.as_posix()}")
+
+
+def _literal_env_name(node: ast.expr) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+        return _DOTTED_ENV_NAMES.get((node.value.id, node.attr))
+    return None
+
+
+def _is_os_environ(node: ast.expr) -> bool:
+    return (isinstance(node, ast.Attribute) and node.attr == "environ") or (
+        isinstance(node, ast.Name) and node.id == "environ"
+    )
+
+
+def _calls_platform_from_env(func: ast.FunctionDef) -> bool:
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "platform_from_env"
+        for node in ast.walk(func)
+    )
+
+
+def _env_vars_read(path: Path, function_name: str) -> set[str]:
+    """Every environment variable `function_name` (defined in `path`)
+    reads directly (`os.environ.get(...)` or `os.environ[...]`), plus --
+    derived, not hand-typed -- `platform_fcc.TOKEN_ENV` whenever the
+    function hands `os.environ` whole to `platform_from_env`, the one
+    indirect read `issue_certificates` and `reissue_certificate` both
+    make (`platform_from_env`'s own body is never walked here; only the
+    fact that this function calls it at all, which is what actually
+    determines whether the read happens)."""
+    func = _function_node(path, function_name)
+    names: set[str] = set()
+    for node in ast.walk(func):
+        if isinstance(node, ast.Call):
+            callee = node.func
+            if (
+                isinstance(callee, ast.Attribute)
+                and callee.attr == "get"
+                and _is_os_environ(callee.value)
+                and node.args
+            ):
+                name = _literal_env_name(node.args[0])
+                if name:
+                    names.add(name)
+        elif isinstance(node, ast.Subscript) and _is_os_environ(node.value):
+            name = _literal_env_name(node.slice)
+            if name:
+                names.add(name)
+    if _calls_platform_from_env(func):
+        names.add(platform_fcc.TOKEN_ENV)
+    return names
+
+
+def _workflow_step_env_keys(
+    workflow_path: Path, job: str, run_contains: str
+) -> set[str]:
+    """The union of `job`'s own `env:` block and the `env:` block of
+    whichever step's `run:` contains `run_contains` -- registration.yml's
+    own split (`TARGET_BRANCH` at job level, every secret at step level),
+    so a check that only read one of the two would silently pass a
+    workflow that moved a variable from one to the other."""
+    loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    job_data = loaded["jobs"][job]
+    keys = set(job_data.get("env") or {})
+    for step in job_data["steps"]:
+        if run_contains in step.get("run", ""):
+            keys |= set(step.get("env") or {})
+            return keys
+    raise AssertionError(
+        f"no step in {workflow_path.as_posix()}::{job} runs a command "
+        f"containing {run_contains!r}"
+    )
+
+
+def test_issue_certificates_workflow_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "issue_certificates")
+    assert expected == {
+        "EVENT_ID",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_SIGNING_KEY",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_MEETING_API_TOKEN",
+    }, (
+        "the derivation itself found an unexpected set -- either "
+        "issue_certificates changed what it reads, or this AST walk no "
+        "longer sees it correctly; investigate before trusting the "
+        "carried-forward check below"
+    )
+    carried = _workflow_step_env_keys(
+        ISSUE_CERTIFICATES_WORKFLOW, "issue", "convener-issue-certificates"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"issue-certificates.yml does not forward {missing} to the step "
+        "that runs convener-issue-certificates, which reads it directly -- "
+        "task 7 shipped exactly this gap"
+    )
+
+
+def test_reissue_certificate_workflow_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "reissue_certificate")
+    assert expected == {
+        "EVENT_ID",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_SIGNING_KEY",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_MEETING_API_TOKEN",
+        "CERTIFICATE_ID",
+    }
+    carried = _workflow_step_env_keys(
+        REISSUE_CERTIFICATE_WORKFLOW, "reissue", "convener-reissue-certificate"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"reissue-certificate.yml does not forward {missing} to the step "
+        "that runs convener-reissue-certificate, which reads it directly"
+    )
+
+
+def test_revoke_certificate_workflow_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "revoke_certificate")
+    assert expected == {"EVENT_ID", "CERTIFICATE_ID"}
+    carried = _workflow_step_env_keys(
+        REVOKE_CERTIFICATE_WORKFLOW, "revoke", "convener-revoke-certificate"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"revoke-certificate.yml does not forward {missing} to the step "
+        "that runs convener-revoke-certificate, which reads it directly"
+    )
+
+
+def test_certificate_workflows_never_accept_an_address_as_an_input() -> None:
+    """R-22: the one property every input list in this trio must hold. A
+    scan over the raw `on:` trigger block's own text, the same "read
+    around `on:` as raw text" idiom
+    `test_publish_vitrine_paths_trigger_includes_the_certificate_register`
+    already uses -- PyYAML's YAML-1.1 bool resolver reads a bare `on:` key
+    as `True`, not `"on"`, so `safe_load` would silently drop this
+    section's own key if it were relied on here instead."""
+    for workflow_path in (
+        ISSUE_CERTIFICATES_WORKFLOW,
+        REISSUE_CERTIFICATE_WORKFLOW,
+        REVOKE_CERTIFICATE_WORKFLOW,
+    ):
+        text = (ROOT / workflow_path).read_text(encoding="utf-8")
+        trigger = text.split("jobs:")[0]
+        assert "email" not in trigger.lower(), (
+            f"{workflow_path.as_posix()} accepts something named like an "
+            "address as a workflow_dispatch input -- R-22 requires "
+            "CERTIFICATE_ID instead"
+        )
+
+
+def test_certificate_workflows_share_one_concurrency_group_per_event() -> None:
+    """All three write the same `certificates.yml` for one event -- see
+    issue-certificates.yml's own comment on why the group is shared
+    rather than one per workflow, the same choice discard-recording.yml
+    and recording.yml already made for the FCC recording they both
+    touch."""
+    groups = set()
+    for workflow_path in (
+        ISSUE_CERTIFICATES_WORKFLOW,
+        REISSUE_CERTIFICATE_WORKFLOW,
+        REVOKE_CERTIFICATE_WORKFLOW,
+    ):
+        loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+        concurrency = loaded.get("concurrency")
+        assert isinstance(concurrency, dict), (
+            f"{workflow_path.as_posix()} has no concurrency group"
+        )
+        assert concurrency.get("cancel-in-progress") is False, (
+            f"{workflow_path.as_posix()}: a run mid-write to "
+            "certificates.yml must finish, never be cancelled by another "
+            "one starting"
+        )
+        groups.add(concurrency["group"])
+    assert len(groups) == 1, (
+        f"the three certificate workflows use different concurrency "
+        f"group templates ({groups}) -- they write the same file and "
+        "must serialise against each other, not only against themselves"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow_path,job",
+    [
+        (ISSUE_CERTIFICATES_WORKFLOW, "issue"),
+        (REISSUE_CERTIFICATE_WORKFLOW, "reissue"),
+        (REVOKE_CERTIFICATE_WORKFLOW, "revoke"),
+    ],
+    ids=lambda value: value if isinstance(value, str) else value.name,
+)
+def test_certificate_workflow_job_has_write_permission_and_a_timeout(
+    workflow_path: Path, job: str
+) -> None:
+    loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    job_data = loaded["jobs"][job]
+    assert job_data.get("permissions") == {"contents": "write"}, (
+        f"{workflow_path.as_posix()}::{job} commits a change to "
+        "certificates.yml and must declare contents: write"
+    )
+    assert isinstance(job_data.get("timeout-minutes"), int), (
+        f"{workflow_path.as_posix()}::{job} has no timeout-minutes"
+    )

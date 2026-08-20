@@ -1,0 +1,109 @@
+name: Reissue a certificate
+
+# R-18 (fix round 1): an operator's deliberate correction to one
+# already-issued certificate -- a mis-typed name fixed in a re-submitted
+# registration, a corrected attendance export -- mints a fresh identifier
+# and never touches the row it replaces, and requires that row to already
+# be revoked (`revoke-certificate.yml`, this same round's R-21). Reusing
+# `convener-issue-certificates`'s own idempotent lookup for this would let a
+# routine re-run silently resurrect a correction nobody asked for; see
+# `tools/convener_ops/certificate.py::reissue`'s own docstring.
+#
+# R-22 (fix round 2): the input is CERTIFICATE_ID, never an address. A
+# `workflow_dispatch` input is rendered on the run page and retained with
+# the run for as long as its own history exists -- longer than the
+# 14-day artefact this project uses everywhere else it has to carry
+# personal data at all, and exactly the exposure task 7's own Important 4
+# named. The certificate identifier is random, public by design, already
+# printed on the document and already published in
+# certificates-public.json -- it names exactly one certificate without
+# naming a person. `convener-reissue-certificate` resolves it to a
+# registration the same way `certificate.issue` does, run in reverse: see
+# that command's own docstring in tools/convener_ops/cli.py.
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Event id, exactly as published (e.g. mrg-042)'
+        required: true
+        type: string
+      certificate_id:
+        description: 'Certificate id to correct, exactly as printed on the document'
+        required: true
+        type: string
+
+# Shared with issue-certificates.yml and revoke-certificate.yml -- see
+# that workflow's own comment on this same group.
+concurrency:
+  group: certificates-${{ inputs.event_id }}
+  cancel-in-progress: false
+
+jobs:
+  reissue:
+    runs-on: ubuntu-latest
+    # Checkout, `uv sync`, one decrypt pass, one attendance fetch, one
+    # signature, plus the commit retry loop below.
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Resolve the event's key secret
+        id: resolve
+        working-directory: tools
+        env:
+          REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
+        run: uv run convener-registration-secret-name
+      - name: Reissue the named certificate
+        env:
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          # Same two deliberate D-13 exceptions as issue-certificates.yml
+          # -- see that workflow's own comment on CONVENER_SIGNING_KEY and
+          # CONVENER_MATCHING_SALT.
+          CONVENER_SIGNING_KEY: ${{ secrets.CONVENER_SIGNING_KEY }}
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          # A public certificate identifier, never an address -- see this
+          # workflow's own header comment (R-22).
+          CERTIFICATE_ID: ${{ inputs.certificate_id }}
+        # Re-derive rather than rebase on a rejected push, the same shape
+        # registration.yml and issue-certificates.yml both use.
+        # `convener-reissue-certificate` mints a fresh random identifier on
+        # every call, so a retry after a fetch-and-reset-hard produces a
+        # *different* new identifier than the discarded attempt did --
+        # correct, not merely tolerated: nothing about the discarded
+        # attempt's own identifier was ever committed, pushed or handed
+        # to anyone, so there is nothing for a second, genuinely fresh one
+        # to contradict.
+        run: |
+          set -e
+          git config user.name "convener-certificates"
+          git config user.email "convener-certificates@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-reissue-certificate)
+            if [ -f "data/events/$EVENT_ID/certificates.yml" ]; then
+              git add "data/events/$EVENT_ID/certificates.yml"
+            fi
+            if git diff --staged --quiet; then
+              echo "no change to commit"
+              exit 0
+            fi
+            git commit -m "data: reissue a certificate for $EVENT_ID"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+          done
+          echo "::error::push failed after 3 attempts -- the correction was computed but not saved"
+          exit 1
