@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -11,6 +12,7 @@ import subprocess  # nosec B404
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
@@ -25,11 +27,14 @@ from convener_ops.attendance import (
     match,
 )
 from convener_ops.certificate import (
+    EVENTS_DIR,
     CertificateEvent,
+    certificates_path,
     issue,
     public_register,
     register_from_data,
     register_to_data,
+    reissue,
 )
 from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
@@ -63,6 +68,7 @@ from convener_ops.registration import (
     find_by_email,
     load_registration_file,
     matching_code,
+    normalize_email,
     to_registration,
     upsert,
 )
@@ -962,11 +968,21 @@ def issue_certificates() -> int:
     on one line and exit 1. A missing or malformed `data/config.yml`
     exits 1 too -- eligibility cannot be computed at all without
     `seminar_duration_minutes`, unlike `match_attendance`, which never
-    needed the config file in the first place. A missing speaker record
-    for `event_id` is not fatal: certificates are still issued, with an
-    empty event title and date, and a line says so -- the same "never let
-    a missing room lookup stop the thing that matters" choice
-    `_send_confirmation` already makes for the confirmation e-mail.
+    needed the config file in the first place. `CONVENER_SIGNING_KEY` present
+    but unusable (a mangled PEM, the ordinary way a pasted secret fails)
+    is checked once, before any registration is decrypted, rather than
+    left to surface as an unhandled `signing.SigningError` traceback from
+    inside the loop below (Important 1, fix round 1).
+
+    A speaker record for `event_id` that is missing, or present but
+    carries an empty title or an empty date, refuses the whole run (exit
+    1) rather than signing a certificate that names no event and no date
+    -- spec S:7's content list is not optional, and the register row a
+    silently-empty certificate would leave behind is permanent (Important
+    2, fix round 1). When `data/speakers.yml` itself failed to parse, the
+    message names that parse failure -- surfaced from `_load`, never
+    discarded -- instead of sending an operator to look for a speaker
+    record that was never actually missing.
 
     Prints only counts, never a name or an address -- the same discipline
     `match_attendance` already holds itself to for the same reason.
@@ -974,6 +990,15 @@ def issue_certificates() -> int:
     (never appended to a partial one), only when at least one certificate
     was freshly minted; reissuing every attendee already on record writes
     nothing and still exits 0.
+
+    Each eligible attendee's `duration_seconds` is capped at
+    `threshold.seminar_duration_minutes * 60` before it ever reaches
+    `issue` (R-17, fix round 1, Critical 1) -- see
+    `certificate.duration_hours`'s own docstring for why this is the
+    correct number, not a workaround, and why it is done here rather than
+    inside `certificate.py`: this is the one place both the attendee's
+    summed duration and the seminar's own scheduled length are already in
+    hand.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
@@ -991,6 +1016,11 @@ def issue_certificates() -> int:
     if not signing_key:
         print(f"{signing.SECRET_NAME} not configured -- no certificate issued this run")
         return 0
+    try:
+        signing.derive_public_pem(signing_key)
+    except signing.SigningError as exc:
+        print(f"{signing.SECRET_NAME}: {exc}", file=sys.stderr)
+        return 1
 
     salt = os.environ.get("CONVENER_MATCHING_SALT") or ""
     if not salt:
@@ -1019,7 +1049,7 @@ def issue_certificates() -> int:
         if registration is not None:
             registrations.append(registration)
 
-    speakers, _errors = _load(root / "data" / "speakers.yml")
+    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
     cfg, _errors = _load(root / "data" / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     if not isinstance(cfg, dict):
@@ -1040,44 +1070,64 @@ def issue_certificates() -> int:
     threshold = EligibilityThreshold.from_config(cfg)
     eligible = eligible_attendees(matched, threshold)
 
-    record: Mapping[str, Any]
-    try:
+    record: Mapping[str, Any] = {}
+    with contextlib.suppress(EventNotFoundError):
         record = find_speaker(speaker_list, event_id)
-    except EventNotFoundError:
-        print(
-            f"no speaker record matches event {event_id} -- certificates "
-            "issued with no title or date"
-        )
-        record = {}
 
-    register_path = root / "data" / "events" / event_id / "certificates.yml"
+    title = str(record.get("title", "") or "")
+    event_date = str(record.get("date", "") or "")
+    if not title or not event_date:
+        if speaker_errors:
+            print(
+                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                "to sign a certificate naming no event and no date",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"no speaker record with both a title and a date matches "
+                f"event {event_id} -- refusing to sign a certificate naming "
+                "no event and no date",
+                file=sys.stderr,
+            )
+        return 1
+
+    register_path = certificates_path(root, event_id)
     if register_path.exists():
         try:
             register_data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
         except yaml.YAMLError as exc:
-            print(f"{register_path.name}: invalid YAML - {exc}", file=sys.stderr)
+            print(
+                f"{register_path.relative_to(root).as_posix()}: invalid YAML - {exc}",
+                file=sys.stderr,
+            )
             return 1
     else:
         register_data = None
     try:
         existing = register_from_data(register_data)
     except ValueError as exc:
-        print(f"{register_path.name}: {exc}", file=sys.stderr)
+        print(f"{register_path.relative_to(root).as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    event = CertificateEvent(
-        event_id=event_id,
-        title=str(record.get("title", "") or ""),
-        date=str(record.get("date", "") or ""),
-    )
+    event = CertificateEvent(event_id=event_id, title=title, date=event_date)
     issued_on = paris_today(datetime.now(UTC))
+    max_duration_seconds = threshold.seminar_duration_minutes * 60
 
     entries = list(existing)
     issued_count = 0
     already_count = 0
     for attendee in eligible:
-        result = issue(
+        capped_attendee = replace(
             attendee,
+            duration_seconds=min(attendee.duration_seconds, max_duration_seconds),
+        )
+        # `result.token` is deliberately dropped: task 14 recomputes it
+        # byte-identically (PKCS1v15 determinism -- see certificate.py's
+        # own module docstring, "idempotent without being deterministic").
+        # This is the payoff of the idempotence design, not an oversight.
+        result = issue(
+            capped_attendee,
             event,
             signing_key,
             salt,
@@ -1126,19 +1176,24 @@ def certificates_public_data() -> int:
     choice `register_from_data` itself already makes.
     """
     root = repo_root()
-    events_dir = root / "data" / "events"
+    events_dir = root / EVENTS_DIR
     entries: list[Any] = []
     if events_dir.is_dir():
         for register_path in sorted(events_dir.glob("*/certificates.yml")):
+            # Minor 5 (fix round 1): relative to `root`, not the whole
+            # absolute path -- issue_certificates and reissue_certificate
+            # already name a register this way, and the absolute form
+            # carries CONVENER_REPO_ROOT into the log for no reason.
+            relative = register_path.relative_to(root).as_posix()
             try:
                 data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
             except yaml.YAMLError as exc:
-                print(f"{register_path}: invalid YAML - {exc}", file=sys.stderr)
+                print(f"{relative}: invalid YAML - {exc}", file=sys.stderr)
                 return 1
             try:
                 entries.extend(register_from_data(data))
             except ValueError as exc:
-                print(f"{register_path}: {exc}", file=sys.stderr)
+                print(f"{relative}: {exc}", file=sys.stderr)
                 return 1
 
     rows = public_register(entries)
@@ -1148,6 +1203,211 @@ def certificates_public_data() -> int:
         json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(rows)} certificates")
+    return 0
+
+
+def reissue_certificate() -> int:
+    """`convener-reissue-certificate`: an operator's deliberate correction to
+    one already-issued certificate -- mint a fresh identifier and a fresh
+    signed token for `ATTENDEE_EMAIL`, never touching the row it replaces
+    (R-18, fix round 1, Important 3).
+
+    Unlike `convener-issue-certificates`, this is never a scheduled job: an
+    operator runs it by hand, once, for one person, after revoking the
+    certificate it replaces (`certificate.revoke` -- there is no CLI
+    command for that step; the register is committed clear specifically
+    so a hand edit and a commit is a legitimate way to flip one entry's
+    `state`, and this command refuses to run without it). See
+    `certificate.reissue`'s own docstring for why this has to be a
+    separate, explicit command rather than a change to
+    `convener-issue-certificates`'s own idempotent lookup: that job must keep
+    refusing to resurrect a revoked certificate on a routine re-run, which
+    is only true as long as reissuing never happens inside its loop.
+
+    Reads `EVENT_ID`, `EVENT_PRIVATE_KEY`, `CONVENER_SIGNING_KEY` and
+    `CONVENER_MATCHING_SALT` exactly as `convener-issue-certificates` does -- the
+    same D-13 shapes apply, for the same reasons -- plus `ATTENDEE_EMAIL`,
+    the one address this run corrects. `ATTENDEE_EMAIL` is never printed,
+    the same discipline every other job in this module holds itself to;
+    every failure message below names the event, never the address.
+
+    Re-derives registrations and attendance from scratch, exactly as
+    `convener-issue-certificates` does, so a correction to either -- a
+    mis-typed name fixed in a re-submitted registration, a corrected
+    attendance export -- is picked up automatically; the only differences
+    from `convener-issue-certificates` are which one attendee this command
+    acts on, and that it calls `certificate.reissue` instead of
+    `certificate.issue`. Refuses (exit 1) when no registration is on file
+    for the address, when the address is not currently eligible under
+    today's attendance data, or when `certificate.reissue` itself refuses
+    -- no revoked row to correct, or a still-issued row standing in the
+    way -- surfacing that `ValueError` verbatim, since it already names
+    the reason.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    signing_key = os.environ.get(signing.SECRET_NAME, "")
+    if not signing_key:
+        print(
+            f"{signing.SECRET_NAME} not configured -- no certificate reissued this run"
+        )
+        return 0
+    try:
+        signing.derive_public_pem(signing_key)
+    except signing.SigningError as exc:
+        print(f"{signing.SECRET_NAME}: {exc}", file=sys.stderr)
+        return 1
+
+    salt = os.environ.get("CONVENER_MATCHING_SALT") or ""
+    if not salt:
+        print(
+            "CONVENER_MATCHING_SALT not configured -- no certificate reissued "
+            "this run (a certificate fingerprint cannot be computed "
+            "safely without it)"
+        )
+        return 0
+
+    email = os.environ.get("ATTENDEE_EMAIL", "").strip()
+    if not email:
+        print("no attendee e-mail address supplied", file=sys.stderr)
+        return 1
+    target_address = normalize_email(email)
+
+    root = repo_root()
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    registrations: list[Registration] = []
+    for entry in current.entries:
+        registration = to_registration(json.dumps(entry), private_pem)
+        if registration is not None:
+            registrations.append(registration)
+
+    if not any(normalize_email(r.email) == target_address for r in registrations):
+        print(
+            f"no registration on file for event {event_id} at the given address",
+            file=sys.stderr,
+        )
+        return 1
+
+    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
+    cfg, _errors = _load(root / "data" / "config.yml")
+    speaker_list = speakers if isinstance(speakers, list) else []
+    if not isinstance(cfg, dict):
+        print(
+            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            file=sys.stderr,
+        )
+        return 1
+
+    platform = platform_from_env(os.environ, speaker_list, cfg)
+    try:
+        rows = platform.get_attendance(event_id)
+    except (AttendanceImportError, FCCRequestError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    matched = match(rows, registrations, MatchEvent(event_id=event_id, salt=salt))
+    threshold = EligibilityThreshold.from_config(cfg)
+    eligible = eligible_attendees(matched, threshold)
+
+    attendee = next(
+        (
+            a
+            for a in eligible
+            if normalize_email(a.registration.email) == target_address
+        ),
+        None,
+    )
+    if attendee is None:
+        print(
+            f"the given address is not currently eligible for event "
+            f"{event_id} -- not enough attendance recorded to reissue a "
+            "certificate",
+            file=sys.stderr,
+        )
+        return 1
+
+    record: Mapping[str, Any] = {}
+    with contextlib.suppress(EventNotFoundError):
+        record = find_speaker(speaker_list, event_id)
+    title = str(record.get("title", "") or "")
+    event_date = str(record.get("date", "") or "")
+    if not title or not event_date:
+        if speaker_errors:
+            print(
+                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                "to sign a certificate naming no event and no date",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"no speaker record with both a title and a date matches "
+                f"event {event_id} -- refusing to sign a certificate naming "
+                "no event and no date",
+                file=sys.stderr,
+            )
+        return 1
+
+    register_path = certificates_path(root, event_id)
+    if register_path.exists():
+        try:
+            register_data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            print(
+                f"{register_path.relative_to(root).as_posix()}: invalid YAML - {exc}",
+                file=sys.stderr,
+            )
+            return 1
+    else:
+        register_data = None
+    try:
+        existing = register_from_data(register_data)
+    except ValueError as exc:
+        print(f"{register_path.relative_to(root).as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    event = CertificateEvent(event_id=event_id, title=title, date=event_date)
+    capped_attendee = replace(
+        attendee,
+        duration_seconds=min(
+            attendee.duration_seconds, threshold.seminar_duration_minutes * 60
+        ),
+    )
+    issued_on = paris_today(datetime.now(UTC))
+    try:
+        result = reissue(
+            capped_attendee, event, signing_key, salt, existing, issued_on=issued_on
+        )
+    except ValueError as exc:
+        print(f"cannot reissue for event {event_id}: {exc}", file=sys.stderr)
+        return 1
+
+    register_path.parent.mkdir(parents=True, exist_ok=True)
+    register_path.write_text(
+        CERTIFICATES_HEADER + _dump(register_to_data((*existing, result.entry))),
+        encoding="utf-8",
+        newline="",
+    )
+    print(f"certificate reissued for event {event_id}")
     return 0
 
 

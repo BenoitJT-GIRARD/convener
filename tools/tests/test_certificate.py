@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import dataclasses
+import hmac
 import json
+import math
 from datetime import date
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -11,6 +14,7 @@ import pytest
 
 from convener_ops.attendance import MatchedAttendee
 from convener_ops.certificate import (
+    EVENTS_DIR,
     FILE_VERSION,
     ORGANISER,
     STATE_ISSUED,
@@ -18,16 +22,26 @@ from convener_ops.certificate import (
     VERIFICATION_BASE,
     CertificateEntry,
     CertificateEvent,
+    certificates_path,
     duration_hours,
     fingerprint,
     issue,
     public_register,
     register_from_data,
     register_to_data,
+    reissue,
     revoke,
     verification_url,
 )
-from convener_ops.registration import Registration, matching_code
+from convener_ops.paths import repo_root
+from convener_ops.registration import (
+    _CODE_ALPHABET,
+    _CODE_GROUP,
+    _CODE_SYMBOLS,
+    Registration,
+    matching_code,
+    normalize_email,
+)
 from convener_ops.signing import (
     MALFORMED,
     NO_MATCHING_KEY,
@@ -133,15 +147,57 @@ def test_fingerprint_differs_by_salt() -> None:
 
 
 def test_fingerprint_is_never_the_same_value_as_the_matching_code() -> None:
-    """The load-bearing property ruling 4 exists for: `matching_code` is
-    *sent to the participant* in their confirmation e-mail, so if
-    `fingerprint` ever collapsed onto the same HMAC input space under the
-    same salt, the register's "private" column would secretly be a value
-    we already mailed out. The domain prefix (`_FINGERPRINT_DOMAIN`) is
-    what keeps the two apart; this test is what would catch it if a future
-    edit accidentally dropped that prefix."""
+    """Kept as a cheap sanity check, but this alone proves nothing (Critical
+    2, fix round 1): `fingerprint` returns a 64-character hex digest,
+    `matching_code` an 8-character hyphenated code from a 30-symbol
+    alphabet, and those two renderings can never be equal for *any* input
+    -- so this assertion is true whether or not `_FINGERPRINT_DOMAIN`
+    still separates the two HMAC input spaces. Removing that prefix left
+    the whole suite green, this test included. The two tests below pin
+    the property that actually matters."""
     event_id, email, salt = "mrg-042", "ada@example.org", "s3cr3t"
     assert fingerprint(event_id, email, salt) != matching_code(event_id, email, salt)
+
+
+def test_fingerprint_would_change_if_the_domain_prefix_were_dropped() -> None:
+    """Critical 2 (fix round 1): pins the *input space*, not the rendered
+    output. `matching_code` HMACs `f"{event_id}\\0{normalised address}"`
+    under `CONVENER_MATCHING_SALT`; `fingerprint` is supposed to prefix that
+    same input with `_FINGERPRINT_DOMAIN` before hashing, under the same
+    salt. If a future edit ever dropped that prefix, `fingerprint` would
+    hash exactly the bytes computed here, and this assertion would fail --
+    unlike the tautology above, which stays green either way."""
+    event_id, email, salt = "mrg-042", "ada@example.org", "s3cr3t"
+    naked = hmac.new(
+        salt.encode("utf-8"),
+        f"{event_id}\0{normalize_email(email)}".encode(),
+        sha256,
+    ).hexdigest()
+    assert fingerprint(event_id, email, salt) != naked
+
+
+def test_fingerprints_digest_bytes_cannot_be_reduced_to_the_mailed_matching_code() -> (
+    None
+):
+    """The concrete harm ruling 4 exists to prevent, reproduced directly
+    (Critical 2, fix round 1): applying `matching_code`'s own digest-to-
+    symbols transform (`bytes.fromhex`, modulo the alphabet, hyphenate) to
+    `fingerprint`'s own hex digest must never recover the matching code
+    task 7 actually mails -- if it ever did, every row of the committed
+    register would double as the participant's own, already-sent matching
+    code. Under the domain-prefix-dropped mutant, this recomputation
+    equals `matching_code(...)` exactly; with the prefix intact, it must
+    not."""
+    event_id, email, salt = "mrg-042", "ada@example.org", "s3cr3t"
+    digest_bytes = bytes.fromhex(fingerprint(event_id, email, salt))
+    symbols = "".join(
+        _CODE_ALPHABET[byte % len(_CODE_ALPHABET)]
+        for byte in digest_bytes[:_CODE_SYMBOLS]
+    )
+    recovered = "-".join(
+        symbols[i : i + _CODE_GROUP] for i in range(0, len(symbols), _CODE_GROUP)
+    )
+    assert recovered != matching_code(event_id, email, salt)
 
 
 # ------------------------------------------------------------------ #
@@ -177,6 +233,18 @@ def test_duration_hours_on_a_clean_multiple_is_unchanged() -> None:
 
 def test_duration_hours_of_zero_seconds_is_zero() -> None:
     assert duration_hours(0) == 0.0
+
+
+def test_duration_hours_of_a_negative_value_floors_at_zero_not_negative_zero() -> None:
+    """Minor 7 (fix round 1): unreachable through `attendance._duration`
+    (which already floors at zero) but this function is public and `int`
+    is signed -- `duration_hours(-5)` rendered `-0.0` before this floor,
+    a value with no honest reading on a certificate. `-0.0 == 0.0` is
+    `True` in Python, so an equality check alone would not catch a
+    regression here -- the sign has to be read separately."""
+    result = duration_hours(-5)
+    assert result == 0.0
+    assert math.copysign(1.0, result) == 1.0
 
 
 # ------------------------------------------------------------------ #
@@ -223,7 +291,13 @@ def test_issue_mints_a_fresh_random_identifier_each_time_no_register_matches() -
     their identifiers must differ, and neither may be derivable from the
     other -- this is the negative half of ruling 3's "identifier must not
     be deterministic": nothing here ties the identifier to the address by
-    formula."""
+    formula.
+
+    Also pins the identifier's own shape (Important 4, fix round 1):
+    `_IDENTIFIER_BYTES` -- 128 bits, `secrets.token_hex` -- was asserted
+    nowhere; reducing it to 2 bytes (16 bits, 65 536 possible values,
+    trivially enumerable against the public projection) left the whole
+    suite green. `len(...) == 32` and a hex-alphabet check catch that."""
     private_pem, _ = generate()
     ada = issue(
         _attendee("ada@example.org"),
@@ -242,6 +316,9 @@ def test_issue_mints_a_fresh_random_identifier_each_time_no_register_matches() -
         issued_on=date(2026, 8, 20),
     )
     assert ada.entry.identifier != grace.entry.identifier
+    for identifier in (ada.entry.identifier, grace.entry.identifier):
+        assert len(identifier) == 32
+        assert all(c in "0123456789abcdef" for c in identifier)
 
 
 def test_issue_never_derives_the_same_identifier_twice_from_a_fresh_register() -> None:
@@ -388,6 +465,106 @@ def test_revoke_leaves_every_other_entry_untouched() -> None:
     )
 
 
+def test_issuing_again_after_revocation_reproduces_it_without_resurrecting() -> None:
+    """R-18 (fix round 1): the guarantee that keeps `reissue` safe to add
+    at all. `issue`'s fingerprint lookup does not consult `state` -- a
+    routine re-run (a scheduled job, a retried delivery) must reuse
+    whatever entry it finds, revoked or not, and never mint a second row.
+    If a future edit "fixed" the entry-management story by having this
+    lookup skip revoked rows instead, this is the test that would catch
+    it: the register would silently grow a second, issued row for someone
+    an operator had deliberately revoked."""
+    private_pem, public_pem = generate()
+    issued = issue(
+        _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+    register = revoke((issued.entry,), issued.entry.identifier)
+
+    [revoked_entry] = register
+    replayed = issue(
+        _attendee(), _EVENT, private_pem, "salt", register, issued_on=date(2026, 8, 21)
+    )
+
+    assert replayed.already_registered is True
+    assert replayed.entry == revoked_entry
+    assert replayed.entry.identifier == issued.entry.identifier
+    assert replayed.entry.state == STATE_REVOKED
+    assert replayed.token == issued.token
+    assert verify(replayed.token, [public_pem]).valid
+
+
+# ------------------------------------------------------------------ #
+# reissue() -- an operator's deliberate correction: a new identifier,
+# gated on the row it replaces already being revoked (R-18, Important 3).
+# ------------------------------------------------------------------ #
+
+
+def test_reissue_refuses_when_no_certificate_exists_for_the_fingerprint() -> None:
+    private_pem, _ = generate()
+    with pytest.raises(ValueError, match="no existing certificate"):
+        reissue(
+            _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+        )
+
+
+def test_reissue_refuses_when_the_standing_certificate_is_still_issued() -> None:
+    """The guard R-18 exists for: reissuing over a still-`STATE_ISSUED` row
+    would leave two valid, contradictory certificates standing at once --
+    exactly Important 3's original defect. An operator must revoke first,
+    a separate and deliberate act."""
+    private_pem, _ = generate()
+    issued = issue(
+        _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+    with pytest.raises(ValueError, match="revoke"):
+        reissue(
+            _attendee(),
+            _EVENT,
+            private_pem,
+            "salt",
+            (issued.entry,),
+            issued_on=date(2026, 8, 21),
+        )
+
+
+def test_reissue_mints_a_new_identifier_while_the_old_row_stays_revoked() -> None:
+    """The two-halves guarantee R-18 asks for: a genuinely new identifier
+    for the corrected certificate, and the revoked row this replaces is
+    returned completely untouched -- `reissue` never mutates `existing`,
+    it only reads it. The caller (`cli.py::reissue_certificate`) is what
+    appends the new entry alongside the old one."""
+    private_pem, public_pem = generate()
+    issued = issue(
+        _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+    revoked_register = revoke((issued.entry,), issued.entry.identifier)
+    [old_entry] = revoked_register
+
+    corrected = reissue(
+        _attendee(duration_seconds=1800),
+        _EVENT,
+        private_pem,
+        "salt",
+        revoked_register,
+        issued_on=date(2026, 8, 21),
+    )
+
+    assert corrected.already_registered is False
+    assert corrected.entry.identifier != old_entry.identifier
+    assert corrected.entry.state == STATE_ISSUED
+    assert corrected.entry.fingerprint == old_entry.fingerprint
+    # The old row, still sitting in the register handed to reissue(), is
+    # the identical object -- untouched, still revoked.
+    assert revoked_register[0] == old_entry
+    assert revoked_register[0].state == STATE_REVOKED
+
+    verified = verify(corrected.token, [public_pem])
+    assert verified.valid
+    assert verified.payload is not None
+    assert verified.payload["identifier"] == corrected.entry.identifier
+    assert verified.payload["identifier"] != old_entry.identifier
+
+
 # ------------------------------------------------------------------ #
 # The register file: parse / serialise, round trip, and refusal of
 # anything malformed.
@@ -483,6 +660,81 @@ def test_register_from_data_rejects_a_field_of_the_wrong_type() -> None:
         register_from_data({"v": FILE_VERSION, "certificates": [entry]})
 
 
+def test_register_from_data_rejects_a_duplicate_identifier() -> None:
+    """Minor 6 (fix round 1): a hand-edited or badly-merged file could
+    otherwise pass with two rows sharing one identifier -- `revoke` would
+    then flip both, and `issue`'s own lookup would silently prefer
+    whichever it meets first."""
+    entries = [
+        {
+            "identifier": "aaa",
+            "event_id": "mrg-042",
+            "issued_on": "2026-08-20",
+            "fingerprint": "fa",
+            "state": STATE_ISSUED,
+        },
+        {
+            "identifier": "aaa",
+            "event_id": "mrg-042",
+            "issued_on": "2026-08-21",
+            "fingerprint": "fb",
+            "state": STATE_ISSUED,
+        },
+    ]
+    with pytest.raises(ValueError, match="more than once"):
+        register_from_data({"v": FILE_VERSION, "certificates": entries})
+
+
+def test_register_from_data_rejects_two_issued_rows_for_one_fingerprint() -> None:
+    """Minor 6 (fix round 1): two simultaneously-issued rows for the same
+    fingerprint is the storage-layer shape of Important 3's original
+    defect -- two documents claiming to be *the* current certificate for
+    one person, neither the register can tell apart."""
+    entries = [
+        {
+            "identifier": "aaa",
+            "event_id": "mrg-042",
+            "issued_on": "2026-08-20",
+            "fingerprint": "fa",
+            "state": STATE_ISSUED,
+        },
+        {
+            "identifier": "bbb",
+            "event_id": "mrg-042",
+            "issued_on": "2026-08-21",
+            "fingerprint": "fa",
+            "state": STATE_ISSUED,
+        },
+    ]
+    with pytest.raises(ValueError, match="currently-issued"):
+        register_from_data({"v": FILE_VERSION, "certificates": entries})
+
+
+def test_register_from_data_accepts_a_revoked_row_and_its_reissue() -> None:
+    """The legitimate shape `reissue` leaves behind (R-18): the old,
+    revoked row and its correction, both real, sharing one fingerprint --
+    Minor 6's own duplicate-fingerprint guard must not reject this, or it
+    would reject every register a correction was ever applied to."""
+    entries = [
+        {
+            "identifier": "aaa",
+            "event_id": "mrg-042",
+            "issued_on": "2026-08-20",
+            "fingerprint": "fa",
+            "state": STATE_REVOKED,
+        },
+        {
+            "identifier": "bbb",
+            "event_id": "mrg-042",
+            "issued_on": "2026-08-21",
+            "fingerprint": "fa",
+            "state": STATE_ISSUED,
+        },
+    ]
+    parsed = register_from_data({"v": FILE_VERSION, "certificates": entries})
+    assert len(parsed) == 2
+
+
 # ------------------------------------------------------------------ #
 # public_register: allowlisted, sorted, stable.
 # ------------------------------------------------------------------ #
@@ -538,6 +790,24 @@ def test_verification_url_percent_encodes_a_token_with_reserved_characters() -> 
     assert query["token"] == [token]
 
 
+def test_verification_url_carries_the_token_after_the_fragment_not_before_it() -> None:
+    """The reviewer's own finding, pinned (fix round 1): `VERIFICATION_BASE`
+    ends in `#/verify/`, so the `?token=` this function appends -- which
+    carries the holder's name -- sits inside the URL *fragment*. A
+    fragment is never sent in an HTTP request and is stripped from
+    `Referer` before a browser navigates away, so the name never reaches
+    GitHub's servers or a third party's request log. That property holds
+    only as long as the token appears *after* the first `#`; switching
+    this application from `HashRouter` to `BrowserRouter` one day -- a
+    change nothing else in this repository would object to -- would
+    silently move the token before the `#` and start leaking names in
+    every verification. This test is what would catch that."""
+    url = verification_url("abc123", '{"v":1,"payload":"eyJuYW1lIjoiQWRhIn0="}')
+    fragment_start = url.index("#")
+    token_start = url.index("token=")
+    assert token_start > fragment_start
+
+
 # ------------------------------------------------------------------ #
 # ORGANISER: a module constant, not configuration (ruling 8).
 # ------------------------------------------------------------------ #
@@ -545,6 +815,62 @@ def test_verification_url_percent_encodes_a_token_with_reserved_characters() -> 
 
 def test_organiser_is_a_non_empty_constant() -> None:
     assert ORGANISER == "The Example Collective"
+
+
+# ------------------------------------------------------------------ #
+# certificates_path: the one function naming where a register lives
+# (Minor 11, fix round 1) -- a symbol a task-15 retention sweep has to
+# walk past, not a paragraph it can skip.
+# ------------------------------------------------------------------ #
+
+
+def test_certificates_path_is_the_events_directory_plus_certificates_yml() -> None:
+    root = Path("/repo")
+    assert certificates_path(root, "mrg-042") == (
+        root / EVENTS_DIR / "mrg-042" / "certificates.yml"
+    )
+
+
+# ------------------------------------------------------------------ #
+# docs/toolkit/certificate.md: the page claims a test pins its field list
+# against signing.PAYLOAD_FIELDS and ORGANISER (Important 9, fix round 1).
+# This is that test.
+# ------------------------------------------------------------------ #
+
+#: Every signed payload field's own bracketed placeholder on the page --
+#: kept as a dict, not a set, so a missing or renamed placeholder names
+#: exactly which field is unaccounted for, rather than only "something is
+#: wrong".
+_TOOLKIT_PLACEHOLDERS = {
+    "identifier": "[the certificate's identifier]",
+    "event": "[the event's title]",
+    "name": "[the participant's full name]",
+    "date": "[the event's date]",
+    "duration_hours": "[the duration, in hours]",
+}
+
+
+def test_the_toolkit_page_field_list_matches_the_signed_payload() -> None:
+    text = (repo_root() / "docs" / "toolkit" / "certificate.md").read_text(
+        encoding="utf-8"
+    )
+    assert set(_TOOLKIT_PLACEHOLDERS) == PAYLOAD_FIELDS
+    for field, placeholder in _TOOLKIT_PLACEHOLDERS.items():
+        assert placeholder in text, (
+            f"docs/toolkit/certificate.md has no placeholder for the signed "
+            f"field {field!r} -- expected {placeholder!r}"
+        )
+
+
+def test_the_toolkit_page_prints_the_organiser_constant() -> None:
+    """The organiser's name is document furniture, never a signed field
+    (`signing.sign` would refuse a payload that tried to include it) --
+    but it must still appear on the page, printed from `ORGANISER`, not
+    hand-typed a second time somewhere this test cannot see."""
+    text = (repo_root() / "docs" / "toolkit" / "certificate.md").read_text(
+        encoding="utf-8"
+    )
+    assert ORGANISER in text
 
 
 # ------------------------------------------------------------------ #
@@ -571,8 +897,13 @@ def test_the_shared_fixtures_token_genuinely_verifies() -> None:
     example = _FIXTURE["signed_example"]
     result = verify(example["token"], [example["public_pem"]])
     assert result.valid
-    assert result.payload == example["payload"]
-    assert set(example["payload"]) == PAYLOAD_FIELDS
+    # `payload_decoded` (fix round 1, Minor 3): the token's own `payload`
+    # field is base64, `signed_example`'s is the already-decoded object --
+    # renamed from the shared `payload` name the two used to collide on,
+    # which threw `InvalidCharacterError` the moment a TypeScript reader
+    # tried `atob(example.payload)` on the decoded form by mistake.
+    assert result.payload == example["payload_decoded"]
+    assert set(example["payload_decoded"]) == PAYLOAD_FIELDS
 
 
 def test_the_shared_fixtures_url_is_reproducible_from_this_modules_own_function() -> (
@@ -589,3 +920,55 @@ def test_the_shared_fixtures_projection_example_has_no_fingerprint_either() -> N
     for row in _FIXTURE["projection_example"]["certificates"]:
         assert frozenset(row) == frozenset({"identifier", "state"})
         assert row["state"] in (STATE_ISSUED, STATE_REVOKED)
+
+
+def test_the_shared_fixtures_iterable_sections_carry_no_comment_key() -> None:
+    """Minor 4 (fix round 1): a TypeScript `Object.keys(fixture.states)` (or
+    `.reasons`) sweep expecting exactly the declared spellings must never
+    see a stray `_comment` key mixed in among them -- every explanatory
+    comment lives at the top level instead, as a sibling `_x_comment` key,
+    the same convention `governance-cases.json` already uses."""
+    for section in (
+        "reasons",
+        "states",
+        "signed_example",
+        "projection_example",
+        "integer_duration_example",
+    ):
+        assert "_comment" not in _FIXTURE[section]
+
+
+def test_the_shared_fixtures_rejects_are_each_correctly_labelled() -> None:
+    """Important 7 (fix round 1): the fixture used to hold only a positive
+    example, plus four bare strings with no input that actually produces
+    them -- a verifier that always returned `valid: True`, or one that
+    never called `verify` at all, satisfied every assertion this file
+    could support. `verification_rejects` closes that gap: each token here
+    must fail against `signed_example`'s own public key, with exactly the
+    `reason` the case names."""
+    public_pem = _FIXTURE["signed_example"]["public_pem"]
+    cases = _FIXTURE["verification_rejects"]
+    assert len(cases) == 3
+    assert {case["reason"] for case in cases} == {MALFORMED, NO_MATCHING_KEY}
+    for case in cases:
+        result = verify(case["token"], [public_pem])
+        assert result.valid is case["valid"] is False
+        assert result.reason == case["reason"]
+
+
+def test_the_shared_fixtures_integer_duration_example_genuinely_verifies() -> None:
+    """Minor 10 (fix round 1): `signed_example` only ever carries
+    `duration_hours: 1.5` -- never the whole-number rendering hazard
+    (`2.0` vs a browser's `JSON.stringify` writing `2`) `signing.py`'s own
+    docstring names. This is a second, real, independently verifiable
+    token that does carry one, for task 13's own tests to check a display
+    path against."""
+    example = _FIXTURE["integer_duration_example"]
+    result = verify(example["token"], [example["public_pem"]])
+    assert result.valid
+    assert result.payload == example["payload_decoded"]
+    assert example["payload_decoded"]["duration_hours"] == 2.0
+    assert (
+        verification_url(example["identifier"], example["token"])
+        == example["verification_url"]
+    )

@@ -5,7 +5,8 @@ import hashlib
 import hmac
 import json
 import re
-from datetime import UTC, datetime, tzinfo
+from collections.abc import Sequence
+from datetime import UTC, date, datetime, tzinfo
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -14,6 +15,9 @@ import yaml
 from conftest import board_member, config, speaker
 
 from convener_ops import eventkeys
+from convener_ops.attendance import MatchedAttendee
+from convener_ops.certificate import CertificateEntry, CertificateEvent, IssueResult
+from convener_ops.certificate import issue as certificate_issue
 from convener_ops.cli import (
     UNMATCHED_ATTENDANCE,
     UNSENT_CONFIRMATION,
@@ -25,6 +29,7 @@ from convener_ops.cli import (
     issue_certificates,
     match_attendance,
     public_data,
+    reissue_certificate,
     release_recording,
     resend_confirmation,
     resolve_registration_secret,
@@ -1754,6 +1759,26 @@ def test_match_attendance_skips_an_entry_that_fails_to_decrypt(
 # ------------------------------------------------------------------ #
 
 
+#: The name and address every certificate test in this section attends
+#: with -- shared so `_assert_no_personal_data_leaked` below sweeps for
+#: the same three strings everywhere it is called (Important 10, fix
+#: round 1).
+_ADA_PERSONAL_DATA = ("Ada", "Lovelace", "ada@example.org")
+
+
+def _assert_no_personal_data_leaked(text: str) -> None:
+    """Important 10 (fix round 1): the original sweep
+    (`test_issue_certificates_issues_one_certificate_for_an_eligible_attendee`)
+    only ever ran on the freshly-issued path. A name and an address
+    printed on the `already_registered` branch alone -- the branch every
+    retry and every scheduled re-run actually takes -- survived the full
+    suite. Factored into one helper so every call site sweeps the same
+    three strings the same way, and a new branch is one call away from
+    being covered rather than one omission away from leaking."""
+    for leaked in _ADA_PERSONAL_DATA:
+        assert leaked not in text
+
+
 def _certificates_register_path(tmp_path: Path, event_id: str = "mrg-042") -> Path:
     return tmp_path / "data" / "events" / event_id / "certificates.yml"
 
@@ -1791,6 +1816,27 @@ def test_issue_certificates_without_a_signing_key_issues_nothing_and_returns_0(
 
     assert issue_certificates() == 0
     assert "CONVENER_SIGNING_KEY not configured" in capsys.readouterr().out
+    assert not _certificates_register_path(tmp_path).exists()
+
+
+def test_issue_certificates_with_an_unloadable_signing_key_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 1 (fix round 1): unlike the D-13 case above, a *present*
+    but unusable `CONVENER_SIGNING_KEY` -- a secret pasted with a mangled PEM
+    header, the ordinary way this fails in Actions -- used to reach
+    `signing.sign` from inside the issuance loop and crash with an
+    unhandled `signing.SigningError` traceback. Validated once, before
+    anything is decrypted, so this is now a one-line refusal instead."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", "not-a-pem-at-all")
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+
+    assert issue_certificates() == 1
+    assert "CONVENER_SIGNING_KEY" in capsys.readouterr().err
     assert not _certificates_register_path(tmp_path).exists()
 
 
@@ -1955,8 +2001,7 @@ def test_issue_certificates_issues_one_certificate_for_an_eligible_attendee(
     assert issue_certificates() == 0
     captured = capsys.readouterr()
     assert "1 issued, 0 already on record (1 eligible)" in captured.out
-    for leaked in ("Ada", "Lovelace", "ada@example.org"):
-        assert leaked not in captured.out + captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
 
     register_text = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
     assert register_text.endswith("\n")
@@ -1965,8 +2010,65 @@ def test_issue_certificates_issues_one_certificate_for_an_eligible_attendee(
     assert entry["event_id"] == "mrg-042"
     assert entry["state"] == "issued"
     assert entry["issued_on"] == paris_today(datetime.now(UTC)).isoformat()
-    for leaked in ("Ada", "Lovelace", "ada@example.org"):
-        assert leaked not in register_text
+    _assert_no_personal_data_leaked(register_text)
+
+
+def test_issue_certificates_clamps_a_double_counted_duration_at_the_seminar_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R-17 (fix round 1, Critical 1): two attendance rows for one person --
+    a reconnection and a genuinely simultaneous second device look
+    identical to `attendance.match`, and both sum -- must never sign more
+    credit than the seminar's own scheduled length: 90 minutes, `config()`'s
+    default, against 180 minutes of summed attendance here, the exact
+    reproduction the review ran.
+
+    The register never carries a duration and the signed token is
+    deliberately never printed or returned by `issue_certificates` (see
+    `certificate.py`'s own module docstring, "idempotent without being
+    deterministic"), so the only way to observe what was actually signed
+    is to intercept the call to `certificate.issue` itself -- `_spy`
+    below delegates to the real function so `issue_certificates`'s own
+    behaviour (register writes, counts) is otherwise unaffected."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    captured_durations: list[int] = []
+
+    def _spy(
+        attendee: MatchedAttendee,
+        event: CertificateEvent,
+        private_pem: str,
+        salt: str,
+        existing: Sequence[CertificateEntry],
+        *,
+        issued_on: date,
+    ) -> IssueResult:
+        captured_durations.append(attendee.duration_seconds)
+        return certificate_issue(
+            attendee, event, private_pem, salt, existing, issued_on=issued_on
+        )
+
+    monkeypatch.setattr("convener_ops.cli.issue", _spy)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert issue_certificates() == 0
+    # 10800s summed (double the 90-minute session) capped to 5400s -- the
+    # seminar's own scheduled length, not a fraction chosen after the fact.
+    assert captured_durations == [90 * 60]
 
 
 def test_issue_certificates_skips_an_entry_that_fails_to_decrypt(
@@ -2024,8 +2126,10 @@ def test_issue_certificates_skips_an_attendee_below_the_eligibility_threshold(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert issue_certificates() == 0
-    assert "0 issued, 0 already on record (0 eligible)" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "0 issued, 0 already on record (0 eligible)" in captured.out
     assert not _certificates_register_path(tmp_path).exists()
+    _assert_no_personal_data_leaked(captured.out + captured.err)
 
 
 def test_issue_certificates_run_twice_does_not_grow_the_register(
@@ -2034,7 +2138,13 @@ def test_issue_certificates_run_twice_does_not_grow_the_register(
     """Spec S:8's "recalcule sans réinscrire", exercised through the real
     CLI wiring: running the job a second time over the exact same event
     reproduces the same one register entry, reported as already on
-    record, never a second row."""
+    record, never a second row.
+
+    Also the Important 10 (fix round 1) regression: this is the branch
+    every retry, every re-run and every scheduled re-execution actually
+    takes -- the normal state, not the exceptional one -- and a name and
+    an address printed only here survived the full suite until this sweep
+    was added on the second run's own output."""
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     event_private_pem, signing_private_pem = _prepare_event(
         tmp_path,
@@ -2053,9 +2163,12 @@ def test_issue_certificates_run_twice_does_not_grow_the_register(
 
     assert issue_certificates() == 0
     first_register = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
+    capsys.readouterr()  # discard the first run's own output
 
     assert issue_certificates() == 0
-    assert "0 issued, 1 already on record (1 eligible)" in capsys.readouterr().out
+    second_captured = capsys.readouterr()
+    assert "0 issued, 1 already on record (1 eligible)" in second_captured.out
+    _assert_no_personal_data_leaked(second_captured.out + second_captured.err)
     second_register = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
     assert second_register == first_register
 
@@ -2117,12 +2230,17 @@ def test_issue_certificates_rejects_a_register_of_the_wrong_version(
     assert "certificates.yml" in capsys.readouterr().err
 
 
-def test_issue_certificates_reports_missing_speaker_record_but_still_issues(
+def test_issue_certificates_refuses_when_no_speaker_record_supplies_a_title_and_date(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Mirrors `_send_confirmation`'s own choice: a missing speaker record
-    never stops the thing that matters. The certificate is still issued,
-    with an empty title and date."""
+    """Important 2 (fix round 1): the implementer's original choice here
+    mirrored `_send_confirmation`'s "never let a missing room lookup stop
+    the thing that matters" -- but that reasoning does not carry.
+    `_send_confirmation` degrades a room link in an e-mail that can be
+    resent; this would sign `event: ""` and `date: ""` into a permanent,
+    third-party-facing document, with the empty register row reused (and
+    the empty document kept valid) on every future re-run. Refuse
+    instead, before anything is signed or written."""
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     private_pem, _ = _publish_event_key(tmp_path)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
@@ -2143,10 +2261,49 @@ def test_issue_certificates_reports_missing_speaker_record_but_still_issues(
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
-    assert issue_certificates() == 0
-    out = capsys.readouterr().out
-    assert "no speaker record matches event mrg-042" in out
-    assert "1 issued, 0 already on record (1 eligible)" in out
+    assert issue_certificates() == 1
+    captured = capsys.readouterr()
+    assert "no speaker record" in captured.err
+    assert "mrg-042" in captured.err
+    assert not _certificates_register_path(tmp_path).exists()
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_issue_certificates_refuses_and_names_the_parse_failure_of_speakers_yml(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 2 (fix round 1), the review's own reproduction: a
+    `data/speakers.yml` that fails to *parse* used to be indistinguishable
+    from an event genuinely absent from a well-formed file -- both landed
+    on `EventNotFoundError` and the same "no speaker record matches"
+    message, sending an operator looking for a missing record that was
+    never actually missing. `_load`'s own errors are surfaced instead."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    private_pem, _ = _publish_event_key(tmp_path)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "speakers.yml").write_text("- title: [unterminated", encoding="utf-8")
+    (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
+    signing_private_pem, _ = generate()
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert issue_certificates() == 1
+    captured = capsys.readouterr()
+    assert "speakers.yml" in captured.err
+    assert "no speaker record" not in captured.err
+    assert not _certificates_register_path(tmp_path).exists()
+    _assert_no_personal_data_leaked(captured.out + captured.err)
 
 
 def test_certificates_public_data_aggregates_every_events_register(
@@ -2249,6 +2406,505 @@ def test_certificates_public_data_rejects_a_register_of_the_wrong_version(
 
     assert certificates_public_data() == 1
     assert "certificates.yml" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ #
+# reissue_certificate(): R-18 (fix round 1, Important 3) -- an operator's
+# deliberate correction, run by hand for one person, gated on the row it
+# replaces already being revoked. Never printed: ATTENDEE_EMAIL.
+# ------------------------------------------------------------------ #
+
+
+def _revoke_on_disk(tmp_path: Path, event_id: str = "mrg-042") -> None:
+    """Flips the sole register entry to `revoked`, the way an operator's
+    hand edit and commit does it -- there is no CLI command for `revoke`
+    itself (`certificate.py`'s own module docstring, "revocation touches
+    the register, never the signature": it takes no signing key and
+    cannot be reached the way issuing or reissuing are)."""
+    path = _certificates_register_path(tmp_path, event_id)
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    for entry in data["certificates"]:
+        entry["state"] = "revoked"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+
+def test_reissue_certificate_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+
+    assert reissue_certificate() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_reissue_certificate_without_a_configured_event_key_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert reissue_certificate() == 1
+    assert "no private key configured" in capsys.readouterr().err
+
+
+def test_reissue_certificate_with_an_unloadable_signing_key_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 1's guard applies equally here: a present but unusable
+    `CONVENER_SIGNING_KEY` must refuse cleanly, never crash with a traceback."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", "not-a-pem-at-all")
+
+    assert reissue_certificate() == 1
+    assert "CONVENER_SIGNING_KEY" in capsys.readouterr().err
+
+
+def test_reissue_certificate_without_a_signing_key_reissues_nothing_and_returns_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_SIGNING_KEY", raising=False)
+
+    assert reissue_certificate() == 0
+    assert "CONVENER_SIGNING_KEY not configured" in capsys.readouterr().out
+
+
+def test_reissue_certificate_without_a_matching_salt_reissues_nothing_and_returns_0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert reissue_certificate() == 0
+    assert "CONVENER_MATCHING_SALT not configured" in capsys.readouterr().out
+
+
+def test_reissue_certificate_without_an_attendee_email_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("ATTENDEE_EMAIL", raising=False)
+
+    assert reissue_certificate() == 1
+    assert "no attendee e-mail" in capsys.readouterr().err
+
+
+def test_reissue_certificate_with_nothing_recorded_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+
+    assert reissue_certificate() == 1
+    assert "no registrations recorded" in capsys.readouterr().err
+
+
+def test_reissue_certificate_rejects_a_malformed_committed_registrations_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+
+    assert reissue_certificate() == 1
+    assert "registrations.enc" in capsys.readouterr().err
+
+
+def test_reissue_certificate_with_a_missing_config_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    private_pem, _ = _publish_event_key(tmp_path)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+
+    assert reissue_certificate() == 1
+    assert "config.yml" in capsys.readouterr().err
+
+
+def test_reissue_certificate_catches_a_platform_request_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path, registrations=(ada,)
+    )
+
+    class _FailingPlatform:
+        def get_attendance(self, event_id: str) -> list[AttendanceRow]:
+            raise FCCRequestError(f"GET /conferences/{event_id}/calls failed: timeout")
+
+    monkeypatch.setattr(
+        "convener_ops.cli.platform_from_env",
+        lambda *args, **kwargs: _FailingPlatform(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+
+    assert reissue_certificate() == 1
+    assert "failed" in capsys.readouterr().err.lower()
+
+
+def test_reissue_certificate_refuses_when_no_registration_is_on_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "nobody@example.org")
+
+    assert reissue_certificate() == 1
+    captured = capsys.readouterr()
+    assert "no registration on file" in captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_reissue_certificate_refuses_when_the_address_is_not_currently_eligible(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        # 30 of 90 scheduled minutes -- well under the two-thirds default.
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T18:30:00Z,1800",
+        ),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert reissue_certificate() == 1
+    captured = capsys.readouterr()
+    assert "not currently eligible" in captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_reissue_certificate_refuses_when_no_existing_certificate_is_on_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`certificate.reissue`'s own guard, surfaced verbatim: nothing to
+    correct -- `convener-issue-certificates` is what mints a first certificate."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert reissue_certificate() == 1
+    captured = capsys.readouterr()
+    assert "no existing certificate" in captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_reissue_certificate_rejects_a_malformed_committed_register(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    register_path = _certificates_register_path(tmp_path)
+    register_path.parent.mkdir(parents=True, exist_ok=True)
+    register_path.write_text("not yaml at all: [unclosed", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert reissue_certificate() == 1
+    assert "certificates.yml" in capsys.readouterr().err
+
+
+def test_reissue_certificate_refuses_when_no_speaker_record_supplies_a_title_and_date(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 2 applies here too: reissuing must never sign a corrected
+    certificate that names no event and no date, any more than a first
+    issuance may."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    private_pem, _ = _publish_event_key(tmp_path)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "speakers.yml").write_text(yaml.safe_dump([]), encoding="utf-8")
+    (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert reissue_certificate() == 1
+    captured = capsys.readouterr()
+    assert "no speaker record" in captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_reissue_certificate_refuses_and_names_the_parse_failure_of_speakers_yml(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    private_pem, _ = _publish_event_key(tmp_path)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "speakers.yml").write_text("- title: [unterminated", encoding="utf-8")
+    (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", generate()[0])
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert reissue_certificate() == 1
+    captured = capsys.readouterr()
+    assert "speakers.yml" in captured.err
+    assert "no speaker record" not in captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_reissue_certificate_rejects_a_register_of_the_wrong_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Valid YAML, but not this format -- exercises `register_from_data`'s
+    own refusal, distinct from the malformed-YAML test above."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    register_path = _certificates_register_path(tmp_path)
+    register_path.parent.mkdir(parents=True, exist_ok=True)
+    register_path.write_text(
+        yaml.safe_dump({"v": 999, "certificates": []}), encoding="utf-8"
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert reissue_certificate() == 1
+    assert "certificates.yml" in capsys.readouterr().err
+
+
+def test_reissue_certificate_refuses_when_the_standing_certificate_is_still_issued(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The guard R-18 exists for: reissuing over a still-issued row would
+    leave two valid, contradictory certificates standing at once. An
+    operator must revoke first -- this run, with nothing revoked yet,
+    refuses instead."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    assert issue_certificates() == 0
+    capsys.readouterr()
+
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    assert reissue_certificate() == 1
+    captured = capsys.readouterr()
+    assert "revoke" in captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+
+def test_reissue_certificate_mints_a_new_identifier_while_the_old_row_stays_revoked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The end-to-end correction R-18 exists for: issue, revoke (an
+    operator's hand edit -- see `_revoke_on_disk`), then reissue. The
+    register must end up with exactly two rows for this one person: the
+    original, still `revoked`, under its original identifier, and a
+    fresh, `issued` row under a genuinely new one."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    assert issue_certificates() == 0
+    capsys.readouterr()
+    original = yaml.safe_load(
+        _certificates_register_path(tmp_path).read_text(encoding="utf-8")
+    )["certificates"][0]
+    _revoke_on_disk(tmp_path)
+
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    assert reissue_certificate() == 0
+    captured = capsys.readouterr()
+    assert "reissued" in captured.out
+    _assert_no_personal_data_leaked(captured.out + captured.err)
+
+    register_text = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
+    _assert_no_personal_data_leaked(register_text)
+    certificates = yaml.safe_load(register_text)["certificates"]
+    assert len(certificates) == 2
+    by_identifier = {row["identifier"]: row for row in certificates}
+    assert by_identifier[original["identifier"]]["state"] == "revoked"
+    [new_identifier] = [
+        identifier
+        for identifier in by_identifier
+        if identifier != original["identifier"]
+    ]
+    assert by_identifier[new_identifier]["state"] == "issued"
+    assert by_identifier[new_identifier]["fingerprint"] == original["fingerprint"]
+
+
+def test_reissue_certificate_skips_a_stray_entry_that_fails_to_decrypt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A stray entry encrypted under an unrelated key pair -- well-formed
+    envelope shape, undecryptable with this event's own key -- must not
+    stop a correction for the one registration that does decrypt, the
+    same handling `issue_certificates` already gives a stray entry."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    assert issue_certificates() == 0
+    capsys.readouterr()
+    _revoke_on_disk(tmp_path)
+
+    file = load_registration_file(
+        (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").read_text(
+            encoding="utf-8"
+        )
+    )
+    _other_private, other_public = eventkeys.generate()
+    stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
+    file = RegistrationFile(entries=(*file.entries, stray))
+    (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").write_text(
+        dump_registration_file(file), encoding="utf-8"
+    )
+
+    monkeypatch.setenv("ATTENDEE_EMAIL", "ada@example.org")
+    assert reissue_certificate() == 0
+    assert "reissued" in capsys.readouterr().out
 
 
 # ------------------------------------------------------------------ #

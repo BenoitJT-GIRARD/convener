@@ -1,35 +1,76 @@
 {
   "_comment": "The D-14 boundary between tools/convener_ops/signing.py + certificate.py (Python) and task 13's verification page (TypeScript, app/src/verify/). Everything under 'signed_example' is real: a throwaway RSA-3072 key pair generated once for this fixture, whose PRIVATE half was never written to disk and is not recoverable from anything here -- only the public half and one token it produced are committed, both safe to publish (a public key's whole job is to be public; a token's payload sits in the clear by construction -- see signing.py's own docstring, 'signing is not encryption'). 'Elodie Fontaine' and the talk title are invented, for a workshop that never happened. Read by tools/tests/test_certificate.py now; task 13's own tests should read this same file rather than hand-copy any value out of it -- a value copied by hand can drift the moment either side edits its own copy and forgets the other.",
+  "_reasons_comment": "signing.verify's two failure spellings (signing.MALFORMED, signing.NO_MATCHING_KEY) -- pinned Python-side by test_signing.py::test_the_two_reasons_keep_the_spelling_that_crosses_the_language_border, which names this fixture as the thing that would eventually bind both sides. A verification page must show a different, non-accusatory message for no_matching_key than for malformed -- see signing.py's own docstring for why conflating them wrongly accuses a genuine, not-yet-recognised certificate.",
   "reasons": {
-    "_comment": "signing.verify's two failure spellings (signing.MALFORMED, signing.NO_MATCHING_KEY) -- pinned Python-side by test_signing.py::test_the_two_reasons_keep_the_spelling_that_crosses_the_language_border, which names this fixture as the thing that would eventually bind both sides. A verification page must show a different, non-accusatory message for no_matching_key than for malformed -- see signing.py's own docstring for why conflating them wrongly accuses a genuine, not-yet-recognised certificate.",
     "malformed": "malformed",
     "no_matching_key": "no_matching_key"
   },
+  "_states_comment": "certificate.py's own register states (certificate.STATE_ISSUED, certificate.STATE_REVOKED). A revoked certificate still verifies cryptographically -- these two strings are what the *register* separately says about it, fetched from public-data/certificates-public.json, never from the token.",
   "states": {
-    "_comment": "certificate.py's own register states (certificate.STATE_ISSUED, certificate.STATE_REVOKED). A revoked certificate still verifies cryptographically -- these two strings are what the *register* separately says about it, fetched from public-data/certificates-public.json, never from the token.",
     "issued": "issued",
     "revoked": "revoked"
   },
   "verification_base": "https://example-instance.github.io/example-showcase/app/#/verify/",
+  "_signed_example_comment": "A real token, verifiable right now with the public key below: json.loads(base64.b64decode(json.loads(token)['payload'])) reproduces 'payload' exactly, and the RSA-PKCS1v15-SHA256 signature over those bytes verifies against 'public_pem'. 'verification_url' is exactly certificate.verification_url(identifier, token) -- carries the token itself as a query parameter, so a page that has only ever seen this one URL can verify the signature fully offline before it ever requests certificates-public.json (and it requests that file for exactly one thing: this identifier's current state).",
   "signed_example": {
-    "_comment": "A real token, verifiable right now with the public key below: json.loads(base64.b64decode(json.loads(token)['payload'])) reproduces 'payload' exactly, and the RSA-PKCS1v15-SHA256 signature over those bytes verifies against 'public_pem'. 'verification_url' is exactly certificate.verification_url(identifier, token) -- carries the token itself as a query parameter, so a page that has only ever seen this one URL can verify the signature fully offline before it ever requests certificates-public.json (and it requests that file for exactly one thing: this identifier's current state).",
     "public_pem": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAoDL29hQq0vfgcLHbM8XC\nGNK+aKo26CjzoPpUFZl4+7o49Us6ZaOPa7Shy9saHqs1RnRGSPe8M4QaNgMa3J0l\noVvk9UcU6JHZOO8lqeBMOfwM1q1aLUadZ9IEm7mFgx6VyxGdcIqhEBsJtA6WKYgv\ni1qUFSObdjZwt90SwtNhw9xga8NgRTBfoxjSlE6JayijmBQFvAlab3BYXcQnAUkB\njo++TSWvzAIbGguE8IheWEQyPJbFiektusX6jysJVu/gd6q8sL+fBpZQJM+xHoxp\n6Zc7xqlITHxES/vXwM7VpwTSwQEDAnjrtexXFans+YPxVftVh9WoXiY0TIkgZjoJ\n2Jn0XXtKXOXV75eiTKsFxX9jfJcekFlJjj4pksDZGiU3cbtMNoXXeMgXHi8ZV74m\n0ZPxhUP9PTGjI7GTZsV0STw1rFdCUGt7CCR6a6/MeB7hnBsO/1EE6aLBz4HP7vkm\ncErrRpVNTUga5xFNhUYAKr8xLeCZJGI5E0vgnujb8WH1AgMBAAE=\n-----END PUBLIC KEY-----\n",
     "identifier": "91ae17587fbbe80a664621946b839c9b",
     "token": "{\"v\":1,\"payload\":\"eyJkYXRlIjoiMjAyNi0wOC0yMCIsImR1cmF0aW9uX2hvdXJzIjoxLjUsImV2ZW50IjoiUmVhZGluZyByb2RlbnQgYmVoYXZpb3VyIGZyb20gdmlkZW8iLCJpZGVudGlmaWVyIjoiOTFhZTE3NTg3ZmJiZTgwYTY2NDYyMTk0NmI4MzljOWIiLCJuYW1lIjoiRWxvZGllIEZvbnRhaW5lIn0=\",\"signature\":\"MQo/JmTYvBwxld4KWrT/ReTycamwldi595wAuu13dW6lJdAS0MZl+GrX8YEqhGIQsE2N4tqDC5bZXgrFx/MGh218cOIbOZn+tvfMJ3jVNtdW0XnIhUac7IfjQhV7js8hHMdxznkp/xvb1kxPoLESpruPq729hCwOh57AH28PzsmXuzhVGY6UyAJCIc7eP7b1MoSFLvo19tsG3gwVN0VBv5JC38sa8ouP6CsCAb9FknhEhG60VUtNSUNKCF2UkmIY/pFkqvadE337MjyXxn7XWUGz2hm7ZFGBJ2ulOTP2KteyUCk7HQ/wIEvo5SsQCNXBqY5mjJ4FQIbrZ9lbkRmC/bUgznOIcQNYqDnMjCuab68VvfB+yJ2JBdbA9stWCfvvLsAkbannKV/Om3S1HP1RgntvQAtoUagf4vn2uI/saX8rIjrmOdHzmOMtjktDTIk/j7/lUQPIvix/B3xfEeZd/+E4MP4vY2ztoIsp7NfiFC4k6v81WscNW/+j8xaWd4D7\"}",
-    "payload": {
+    "verification_url": "https://example-instance.github.io/example-showcase/app/#/verify/91ae17587fbbe80a664621946b839c9b?token=%7B%22v%22%3A1%2C%22payload%22%3A%22eyJkYXRlIjoiMjAyNi0wOC0yMCIsImR1cmF0aW9uX2hvdXJzIjoxLjUsImV2ZW50IjoiUmVhZGluZyByb2RlbnQgYmVoYXZpb3VyIGZyb20gdmlkZW8iLCJpZGVudGlmaWVyIjoiOTFhZTE3NTg3ZmJiZTgwYTY2NDYyMTk0NmI4MzljOWIiLCJuYW1lIjoiRWxvZGllIEZvbnRhaW5lIn0%3D%22%2C%22signature%22%3A%22MQo%2FJmTYvBwxld4KWrT%2FReTycamwldi595wAuu13dW6lJdAS0MZl%2BGrX8YEqhGIQsE2N4tqDC5bZXgrFx%2FMGh218cOIbOZn%2BtvfMJ3jVNtdW0XnIhUac7IfjQhV7js8hHMdxznkp%2Fxvb1kxPoLESpruPq729hCwOh57AH28PzsmXuzhVGY6UyAJCIc7eP7b1MoSFLvo19tsG3gwVN0VBv5JC38sa8ouP6CsCAb9FknhEhG60VUtNSUNKCF2UkmIY%2FpFkqvadE337MjyXxn7XWUGz2hm7ZFGBJ2ulOTP2KteyUCk7HQ%2FwIEvo5SsQCNXBqY5mjJ4FQIbrZ9lbkRmC%2FbUgznOIcQNYqDnMjCuab68VvfB%2ByJ2JBdbA9stWCfvvLsAkbannKV%2FOm3S1HP1RgntvQAtoUagf4vn2uI%2FsaX8rIjrmOdHzmOMtjktDTIk%2Fj7%2FlUQPIvix%2FB3xfEeZd%2F%2BE4MP4vY2ztoIsp7NfiFC4k6v81WscNW%2F%2Bj8xaWd4D7%22%7D",
+    "payload_decoded": {
       "identifier": "91ae17587fbbe80a664621946b839c9b",
       "event": "Reading rodent behaviour from video",
       "name": "Elodie Fontaine",
       "date": "2026-08-20",
       "duration_hours": 1.5
-    },
-    "verification_url": "https://example-instance.github.io/example-showcase/app/#/verify/91ae17587fbbe80a664621946b839c9b?token=%7B%22v%22%3A1%2C%22payload%22%3A%22eyJkYXRlIjoiMjAyNi0wOC0yMCIsImR1cmF0aW9uX2hvdXJzIjoxLjUsImV2ZW50IjoiUmVhZGluZyByb2RlbnQgYmVoYXZpb3VyIGZyb20gdmlkZW8iLCJpZGVudGlmaWVyIjoiOTFhZTE3NTg3ZmJiZTgwYTY2NDYyMTk0NmI4MzljOWIiLCJuYW1lIjoiRWxvZGllIEZvbnRhaW5lIn0%3D%22%2C%22signature%22%3A%22MQo%2FJmTYvBwxld4KWrT%2FReTycamwldi595wAuu13dW6lJdAS0MZl%2BGrX8YEqhGIQsE2N4tqDC5bZXgrFx%2FMGh218cOIbOZn%2BtvfMJ3jVNtdW0XnIhUac7IfjQhV7js8hHMdxznkp%2Fxvb1kxPoLESpruPq729hCwOh57AH28PzsmXuzhVGY6UyAJCIc7eP7b1MoSFLvo19tsG3gwVN0VBv5JC38sa8ouP6CsCAb9FknhEhG60VUtNSUNKCF2UkmIY%2FpFkqvadE337MjyXxn7XWUGz2hm7ZFGBJ2ulOTP2KteyUCk7HQ%2FwIEvo5SsQCNXBqY5mjJ4FQIbrZ9lbkRmC%2FbUgznOIcQNYqDnMjCuab68VvfB%2ByJ2JBdbA9stWCfvvLsAkbannKV%2FOm3S1HP1RgntvQAtoUagf4vn2uI%2FsaX8rIjrmOdHzmOMtjktDTIk%2Fj7%2FlUQPIvix%2FB3xfEeZd%2F%2BE4MP4vY2ztoIsp7NfiFC4k6v81WscNW%2F%2Bj8xaWd4D7%22%7D"
+    }
   },
+  "_verification_rejects_comment": "Important 7 (fix round 1): the positive signed_example above proves a verifier CAN accept a genuine token; without a negative case, a page that verifies nothing (always returns valid: true, or never calls verify at all) would satisfy every assertion this fixture could support -- exactly the failure this file exists to prevent. Each token here must be checked against signed_example.public_pem, the SAME key as the positive example, and must produce exactly the 'reason' named. 'flipped one byte in the signature' and 'signed by a different key' both surface as no_matching_key -- signing.verify deliberately cannot and must not distinguish a forged signature from a genuine one made under a key it was not given, see signing.py's own module docstring's 'three outcomes' section. The different-key token was produced by a second, throwaway RSA key pair generated once for this fixture; its private half was never written to disk and is not recoverable from anything here, the same practice signed_example's own key follows.",
+  "verification_rejects": [
+    {
+      "name": "one byte flipped in the signature",
+      "token": "{\"v\":1,\"payload\":\"eyJkYXRlIjoiMjAyNi0wOC0yMCIsImR1cmF0aW9uX2hvdXJzIjoxLjUsImV2ZW50IjoiUmVhZGluZyByb2RlbnQgYmVoYXZpb3VyIGZyb20gdmlkZW8iLCJpZGVudGlmaWVyIjoiOTFhZTE3NTg3ZmJiZTgwYTY2NDYyMTk0NmI4MzljOWIiLCJuYW1lIjoiRWxvZGllIEZvbnRhaW5lIn0=\",\"signature\":\"zgo/JmTYvBwxld4KWrT/ReTycamwldi595wAuu13dW6lJdAS0MZl+GrX8YEqhGIQsE2N4tqDC5bZXgrFx/MGh218cOIbOZn+tvfMJ3jVNtdW0XnIhUac7IfjQhV7js8hHMdxznkp/xvb1kxPoLESpruPq729hCwOh57AH28PzsmXuzhVGY6UyAJCIc7eP7b1MoSFLvo19tsG3gwVN0VBv5JC38sa8ouP6CsCAb9FknhEhG60VUtNSUNKCF2UkmIY/pFkqvadE337MjyXxn7XWUGz2hm7ZFGBJ2ulOTP2KteyUCk7HQ/wIEvo5SsQCNXBqY5mjJ4FQIbrZ9lbkRmC/bUgznOIcQNYqDnMjCuab68VvfB+yJ2JBdbA9stWCfvvLsAkbannKV/Om3S1HP1RgntvQAtoUagf4vn2uI/saX8rIjrmOdHzmOMtjktDTIk/j7/lUQPIvix/B3xfEeZd/+E4MP4vY2ztoIsp7NfiFC4k6v81WscNW/+j8xaWd4D7\"}",
+      "valid": false,
+      "reason": "no_matching_key"
+    },
+    {
+      "name": "signed by a different key",
+      "token": "{\"v\":1,\"payload\":\"eyJkYXRlIjoiMjAyNi0wOC0yMCIsImR1cmF0aW9uX2hvdXJzIjoxLjUsImV2ZW50IjoiUmVhZGluZyByb2RlbnQgYmVoYXZpb3VyIGZyb20gdmlkZW8iLCJpZGVudGlmaWVyIjoiOTFhZTE3NTg3ZmJiZTgwYTY2NDYyMTk0NmI4MzljOWIiLCJuYW1lIjoiRWxvZGllIEZvbnRhaW5lIn0=\",\"signature\":\"m+P8QDtkmSXOf1dImDwplk1PA9Y+3++zBWyyDw02Gb4un+YAS24a18jmrk/ad/wyAcrCMYetomfjdT/LQdJVSWj7T8KAZtJF/PN6Q9VoCmIaloUa0+x39CW2xeqHsk3V0fkgGP24L/PTyGU1QJ3tOKTU4/D5yVWqAKEB5kr+nqPKpvbk0xVIyDNpB6ElwaRQtKOI3oUPrMQALOSIMQlIJCLxE3CbKavWiqVTrUF6KLS9ALr+k8o2w8Q6ZLr2hNlma4XhzF/9mEsZdoy6lBFsia1gFnArySVyL9AaRGy1Ql+aer2BztvVSkt2Dzc5+d2qSYSDOn2fNxE9G/a10e9Nl4ZgZVVLQOWPQuUfZy3EV1i/e0/fmHQO0kBxstEAVhamOX5EwlMGBwkhVMilLs+HGT6c6XQY6BiHylcURRhFzLbQZ9Ku/BSMv3m/xUMXUejqdTFhEfNKocOChhkPOso1Kn8bP+UpUz6J5lxpPnRgozOHcZsyQXFColRseQKGa6ZA\"}",
+      "valid": false,
+      "reason": "no_matching_key"
+    },
+    {
+      "name": "truncated",
+      "token": "{\"v\":1,\"payload\":\"eyJkYXRlIjoiMjAyNi0wOC0yMCIsImR1cmF0aW9uX2hvdXJzIjoxLjUsImV2ZW50IjoiUmVhZGluZyByb2RlbnQgYmVoYXZpb3VyIGZyb20gdmlkZW8iLCJpZGVudGlmaWVyIjoiOTFhZTE3NTg3ZmJiZTgwYTY2NDYyMTk0NmI4MzljOWIiLCJuYW1lIjoiRWxvZGllIEZvbnRhaW5lIn0=\",\"signature\":\"MQo/JmTYvBwxld4KWrT/ReTycamwldi595wAuu13dW6lJdAS0MZl+GrX8YEqhGIQsE2N4tqDC5bZXgrFx/MGh218cOIbOZn+tvfMJ3jVNtdW0XnIhUac7IfjQhV7js8hHMdxznkp/xvb1kxPoLESpruPq729hCwOh57AH28PzsmXuzhVGY6UyAJCIc7eP7b1MoSFLvo19tsG3gwVN0VBv5JC38sa8ouP6CsCAb9FknhEhG60VUtNSUNKCF2UkmIY/pFkqvadE337MjyXxn7XWUGz2hm7ZFGBJ2ulOTP2KteyUCk7HQ/wIEvo5SsQCNXBqY5mjJ4FQIbrZ9lbkRmC/bUgznOIcQNYqDnMjCuab68VvfB+yJ2JBdbA9stWCfvvLsAkbannKV/Om3S1HP1RgntvQAtoUagf4vn2uI/saX8rIjrmOdHzmOMtjktDTIk/j7/lUQPIvix/B3xfEeZd/+E4MP4vY2ztoIsp7NfiFC4k6v81WscNW/+j",
+      "valid": false,
+      "reason": "malformed"
+    }
+  ],
+  "_projection_example_comment": "The exact shape certificate.public_register produces, and public-data/certificates-public.json holds: identifier and state only, never a fingerprint, an event id, or an issue date. The first row is the certificate above, current; the second is an unrelated, revoked one -- included so a page's test fixture never has to invent its own 'what does a revoked row look like' example.",
   "projection_example": {
-    "_comment": "The exact shape certificate.public_register produces, and public-data/certificates-public.json holds: identifier and state only, never a fingerprint, an event id, or an issue date. The first row is the certificate above, current; the second is an unrelated, revoked one -- included so a page's test fixture never has to invent its own 'what does a revoked row look like' example.",
     "certificates": [
-      { "identifier": "91ae17587fbbe80a664621946b839c9b", "state": "issued" },
-      { "identifier": "0c4c6a2c8e6c4d6c9f7f6f2b8a1d5e3c", "state": "revoked" }
+      {
+        "identifier": "91ae17587fbbe80a664621946b839c9b",
+        "state": "issued"
+      },
+      {
+        "identifier": "0c4c6a2c8e6c4d6c9f7f6f2b8a1d5e3c",
+        "state": "revoked"
+      }
     ]
+  },
+  "_integer_duration_example_comment": "Minor 10 (fix round 1): the fixture's main signed_example carries duration_hours: 1.5, never an integer value -- the exact case where Python's float and a browser's JSON.stringify could render differently (2.0 vs 2; see signing.py's own docstring and certificate.py's duration_hours). Verification is over the raw transported bytes, never a re-serialised number, so this does not threaten signature verification either way -- but a page that *displays* the decoded number will differ from what Python printed unless it renders a whole float with one decimal place explicitly. A second, real, independently-verifiable token, from its own throwaway key pair (private half discarded, same practice as signed_example's own).",
+  "integer_duration_example": {
+    "public_pem": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAuMYF7FzIWi82Gap1tBBM\n6fAmV1Bap7C5/0LzDT8wlEiIm+Bn5MQMnffhk/pMjyILEHU96tlmWFrmJ5NXRxyX\n+BZsOD1ieZYio4rr7uaeQ2UNFPzcVodLH+Uq2ursSfjaGo0HRWqBn+XAZRJWnUlC\nF9iwBvCwg7SBiIoBiP6dsuqZIE07jKsgROv2DdV5W3OSvLEWeQpEmRYlBOOxtch6\nQYtFe4ltEEfOL8fl4z71yoFiQ+c3g0j4TNvzAYv5hmnrOZX0Eem9zVc3/xQLaUXu\nhQbLICyRKqEa5CWjIxQrjqph5+6P3du+XlS8sk4aFYBXapSu/T7yle+kjiR6nnE3\nxSKG00Go8sOVNgN9TP3lmflqhOhxsNpEgutkfItU8OycD9BkPNtXpbwxmrZb/MIz\nvLHtzZEgJT6Ip17av/61jkej9QUOB1SRo/6V7293JpRkU/09fJNnMGXloffgig/L\n3BHXD0Ru2dnOlBNI7xJ3B9TSo9VbqkFVO+MW/4J5FKihAgMBAAE=\n-----END PUBLIC KEY-----\n",
+    "identifier": "5b1f0c9e2a3d4f6b8c1e0a2d4f6b8c1e",
+    "token": "{\"v\":1,\"payload\":\"eyJkYXRlIjoiMjAyNi0wOS0xMCIsImR1cmF0aW9uX2hvdXJzIjoyLjAsImV2ZW50IjoiSGFiaXR1YXRpb24gaW4gY2FwdGl2ZSBjb3J2aWRzIiwiaWRlbnRpZmllciI6IjViMWYwYzllMmEzZDRmNmI4YzFlMGEyZDRmNmI4YzFlIiwibmFtZSI6IklkcmlzIE9rb3llIn0=\",\"signature\":\"qMmJDgenFnYpu+tj5k4gISf8TqmR4IuZdHDgoNMK20TEWsHc2sdQHUzcwHJ8+5Km7eP2ZrdgBS0+kV5TzwQ0N8FezIWFxpC4qXMwWfsmCx2zG53xVn6+bensPCGl9zbhfJeDF0kGdsKB6vIAeWoznfyX6fPHcphRHI+fvRhBjZb1CuhOZ3xMezeyZTDgVGdvRFWHalfk0GplFey4XXjA4DE9HjovMrsozplhtSlhc+NzPQc8jWYjSWiEFyV/LL4xl+QlC4lhaAfC3bzy3odS/CTkk9wLvsbfs6VLO4K++G4bVOAHpw4XOV4EmWF3UvIfNk3vV5aqhcd98vEdKdyJL8DvaNFwCQN6USJIjY96XZGXXXQMU9FQYwY/TNe42/ABpyElkD7026HEMiKJ0h4Q51HqhVaTPqoIpAA2tuoirEuaPF6CO7j6WdjFB5HMNLEcx40bcutvrWxrpzwbbb15NiL5vuYb5jYtlia/IvdGGx/fL6Bcx99zRWUlFc8OTzqE\"}",
+    "payload_decoded": {
+      "identifier": "5b1f0c9e2a3d4f6b8c1e0a2d4f6b8c1e",
+      "event": "Habituation in captive corvids",
+      "name": "Idris Okoye",
+      "date": "2026-09-10",
+      "duration_hours": 2.0
+    },
+    "verification_url": "https://example-instance.github.io/example-showcase/app/#/verify/5b1f0c9e2a3d4f6b8c1e0a2d4f6b8c1e?token=%7B%22v%22%3A1%2C%22payload%22%3A%22eyJkYXRlIjoiMjAyNi0wOS0xMCIsImR1cmF0aW9uX2hvdXJzIjoyLjAsImV2ZW50IjoiSGFiaXR1YXRpb24gaW4gY2FwdGl2ZSBjb3J2aWRzIiwiaWRlbnRpZmllciI6IjViMWYwYzllMmEzZDRmNmI4YzFlMGEyZDRmNmI4YzFlIiwibmFtZSI6IklkcmlzIE9rb3llIn0%3D%22%2C%22signature%22%3A%22qMmJDgenFnYpu%2Btj5k4gISf8TqmR4IuZdHDgoNMK20TEWsHc2sdQHUzcwHJ8%2B5Km7eP2ZrdgBS0%2BkV5TzwQ0N8FezIWFxpC4qXMwWfsmCx2zG53xVn6%2BbensPCGl9zbhfJeDF0kGdsKB6vIAeWoznfyX6fPHcphRHI%2BfvRhBjZb1CuhOZ3xMezeyZTDgVGdvRFWHalfk0GplFey4XXjA4DE9HjovMrsozplhtSlhc%2BNzPQc8jWYjSWiEFyV%2FLL4xl%2BQlC4lhaAfC3bzy3odS%2FCTkk9wLvsbfs6VLO4K%2B%2BG4bVOAHpw4XOV4EmWF3UvIfNk3vV5aqhcd98vEdKdyJL8DvaNFwCQN6USJIjY96XZGXXXQMU9FQYwY%2FTNe42%2FABpyElkD7026HEMiKJ0h4Q51HqhVaTPqoIpAA2tuoirEuaPF6CO7j6WdjFB5HMNLEcx40bcutvrWxrpzwbbb15NiL5vuYb5jYtlia%2FIvdGGx%2FfL6Bcx99zRWUlFc8OTzqE%22%7D"
   }
 }

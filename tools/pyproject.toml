@@ -38,6 +38,7 @@ convener-release-recording = "convener_ops.cli:release_recording"
 convener-discard-recording = "convener_ops.cli:discard_recording"
 convener-issue-certificates = "convener_ops.cli:issue_certificates"
 convener-certificates-public-data = "convener_ops.cli:certificates_public_data"
+convener-reissue-certificate = "convener_ops.cli:reissue_certificate"
 
 [build-system]
 requires = ["hatchling"]
