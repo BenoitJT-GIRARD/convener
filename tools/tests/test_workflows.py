@@ -100,12 +100,51 @@ def test_deploy_workflow_has_a_single_self_sufficient_job() -> None:
     )
 
 
-def test_deploy_workflow_has_no_pages_concurrency_group() -> None:
-    workflow = _load_workflow()
-    assert "concurrency" not in workflow, (
-        "the `concurrency: group: pages` block only serialised deploys "
-        "against the Pages environment; there is no Pages environment left "
-        "to serialise against"
+def test_deploy_workflow_cancels_stale_runs_of_itself() -> None:
+    """Two overlapping `deploy.yml` runs both rewrite all of `app/` -- unlike
+    this workflow and `publish-vitrine.yml`, which write disjoint subtrees and
+    so can safely race through the retry-with-rebase loop instead. Left
+    unserialised, the loser's rebase either conflicts on `index.html` or
+    replays cleanly and lets the older build silently overwrite the newer
+    one; cancelling the older run removes that case by construction."""
+    concurrency = _load_workflow().get("concurrency")
+    assert isinstance(concurrency, dict), (
+        "deploy.yml has no concurrency group -- two overlapping runs can "
+        "each push a build, and the loser's rebase-and-retry can replay "
+        "cleanly with the older build silently overwriting the newer one"
+    )
+    assert concurrency.get("cancel-in-progress") is True, (
+        "cancel-in-progress must be true, not false: an older deploy run "
+        "has no reason to finish once a newer commit has already started "
+        "its own, so it should be cancelled outright, not merely queued "
+        "behind the newer one"
+    )
+
+
+def test_deploy_workflow_concurrency_group_cannot_collide_with_another_workflow() -> (
+    None
+):
+    group = _load_workflow()["concurrency"]["group"]
+    assert "github.workflow" in group, (
+        "the group must be derived from `github.workflow`, this workflow's "
+        "own name -- so pasting this block into a future workflow file "
+        "gives that workflow its own group automatically instead of "
+        "silently sharing deploy.yml's"
+    )
+
+
+def test_deploy_workflow_concurrency_is_not_shared_with_publish_vitrine() -> None:
+    """`publish-vitrine.yml` writes a disjoint subtree of example-showcase and its
+    overlapping pushes are both legitimate -- the retry-with-rebase loop
+    already handles that case more cheaply. Grouping the two workflows
+    together here would serialise a job that does not need to wait."""
+    publish_vitrine = safe_load(
+        (ROOT / ".github/workflows/publish-vitrine.yml").read_text(encoding="utf-8")
+    )
+    assert "concurrency" not in publish_vitrine, (
+        "publish-vitrine.yml must not gain a concurrency group shared with "
+        "deploy.yml's -- their overlapping pushes are both legitimate and "
+        "the existing retry loop already reconciles them"
     )
 
 
