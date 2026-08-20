@@ -98,6 +98,16 @@ jobs:
               # comment on this same dispatch.
               gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
                 echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              # Critical 1, fix round 1 (task 13): see
+              # issue-certificates.yml's own comment on this same
+              # addition -- publish-vitrine.yml alone never rebuilt the
+              # file the verification page fetches; deploy.yml does. A
+              # revocation is exactly the case this matters most for: the
+              # holder's own signature still verifies (spec S:7's own
+              # "la signature reste valide"), and only the register's own
+              # state can tell a visitor it was revoked.
+              gh workflow run deploy.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger deploy.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
             echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"

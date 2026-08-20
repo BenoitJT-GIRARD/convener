@@ -46,12 +46,26 @@ jobs:
       # into the showcase for free, with no second, separate write into
       # that repo's `app/` subtree to race against this workflow's own
       # wholesale refresh of it. Needs no secret: `convener-certificates-public-data`
-      # only ever reads committed `data/events/*/certificates.yml` files, the
-      # same public projection `publish-vitrine.yml` already builds. An
-      # event with no certificates yet is a normal state (`cli.py`'s own
+      # only ever reads committed `data/events/*/certificates.yml` files.
+      # An event with no certificates yet is a normal state (`cli.py`'s own
       # `certificates_public_data`), so this step never fails for want of
       # one -- `scripts/copy-certificates.mjs`, below, is equally tolerant
       # of this step never having run at all.
+      #
+      # Critical 1 (fix round 1, task 13): this step is what actually
+      # keeps the register a verifier reads current, and it only runs when
+      # this workflow does -- which a certificate issuance or revocation's
+      # own push (made with the checkout's own GITHUB_TOKEN) can never
+      # trigger via the `push:` clause above (the same recursion guard
+      # `publish-vitrine.yml`'s own header comment explains). Each of
+      # issue-certificates.yml, reissue-certificate.yml and
+      # revoke-certificate.yml now dispatches this workflow directly with
+      # `gh workflow run deploy.yml` as its own last step, alongside its
+      # existing `publish-vitrine.yml` dispatch (which, after Minor 5,
+      # no longer touches certificate data at all -- see that workflow's
+      # own comment). Before this, only publish-vitrine.yml was dispatched,
+      # which rebuilt a file the showcase never served; this step, and
+      # this dispatch, are what a verifier's page actually depends on.
       - name: Build public data
         working-directory: tools
         run: uv run convener-certificates-public-data
