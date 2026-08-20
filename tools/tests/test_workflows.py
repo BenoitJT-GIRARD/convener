@@ -220,6 +220,93 @@ def test_deploy_workflow_push_step_skips_committing_when_nothing_changed() -> No
 
 
 # ------------------------------------------------------------------ #
+# publish-vitrine.yml: the certificate register's public projection
+# (R-19, fix round 1, task 12). Before this, a revocation -- a change to
+# data/events/<id>/certificates.yml -- did not even fire this workflow,
+# and the file it would have built was never copied to the showcase, so
+# spec S:7's "le registre fait foi sur l'état" had no observable effect on
+# any verifier. Text assertions on the parsed `run:` block, the same idiom
+# test_notify.py uses for notify.yml, because running the script means a
+# real clone of a real repository -- exactly the network access this
+# suite must not take on (see this module's own docstring).
+# ------------------------------------------------------------------ #
+
+PUBLISH_VITRINE_WORKFLOW = Path(".github/workflows/publish-vitrine.yml")
+
+
+def _publish_vitrine_workflow() -> dict[str, Any]:
+    loaded = safe_load((ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _publish_vitrine_build_step() -> str:
+    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    for step in job["steps"]:
+        if step.get("name") == "Build public data":
+            run = step["run"]
+            assert isinstance(run, str)
+            return run
+    raise AssertionError(
+        "publish-vitrine.yml has no 'Build public data' step -- renamed "
+        "away from the name this test looks for"
+    )
+
+
+def _publish_vitrine_push_script() -> str:
+    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    for step in job["steps"]:
+        env = step.get("env", {})
+        if any("VITRINE_DEPLOY_TOKEN" in str(value) for value in env.values()):
+            run = step["run"]
+            assert isinstance(run, str)
+            return run
+    raise AssertionError(
+        "no step in the publish job reads VITRINE_DEPLOY_TOKEN -- the "
+        "push-to-vitrine step is missing or was renamed away from it"
+    )
+
+
+def test_publish_vitrine_paths_trigger_includes_the_certificate_register() -> None:
+    """Half the original defect (Important 6): a revocation is a change to
+    `data/events/<id>/certificates.yml`, and the old `paths:` trigger
+    (`data/speakers.yml`, `tools/**`) would not even fire this workflow
+    for one.
+
+    Read as raw text, not through `safe_load`: PyYAML's YAML-1.1 bool
+    resolver reads a bare `on:` key as the boolean `True`, not the string
+    `"on"` -- a real gotcha, not a reason to trust this file less than
+    `notify.yml`'s own text assertions already do (test_notify.py's own
+    idiom, followed here for exactly this reason)."""
+    text = (ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    assert "'data/events/*/certificates.yml'" in trigger
+
+
+def test_publish_vitrine_builds_the_certificates_public_data() -> None:
+    """The other half: the projection has to actually be regenerated, not
+    only trigger-eligible."""
+    assert "convener-certificates-public-data" in _publish_vitrine_build_step()
+
+
+def test_publish_vitrine_push_step_copies_certificates_data_to_the_showcase() -> None:
+    """Follows `events-public.json`'s own precedent exactly: built under
+    `public-data/`, copied into the cloned showcase's `src/_data/`, staged
+    alongside the events feed so one commit carries both."""
+    script = _publish_vitrine_push_script()
+    assert (
+        "cp public-data/certificates-public.json /tmp/vit/src/_data/certificates.json"
+        in script
+    )
+    assert "git add src/_data/events.json src/_data/certificates.json" in script
+
+
+def test_publish_vitrine_workflow_permissions_are_read_only() -> None:
+    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    assert job["permissions"] == {"contents": "read"}
+
+
+# ------------------------------------------------------------------ #
 # Commit authors: an address on a domain this project administers
 # ------------------------------------------------------------------ #
 
