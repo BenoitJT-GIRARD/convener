@@ -53,6 +53,7 @@ jobs:
         env:
           VITE_AUTH_PROXY_URL: ${{ vars.VITE_AUTH_PROXY_URL }}
           VITE_GITHUB_APP_CLIENT_ID: ${{ vars.VITE_GITHUB_APP_CLIENT_ID }}
+          VITE_SIGNUP_RELAY_URL: ${{ vars.VITE_SIGNUP_RELAY_URL }}
         run: npm run build
       - name: Push to example-showcase
         env:
