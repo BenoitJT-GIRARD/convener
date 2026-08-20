@@ -17,6 +17,7 @@ from convener_ops import eventkeys
 from convener_ops.eventkeys import (
     ACTIVE,
     DESTROYED,
+    ENVELOPE_FIELDS,
     GCM_NONCE_BYTES,
     NEVER_CREATED,
     RSA_KEY_BITS,
@@ -24,6 +25,7 @@ from convener_ops.eventkeys import (
     DecryptionError,
     DestructionRecord,
     decrypt,
+    derive_public_pem,
     destroy,
     encrypt,
     generate,
@@ -336,6 +338,60 @@ def test_encrypt_rejects_a_public_key_of_the_wrong_kind() -> None:
 
     with pytest.raises(ValueError, match="RSA"):
         encrypt(ec_public_pem, b"a registration")
+
+
+# ------------------------------------------------------------------ #
+# derive_public_pem(): the public half, re-derived rather than read from a
+# file -- so a re-encryption never depends on what is (or is not) committed
+# at keys/events/<id>.pub.
+# ------------------------------------------------------------------ #
+
+
+def test_derive_public_pem_matches_the_pair_generate_produced() -> None:
+    private_pem, public_pem = generate()
+    assert derive_public_pem(private_pem) == public_pem
+
+
+def test_derive_public_pem_lets_the_original_public_half_decrypt_nothing_new() -> None:
+    """Not a new property -- `encrypt`/`decrypt` already prove the pair
+    works -- but pinned here as the direct round trip through the derived
+    key specifically, since that is the key `registration.py::upsert`
+    actually encrypts under."""
+    private_pem, _ = generate()
+    derived_public_pem = derive_public_pem(private_pem)
+
+    ciphertext = encrypt(derived_public_pem, b"a registration")
+
+    assert decrypt(private_pem, ciphertext) == b"a registration"
+
+
+def test_derive_public_pem_rejects_a_public_pem_passed_as_the_private_key() -> None:
+    _, public_pem = generate()
+    with pytest.raises(DecryptionError):
+        derive_public_pem(public_pem)
+
+
+def test_derive_public_pem_rejects_a_private_key_of_the_wrong_kind() -> None:
+    ec_key = ec.generate_private_key(ec.SECP256R1())
+    ec_pem = ec_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("ascii")
+
+    with pytest.raises(DecryptionError):
+        derive_public_pem(ec_pem)
+
+
+# ------------------------------------------------------------------ #
+# ENVELOPE_FIELDS: the one definition of "this dict is ciphertext"
+# ------------------------------------------------------------------ #
+
+
+def test_envelope_fields_matches_what_encrypt_actually_produces() -> None:
+    _, public_pem = generate()
+    envelope = json.loads(encrypt(public_pem, b"a registration"))
+    assert set(envelope) == ENVELOPE_FIELDS
 
 
 # ------------------------------------------------------------------ #

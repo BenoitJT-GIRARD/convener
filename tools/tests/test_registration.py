@@ -9,6 +9,7 @@ import pytest
 
 from convener_ops import eventkeys
 from convener_ops.registration import (
+    _CODE_ALPHABET,
     FILE_VERSION,
     Registration,
     RegistrationFile,
@@ -20,9 +21,8 @@ from convener_ops.registration import (
     upsert,
 )
 
-#: A legal code alphabet symbol: neither the "31 symbols" `matching_code`
-#: documents nor `0`/`O`/`1`/`I`/`L`.
-_CODE_SYMBOL_RE = re.compile(r"^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]+$")
+#: A legal code alphabet symbol: exactly `_CODE_ALPHABET`'s own 30 symbols.
+_CODE_SYMBOL_RE = re.compile(f"^[{_CODE_ALPHABET}]+$")
 
 
 def _fields(**overrides: Any) -> dict[str, Any]:
@@ -181,6 +181,22 @@ def test_to_registration_returns_none_for_a_decrypted_plaintext_that_is_not_json
     assert to_registration(ciphertext, private_pem) is None
 
 
+def test_to_registration_returns_none_for_decrypted_bytes_that_are_not_utf8() -> None:
+    """`json.loads` decodes `bytes` as UTF-8 before it ever parses JSON, and
+    raises `UnicodeDecodeError` -- not `JSONDecodeError` -- for anything
+    that fails that step. Anyone who knows an event id can encrypt
+    arbitrary non-UTF-8 bytes under its *published* public key, so this is
+    real attacker-reachable input, not a hypothetical: without catching
+    this specific exception, it would escape `to_registration` entirely,
+    against the function's own "None covers everything" contract -- and
+    `UnicodeDecodeError.object` carries the full plaintext, so an escaped
+    instance is not a harmless crash."""
+    private_pem, public_pem = eventkeys.generate()
+    ciphertext = eventkeys.encrypt(public_pem, b"\x80\x81\x82 not valid utf-8")
+
+    assert to_registration(ciphertext, private_pem) is None
+
+
 def test_to_registration_returns_none_for_a_missing_field() -> None:
     private_pem, public_pem = eventkeys.generate()
     fields = _fields()
@@ -259,11 +275,11 @@ def test_file_version_is_1() -> None:
 
 
 def test_upsert_appends_the_first_registration() -> None:
-    private_pem, public_pem = eventkeys.generate()
+    private_pem, _ = eventkeys.generate()
     registration = Registration("Ada", "Lovelace", "ada@example.org", "", False)
 
     updated, replaced = upsert(
-        RegistrationFile(), registration, public_pem=public_pem, private_pem=private_pem
+        RegistrationFile(), registration, private_pem=private_pem
     )
 
     assert replaced is False
@@ -272,16 +288,12 @@ def test_upsert_appends_the_first_registration() -> None:
 
 
 def test_upsert_appends_a_second_registration_from_a_different_address() -> None:
-    private_pem, public_pem = eventkeys.generate()
+    private_pem, _ = eventkeys.generate()
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
-    file, _ = upsert(
-        RegistrationFile(), ada, public_pem=public_pem, private_pem=private_pem
-    )
+    file, _replaced = upsert(RegistrationFile(), ada, private_pem=private_pem)
 
-    updated, replaced = upsert(
-        file, grace, public_pem=public_pem, private_pem=private_pem
-    )
+    updated, replaced = upsert(file, grace, private_pem=private_pem)
 
     assert replaced is False
     assert len(updated.entries) == 2
@@ -290,18 +302,14 @@ def test_upsert_appends_a_second_registration_from_a_different_address() -> None
 def test_upsert_replaces_rather_than_duplicates_the_same_address() -> None:
     """The mutation this test exists to catch: a dedup check that never
     fires would leave two entries for one registrant here instead of one."""
-    private_pem, public_pem = eventkeys.generate()
+    private_pem, _ = eventkeys.generate()
     first = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     second = Registration(
         "Ada", "Lovelace", "ada@example.org", "Analytical Engines Institute", True
     )
-    file, _ = upsert(
-        RegistrationFile(), first, public_pem=public_pem, private_pem=private_pem
-    )
+    file, _replaced = upsert(RegistrationFile(), first, private_pem=private_pem)
 
-    updated, replaced = upsert(
-        file, second, public_pem=public_pem, private_pem=private_pem
-    )
+    updated, replaced = upsert(file, second, private_pem=private_pem)
 
     assert replaced is True
     assert len(updated.entries) == 1
@@ -309,14 +317,12 @@ def test_upsert_replaces_rather_than_duplicates_the_same_address() -> None:
 
 
 def test_upsert_matches_the_same_address_regardless_of_case_or_whitespace() -> None:
-    private_pem, public_pem = eventkeys.generate()
+    private_pem, _ = eventkeys.generate()
     first = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     second = Registration("Ada", "Lovelace", " Ada@Example.ORG ", "", True)
-    file, _ = upsert(
-        RegistrationFile(), first, public_pem=public_pem, private_pem=private_pem
-    )
+    file, _replaced = upsert(RegistrationFile(), first, private_pem=private_pem)
 
-    _, replaced = upsert(file, second, public_pem=public_pem, private_pem=private_pem)
+    _, replaced = upsert(file, second, private_pem=private_pem)
 
     assert replaced is True
 
@@ -325,21 +331,17 @@ def test_upsert_leaves_every_other_entrys_ciphertext_byte_for_byte_unchanged() -
     """The property the module docstring names as the reason for one
     envelope per registration rather than one for the whole file: updating
     Grace's entry must not so much as re-encrypt Ada's or Marie's."""
-    private_pem, public_pem = eventkeys.generate()
+    private_pem, _ = eventkeys.generate()
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     marie = Registration("Marie", "Curie", "marie@example.org", "", True)
     file = RegistrationFile()
     for registration in (ada, grace, marie):
-        file, _ = upsert(
-            file, registration, public_pem=public_pem, private_pem=private_pem
-        )
+        file, _replaced = upsert(file, registration, private_pem=private_pem)
     ada_entry, grace_entry, marie_entry = file.entries
 
     grace_again = Registration("Grace", "Hopper", "grace@example.org", "US Navy", True)
-    updated, replaced = upsert(
-        file, grace_again, public_pem=public_pem, private_pem=private_pem
-    )
+    updated, replaced = upsert(file, grace_again, private_pem=private_pem)
 
     assert replaced is True
     assert updated.entries[0] == ada_entry
@@ -355,7 +357,7 @@ def test_upsert_keeps_an_undecryptable_entry_rather_than_treating_it_as_a_match(
     never happen in practice, but `upsert` must not crash on one, and must
     not treat it as "the same address" by default -- it is kept exactly as
     found, and the new registration is appended instead."""
-    private_pem, public_pem = eventkeys.generate()
+    private_pem, _ = eventkeys.generate()
     stray_entry = {
         "v": 1,
         "encrypted_key": "AA==",
@@ -365,13 +367,75 @@ def test_upsert_keeps_an_undecryptable_entry_rather_than_treating_it_as_a_match(
     file = RegistrationFile(entries=(stray_entry,))
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
 
-    updated, replaced = upsert(
-        file, ada, public_pem=public_pem, private_pem=private_pem
-    )
+    updated, replaced = upsert(file, ada, private_pem=private_pem)
 
     assert replaced is False
     assert updated.entries[0] == stray_entry
     assert len(updated.entries) == 2
+
+
+# ------------------------------------------------------------------ #
+# Every entry is exactly ciphertext -- the structural guard against a
+# cleartext lookup field ever sitting beside an envelope. A round-trip
+# assertion ("it still decrypts") would not catch an *extra* field the
+# way an exact key-set comparison does.
+# ------------------------------------------------------------------ #
+
+
+def test_upsert_writes_entries_that_are_exactly_ciphertext() -> None:
+    """The mutation this test exists to catch: `upsert` writing
+    `entry["email_lookup"] = registration.email` beside the envelope --
+    a realistic "stop decrypting every existing entry" optimisation that
+    would otherwise ship an address into the committed file in the clear
+    while every round-trip ("it still decrypts") test kept passing."""
+    private_pem, _ = eventkeys.generate()
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+
+    updated, _replaced = upsert(RegistrationFile(), ada, private_pem=private_pem)
+
+    for entry in updated.entries:
+        assert set(entry) == eventkeys.ENVELOPE_FIELDS
+
+
+def test_load_registration_file_rejects_an_entry_with_an_extra_field() -> None:
+    """Pins `load_registration_file`'s own runtime guard directly, not only
+    through `upsert`: a hand-edited or migrated file with a stray field
+    beside an envelope must never load silently."""
+    text = json.dumps(
+        {
+            "v": 1,
+            "registrations": [
+                {
+                    "v": 1,
+                    "encrypted_key": "AA==",
+                    "iv": "AAAAAAAAAAAAAAAA",
+                    "ciphertext": "AAAAAAAAAAAAAAAAAAAAAAA=",
+                    "email_lookup": "ada@example.org",
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match="not exactly ciphertext"):
+        load_registration_file(text)
+
+
+def test_load_registration_file_rejects_an_entry_missing_a_field() -> None:
+    text = json.dumps(
+        {
+            "v": 1,
+            "registrations": [
+                {
+                    "v": 1,
+                    "encrypted_key": "AA==",
+                    "ciphertext": "AAAAAAAAAAAAAAAAAAAAAAA=",
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match="not exactly ciphertext"):
+        load_registration_file(text)
 
 
 # ------------------------------------------------------------------ #
@@ -423,10 +487,24 @@ def test_matching_code_differs_by_salt() -> None:
     assert one_salt != other_salt
 
 
+def test_code_alphabet_has_30_symbols_and_excludes_every_confusion() -> None:
+    """Pins the alphabet *constant* directly, not a single sampled code:
+    a mutant restoring `O` (or any of `0`, `1`, `I`, `L`, `U`) would still
+    pass a one-code sample about 29/30 of the time. This fails every time,
+    on the alphabet itself, regardless of what any particular HMAC output
+    happens to draw."""
+    assert len(_CODE_ALPHABET) == 30
+    assert len(set(_CODE_ALPHABET)) == 30
+    assert set(_CODE_ALPHABET) & set("01ILOU") == set()
+
+
 def test_matching_code_alphabet_excludes_the_classic_confusions() -> None:
+    """A sampled-code companion to the constant-level test above: confirms
+    the *derivation* draws from the alphabet it claims to, not only that
+    the alphabet itself is correct in isolation."""
     code = matching_code("mrg-042", "ada@example.org", "sh")
     assert code is not None
-    for forbidden in "0O1IL":
+    for forbidden in "01ILOU":
         assert forbidden not in code
 
 
@@ -444,6 +522,29 @@ def test_matching_code_never_reveals_the_address_it_derives_from() -> None:
     assert code is not None
     assert "ADA" not in code
     assert "LOVELACE" not in code
+
+
+def test_matching_code_shows_avalanche_from_a_one_character_address_change() -> None:
+    """`"ADA" not in code` holds for *any* derivation, including a
+    reversible encoding that would defeat the whole point of hashing the
+    address -- it asserts almost nothing about how the code was actually
+    derived. A real HMAC has full avalanche: changing one input character
+    should scramble most of the output, not shift it predictably. Two
+    addresses one character apart should share few, if any, of the eight
+    symbol positions; sharing at most a third of them (an extremely
+    generous bound -- chance alone predicts under one shared position on
+    average) is not something a substring-derived or otherwise reversible
+    code could reliably do."""
+    one = matching_code("mrg-042", "ada@example.org", "sh")
+    other = matching_code("mrg-042", "adb@example.org", "sh")
+    assert one is not None
+    assert other is not None
+    assert one != other
+
+    positions_one = one.replace("-", "")
+    positions_other = other.replace("-", "")
+    shared = sum(a == b for a, b in zip(positions_one, positions_other, strict=True))
+    assert shared <= len(positions_one) // 3
 
 
 # ------------------------------------------------------------------ #

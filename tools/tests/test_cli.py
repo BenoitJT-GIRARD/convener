@@ -679,18 +679,28 @@ def test_handle_registration_fails_closed_without_a_configured_key(
     assert not (tmp_path / "data").exists()
 
 
-def test_handle_registration_without_a_published_public_key_returns_1(
+def test_handle_registration_does_not_require_a_published_public_key(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """The failure mode this replaces: re-encryption used to read
+    `keys/events/<id>.pub` from disk and fail without it. `upsert` now
+    derives the matching public half from `private_pem` itself
+    (`eventkeys.derive_public_pem`), so this job succeeds even when no
+    `.pub` file exists anywhere in the checkout -- removing both the
+    failure mode and the possibility of re-encrypting under a stale or
+    swapped published key."""
     private_pem, public_pem = eventkeys.generate()
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
     )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    assert not (tmp_path / "keys").exists()
 
-    assert handle_registration() == 1
-    assert "no published public key for event mrg-042" in capsys.readouterr().err
+    assert handle_registration() == 0
+    assert (
+        "recorded a registration for event mrg-042 (1 total)" in capsys.readouterr().out
+    )
 
 
 def test_handle_registration_rejects_an_undecryptable_payload_and_leaks_nothing(
@@ -735,6 +745,10 @@ def test_handle_registration_writes_the_record_and_prints_no_name_or_address(
     assert enc_path.exists()
     file = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(file.entries) == 1
+    # Exactly ciphertext -- see test_registration.py's own
+    # test_upsert_writes_entries_that_are_exactly_ciphertext for the
+    # mutant this specific assertion is written to catch.
+    assert set(file.entries[0]) == eventkeys.ENVELOPE_FIELDS
     recovered = to_registration(json.dumps(file.entries[0]), private_pem)
     assert recovered is not None
     assert recovered.email == "ada@example.org"

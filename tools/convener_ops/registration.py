@@ -37,9 +37,14 @@ stranger's ciphertext to reach it.
 
 The same independence is what deduplication needs, from the other
 direction: replacing one person's entry (`upsert`, below) touches only that
-entry's own three fields, never anyone else's. On disk, an update is
-indistinguishable from that person having been the only one who ever
-registered.
+entry's own three fields, never anyone else's -- no other entry is
+re-encrypted, moved, or so much as re-serialised. That is not the same as
+"an update is invisible": the entry keeps its array position, so a reader
+of the commit history (never the private key) can still see which position
+was rewritten and when, which is a stable positional handle on "the same
+person came back" -- the residual this design accepts, named rather than
+denied, in exchange for never storing anything derived from the address
+itself.
 
 No stored identifier for "whose entry is this"
 --------------------------------------------------
@@ -154,7 +159,17 @@ def to_registration(ciphertext: str, private_pem: str) -> Registration | None:
 
     try:
         data: Any = json.loads(plaintext)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        # `json.loads` on `bytes` decodes as UTF-8 first and raises
+        # `UnicodeDecodeError`, not `JSONDecodeError`, for plaintext that is
+        # not valid UTF-8 -- a real case here, not a hypothetical: the
+        # public key anyone can encrypt under makes the *decrypted* bytes
+        # exactly as untrusted as the ciphertext was. Caught alongside
+        # `JSONDecodeError` rather than separately, because both mean the
+        # same thing to this function's caller: not a registration.
+        # `UnicodeDecodeError.object` is the plaintext itself, so this is
+        # also the one exception in this function that must never be
+        # logged, formatted, or passed to anything that might print it.
         return None
     if not isinstance(data, dict) or set(data) != _FIELDS:
         return None
@@ -224,6 +239,16 @@ def load_registration_file(text: str | None) -> RegistrationFile:
     entries = data.get("registrations")
     if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
         raise ValueError("registrations.enc is malformed")
+    # Every entry's key set must be exactly the wire format's four fields --
+    # nothing more. This is the structural guard against the entry this file
+    # exists to make impossible: a "helpful" extra field such as a cleartext
+    # lookup key sitting in plain sight beside the ciphertext it was meant to
+    # replace. A test can be forgotten; this runs on every load, including
+    # task 15's eventual read for erasure.
+    if not all(set(e) == eventkeys.ENVELOPE_FIELDS for e in entries):
+        raise ValueError(
+            "registrations.enc holds an entry that is not exactly ciphertext"
+        )
     return RegistrationFile(entries=tuple(entries))
 
 
@@ -242,7 +267,6 @@ def upsert(
     file: RegistrationFile,
     registration: Registration,
     *,
-    public_pem: str,
     private_pem: str,
 ) -> tuple[RegistrationFile, bool]:
     """Insert `registration` into `file`, replacing any existing entry for
@@ -264,13 +288,22 @@ def upsert(
     exist (this same function is what keeps a second from ever being
     written).
 
+    There is no `public_pem` parameter: the re-encryption key is
+    `eventkeys.derive_public_pem(private_pem)`, the public half that
+    mathematically matches the private key this call already needs --
+    never whatever happens to be committed at `keys/events/<id>.pub`,
+    which could in principle be stale, mid-rotation, or simply the wrong
+    file. See `derive_public_pem`'s own docstring.
+
     A resend never changes `matching_code(event_id, registration.email,
     salt)`: it is a pure function of the address, and the address does not
     change on an update, so nothing here computes, compares, or carries a
     code at all -- see that function's own docstring.
     """
     new_entry: dict[str, Any] = json.loads(
-        eventkeys.encrypt(public_pem, _to_plaintext(registration))
+        eventkeys.encrypt(
+            eventkeys.derive_public_pem(private_pem), _to_plaintext(registration)
+        )
     )
     target = _normalize_email(registration.email)
 
@@ -289,10 +322,13 @@ def upsert(
 
 
 #: The alphabet a matching code is drawn from: digits 2-9 and every
-#: uppercase letter except I, L and O -- the pairs a spoken or handwritten
-#: code is classically confused on (0/O, 1/I/l). 31 symbols; see
+#: uppercase letter except I, L, O and U -- the first three are the pairs a
+#: spoken or handwritten code is classically confused on (0/O, 1/I/l); U
+#: joins them for the reason Crockford's own base32 drops it too -- an
+#: eight-symbol code read aloud on a call should not have a chance of
+#: spelling something a participant has to say out loud. 30 symbols; see
 #: `matching_code` for why 8 of them, in two groups, is enough.
-_CODE_ALPHABET: Final = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+_CODE_ALPHABET: Final = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
 _CODE_SYMBOLS: Final = 8
 _CODE_GROUP: Final = 4
 
@@ -312,14 +348,18 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
     instead, which is task 7's decision, not this function's.
 
     The alphabet drops the pairs a spoken or handwritten code confuses --
-    `0`/`O`, `1`/`I`/`l` -- leaving 31 symbols. 8 of them, in two groups of
-    four, give `31**8` (about 8.5e11) possible codes for one event: at the
-    signup relay's own per-event ceiling of 500 registrations
-    (`services/signup-relay/src/index.js::PER_EVENT_CEILING`), the chance
-    any two collide is negligible even though each symbol comes from one
-    HMAC byte reduced modulo 31, which is not perfectly uniform -- that does
-    not matter for a display code whose unforgeability already comes from
-    the salted HMAC underneath it, not from the mapping onto this alphabet.
+    `0`/`O`, `1`/`I`/`l` -- and `U`, for the same reason Crockford's own
+    base32 drops it: an eight-symbol code read aloud on a call should never
+    have a chance of spelling something. 30 symbols. 8 of them, in two
+    groups of four, give `30**8` (about 6.56e11) possible codes for one
+    event: at the signup relay's own per-event ceiling of 500 registrations
+    (`services/signup-relay/src/index.js::PER_EVENT_CEILING`), the birthday
+    collision probability -- `n*(n-1) / (2 * 30**8)` for `n = 500` -- is
+    about 1.9e-7, still negligible, even accounting for each symbol coming
+    from one HMAC byte reduced modulo 30, which is not perfectly uniform:
+    that does not matter for a display code whose unforgeability already
+    comes from the salted HMAC underneath it, not from the mapping onto
+    this alphabet.
 
     Salted, not constant: a code anyone could derive from an address alone
     would prove nothing about who holds that address -- see `matching_salt`
@@ -327,6 +367,12 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
     `_normalize_email` keeps the same property `upsert` relies on: two
     submissions of the same address, differently capitalised, still derive
     one code, matching `upsert`'s own notion of "the same registration".
+
+    The result is always uppercase. A participant types it into a display
+    name on their own keyboard, which may not match that case, so whoever
+    compares a typed name against this code (task 8) must case-fold the
+    typed side first -- this function does not, and should not, guess at
+    what a comparison needs.
     """
     if not salt:
         return None

@@ -464,12 +464,6 @@ def handle_registration() -> int:
         return 1
 
     root = repo_root()
-    public_path = eventkeys.public_key_path(event_id)
-    if not public_path.exists():
-        print(f"no published public key for event {event_id}", file=sys.stderr)
-        return 1
-    public_pem = public_path.read_text(encoding="ascii")
-
     rel_path = Path("data") / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     existing_text = enc_path.read_text(encoding="utf-8") if enc_path.exists() else None
@@ -479,9 +473,7 @@ def handle_registration() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    updated, replaced = upsert(
-        current, registration, public_pem=public_pem, private_pem=private_pem
-    )
+    updated, replaced = upsert(current, registration, private_pem=private_pem)
     enc_path.parent.mkdir(parents=True, exist_ok=True)
     enc_path.write_text(dump_registration_file(updated), encoding="utf-8", newline="")
 

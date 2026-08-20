@@ -166,6 +166,13 @@ GCM_NONCE_BYTES: Final = 12
 #: The wire format version written into every ciphertext's `"v"` field.
 WIRE_VERSION: Final = 1
 
+#: The envelope's exact key set -- nothing more, nothing less. Exported so a
+#: caller storing envelopes verbatim (`registration.py::load_registration_file`)
+#: can pin "this dict is ciphertext and only ciphertext" against the one
+#: definition of what ciphertext looks like, rather than a second, hand-typed
+#: copy of these four names that could drift from this module's own.
+ENVELOPE_FIELDS: Final = frozenset({"v", "encrypted_key", "iv", "ciphertext"})
+
 #: Where the published public half of an event's key pair lives, relative to
 #: the repository root.
 KEYS_DIR: Final = Path("keys") / "events"
@@ -294,6 +301,50 @@ def generate() -> tuple[str, str]:
         .decode("ascii")
     )
     return private_pem, public_pem
+
+
+def derive_public_pem(private_pem: str) -> str:
+    """The public half of `private_pem`, re-derived rather than read from a
+    file on disk.
+
+    A job re-encrypting a registration (`registration.py::upsert`) only
+    ever needs the public half that *mathematically matches* the private
+    key it already holds -- and deriving it is what guarantees exactly
+    that. Reading `keys/events/<id>.pub` instead would trust whatever
+    happens to be committed there: ordinarily the same key, but a stale
+    commit, a mid-rotation state, or a swapped file would silently
+    re-encrypt under the wrong public half, and the failure would not
+    surface until someone tried to decrypt with the *actual* private key
+    and found the ciphertext did not match it. Deriving instead makes that
+    class of mismatch structurally impossible, and removes a filesystem
+    read -- and the "no published public key" failure mode that came with
+    it -- from a job whose only other filesystem interaction is the file
+    it writes.
+
+    Raises `DecryptionError` for a key that will not load or is not RSA --
+    the same single failure mode `decrypt` uses for every "not a usable
+    key" cause, rather than a second exception type this module's callers
+    would also have to catch. Callers of this function already hold a
+    `private_pem` proven valid by an earlier successful `decrypt` call, so
+    this is not a new input-validation boundary in practice -- but the
+    contract holds regardless of how it is called.
+    """
+    try:
+        private_key = serialization.load_pem_private_key(
+            private_pem.encode("ascii"), password=None
+        )
+    except (ValueError, TypeError, UnsupportedAlgorithm) as exc:
+        raise DecryptionError("not a usable RSA private key") from exc
+    if not isinstance(private_key, rsa.RSAPrivateKey):
+        raise DecryptionError("not an RSA private key")
+    return (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("ascii")
+    )
 
 
 def encrypt(public_pem: str, plaintext: bytes) -> str:
