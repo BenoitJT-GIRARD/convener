@@ -1,0 +1,18 @@
+name = "convener-signup-relay"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# CONVENER_DISPATCH_TOKEN is a Wrangler secret, set with
+# `npx wrangler secret put CONVENER_DISPATCH_TOKEN` -- never here. See README.md.
+
+# SIGNUP_RELAY_KV backs the per-event registration ceiling (README.md,
+# "Abuse protection"). Not a secret -- a namespace id is not sensitive -- but
+# it is specific to the Cloudflare account this worker deploys to, so it
+# cannot be filled in until that namespace exists:
+#
+#   npx wrangler kv namespace create SIGNUP_RELAY_KV
+#
+# paste the "id" it prints below before the first deploy.
+[[kv_namespaces]]
+binding = "SIGNUP_RELAY_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
