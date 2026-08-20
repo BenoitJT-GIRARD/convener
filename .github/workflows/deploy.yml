@@ -37,6 +37,24 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      # Task 13 (certificate verification page): `certificates.json`, part
+      # of the app's own `public/` -- so it ships inside `app/dist/` and
+      # `deploy.yml`'s existing "Push to example-showcase" step below carries it
+      # into the showcase for free, with no second, separate write into
+      # that repo's `app/` subtree to race against this workflow's own
+      # wholesale refresh of it. Needs no secret: `convener-certificates-public-data`
+      # only ever reads committed `data/events/*/certificates.yml` files, the
+      # same public projection `publish-vitrine.yml` already builds. An
+      # event with no certificates yet is a normal state (`cli.py`'s own
+      # `certificates_public_data`), so this step never fails for want of
+      # one -- `scripts/copy-certificates.mjs`, below, is equally tolerant
+      # of this step never having run at all.
+      - name: Build public data
+        working-directory: tools
+        run: uv run convener-certificates-public-data
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
