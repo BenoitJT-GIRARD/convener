@@ -171,17 +171,61 @@ site answers at the address above.
 
 ## Meeting platform
 
-**Without it:** the manual adapter is used — links are typed by hand and
-attendance is imported from a file. No room link is published
-automatically.
+**Without it:** the manual adapter (`tools/convener_ops/platform.py::ManualPlatform`)
+is used — links are typed by hand and attendance is imported from a file. No
+room link is published automatically. This is D-13's ordinary state, not a
+degraded one, and it stays fully usable indefinitely: nothing in this project
+requires the meeting provider's own API to ever be configured.
+
+**With it:** `tools/convener_ops/platform_fcc.py::PlatformFCC` is used instead,
+selected automatically by `platform_from_env` from whether the secret below
+is set. Real per-person attendance is read from the provider's own
+`GET /api/v4/conferences/{id}/calls` — one row per connection, address,
+join and leave time, duration — and the session recording is reported and
+deleted through the same API rather than tracked by hand. **This endpoint is
+not published in the provider's own API reference.** It has answered
+consistently against a real account and a real token, more than once, but
+nothing contractual guarantees it keeps answering. If it ever stops, nothing
+breaks: `platform_from_env` falls back to the manual adapter the moment the
+secret is unset, exactly as it does today.
 
 **To create:** requires production API credentials from the meeting
-provider, granted after a manual request (see phase 4).
+provider, granted after a manual request (see phase 4). The value to set is
+a bearer **access token**, not a client id and secret — this project does
+not exchange credentials for one itself.
 
 **Secret to set:** `CONVENER_MEETING_API_TOKEN`.
 
 **To verify:** run `cd tools && uv run convener-check-config`; *Meeting platform*
 moves from `absent` to `production`.
+
+**Renewing the token — a step of the event's journey, not a secret set
+once.** The access token is short-lived (31 days on one grant observed, 14
+on another) against a series that runs roughly monthly, so renewal cannot be
+a one-time setup step. The provider's refresh token would solve that, but it
+**rotates on every use** — exchanging it issues a new refresh token and
+invalidates the old one, so it cannot be stored once as a secret the way an
+access token is; whatever holds it must be rewritten by hand on every
+renewal. The design that survives that constraint is human-in-the-loop
+rather than automated:
+
+1. The refresh token lives only in the shared vault (`secrets.kdbx`), never
+   in this repository.
+2. Roughly once a month, alongside the other T-7 preparations already on an
+   event's runbook (beside a line like "Waiting room and co-host rights set
+   up"), a volunteer completes a short browser consent step with the
+   provider and pastes the new access token into `CONVENER_MEETING_API_TOKEN`.
+3. If nobody has, before the current token's remaining life runs low, a
+   **notice is posted to the board thread** — the same channel
+   `convener-notify-immediate` already posts through — rather than the
+   integration failing silently on the day of a seminar.
+
+Skipping the step costs one event's manual attendance import through the
+fallback above, never a cancelled seminar and never a security incident. The
+journey line and the board notice that drive this are wired up in a later
+phase-4 task; this section documents the procedure a volunteer or that later
+task follows, and `tools/convener_ops/platform_fcc.py`'s module docstring
+documents the same reasoning from the code's side.
 
 ## Outbound email
 
