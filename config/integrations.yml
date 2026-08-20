@@ -1,7 +1,9 @@
 # Every external dependency the *application code* (tools/convener_ops and
 # app/src) reads at runtime, and what happens without it. Absent is a normal
 # state: the feature degrades visibly, nothing breaks -- with one exception,
-# event_keys below, whose absent_behaviour says so explicitly.
+# event_keys below, which declares `absent_is_normal: false` rather than
+# relying on its absent_behaviour text alone: a boolean `convener-check-config`
+# can act on, not only a paragraph a reader might skip.
 #
 # This deliberately excludes secrets that only CI ever reads (a workflow
 # step's `env:`, never something convener-check-config's own process sees) --
@@ -73,6 +75,7 @@ integrations:
     label: Event registration encryption
     secrets:
       - CONVENER_EVENT_KEY_<ID>
+    absent_is_normal: false
     absent_behaviour: >-
       Unlike every other row here, this is not a normal state to degrade out
       of. CONVENER_EVENT_KEY_<ID> is set once per event -- <ID> stands for the

@@ -18,7 +18,7 @@ from typing import Any, Final
 import yaml
 
 from convener_ops.governance import paris_today
-from convener_ops.integrations import Integration, load_declaration, resolve_states
+from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
@@ -174,10 +174,28 @@ _SYMBOL = {"production": "[ok]", "trial": "[trial]", "absent": "[--]"}
 
 
 def render_check(integrations: list[Integration]) -> str:
+    """The `convener-check-config` report.
+
+    "An absent integration is a normal state" is true for every row but the
+    ones that declare `absent_is_normal: false` (see `integrations.py`).
+    Softening the footer to "...unless a row says otherwise" would charge
+    the honest rows for the exceptional one's sake, so instead: an
+    exceptional row that is currently absent is marked inline, where the
+    reader is already looking, and the footer only admits the exception --
+    naming which row -- when one is actually in that state. A row that
+    merely *declares* itself exceptional but is `production` today changes
+    nothing here, because there is nothing to warn about yet.
+    """
     lines = ["Integration status", "=================="]
+    exceptional_absences: list[str] = []
     for integration in integrations:
+        marker = ""
+        if integration.state == ABSENT and not integration.absent_is_normal:
+            marker = "  (not a normal absence -- see below)"
+            exceptional_absences.append(integration.label)
         lines.append(
-            f"{_SYMBOL[integration.state]} {integration.label} - {integration.state}"
+            f"{_SYMBOL[integration.state]} {integration.label} - "
+            f"{integration.state}{marker}"
         )
         if integration.missing:
             lines.append(f"      waiting on: {', '.join(integration.missing)}")
@@ -190,7 +208,13 @@ def render_check(integrations: list[Integration]) -> str:
     )
     lines.append("")
     lines.append(f"Summary: {summary}")
-    lines.append("An absent integration is a normal state, not a failure.")
+    if exceptional_absences:
+        lines.append(
+            "An absent integration is a normal state, not a failure -- "
+            f"except {', '.join(exceptional_absences)}, marked above."
+        )
+    else:
+        lines.append("An absent integration is a normal state, not a failure.")
     return "\n".join(lines)
 
 

@@ -36,6 +36,28 @@ def test_declaration_is_loaded(tmp_path: Path) -> None:
     ]
 
 
+def test_absent_is_normal_defaults_to_true_when_not_declared(tmp_path: Path) -> None:
+    integrations = load_declaration(_write(tmp_path))
+    assert all(i.absent_is_normal for i in integrations)
+
+
+def test_absent_is_normal_false_is_read_from_the_declaration(tmp_path: Path) -> None:
+    path = tmp_path / "integrations.yml"
+    path.write_text(
+        """
+integrations:
+  - name: event_keys
+    label: Event registration encryption
+    secrets: [CONVENER_EVENT_KEY_<ID>]
+    absent_is_normal: false
+    absent_behaviour: The job that would decrypt registrations exits in error.
+""",
+        encoding="utf-8",
+    )
+    integrations = load_declaration(path)
+    assert integrations[0].absent_is_normal is False
+
+
 def test_absent_when_no_secret_is_set(tmp_path: Path) -> None:
     resolved = resolve_states(load_declaration(_write(tmp_path)), env={})
     assert all(i.state == "absent" for i in resolved)
@@ -103,6 +125,17 @@ def test_email_transport_declares_the_smtp_port() -> None:
         "CONVENER_SMTP_PASSWORD",
         "CONVENER_SMTP_FROM",
     }
+
+
+def test_exactly_one_row_declares_itself_an_exception_and_it_is_event_keys() -> None:
+    """Pinned as data, not left to a reader noticing prose: two years from
+    now, a new integration copied from a neighbouring row inherits
+    `absent_is_normal: true` by default (see `Integration`), so this only
+    breaks if someone deliberately declares a second exception -- which is
+    exactly when this test should make them explain why."""
+    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    exceptions = [i.name for i in declaration if not i.absent_is_normal]
+    assert exceptions == ["event_keys"]
 
 
 def test_email_transport_is_absent_when_only_the_port_is_missing() -> None:
