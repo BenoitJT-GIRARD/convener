@@ -28,13 +28,16 @@ from convener_ops.attendance import (
 )
 from convener_ops.certificate import (
     EVENTS_DIR,
+    CertificateEntry,
     CertificateEvent,
     certificates_path,
+    fingerprint,
     issue,
     public_register,
     register_from_data,
     register_to_data,
     reissue,
+    revoke,
 )
 from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
@@ -68,7 +71,6 @@ from convener_ops.registration import (
     find_by_email,
     load_registration_file,
     matching_code,
-    normalize_email,
     to_registration,
     upsert,
 )
@@ -1092,23 +1094,10 @@ def issue_certificates() -> int:
             )
         return 1
 
-    register_path = certificates_path(root, event_id)
-    if register_path.exists():
-        try:
-            register_data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
-        except yaml.YAMLError as exc:
-            print(
-                f"{register_path.relative_to(root).as_posix()}: invalid YAML - {exc}",
-                file=sys.stderr,
-            )
-            return 1
-    else:
-        register_data = None
-    try:
-        existing = register_from_data(register_data)
-    except ValueError as exc:
-        print(f"{register_path.relative_to(root).as_posix()}: {exc}", file=sys.stderr)
+    loaded_register = _load_certificate_register(root, event_id)
+    if loaded_register is None:
         return 1
+    register_path, existing = loaded_register
 
     event = CertificateEvent(event_id=event_id, title=title, date=event_date)
     issued_on = paris_today(datetime.now(UTC))
@@ -1206,19 +1195,47 @@ def certificates_public_data() -> int:
     return 0
 
 
+def _load_certificate_register(
+    root: Path, event_id: str
+) -> tuple[Path, tuple[CertificateEntry, ...]] | None:
+    """Load `event_id`'s register -- factored out (fix round 2) so
+    `issue_certificates`, `reissue_certificate` and `revoke_certificate`
+    share one reading of `certificates.yml` rather than three copies that
+    could drift. Returns `None` on any failure, having already printed the
+    one-line reason to stderr; a caller returns `1` in that case. Returning
+    `None` rather than a third element a caller has to `assert` away keeps
+    every call site a plain `if loaded is None: return 1`, which mypy
+    narrows on its own."""
+    register_path = certificates_path(root, event_id)
+    if register_path.exists():
+        try:
+            register_data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            print(
+                f"{register_path.relative_to(root).as_posix()}: invalid YAML - {exc}",
+                file=sys.stderr,
+            )
+            return None
+    else:
+        register_data = None
+    try:
+        existing = register_from_data(register_data)
+    except ValueError as exc:
+        print(f"{register_path.relative_to(root).as_posix()}: {exc}", file=sys.stderr)
+        return None
+    return register_path, existing
+
+
 def reissue_certificate() -> int:
     """`convener-reissue-certificate`: an operator's deliberate correction to
     one already-issued certificate -- mint a fresh identifier and a fresh
-    signed token for `ATTENDEE_EMAIL`, never touching the row it replaces
-    (R-18, fix round 1, Important 3).
+    signed token for the attendee named by `CERTIFICATE_ID`, never
+    touching the row it replaces (R-18, fix round 1, Important 3).
 
     Unlike `convener-issue-certificates`, this is never a scheduled job: an
-    operator runs it by hand, once, for one person, after revoking the
-    certificate it replaces (`certificate.revoke` -- there is no CLI
-    command for that step; the register is committed clear specifically
-    so a hand edit and a commit is a legitimate way to flip one entry's
-    `state`, and this command refuses to run without it). See
-    `certificate.reissue`'s own docstring for why this has to be a
+    operator runs it by hand, once, for one certificate, after revoking
+    the one it replaces (`convener-revoke-certificate`, R-21, fix round 2).
+    See `certificate.reissue`'s own docstring for why this has to be a
     separate, explicit command rather than a change to
     `convener-issue-certificates`'s own idempotent lookup: that job must keep
     refusing to resurrect a revoked certificate on a routine re-run, which
@@ -1226,10 +1243,27 @@ def reissue_certificate() -> int:
 
     Reads `EVENT_ID`, `EVENT_PRIVATE_KEY`, `CONVENER_SIGNING_KEY` and
     `CONVENER_MATCHING_SALT` exactly as `convener-issue-certificates` does -- the
-    same D-13 shapes apply, for the same reasons -- plus `ATTENDEE_EMAIL`,
-    the one address this run corrects. `ATTENDEE_EMAIL` is never printed,
-    the same discipline every other job in this module holds itself to;
-    every failure message below names the event, never the address.
+    same D-13 shapes apply, for the same reasons -- plus `CERTIFICATE_ID`,
+    the certificate this run corrects (R-22, fix round 2).
+
+    **`CERTIFICATE_ID`, never an address (R-22).** A `workflow_dispatch`
+    input is rendered on the run page and retained with the run for as
+    long as the run's own history exists -- longer than the 14-day
+    artefact this project uses everywhere it has to carry personal data
+    at all, and exactly the exposure task 7's own Important 4 named. This
+    command has an alternative `convener-resend-confirmation` never had: the
+    certificate identifier is random, public by design, already printed
+    on the document and already published in
+    `certificates-public.json` -- so it names exactly one certificate
+    without naming a person. The identifier resolves to a registration
+    the same way `certificate.issue` does, run in reverse: this function
+    reads the register row `CERTIFICATE_ID` names (`fingerprint`,
+    private, never published) and then computes every currently eligible
+    attendee's own fingerprint until one matches -- the one candidate
+    `certificate.fingerprint`'s salted HMAC says is the same person,
+    without ever reading or printing an address to find out. No address
+    is typed into this command, held by it, or printed by it, at any
+    point.
 
     Re-derives registrations and attendance from scratch, exactly as
     `convener-issue-certificates` does, so a correction to either -- a
@@ -1237,12 +1271,11 @@ def reissue_certificate() -> int:
     attendance export -- is picked up automatically; the only differences
     from `convener-issue-certificates` are which one attendee this command
     acts on, and that it calls `certificate.reissue` instead of
-    `certificate.issue`. Refuses (exit 1) when no registration is on file
-    for the address, when the address is not currently eligible under
-    today's attendance data, or when `certificate.reissue` itself refuses
-    -- no revoked row to correct, or a still-issued row standing in the
-    way -- surfacing that `ValueError` verbatim, since it already names
-    the reason.
+    `certificate.issue`. Refuses (exit 1) when no register entry carries
+    `CERTIFICATE_ID`, when no currently eligible attendee's fingerprint
+    matches that entry's, or when `certificate.reissue` itself refuses --
+    a still-issued row standing in the way -- surfacing that `ValueError`
+    verbatim, since it already names the reason.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
@@ -1277,11 +1310,10 @@ def reissue_certificate() -> int:
         )
         return 0
 
-    email = os.environ.get("ATTENDEE_EMAIL", "").strip()
-    if not email:
-        print("no attendee e-mail address supplied", file=sys.stderr)
+    certificate_id = os.environ.get("CERTIFICATE_ID", "").strip()
+    if not certificate_id:
+        print("no certificate id supplied", file=sys.stderr)
         return 1
-    target_address = normalize_email(email)
 
     root = repo_root()
     rel_path = Path("data") / "events" / event_id / "registrations.enc"
@@ -1301,9 +1333,22 @@ def reissue_certificate() -> int:
         if registration is not None:
             registrations.append(registration)
 
-    if not any(normalize_email(r.email) == target_address for r in registrations):
+    loaded_register = _load_certificate_register(root, event_id)
+    if loaded_register is None:
+        return 1
+    register_path, existing = loaded_register
+
+    target_entry = next(
+        (
+            entry
+            for entry in existing
+            if entry.event_id == event_id and entry.identifier == certificate_id
+        ),
+        None,
+    )
+    if target_entry is None:
         print(
-            f"no registration on file for event {event_id} at the given address",
+            f"no certificate {certificate_id} on record for event {event_id}",
             file=sys.stderr,
         )
         return 1
@@ -1329,19 +1374,24 @@ def reissue_certificate() -> int:
     threshold = EligibilityThreshold.from_config(cfg)
     eligible = eligible_attendees(matched, threshold)
 
+    # R-22: resolve the certificate to a candidate by fingerprint, the
+    # same derivation `certificate.issue` performs, run in reverse --
+    # never by reading an address out of the register (it holds none) or
+    # accepting one as input (see the docstring above).
     attendee = next(
         (
             a
             for a in eligible
-            if normalize_email(a.registration.email) == target_address
+            if fingerprint(event_id, a.registration.email, salt)
+            == target_entry.fingerprint
         ),
         None,
     )
     if attendee is None:
         print(
-            f"the given address is not currently eligible for event "
-            f"{event_id} -- not enough attendance recorded to reissue a "
-            "certificate",
+            f"certificate {certificate_id} does not match any currently "
+            f"eligible attendee for event {event_id} -- not enough "
+            "attendance recorded to reissue it",
             file=sys.stderr,
         )
         return 1
@@ -1367,24 +1417,6 @@ def reissue_certificate() -> int:
             )
         return 1
 
-    register_path = certificates_path(root, event_id)
-    if register_path.exists():
-        try:
-            register_data = yaml_safe_load(register_path.read_text(encoding="utf-8"))
-        except yaml.YAMLError as exc:
-            print(
-                f"{register_path.relative_to(root).as_posix()}: invalid YAML - {exc}",
-                file=sys.stderr,
-            )
-            return 1
-    else:
-        register_data = None
-    try:
-        existing = register_from_data(register_data)
-    except ValueError as exc:
-        print(f"{register_path.relative_to(root).as_posix()}: {exc}", file=sys.stderr)
-        return 1
-
     event = CertificateEvent(event_id=event_id, title=title, date=event_date)
     capped_attendee = replace(
         attendee,
@@ -1407,7 +1439,72 @@ def reissue_certificate() -> int:
         encoding="utf-8",
         newline="",
     )
-    print(f"certificate reissued for event {event_id}")
+    print(
+        f"certificate reissued for event {event_id}: {certificate_id} -> "
+        f"{result.entry.identifier}"
+    )
+    return 0
+
+
+def revoke_certificate() -> int:
+    """`convener-revoke-certificate`: mark one already-issued certificate
+    `STATE_REVOKED` in the register (R-21, fix round 2) -- the operation
+    spec S:7 names by itself ("Révocation"), and the one this module
+    always had a tested, correct pure function for (`certificate.revoke`)
+    and, until this round, no caller at all.
+
+    Round 1 reasoned that a hand edit of the committed-clear register was
+    a legitimate way to flip one entry's `state` (`cli.py`'s own docstring
+    at the time; see the fix round 1 report's Concern 2). R-21 does not
+    accept that: it depends on a volunteer having a working checkout,
+    finding the right file, editing the right row, and committing it
+    correctly -- exactly the "a collaborator's goodwill or their post"
+    dependency this whole project refuses to build on elsewhere -- and
+    `revoke`'s own guard against naming an identifier that is not in the
+    register is unreachable from a text editor, which is precisely where
+    that mistake gets made.
+
+    Reads `EVENT_ID` and `CERTIFICATE_ID` -- both public identifiers,
+    never an address (R-22; see `reissue_certificate`'s own docstring for
+    why an address is never accepted by any command in this module that a
+    `workflow_dispatch` form could expose). Needs no signing key and no
+    matching salt: revocation touches the register alone
+    (`certificate.py`'s own "revocation touches the register, never the
+    signature" section) -- the token a revoked certificate's holder
+    carries keeps verifying forever; only the register's own `state`
+    column says it should no longer be trusted.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    certificate_id = os.environ.get("CERTIFICATE_ID", "").strip()
+    if not certificate_id:
+        print("no certificate id supplied", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    loaded_register = _load_certificate_register(root, event_id)
+    if loaded_register is None:
+        return 1
+    register_path, existing = loaded_register
+
+    try:
+        updated = revoke(existing, certificate_id)
+    except ValueError as exc:
+        print(f"cannot revoke for event {event_id}: {exc}", file=sys.stderr)
+        return 1
+
+    register_path.parent.mkdir(parents=True, exist_ok=True)
+    register_path.write_text(
+        CERTIFICATES_HEADER + _dump(register_to_data(updated)),
+        encoding="utf-8",
+        newline="",
+    )
+    print(f"certificate {certificate_id} revoked for event {event_id}")
     return 0
 
 
