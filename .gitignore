@@ -20,6 +20,14 @@ notify-body.md
 # build artefact this becomes instead of a line in the job log.
 unsent-confirmation.eml
 
+# The host's short list of attendance to resolve by hand
+# (tools/convener_ops/cli.py::match_attendance). Written only when
+# attendance.match finds an unmatched or unreachable attendee -- carries
+# display names and addresses, so it is never committed and never printed;
+# see match_attendance's own docstring for why a file, the same reasoning
+# unsent-confirmation.eml above already follows.
+unmatched-attendance.md
+
 # Python
 __pycache__/
 *.pyc

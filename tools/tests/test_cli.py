@@ -14,10 +14,12 @@ from conftest import board_member, config, speaker
 
 from convener_ops import eventkeys
 from convener_ops.cli import (
+    UNMATCHED_ATTENDANCE,
     UNSENT_CONFIRMATION,
     _load,
     handle_proposal,
     handle_registration,
+    match_attendance,
     public_data,
     resend_confirmation,
     resolve_registration_secret,
@@ -25,7 +27,15 @@ from convener_ops.cli import (
     sweep,
     validate,
 )
-from convener_ops.registration import load_registration_file, matching_code, to_registration
+from convener_ops.registration import (
+    Registration,
+    RegistrationFile,
+    dump_registration_file,
+    load_registration_file,
+    matching_code,
+    to_registration,
+    upsert,
+)
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -1377,3 +1387,284 @@ def test_resend_confirmation_rejects_a_malformed_committed_file(
 
     assert resend_confirmation() == 1
     assert "registrations.enc" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ #
+# match_attendance(): task 8 -- join the platform's attendance export
+# against this event's registrations (spec S:5's cascade) and report the
+# result. Like handle_registration above, this job holds decrypted
+# registrations in memory; these tests check the same property task 6's
+# tests check there -- no name and no address may appear anywhere this
+# job prints, on any path -- plus the one new thing task 8 adds: the
+# host's short list of unresolved attendance goes to a file, never to
+# stdout, and only when there is something in it to report.
+# ------------------------------------------------------------------ #
+
+_ATTENDANCE_CSV_HEADER = "display_name,email,joined_at,left_at,duration_seconds"
+
+
+def _write_registrations(
+    tmp_path: Path, event_id: str, private_pem: str, *registrations: Registration
+) -> None:
+    file = load_registration_file(None)
+    for registration in registrations:
+        file, _replaced = upsert(file, registration, private_pem=private_pem)
+    path = tmp_path / "data" / "events" / event_id / "registrations.enc"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(dump_registration_file(file), encoding="utf-8")
+
+
+def _write_attendance_csv(tmp_path: Path, event_id: str, *rows: str) -> None:
+    path = tmp_path / "data" / "events" / event_id / "attendance-import.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n", encoding="utf-8")
+
+
+def test_match_attendance_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+
+    assert match_attendance() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_match_attendance_with_an_invalid_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "../escape")
+
+    assert match_attendance() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_match_attendance_without_a_configured_key_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert match_attendance() == 1
+    assert "no private key configured" in capsys.readouterr().err
+
+
+def test_match_attendance_with_nothing_recorded_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert match_attendance() == 1
+    assert "no registrations recorded" in capsys.readouterr().err
+
+
+def test_match_attendance_rejects_a_malformed_committed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert match_attendance() == 1
+    assert "registrations.enc" in capsys.readouterr().err
+
+
+def test_match_attendance_reports_a_missing_attendance_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert match_attendance() == 1
+    assert "no attendance export" in capsys.readouterr().err
+
+
+def test_match_attendance_prints_only_counts_and_writes_the_host_list(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Ada joins by the link with her own address (matched, level 2 --
+    no salt configured); Grace's connection carries an address that
+    matches nobody (unmatched); a third connection has no address at all
+    (unreachable). Neither Ada's nor Grace's name or address may appear
+    in anything this job prints -- only in the host's file, which is the
+    one place they are allowed to, because that is the whole point of
+    handing it to a human."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+        "Grace Hopper,grace@example.org,2026-08-20T18:00:00Z,2026-08-20T18:30:00Z,1800",
+        "+1 555 0100,,2026-08-20T18:00:00Z,2026-08-20T18:10:00Z,600",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert match_attendance() == 0
+
+    captured = capsys.readouterr()
+    printed = (captured.out + captured.err).lower()
+    assert "1 matched, 1 unmatched, 1 unreachable" in printed
+    assert "3 row(s) read" in printed
+    for leaked in ("ada", "lovelace", "grace", "hopper", "555 0100"):
+        assert leaked not in printed, f"{leaked!r} leaked into job output"
+
+    host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
+    assert "Grace Hopper" in host_list
+    assert "grace@example.org" in host_list
+    assert "+1 555 0100" in host_list
+    assert "Ada" not in host_list
+    assert "ada@example.org" not in host_list
+
+
+def test_match_attendance_unlinks_a_stale_host_list_when_all_matched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    stale = tmp_path / UNMATCHED_ATTENDANCE
+    stale.write_text("leftover from an earlier run", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert match_attendance() == 0
+    assert not stale.exists()
+
+
+def test_match_attendance_uses_the_matching_code_when_salted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An end-to-end check that CONVENER_MATCHING_SALT actually reaches the
+    cascade: with a code embedded, a connection whose own address matches
+    nobody is still matched -- level 1 overriding level 2, exercised
+    through the real CLI wiring rather than only through attendance.match
+    directly."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    code = matching_code("mrg-042", ada.email, "s3cr3t-salt-value")
+    assert code is not None
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        f"Ada Lovelace {code},not-ada@example.org,"
+        "2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert match_attendance() == 0
+    assert not (tmp_path / UNMATCHED_ATTENDANCE).exists()
+
+
+def test_match_attendance_host_list_with_only_unmatched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No unreachable entry this time -- the host list's second section
+    is skipped, not printed as an empty heading."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Someone Else,someone@example.org,"
+        "2026-08-20T18:00:00Z,2026-08-20T18:30:00Z,1800",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert match_attendance() == 0
+
+    host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
+    assert "Unmatched" in host_list
+    assert "Unreachable" not in host_list
+
+
+def test_match_attendance_host_list_with_only_unreachable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No unmatched entry this time -- the host list's first section is
+    skipped, not printed as an empty heading."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "+1 555 0100,,2026-08-20T18:00:00Z,2026-08-20T18:10:00Z,600",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert match_attendance() == 0
+
+    host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
+    assert "Unreachable" in host_list
+    assert "Unmatched" not in host_list
+
+
+def test_match_attendance_skips_an_entry_that_fails_to_decrypt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A stray entry encrypted under an unrelated key pair -- well-formed
+    envelope shape, but undecryptable with this event's own key. Skipped,
+    not treated as a match, the same handling find_by_email and upsert
+    already give a stray undecryptable entry."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    file = load_registration_file(None)
+    file, _replaced = upsert(file, ada, private_pem=private_pem)
+    _other_private, other_public = eventkeys.generate()
+    stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
+    file = RegistrationFile(entries=(*file.entries, stray))
+    path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(dump_registration_file(file), encoding="utf-8")
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert match_attendance() == 0
+    assert "1 matched, 0 unmatched, 0 unreachable" in capsys.readouterr().out

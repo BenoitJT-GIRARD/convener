@@ -18,11 +18,12 @@ from typing import Any, Final
 import yaml
 
 from convener_ops import confirmation, eventkeys
+from convener_ops.attendance import MatchEvent, match
 from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
-from convener_ops.platform import Room
+from convener_ops.platform import AttendanceImportError, Room
 from convener_ops.platform_fcc import platform_from_env
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
@@ -747,6 +748,123 @@ def resend_confirmation() -> int:
         return 1
 
     _send_confirmation(event_id, registration, ())
+    return 0
+
+
+#: Where the host's short list of attendance to resolve by hand lands --
+#: names and addresses a volunteer needs to read directly, so this file is
+#: `.gitignore`d and never printed, the same way `UNSENT_CONFIRMATION`
+#: already handles a composed message that carries the same kind of data.
+#: Written only when there is something to report; unlinked otherwise, so a
+#: stale file from an earlier run of this same job workspace is never
+#: mistaken for this run's answer.
+UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
+
+
+def match_attendance() -> int:
+    """`convener-match-attendance`: read the platform's attendance export for
+    one event, join it against that event's stored registrations through
+    `attendance.match` (spec S:5's cascade), and report the result.
+
+    Reads `EVENT_ID` -- an operator-typed value, the same manual-trigger
+    shape `resend_confirmation` already reads, since the platform's
+    attendance export only exists once the session is over, on nobody's
+    automatic schedule -- and `EVENT_PRIVATE_KEY`, the same per-event
+    secret every other step in this file that touches
+    `registrations.enc` reads. Every existing entry is decrypted once, in
+    memory, into `Registration` objects; an entry that fails to decrypt
+    under this key is skipped rather than treated as a match, the same
+    handling `find_by_email` and `upsert` already give a stray
+    undecryptable entry.
+
+    `attendance.py` is pure and never prints; this function is the only
+    place its answer is turned into output, and it draws the same line
+    task 6 drew for a decrypted registration: only counts -- how many
+    matched, unmatched and unreachable, and how many rows were read --
+    ever reach stdout, never a name or an address. The host's actual short
+    list goes to `UNMATCHED_ATTENDANCE` instead, never printed and never
+    committed (see its own comment above).
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    registrations: list[Registration] = []
+    for entry in current.entries:
+        registration = to_registration(json.dumps(entry), private_pem)
+        if registration is not None:
+            registrations.append(registration)
+
+    speakers, _errors = _load(root / "data" / "speakers.yml")
+    cfg, _errors = _load(root / "data" / "config.yml")
+    speaker_list = speakers if isinstance(speakers, list) else []
+    config_map = cfg if isinstance(cfg, dict) else None
+    platform = platform_from_env(os.environ, speaker_list, config_map)
+
+    try:
+        rows = platform.get_attendance(event_id)
+    except AttendanceImportError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    salt = os.environ.get("CONVENER_MATCHING_SALT")
+    result = match(rows, registrations, MatchEvent(event_id=event_id, salt=salt))
+
+    print(
+        f"attendance for event {event_id}: {len(result.matched)} matched, "
+        f"{len(result.unmatched)} unmatched, {len(result.unreachable)} "
+        f"unreachable ({len(rows)} row(s) read)"
+    )
+
+    unmatched_path = root / UNMATCHED_ATTENDANCE
+    if result.unmatched or result.unreachable:
+        lines = [f"# Attendance to resolve -- event {event_id}", ""]
+        if result.unmatched:
+            lines.append("## Unmatched -- the host can resolve these by hand")
+            for unmatched in result.unmatched:
+                minutes = unmatched.duration_seconds // 60
+                lines.append(
+                    f"- {unmatched.display_name} <{unmatched.email}> -- {minutes} min"
+                )
+            lines.append("")
+        if result.unreachable:
+            lines.append(
+                "## Unreachable -- joined by phone, no address on file, "
+                "cannot be matched"
+            )
+            for unreachable in result.unreachable:
+                minutes = unreachable.duration_seconds // 60
+                lines.append(f"- {unreachable.display_name} -- {minutes} min")
+            lines.append("")
+        unmatched_path.write_text("\n".join(lines), encoding="utf-8", newline="")
+        print(
+            f"{len(result.unmatched)} unmatched and {len(result.unreachable)} "
+            f"unreachable attendee(s) written to {UNMATCHED_ATTENDANCE} for the "
+            "host to review"
+        )
+    else:
+        unmatched_path.unlink(missing_ok=True)
+
     return 0
 
 
