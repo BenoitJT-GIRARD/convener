@@ -11,10 +11,18 @@
  * Unlike services/form-relay, there is no shared secret a caller signs
  * with -- a static page cannot hold one -- so this endpoint is open by
  * construction. README.md ("Abuse protection") records the choice made for
- * that and why. Unlike services/auth-proxy, this worker holds a GitHub
- * token (turning a submission into a repository_dispatch requires one), so
- * it cannot be secret-free either -- see README.md for why that puts it in
- * its own worker rather than a route on either of the other two.
+ * that and why -- a per-event burst limiter plus a per-event cumulative
+ * ceiling, both with their own storage bindings. Unlike services/auth-proxy,
+ * this worker holds a GitHub token (turning a submission into a
+ * repository_dispatch requires one), so it cannot be secret-free either --
+ * see README.md for why that puts it in its own worker rather than a route
+ * on either of the other two.
+ *
+ * It answers cross-origin requests -- the form is served from a different
+ * origin than this worker -- following the same pattern
+ * `services/auth-proxy/src/index.js` already uses: an `ALLOWED_ORIGIN`
+ * check, a preflight answer, and CORS headers on every response, error or
+ * not, so a caller can actually read what this worker sends back.
  *
  * It logs no request body and keeps nothing beyond the per-event counter
  * README.md describes -- and that counter is a count, never the data that
@@ -51,15 +59,51 @@ const MAX_BODY_BYTES = 32_768;
 //: participates in.
 const EVENT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
-// A per-event registration ceiling, needed regardless of whichever abuse
-// protection is chosen (README.md): an event does not have ten thousand
-// registrants, and a count that goes past this is worth surfacing as a
-// signal even when it is not, on its own, a hard defence. 500 is
-// generous -- an order of magnitude above any real seminar's attendance --
-// while three orders of magnitude below "ten thousand".
+// A per-event *cumulative* registration ceiling, needed regardless of
+// whichever burst protection sits in front of it (README.md): an event
+// does not have ten thousand registrants, and a count that goes past this
+// is worth surfacing as a signal even where it is not, on its own, a hard
+// defence. 500 is generous -- an order of magnitude above any real
+// seminar's attendance -- while three orders of magnitude below "ten
+// thousand". This is a *total*, unbounded in time; SIGNUP_RATE_LIMITER
+// below is what bounds *velocity*, and the two are complementary, not
+// redundant -- see README.md, "Abuse protection".
 const PER_EVENT_CEILING = 500;
 
+// GitHub's own dispatches/contents API has no documented timeout of its
+// own, so an unresponsive upstream would otherwise hold this worker's
+// invocation open until the *caller's* timeout -- SUBMIT_TIMEOUT_MS in
+// app/src/signup/SignupForm.tsx -- fires instead. Both outbound GitHub
+// calls carry this, well inside that 15-second client budget even if both
+// were to time out in sequence.
+const GITHUB_FETCH_TIMEOUT_MS = 5_000;
+
 const EXPECTED_FIELDS = ['ciphertext', 'encrypted_key', 'event_id', 'iv', 'v'];
+
+/** The CORS headers on every response once `ALLOWED_ORIGIN` is known to
+ *  match -- mirrors `services/auth-proxy/src/index.js` exactly, including
+ *  attaching them to *error* responses (a caller's `fetch` cannot read a
+ *  204, or a 4xx/502 body, without `Access-Control-Allow-Origin` on that
+ *  specific response, not only on success). */
+function corsHeaders(origin) {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
+/** `new Response`, always carrying the CORS headers -- one call site so no
+ *  branch below this line can forget them and produce a response a real
+ *  browser silently discards. */
+function respond(status, env, body = null, extraHeaders = {}) {
+  return new Response(body, {
+    status,
+    headers: { ...corsHeaders(env.ALLOWED_ORIGIN), ...extraHeaders },
+  });
+}
 
 /** Decodes standard-alphabet base64 to bytes, or `null` for anything that
  *  is not validly formed -- wrong alphabet, wrong padding, or a string
@@ -76,6 +120,34 @@ function base64Decode(value) {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
+}
+
+/**
+ * True if `rawBody` -- already confirmed to be valid JSON describing a flat
+ * object -- spells the same key twice. `JSON.parse` silently keeps only the
+ * *last* occurrence of a duplicate key, so `Object.keys` on the *parsed*
+ * result can never see this: two `"event_id"` entries collapse to the one
+ * key this worker validates, while `client_payload.body` still forwards
+ * both, byte for byte, to whatever parses it next -- which may not resolve
+ * the same collision the same way `JSON.parse` did here.
+ *
+ * Sound rather than approximate, because every field this worker accepts
+ * is a string or a number, never a nested object or array (enforced
+ * elsewhere): with no legal `{...}` inside any value, an unescaped
+ * `"name":` sequence anywhere in the raw text can only be an actual
+ * top-level key. Inside a JSON string, an unescaped `"` always terminates
+ * the string, so the same literal, unescaped sequence could never appear as
+ * content instead.
+ */
+function hasDuplicateKey(rawBody) {
+  const seen = new Set();
+  const keyPattern = /"((?:[^"\\]|\\.)*)"\s*:/g;
+  let match;
+  while ((match = keyPattern.exec(rawBody)) !== null) {
+    if (seen.has(match[1])) return true;
+    seen.add(match[1]);
+  }
+  return false;
 }
 
 /**
@@ -123,8 +195,9 @@ function validatedEventId(parsed) {
  * already covers a read. No second secret, no second account.
  *
  * Throws on anything other than a clean 200 or 404 -- a rate limit, a bad
- * token, GitHub unreachable -- so the caller reports that as this worker's
- * own failure (502) rather than confusing it with "no such event" (404).
+ * token, GitHub unreachable, a timeout -- so the caller reports that as
+ * this worker's own failure (502) rather than confusing it with "no such
+ * event" (404).
  */
 async function eventKeyExists(eventId, token) {
   const url = `https://api.github.com/repos/${REPO}/contents/keys/events/${encodeURIComponent(eventId)}.pub`;
@@ -134,6 +207,7 @@ async function eventKeyExists(eventId, token) {
       Accept: 'application/vnd.github+json',
       'User-Agent': USER_AGENT,
     },
+    signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
   });
   if (res.status === 200) return true;
   if (res.status === 404) return false;
@@ -145,13 +219,35 @@ function counterKey(eventId) {
 }
 
 export async function handle(request, env) {
-  if (request.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
+  // CORS, first: the in-repo pattern services/auth-proxy/src/index.js
+  // uses, copied rather than reinvented. A mismatched or absent Origin
+  // gets a bare 403 with no CORS headers at all -- exactly like that
+  // worker -- because a real browser sending the wrong Origin would not be
+  // able to read a CORS-headed response as this worker's own origin
+  // either, and a non-browser caller has no CORS to satisfy in the first
+  // place. An unset ALLOWED_ORIGIN var behaves the same way: `origin` can
+  // never literally equal `undefined`, so every request is refused, the
+  // same fail-closed direction as the checks further down.
+  const origin = request.headers.get('Origin');
+  if (origin !== env.ALLOWED_ORIGIN) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  if (request.method !== 'OPTIONS' && request.method !== 'POST') {
+    return respond(405, env, 'Method Not Allowed');
   }
 
   const { pathname } = new URL(request.url);
   if (pathname !== ROUTE) {
-    return new Response('Not Found', { status: 404 });
+    return respond(404, env, 'Not Found');
+  }
+
+  if (request.method === 'OPTIONS') {
+    // The preflight a browser sends before the real POST, because
+    // `content-type: application/json` is not a CORS-safelisted value
+    // (SignupForm.tsx's own submit call sets it). No body, 204, and the
+    // same CORS headers every other response carries.
+    return respond(204, env);
   }
 
   // Cheap, pre-parse guard: refuse an oversized body before it is even
@@ -161,28 +257,48 @@ export async function handle(request, env) {
   // never pass it.
   const declaredLength = request.headers.get('content-length');
   if (declaredLength && Number(declaredLength) > MAX_BODY_BYTES) {
-    return new Response('Bad Request', { status: 400 });
+    return respond(400, env, 'Bad Request');
   }
 
   // Read raw: it contains ciphertext, and this worker cannot read it, that
   // is the point. It is parsed only far enough to check shape, then
   // forwarded byte-identical -- never re-serialised -- as
   // `client_payload.body`, the same pattern services/form-relay uses.
-  const body = await request.text();
-  if (body.length > MAX_BODY_BYTES) {
-    return new Response('Bad Request', { status: 400 });
+  // Guarded: an aborted or malformed request body throws here rather than
+  // resolving, and an uncaught throw would escape as workerd's own generic
+  // error page -- outside the closed set of statuses this worker promises.
+  let body;
+  try {
+    body = await request.text();
+  } catch {
+    return respond(400, env, 'Bad Request');
+  }
+
+  // `body.length` is UTF-16 code units, not bytes -- a multi-byte-heavy
+  // body could pass a byte-denominated MAX_BODY_BYTES compared against
+  // that count. `TextEncoder` gives the real encoded byte length, the same
+  // unit `MAX_BODY_BYTES` and the Content-Length check above are in.
+  if (new TextEncoder().encode(body).length > MAX_BODY_BYTES) {
+    return respond(400, env, 'Bad Request');
   }
 
   let parsed;
   try {
     parsed = JSON.parse(body);
   } catch {
-    return new Response('Bad Request', { status: 400 });
+    return respond(400, env, 'Bad Request');
+  }
+
+  // Checked on the *raw text*, not the parsed object: see hasDuplicateKey's
+  // own docstring for why a duplicate key is invisible to any check that
+  // only looks at `parsed`.
+  if (hasDuplicateKey(body)) {
+    return respond(400, env, 'Bad Request');
   }
 
   const eventId = validatedEventId(parsed);
   if (!eventId) {
-    return new Response('Bad Request', { status: 400 });
+    return respond(400, env, 'Bad Request');
   }
 
   // Fail closed: this worker is the internet-facing boundary, so an
@@ -190,15 +306,35 @@ export async function handle(request, env) {
   // than silently skipping the checks they exist for -- see README.md,
   // "Fail closed, not open", for why that is the opposite of how
   // tools/convener_ops/proposal.py treats its own absent secret, and correctly
-  // so for each. Checked before anything below touches GitHub or the
-  // counter, so neither is ever reached on a misconfigured deploy.
+  // so for each. Checked before anything below touches GitHub or either
+  // counter, so none of them is ever reached on a misconfigured deploy.
   const token = env.CONVENER_DISPATCH_TOKEN;
   const kv = env.SIGNUP_RELAY_KV;
-  if (!token || !kv) {
-    return new Response('Bad Gateway', { status: 502 });
+  const rateLimiter = env.SIGNUP_RATE_LIMITER;
+  if (!token || !kv || !rateLimiter) {
+    return respond(502, env, 'Bad Gateway');
   }
 
-  // The per-event ceiling, checked before either GitHub call: cheaper to
+  // The burst limiter, checked before anything else touches GitHub or the
+  // cumulative counter: purpose-built for exactly this (unlike
+  // SIGNUP_RELAY_KV, a general store repurposed as a counter), keyed per
+  // event so one flooded event cannot exhaust another's budget. Cloudflare
+  // documents this binding as "permissive, eventually consistent, and
+  // intentionally designed to not be used as an accurate accounting
+  // system" -- quoted, not paraphrased, in README.md -- so a thrown
+  // `.limit()` call is treated the same as any other fail-closed check
+  // here: refused, not silently skipped.
+  let limited;
+  try {
+    limited = await rateLimiter.limit({ key: eventId });
+  } catch {
+    return respond(502, env, 'Bad Gateway');
+  }
+  if (!limited.success) {
+    return respond(429, env, 'Too Many Requests', { 'Retry-After': '60' });
+  }
+
+  // The cumulative ceiling, checked before either GitHub call: cheaper to
   // refuse here than to spend a Contents-API read and a dispatch on a
   // request that will be refused anyway. A KV read failure is treated as
   // "no count yet" rather than refusing the request -- see README.md,
@@ -212,17 +348,17 @@ export async function handle(request, env) {
     count = 0;
   }
   if (count >= PER_EVENT_CEILING) {
-    return new Response('Too Many Requests', { status: 429 });
+    return respond(429, env, 'Too Many Requests', { 'Retry-After': '60' });
   }
 
   let known;
   try {
     known = await eventKeyExists(eventId, token);
   } catch {
-    return new Response('Bad Gateway', { status: 502 });
+    return respond(502, env, 'Bad Gateway');
   }
   if (!known) {
-    return new Response('Not Found', { status: 404 });
+    return respond(404, env, 'Not Found');
   }
 
   let upstream;
@@ -243,12 +379,13 @@ export async function handle(request, env) {
         event_type: 'registration-submitted',
         client_payload: { body },
       }),
+      signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
     });
   } catch {
     // A rejected fetch -- GitHub unreachable, DNS failure, a reset
-    // connection -- is exactly as much "this worker could not complete the
-    // dispatch" as a non-2xx answer below.
-    return new Response('Bad Gateway', { status: 502 });
+    // connection, this worker's own timeout -- is exactly as much "this
+    // worker could not complete the dispatch" as a non-2xx answer below.
+    return respond(502, env, 'Bad Gateway');
   }
 
   if (!upstream.ok) {
@@ -256,23 +393,30 @@ export async function handle(request, env) {
     // well-shaped, known-event envelope has no need to see GitHub's error
     // detail, and passing it through would blur this worker's own
     // taxonomy with GitHub's.
-    return new Response('Bad Gateway', { status: 502 });
+    return respond(502, env, 'Bad Gateway');
   }
 
   // Best-effort, after a confirmed dispatch: a registration that reached
   // GitHub must not be un-sent because the counter could not be written
-  // afterwards. See README.md for why this counter is a signal and not a
-  // gate that must never be wrong.
+  // afterwards -- see README.md for why this counter is a signal and not a
+  // gate that must never be wrong. But a failure here is still worth a
+  // trace: unlike a KV *read* failure above (indistinguishable from "no
+  // registrations yet", and harmless to treat as one), a *write* failure
+  // means a real, accepted registration will never be counted, which is
+  // exactly the state a signal exists to surface, not hide. `console.error`
+  // carries only the event id -- already public, the same identifier every
+  // dispatch and every workflow run already names -- and a fixed message;
+  // never the body.
   try {
     await kv.put(counterKey(eventId), String(count + 1));
   } catch {
-    // Nothing to do: the registration already succeeded.
+    console.error(`signup-relay: failed to update the registration counter for event ${eventId}`);
   }
 
   // Fixed 204, not upstream.status -- see services/form-relay/src/index.js
   // for why an unexpected 2xx must not leak through as-is. The caller only
-  // ever sees one of 204, 400, 404, 405, 429 or 502 from this worker.
-  return new Response(null, { status: 204 });
+  // ever sees one of 204, 400, 403, 404, 405, 429 or 502 from this worker.
+  return respond(204, env);
 }
 
 export default { fetch: handle };

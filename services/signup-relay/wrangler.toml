@@ -2,6 +2,14 @@ name = "convener-signup-relay"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
+# The application's origin -- the only one this worker answers CORS
+# preflights for. Same value as services/auth-proxy/wrangler.toml's
+# ALLOWED_ORIGIN, for the same reason: Origin carries no path, so the app
+# being served from a subpath of this host does not change it. Not a
+# secret -- it ships in every CORS response header already.
+[vars]
+ALLOWED_ORIGIN = "https://example-instance.github.io"
+
 # CONVENER_DISPATCH_TOKEN is a Wrangler secret, set with
 # `npx wrangler secret put CONVENER_DISPATCH_TOKEN` -- never here. See README.md.
 
@@ -13,6 +21,25 @@ compatibility_date = "2026-01-01"
 #   npx wrangler kv namespace create SIGNUP_RELAY_KV
 #
 # paste the "id" it prints below before the first deploy.
+# deploy-signup-relay.yml's own gate refuses to deploy while this is still
+# the placeholder, rather than letting `wrangler deploy` fail on it.
 [[kv_namespaces]]
 binding = "SIGNUP_RELAY_KV"
 id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# SIGNUP_RATE_LIMITER -- the per-event burst limiter (README.md, "Abuse
+# protection"). Unlike SIGNUP_RELAY_KV above, `namespace_id` needs no
+# `wrangler ... create` step and no account-specific value: Cloudflare's own
+# docs describe it as "a positive integer that uniquely defines this rate
+# limiting namespace within your Cloudflare account," chosen by the
+# developer, not allocated. "1" is safe to commit as-is because this is the
+# only rate limiter declared anywhere in this Cloudflare account today; if a
+# second one is ever added (in this worker or another), it must use a
+# different integer, or the two will silently share one bucket.
+[[ratelimits]]
+name = "SIGNUP_RATE_LIMITER"
+namespace_id = "1"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60

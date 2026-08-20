@@ -47,6 +47,9 @@ jobs:
           if [ -z "$TOKEN" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
             echo "CLOUDFLARE_API_TOKEN not set - signup relay deploy skipped. This is a normal state until the Cloudflare account is connected."
+          elif grep -q "REPLACE_WITH_" services/signup-relay/wrangler.toml; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "services/signup-relay/wrangler.toml still has a placeholder id - signup relay deploy skipped until the KV namespace is created and its id filled in. See services/signup-relay/README.md."
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi

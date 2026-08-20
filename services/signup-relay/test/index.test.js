@@ -22,16 +22,28 @@ const EVENT_ID = 'mrg-042';
 const VALID_ENVELOPE = JSON.parse(REGISTRATION_CASES[0].envelope);
 const VALID_BODY = JSON.stringify({ event_id: EVENT_ID, ...VALID_ENVELOPE });
 
+// Mirrors services/signup-relay/wrangler.toml's ALLOWED_ORIGIN, which in
+// turn mirrors services/auth-proxy/wrangler.toml's -- the app's origin,
+// not its full URL (Origin never carries a path).
+const ALLOWED_ORIGIN = 'https://example-instance.github.io';
+
 const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cockpit/dispatches';
 const CONTENTS_URL = (id) =>
   `https://api.github.com/repos/example-instance/example-cockpit/contents/keys/events/${id}.pub`;
 
 function post(body, headers = {}) {
-  return new Request('https://relay.example/', { method: 'POST', headers, body });
+  return new Request('https://relay.example/', {
+    method: 'POST',
+    headers: { Origin: ALLOWED_ORIGIN, ...headers },
+    body,
+  });
 }
 
-function requestAt(path, method) {
-  return new Request(`https://relay.example${path}`, { method });
+function requestAt(path, method, headers = {}) {
+  return new Request(`https://relay.example${path}`, {
+    method,
+    headers: { Origin: ALLOWED_ORIGIN, ...headers },
+  });
 }
 
 function makeKv(initial = {}) {
@@ -45,8 +57,18 @@ function makeKv(initial = {}) {
   };
 }
 
-function env(token = 'ghp_test-token', kv = makeKv()) {
-  return { CONVENER_DISPATCH_TOKEN: token, SIGNUP_RELAY_KV: kv };
+function makeRateLimiter(success = true) {
+  return { limit: vi.fn(async () => ({ success })) };
+}
+
+function env(overrides = {}) {
+  return {
+    CONVENER_DISPATCH_TOKEN: 'ghp_test-token',
+    SIGNUP_RELAY_KV: makeKv(),
+    SIGNUP_RATE_LIMITER: makeRateLimiter(),
+    ALLOWED_ORIGIN,
+    ...overrides,
+  };
 }
 
 /** Routes the mocked fetch by URL: the existence check answers `known`
@@ -68,8 +90,54 @@ beforeEach(() => {
   globalThis.fetch = stubFetch();
 });
 
+describe('signup relay -- CORS and the browser boundary', () => {
+  it('answers an OPTIONS preflight from the allowed origin with 204 and every CORS header a browser needs', async () => {
+    const res = await handle(requestAt('/', 'OPTIONS'), env());
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED_ORIGIN);
+    expect(res.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toBe('Content-Type, Accept');
+    expect(res.headers.get('Vary')).toBe('Origin');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('carries CORS headers on a real success response, not only the preflight', async () => {
+    const res = await handle(post(VALID_BODY), env());
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED_ORIGIN);
+  });
+
+  it('carries CORS headers on an error response too -- a fetch() cannot read a response with none', async () => {
+    const res = await handle(post('not json'), env());
+    expect(res.status).toBe(400);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED_ORIGIN);
+  });
+
+  it('refuses a request from any other origin with a bare 403 -- no CORS headers, nothing touched', async () => {
+    const res = await handle(post(VALID_BODY, { Origin: 'https://evil.example' }), env());
+    expect(res.status).toBe(403);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a request with no Origin header at all', async () => {
+    const res = await handle(
+      new Request('https://relay.example/', { method: 'POST', body: VALID_BODY }),
+      env(),
+    );
+    expect(res.status).toBe(403);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses every request when ALLOWED_ORIGIN is not configured, even from what would otherwise be the right origin', async () => {
+    const res = await handle(post(VALID_BODY), env({ ALLOWED_ORIGIN: undefined }));
+    expect(res.status).toBe(403);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
 describe('signup relay -- routing', () => {
-  it('refuses a method other than POST', async () => {
+  it('refuses a method other than POST or OPTIONS', async () => {
     const res = await handle(requestAt('/', 'GET'), env());
     expect(res.status).toBe(405);
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -85,7 +153,7 @@ describe('signup relay -- routing', () => {
 describe('signup relay -- the happy path', () => {
   it('accepts a well-shaped, known-event envelope, dispatches it byte-identical, and counts it', async () => {
     const kv = makeKv();
-    const res = await handle(post(VALID_BODY), env('ghp_test-token', kv));
+    const res = await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
 
     expect(res.status).toBe(204);
 
@@ -96,11 +164,15 @@ describe('signup relay -- the happy path', () => {
     expect(String(existsUrl)).toBe(CONTENTS_URL(EVENT_ID));
     expect(existsInit.headers.Authorization).toBe('Bearer ghp_test-token');
     expect(existsInit.headers['User-Agent']).toBe('convener-signup-relay');
+    // Neither GitHub call is left to hang on this worker's own invocation
+    // forever -- both carry a timeout signal.
+    expect(existsInit.signal).toBeInstanceOf(AbortSignal);
 
     const [dispatchUrl, dispatchInit] = calls[1];
     expect(dispatchUrl).toBe(DISPATCH_URL);
     expect(dispatchInit.headers['User-Agent']).toBe('convener-signup-relay');
     expect(dispatchInit.headers.Authorization).toBe('Bearer ghp_test-token');
+    expect(dispatchInit.signal).toBeInstanceOf(AbortSignal);
 
     const sent = JSON.parse(dispatchInit.body);
     expect(sent.event_type).toBe('registration-submitted');
@@ -161,11 +233,13 @@ describe('signup relay -- shape validation (a shape check, not a content check)'
 
   it.each(mutations)('refuses a body that %s, with 400, and touches nothing else', async (_label, make) => {
     const kv = makeKv();
-    const res = await handle(post(make()), env('ghp_test-token', kv));
+    const rateLimiter = makeRateLimiter();
+    const res = await handle(post(make()), env({ SIGNUP_RELAY_KV: kv, SIGNUP_RATE_LIMITER: rateLimiter }));
     expect(res.status).toBe(400);
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(kv.get).not.toHaveBeenCalled();
     expect(kv.put).not.toHaveBeenCalled();
+    expect(rateLimiter.limit).not.toHaveBeenCalled();
   });
 
   it('refuses a body declared oversized by Content-Length before reading it', async () => {
@@ -173,6 +247,62 @@ describe('signup relay -- shape validation (a shape check, not a content check)'
       post(VALID_BODY, { 'content-length': String(10 * 1024 * 1024) }),
       env(),
     );
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a body whose real byte length exceeds the budget even when its UTF-16 length does not', async () => {
+    // Every field this worker accepts is ASCII by construction (event_id's
+    // token charset, base64 for the rest, and `v` a bare number), so a
+    // shape-valid envelope can never itself hit this path -- this pins the
+    // resource guard's own precision (MAX_BODY_BYTES is a byte budget, and
+    // must be measured in bytes, not UTF-16 code units), not an acceptance
+    // bug. A repeated 3-byte character keeps `.length` (UTF-16 units) at a
+    // third of the true UTF-8 byte count, comfortably under the budget
+    // while the real byte count is comfortably over it.
+    const oversized = '€'.repeat(11_000); // length 11,000; byte length 33,000
+    const res = await handle(post(oversized), env());
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a request whose body cannot even be read (an aborted or broken stream)', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.error(new Error('stream broken'));
+      },
+    });
+    const request = new Request('https://relay.example/', {
+      method: 'POST',
+      headers: { Origin: ALLOWED_ORIGIN },
+      body: stream,
+      duplex: 'half',
+    });
+    const res = await handle(request, env());
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a body with a duplicated event_id key, even though JSON.parse would silently resolve one', async () => {
+    // JSON.parse keeps only the last "event_id", so Object.keys(parsed)
+    // shows exactly the expected five keys -- the exact-set check alone
+    // cannot see this. The forwarded raw body still carries both.
+    const dup =
+      `{"event_id":"${EVENT_ID}","event_id":"mrg-999",` +
+      `"v":${VALID_ENVELOPE.v},"encrypted_key":"${VALID_ENVELOPE.encrypted_key}",` +
+      `"iv":"${VALID_ENVELOPE.iv}","ciphertext":"${VALID_ENVELOPE.ciphertext}"}`;
+    // Sanity check on the test's own premise: this really is valid JSON
+    // that a naive parsed-object-only check would accept.
+    expect(() => JSON.parse(dup)).not.toThrow();
+    const res = await handle(post(dup), env());
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a body with a duplicated key anywhere, not only event_id', async () => {
+    const dup = VALID_BODY.replace('"v":1,', '"v":1,"v":1,');
+    expect(() => JSON.parse(dup)).not.toThrow();
+    const res = await handle(post(dup), env());
     expect(res.status).toBe(400);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
@@ -209,11 +339,38 @@ describe('signup relay -- the event must be known', () => {
 
 describe('signup relay -- fail closed on a missing secret or store', () => {
   it.each([
-    ['CONVENER_DISPATCH_TOKEN is unset', { CONVENER_DISPATCH_TOKEN: undefined, SIGNUP_RELAY_KV: makeKv() }],
-    ['CONVENER_DISPATCH_TOKEN is an empty string', { CONVENER_DISPATCH_TOKEN: '', SIGNUP_RELAY_KV: makeKv() }],
-    ['SIGNUP_RELAY_KV is not bound', { CONVENER_DISPATCH_TOKEN: 'ghp_test-token', SIGNUP_RELAY_KV: undefined }],
-  ])('refuses every well-shaped request when %s, and never calls GitHub', async (_label, badEnv) => {
-    const res = await handle(post(VALID_BODY), badEnv);
+    ['CONVENER_DISPATCH_TOKEN is unset', { CONVENER_DISPATCH_TOKEN: undefined }],
+    ['CONVENER_DISPATCH_TOKEN is an empty string', { CONVENER_DISPATCH_TOKEN: '' }],
+    ['SIGNUP_RELAY_KV is not bound', { SIGNUP_RELAY_KV: undefined }],
+    ['SIGNUP_RATE_LIMITER is not bound', { SIGNUP_RATE_LIMITER: undefined }],
+  ])('refuses every well-shaped request when %s, and never calls GitHub', async (_label, override) => {
+    const res = await handle(post(VALID_BODY), env(override));
+    expect(res.status).toBe(502);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('signup relay -- the burst limiter', () => {
+  it('refuses once the per-event burst limiter trips, with Retry-After, and never calls GitHub', async () => {
+    const rateLimiter = makeRateLimiter(false);
+    const kv = makeKv();
+    const res = await handle(post(VALID_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter, SIGNUP_RELAY_KV: kv }));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(kv.get).not.toHaveBeenCalled();
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('keys the limiter by event id', async () => {
+    const rateLimiter = makeRateLimiter(true);
+    await handle(post(VALID_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
+    expect(rateLimiter.limit).toHaveBeenCalledWith({ key: EVENT_ID });
+  });
+
+  it('fails closed (502) when the limiter itself cannot be reached, rather than skipping it', async () => {
+    const rateLimiter = { limit: vi.fn(async () => { throw new Error('unavailable'); }) };
+    const res = await handle(post(VALID_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
     expect(res.status).toBe(502);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
@@ -241,7 +398,7 @@ describe('signup relay -- dispatch failure', () => {
   it('does not count a failed dispatch toward the per-event ceiling', async () => {
     globalThis.fetch = stubFetch({ dispatchStatus: 500 });
     const kv = makeKv();
-    await handle(post(VALID_BODY), env('ghp_test-token', kv));
+    await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
     expect(kv.put).not.toHaveBeenCalled();
   });
 
@@ -252,27 +409,33 @@ describe('signup relay -- dispatch failure', () => {
   });
 });
 
-describe('signup relay -- the per-event ceiling', () => {
-  it('refuses once an event has reached the ceiling, without calling GitHub at all', async () => {
+describe('signup relay -- the per-event cumulative ceiling', () => {
+  it('refuses once an event has reached the ceiling, with Retry-After, without calling GitHub at all', async () => {
     const kv = makeKv({ 'count:mrg-042': '500' });
-    const res = await handle(post(VALID_BODY), env('ghp_test-token', kv));
+    const res = await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
     expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(kv.put).not.toHaveBeenCalled();
   });
 
   it('still accepts the request one below the ceiling, and the count becomes the ceiling', async () => {
     const kv = makeKv({ 'count:mrg-042': '499' });
-    const res = await handle(post(VALID_BODY), env('ghp_test-token', kv));
+    const res = await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
     expect(res.status).toBe(204);
     expect(kv.put).toHaveBeenCalledWith('count:mrg-042', '500');
   });
 
-  it('keeps each event on its own counter -- a full event does not block a different one', async () => {
+  it('keeps each event on its own counter -- a full event does not block a different one, and writes that event\'s own key', async () => {
     const kv = makeKv({ 'count:mrg-042': '500' });
     const otherBody = JSON.stringify({ event_id: 'mrg-043', ...VALID_ENVELOPE });
-    const res = await handle(post(otherBody), env('ghp_test-token', kv));
+    const res = await handle(post(otherBody), env({ SIGNUP_RELAY_KV: kv }));
     expect(res.status).toBe(204);
+    // Not just "some" write succeeded -- the write landed on mrg-043's own
+    // key, not mrg-042's (which would silently push the full event further
+    // over its ceiling instead of tracking the new one).
+    expect(kv.put).toHaveBeenCalledWith('count:mrg-043', '1');
+    expect(kv.put).not.toHaveBeenCalledWith('count:mrg-042', expect.anything());
   });
 
   it('treats a KV read failure as no count yet, rather than refusing the request', async () => {
@@ -280,16 +443,28 @@ describe('signup relay -- the per-event ceiling', () => {
     kv.get = vi.fn(async () => {
       throw new Error('kv unavailable');
     });
-    const res = await handle(post(VALID_BODY), env('ghp_test-token', kv));
+    const res = await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
     expect(res.status).toBe(204);
   });
 
-  it('still answers 204 when the counter cannot be written after a successful dispatch', async () => {
+  it('still answers 204 when the counter cannot be written after a successful dispatch, and traces the failure', async () => {
     const kv = makeKv();
     kv.put = vi.fn(async () => {
       throw new Error('kv unavailable');
     });
-    const res = await handle(post(VALID_BODY), env('ghp_test-token', kv));
-    expect(res.status).toBe(204);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
+      expect(res.status).toBe(204);
+      // A write failure is no longer discarded without a trace -- but the
+      // trace names only the event id (already public) and a fixed
+      // message, never the body.
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const [logged] = errorSpy.mock.calls[0];
+      expect(logged).toContain(EVENT_ID);
+      expect(logged).not.toContain(VALID_BODY);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
