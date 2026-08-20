@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "node scripts/copy-handbook.mjs && node scripts/copy-event-keys.mjs",
-    "predev": "node scripts/copy-handbook.mjs && node scripts/copy-event-keys.mjs",
+    "prebuild": "node scripts/copy-handbook.mjs && node scripts/copy-event-keys.mjs && node scripts/copy-signing-keys.mjs && node scripts/copy-certificates.mjs",
+    "predev": "node scripts/copy-handbook.mjs && node scripts/copy-event-keys.mjs && node scripts/copy-signing-keys.mjs && node scripts/copy-certificates.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
