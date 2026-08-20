@@ -434,6 +434,20 @@ export interface Config {
   overlap_window_days: number;
   /** How long a seminar runs, in minutes. */
   seminar_duration_minutes: number;
+  /** A share of `seminar_duration_minutes` a matched attendee's summed
+   *  duration must reach to earn a certificate (phase 4 S:5). Configuration,
+   *  not a constant: the real number has to align with accreditation
+   *  requirements this project does not yet know, and alignment happens by
+   *  editing this file, not by editing code.
+   *
+   *  `0.6666666666666666`, not the tidier-looking `0.6667`: the closest
+   *  float64 to exactly two thirds, chosen because it lands fractionally
+   *  *below* two thirds rather than above -- so a duration of exactly two
+   *  thirds of the session reads as eligible rather than being refused by a
+   *  rounding artefact nobody typing a shorter number could see or contest.
+   *  See `tools/convener_ops/attendance.py::EligibilityThreshold` for the
+   *  calculation this feeds. */
+  eligibility_share: number;
   /** The editorial board, one entry per member. Replaces the flat
    *  `board_members` list of logins. */
   board: BoardMember[];

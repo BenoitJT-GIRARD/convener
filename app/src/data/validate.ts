@@ -127,6 +127,22 @@ function whole(at: Cursor, raw: Record<string, unknown>, key: string): number {
   return value;
 }
 
+/** A bounded fraction, `]0, 1]`: above zero, at most one. Nothing in this
+ *  model was this shape before `eligibility_share` (phase 4 S:5) -- every
+ *  other number here is a whole count `whole()` above actively rejects a
+ *  fraction from, pinned by a test that a fractional window is refused
+ *  rather than rounded. No `isinstance(value, bool)`-style guard is needed
+ *  the way `tools/convener_ops/validate.py`'s mirror of this check needs one:
+ *  `typeof true === 'boolean'`, never `'number'`, so a boolean already
+ *  fails the first condition below on its own. */
+function share(at: Cursor, raw: Record<string, unknown>, key: string): number {
+  const value = raw[key];
+  if (typeof value !== 'number' || !Number.isFinite(value) || !(value > 0 && value <= 1)) {
+    fail(at.file, at.where, `should give "${key}" as a share in ]0, 1] but gives ${shown(value)}`);
+  }
+  return value;
+}
+
 /** A count that may legitimately be unrecorded. `null` and `0` are different
  *  facts -- nobody counted, versus nobody came -- and both are kept. */
 function wholeOrBlank(at: Cursor, raw: Record<string, unknown>, key: string): number | null {
@@ -574,9 +590,10 @@ function readSlaDays(at: Cursor, value: unknown): Config['sla_days'] {
 
 const CONFIG_KEYS = [
   'season', 'vw_counter', 'overlap_window_days', 'seminar_duration_minutes',
-  'board', 'nominations', 'board_min', 'board_max', 'vote_window_days',
-  'objection_window_working_days', 'inactivity_months', 'balance_window_months',
-  'view_count_window_days', 'instructions', 'sla_days', 'channels',
+  'eligibility_share', 'board', 'nominations', 'board_min', 'board_max',
+  'vote_window_days', 'objection_window_working_days', 'inactivity_months',
+  'balance_window_months', 'view_count_window_days', 'instructions', 'sla_days',
+  'channels',
 ] as const;
 
 /**
@@ -599,6 +616,7 @@ export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
     vw_counter: whole(at, raw, 'vw_counter'),
     overlap_window_days: whole(at, raw, 'overlap_window_days'),
     seminar_duration_minutes: whole(at, raw, 'seminar_duration_minutes'),
+    eligibility_share: share(at, raw, 'eligibility_share'),
     board: listOf({ file, where: 'the board' }, raw, 'board', readBoardMember),
     nominations: listOf({ file, where: 'the nominations' }, raw, 'nominations', readNomination),
     board_min: whole(at, raw, 'board_min'),

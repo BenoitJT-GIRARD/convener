@@ -42,6 +42,7 @@ export const DEMO_CONFIG: Config = {
   vw_counter: 6,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
+  eligibility_share: 0.6666666666666666,
   board: [
     boardMember('alice', '2024-01-01'),
     boardMember('bob', '2024-01-01'),
