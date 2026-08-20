@@ -22,53 +22,100 @@ ordinary case, not a degraded one. Task 3 will not replace this module; it
 will sit beside it, and the choice between the two is made by whoever wires
 them together, not by anything in here.
 
-Where "the event's configuration" lives
-------------------------------------------
-Nothing in this codebase already models "one event's manual settings" --
-`data/speakers.yml` carries `zoom_link` and `youtube_url` for the *old*,
-one-Zoom-link-per-talk world, keyed by a speaker record's lifecycle, not by
-the event this phase's key pairs, encrypted registrations and attendance
-already key everything else on (`data/events/<id>/`, see
-`tools/convener_ops/eventkeys.py`). Reusing `zoom_link` would tie a phase-4
-adapter to a phase-1 schema this task has no licence to change, for a
-"permanent room" whose link will in practice be the same string on every
-row of that file, which is not what the field was built for. So this module
-opens its own file, shaped the way `data/config.yml` already is -- a flat
-mapping, every key required, an empty string a legal answer, a missing key
-refused by name:
+Where "the event's configuration" lives (revised on review, R-5 / R-6)
+--------------------------------------------------------------------------
+The first version of this module opened its own file,
+`data/events/<id>/config.yml`, reasoning that `data/speakers.yml`'s
+`zoom_link` and `youtube_url` belonged to a phase-1 schema this task had no
+licence to change. Review found the reasoning sound but pointed at the
+wrong file: every `convener_ops` business-logic module except `cli.py` is pure,
+receiving already-loaded data rather than reading a file itself --
+`governance.py`, `notify.py`, `sweep.py` and `public_data.py` all follow
+that rule, and it is the right one. The defect was that `ManualPlatform`
+was reading a file at all, not which file it was reading. So:
 
-    data/events/<id>/config.yml
-        join_url: ''         # the room link, typed in by hand
-        instructions: ''     # anything beyond the link; '' if nothing
-        recording_url: ''    # typed in by hand once the host uploads it
+* **`ManualPlatform` takes the loaded speaker records as a constructor
+  parameter (`speakers`) and never touches `data/speakers.yml` itself.**
+  `get_room` and `get_recording` find the matching record and read its
+  existing `zoom_link` and `youtube_url` -- the very fields the first
+  version rejected, now reached the way every other pure module in this
+  package reaches `data/speakers.yml`'s content: already loaded, by
+  whoever wires this class up (`cli.py`, in the end).
+* **`event_id` is `edition_code`, lower-cased (R-5).** Nothing else in the
+  codebase defines that mapping, and it cannot be implemented without one:
+  `edition_code` is the only candidate consistent with existing convention
+  (`app/src/state/consent.ts` already treats it as the event's public id,
+  `tools/convener_ops/validate.py::EDITION_RE` fixes its shape as `MRG-` followed
+  by digits), and it is what task 1's own tests already use (`mrg-042` for
+  `MRG-042`). `find_speaker` below is the one place this rule is written
+  down.
+* **`instructions` lives in `data/config.yml`, not on the speaker record
+  (R-6).** The cost of the alternative is real -- a `Speaker` field must
+  also join the exhaustive field set, be classified in `consent.ts`,
+  mirrored in `public_data.py`, and added to the cross-language fixture
+  that binds the two -- but the deciding argument is D-06 itself: the
+  chosen platform's account *is* the permanent room, so join instructions
+  for a room that never changes are a property of the series, not of one
+  event. Putting them on the speaker record would invite writing different
+  instructions per event for a room that is the same room every time. So
+  `ManualPlatform` takes a second, optional constructor parameter
+  (`config`, the loaded `data/config.yml`) and reads `instructions` from
+  it; `None` (no config supplied) reads as `''`, the same "nothing more to
+  say" answer an explicit empty string would give.
 
-and, for attendance, the export the brief names directly:
+For attendance, the file stays exactly where the brief named it -- nothing
+about that path was in question:
 
     data/events/<id>/attendance-import.csv
 
 The CSV is never committed
 -----------------------------
-Unlike `config.yml` above, `attendance-import.csv` is a raw export off the
-chosen platform: `display_name` and `email` are personal data. "No personal
-data in the repository, ever" is a hard constraint of this phase, so this
-path is `.gitignore`d (`data/events/*/attendance-import.csv`) even though it
-sits under `data/` like everything else here -- it is dropped locally (or
-into an ephemeral job workspace) for this reader to consume once, never
-checked in. `config.yml` alongside it holds no personal data and is
-committed normally.
+`attendance-import.csv` is a raw export off the chosen platform:
+`display_name` and `email` are personal data. "No personal data in the
+repository, ever" is a hard constraint of this phase, so this path is
+`.gitignore`d (`data/events/*/attendance-import.csv`) even though it sits
+under `data/` like everything else here -- it is dropped locally (or into
+an ephemeral job workspace) for this reader to consume once, never checked
+in.
+
+One consequence worth stating rather than leaving for an auditor to
+rediscover: acceptance criterion 8 ("the whole chain is executable end to
+end with the manual implementation, without any external account") cannot
+be *demonstrated in CI* for this path, and that is correct, not a gap. A
+CI job has no attendance export to read, on purpose -- the only way one
+could is by checking a real export into the repository, which the
+constraint above forbids outright. "Manual" means a human drops the file
+and runs the job; it does not mean "reproducible from a fixture committed
+alongside the code." AC8 is exercised by running the chain by hand against
+a real drop, not by a test in this suite, and no test here claims
+otherwise.
 
 The CSV columns, and what "reads it" means
 ----------------------------------------------
 Five columns, by name, in any order: `display_name`, `email`, `joined_at`,
-`left_at`, `duration_seconds`. `parse_attendance_csv` is the pure reader --
-text in, rows and issues out, no filesystem, fully unit-testable --  and
-`ManualPlatform.get_attendance` is the thin wrapper that finds the file,
-calls it, and prints one line per dropped row to the job log (the same
-"printed where any volunteer can read it" idiom `cli.py` already uses for
-`board_notifications`'s fallback) before returning the rows that parsed. A
-column missing from the header is a whole-file failure, named in the
-exception (step 3 of the brief); a single malformed row is reported and
-excluded, never silently dropped, and never aborts the rows around it.
+`left_at`, `duration_seconds`. Two columns with the same name are a
+whole-file failure too, named like a missing one -- `csv.DictReader` keeps
+only the last one's value, silently, and nothing downstream could tell a
+duplicate from a single well-formed column without this check.
+`parse_attendance_csv` is the pure reader -- text in, rows and issues out,
+no filesystem, fully unit-testable -- and `ManualPlatform.get_attendance`
+is the thin wrapper that finds the file, calls it, and prints one line per
+dropped row to the job log (the same "printed where any volunteer can read
+it" idiom `cli.py` already uses for `board_notifications`'s fallback)
+before returning the rows that parsed. A column missing from the header is
+a whole-file failure, named in the exception (step 3 of the brief); a
+single malformed row is reported and excluded, never silently dropped, and
+never aborts the rows around it.
+
+`get_attendance` reads the file as `utf-8-sig`, not `utf-8`: a plain
+`utf-8` read leaves a leading byte-order mark on the first header cell,
+turning `display_name` into a string starting with a BOM and making this
+module report *that* column missing -- on a file that has it. Windows and
+Excel-adjacent export tools write a BOM often enough that this is not a
+theoretical case, and getting the diagnosis wrong is exactly what the task
+exists to prevent: `utf-8-sig` strips a BOM when present and reads
+identically to `utf-8` when it is not, so this is a strict widening, not a
+behaviour change for the files that already worked.
 
 The email boundary (do not "fix" this)
 ------------------------------------------
@@ -101,31 +148,19 @@ from __future__ import annotations
 import csv
 import io
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Final, Protocol, runtime_checkable
+from typing import Any, Final, Protocol, runtime_checkable
 
 from .commit_format import _TOKEN
 from .paths import repo_root
-from .yaml_safe import safe_load
 
 #: The five columns `attendance-import.csv` must carry, by name. Extra
 #: columns an export tool adds are harmless and ignored; only a column
 #: missing from this set fails the whole file.
 _REQUIRED_ATTENDANCE_COLUMNS: Final = frozenset(
     {"display_name", "email", "joined_at", "left_at", "duration_seconds"}
-)
-
-#: The keys `data/events/<id>/config.yml` must carry. Every one is required
-#: -- a missing key is an incomplete record, refused by name, the same rule
-#: `data/config.yml` itself is validated by -- but an *empty* value is a
-#: legal answer for any of the three: no extra instructions, no recording
-#: yet.
-_REQUIRED_ROOM_KEYS: Final[tuple[str, ...]] = (
-    "join_url",
-    "instructions",
-    "recording_url",
 )
 
 #: An event id, validated the same way `eventkeys.py` validates one --
@@ -209,11 +244,11 @@ class AttendanceImportError(Exception):
     reading this needs to know what to fix, not that something failed."""
 
 
-class RoomConfigError(Exception):
-    """The event's `config.yml` could not be read at all: the file is
-    absent, is not a mapping, or is missing one of the required keys.
-    Always names the event, the path, or the key -- see
-    `AttendanceImportError`, the same rule applies here."""
+class EventNotFoundError(Exception):
+    """No speaker record's `edition_code` matches an event id (R-5). Raised
+    by `find_speaker`, and by `get_room` / `get_recording` through it --
+    both need the matching record before they can answer, and "no such
+    event" is the whole failure; there is nothing else here to name."""
 
 
 @dataclass(frozen=True)
@@ -276,13 +311,29 @@ def parse_attendance_csv(
     asks for is testable directly, without a temp file.
 
     Raises `AttendanceImportError` if a required column is missing from the
-    header -- that is a whole-file failure, not a per-row one. A malformed
-    row never raises past this function; it becomes an `AttendanceIssue`
-    instead, and reading continues.
+    header, or if the header repeats a column name -- both are whole-file
+    failures, not per-row ones. A malformed row never raises past this
+    function; it becomes an `AttendanceIssue` instead, and reading
+    continues.
     """
     reader: csv.DictReader[str] = csv.DictReader(io.StringIO(text))
-    header = set(reader.fieldnames or ())
-    missing_columns = _REQUIRED_ATTENDANCE_COLUMNS - header
+    fieldnames = list(reader.fieldnames or ())
+
+    #: `set(fieldnames)` below would silently collapse a repeated column
+    #: name before the missing-column check ever saw it, and
+    #: `csv.DictReader` itself keeps only the last one's value -- so a
+    #: duplicate is checked first, on the list, while the repetition is
+    #: still visible.
+    duplicate_columns = sorted(
+        {name for name in fieldnames if fieldnames.count(name) > 1}
+    )
+    if duplicate_columns:
+        raise AttendanceImportError(
+            "attendance-import.csv has duplicate column(s): "
+            + ", ".join(duplicate_columns)
+        )
+
+    missing_columns = _REQUIRED_ATTENDANCE_COLUMNS - set(fieldnames)
     if missing_columns:
         raise AttendanceImportError(
             "attendance-import.csv is missing required column(s): "
@@ -299,47 +350,68 @@ def parse_attendance_csv(
     return rows, issues
 
 
+def _matches_event(record: Mapping[str, Any], event_id: str) -> bool:
+    edition_code = record.get("edition_code")
+    return isinstance(edition_code, str) and edition_code.lower() == event_id
+
+
+def find_speaker(
+    speakers: Sequence[Mapping[str, Any]], event_id: str
+) -> Mapping[str, Any]:
+    """The R-5 rule, and the one place it is written down: `event_id` is
+    `edition_code`, lower-cased -- `mrg-1` matches the record whose
+    `edition_code` is `MRG-1`. `event_id` is expected to already be
+    lower-case (that is what "is edition_code lower-cased" means); this
+    does not also lower-case `event_id` itself before comparing, so a
+    caller holding `MRG-1` has to lower it first, the same as everywhere
+    else in this module.
+
+    Raises `EventNotFoundError`, naming `event_id`, when no record's
+    `edition_code` matches -- never returns a placeholder, and never
+    guesses at a near match.
+    """
+    _validate_event_id(event_id)
+    for record in speakers:
+        if _matches_event(record, event_id):
+            return record
+    raise EventNotFoundError(f"no event found for id {event_id!r}")
+
+
 @dataclass(frozen=True)
 class ManualPlatform:
     """The manual implementation of `Platform`. See the module docstring
-    for why it is the default, where each file lives, and why the two
-    files it reads are treated so differently by `.gitignore`."""
+    for why it is the default, where the room and recording come from
+    (constructor parameters, not a file this class reads itself), and why
+    `attendance-import.csv` -- the one file it does read -- is treated
+    differently by `.gitignore` than everything else under `data/`."""
 
     events_dir: Path = field(default_factory=lambda: repo_root() / "data" / "events")
+    #: The loaded contents of `data/speakers.yml` -- already validated and
+    #: read by whoever constructs this class, never by this class itself
+    #: (see the module docstring's "Where the event's configuration lives"
+    #: section). `()` is a legal, if useless, default: any lookup then
+    #: raises `EventNotFoundError` for every id, which is the honest
+    #: answer to "no speaker data was supplied".
+    speakers: Sequence[Mapping[str, Any]] = ()
+    #: The loaded contents of `data/config.yml`, for `instructions` (R-6).
+    #: `None` -- the default -- reads as `''`: no config supplied is not a
+    #: data-integrity failure the way a missing speaker record is, it is
+    #: the same "nothing more to say" an explicit empty string would be.
+    config: Mapping[str, Any] | None = None
 
     def _event_dir(self, event_id: str) -> Path:
         _validate_event_id(event_id)
         return self.events_dir / event_id
 
-    def _load_room_config(self, event_id: str) -> dict[str, str]:
-        path = self._event_dir(event_id) / "config.yml"
-        if not path.exists():
-            raise RoomConfigError(
-                f"no configuration for event {event_id!r}: expected {path}"
-            )
-        raw = safe_load(path.read_text(encoding="utf-8"))
-        if not isinstance(raw, dict):
-            raise RoomConfigError(f"{path} does not contain a mapping")
-        missing_keys = [key for key in _REQUIRED_ROOM_KEYS if key not in raw]
-        if missing_keys:
-            raise RoomConfigError(
-                f"{path} is missing required key(s): {', '.join(missing_keys)}"
-            )
-        config: dict[str, str] = {}
-        for key in _REQUIRED_ROOM_KEYS:
-            value = raw[key]
-            if value is None:
-                value = ""
-            if not isinstance(value, str):
-                raise RoomConfigError(
-                    f"{path}: {key!r} must be a string, got {value!r}"
-                )
-            config[key] = value
-        return config
+    def _instructions(self) -> str:
+        if self.config is None:
+            return ""
+        return str(self.config.get("instructions", "") or "")
 
     def get_room(self, event_id: str) -> Room:
-        config = self._load_room_config(event_id)
-        return Room(join_url=config["join_url"], instructions=config["instructions"])
+        record = find_speaker(self.speakers, event_id)
+        join_url = str(record.get("zoom_link", "") or "")
+        return Room(join_url=join_url, instructions=self._instructions())
 
     def get_attendance(self, event_id: str) -> list[AttendanceRow]:
         path = self._event_dir(event_id) / "attendance-import.csv"
@@ -347,14 +419,16 @@ class ManualPlatform:
             raise AttendanceImportError(
                 f"no attendance export for event {event_id!r}: expected {path}"
             )
-        rows, issues = parse_attendance_csv(path.read_text(encoding="utf-8"))
+        #: Not "utf-8" -- see the module docstring's note on the BOM a
+        #: Windows or Excel-adjacent export tool commonly writes.
+        rows, issues = parse_attendance_csv(path.read_text(encoding="utf-8-sig"))
         for issue in issues:
             print(f"attendance-import.csv line {issue.line_number}: {issue.reason}")
         return rows
 
     def get_recording(self, event_id: str) -> Recording:
-        config = self._load_room_config(event_id)
-        url = config["recording_url"]
+        record = find_speaker(self.speakers, event_id)
+        url = str(record.get("youtube_url", "") or "")
         return Recording(url=url, size=0, available=bool(url))
 
     def delete_recording(self, event_id: str) -> None:

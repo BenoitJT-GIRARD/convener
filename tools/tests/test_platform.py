@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -8,11 +10,11 @@ from convener_ops.platform import (
     AttendanceImportError,
     AttendanceIssue,
     AttendanceRow,
+    EventNotFoundError,
     ManualPlatform,
     Platform,
     Recording,
-    Room,
-    RoomConfigError,
+    find_speaker,
     parse_attendance_csv,
 )
 
@@ -23,26 +25,28 @@ def _write_csv(path: Path, *rows: str) -> None:
     path.write_text("\n".join((CSV_HEADER, *rows)) + "\n", encoding="utf-8")
 
 
-def _write_room_config(
-    path: Path,
-    join_url: str = "https://meet.example.org/room",
-    instructions: str = "",
-    recording_url: str = "",
-) -> None:
-    path.write_text(
-        "join_url: "
-        + repr(join_url)
-        + "\ninstructions: "
-        + repr(instructions)
-        + "\nrecording_url: "
-        + repr(recording_url)
-        + "\n",
-        encoding="utf-8",
+def _speaker(**overrides: Any) -> dict[str, Any]:
+    """A minimal loaded `data/speakers.yml` record -- only the two fields
+    `ManualPlatform` reads. Real records carry far more; this class never
+    looks at the rest, the same way `public_data.py` only ever reads the
+    fields its own allowlist names."""
+    base: dict[str, Any] = {
+        "edition_code": "MRG-901",
+        "zoom_link": "https://meet.example.org/permanent-room",
+        "youtube_url": "",
+    }
+    base.update(overrides)
+    return base
+
+
+def _platform(
+    tmp_path: Path,
+    speakers: Sequence[Mapping[str, Any]] = (),
+    config: Mapping[str, Any] | None = None,
+) -> ManualPlatform:
+    return ManualPlatform(
+        events_dir=tmp_path / "events", speakers=speakers, config=config
     )
-
-
-def _platform(tmp_path: Path) -> ManualPlatform:
-    return ManualPlatform(events_dir=tmp_path / "events")
 
 
 # ------------------------------------------------------------------ #
@@ -58,102 +62,115 @@ def test_manual_platform_satisfies_the_platform_protocol(tmp_path: Path) -> None
 
 
 # ------------------------------------------------------------------ #
-# get_room -- the event's configuration
+# find_speaker -- R-5: event_id is edition_code, lower-cased
 # ------------------------------------------------------------------ #
 
 
-def test_get_room_reads_join_url_and_instructions_from_the_event_config(
+def test_find_speaker_matches_the_lower_cased_edition_code() -> None:
+    record = _speaker(edition_code="MRG-1")
+    assert find_speaker([record], "mrg-1") is record
+
+
+def test_find_speaker_raises_naming_the_id_when_nothing_matches() -> None:
+    with pytest.raises(EventNotFoundError, match="mrg-2"):
+        find_speaker([_speaker(edition_code="MRG-1")], "mrg-2")
+
+
+def test_find_speaker_does_not_match_on_case_alone(tmp_path: Path) -> None:
+    """`event_id` is expected to already be lower-case -- this is not a
+    case-insensitive search in the other direction. An `event_id` that is
+    not already lower-case is simply an id nothing matches, same as any
+    other wrong id."""
+    with pytest.raises(EventNotFoundError):
+        find_speaker([_speaker(edition_code="MRG-1")], "MRG-1")
+
+
+def test_find_speaker_ignores_a_record_with_no_edition_code() -> None:
+    unscheduled = _speaker(edition_code="")
+    scheduled = _speaker(edition_code="MRG-1")
+    assert find_speaker([unscheduled, scheduled], "mrg-1") is scheduled
+
+
+# ------------------------------------------------------------------ #
+# get_room -- the room comes from the speaker record, instructions from
+# data/config.yml (R-5, R-6)
+# ------------------------------------------------------------------ #
+
+
+def test_get_room_reads_the_join_url_from_the_matching_speaker_record(
     tmp_path: Path,
 ) -> None:
-    event_dir = tmp_path / "events" / "mrg-901"
-    event_dir.mkdir(parents=True)
-    _write_room_config(
-        event_dir / "config.yml",
-        join_url="https://meet.example.org/permanent-room",
-        instructions="Dial +1 555 0100 if the link fails.",
-    )
+    speakers = [
+        _speaker(
+            edition_code="MRG-901",
+            zoom_link="https://meet.example.org/permanent-room",
+        )
+    ]
 
-    room = _platform(tmp_path).get_room("mrg-901")
+    room = _platform(tmp_path, speakers=speakers).get_room("mrg-901")
 
-    assert room == Room(
-        join_url="https://meet.example.org/permanent-room",
-        instructions="Dial +1 555 0100 if the link fails.",
-    )
+    assert room.join_url == "https://meet.example.org/permanent-room"
 
 
-def test_get_room_allows_empty_instructions(tmp_path: Path) -> None:
-    """An empty string is an answer -- 'nothing beyond the link' -- the same
-    convention `data/config.yml` uses throughout."""
-    event_dir = tmp_path / "events" / "mrg-902"
-    event_dir.mkdir(parents=True)
-    _write_room_config(event_dir / "config.yml", instructions="")
+def test_get_room_reads_instructions_from_config_not_the_speaker_record(
+    tmp_path: Path,
+) -> None:
+    """R-6: D-06 makes the account itself the permanent room, so join
+    instructions describe a room that never changes -- a property of the
+    series (`data/config.yml`), not of one event."""
+    speakers = [_speaker(edition_code="MRG-901")]
+    config = {"instructions": "Dial +1 555 0100 if the link fails."}
 
-    room = _platform(tmp_path).get_room("mrg-902")
+    room = _platform(tmp_path, speakers=speakers, config=config).get_room("mrg-901")
+
+    assert room.instructions == "Dial +1 555 0100 if the link fails."
+
+
+def test_get_room_with_no_config_supplied_has_no_instructions(
+    tmp_path: Path,
+) -> None:
+    """No `config` supplied is not a data-integrity failure -- it reads as
+    the same 'nothing more to say' an explicit empty string would."""
+    speakers = [_speaker(edition_code="MRG-901")]
+
+    room = _platform(tmp_path, speakers=speakers).get_room("mrg-901")
 
     assert room.instructions == ""
 
 
-def test_get_room_raises_when_no_configuration_exists_for_the_event(
+def test_get_room_treats_a_missing_instructions_key_as_empty_string(
     tmp_path: Path,
 ) -> None:
-    with pytest.raises(RoomConfigError, match="mrg-903"):
+    speakers = [_speaker(edition_code="MRG-901")]
+
+    room = _platform(tmp_path, speakers=speakers, config={}).get_room("mrg-901")
+
+    assert room.instructions == ""
+
+
+def test_get_room_raises_when_no_speaker_record_matches_the_event(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(EventNotFoundError, match="mrg-903"):
         _platform(tmp_path).get_room("mrg-903")
 
 
-def test_get_room_names_the_missing_key(tmp_path: Path) -> None:
-    """A volunteer editing this file by hand needs to know which key is
-    missing, not merely that the file could not be read -- the same
-    requirement acceptance criterion 3 of the brief makes of the CSV
-    reader."""
-    event_dir = tmp_path / "events" / "mrg-904"
-    event_dir.mkdir(parents=True)
-    (event_dir / "config.yml").write_text(
-        "join_url: 'https://meet.example.org/room'\n", encoding="utf-8"
-    )
+def test_get_room_the_same_instructions_apply_to_every_event(tmp_path: Path) -> None:
+    """The point of R-6, made concrete: two different events, one config,
+    the same instructions -- because it is the same room."""
+    speakers = [
+        _speaker(edition_code="MRG-901", zoom_link="https://meet.example.org/room"),
+        _speaker(edition_code="MRG-902", zoom_link="https://meet.example.org/room"),
+    ]
+    config = {"instructions": "Dial +1 555 0100 if the link fails."}
+    platform = _platform(tmp_path, speakers=speakers, config=config)
 
-    with pytest.raises(RoomConfigError) as excinfo:
-        _platform(tmp_path).get_room("mrg-904")
+    first = platform.get_room("mrg-901")
+    second = platform.get_room("mrg-902")
 
-    assert "instructions" in str(excinfo.value)
-    assert "recording_url" in str(excinfo.value)
-
-
-def test_get_room_raises_when_the_config_is_not_a_mapping(tmp_path: Path) -> None:
-    event_dir = tmp_path / "events" / "mrg-905"
-    event_dir.mkdir(parents=True)
-    (event_dir / "config.yml").write_text("- not\n- a\n- mapping\n", encoding="utf-8")
-
-    with pytest.raises(RoomConfigError):
-        _platform(tmp_path).get_room("mrg-905")
-
-
-def test_get_room_treats_a_blank_hand_typed_value_as_empty_string(
-    tmp_path: Path,
-) -> None:
-    """A volunteer typing `instructions:` with nothing after the colon
-    writes YAML `null`, not `''` -- both mean the same thing here: no
-    answer given yet."""
-    event_dir = tmp_path / "events" / "mrg-906"
-    event_dir.mkdir(parents=True)
-    (event_dir / "config.yml").write_text(
-        "join_url: 'https://meet.example.org/room'\ninstructions:\nrecording_url: ''\n",
-        encoding="utf-8",
-    )
-
-    room = _platform(tmp_path).get_room("mrg-906")
-
-    assert room.instructions == ""
-
-
-def test_get_room_raises_when_a_key_holds_the_wrong_type(tmp_path: Path) -> None:
-    event_dir = tmp_path / "events" / "mrg-907"
-    event_dir.mkdir(parents=True)
-    (event_dir / "config.yml").write_text(
-        "join_url: 42\ninstructions: ''\nrecording_url: ''\n", encoding="utf-8"
-    )
-
-    with pytest.raises(RoomConfigError, match="join_url"):
-        _platform(tmp_path).get_room("mrg-907")
+    expected = "Dial +1 555 0100 if the link fails."
+    assert first.instructions == second.instructions == expected
+    assert first.join_url == second.join_url
 
 
 # ------------------------------------------------------------------ #
@@ -167,9 +184,14 @@ def test_an_invalid_event_id_is_refused_before_touching_the_filesystem(
 ) -> None:
     events_dir = tmp_path / "events"
     with pytest.raises(ValueError):
-        _platform(tmp_path).get_room(bad_id)
+        _platform(tmp_path).get_attendance(bad_id)
     # No directory was created or read as a side effect of the attempt.
     assert not events_dir.exists()
+
+
+def test_get_room_also_validates_the_event_id_first(tmp_path: Path) -> None:
+    with pytest.raises(ValueError):
+        _platform(tmp_path).get_room("../secret")
 
 
 # ------------------------------------------------------------------ #
@@ -303,6 +325,18 @@ def test_missing_column_is_a_whole_file_failure_not_reported_per_row(
         _platform(tmp_path).get_attendance("mrg-917")
 
 
+def test_duplicate_column_names_are_refused_not_silently_collapsed() -> None:
+    """`csv.DictReader` keeps only the last `email` column's value, and a
+    plain `set(fieldnames)` would collapse the duplicate before the
+    missing-column check ever saw it -- checked explicitly, named like a
+    missing column would be."""
+    with pytest.raises(AttendanceImportError, match="email"):
+        parse_attendance_csv(
+            "display_name,email,email,joined_at,left_at,duration_seconds\n"
+            "Ada Lovelace,ada@example.org,ada@example.org,t1,t2,3600\n"
+        )
+
+
 def test_a_malformed_row_is_reported_and_dropped_the_rest_still_read(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -419,6 +453,86 @@ def test_extra_unexpected_columns_do_not_fail_the_import(tmp_path: Path) -> None
 
 
 # ------------------------------------------------------------------ #
+# get_attendance against real bytes, not hand-built strings -- the BOM,
+# CRLF, a trailing blank line and an over-long row all arrive this way in
+# practice, at the file-reading boundary `parse_attendance_csv` alone
+# cannot exercise.
+# ------------------------------------------------------------------ #
+
+
+def test_get_attendance_reads_a_file_with_a_utf8_bom(tmp_path: Path) -> None:
+    """The Important review finding: a plain `utf-8` read leaves the BOM on
+    the first header cell, and this module used to report `display_name`
+    missing on a file that has it. Real bytes, because a hand-built Python
+    string would never carry a BOM by accident the way a Windows or
+    Excel-adjacent export tool does."""
+    event_dir = tmp_path / "events" / "mrg-930"
+    event_dir.mkdir(parents=True)
+    content = (
+        CSV_HEADER + "\n"
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:00:00Z,3600\n"
+    )
+    (event_dir / "attendance-import.csv").write_bytes(
+        b"\xef\xbb\xbf" + content.encode("utf-8")
+    )
+
+    rows = _platform(tmp_path).get_attendance("mrg-930")
+
+    assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+def test_get_attendance_handles_crlf_line_endings(tmp_path: Path) -> None:
+    event_dir = tmp_path / "events" / "mrg-931"
+    event_dir.mkdir(parents=True)
+    content = (
+        CSV_HEADER + "\r\n"
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+        "2026-08-20T19:00:00Z,3600\r\n"
+    )
+    (event_dir / "attendance-import.csv").write_bytes(content.encode("utf-8"))
+
+    rows = _platform(tmp_path).get_attendance("mrg-931")
+
+    assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+def test_get_attendance_skips_trailing_blank_lines(tmp_path: Path) -> None:
+    event_dir = tmp_path / "events" / "mrg-932"
+    event_dir.mkdir(parents=True)
+    content = (
+        CSV_HEADER + "\n"
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:00:00Z,3600\n"
+        "\n\n"
+    )
+    (event_dir / "attendance-import.csv").write_bytes(content.encode("utf-8"))
+
+    rows = _platform(tmp_path).get_attendance("mrg-932")
+
+    assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+def test_get_attendance_ignores_extra_cells_on_an_over_long_row(
+    tmp_path: Path,
+) -> None:
+    """A row with more cells than the header has columns puts the extras
+    under `csv.DictReader`'s `None` restkey. `_parse_row` only ever reads
+    the five named columns, so the extras are silently harmless -- pinned
+    here through the real read path, not assumed."""
+    event_dir = tmp_path / "events" / "mrg-933"
+    event_dir.mkdir(parents=True)
+    content = (
+        CSV_HEADER + "\n"
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+        "2026-08-20T19:00:00Z,3600,extra,extra2\n"
+    )
+    (event_dir / "attendance-import.csv").write_bytes(content.encode("utf-8"))
+
+    rows = _platform(tmp_path).get_attendance("mrg-933")
+
+    assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+# ------------------------------------------------------------------ #
 # get_recording / delete_recording
 # ------------------------------------------------------------------ #
 
@@ -426,11 +540,9 @@ def test_extra_unexpected_columns_do_not_fail_the_import(tmp_path: Path) -> None
 def test_get_recording_is_unavailable_when_no_recording_url_is_set(
     tmp_path: Path,
 ) -> None:
-    event_dir = tmp_path / "events" / "mrg-920"
-    event_dir.mkdir(parents=True)
-    _write_room_config(event_dir / "config.yml", recording_url="")
+    speakers = [_speaker(edition_code="MRG-920", youtube_url="")]
 
-    recording = _platform(tmp_path).get_recording("mrg-920")
+    recording = _platform(tmp_path, speakers=speakers).get_recording("mrg-920")
 
     assert recording == Recording(url="", size=0, available=False)
 
@@ -442,32 +554,31 @@ def test_get_recording_is_available_once_a_url_is_typed_in_by_hand(
     says this: recording URLs are entered by hand after publishing, and no
     upload is attempted -- so `size` is not knowable here (the file is not
     hosted by us) and is always 0 for the manual implementation."""
-    event_dir = tmp_path / "events" / "mrg-921"
-    event_dir.mkdir(parents=True)
-    _write_room_config(
-        event_dir / "config.yml",
-        recording_url="https://videos.example.org/mrg-921",
-    )
+    speakers = [
+        _speaker(edition_code="MRG-921", youtube_url="https://videos.example.org/mrg-921")
+    ]
 
-    recording = _platform(tmp_path).get_recording("mrg-921")
+    recording = _platform(tmp_path, speakers=speakers).get_recording("mrg-921")
 
     assert recording == Recording(
         url="https://videos.example.org/mrg-921", size=0, available=True
     )
 
 
+def test_get_recording_raises_when_no_speaker_record_matches_the_event(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(EventNotFoundError, match="mrg-923"):
+        _platform(tmp_path).get_recording("mrg-923")
+
+
 def test_delete_recording_is_a_documented_no_op(tmp_path: Path) -> None:
     """`delete_recording` exists because of the chosen platform's storage
-    quota (spec 2): a manual recording lives wherever it was uploaded by
+    quota (spec SS2): a manual recording lives wherever it was uploaded by
     hand, under nobody's quota this project manages, so there is nothing
-    for the manual implementation to reclaim."""
-    event_dir = tmp_path / "events" / "mrg-922"
-    event_dir.mkdir(parents=True)
-    _write_room_config(event_dir / "config.yml")
-
+    for the manual implementation to reclaim. No speaker record is needed
+    either -- unlike `get_room` / `get_recording`, this never looks one up."""
     _platform(tmp_path).delete_recording("mrg-922")  # does not raise
-    # Nothing on disk was touched by the no-op.
-    assert (event_dir / "config.yml").exists()
 
 
 def test_delete_recording_still_validates_the_event_id(tmp_path: Path) -> None:
@@ -488,3 +599,13 @@ def test_events_dir_defaults_to_the_repository_data_events_directory(
     (tmp_path / "data" / "config.yml").write_text("season: 2026\n", encoding="utf-8")
 
     assert ManualPlatform().events_dir == tmp_path / "data" / "events"
+
+
+def test_speakers_and_config_default_to_empty(tmp_path: Path) -> None:
+    """No speaker data or config supplied is not a construction error --
+    every lookup then simply fails to find anything, the honest answer to
+    'nothing was given'."""
+    platform = ManualPlatform(events_dir=tmp_path / "events")
+
+    assert platform.speakers == ()
+    assert platform.config is None
