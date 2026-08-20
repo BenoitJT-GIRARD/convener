@@ -249,6 +249,34 @@ drifting, so this paragraph is the only mechanism that gets it corrected.
 **To verify:** push to `main`; the *Deploy app* workflow ends green and the
 site answers at the address above.
 
+**Not currently reachable (task 13 fix round 1, Important 5).** The
+application is not served today, and this is the honest current state, not
+a guess:
+
+- `VITRINE_DEPLOY_TOKEN` is unset, so *Deploy app*'s own push step exits
+  cleanly at its very first line without ever cloning `example-showcase` — this
+  is D-13's ordinary "absent is normal" state, not a failure, but it means
+  no build of this application has ever reached that repository.
+- Independently of that: a live `curl -I` against
+  `https://example-instance.github.io/example-showcase/` returns `200`, but
+  that response is Jekyll rendering the repository's own `README.md` (`<meta
+  name="generator" content="Jekyll v3.10.0">`), which is GitHub Pages'
+  default behaviour for *Source = Deploy from a branch, branch `main`,
+  folder `/ (root)`* — matching the setting this page names above.
+  `https://example-instance.github.io/example-showcase/app/` and `.../style.css`
+  both `404`. The showcase repository's own `build.yml`, separately, builds
+  its Eleventy site and publishes `_site` to a `gh-pages` branch — a
+  publication target this repository's Pages *Source* setting is not
+  configured to serve. Those two configurations, both real, cannot both be
+  in force at once; which one actually governs `example-showcase`'s Pages
+  setting is outside this repository to check or to change, and is the
+  owner's decision, not this task's.
+
+Net effect: even once `VITRINE_DEPLOY_TOKEN` is set, the application's own
+reachability at the address above still depends on that separate,
+external setting resolving in this page's favour. See
+`docs/superpowers/deferred-work.md` for what this blocks.
+
 ## Meeting platform
 
 **Without it:** the manual adapter (`tools/convener_ops/platform.py::ManualPlatform`)
