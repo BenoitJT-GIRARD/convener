@@ -54,6 +54,15 @@ def test_only_public_statuses_are_emitted() -> None:
     assert [r["id"] for r in to_public(rows)] == ["MRG-05"]
 
 
+def test_a_non_mapping_entry_is_skipped_not_crashed() -> None:
+    # speakers.yml is read unvalidated (convener_ops.cli._load) before to_public
+    # ever sees it -- a stray non-mapping list item must not crash the
+    # public feed; it is dropped, and everything else still comes through.
+    rows = to_public([None, _scheduled()])  # type: ignore[list-item]
+    assert len(rows) == 1
+    assert rows[0]["id"] == "MRG-05"
+
+
 def test_no_field_outside_the_allowlist_is_emitted() -> None:
     out = to_public([_scheduled()])
     assert set(out[0]) <= PUBLIC_FIELDS

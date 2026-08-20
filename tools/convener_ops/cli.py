@@ -586,5 +586,11 @@ def register() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
+    # Unreachable under both ways this module is ever run: pytest imports
+    # it as convener_ops.cli, never as __main__, and every console script in
+    # [project.scripts] (convener-validate and the rest) calls its target
+    # function directly -- neither executes this module as a script. Only
+    # `python convener_ops/cli.py` or `python -m convener_ops.cli` would, and this
+    # project does not invoke it that way.
     sys.exit(validate())

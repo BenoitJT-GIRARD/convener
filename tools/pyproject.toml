@@ -60,6 +60,41 @@ files = ["convener_ops", "tests"]
 # imported by their tests, and are held to the same strictness.
 mypy_path = "../scripts"
 
+[tool.coverage.run]
+# `branch` belongs here, not under [tool.coverage.report] -- coverage.py
+# only recognises it as a [run] option (a misplaced copy is silently
+# ignored, with a warning, not an error). Verified by running the suite
+# with and without this section and comparing the Branch/BrPart columns.
+branch = true
+
 [tool.coverage.report]
-fail_under = 85
+# 90, not the actual figure. On this branch's head, actual is 99.77%
+# (2178 of 2183 measured statements and branch exits covered). Before this
+# branch the floor was 85 against an actual of 95.98% -- a third of the
+# tests could have been deleted and the gate would still have passed. That
+# decorative gap is what raising the floor is for.
+#
+# 90 is not sharp either. coverage.py's percentage is statements *plus*
+# branch exits together (2183 of them here), not statements alone -- a
+# ninety-point estimate of the slack comes from applying the percentage
+# gap to the statement count alone (1503) and missing the 680 branches in
+# the real denominator. Measured against the real total: 90% of 2183 is
+# 1965, and 2178 are covered today, so 213 currently-covered statements or
+# branches could go uncovered before the gate would fail -- gross
+# regression, a chunk of untested code landing at once, and nothing finer
+# than that. A test that exercises a line without asserting anything
+# meaningful about it satisfies this gate exactly as well as one that
+# doesn't exist here at all. Compare app/vite.config.ts, which enforces
+# 90/90/85/90 while the app actually sits at 98.21/94.15/99.34/98.94 --
+# same shape of gap, same limits to what a floor this far below the truth
+# can catch.
+#
+# The real guard against a weak test is mutation testing -- breaking the
+# line or branch a test claims to cover and checking the test then fails --
+# and a reviewer who spot-checks that a new test actually bites, not this
+# number. fail_under is a backstop against a large regression, never a
+# claim that passing it means the suite is any good. (This comment names a
+# specific slack figure, and got it wrong once already -- recompute rather
+# than edit the words if the number ever needs to change again.)
+fail_under = 90
 show_missing = true

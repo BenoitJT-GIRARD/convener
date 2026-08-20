@@ -35,6 +35,16 @@ def test_an_ongoing_seminar_is_untouched() -> None:
     assert changes == []
 
 
+def test_a_scheduled_entry_with_no_date_never_ends() -> None:
+    # A "scheduled" status implies a date was set, but sweep() reads
+    # speakers.yml unvalidated -- a record missing "date" must be treated
+    # as not yet ended rather than crash parsing "" as a calendar day.
+    now = datetime(2099, 1, 1, tzinfo=UTC)
+    swept, changes = sweep([_scheduled(date="")], config(), now)
+    assert changes == []
+    assert swept[0]["status"] == "scheduled"
+
+
 def test_summer_time_is_handled() -> None:
     now = datetime(2026, 7, 9, 12, 1, tzinfo=UTC)  # 14:01 Paris
     swept, _ = sweep([_scheduled(date="2026-07-09")], config(), now)

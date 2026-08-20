@@ -61,6 +61,30 @@ def test_ballot_from_a_login_absent_from_the_board_is_rejected() -> None:
     assert any("ballot from a non-member" in e for e in errors)
 
 
+def test_a_selection_with_no_ballots_list_is_not_a_ballot_error() -> None:
+    # A hand-edited file can leave "ballots" out of a present "selection"
+    # block, the same way tests/fixtures/hand-edited-speakers.yml leaves
+    # "selection" out entirely. validate_speakers is lenient about the
+    # block's shape the same way it is about the block's absence: it is not
+    # this validator's job to invent a threshold-affecting default for a
+    # field it cannot see.
+    s = speaker(selection={"opened_on": "", "decided_on": ""})
+    errors = validate_speakers([s], board_logins={"Anonymous"})
+    assert not any("ballot" in e for e in errors)
+
+
+def test_a_non_mapping_ballot_is_rejected() -> None:
+    s = speaker(
+        selection={
+            "ballots": ["not-a-mapping"],
+            "opened_on": "",
+            "decided_on": "",
+        }
+    )
+    errors = validate_speakers([s], board_logins={"Anonymous"})
+    assert any("not a mapping" in e for e in errors)
+
+
 def test_unknown_career_stage_is_rejected() -> None:
     errors = validate_speakers([speaker(career_stage="professor")])
     assert any("invalid career_stage" in e for e in errors)
@@ -392,6 +416,41 @@ def test_selection_decided_on_must_be_a_date() -> None:
 def test_nominations_must_be_a_list() -> None:
     errors = validate_config(config(nominations="not-a-list"))
     assert any("nominations must be a list" in e for e in errors)
+
+
+def test_a_missing_nominations_key_is_reported_once_not_twice() -> None:
+    # Reported once, by the missing-keys check -- must not also trip
+    # "nominations must be a list" (guarded by `"nominations" in cfg`, for
+    # the same reason as the board and sla_days checks in test_validate.py)
+    # or be iterated as an empty list.
+    cfg = config()
+    del cfg["nominations"]
+    errors = validate_config(cfg)
+    assert any("missing keys ['nominations']" in e for e in errors)
+    assert not any("nominations must be a list" in e for e in errors)
+    assert not any("nominations[" in e for e in errors)
+
+
+def test_a_nomination_with_no_objections_key_is_not_an_error() -> None:
+    # None (the field simply absent) means the record predates the field or
+    # never had one -- absent is not malformed, only a non-list value is
+    # (see test_nomination_objections_must_be_a_list below).
+    nom = nomination()
+    del nom["objections"]
+    errors = validate_config(config(nominations=[nom]))
+    assert not any(".objections" in e for e in errors)
+
+
+def test_a_nomination_with_no_candidate_is_skipped_in_the_deferral_check() -> None:
+    # The deferral backstop (below) tracks open nominations by candidate
+    # name; one with no usable candidate -- already flagged invalid by the
+    # check above -- must not be tracked under an empty-string key, or two
+    # such nominations would wrongly trip "already has an unsettled
+    # nomination" against each other.
+    errors = validate_config(
+        config(nominations=[nomination(candidate=""), nomination(candidate="")])
+    )
+    assert not any("already has an unsettled nomination" in e for e in errors)
 
 
 def test_nomination_entry_must_be_a_mapping() -> None:

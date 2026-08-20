@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import random
+import shutil
+import subprocess  # nosec B404
 from datetime import date
 from pathlib import Path
 
@@ -537,3 +539,25 @@ def test_git_log_returns_lines_this_module_can_parse() -> None:
     assert log.strip()
     for line in log.splitlines():
         assert "\x1f" in line
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not on PATH")
+def test_git_log_reports_an_error_rather_than_raising_on_a_repository_with_no_commits(
+    tmp_path: Path,
+) -> None:
+    # The subprocess-failure half of `_git_log` itself.
+    # test_register_reports_a_history_it_cannot_read (above) mocks
+    # `_git_log` entirely to exercise register()'s handling of an error, so
+    # the real subprocess call failing is otherwise never run. A freshly
+    # `git init`-ed directory has no commits yet, so `git log` exits
+    # non-zero.
+    subprocess.run(  # nosec B603 B607
+        ["git", "init", "--quiet", "--initial-branch=main"],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    log, error = cli._git_log(tmp_path)
+
+    assert log == ""
+    assert error != ""

@@ -128,6 +128,35 @@ def test_the_next_id_is_assigned_from_the_highest_existing_one() -> None:
     assert lead["id"] == "spk-008"
 
 
+def test_the_next_id_generation_skips_a_non_mapping_entry_in_existing() -> None:
+    # `existing` is `speakers.yml` as `cli._load` parsed it -- raw YAML, not
+    # schema-checked (validation is a separate step, `convener-validate`) --
+    # before handle_proposal ever passes it in. A list item that is not a
+    # mapping (a stray scalar from a hand-edit) must be skipped rather than
+    # crash `.get("id")` on it.
+    existing = [
+        speaker(id="spk-001"),
+        "not-a-mapping",
+        speaker(id="spk-007"),
+    ]
+    fields = _fields(("Name", "Grace Hopper"))
+    lead = to_lead(fields, existing, config(), TODAY)  # type: ignore[arg-type]
+    assert lead is not None
+    assert lead["id"] == "spk-008"
+
+
+def test_the_next_id_generation_skips_an_id_outside_the_spk_pattern() -> None:
+    # validate_speakers checks that `id` is present and unique, not that it
+    # matches "spk-NNN" (convener_ops.validate.validate_speakers) -- so a legacy
+    # or hand-typed id in another shape can reach here. It must not raise,
+    # and must not perturb the next id computed from the ids that do match.
+    existing = [speaker(id="legacy-042"), speaker(id="spk-007")]
+    fields = _fields(("Name", "Grace Hopper"))
+    lead = to_lead(fields, existing, config(), TODAY)
+    assert lead is not None
+    assert lead["id"] == "spk-008"
+
+
 def test_a_submission_matching_a_lead_by_email_is_ignored_as_duplicate() -> None:
     existing = [speaker(id="spk-001", email="grace@example.org", status="lead")]
     fields = _fields(("Name", "Grace Hopper"), ("Email", "grace@example.org"))
@@ -248,6 +277,23 @@ def test_assign_lead_matches_the_shared_fixture(case: dict[str, Any]) -> None:
         assign_lead(case["speakers"], {"board": case["board"]}, case["on"])
         == (case["expected"])
     )
+
+
+def test_assign_lead_ignores_a_speaker_that_has_moved_past_the_lead_stage() -> None:
+    # assign_lead balances by *open* leads only (G-17): a speaker who moved
+    # on to "confirmed" must not still count against the member who
+    # onboarded them, or that member would look permanently busier than
+    # they are. ada carries two non-lead records against grace's one real
+    # lead, so a filter that counted every status regardless would pick
+    # grace instead -- the two outcomes disagree outright, not just on a
+    # tie-break.
+    cfg = config(board=[board_member(login="ada"), board_member(login="grace")])
+    existing = [
+        speaker(id="spk-001", status="confirmed", assigned_to="ada"),
+        speaker(id="spk-002", status="delivered", assigned_to="ada"),
+        speaker(id="spk-003", status="lead", assigned_to="grace"),
+    ]
+    assert assign_lead(existing, cfg, TODAY) == "ada"
 
 
 def test_a_form_lead_is_written_in_the_v3_shape() -> None:

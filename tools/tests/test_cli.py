@@ -11,7 +11,7 @@ import pytest
 import yaml
 from conftest import board_member, config, speaker
 
-from convener_ops.cli import _load, handle_proposal, sweep, validate
+from convener_ops.cli import _load, handle_proposal, public_data, sweep, validate
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -93,6 +93,71 @@ def test_validate_reports_a_board_under_its_target_without_failing(
     assert out.isascii()
 
 
+def test_validate_handles_a_missing_config_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # config.yml can be absent -- a fresh checkout before it is ever
+    # written, or a broken deploy -- and validate() must still run speakers
+    # validation and report the load error, not crash resolving
+    # cfg["board"] or calling validate_config(None).
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "speakers.yml").write_text(
+        yaml.safe_dump([speaker()]), encoding="utf-8"
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 1
+    out = capsys.readouterr().out
+    assert "config.yml: file missing" in out
+    # validate_config(None) would itself report "top-level must be a
+    # mapping" gracefully rather than raise -- so calling it unconditionally
+    # (skipping `if cfg is not None:`) would not crash here, it would just
+    # add a second, redundant message. This line is what tells the two
+    # apart.
+    assert "top-level must be a mapping" not in out
+
+
+def test_validate_handles_a_missing_speakers_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 1
+    out = capsys.readouterr().out
+    assert "speakers.yml: file missing" in out
+    # validate_speakers(None) would itself report "top-level must be a
+    # list" gracefully rather than raise -- so calling it unconditionally
+    # (skipping `if speakers is not None:`) would not crash here, it would
+    # just add a second, redundant message. This line is what tells the
+    # two apart.
+    assert "top-level must be a list" not in out
+
+
+def test_validate_handles_a_config_with_no_board_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # board_logins seeds validate_speakers's login checks (assigned_to /
+    # ballot voter). A config.yml with no "board" key at all -- a hand-edit
+    # or an in-progress migration -- must fall back to an empty set rather
+    # than raise iterating None. assigned_to="ada" makes that fallback
+    # observable: with board_logins genuinely empty, "ada" cannot be in it,
+    # so the speaker-side error names it -- proof the fallback ran, not
+    # just that *some* error appeared.
+    cfg = config()
+    del cfg["board"]
+    _write_data(tmp_path, [speaker(assigned_to="ada")], cfg)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert validate() == 1
+    out = capsys.readouterr().out
+    assert "Data validation FAILED" in out
+    assert "assigned_to is not a board member ('ada')" in out
+
+
 def test_sweep_reports_nothing_to_sweep_when_no_change(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -134,6 +199,48 @@ def test_sweep_reports_load_errors_and_returns_1(
 
     assert sweep() == 1
     assert "file missing" in capsys.readouterr().out
+
+
+def test_public_data_writes_the_allowlisted_feed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The entry point `convener-public-data` runs, wired end to end: a lead is
+    # excluded (not a public status), a scheduled talk is included and
+    # named by its edition_code (to_public's own id mapping, see
+    # test_public_data.py) -- proving this writes to_public's *output*,
+    # not merely that to_public itself works in isolation.
+    speakers = [
+        speaker(id="spk-001", status="lead"),
+        speaker(
+            id="spk-002",
+            status="scheduled",
+            edition_code="MRG-05",
+            date="2026-01-08",
+            host_1="H1",
+            host_2="H2",
+        ),
+    ]
+    _write_data(tmp_path, speakers, config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert public_data() == 0
+    assert "wrote 1 events" in capsys.readouterr().out
+
+    written = json.loads(
+        (tmp_path / "public-data" / "events-public.json").read_text(encoding="utf-8")
+    )
+    assert [row["id"] for row in written] == ["MRG-05"]
+
+
+def test_public_data_reports_load_errors_and_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    (tmp_path / "data").mkdir()
+
+    assert public_data() == 1
+    assert "file missing" in capsys.readouterr().out
+    assert not (tmp_path / "public-data").exists()
 
 
 def test_handle_proposal_with_no_payload_returns_1(
@@ -326,6 +433,25 @@ def test_handle_proposal_with_a_json_array_payload_returns_1(
 
     assert handle_proposal() == 1
     assert "invalid JSON payload" in capsys.readouterr().err
+
+
+def test_handle_proposal_treats_a_non_list_fields_value_as_no_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Tally always sends "fields" as a list, but the signature only proves
+    # who sent the body, not its shape (see handle_proposal's docstring). A
+    # payload where "fields" is null (present but not a list, and not even
+    # iterable) must degrade to "no fields" rather than raise TypeError
+    # iterating it. A string would be iterable by accident and pass this
+    # test even with the guard removed -- null does not.
+    _write_data(tmp_path, [], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", json.dumps({"data": {"fields": None}}))
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 0
+    assert "skipping: empty name" in capsys.readouterr().out
 
 
 def test_handle_proposal_resolves_a_picker_shaped_gender_field(
