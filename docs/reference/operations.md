@@ -945,6 +945,68 @@ republishes `certificates-public.json` with the new state -- visible as a
 second, separate workflow run on the Actions tab, started a few seconds
 after the first.
 
+## Delivering a certificate
+
+Spec §7's own rule on delivery is categorical: by e-mail, and a document
+naming a person is never deposited in a repository. Two commands, one
+workflow step and one standalone workflow, both new this round (task 14).
+
+- **Deliver certificates for this event** -- a step in
+  `.github/workflows/issue-certificates.yml`, `convener-deliver-certificates`,
+  running immediately after *Issue certificates* in the same job and the
+  same checkout. Re-derives registrations, attendance and eligibility from
+  scratch, exactly as *Issue certificates* does, and for each currently
+  eligible attendee calls `certificate.issue` again -- idempotent, so this
+  reproduces the identifier and signed token *Issue certificates* just
+  wrote (or, on a re-run, whatever an earlier run already wrote) rather
+  than minting anything new -- renders a self-contained HTML certificate
+  with an inline SVG verification code, and e-mails it as an attachment.
+  Never writes the rendered document anywhere: a failed send is folded
+  into a bare count ("N sent, M not sent") and recovered by re-running
+  this same step or the whole workflow, which reproduces the identical
+  document rather than a new one.
+- **Deliver a certificate** (`.github/workflows/deliver-certificate.yml`,
+  `convener-deliver-certificate`). A manual resend for one certificate -- a
+  certificate sitting unread in a spam folder does not exist any more
+  than a registration confirmation does (spec §9's own risk table) -- named
+  by `CERTIFICATE_ID`, never an address, resolved to a registration the
+  same fingerprint-reversal `convener-reissue-certificate` already uses (the
+  two commands now share that resolution code). Inputs: the event id, the
+  certificate id to resend, and the same optional conference id the other
+  three certificate workflows take. Read-only: this workflow writes
+  nothing and dispatches nothing, so its job needs only `contents: read`,
+  unlike the three that write `certificates.yml`.
+
+**Secrets read:** both read `CONVENER_EVENT_KEY_<EVENT ID>`, `CONVENER_SIGNING_KEY`,
+`CONVENER_MATCHING_SALT` and `CONVENER_MEETING_API_TOKEN` -- the same four *Issuing,
+reissuing and revoking certificates* already documents -- plus
+`email_transport`'s five `CONVENER_SMTP_*` secrets (*Outbound email*, above),
+read here for the first time by anything other than the registration
+confirmation. Absent `email_transport` secrets are ordinary D-13 here too,
+but degrade differently than they do for the confirmation: nothing is ever
+written anywhere, not even to a private, short-retention artefact -- see
+`tools/convener_ops/delivery.py`'s own module docstring for why task 7's
+`UNSENT_CONFIRMATION` pattern is the wrong one for a signed, nominative
+document.
+
+**Replayable, bounded by retention.** A failed or retried delivery
+reproduces the byte-identical document -- `certificate.issue`'s own
+idempotent lookup plus `signing.sign`'s determinism -- for as long as this
+event's `registrations.enc` still exists. Once task 15's retention sweep
+destroys the event's key, 90 days after the event, there is no address
+left to deliver to: the certificate still verifies, forever, but
+`convener-deliver-certificate` refuses cleanly (the same "no registrations
+recorded" message a missing file always gives) rather than pretending the
+certificate itself has become invalid.
+
+**To verify:** run *Deliver certificates for this event* for a test event
+with at least one eligible attendee and `email_transport` configured; the
+run's own summary line reports a sent count, and the configured mailbox
+receives one message per eligible attendee, each carrying the certificate
+as an HTML attachment. Run *Deliver a certificate* for one of the
+identifiers `certificates-public.json` already lists to confirm the
+resend path independently.
+
 ## CI-only secrets
 
 These gate GitHub Actions workflow behaviour rather than anything the

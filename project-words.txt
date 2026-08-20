@@ -41,3 +41,4 @@ eventkeys
 ratelimits
 STARTTLS
 WXYZ
+replayable

@@ -179,3 +179,41 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- certificates were computed but not saved"
           exit 1
+      # Task 14: deliver every currently eligible attendee's certificate by
+      # e-mail (spec S:7, "Remise": "Par courriel. Jamais de document
+      # nominatif depose dans un depot."). Runs after the step above, in
+      # the same job and the same checkout, so convener-deliver-certificates
+      # reads whatever certificates.yml this run's own commit just wrote
+      # (or, on a re-run, whatever an earlier run already committed) --
+      # never a second, independent write of its own; this step never
+      # touches git at all. A failed delivery is reported in this step's
+      # own summary count, never stashed anywhere: re-dispatching this
+      # whole workflow replays the identical documents
+      # (delivery.py's own module docstring, "replayable, not
+      # regenerated"), which is why this step carries no retry loop of its
+      # own the way the commit-and-push step above does.
+      - name: Deliver certificates for this event
+        working-directory: tools
+        env:
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          # Same two deliberate D-13 exceptions as the issuance step above
+          # -- see that step's own comment on CONVENER_SIGNING_KEY and
+          # CONVENER_MATCHING_SALT.
+          CONVENER_SIGNING_KEY: ${{ secrets.CONVENER_SIGNING_KEY }}
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
+          # email_transport's five secrets (config/integrations.yml) --
+          # absent is ordinary D-13 here too: every attempt this step makes
+          # is simply reported as not sent, in the printed counts, never a
+          # failed step. See delivery.py's own module docstring for why an
+          # unsent certificate is never written anywhere, unlike an unsent
+          # registration confirmation (registration.yml's own
+          # UNSENT_CONFIRMATION artefact).
+          CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
+          CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
+          CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
+          CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
+          CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
+        run: uv run convener-deliver-certificates

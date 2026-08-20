@@ -377,6 +377,7 @@ __all__ = [
     "certificates_path",
     "duration_hours",
     "fingerprint",
+    "full_name",
     "issue",
     "public_register",
     "register_from_data",
@@ -623,6 +624,24 @@ def duration_hours(duration_seconds: int) -> float:
     return float(quarters * _ROUNDING_INCREMENT)
 
 
+def full_name(attendee: MatchedAttendee) -> str:
+    """The exact name a certificate signs, and the exact name its document
+    prints: first name and surname, joined by one space (task 14).
+
+    Factored out of `_sign_certificate` so the payload `signing.sign`
+    covers and the document `delivery.render_certificate` shows can never
+    drift into two different ideas of "the name" -- the one property a
+    signed document's whole design depends on: a certificate has to show
+    exactly what its own signature attests, never a name computed a
+    second, independently-maintained way. Before this, `_sign_certificate`
+    was the only place this join happened; `delivery.py` calling
+    `certificate.full_name` instead of re-typing
+    `f"{attendee.registration.first_name} {attendee.registration.surname}"`
+    a second time is what this function exists to make impossible to get
+    wrong."""
+    return f"{attendee.registration.first_name} {attendee.registration.surname}"
+
+
 def _new_identifier() -> str:
     """A fresh, random certificate identifier -- see the module docstring's
     "why the identifier must not be deterministic" section. `token_hex`,
@@ -708,7 +727,7 @@ def _sign_certificate(
     payload = {
         "identifier": entry.identifier,
         "event": event.title,
-        "name": f"{attendee.registration.first_name} {attendee.registration.surname}",
+        "name": full_name(attendee),
         "date": event.date,
         "duration_hours": duration_hours(attendee.duration_seconds),
     }

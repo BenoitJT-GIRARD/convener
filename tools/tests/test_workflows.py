@@ -28,7 +28,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops import certificate, platform_fcc, signing
+from convener_ops import certificate, confirmation, platform_fcc, signing
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
 
@@ -490,6 +490,9 @@ CLI_MODULE_PATH = Path("tools/convener_ops/cli.py")
 ISSUE_CERTIFICATES_WORKFLOW = Path(".github/workflows/issue-certificates.yml")
 REISSUE_CERTIFICATE_WORKFLOW = Path(".github/workflows/reissue-certificate.yml")
 REVOKE_CERTIFICATE_WORKFLOW = Path(".github/workflows/revoke-certificate.yml")
+#: Task 14: the delivery step issue-certificates.yml runs after issuance,
+#: and the standalone resend workflow keyed by CERTIFICATE_ID.
+DELIVER_CERTIFICATE_WORKFLOW = Path(".github/workflows/deliver-certificate.yml")
 
 #: `os.environ.get(signing.SECRET_NAME, ...)` cannot be read as a string
 #: literal by the AST walk below -- it is an attribute access, not a
@@ -528,6 +531,25 @@ def _calls_platform_from_env(func: ast.FunctionDef) -> bool:
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
         and node.func.id == "platform_from_env"
+        for node in ast.walk(func)
+    )
+
+
+def _calls_delivery_deliver(func: ast.FunctionDef) -> bool:
+    """Task 14's own analogue of `_calls_platform_from_env` above: `cli.py`
+    calls `delivery.deliver(message, os.environ)` (a module-qualified
+    attribute call, `confirmation.deliver`'s own calling convention --
+    `cli.py` imports `delivery` as a module, never a bare name), which
+    hands `os.environ` down into `confirmation.smtp_config_from_env`
+    *inside `delivery.py`*, a read `_env_vars_read` cannot otherwise see
+    (the same "out of this function's own scope by design" limitation its
+    own docstring already names for `platform_from_env`)."""
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "deliver"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "delivery"
         for node in ast.walk(func)
     )
 
@@ -576,16 +598,24 @@ def _env_vars_read(
     here is a strict top-down chain, so this is a safety net, not
     something expected to matter.
 
+    Also derived, not hand-typed (task 14): `confirmation.SMTP_ENV_VARS`
+    whenever the function calls `delivery.deliver` -- `_calls_delivery_deliver`,
+    below, the second special case this walk knows about by name, for the
+    identical reason `platform_from_env` needed one: `delivery.deliver`
+    hands `os.environ` on to `confirmation.smtp_config_from_env`, a read
+    genuinely inside a different module's own AST.
+
     **What this still cannot see**, so the docstring does not claim more
     than the walk does: a call reached only through a name that is not a
-    plain `ast.Name` (a method call, a call through a variable holding a
+    plain `ast.Name` or, for `delivery.deliver`, a plain `module.attr`
+    (a method call on an instance, a call through a variable holding a
     function reference, `getattr`-style indirection), and any read inside
     a function this module imports from elsewhere -- `platform_from_env`
-    is the one such case this function already knows about by name, and
-    remains the only one special-cased rather than walked, since walking
-    a different module's own AST is out of this function's own scope by
-    design (it answers "what does `cli.py` read", not "what does
-    everything `cli.py` calls read")."""
+    and `delivery.deliver` are the only two such cases this function
+    already knows about by name, since walking a different module's own
+    AST from scratch is out of this function's own scope by design (it
+    answers "what does `cli.py` read", not "what does everything `cli.py`
+    calls read")."""
     if function_name in _seen:
         return set()
     func = _function_node(path, function_name)
@@ -608,6 +638,8 @@ def _env_vars_read(
                 names.add(name)
     if _calls_platform_from_env(func):
         names.add(platform_fcc.TOKEN_ENV)
+    if _calls_delivery_deliver(func):
+        names |= confirmation.SMTP_ENV_VARS
 
     seen = _seen | {function_name}
     local_functions = _module_function_names(path)
@@ -708,6 +740,80 @@ def test_revoke_certificate_workflow_carries_every_env_var_the_command_reads() -
     )
 
 
+# ------------------------------------------------------------------ #
+# Task 14's own instance of the same check above, for the two new jobs:
+# the delivery step issue-certificates.yml runs after issuance, and the
+# standalone deliver-certificate.yml resend keyed by CERTIFICATE_ID. The
+# brief's own instruction: "Both must forward every environment variable
+# their command reads, including all five CONVENER_SMTP_* secrets -- task 7
+# shipped a workflow that passed three of nine and its whole suite stayed
+# green, so extend test_workflows.py's derived-environment test to cover
+# the new jobs rather than writing a hand-copied list."
+# ------------------------------------------------------------------ #
+
+
+def test_issue_certificates_delivery_step_carries_every_env_var_it_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "deliver_certificates")
+    assert expected == {
+        "EVENT_ID",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_SIGNING_KEY",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_MEETING_API_TOKEN",
+        "CONVENER_FCC_CONFERENCE_ID",
+        "CONVENER_SMTP_HOST",
+        "CONVENER_SMTP_PORT",
+        "CONVENER_SMTP_USER",
+        "CONVENER_SMTP_PASSWORD",
+        "CONVENER_SMTP_FROM",
+    }, (
+        "the derivation itself found an unexpected set -- either "
+        "deliver_certificates changed what it reads, or this AST walk no "
+        "longer sees it correctly; investigate before trusting the "
+        "carried-forward check below"
+    )
+    carried = _workflow_step_env_keys(
+        ISSUE_CERTIFICATES_WORKFLOW, "issue", "convener-deliver-certificates"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"issue-certificates.yml's delivery step does not forward {missing} "
+        "to the step that runs convener-deliver-certificates, which reads it "
+        "directly -- task 7 shipped exactly this gap for a different command"
+    )
+
+
+def test_deliver_certificate_workflow_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "deliver_certificate")
+    assert expected == {
+        "EVENT_ID",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_SIGNING_KEY",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_MEETING_API_TOKEN",
+        "CONVENER_FCC_CONFERENCE_ID",
+        "CERTIFICATE_ID",
+        "CONVENER_SMTP_HOST",
+        "CONVENER_SMTP_PORT",
+        "CONVENER_SMTP_USER",
+        "CONVENER_SMTP_PASSWORD",
+        "CONVENER_SMTP_FROM",
+    }, (
+        "the derivation itself found an unexpected set -- either "
+        "deliver_certificate changed what it reads, or this AST walk no "
+        "longer sees it correctly; investigate before trusting the "
+        "carried-forward check below"
+    )
+    carried = _workflow_step_env_keys(
+        DELIVER_CERTIFICATE_WORKFLOW, "deliver", "convener-deliver-certificate"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"deliver-certificate.yml does not forward {missing} to the step "
+        "that runs convener-deliver-certificate, which reads it directly"
+    )
+
+
 #: Minor 3, fix round 3: the exact three names any of these workflows'
 #: `workflow_dispatch` inputs may ever carry -- an allowlist, not the
 #: one-word denylist (`"email" not in trigger.lower()`) this test used to
@@ -740,6 +846,9 @@ def test_certificate_workflows_accept_only_the_allowlisted_inputs() -> None:
         ISSUE_CERTIFICATES_WORKFLOW,
         REISSUE_CERTIFICATE_WORKFLOW,
         REVOKE_CERTIFICATE_WORKFLOW,
+        # Task 14: the same R-22 property applies to the new resend
+        # workflow's own certificate_id input.
+        DELIVER_CERTIFICATE_WORKFLOW,
     ):
         text = (ROOT / workflow_path).read_text(encoding="utf-8")
         trigger = text.split("jobs:")[0]
@@ -1082,3 +1191,39 @@ def test_certificate_workflow_warns_when_a_dispatched_run_writes_nothing(
         "nothing, with no warning annotation -- a dispatched run that did "
         "nothing looks identical to one that worked"
     )
+
+
+# ------------------------------------------------------------------ #
+# deliver-certificate.yml: read-only, unlike the three workflows above --
+# it never writes certificates.yml (delivery is not a register state,
+# R-20) and never commits anything.
+# ------------------------------------------------------------------ #
+
+
+def _deliver_certificate_workflow() -> dict[str, Any]:
+    loaded = safe_load(
+        (ROOT / DELIVER_CERTIFICATE_WORKFLOW).read_text(encoding="utf-8")
+    )
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def test_deliver_certificate_workflow_is_read_only_and_has_a_timeout() -> None:
+    job = _deliver_certificate_workflow()["jobs"]["deliver"]
+    assert job.get("permissions") == {"contents": "read"}, (
+        "deliver-certificate.yml commits nothing and dispatches nothing -- "
+        "it needs no write permission at all, unlike the three certificate "
+        "workflows that write certificates.yml"
+    )
+    assert isinstance(job.get("timeout-minutes"), int), (
+        "deliver-certificate.yml has no timeout-minutes"
+    )
+
+
+def test_deliver_certificate_workflow_is_dispatchable_by_hand() -> None:
+    """A command nothing invokes is not delivered work -- this phase has
+    shipped that four times already. This is the check that the resend
+    path is actually reachable from the Actions tab."""
+    text = (ROOT / DELIVER_CERTIFICATE_WORKFLOW).read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    assert "workflow_dispatch:" in trigger

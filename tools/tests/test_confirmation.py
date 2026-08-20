@@ -11,6 +11,7 @@ from convener_ops.confirmation import (
     CONTACT_EMAIL,
     FIELD_LABELS,
     MATCHING_INSTRUCTION,
+    SMTP_ENV_VARS,
     UPDATE_WARNING,
     Confirmation,
     EventDetails,
@@ -306,6 +307,17 @@ def test_compose_is_deterministic_so_a_resend_reproduces_it_exactly() -> None:
 # ------------------------------------------------------------------ #
 # smtp_config_from_env(): D-13, all five secrets or none
 # ------------------------------------------------------------------ #
+
+
+def test_smtp_env_vars_names_exactly_the_five_keys_of_config_env() -> None:
+    """`SMTP_ENV_VARS` (task 14) exists so a second module
+    (`delivery.py`) and a test deriving what a function reads from its
+    own source (`test_workflows.py`'s `_env_vars_read`) can name "every
+    email_transport secret" without retyping five strings a second time
+    -- pinned here against the same env mapping every `smtp_config_from_env`
+    test in this file already uses, so the exported set and the actual
+    keys `smtp_config_from_env` reads can never quietly drift apart."""
+    assert set(_CONFIG_ENV) == SMTP_ENV_VARS
 
 
 def test_smtp_config_from_env_with_all_five_secrets() -> None:

@@ -26,6 +26,7 @@ from convener_ops.certificate import (
     certificates_path,
     duration_hours,
     fingerprint,
+    full_name,
     is_valid_identifier,
     issue,
     public_register,
@@ -263,6 +264,29 @@ def _attendee(
 ) -> MatchedAttendee:
     registration = Registration("Ada", "Lovelace", email, "", False)
     return MatchedAttendee(registration=registration, duration_seconds=duration_seconds)
+
+
+def test_full_name_joins_first_name_and_surname_with_one_space() -> None:
+    """The exact join `_sign_certificate` signs into the payload's own
+    `name` field -- see this function's own docstring for why it is
+    factored out at all: `delivery.render_certificate` (task 14) must
+    print the identical string, computed the identical way, never a
+    second independently-typed join."""
+    assert full_name(_attendee()) == "Ada Lovelace"
+
+
+def test_issue_signs_the_same_name_full_name_would_compute() -> None:
+    """Pins `_sign_certificate`'s own payload against `full_name` directly
+    -- the property that stops the signed name and the printed name from
+    ever drifting apart."""
+    private_pem, public_pem = generate()
+    attendee = _attendee()
+    result = issue(
+        attendee, _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+    outcome = verify(result.token, [public_pem])
+    assert outcome.payload is not None
+    assert outcome.payload["name"] == full_name(attendee)
 
 
 def test_issue_produces_a_token_that_verifies_and_carries_the_right_payload() -> None:

@@ -16,6 +16,19 @@ dependencies = [
   # hand-rolling RSA in the one module that handles other people's personal
   # data; see tools/convener_ops/eventkeys.py for the rest of that reasoning.
   "cryptography>=43",
+  # spec S:7 requires the certificate's machine-readable code, and task 14's
+  # own ruling requires the library that draws it to be pure Python, no
+  # binary wheel, no Pillow -- verified before adding it, not assumed: segno
+  # ships one universal wheel (py3-none-any, checked directly against the
+  # built artefact, not only the classifier), has zero required dependencies
+  # for this project's Python floor (its one dependency,
+  # importlib-metadata, is conditional on python_version < '3.10'; this
+  # project requires >=3.12), is BSD-3-Clause (the licence file itself, not
+  # only the PyPI classifier), and renders SVG natively through
+  # `svg_inline()` -- an embeddable `<svg>...</svg>` fragment, no Pillow, no
+  # raster step at all. See tools/convener_ops/delivery.py for where it is used
+  # and why HTML+SVG rather than a raster format.
+  "segno>=1.6",
 ]
 
 [project.scripts]
@@ -40,6 +53,8 @@ convener-issue-certificates = "convener_ops.cli:issue_certificates"
 convener-certificates-public-data = "convener_ops.cli:certificates_public_data"
 convener-reissue-certificate = "convener_ops.cli:reissue_certificate"
 convener-revoke-certificate = "convener_ops.cli:revoke_certificate"
+convener-deliver-certificates = "convener_ops.cli:deliver_certificates"
+convener-deliver-certificate = "convener_ops.cli:deliver_certificate"
 
 [build-system]
 requires = ["hatchling"]

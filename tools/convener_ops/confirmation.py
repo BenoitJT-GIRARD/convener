@@ -111,6 +111,7 @@ __all__ = [
     "CONTACT_EMAIL",
     "FIELD_LABELS",
     "MATCHING_INSTRUCTION",
+    "SMTP_ENV_VARS",
     "UPDATE_WARNING",
     "Confirmation",
     "EmailTransport",
@@ -379,6 +380,20 @@ _PORT_ENV: Final = "CONVENER_SMTP_PORT"
 _USER_ENV: Final = "CONVENER_SMTP_USER"
 _PASSWORD_ENV: Final = "CONVENER_SMTP_PASSWORD"
 _FROM_ENV: Final = "CONVENER_SMTP_FROM"
+
+#: The five names above, as a set -- exported (task 14) so a second module
+#: that also sends over this same transport (`delivery.py`, the
+#: certificate's own e-mail step) can name "every secret this integration
+#: needs" without retyping the five strings a second time, and so a test
+#: deriving what a function reads from its own source (`test_workflows.py`'s
+#: `_env_vars_read`) can reference one collection instead of a hand-typed
+#: list -- the exact gap task 7 itself shipped once already (a workflow
+#: forwarding three of nine variables its own command read, unnoticed by a
+#: fully green suite) and the reason a hand-copied list is refused
+#: everywhere else this project derives one instead.
+SMTP_ENV_VARS: Final = frozenset(
+    {_HOST_ENV, _PORT_ENV, _USER_ENV, _PASSWORD_ENV, _FROM_ENV}
+)
 
 #: SMTP's own implicit-TLS port (RFC 8314). Any other configured port uses
 #: STARTTLS instead. `CONVENER_SMTP_PORT` exists specifically so this adapter is

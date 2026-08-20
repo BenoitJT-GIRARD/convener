@@ -43,15 +43,17 @@ instruction rather than as a field the workspace forgot to fill.
 
 ## Sent automatically, not from here
 
-Two items are not on the list above because nobody sends them from this
+Three items are not on the list above because nobody sends them from this
 page: [Registration confirmed](emails/registration-confirmed.md) goes out
 the moment a participant registers, composed and sent by
 `tools/convener_ops/confirmation.py`. [Certificate of attendance](certificate.md)
 is generated once per eligible attendee after an event, by
-`tools/convener_ops/certificate.py`, and delivered the same way. Both are kept
-in this section anyway, for the same reason every other message is — so
+`tools/convener_ops/certificate.py`, and delivered by e-mail with
+[Certificate delivered](emails/certificate-delivered.md) as the message that
+carries it, composed and sent by `tools/convener_ops/delivery.py`. All three are
+kept in this section anyway, for the same reason every other message is — so
 their exact wording is one click away — but their placeholders are written
-in square brackets, not double braces, since nobody ever opens either one
+in square brackets, not double braces, since nobody ever opens any of them
 here to fill them in.
 
 ## Posts & scripts

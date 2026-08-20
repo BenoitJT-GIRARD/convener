@@ -54,6 +54,14 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // attendee and delivered by e-mail (task 14), never committed here. Kept
   // in the registry for the same reason registration-confirmed is above.
   'toolkit/certificate': { file: 'toolkit/certificate.md', anchor: null },
+  // The e-mail that carries the certificate above as an attachment (task
+  // 14), composed by tools/convener_ops/delivery.py. Same reasoning as
+  // registration-confirmed: nobody sends this by hand, kept here so a
+  // board member can read the copy without opening the Python module.
+  'toolkit/emails/certificate-delivered': {
+    file: 'toolkit/emails/certificate-delivered.md',
+    anchor: null,
+  },
 
   // toolkit — posts
   'toolkit/forum-post-announce': { file: 'toolkit/forum-post-announce.md', anchor: null },

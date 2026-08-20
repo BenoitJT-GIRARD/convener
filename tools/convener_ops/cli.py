@@ -19,9 +19,10 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops import confirmation, eventkeys, signing
+from convener_ops import confirmation, delivery, eventkeys, signing
 from convener_ops.attendance import (
     EligibilityThreshold,
+    MatchedAttendee,
     MatchEvent,
     eligible_attendees,
     match,
@@ -31,7 +32,9 @@ from convener_ops.certificate import (
     CertificateEntry,
     CertificateEvent,
     certificates_path,
+    duration_hours,
     fingerprint,
+    full_name,
     is_valid_identifier,
     issue,
     public_register,
@@ -1285,6 +1288,49 @@ def _load_certificate_register(
     return register_path, existing
 
 
+def _find_register_entry(
+    existing: Sequence[CertificateEntry], event_id: str, certificate_id: str
+) -> CertificateEntry | None:
+    """`existing`'s own row for `(event_id, certificate_id)`, or `None` --
+    factored out (task 14) so `reissue_certificate` and
+    `deliver_certificate` share one reading of "does this certificate id
+    exist on record for this event", rather than the inline `next(...)`
+    each once wrote for itself."""
+    return next(
+        (
+            entry
+            for entry in existing
+            if entry.event_id == event_id and entry.identifier == certificate_id
+        ),
+        None,
+    )
+
+
+def _find_attendee_by_fingerprint(
+    eligible: Sequence[MatchedAttendee],
+    event_id: str,
+    salt: str,
+    target_fingerprint: str,
+) -> MatchedAttendee | None:
+    """The one currently-eligible attendee whose own fingerprint matches
+    `target_fingerprint`, or `None` -- the reverse of
+    `certificate.issue`'s own lookup (R-22): resolve a public certificate
+    id to a person by fingerprint alone, never by accepting or holding an
+    address. Factored out (task 14) so `reissue_certificate` and
+    `deliver_certificate` share this one resolution path rather than
+    `deliver_certificate` writing a second copy of it -- see that
+    function's own docstring."""
+    return next(
+        (
+            attendee
+            for attendee in eligible
+            if fingerprint(event_id, attendee.registration.email, salt)
+            == target_fingerprint
+        ),
+        None,
+    )
+
+
 def reissue_certificate() -> int:
     """`convener-reissue-certificate`: an operator's deliberate correction to
     one already-issued certificate -- mint a fresh identifier and a fresh
@@ -1415,14 +1461,7 @@ def reissue_certificate() -> int:
         return 1
     register_path, existing = loaded_register
 
-    target_entry = next(
-        (
-            entry
-            for entry in existing
-            if entry.event_id == event_id and entry.identifier == certificate_id
-        ),
-        None,
-    )
+    target_entry = _find_register_entry(existing, event_id, certificate_id)
     if target_entry is None:
         print(
             f"no certificate {certificate_id} on record for event {event_id}",
@@ -1458,15 +1497,11 @@ def reissue_certificate() -> int:
     # R-22: resolve the certificate to a candidate by fingerprint, the
     # same derivation `certificate.issue` performs, run in reverse --
     # never by reading an address out of the register (it holds none) or
-    # accepting one as input (see the docstring above).
-    attendee = next(
-        (
-            a
-            for a in eligible
-            if fingerprint(event_id, a.registration.email, salt)
-            == target_entry.fingerprint
-        ),
-        None,
+    # accepting one as input (see the docstring above). Shared with
+    # `deliver_certificate` (task 14) through `_find_attendee_by_fingerprint`
+    # rather than written a second time.
+    attendee = _find_attendee_by_fingerprint(
+        eligible, event_id, salt, target_entry.fingerprint
     )
     if attendee is None:
         print(
@@ -1596,6 +1631,424 @@ def revoke_certificate() -> int:
         newline="",
     )
     print(f"certificate {certificate_id} revoked for event {event_id}")
+    return 0
+
+
+def deliver_certificates() -> int:
+    """`convener-deliver-certificates`: e-mail every currently eligible
+    attendee's certificate for one event (spec S:7's "Remise": "Par
+    courriel. Jamais de document nominatif depose dans un depot.") -- the
+    step `issue-certificates.yml` runs immediately after
+    `convener-issue-certificates` itself, in the same job and the same
+    checkout, so this function's own re-derivation of the register (via
+    `_load_certificate_register`) reads exactly what that step just wrote.
+
+    Re-derives registrations, attendance and eligibility from scratch,
+    exactly as `issue_certificates` does -- the same "recalcule sans
+    reinscrire" discipline (spec S:8) -- and then calls `certificate.issue`
+    again for each eligible attendee. That second call never grows the
+    register (`issue`'s own fingerprint-keyed lookup reuses the existing
+    entry's `identifier`, `certificate.py`'s own module docstring,
+    "idempotent without being deterministic") and reproduces the exact
+    same signed token every time (`signing.sign` is deterministic) -- so
+    running this command again, for a delivery that failed the first
+    time, replays the identical document rather than minting a second
+    certificate for the same person (spec S:8's own guarantee, and
+    `delivery.py`'s module docstring, "replayable, not regenerated").
+
+    Never writes anything to disk (ruling 1, task 14): the rendered
+    document lives only in memory for the length of one e-mail send
+    (`delivery.render_certificate`, `delivery.deliver`) and is never
+    written to a file, an artefact, or printed. A failed delivery is
+    reported -- folded into the printed count, never named individually --
+    and replayed by re-running this same command; see `delivery.py`'s own
+    module docstring, "never written to disk", for why the pattern task 7
+    uses for an unsent confirmation (`UNSENT_CONFIRMATION`, a 14-day
+    build artefact) is the wrong one here: what it would retain is a
+    nominative, signed document, in an Actions surface, exactly what spec
+    S:7 forbids.
+
+    Two secrets gate whether anything is delivered this run, checked
+    before any registration is even decrypted -- the same two
+    `issue_certificates` gates on, for the identical reasons (see that
+    function's own docstring): `CONVENER_SIGNING_KEY` absent is ordinary D-13
+    (nothing to sign a token with, so nothing delivered, a clean exit);
+    `CONVENER_MATCHING_SALT` absent is not (a certificate fingerprint cannot be
+    computed safely without it). Absent `email_transport` secrets are
+    ordinary D-13 too, but at a different point: every attempt this run
+    makes simply reports unsent (`delivery.deliver` returns
+    `sent=False` with nothing configured), never a refusal before the
+    loop -- an operator who has not yet configured outbound mail can still
+    see exactly how many certificates *would* have gone out.
+
+    Every other refusal mirrors `issue_certificates`'s own handling line
+    for line: a bad event id, a missing private key, a missing or
+    malformed `registrations.enc`, a missing or malformed
+    `data/config.yml`, a platform that cannot answer, or a speaker record
+    with no title and no date all refuse the whole run (exit 1) before
+    anything is delivered. Once eligibility is computed, this command
+    never fails the whole run again -- a failure rendering or delivering
+    one attendee's certificate is caught, counted as unsent, and never
+    stops delivery to the rest (the same "nobody is watching this job for
+    a Python traceback" reasoning `_send_confirmation` documents for
+    itself); the exception's own text is never printed, only counted.
+
+    Prints only counts, never a name or an address, on every path --
+    including an attendee who was already on record before this run
+    started (Important 10 in `certificate.py`'s own review history: a
+    name printed on exactly that branch survived a full green suite once
+    already, because the leak sweep that would have caught it only ever
+    ran on the freshly-issued path)."""
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    signing_key = os.environ.get(signing.SECRET_NAME, "")
+    if not signing_key:
+        print(
+            f"{signing.SECRET_NAME} not configured -- no certificate delivered this run"
+        )
+        return 0
+    try:
+        signing.derive_public_pem(signing_key)
+    except signing.SigningError as exc:
+        print(f"{signing.SECRET_NAME}: {exc}", file=sys.stderr)
+        return 1
+
+    salt = os.environ.get("CONVENER_MATCHING_SALT") or ""
+    if not salt:
+        print(
+            "CONVENER_MATCHING_SALT not configured -- no certificate delivered "
+            "this run (a certificate fingerprint cannot be computed "
+            "safely without it)"
+        )
+        return 0
+
+    root = repo_root()
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    registrations: list[Registration] = []
+    for entry in current.entries:
+        registration = to_registration(json.dumps(entry), private_pem)
+        if registration is not None:
+            registrations.append(registration)
+
+    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
+    cfg, _errors = _load(root / "data" / "config.yml")
+    speaker_list = speakers if isinstance(speakers, list) else []
+    if not isinstance(cfg, dict):
+        print(
+            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            file=sys.stderr,
+        )
+        return 1
+
+    platform = platform_from_env(
+        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+    )
+    try:
+        rows = platform.get_attendance(event_id)
+    except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    matched = match(rows, registrations, MatchEvent(event_id=event_id, salt=salt))
+    threshold = EligibilityThreshold.from_config(cfg)
+    eligible = eligible_attendees(matched, threshold)
+
+    record: Mapping[str, Any] = {}
+    with contextlib.suppress(EventNotFoundError):
+        record = find_speaker(speaker_list, event_id)
+    title = str(record.get("title", "") or "")
+    event_date = str(record.get("date", "") or "")
+    if not title or not event_date:
+        if speaker_errors:
+            print(
+                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                "to sign a certificate naming no event and no date",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"no speaker record with both a title and a date matches "
+                f"event {event_id} -- refusing to sign a certificate naming "
+                "no event and no date",
+                file=sys.stderr,
+            )
+        return 1
+
+    loaded_register = _load_certificate_register(root, event_id)
+    if loaded_register is None:
+        return 1
+    _register_path, existing = loaded_register
+
+    event = CertificateEvent(event_id=event_id, title=title, date=event_date)
+    issued_on = paris_today(datetime.now(UTC))
+    max_duration_seconds = threshold.seminar_duration_minutes * 60
+
+    sent_count = 0
+    unsent_count = 0
+    for attendee in eligible:
+        capped_attendee = replace(
+            attendee,
+            duration_seconds=min(attendee.duration_seconds, max_duration_seconds),
+        )
+        try:
+            result = issue(
+                capped_attendee, event, signing_key, salt, existing, issued_on=issued_on
+            )
+            document = delivery.render_certificate(
+                name=full_name(capped_attendee),
+                event_title=event.title,
+                event_date=event.date,
+                duration_hours=duration_hours(capped_attendee.duration_seconds),
+                identifier=result.entry.identifier,
+                token=result.token,
+            )
+            message = delivery.compose(
+                capped_attendee.registration,
+                event.title,
+                result.entry.identifier,
+                document,
+            )
+            send_result = delivery.deliver(message, os.environ)
+        except Exception:  # nobody is watching this job for a traceback
+            unsent_count += 1
+            continue
+        if send_result.sent:
+            sent_count += 1
+        else:
+            unsent_count += 1
+
+    print(
+        f"certificates delivered for event {event_id}: {sent_count} sent, "
+        f"{unsent_count} not sent ({len(eligible)} eligible)"
+    )
+    return 0
+
+
+def deliver_certificate() -> int:
+    """`convener-deliver-certificate`: (re)deliver one already-issued
+    certificate, named by `CERTIFICATE_ID` -- the manual resend `spec S:9`
+    asks for ("un certificat dans les indesirables n'existe pas"), for the
+    one document R-22 forbids ever accepting an address to redeliver.
+
+    Reuses `reissue_certificate`'s own `CERTIFICATE_ID` -> attendee
+    resolution (`_find_register_entry`, `_find_attendee_by_fingerprint`)
+    rather than writing a second lookup: `CERTIFICATE_ID` is a public,
+    printed-on-the-document identifier, resolved to a register row and then
+    to a currently-eligible attendee by fingerprint alone, run in reverse
+    from `certificate.issue`'s own derivation -- never by reading or
+    accepting an address (see `reissue_certificate`'s own docstring for the
+    full reasoning this shares).
+
+    Every refusal before resolution mirrors `reissue_certificate`'s own
+    handling: a bad event id, a missing private key, `CONVENER_SIGNING_KEY` or
+    `CONVENER_MATCHING_SALT` absent (both ordinary D-13, nothing delivered, a
+    clean exit -- for `CONVENER_MATCHING_SALT` the same stronger reason
+    `certificate.py`'s module docstring gives), a missing or malformed
+    `CERTIFICATE_ID`, missing or malformed `registrations.enc`, an unknown
+    certificate id, a missing or malformed `data/config.yml`, a platform
+    that cannot answer, an id that matches no currently eligible attendee,
+    or a speaker record with no title and no date -- all refuse (exit 1)
+    before anything is rendered or sent.
+
+    Once the attendee is resolved, this command always exits 0 and reports
+    the outcome by message alone -- the same shape
+    `resend_confirmation`/`_send_confirmation` already use for an ordinary
+    confirmation resend: whether a delivery was actually sent is D-13's
+    ordinary outward shape (a line, a clean exit), never a job failure,
+    because the certificate itself is unaffected either way and a repeat
+    run replays it identically (`delivery.py`'s own module docstring,
+    "replayable, not regenerated" -- bounded, after task 15's retention
+    sweep, by whether this event's registrations still exist at all; see
+    that same section for the boundary). Prints only the certificate id
+    (already public) and the outcome -- never a name or an address."""
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    signing_key = os.environ.get(signing.SECRET_NAME, "")
+    if not signing_key:
+        print(
+            f"{signing.SECRET_NAME} not configured -- no certificate delivered this run"
+        )
+        return 0
+    try:
+        signing.derive_public_pem(signing_key)
+    except signing.SigningError as exc:
+        print(f"{signing.SECRET_NAME}: {exc}", file=sys.stderr)
+        return 1
+
+    salt = os.environ.get("CONVENER_MATCHING_SALT") or ""
+    if not salt:
+        print(
+            "CONVENER_MATCHING_SALT not configured -- no certificate delivered "
+            "this run (a certificate fingerprint cannot be computed "
+            "safely without it)"
+        )
+        return 0
+
+    certificate_id = os.environ.get("CERTIFICATE_ID", "").strip()
+    if not certificate_id:
+        print("no certificate id supplied", file=sys.stderr)
+        return 1
+    if not is_valid_identifier(certificate_id):
+        print("not a valid certificate id supplied", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    registrations: list[Registration] = []
+    for entry in current.entries:
+        registration = to_registration(json.dumps(entry), private_pem)
+        if registration is not None:
+            registrations.append(registration)
+
+    loaded_register = _load_certificate_register(root, event_id)
+    if loaded_register is None:
+        return 1
+    _register_path, existing = loaded_register
+
+    target_entry = _find_register_entry(existing, event_id, certificate_id)
+    if target_entry is None:
+        print(
+            f"no certificate {certificate_id} on record for event {event_id}",
+            file=sys.stderr,
+        )
+        return 1
+
+    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
+    cfg, _errors = _load(root / "data" / "config.yml")
+    speaker_list = speakers if isinstance(speakers, list) else []
+    if not isinstance(cfg, dict):
+        print(
+            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            file=sys.stderr,
+        )
+        return 1
+
+    platform = platform_from_env(
+        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+    )
+    try:
+        rows = platform.get_attendance(event_id)
+    except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    matched = match(rows, registrations, MatchEvent(event_id=event_id, salt=salt))
+    threshold = EligibilityThreshold.from_config(cfg)
+    eligible = eligible_attendees(matched, threshold)
+
+    attendee = _find_attendee_by_fingerprint(
+        eligible, event_id, salt, target_entry.fingerprint
+    )
+    if attendee is None:
+        print(
+            f"certificate {certificate_id} does not match any currently "
+            f"eligible attendee for event {event_id} -- not enough "
+            "attendance recorded to deliver it",
+            file=sys.stderr,
+        )
+        return 1
+
+    record: Mapping[str, Any] = {}
+    with contextlib.suppress(EventNotFoundError):
+        record = find_speaker(speaker_list, event_id)
+    title = str(record.get("title", "") or "")
+    event_date = str(record.get("date", "") or "")
+    if not title or not event_date:
+        if speaker_errors:
+            print(
+                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                "to sign a certificate naming no event and no date",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"no speaker record with both a title and a date matches "
+                f"event {event_id} -- refusing to sign a certificate naming "
+                "no event and no date",
+                file=sys.stderr,
+            )
+        return 1
+
+    event = CertificateEvent(event_id=event_id, title=title, date=event_date)
+    capped_attendee = replace(
+        attendee,
+        duration_seconds=min(
+            attendee.duration_seconds, threshold.seminar_duration_minutes * 60
+        ),
+    )
+    issued_on = paris_today(datetime.now(UTC))
+    result = issue(
+        capped_attendee, event, signing_key, salt, existing, issued_on=issued_on
+    )
+
+    try:
+        document = delivery.render_certificate(
+            name=full_name(capped_attendee),
+            event_title=event.title,
+            event_date=event.date,
+            duration_hours=duration_hours(capped_attendee.duration_seconds),
+            identifier=result.entry.identifier,
+            token=result.token,
+        )
+        message = delivery.compose(
+            capped_attendee.registration, event.title, result.entry.identifier, document
+        )
+        send_result = delivery.deliver(message, os.environ)
+    except Exception:  # nobody is watching this job for a traceback
+        print(
+            f"certificate {certificate_id} could not be delivered for event "
+            f"{event_id}, for a reason this job did not anticipate",
+        )
+        return 0
+
+    if send_result.sent:
+        print(f"certificate {certificate_id} delivered for event {event_id}")
+    else:
+        print(
+            f"certificate {certificate_id} not delivered for event {event_id} "
+            "-- no email transport configured or delivery failed; re-run "
+            "this command to retry"
+        )
     return 0
 
 
