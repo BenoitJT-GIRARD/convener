@@ -8,6 +8,19 @@ name: Publish vitrine data
 # unobservable from any browser. certificates-public.json travels the same
 # way events-public.json already does: built here, copied into the
 # showcase's src/_data/, alongside it.
+#
+# Critical A (fix round 3): the `paths:` trigger above is still correct,
+# but it is unreachable in the one case it exists for. GitHub does not
+# start a new workflow run from a push made with the checkout's own
+# `GITHUB_TOKEN` -- the recursion guard -- and issue-certificates.yml,
+# reissue-certificate.yml, revoke-certificate.yml and sweep.yml all commit
+# with exactly that token (zero-cost: no new secret). So `workflow_dispatch`
+# is added here, and each of those four jobs invokes it directly as their
+# own last step once they have actually changed something --
+# `workflow_dispatch` is one of the documented exceptions to the recursion
+# guard, so the caller's own `GITHUB_TOKEN` is enough. See any of those
+# workflows' own "Trigger public data publication" step for the other half
+# of this fix.
 on:
   push:
     branches: [main]
@@ -15,6 +28,7 @@ on:
       - 'data/speakers.yml'
       - 'data/events/*/certificates.yml'
       - 'tools/**'
+  workflow_dispatch:
 
 jobs:
   publish:

@@ -11,18 +11,29 @@ name: Issue certificates
 # join before certificates are minted from it
 # (docs/reference/operations.md).
 #
-# No input carries an address: `EVENT_ID` is the only thing an operator
-# names. Attendance and eligibility are both re-derived from data already
-# on file (registrations.enc, decrypted here; the platform's own
-# attendance API, or -- with no CONVENER_MEETING_API_TOKEN configured -- the
-# committed manual export), the same "recalcule sans reinscrire" (spec
-# S:8) every scheduled job in this repository already relies on.
+# No input carries an address: `EVENT_ID` and, optionally, `conference_id`
+# are the only things an operator names -- a provider identifier, not
+# personal data, none of R-22's "never an address" reasoning applies to it
+# (see `conference_id`'s own description below). Attendance and
+# eligibility are both re-derived from data already on file
+# (registrations.enc, decrypted here; the platform's own attendance API,
+# or -- with no CONVENER_MEETING_API_TOKEN configured -- the committed manual
+# export), the same "recalcule sans reinscrire" (spec S:8) every scheduled
+# job in this repository already relies on.
 on:
   workflow_dispatch:
     inputs:
       event_id:
         description: 'Event id, exactly as published (e.g. mrg-042)'
         required: true
+        type: string
+      conference_id:
+        description: >-
+          The FreeConferenceCall conference id for this event (only needed
+          with CONVENER_MEETING_API_TOKEN configured; see recording.yml's own
+          input of the same name). Leave blank for the manual
+          implementation.
+        required: false
         type: string
 
 # Shared with reissue-certificate.yml and revoke-certificate.yml,
@@ -44,6 +55,13 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      # Critical A, fix round 3: this job's own commit below pushes with
+      # this same job's `GITHUB_TOKEN`, which cannot fire
+      # publish-vitrine.yml's `push`-triggered `paths:` trigger (GitHub's
+      # recursion guard). `workflow_dispatch` is the documented exception
+      # to that guard, and dispatching one requires `actions: write` --
+      # see the commit step's own final line below.
+      actions: write
     env:
       # See registration.yml's own comment on this same pattern: read
       # once, used by both the checkout below and the retry loop, so the
@@ -86,6 +104,19 @@ jobs:
           # round 2) records this repository cannot populate in CI at all
           # yet (see docs/superpowers/deferred-work.md).
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          # Critical B, fix round 3: folded into `conference_ids` by
+          # `cli.py::_conference_ids_from_env`, the same way
+          # recording.yml's own `conference_id` input already reaches
+          # `release_recording` (task 10). Blank when the operator leaves
+          # the input empty -- the ordinary D-13 shape for the manual
+          # implementation, which never reads this at all.
+          CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
+          # Critical A, fix round 3: authenticates the `gh workflow run`
+          # call at the end of the script below. `github.token` is this
+          # job's own `GITHUB_TOKEN`, scoped by `permissions:` above --
+          # `workflow_dispatch` is one of the documented exceptions to the
+          # recursion guard, so no new secret is needed.
+          GH_TOKEN: ${{ github.token }}
         # Same shape as registration.yml's own commit step: re-derive
         # rather than rebase on a rejected push. `convener-issue-certificates`
         # re-reads every input from the checked-out tree on each attempt,
@@ -105,11 +136,29 @@ jobs:
               git add "data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
-              echo "no change to commit"
+              # Small item 1, fix round 3: an operator pressed this
+              # button and nothing was written -- no eligible attendee
+              # yet, or CONVENER_SIGNING_KEY / CONVENER_MATCHING_SALT not
+              # configured. Right for a scheduled job, wrong for one a
+              # human dispatched by hand: a warning, not a failure (D-13
+              # still holds -- see convener-issue-certificates's own message
+              # above this line for the actual reason).
+              echo "::warning::convener-issue-certificates ran but wrote nothing -- see this run's own log above for why"
               exit 0
             fi
             git commit -m "data: issue certificates for $EVENT_ID"
             if git push; then
+              # Critical A, fix round 3: this push used GITHUB_TOKEN, so
+              # it cannot have fired publish-vitrine.yml's own `push`
+              # trigger (GitHub's recursion guard) -- dispatch it
+              # directly instead. Only reached once a change was
+              # genuinely pushed, never on the no-op branch above.
+              # A failure here does not fail this job: the certificates
+              # themselves are already safely committed and pushed: only
+              # the public projection's refresh would need a manual
+              # rerun of publish-vitrine.yml.
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
             echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"

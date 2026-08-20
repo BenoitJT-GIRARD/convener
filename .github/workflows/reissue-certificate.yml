@@ -20,6 +20,14 @@ name: Reissue a certificate
 # naming a person. `convener-reissue-certificate` resolves it to a
 # registration the same way `certificate.issue` does, run in reverse: see
 # that command's own docstring in tools/convener_ops/cli.py.
+#
+# Critical B (fix round 3): also takes an optional `conference_id`, the
+# same provider identifier -- never an address -- `recording.yml` and, as
+# of this round, `issue-certificates.yml` already take. Without it, the
+# FCC path (CONVENER_MEETING_API_TOKEN configured) could not resolve any
+# attendance at all; see issue-certificates.yml's own comment for the
+# full reasoning, shared verbatim by both workflows' underlying command
+# through `cli.py::_conference_ids_from_env`.
 on:
   workflow_dispatch:
     inputs:
@@ -30,6 +38,13 @@ on:
       certificate_id:
         description: 'Certificate id to correct, exactly as printed on the document'
         required: true
+        type: string
+      conference_id:
+        description: >-
+          The FreeConferenceCall conference id for this event (only needed
+          with CONVENER_MEETING_API_TOKEN configured). Leave blank for the
+          manual implementation.
+        required: false
         type: string
 
 # Shared with issue-certificates.yml and revoke-certificate.yml -- see
@@ -46,6 +61,11 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      # Critical A, fix round 3: see issue-certificates.yml's own comment
+      # on this same addition -- this job's commit below also pushes with
+      # GITHUB_TOKEN and needs `actions: write` to dispatch
+      # publish-vitrine.yml directly afterwards.
+      actions: write
     env:
       TARGET_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
@@ -71,9 +91,15 @@ jobs:
           CONVENER_SIGNING_KEY: ${{ secrets.CONVENER_SIGNING_KEY }}
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          # Critical B, fix round 3: see issue-certificates.yml's own
+          # comment on this same env var.
+          CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
           # A public certificate identifier, never an address -- see this
           # workflow's own header comment (R-22).
           CERTIFICATE_ID: ${{ inputs.certificate_id }}
+          # Critical A, fix round 3: see issue-certificates.yml's own
+          # comment on this same env var.
+          GH_TOKEN: ${{ github.token }}
         # Re-derive rather than rebase on a rejected push, the same shape
         # registration.yml and issue-certificates.yml both use.
         # `convener-reissue-certificate` mints a fresh random identifier on
@@ -94,11 +120,20 @@ jobs:
               git add "data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
-              echo "no change to commit"
+              # Small item 1, fix round 3: see issue-certificates.yml's
+              # own comment on this same warning -- an absent
+              # CONVENER_SIGNING_KEY or CONVENER_MATCHING_SALT is the only way this
+              # branch is reached for reissue (a resolved correction
+              # always writes).
+              echo "::warning::convener-reissue-certificate ran but wrote nothing -- see this run's own log above for why"
               exit 0
             fi
             git commit -m "data: reissue a certificate for $EVENT_ID"
             if git push; then
+              # Critical A, fix round 3: see issue-certificates.yml's own
+              # comment on this same dispatch.
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
             echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"

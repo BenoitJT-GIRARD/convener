@@ -435,15 +435,62 @@ def _calls_platform_from_env(func: ast.FunctionDef) -> bool:
     )
 
 
-def _env_vars_read(path: Path, function_name: str) -> set[str]:
+def _module_function_names(path: Path) -> frozenset[str]:
+    """Every function `path`'s own module defines, at any nesting depth --
+    the universe `_env_vars_read`'s recursion (below) is allowed to walk
+    into. Bounded to names the module itself defines, so a call to an
+    *imported* function that happens to share a name with a local helper
+    is never mistaken for one (an import always binds a different name in
+    `ast.Call.func` than the module's own `def`, since Python has no way
+    to call an imported function through a bare, undotted name that also
+    resolves to something else)."""
+    tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
+    return frozenset(
+        node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
+    )
+
+
+def _env_vars_read(
+    path: Path, function_name: str, *, _seen: frozenset[str] = frozenset()
+) -> set[str]:
     """Every environment variable `function_name` (defined in `path`)
     reads directly (`os.environ.get(...)` or `os.environ[...]`), plus --
     derived, not hand-typed -- `platform_fcc.TOKEN_ENV` whenever the
-    function hands `os.environ` whole to `platform_from_env`, the one
-    indirect read `issue_certificates` and `reissue_certificate` both
-    make (`platform_from_env`'s own body is never walked here; only the
-    fact that this function calls it at all, which is what actually
-    determines whether the read happens)."""
+    function hands `os.environ` whole to `platform_from_env` (
+    `platform_from_env`'s own body is never walked; only the fact that
+    this function calls it at all, which is what actually determines
+    whether the read happens).
+
+    **Recurses into this module's own helper functions (fix round 3,
+    minor 4).** The first version of this walk covered only
+    `function_name`'s own body, which made it blind to a read moved out
+    of that body and into a private helper -- exactly what
+    `cli.py::_conference_ids_from_env` is, this same round: without this
+    recursion, adding `CONVENER_FCC_CONFERENCE_ID` there would have silently
+    dropped out of the set this function derives, and the check below
+    that compares it against the workflow's own forwarded `env:` keys
+    would have stopped meaning anything for that one variable without
+    ever failing loudly. Every plain, unqualified call
+    (`ast.Call.func` an `ast.Name`, never `self.foo(...)` or
+    `module.foo(...)`) to a function `path`'s own module defines
+    (`_module_function_names`) is walked the same way the top-level call
+    is, transitively, with `_seen` guarding against infinite recursion on
+    a call cycle -- none exists in this module today; every real call
+    here is a strict top-down chain, so this is a safety net, not
+    something expected to matter.
+
+    **What this still cannot see**, so the docstring does not claim more
+    than the walk does: a call reached only through a name that is not a
+    plain `ast.Name` (a method call, a call through a variable holding a
+    function reference, `getattr`-style indirection), and any read inside
+    a function this module imports from elsewhere -- `platform_from_env`
+    is the one such case this function already knows about by name, and
+    remains the only one special-cased rather than walked, since walking
+    a different module's own AST is out of this function's own scope by
+    design (it answers "what does `cli.py` read", not "what does
+    everything `cli.py` calls read")."""
+    if function_name in _seen:
+        return set()
     func = _function_node(path, function_name)
     names: set[str] = set()
     for node in ast.walk(func):
@@ -464,6 +511,16 @@ def _env_vars_read(path: Path, function_name: str) -> set[str]:
                 names.add(name)
     if _calls_platform_from_env(func):
         names.add(platform_fcc.TOKEN_ENV)
+
+    seen = _seen | {function_name}
+    local_functions = _module_function_names(path)
+    called = {
+        node.func.id
+        for node in ast.walk(func)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    for helper in called & local_functions - seen:
+        names |= _env_vars_read(path, helper, _seen=seen)
     return names
 
 
@@ -496,6 +553,10 @@ def test_issue_certificates_workflow_carries_every_env_var_the_command_reads() -
         "CONVENER_SIGNING_KEY",
         "CONVENER_MATCHING_SALT",
         "CONVENER_MEETING_API_TOKEN",
+        # Critical B, fix round 3: read inside `_conference_ids_from_env`,
+        # a helper `issue_certificates` calls -- present here only because
+        # `_env_vars_read` now recurses into it (minor 4, same round).
+        "CONVENER_FCC_CONFERENCE_ID",
     }, (
         "the derivation itself found an unexpected set -- either "
         "issue_certificates changed what it reads, or this AST walk no "
@@ -522,6 +583,10 @@ def test_reissue_certificate_workflow_carries_every_env_var_the_command_reads() 
         "CONVENER_MATCHING_SALT",
         "CONVENER_MEETING_API_TOKEN",
         "CERTIFICATE_ID",
+        # Critical B, fix round 3: see
+        # test_issue_certificates_workflow_carries_every_env_var_the_command_reads's
+        # own comment on this same addition.
+        "CONVENER_FCC_CONFERENCE_ID",
     }
     carried = _workflow_step_env_keys(
         REISSUE_CERTIFICATE_WORKFLOW, "reissue", "convener-reissue-certificate"
@@ -546,7 +611,27 @@ def test_revoke_certificate_workflow_carries_every_env_var_the_command_reads() -
     )
 
 
-def test_certificate_workflows_never_accept_an_address_as_an_input() -> None:
+#: Minor 3, fix round 3: the exact three names any of these workflows'
+#: `workflow_dispatch` inputs may ever carry -- an allowlist, not the
+#: one-word denylist (`"email" not in trigger.lower()`) this test used to
+#: be. R-22's own docstring calls "never an address" "the one property
+#: every input list in this trio must hold", but the old denylist let
+#: `attendee_address`, `contact` or `who` sail straight through it
+#: untouched. This repository already argues the general case in
+#: `certificate.public_register`'s own docstring: an allowlist of exactly
+#: what may leave, not a denylist of the one thing that must not.
+_ALLOWED_CERTIFICATE_WORKFLOW_INPUTS = frozenset(
+    {"event_id", "certificate_id", "conference_id"}
+)
+
+#: Matches a `workflow_dispatch` input's own name -- a key indented
+#: exactly six spaces under `on: / workflow_dispatch: / inputs:` in every
+#: workflow file this repository writes by hand (verified against all
+#: three below, and against recording.yml's own `conference_id`).
+_WORKFLOW_DISPATCH_INPUT_NAME_RE = re.compile(r"^ {6}([A-Za-z_][A-Za-z0-9_]*):$", re.M)
+
+
+def test_certificate_workflows_accept_only_the_allowlisted_inputs() -> None:
     """R-22: the one property every input list in this trio must hold. A
     scan over the raw `on:` trigger block's own text, the same "read
     around `on:` as raw text" idiom
@@ -561,10 +646,19 @@ def test_certificate_workflows_never_accept_an_address_as_an_input() -> None:
     ):
         text = (ROOT / workflow_path).read_text(encoding="utf-8")
         trigger = text.split("jobs:")[0]
-        assert "email" not in trigger.lower(), (
-            f"{workflow_path.as_posix()} accepts something named like an "
-            "address as a workflow_dispatch input -- R-22 requires "
-            "CERTIFICATE_ID instead"
+        names = set(_WORKFLOW_DISPATCH_INPUT_NAME_RE.findall(trigger))
+        assert names, (
+            f"{workflow_path.as_posix()}: no workflow_dispatch input names "
+            "found at all -- the regex itself is wrong, which would "
+            "silently empty this scan"
+        )
+        assert names <= _ALLOWED_CERTIFICATE_WORKFLOW_INPUTS, (
+            f"{workflow_path.as_posix()} accepts "
+            f"{names - _ALLOWED_CERTIFICATE_WORKFLOW_INPUTS}, not one of "
+            f"{sorted(_ALLOWED_CERTIFICATE_WORKFLOW_INPUTS)} -- R-22 "
+            "requires an identifier, never an address, and an allowlist "
+            "is what actually enforces that, not a denylist of the one "
+            "word 'email'"
         )
 
 
@@ -612,10 +706,197 @@ def test_certificate_workflow_job_has_write_permission_and_a_timeout(
 ) -> None:
     loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
     job_data = loaded["jobs"][job]
-    assert job_data.get("permissions") == {"contents": "write"}, (
+    # Critical A, fix round 3: `actions: write` joined `contents: write`
+    # in all three jobs -- each now dispatches publish-vitrine.yml as its
+    # own last step once it has actually committed something, which needs
+    # that permission (`workflow_dispatch` is the documented exception to
+    # GitHub's recursion guard, so no new secret is needed).
+    assert job_data.get("permissions") == {
+        "contents": "write",
+        "actions": "write",
+    }, (
         f"{workflow_path.as_posix()}::{job} commits a change to "
-        "certificates.yml and must declare contents: write"
+        "certificates.yml (needs contents: write) and dispatches "
+        "publish-vitrine.yml afterwards (needs actions: write)"
     )
     assert isinstance(job_data.get("timeout-minutes"), int), (
         f"{workflow_path.as_posix()}::{job} has no timeout-minutes"
+    )
+
+
+# ------------------------------------------------------------------ #
+# Critical A, fix round 3: GitHub does not start a new workflow run from
+# an event triggered by a job's own GITHUB_TOKEN (the recursion guard),
+# so a push made by any of the three certificate workflows -- or by
+# sweep.yml -- could never fire publish-vitrine.yml's own `push`-triggered
+# `paths:` trigger, no matter how carefully R-19 (fix round 1) worded it.
+# Each of those four jobs now dispatches publish-vitrine.yml directly,
+# with `gh workflow run`, as its own last step -- `workflow_dispatch` is
+# the one documented exception to the recursion guard. Text assertions on
+# the parsed `run:` block, the same idiom this module already uses
+# throughout (see this module's own docstring for why: running the script
+# means a real `gh` call, exactly the kind of network access this suite
+# must not take on).
+# ------------------------------------------------------------------ #
+
+PUBLISH_VITRINE_DISPATCH = "gh workflow run publish-vitrine.yml"
+SWEEP_WORKFLOW = Path(".github/workflows/sweep.yml")
+
+
+def _job_step_script(workflow_path: Path, job: str, run_contains: str) -> str:
+    loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    for step in loaded["jobs"][job]["steps"]:
+        if run_contains in step.get("run", ""):
+            run = step["run"]
+            assert isinstance(run, str)
+            return run
+    raise AssertionError(
+        f"no step in {workflow_path.as_posix()}::{job} runs a command "
+        f"containing {run_contains!r}"
+    )
+
+
+def _guarded_block(script: str, if_line: str) -> str:
+    """The slice of `script` between `if_line` and its own matching `fi`
+    -- the same "isolate to the one guard, not the whole script" technique
+    `test_deploy_workflow_push_step_guards_on_missing_token` already uses,
+    so a line that is merely *somewhere* in the script, rather than
+    genuinely inside this one guard, cannot satisfy an assertion built on
+    this helper.
+
+    The matching `fi` is found at `if_line`'s own indentation, not a fixed
+    two spaces: sweep.yml's own "nothing to commit" guard sits at the top
+    level (an unindented `fi`), while the three certificate workflows'
+    equivalent guard sits inside a `for` loop (a two-space `fi`) -- a
+    fixed search would either miss the first or, worse, overshoot past it
+    into an unrelated, later `fi` at a different nesting depth and
+    silently return a block spanning two guards at once."""
+    start_at = script.find(if_line)
+    assert start_at != -1, f"no {if_line!r} guard found in this script"
+    line_start = script.rfind("\n", 0, start_at) + 1
+    indent = script[line_start:start_at]
+    closing = f"\n{indent}fi"
+    end_at = script.find(closing, start_at)
+    assert end_at != -1, f"the {if_line!r} guard has no matching fi"
+    return script[start_at : end_at + len(closing)]
+
+
+@pytest.mark.parametrize(
+    "workflow_path,job,run_contains",
+    [
+        (ISSUE_CERTIFICATES_WORKFLOW, "issue", "convener-issue-certificates"),
+        (REISSUE_CERTIFICATE_WORKFLOW, "reissue", "convener-reissue-certificate"),
+        (REVOKE_CERTIFICATE_WORKFLOW, "revoke", "convener-revoke-certificate"),
+    ],
+    ids=lambda value: value if isinstance(value, str) else value.name,
+)
+def test_certificate_workflow_dispatches_publish_vitrine_only_after_a_real_push(
+    workflow_path: Path, job: str, run_contains: str
+) -> None:
+    """The mutation this round's own ruling names directly: "make the
+    publication dispatch step unconditional, or delete it. A test must
+    fail." Two halves, both required: the dispatch must be reachable once
+    a push genuinely succeeds, and must not be reachable on the "nothing
+    to commit" branch, where nothing was ever pushed for a publication to
+    reflect."""
+    script = _job_step_script(workflow_path, job, run_contains)
+
+    pushed = _guarded_block(script, "if git push; then")
+    assert PUBLISH_VITRINE_DISPATCH in pushed, (
+        f"{workflow_path.as_posix()}::{job} does not dispatch "
+        "publish-vitrine.yml once a change is genuinely pushed -- a "
+        "revocation, issuance or correction would reach nobody (Critical A)"
+    )
+
+    unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
+    assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
+        f"{workflow_path.as_posix()}::{job} dispatches publish-vitrine.yml "
+        "even when nothing changed this run -- the dispatch step must be "
+        "conditional on a real push, not unconditional"
+    )
+
+
+def test_sweep_workflow_dispatches_publish_vitrine_only_after_a_real_push() -> None:
+    """The same fix, and the same two-halves guard, for sweep.yml -- the
+    re-review found the identical suppression there (a phase-3 defect:
+    `events-public.json` has never been republished after a nightly sweep,
+    since sweep.yml also pushes `data/speakers.yml` with GITHUB_TOKEN)."""
+    script = _job_step_script(SWEEP_WORKFLOW, "sweep", "git commit -m")
+
+    pushed = _guarded_block(script, "if git push; then")
+    assert PUBLISH_VITRINE_DISPATCH in pushed, (
+        "sweep.yml does not dispatch publish-vitrine.yml once a change is "
+        "genuinely pushed -- events-public.json would never be republished "
+        "after a sweep (Critical A)"
+    )
+
+    unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
+    assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
+        "sweep.yml dispatches publish-vitrine.yml even when nothing changed this run"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow_path,job,run_contains",
+    [
+        (ISSUE_CERTIFICATES_WORKFLOW, "issue", "convener-issue-certificates"),
+        (REISSUE_CERTIFICATE_WORKFLOW, "reissue", "convener-reissue-certificate"),
+        (REVOKE_CERTIFICATE_WORKFLOW, "revoke", "convener-revoke-certificate"),
+    ],
+    ids=lambda value: value if isinstance(value, str) else value.name,
+)
+def test_certificate_workflow_dispatch_step_authenticates_with_the_job_token(
+    workflow_path: Path, job: str, run_contains: str
+) -> None:
+    """`gh workflow run` needs `GH_TOKEN` (or `GITHUB_TOKEN`) in its own
+    environment to authenticate at all -- without it, the dispatch call
+    itself would fail every time, silently defeating Critical A's own fix
+    from inside the one step meant to carry it out."""
+    carried = _workflow_step_env_keys(workflow_path, job, run_contains)
+    assert "GH_TOKEN" in carried, (
+        f"{workflow_path.as_posix()}::{job} calls gh workflow run without "
+        "GH_TOKEN in its own env -- the dispatch call would fail to "
+        "authenticate"
+    )
+
+
+def test_publish_vitrine_workflow_dispatch_is_enabled() -> None:
+    """Critical A (fix round 3): the `paths:` trigger alone is
+    unreachable from any of the four jobs that write the paths it names,
+    since all four commit with their own GITHUB_TOKEN (the recursion
+    guard) -- `workflow_dispatch` is what each of those jobs' own
+    dispatch step (above) actually calls."""
+    text = (ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    assert "workflow_dispatch:" in trigger, (
+        "publish-vitrine.yml has no workflow_dispatch trigger -- nothing "
+        "could ever call `gh workflow run publish-vitrine.yml`"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow_path,job,run_contains",
+    [
+        (ISSUE_CERTIFICATES_WORKFLOW, "issue", "convener-issue-certificates"),
+        (REISSUE_CERTIFICATE_WORKFLOW, "reissue", "convener-reissue-certificate"),
+        (REVOKE_CERTIFICATE_WORKFLOW, "revoke", "convener-revoke-certificate"),
+    ],
+    ids=lambda value: value if isinstance(value, str) else value.name,
+)
+def test_certificate_workflow_warns_when_a_dispatched_run_writes_nothing(
+    workflow_path: Path, job: str, run_contains: str
+) -> None:
+    """Small item 1, fix round 3: a dispatched job that writes nothing
+    still exits 0 (D-13 still holds -- this is not turned into a
+    failure), but a `::warning::` annotation is what stops "it worked" and
+    "it skipped" from looking identical on the run's own summary page,
+    which matters most for `config/integrations.yml`'s own
+    `certificate_fingerprint` row -- the one absence it deliberately
+    declares `absent_is_normal: false`."""
+    script = _job_step_script(workflow_path, job, run_contains)
+    unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
+    assert "::warning::" in unchanged, (
+        f"{workflow_path.as_posix()}::{job} exits cleanly when it writes "
+        "nothing, with no warning annotation -- a dispatched run that did "
+        "nothing looks identical to one that worked"
     )

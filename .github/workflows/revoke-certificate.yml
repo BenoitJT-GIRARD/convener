@@ -45,6 +45,11 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+      # Critical A, fix round 3: see issue-certificates.yml's own comment
+      # on this same addition -- this job's commit below also pushes with
+      # GITHUB_TOKEN and needs `actions: write` to dispatch
+      # publish-vitrine.yml directly afterwards.
+      actions: write
     env:
       TARGET_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
@@ -58,6 +63,9 @@ jobs:
         env:
           EVENT_ID: ${{ inputs.event_id }}
           CERTIFICATE_ID: ${{ inputs.certificate_id }}
+          # Critical A, fix round 3: see issue-certificates.yml's own
+          # comment on this same env var.
+          GH_TOKEN: ${{ github.token }}
         # Re-derive rather than rebase on a rejected push, the same shape
         # every other commit-and-push step in this repository uses.
         # `convener-revoke-certificate` is idempotent on an already-revoked
@@ -75,11 +83,21 @@ jobs:
               git add "data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
-              echo "no change to commit"
+              # Small item 1, fix round 3: see issue-certificates.yml's
+              # own comment on this same warning. For revoke this branch
+              # is reached only when the named certificate was already
+              # revoked -- an idempotent no-op an operator still deserves
+              # to see named, not indistinguishable from a genuine
+              # revocation.
+              echo "::warning::convener-revoke-certificate ran but wrote nothing -- see this run's own log above for why"
               exit 0
             fi
             git commit -m "data: revoke a certificate for $EVENT_ID"
             if git push; then
+              # Critical A, fix round 3: see issue-certificates.yml's own
+              # comment on this same dispatch.
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
             echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
