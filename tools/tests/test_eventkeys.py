@@ -1,17 +1,26 @@
 from __future__ import annotations
 
+import base64
 import json
+import re
 from datetime import UTC, date, datetime
 from pathlib import Path
+from secrets import token_bytes as _real_token_bytes
+from typing import Any
 
 import pytest
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from convener_ops import eventkeys
 from convener_ops.eventkeys import (
     ACTIVE,
     DESTROYED,
+    GCM_NONCE_BYTES,
     NEVER_CREATED,
+    RSA_KEY_BITS,
+    WIRE_VERSION,
     DecryptionError,
     DestructionRecord,
     decrypt,
@@ -20,7 +29,11 @@ from convener_ops.eventkeys import (
     generate,
     key_status,
     public_key_path,
+    secret_name,
 )
+
+#: A legal GitHub Actions secret name, end to end: `[A-Za-z_][A-Za-z0-9_]*`.
+_LEGAL_SECRET_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 # ------------------------------------------------------------------ #
 # The four tests the brief names -- the second is the one the whole
@@ -37,9 +50,54 @@ def test_a_payload_encrypted_with_the_public_half_is_read_by_the_private_half() 
     assert decrypt(private_pem, ciphertext) == plaintext
 
 
-def test_the_public_half_alone_cannot_decrypt() -> None:
+def test_the_public_half_alone_cannot_decrypt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """C'est la propriete sur laquelle repose tout le reste : le navigateur, qui
-    ne detient que la moitie publiee, ne peut pas relire ce qu'il a chiffre."""
+    ne detient que la moitie publiee, ne peut pas relire ce qu'il a chiffre.
+
+    Not "decrypt() raises when handed the public PEM" -- that is a type
+    check that never reaches any cryptography. The property that actually
+    matters is that the envelope `encrypt` hands back carries nothing a
+    holder of only the public half could use: no extra field, and no trace
+    of the plaintext or of the throwaway AES key that sealed it.
+    """
+    aes_keys_drawn: list[bytes] = []
+
+    def spy(count: int) -> bytes:
+        drawn = _real_token_bytes(count)
+        if count == eventkeys.AES_KEY_BYTES:
+            aes_keys_drawn.append(drawn)
+        return drawn
+
+    monkeypatch.setattr("convener_ops.eventkeys.token_bytes", spy)
+
+    _, public_pem = generate()
+    plaintext = b'{"email": "a registrant, never committed"}'
+
+    ciphertext = encrypt(public_pem, plaintext)
+
+    assert len(aes_keys_drawn) == 1
+    aes_key = aes_keys_drawn[0]
+    envelope = json.loads(ciphertext)
+
+    # The wire format's entire vocabulary -- nothing else is on offer for a
+    # holder of only the public half to read, decode or brute-force from.
+    # A mutant that smuggles the AES key out as an extra field is caught
+    # right here.
+    assert set(envelope) == {"v", "encrypted_key", "iv", "ciphertext"}
+    # Neither the plaintext nor the raw AES key appears anywhere in the
+    # envelope, encoded or not -- catches a mutant that hides the key
+    # inside an existing field instead of adding a new one.
+    assert b"registrant" not in ciphertext.encode("ascii")
+    assert base64.b64encode(aes_key).decode("ascii") not in ciphertext
+    assert aes_key.hex() not in ciphertext
+
+
+def test_decrypt_refuses_a_public_pem_passed_as_the_private_key() -> None:
+    """A type check, not the confidentiality property above: this never
+    reaches any ciphertext data, because a public PEM is not a private key
+    PEM at all."""
     _, public_pem = generate()
     ciphertext = encrypt(public_pem, b"a registration")
 
@@ -58,19 +116,34 @@ def test_a_ciphertext_from_another_event_does_not_decrypt() -> None:
         decrypt(private_b, ciphertext)
 
 
+def _with_ciphertext_field(envelope: dict[str, Any], body: bytes) -> str:
+    updated = dict(envelope)
+    updated["ciphertext"] = base64.b64encode(body).decode("ascii")
+    return json.dumps(updated)
+
+
 def test_a_truncated_or_tampered_ciphertext_is_refused_not_returned_garbled() -> None:
+    """Both mutations act on the decoded AES-GCM body itself -- the bytes
+    behind the envelope's `ciphertext` field -- not on the surrounding JSON,
+    so both are refused by the GCM authentication tag rather than by
+    `json.loads` failing to parse first."""
     private_pem, public_pem = generate()
     ciphertext = encrypt(public_pem, b"a registration")
+    envelope = json.loads(ciphertext)
+    body = base64.b64decode(envelope["ciphertext"])
+    assert len(body) >= 16  # the 16-byte GCM tag alone, plus at least 1 byte
 
-    # Truncated: drops the closing brace, so this fails to parse at all.
+    # Truncated: drop the body's last byte, inside the 16-byte tag.
+    truncated = _with_ciphertext_field(envelope, body[:-1])
     with pytest.raises(DecryptionError):
-        decrypt(private_pem, ciphertext[:-1])
+        decrypt(private_pem, truncated)
 
-    # Tampered: one character flipped in the middle of the payload, so this
-    # parses fine but the AES-GCM authentication tag no longer matches.
-    middle = len(ciphertext) // 2
-    flipped = "0" if ciphertext[middle] != "0" else "1"
-    tampered = ciphertext[:middle] + flipped + ciphertext[middle + 1 :]
+    # Tampered: flip one bit inside the tag itself. The structure still
+    # parses and RSA-OAEP still recovers the AES key -- only AES-GCM's own
+    # authentication check can catch this one.
+    tampered_body = bytearray(body)
+    tampered_body[-1] ^= 0x01
+    tampered = _with_ciphertext_field(envelope, bytes(tampered_body))
     with pytest.raises(DecryptionError):
         decrypt(private_pem, tampered)
 
@@ -93,13 +166,19 @@ def test_generate_produces_a_fresh_pair_every_call() -> None:
     assert first_private != second_private
 
 
-def test_encrypt_draws_a_fresh_nonce_and_key_every_call() -> None:
-    """Two encryptions of the same plaintext must not produce the same
-    ciphertext, or the nonce is being reused -- which breaks AES-GCM."""
+def test_encrypt_draws_a_fresh_nonce_every_call() -> None:
+    """A reused nonce under the same AES-GCM key breaks both confidentiality
+    and authenticity outright, so this checks the nonce field itself rather
+    than a proxy for it (the previous version of this test compared whole
+    envelopes, which stayed different from the fresh AES key alone -- a
+    mutant with a hard-coded, constant nonce passed it)."""
     _, public_pem = generate()
-    first = encrypt(public_pem, b"same payload")
-    second = encrypt(public_pem, b"same payload")
-    assert first != second
+    first = json.loads(encrypt(public_pem, b"same payload"))
+    second = json.loads(encrypt(public_pem, b"same payload"))
+
+    assert first["iv"] != second["iv"]
+    for envelope in (first, second):
+        assert len(base64.b64decode(envelope["iv"])) == GCM_NONCE_BYTES
 
 
 def test_encrypt_handles_a_payload_far_larger_than_one_rsa_block() -> None:
@@ -118,6 +197,50 @@ def test_encrypt_handles_an_empty_payload() -> None:
     ciphertext = encrypt(public_pem, b"")
 
     assert decrypt(private_pem, ciphertext) == b""
+
+
+# ------------------------------------------------------------------ #
+# The wire format: a cross-language contract, pinned by test
+# ------------------------------------------------------------------ #
+
+
+def test_wire_format_has_exactly_the_documented_fields_and_lengths() -> None:
+    _, public_pem = generate()
+
+    envelope = json.loads(encrypt(public_pem, b"a registration"))
+
+    assert set(envelope) == {"v", "encrypted_key", "iv", "ciphertext"}
+    assert envelope["v"] == WIRE_VERSION == 1
+    assert len(base64.b64decode(envelope["encrypted_key"])) == RSA_KEY_BITS // 8
+    assert len(base64.b64decode(envelope["iv"])) == GCM_NONCE_BYTES
+
+
+def test_decrypt_does_not_care_about_json_formatting_or_key_order() -> None:
+    """`JSON.stringify` on the browser side is not guaranteed to produce
+    compact, insertion-ordered JSON the way `json.dumps(...,
+    separators=...)` does here; decoding must not silently depend on
+    either."""
+    private_pem, public_pem = generate()
+    envelope = json.loads(encrypt(public_pem, b"a registration"))
+    reordered = {
+        "ciphertext": envelope["ciphertext"],
+        "iv": envelope["iv"],
+        "v": envelope["v"],
+        "encrypted_key": envelope["encrypted_key"],
+    }
+    reformatted = json.dumps(reordered, indent=2)
+    assert reformatted != json.dumps(envelope, separators=(",", ":"))
+
+    assert decrypt(private_pem, reformatted) == b"a registration"
+
+
+def test_decrypt_rejects_an_unknown_wire_format_version() -> None:
+    private_pem, public_pem = generate()
+    envelope = json.loads(encrypt(public_pem, b"a registration"))
+    envelope["v"] = 2
+
+    with pytest.raises(DecryptionError):
+        decrypt(private_pem, json.dumps(envelope))
 
 
 # ------------------------------------------------------------------ #
@@ -174,6 +297,32 @@ def test_decrypt_rejects_a_private_key_of_the_wrong_kind() -> None:
         decrypt(ec_pem, ciphertext)
 
 
+def test_decrypt_converts_unsupported_algorithm_to_decryption_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`UnsupportedAlgorithm` is a real failure mode of
+    `load_pem_private_key` (an exotic or partially-supported key type), but
+    triggering it authentically depends on backend/OpenSSL build details
+    that are impractical to construct portably in a test. This pins the
+    module's own conversion contract directly instead: whatever the cause,
+    it must not escape `decrypt` as itself."""
+    calls = {"count": 0}
+
+    def raise_unsupported(*_args: object, **_kwargs: object) -> None:
+        calls["count"] += 1
+        raise UnsupportedAlgorithm("not supported")
+
+    monkeypatch.setattr(
+        "convener_ops.eventkeys.serialization.load_pem_private_key", raise_unsupported
+    )
+    _, public_pem = generate()
+    ciphertext = encrypt(public_pem, b"a registration")
+
+    with pytest.raises(DecryptionError):
+        decrypt("does-not-matter", ciphertext)
+    assert calls["count"] == 1
+
+
 def test_encrypt_rejects_a_public_key_of_the_wrong_kind() -> None:
     ec_key = ec.generate_private_key(ec.SECP256R1())
     ec_public_pem = (
@@ -210,6 +359,41 @@ def test_public_key_path_rejects_an_id_that_is_not_a_plain_token(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     with pytest.raises(ValueError, match="event id"):
         public_key_path(bad_id)
+
+
+# ------------------------------------------------------------------ #
+# secret_name(): the id-to-secret-suffix transform
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.parametrize(
+    "event_id", ["mrg-042", "mrg.042", "vw2026", "a", "MRG-Autumn.2026"]
+)
+def test_secret_name_is_always_a_legal_github_actions_secret_name(
+    event_id: str,
+) -> None:
+    """Every id `_EVENT_ID_RE` admits -- including the tests' own canonical
+    `mrg-042`, which uppercasing alone does not make legal -- must produce a
+    name GitHub Actions will actually accept."""
+    assert _LEGAL_SECRET_NAME.fullmatch(secret_name(event_id))
+
+
+def test_secret_name_uppercases_and_folds_dots_and_hyphens_to_underscore() -> None:
+    assert secret_name("mrg-042") == "CONVENER_EVENT_KEY_MRG_042"
+    assert secret_name("vw2026") == "CONVENER_EVENT_KEY_VW2026"
+
+
+def test_secret_name_is_lossy_dot_and_hyphen_collide() -> None:
+    """Documented, not hidden: the transform folds both '.' and '-' to '_',
+    so two distinct, individually valid event ids can land on the same
+    secret name. See `secret_name`'s docstring for why this is an
+    operational constraint rather than something the function can detect."""
+    assert secret_name("mrg-042") == secret_name("mrg.042")
+
+
+def test_secret_name_rejects_an_invalid_event_id() -> None:
+    with pytest.raises(ValueError, match="event id"):
+        secret_name("../escape")
 
 
 # ------------------------------------------------------------------ #

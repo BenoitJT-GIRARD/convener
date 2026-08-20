@@ -41,8 +41,9 @@ write it without a library on either side::
 
     {"v": 1, "encrypted_key": "<base64>", "iv": "<base64>", "ciphertext": "<base64>"}
 
-- ``v`` -- format version; 1 today, so a later change has somewhere to
-  signal itself.
+- ``v`` -- format version; 1 today. `decrypt` rejects anything else
+  outright, so a later format change has somewhere to signal itself instead
+  of being silently misread as the current one.
 - ``encrypted_key`` -- the 32-byte AES-256 key, RSA-OAEP-encrypted (SHA-256
   hash and MGF1, no label) with the event's public key.
 - ``iv`` -- the AES-GCM nonce: 12 random bytes (96 bits), the size
@@ -64,6 +65,12 @@ The public half is a file, not a secret
 `public_key_path` returns `keys/events/<id>.pub`, committed PEM. It is not a
 secret -- publishing it is what lets a static registration page encrypt
 without asking a server for anything first.
+
+One gap for the browser side to close, not this module's:
+`crypto.subtle.importKey` takes DER (`"spki"` format), not PEM. Fetching the
+`.pub` file is not enough on its own -- the browser has to strip the
+`-----BEGIN/END PUBLIC KEY-----` lines and `atob` the base64 body first, the
+same DER bytes this module's PEM wraps.
 
 The private half, and the one place D-13 does not apply
 ---------------------------------------------------------
@@ -131,11 +138,12 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Final
 
-from cryptography.exceptions import InvalidTag
+from cryptography.exceptions import InvalidTag, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from .commit_format import _TOKEN
 from .governance import paris_today
 from .paths import repo_root
 
@@ -173,16 +181,24 @@ _OAEP: Final = padding.OAEP(
     label=None,
 )
 
-#: An event id: a plain token, the same shape `commit_format._TOKEN` accepts
-#: for a decision register entity. No `Identifier` type exists yet anywhere
-#: in this codebase (Python or TypeScript) -- event ids are new to phase 4 --
-#: so this module treats one as a validated `str` rather than inventing a
-#: wrapper type nothing else uses. The validation exists because this
-#: string becomes a path component (`public_key_path`) and, in the caller's
-#: hands, an environment variable suffix (`CONVENER_EVENT_KEY_<ID>`): an id that
-#: is not a plain token could otherwise walk out of `keys/events/` or forge
-#: an unrelated variable name.
-_EVENT_ID_RE: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+#: An event id: a plain token, the exact shape `commit_format._TOKEN`
+#: accepts for a decision register entity -- imported, not copied, so the
+#: two cannot drift apart into two different definitions of "a token" by
+#: hand-edit. No `Identifier` type exists yet anywhere in this codebase
+#: (Python or TypeScript) -- event ids are new to phase 4 -- so this module
+#: treats one as a validated `str` rather than inventing a wrapper type
+#: nothing else uses. The validation exists because this string becomes a
+#: path component (`public_key_path`): an id that is not a plain token
+#: could otherwise walk out of `keys/events/`. It does *not* by itself
+#: guarantee a legal environment variable suffix -- `_TOKEN` admits `.` and
+#: `-`, neither legal in a GitHub Actions secret name, which is why
+#: `secret_name` below exists as a separate step.
+_EVENT_ID_RE: Final = re.compile(rf"^{_TOKEN}$")
+
+#: GitHub Actions secret names are restricted to `[A-Za-z_][A-Za-z0-9_]*`.
+#: `secret_name` folds the two characters `_EVENT_ID_RE` admits but that
+#: charset does not -- `.` and `-` -- to `_` before uppercasing.
+_SECRET_UNSAFE_RE: Final = re.compile(r"[.-]")
 
 #: `key_status` and the registry `destroy` reasons about: the key exists,
 #: was never made, or was made and has since been destroyed on purpose.
@@ -194,13 +210,18 @@ DESTROYED: Final = "destroyed"
 class DecryptionError(Exception):
     """A ciphertext could not be decrypted.
 
-    Wrong private key, wrong event, truncated, tampered, or structurally
-    malformed -- every one of those becomes this same exception, with no
-    detail that would let a caller tell them apart. A caller able to
-    distinguish "wrong key" from "corrupted data" by exception type would
-    have an oracle a real attacker could use to probe which failure mode
-    they hit; there is exactly one way for this function to fail on purpose,
-    and it never carries plaintext, key material, or a fragment of either.
+    Wrong private key, wrong event, truncated, or tampered all become this
+    same exception, and the message never says which of those it was: a
+    caller able to distinguish them by exception type or text would have an
+    oracle a real attacker could use to probe which *cryptographic* failure
+    mode they hit. That promise covers the cryptographic failure modes
+    specifically. A small number of pre-cryptographic causes -- a key that
+    is not RSA at all, a ciphertext that is not even a JSON object -- do get
+    a distinct, still plaintext-free message from `_decrypt`, because they
+    are detected before any key material is touched and naming them gives
+    an attacker nothing they could not already see from the input itself.
+    Never carries plaintext, key material, or a fragment of either, in any
+    case.
     """
 
 
@@ -220,14 +241,43 @@ def _validate_event_id(event_id: str) -> None:
         raise ValueError(f"not a valid event id: {event_id!r}")
 
 
+def secret_name(event_id: str) -> str:
+    """The `CONVENER_EVENT_KEY_<ID>` environment variable name for `event_id`.
+
+    `config/integrations.yml` declares the *pattern*
+    `CONVENER_EVENT_KEY_<ID>`; this is what `<ID>` concretely is for a given
+    event. Uppercasing the id is not enough on its own -- an id such as the
+    tests' own canonical `mrg-042` uppercases to `MRG-042`, and
+    `CONVENER_EVENT_KEY_MRG-042` is not a legal GitHub Actions secret name, which
+    only admits `[A-Za-z_][A-Za-z0-9_]*`. So both characters `_EVENT_ID_RE`
+    admits but that charset does not -- `.` and `-` -- become `_` first.
+    The result is always legal by construction: the prefix is fixed and
+    already legal, and the transformed suffix can only contain letters,
+    digits and `_`.
+
+    This transform is lossy on purpose to keep it simple, and that has one
+    consequence: `mrg-042` and `mrg.042` both become `MRG_042` and would
+    collide on the same secret. Event ids are chosen by whoever creates the
+    event, never by a participant, so this is a documented operational
+    constraint -- do not create two events whose ids collide once `.` and
+    `-` are folded to `_` -- rather than something this function can detect
+    on its own; it holds no registry of any other event's id to check
+    against.
+    """
+    _validate_event_id(event_id)
+    suffix = _SECRET_UNSAFE_RE.sub("_", event_id).upper()
+    return f"CONVENER_EVENT_KEY_{suffix}"
+
+
 def generate() -> tuple[str, str]:
     """A fresh RSA key pair, PEM-encoded: `(private, public)`.
 
     The private half is PKCS8, unencrypted -- its protection is the
     repository secret it is stored as (`CONVENER_EVENT_KEY_<ID>`), not a
     password on the PEM itself, which would only move the secret one layer
-    down. The public half is `SubjectPublicKeyInfo`, the form
-    `crypto.subtle.importKey("spki", ...)` expects.
+    down. The public half is `SubjectPublicKeyInfo` PEM -- see the module
+    docstring for the one extra step the browser needs before
+    `crypto.subtle.importKey("spki", ...)` will accept it.
     """
     key = rsa.generate_private_key(public_exponent=65537, key_size=RSA_KEY_BITS)
     private_pem = key.private_bytes(
@@ -279,7 +329,13 @@ def decrypt(private_pem: str, ciphertext: str) -> bytes:
     """
     try:
         return _decrypt(private_pem, ciphertext)
-    except (ValueError, TypeError, KeyError, InvalidTag) as exc:
+    except (
+        ValueError,
+        TypeError,
+        KeyError,
+        InvalidTag,
+        UnsupportedAlgorithm,
+    ) as exc:
         raise DecryptionError("ciphertext could not be decrypted") from exc
 
 
@@ -293,6 +349,8 @@ def _decrypt(private_pem: str, ciphertext: str) -> bytes:
     envelope: Any = json.loads(ciphertext)
     if not isinstance(envelope, dict):
         raise DecryptionError("malformed ciphertext")
+    if envelope.get("v") != WIRE_VERSION:
+        raise DecryptionError("unsupported ciphertext format version")
 
     encrypted_key = base64.b64decode(envelope["encrypted_key"], validate=True)
     nonce = base64.b64decode(envelope["iv"], validate=True)

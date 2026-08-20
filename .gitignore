@@ -31,3 +31,10 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Event private keys (tools/convener_ops/eventkeys.py never writes one to disk --
+# this guards a human trying one out by hand). Only the published .pub half
+# belongs in keys/events/.
+*.pem
+keys/events/*
+!keys/events/*.pub
