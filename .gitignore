@@ -41,8 +41,11 @@ keys/events/*
 
 # Raw attendance export (tools/convener_ops/platform.py::ManualPlatform). Contains
 # personal data -- display names and addresses off the meeting platform --
-# and is dropped here only for one read, never committed. Nothing else lives
-# in data/events/<id>/ yet that this rule would need to spare: the room link
-# and join instructions come from data/speakers.yml and data/config.yml
-# instead (R-5, R-6), never from a file under this directory.
+# and is dropped here only for one read, never committed. The room link and
+# join instructions come from data/speakers.yml and data/config.yml instead
+# (R-5, R-6), never from a file under this directory. This filename-specific
+# pattern deliberately does not reach data/events/<id>/registrations.enc,
+# which *is* committed (tools/convener_ops/registration.py) -- it holds nothing
+# but per-registration ciphertext, the opposite of what this rule exists to
+# keep out.
 data/events/*/attendance-import.csv
