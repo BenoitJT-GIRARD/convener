@@ -861,4 +861,27 @@ def validate_config(cfg: Any) -> list[str]:
         if isinstance(value, bool) or not isinstance(value, int):
             errors.append(f"config.yml: {path} must be an integer")
 
+    # Phase 4 S:5's configurable eligibility threshold: a share of
+    # `seminar_duration_minutes` a matched attendee's summed duration must
+    # reach to count as present. Deliberately not in `CONFIG_REQUIRED`,
+    # unlike `sla_days`: the spec says the real number "devra s'aligner sur
+    # des exigences d'accréditation encore inconnues" - nobody has a number
+    # to write yet, and `tools/convener_ops/attendance.py::DEFAULT_ELIGIBILITY_SHARE`
+    # (the spec's own "par défaut deux tiers") is what applies until somebody
+    # does. Validated the same way regardless of whether the file carries it:
+    # a *present* value outside ]0, 1] is refused, by name, at `convener-validate`
+    # time - the day this key stops being hypothetical, it is already
+    # enforced, the same guarantee `sla_days` gets by being required outright.
+    if "eligibility_share" in cfg:
+        eligibility_share = cfg["eligibility_share"]
+        if (
+            isinstance(eligibility_share, bool)
+            or not isinstance(eligibility_share, (int, float))
+            or not (0 < eligibility_share <= 1)
+        ):
+            errors.append(
+                "config.yml: eligibility_share must be a number in ]0, 1], "
+                f"got {eligibility_share!r}"
+            )
+
     return errors

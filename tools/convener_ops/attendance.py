@@ -134,13 +134,72 @@ list rather than a side effect: the host resolves it after the event
 of a human -- this module never prints or writes anything itself, the same
 "every module but `cli.py` is pure" rule every other module in this
 package already follows.
+
+Eligibility is a calculation, not a decision
+---------------------------------------------------
+Spec S:5 turns a matched person's summed duration into a yes/no: eligible
+when it reaches a configurable share of the session, by default two
+thirds. Spec S:8 is explicit that this is a *calculation*, kept apart from
+*issuing* a certificate (task 12's `certificate.py`): an appariement
+corrected after the fact is re-run through `match`, and the eligibility
+that follows from it is re-run too, with nothing here to undo -- no
+registry entry, no certificate, nothing this module ever wrote in the
+first place. `eligible` and `eligible_attendees` below return facts about
+a duration, full stop; whether a fact becomes a certificate is a later
+module's decision, deliberately.
+
+The threshold itself is `EligibilityThreshold`: `seminar_duration_minutes`
+(`data/config.yml`, already required for every other reason this project
+reads "the session's own length") and `share`, spec S:5's configurable
+fraction -- configuration, not a constant, because the real number "devra
+s'aligner sur des exigences d'accréditation encore inconnues" (spec S:5).
+`validate.py::validate_config` refuses a configured `share` outside
+``]0, 1]`` at write time, the same way it already refuses a malformed
+`sla_days` entry, naming the key; `DEFAULT_ELIGIBILITY_SHARE` is what
+applies for as long as nobody has a number to write.
+
+Eligibility answers a question only a matched attendee can be asked
+-------------------------------------------------------------------------
+`eligible` takes a `MatchedAttendee`, not a bare `int` of seconds. That is
+deliberate, and it is this module's second boundary, built the same way
+its matching boundary already is (see "Three outcomes, not two" above): an
+`UnmatchedAttendee` and an `UnreachableAttendee` cannot be passed to
+`eligible` at all, because neither carries the `Registration` a
+certificate would have to name. Two cases follow from that, both named in
+spec S:9's own table:
+
+- **Present without having registered** (an `UnmatchedAttendee`, or an
+  `UnreachableAttendee` if the same person joined by phone) is "non
+  éligible" in the spec's own words, and `eligible_attendees` agrees with
+  that verdict -- but not by computing `False` for them. There is no
+  honest way to ask "was this duration long enough" about a person this
+  module never identified, and answering it anyway would look, from a
+  caller's side, exactly like a registrant who attended too briefly:
+  "we do not know who this was" collapsing into "we know who this was and
+  they fell short", which are different facts the host resolving
+  `matched.unmatched` needs told apart (spec S:5's "reprise manuelle" is
+  only actionable if it still says who is unresolved, not who failed a
+  duration check). `eligible_attendees` keeps them apart the same way
+  `match` keeps `unmatched` apart from `unreachable`: by construction,
+  never producing the first kind of answer at all. This is the deliberate
+  choice the task brief asks this module to write down: excluded as
+  something a caller must handle separately (the host's manual
+  resolution, or, for a telephone joiner, the platform boundary spec S:5
+  already documents on the event page), not folded into "not eligible".
+- **Registered, never attended** carries no `AttendanceRow` at all, so
+  `match` itself never places them in any of the three outcomes (see
+  "Nobody disappears in silence" above) -- there is no duration to compare
+  against a threshold, and no entry in `matched.matched` for
+  `eligible_attendees` to examine.
 """
 
 from __future__ import annotations
 
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from fractions import Fraction
+from typing import Any, Final
 
 from .platform import AttendanceRow
 from .registration import (
@@ -489,4 +548,121 @@ def match(
             for seen_name, seen_email, total, seen_tied in unmatched_totals.values()
         ),
         unreachable=tuple(unreachable),
+    )
+
+
+#: Spec S:5's own words: "par défaut deux tiers" (by default, two thirds).
+#: Kept as an exact `Fraction`, never the `float` `2 / 3` (0.6666666666666666
+#: in Python -- a value that is *not* exactly two thirds): a session whose
+#: length divides evenly by three then lands exactly on its threshold, with
+#: no rounding drift of this constant's own making. Applied by
+#: `EligibilityThreshold.from_config` only when `data/config.yml` carries
+#: no `eligibility_share` of its own -- see the module docstring's
+#: "Eligibility is a calculation, not a decision" for why that is not a
+#: gap in the configuration but the configuration's normal state today.
+DEFAULT_ELIGIBILITY_SHARE: Final = Fraction(2, 3)
+
+
+@dataclass(frozen=True)
+class EligibilityThreshold:
+    """The two facts `eligible` needs about the event that live on neither
+    `MatchedAttendee` nor `Registration`: how long the session itself was
+    scheduled to run (`seminar_duration_minutes`, minutes, `data/config.yml`
+    -- the same setting `sweep.py`'s auto-deliver cutoff already reads, so
+    building this never re-derives what "the session's own length" means)
+    and what share of it counts (`share`, spec S:5's configurable fraction
+    -- read once by the caller and passed in rather than read from the file
+    here, this module is pure like every `convener_ops` module but `cli.py`).
+
+    `share` accepts a `Fraction` or a `float` rather than only a `float`:
+    `DEFAULT_ELIGIBILITY_SHARE` is a `Fraction` so the *default* threshold
+    is exact, and a value read out of `data/config.yml` is a `float`
+    because that is what YAML gives back for `0.6667`. `threshold_seconds`
+    below converts whichever it was handed to a `Fraction` and never back
+    to a `float`, so neither path loses precision converting itself to the
+    other's shape."""
+
+    seminar_duration_minutes: int
+    share: Fraction | float = DEFAULT_ELIGIBILITY_SHARE
+
+    @property
+    def threshold_seconds(self) -> Fraction:
+        """The minimum summed duration a matched attendee must reach,
+        exactly -- never rounded through a `float` -- so a duration
+        engineered to land precisely on the threshold compares equal to
+        it rather than drifting by a fraction of a second under
+        floating-point multiplication. `Fraction(self.share)` captures
+        whatever `share` actually is, exactly: the default's own
+        `Fraction(2, 3)` stays exact, and a configured `float` (`0.6667`,
+        say) is read as the exact binary value that decimal parsed to,
+        not silently rounded to some "intended" fraction it never
+        carried."""
+        return self.seminar_duration_minutes * 60 * Fraction(self.share)
+
+    @classmethod
+    def from_config(cls, cfg: Mapping[str, Any]) -> EligibilityThreshold:
+        """Build the threshold from an already-loaded `data/config.yml`.
+
+        `seminar_duration_minutes` is required
+        (`validate.py::CONFIG_REQUIRED`) and read as-is: a config that has
+        already passed `validate_config` carries a real integer there, and
+        this module trusts that the same way it trusts every other
+        already-validated fact it is handed. `eligibility_share` is not
+        required -- its absence means spec S:5's own default applies, not
+        that the file is incomplete; `validate_config` refuses a *present*
+        value outside ``]0, 1]``, by name, but never demands the key
+        itself."""
+        return cls(
+            seminar_duration_minutes=cfg["seminar_duration_minutes"],
+            share=cfg.get("eligibility_share", DEFAULT_ELIGIBILITY_SHARE),
+        )
+
+
+def eligible(attendee: MatchedAttendee, threshold: EligibilityThreshold) -> bool:
+    """Whether `attendee`'s summed duration reaches spec S:5's configurable
+    share of the session -- inclusive at the exact boundary: a duration
+    equal to the threshold is eligible, not only one that exceeds it. A
+    duration that lands exactly there is exactly the amount the fraction
+    was chosen to mean; refusing it would refuse the one number the
+    threshold names.
+
+    Takes a `MatchedAttendee`, not a bare `int` of seconds -- see the
+    module docstring's "Eligibility answers a question only a matched
+    attendee can be asked" for why `UnmatchedAttendee` and
+    `UnreachableAttendee` cannot be passed here at all, and what that
+    means for the two cases spec S:9 names ("présent sans s'être inscrit",
+    a telephone joiner).
+
+    Eligible is not certified: this returns a fact about a duration, never
+    an act of issuing anything. See the module docstring's "Eligibility is
+    a calculation, not a decision" for why that separation is load-bearing
+    (spec S:8), not stylistic."""
+    return Fraction(attendee.duration_seconds) >= threshold.threshold_seconds
+
+
+def eligible_attendees(
+    matched: Matched, threshold: EligibilityThreshold
+) -> tuple[MatchedAttendee, ...]:
+    """Every attendee in `matched.matched` whose summed duration crosses
+    `threshold`, in the order `matched.matched` already carries them.
+
+    Reads `matched.matched` alone. `matched.unmatched` and
+    `matched.unreachable` are never examined -- not an oversight, see the
+    module docstring's "Eligibility answers a question only a matched
+    attendee can be asked": there is no `Registration` behind either
+    outcome for a duration to be compared on behalf of, so neither is a
+    candidate this function could honestly rule on. A registrant who never
+    attended has no entry in `matched.matched` either (`match`'s own
+    "Nobody disappears in silence"), which is why there is nothing more
+    this function needs to do to exclude them: they were never a
+    candidate in the first place.
+
+    A pure calculation over whatever `matched` currently says (spec S:8):
+    re-running `match` on a corrected registration file and calling this
+    again produces a fresh answer, with no registry entry, no certificate
+    and no state of this function's own to undo first. Which of *these*
+    attendees actually receive a certificate is task 12's
+    (`certificate.py`) decision, not this one."""
+    return tuple(
+        attendee for attendee in matched.matched if eligible(attendee, threshold)
     )

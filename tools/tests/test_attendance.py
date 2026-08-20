@@ -7,7 +7,11 @@ nothing here is a real registrant.
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 from convener_ops.attendance import (
+    DEFAULT_ELIGIBILITY_SHARE,
+    EligibilityThreshold,
     Matched,
     MatchedAttendee,
     MatchEvent,
@@ -15,6 +19,8 @@ from convener_ops.attendance import (
     UnreachableAttendee,
     _name_tokens,
     _name_tokens_for_matching,
+    eligible,
+    eligible_attendees,
     match,
 )
 from convener_ops.platform import AttendanceRow
@@ -672,3 +678,145 @@ def test_no_registrations_leaves_addressed_rows_unmatched() -> None:
 
     assert result.matched == ()
     assert [u.email for u in result.unmatched] == ["nobody@example.org"]
+
+
+# ------------------------------------------------------------------ #
+# Eligibility (spec S:5): a share of the session, not a fixed cutoff.
+# ------------------------------------------------------------------ #
+
+
+def _attendee(duration_seconds: int) -> MatchedAttendee:
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    return MatchedAttendee(registration=ada, duration_seconds=duration_seconds)
+
+
+def test_a_duration_exactly_at_the_threshold_is_eligible() -> None:
+    """The brief's own boundary case: exactly the fraction asked for
+    counts, not only strictly more than it."""
+    threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
+
+    assert eligible(_attendee(2700), threshold) is True
+
+
+def test_one_second_under_the_threshold_is_not_eligible() -> None:
+    threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
+
+    assert eligible(_attendee(2699), threshold) is False
+
+
+def test_zero_seconds_is_never_eligible() -> None:
+    threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
+
+    assert eligible(_attendee(0), threshold) is False
+
+
+def test_the_default_share_is_exactly_two_thirds_with_no_floating_point_drift() -> None:
+    """`2 / 3` in Python is 0.6666666666666666, not two thirds -- a session
+    whose length divides evenly by three has to land exactly on its
+    threshold, not a fraction of a second short of it under float
+    rounding."""
+    threshold = EligibilityThreshold(seminar_duration_minutes=90)
+
+    assert threshold.share == DEFAULT_ELIGIBILITY_SHARE
+    assert threshold.threshold_seconds == Fraction(3600)
+    assert eligible(_attendee(3600), threshold) is True
+    assert eligible(_attendee(3599), threshold) is False
+
+
+def test_a_configured_share_of_one_requires_the_entire_session() -> None:
+    """The top of the legal range ``]0, 1]``: allowed, and means "all of
+    it"."""
+    threshold = EligibilityThreshold(seminar_duration_minutes=60, share=1.0)
+
+    assert eligible(_attendee(3600), threshold) is True
+    assert eligible(_attendee(3599), threshold) is False
+
+
+def test_from_config_defaults_the_share_when_the_key_is_absent() -> None:
+    threshold = EligibilityThreshold.from_config({"seminar_duration_minutes": 90})
+
+    assert threshold.seminar_duration_minutes == 90
+    assert threshold.share == DEFAULT_ELIGIBILITY_SHARE
+
+
+def test_from_config_reads_an_explicit_eligibility_share() -> None:
+    threshold = EligibilityThreshold.from_config(
+        {"seminar_duration_minutes": 90, "eligibility_share": 0.5}
+    )
+
+    assert threshold.share == 0.5
+    assert threshold.threshold_seconds == Fraction(2700)
+
+
+def test_eligible_attendees_returns_only_those_crossing_the_threshold() -> None:
+    threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    matched = Matched(
+        matched=(
+            MatchedAttendee(registration=ada, duration_seconds=2700),
+            MatchedAttendee(registration=grace, duration_seconds=100),
+        ),
+        unmatched=(),
+        unreachable=(),
+    )
+
+    result = eligible_attendees(matched, threshold)
+
+    assert result == (matched.matched[0],)
+
+
+def test_present_without_registration_is_never_a_candidate_for_eligibility() -> None:
+    """An `UnmatchedAttendee` -- present in the room, no registration the
+    cascade could tie them to -- is excluded from `eligible_attendees` by
+    never being offered to it, not by a computed `False`. Spec S:9 calls
+    this person "non eligible"; this test proves the module reaches that
+    verdict by construction rather than by asking `eligible` a question it
+    has no honest answer for (see the module docstring)."""
+    threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
+    matched = Matched(
+        matched=(),
+        unmatched=(
+            UnmatchedAttendee(
+                display_name="Walk-in",
+                email="walkin@example.org",
+                duration_seconds=5400,
+            ),
+        ),
+        unreachable=(),
+    )
+
+    assert eligible_attendees(matched, threshold) == ()
+
+
+def test_a_telephone_joiner_is_never_a_candidate_for_eligibility_either() -> None:
+    """The other case task 8's types separate from `unmatched`: a phone
+    joiner has a duration and no way to ever acquire an identity. Same
+    exclusion-by-construction as the unmatched case above, for the same
+    reason -- see the module docstring's "Eligibility answers a question
+    only a matched attendee can be asked"."""
+    threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
+    matched = Matched(
+        matched=(),
+        unmatched=(),
+        unreachable=(
+            UnreachableAttendee(display_name="+1 555 0100", duration_seconds=5400),
+        ),
+    )
+
+    assert eligible_attendees(matched, threshold) == ()
+
+
+def test_a_registrant_who_never_attended_has_no_eligibility_to_compute() -> None:
+    """No `AttendanceRow` named them, so `match` places them in none of the
+    three outcomes (its own "Nobody disappears in silence") -- and with no
+    entry in `matched.matched`, `eligible_attendees` has nothing to
+    examine either."""
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event = MatchEvent(event_id=_EVENT_ID, salt=_SALT)
+    threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
+
+    result = match([], [ada], event)
+
+    assert result.matched == ()
+    assert eligible_attendees(result, threshold) == ()
