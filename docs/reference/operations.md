@@ -788,10 +788,25 @@ key "must never... be written to a file outside a CI job's environment", so
 this command is not meant to be run against a real event from a laptop.
 **No workflow currently invokes it** -- unlike `convener-issue-certificates`,
 `convener-reissue-certificate` and `convener-revoke-certificate` below, all three
-wired to a `workflow_dispatch` this same round (fix round 2, task 12,
-R-23), `convener-match-attendance` still has no caller in this repository. Noted
-here rather than silently left undocumented; wiring it up is not this
-round's scope.
+wired to a `workflow_dispatch` in fix round 2 (task 12, R-23),
+`convener-match-attendance` still has no caller in this repository. Noted here
+rather than silently left undocumented; wiring it up is not this round's
+scope either -- it is task 8's, already carried to the phase's final fix
+wave.
+
+**It cannot currently be run against real attendance at all (fix round
+3).** With no `CONVENER_MEETING_API_TOKEN`, the manual implementation looks
+for `data/events/<event id>/attendance-import.csv`, which `.gitignore`
+keeps out of every checkout -- there is nowhere to run this command *from*
+that could hold that file. With a token configured, this command never
+populates `conference_ids` either (unlike `convener-issue-certificates` and
+`convener-reissue-certificate` below, since it has no `workflow_dispatch` of
+its own to take a `conference_id` input from), so the FCC path always
+refuses with "no FCC conference is recorded for event ...". Fix round 3
+closed the one real defect this exposed -- that refusal used to be an
+unhandled traceback, not the clean, one-line message every other failure
+in this command already gave -- so what an operator should actually
+expect today is a clean refusal either way, not a working diagnostic run.
 
 ## Issuing, reissuing and revoking certificates
 
@@ -822,24 +837,30 @@ in the other direction -- see that module's own docstring and
 `convener_ops.cli.reissue_certificate`'s.
 
 - **Issue certificates** (`.github/workflows/issue-certificates.yml`,
-  `convener-issue-certificates`). Input: the event id. Signs a certificate for
-  every currently eligible attendee not already on record (spec §5's threshold,
-  computed the same way `convener-match-attendance` computes it), and commits
-  the register only when at least one certificate was freshly minted.
-  Reading `CONVENER_SIGNING_KEY` absent, or `CONVENER_MATCHING_SALT` absent, are both
-  ordinary D-13 states -- nothing issued, a clean exit -- the latter for a
-  stronger reason than the former: `certificate.py`'s own module docstring
-  explains why a certificate fingerprint may never be computed without a
-  real salt, so an absent salt forbids writing rather than licensing an
-  unsafe write.
+  `convener-issue-certificates`). Inputs: the event id, and, optionally, the
+  FreeConferenceCall conference id (fix round 3, Critical B) -- the same
+  input `recording.yml` already takes, needed only when
+  `CONVENER_MEETING_API_TOKEN` is configured; the manual implementation never
+  reads it. Signs a certificate for every currently eligible attendee not
+  already on record (spec §5's threshold, computed the same way
+  `convener-match-attendance` computes it), and commits the register only when
+  at least one certificate was freshly minted. Reading `CONVENER_SIGNING_KEY`
+  absent, or `CONVENER_MATCHING_SALT` absent, are both ordinary D-13 states --
+  nothing issued, a clean exit -- the latter for a stronger reason than
+  the former: `certificate.py`'s own module docstring explains why a
+  certificate fingerprint may never be computed without a real salt, so
+  an absent salt forbids writing rather than licensing an unsafe write.
+  Before fix round 3, nothing populated the FCC path's own `conference_ids`
+  at all, so it could never issue a single certificate -- see that
+  round's own report for the full finding.
 - **Reissue a certificate** (`.github/workflows/reissue-certificate.yml`,
-  `convener-reissue-certificate`). Inputs: the event id, and the certificate id
-  to correct. An operator's deliberate action for one person, never a
-  scheduled job -- reusing `convener-issue-certificates`'s own idempotent lookup
-  for a correction would let a routine re-run silently resurrect it. Mints
-  a fresh identifier and a fresh signed token, and refuses (without
-  writing anything) unless the standing row for that id is already
-  revoked.
+  `convener-reissue-certificate`). Inputs: the event id, the certificate id to
+  correct, and the same optional conference id as above. An operator's
+  deliberate action for one person, never a scheduled job -- reusing
+  `convener-issue-certificates`'s own idempotent lookup for a correction would
+  let a routine re-run silently resurrect it. Mints a fresh identifier and
+  a fresh signed token, and refuses (without writing anything) unless the
+  standing row for that id is already revoked.
 - **Revoke a certificate** (`.github/workflows/revoke-certificate.yml`,
   `convener-revoke-certificate`). Inputs: the event id, and the certificate id
   to revoke. Flips one register row to `revoked` and nothing else -- no
@@ -869,12 +890,32 @@ their own sections above. Revoking reads neither an event key nor either
 certificate secret, exactly as its own bullet above says: revocation never
 touches anything that would need one.
 
+**How the public projection actually gets rebuilt (corrected, fix round
+3).** *Publish vitrine data*'s own `paths:` trigger names
+`data/events/*/certificates.yml`, but a `push` trigger only fires from an
+event GitHub itself raises for the push -- and none of these three jobs'
+own commits raise one: all three push with the checkout's default
+`GITHUB_TOKEN`, and GitHub does not start a new workflow run from an
+event triggered by that same token (the recursion guard). Before fix
+round 3 this meant *Publish vitrine data* never ran after issuing,
+re-issuing or revoking a certificate at all -- the register's own
+authority on state (spec §7 says plainly that it is the register, not the
+signature, that has the final say) had no observable effect on any
+verifier, R-19's own finding come back one layer up. Each of
+the three jobs now dispatches *Publish vitrine data* directly, as its own
+last step, with `gh workflow run publish-vitrine.yml` -- `workflow_dispatch`
+(added to that workflow this same round) is one of the documented
+exceptions to the recursion guard, so the job's own `GITHUB_TOKEN` is
+enough and no new secret is needed. The dispatch only fires once a change
+was genuinely pushed, never on a run that wrote nothing.
+
 **To verify:** run one of the three workflows for a test event with a
 published key and a settled attendance export; `data/events/<event
 id>/certificates.yml` gains, changes or flips the state of one row, and
-*Publish vitrine data* (triggered by that same commit, since its own
-`paths:` trigger names `data/events/*/certificates.yml`) republishes
-`certificates-public.json` with the new state.
+that same job's own dispatch step starts *Publish vitrine data*, which
+republishes `certificates-public.json` with the new state -- visible as a
+second, separate workflow run on the Actions tab, started a few seconds
+after the first.
 
 ## CI-only secrets
 
