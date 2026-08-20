@@ -586,17 +586,31 @@ registration keys*, this is an ordinary D-13 absence: there is no
 confidentiality risk a missing signing key could expose, only a feature
 (certificates) that does not run this time.
 
-**To create:** generate a fresh key pair (`convener_ops.signing.generate()`).
-There is exactly one of these in service at a time — unlike an event key,
-this is not per-event.
+**To create:** a human operator runs `convener_ops.signing.generate()`
+themselves, interactively, on their own machine — a Python shell is
+enough (`cd tools && uv run python`, then `from convener_ops.signing import
+generate; private_pem, public_pem = generate()`). **Not an automated
+step, and not something to delegate to an agent or a CI job:** this mints
+the one key that every future certificate depends on, and it is minted
+exactly once, deliberately, by someone who then holds the only copy of
+its private half until it is pasted into GitHub Secrets and never printed
+or saved again. There is exactly one of these in service at a time —
+unlike an event key, this is not per-event.
 
 1. Commit the public half as `keys/signing/<YYYY-MM-DD>.pub`, dated the day
    it was generated (`convener_ops.signing.public_key_path`). This is not a
    secret: it is what lets a public verification page (task 13) confirm a
-   certificate offline, with no request to us at all.
-2. Store the private half as the repository secret `CONVENER_SIGNING_KEY`.
-   Never commit it, never write it to a file outside a CI job's
-   environment, and never let it appear in a job log.
+   certificate offline, with no request to us at all. `keys/signing/`
+   holds a `README.md` describing this layout even when the directory is
+   otherwise empty — an empty directory there is the normal state before
+   the first key is ever generated, not a sign of anything missing.
+2. Store the private half as the repository secret `CONVENER_SIGNING_KEY`, by
+   pasting it directly from the terminal into the GitHub Secrets UI.
+   **Never write it to a file, anywhere, at any point** — not a temporary
+   one, not a `.gitignore`'d one, not a CI job's workspace. Once it is
+   pasted in and the operator has confirmed the paste, close the terminal
+   that generated it; nothing else should retain a copy. Never commit it,
+   and never let it appear in a job log.
 
 **This order is load-bearing, the same way it is for an event key:**
 publish the public half before the private secret exists. Setting the

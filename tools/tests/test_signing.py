@@ -236,6 +236,12 @@ def test_sign_lets_a_json_encoding_failure_pass_through_unwrapped() -> None:
 
 
 def test_verify_returns_none_for_an_empty_key_list() -> None:
+    """Not only a defensive edge case: `keys/signing/` genuinely holds no
+    key at all until an operator generates the first one (see that
+    directory's own README), so a caller that built `public_pems` from an
+    empty directory listing must get this same clean refusal, never a
+    crash and never a token accepted for want of anything to check it
+    against."""
     private_pem, _ = generate()
     token = sign(CERT_PAYLOAD, private_pem)
     assert verify(token, []) is None

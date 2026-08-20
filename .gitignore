@@ -59,9 +59,11 @@ keys/events/*
 # to disk either). Unlike keys/events/, every .pub ever committed here stays
 # forever -- rotation retires a key from service, never from this directory
 # -- but the rule protecting the private half from an accidental commit is
-# the same one.
+# the same one. keys/signing/README.md documents the layout and is exempted
+# below so the directory's contract survives even while it holds no keys.
 keys/signing/*
 !keys/signing/*.pub
+!keys/signing/README.md
 
 # Raw attendance export (tools/convener_ops/platform.py::ManualPlatform). Contains
 # personal data -- display names and addresses off the meeting platform --

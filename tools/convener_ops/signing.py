@@ -167,13 +167,19 @@ The private half, and why its absence is an ordinary D-13 state here
 Unlike `eventkeys.py`'s private half, there is exactly one signing private
 key in service at a time, held as the repository secret `CONVENER_SIGNING_KEY`
 (`config/integrations.yml`), read only inside the job that issues
-certificates (task 12/14) and never elsewhere. Rotating it means: generate a
-fresh pair, commit the new public half under a new date, and only then
-replace the `CONVENER_SIGNING_KEY` secret with the new private half -- the same
-publish-before-secret ordering `eventkeys.py`'s own operations doc already
-argues for event keys, and for the same reason: setting the secret first
-would let a job sign a certificate under a key with no public half yet
-committed for anyone to verify it against.
+certificates (task 12/14) and never elsewhere. Rotating it means: an
+*operator* -- a person, interactively, never an automated step and never
+this module acting on anyone's behalf -- runs `generate()`, commits the new
+public half under a new date, and only then replaces the `CONVENER_SIGNING_KEY`
+secret with the new private half, pasted directly into GitHub Secrets and
+never written to a file at any point. That is the same publish-before-secret
+ordering `eventkeys.py`'s own operations doc already argues for event keys,
+and for the same reason: setting the secret first would let a job sign a
+certificate under a key with no public half yet committed for anyone to
+verify it against. `generate` itself has no opinion on who calls it or how
+the result is handled -- it is `docs/reference/operations.md`'s
+"Certificate signing key" section, not this module, that is the place this
+constraint is a procedure rather than only a property of the function.
 
 `eventkeys.py`'s module docstring carves out one deliberate exception to
 D-13 ("an absent integration is a normal state"): a missing event key must
@@ -385,6 +391,14 @@ def verify(token: str, public_pems: list[str]) -> dict[str, Any] | None:
     signature that does not check out against any key offered. A public
     verification page needs one boolean-shaped answer, not a `try`/`except`
     around a call it cannot recover from differently either way.
+
+    `public_pems == []` is not a special case in the code below -- the loop
+    simply never runs -- but it is a real, expected input, not only a
+    theoretical one: `keys/signing/` legitimately holds no key at all until
+    an operator generates the first one (see that directory's own
+    `README.md`), and a caller that built its list by globbing an empty
+    directory must still get a clean `None` back, never an exception and
+    never a token accepted for want of anything to check it against.
     """
     try:
         parsed: Any = json.loads(token)
