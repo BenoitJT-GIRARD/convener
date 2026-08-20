@@ -1,0 +1,543 @@
+from __future__ import annotations
+
+import smtplib
+from pathlib import Path
+from typing import Any, ClassVar
+
+import pytest
+
+from convener_ops.confirmation import (
+    FIELD_LABELS,
+    MATCHING_INSTRUCTION,
+    UPDATE_WARNING,
+    Confirmation,
+    EventDetails,
+    EventNotFoundError,
+    SendResult,
+    SmtpConfig,
+    _join_labels,
+    changed_fields,
+    compose,
+    deliver,
+    event_details,
+    smtp_config_from_env,
+)
+from convener_ops.platform import ManualPlatform, Room
+from convener_ops.registration import Registration
+
+# ------------------------------------------------------------------ #
+# Fixtures
+# ------------------------------------------------------------------ #
+
+
+def _registration(**overrides: Any) -> Registration:
+    base: dict[str, Any] = {
+        "first_name": "Ada",
+        "surname": "Lovelace",
+        "email": "ada@example.org",
+        "institution": "Analytical Engines Institute",
+        "membership_opt_in": True,
+    }
+    base.update(overrides)
+    return Registration(**base)
+
+
+def _speaker(**overrides: Any) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "edition_code": "MRG-901",
+        "zoom_link": "https://meet.example.org/permanent-room",
+        "youtube_url": "",
+        "title": "On analytical engines",
+        "date": "2026-09-01",
+    }
+    base.update(overrides)
+    return base
+
+
+_ROOM = Room(
+    join_url="https://meet.example.org/permanent-room",
+    instructions="Wait to be let in.",
+)
+_EVENT = EventDetails(title="On analytical engines", date="2026-09-01", room=_ROOM)
+_BLANK_EVENT = EventDetails(title="", date="", room=Room(join_url="", instructions=""))
+
+
+class FakeTransport:
+    """Records every call; never touches a socket. `raises`, when set, is
+    raised instead of recording -- for the two exceptions `deliver` is
+    documented to catch, and for one it must not."""
+
+    def __init__(self, raises: BaseException | None = None) -> None:
+        self.raises = raises
+        self.calls: list[tuple[SmtpConfig, Confirmation]] = []
+
+    def send(self, config: SmtpConfig, message: Confirmation) -> None:
+        if self.raises is not None:
+            raise self.raises
+        self.calls.append((config, message))
+
+
+_CONFIG_ENV = {
+    "CONVENER_SMTP_HOST": "smtp.example.org",
+    "CONVENER_SMTP_PORT": "587",
+    "CONVENER_SMTP_USER": "convener-registration@example.org",
+    "CONVENER_SMTP_PASSWORD": "shh",
+    "CONVENER_SMTP_FROM": "convener-registration@example.org",
+}
+
+
+# ------------------------------------------------------------------ #
+# changed_fields(): what an update names, never what it quotes (R-9)
+# ------------------------------------------------------------------ #
+
+
+def test_changed_fields_is_empty_when_nothing_differs() -> None:
+    assert changed_fields(_registration(), _registration()) == ()
+
+
+def test_changed_fields_names_the_one_field_that_differs() -> None:
+    old = _registration(institution="Somewhere Else")
+    new = _registration()
+    assert changed_fields(old, new) == ("institution",)
+
+
+def test_changed_fields_names_several_fields_in_a_fixed_order() -> None:
+    old = _registration(first_name="Augusta", membership_opt_in=False)
+    new = _registration()
+    # FIELD_LABELS's own order: first_name before membership_opt_in.
+    assert changed_fields(old, new) == ("first name", "announce-list subscription")
+
+
+def test_changed_fields_never_names_a_value_it_saw_change() -> None:
+    """The property R-9 asks for directly: a diff that leaks the old or the
+    new institution name would defeat the point of naming fields instead of
+    quoting them."""
+    old = _registration(institution="Old Institute")
+    new = _registration(institution="New Institute")
+    for label in changed_fields(old, new):
+        assert "Institute" not in label
+
+
+def test_changed_fields_covers_every_registration_field() -> None:
+    """`FIELD_LABELS` must name all five `Registration` fields, or a real
+    change to one would go unreported -- pins the set directly rather than
+    trusting the dict literal never falls behind the dataclass."""
+    assert set(FIELD_LABELS) == {
+        "first_name",
+        "surname",
+        "email",
+        "institution",
+        "membership_opt_in",
+    }
+
+
+def test_join_labels_forms() -> None:
+    assert _join_labels([]) == ""
+    assert _join_labels(["a"]) == "a"
+    assert _join_labels(["a", "b"]) == "a and b"
+    assert _join_labels(["a", "b", "c"]) == "a, b and c"
+
+
+# ------------------------------------------------------------------ #
+# event_details(): the room through Platform, title/date off the record
+# ------------------------------------------------------------------ #
+
+
+def test_event_details_reads_title_date_and_room() -> None:
+    platform = ManualPlatform(speakers=[_speaker(edition_code="MRG-901")])
+
+    details = event_details([_speaker(edition_code="MRG-901")], "mrg-901", platform)
+
+    assert details.title == "On analytical engines"
+    assert details.date == "2026-09-01"
+    assert details.room.join_url == "https://meet.example.org/permanent-room"
+
+
+def test_event_details_raises_for_an_unknown_event() -> None:
+    platform = ManualPlatform(speakers=[])
+    with pytest.raises(EventNotFoundError, match="mrg-999"):
+        event_details([], "mrg-999", platform)
+
+
+def test_event_details_blank_title_and_date_read_as_empty_strings() -> None:
+    speakers = [_speaker(edition_code="MRG-901", title="", date="")]
+    platform = ManualPlatform(speakers=speakers)
+
+    details = event_details(speakers, "mrg-901", platform)
+
+    assert details.title == ""
+    assert details.date == ""
+
+
+# ------------------------------------------------------------------ #
+# compose(): the four required contents (spec S:3), and R-9's update notice
+# ------------------------------------------------------------------ #
+
+
+def test_compose_addresses_the_registrant() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    assert message.to == "ada@example.org"
+
+
+def test_compose_subject_names_the_event_when_known() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    assert "On analytical engines" in message.subject
+
+
+def test_compose_subject_is_still_sensible_with_no_event_title() -> None:
+    message = compose(_registration(), _BLANK_EVENT, "WXYZ-2345")
+    assert message.subject == "Your registration is confirmed"
+
+
+def test_compose_carries_the_room_link() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    assert _ROOM.join_url in message.body
+
+
+def test_compose_carries_the_room_instructions_when_present() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    assert "Wait to be let in." in message.body
+
+
+def test_compose_says_something_sensible_with_no_room_link_yet() -> None:
+    message = compose(_registration(), _BLANK_EVENT, "WXYZ-2345")
+    assert "has not been set yet" in message.body
+
+
+def test_compose_carries_the_matching_code_and_its_exact_instruction() -> None:
+    """The load-bearing content (spec S:3, S:5): both the instruction
+    sentence and the live code itself must be in the message, verbatim --
+    this is the test the task's own mutation exercise is built to kill by
+    dropping the code from `compose`."""
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    assert MATCHING_INSTRUCTION in message.body
+    assert "WXYZ-2345" in message.body
+    assert f"{MATCHING_INSTRUCTION}: WXYZ-2345" in message.body
+
+
+def test_compose_names_the_fallback_cascade_with_no_code() -> None:
+    """Spec S:5's documented fallback when `CONVENER_MATCHING_SALT` is unset
+    (an ordinary D-13 absence, `registration.matching_code`'s own
+    docstring) -- the message must still say *something* about how
+    attendance will be matched, not simply omit the sentence."""
+    message = compose(_registration(), _EVENT, None)
+    assert MATCHING_INSTRUCTION not in message.body
+    assert "match your attendance" in message.body
+
+
+def test_compose_carries_the_data_protection_notice_and_the_rights_notice() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    assert "Data protection." in message.body
+    assert "90 days" in message.body
+    assert "reply to this message" in message.body
+
+
+def test_compose_says_nothing_about_an_update_when_nothing_changed() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345", changed=())
+    assert "This confirms an update" not in message.body
+    assert UPDATE_WARNING not in message.body
+
+
+def test_compose_names_what_changed_and_warns_when_something_did() -> None:
+    """R-9: the only detection channel for a silent overwrite has to name
+    the change and tell the reader what to do if it was not them."""
+    message = compose(_registration(), _EVENT, "WXYZ-2345", changed=("institution",))
+    assert "This confirms an update" in message.body
+    assert "institution" in message.body
+    assert UPDATE_WARNING in message.body
+
+
+def test_compose_joins_several_changed_fields_in_one_sentence() -> None:
+    message = compose(
+        _registration(),
+        _EVENT,
+        "WXYZ-2345",
+        changed=("first name", "institution"),
+    )
+    assert "first name and institution" in message.body
+
+
+def test_compose_never_quotes_the_institution_value_in_an_update_notice() -> None:
+    """The property `changed_fields` names but does not quote (R-9) has to
+    survive into the composed message too, not only into the field list."""
+    message = compose(
+        _registration(institution="Analytical Engines Institute"),
+        _EVENT,
+        "WXYZ-2345",
+        changed=("institution",),
+    )
+    assert "Analytical Engines Institute" not in message.body
+
+
+def test_compose_is_deterministic_so_a_resend_reproduces_it_exactly() -> None:
+    """The property a manual resend depends on directly: composing twice
+    from the same inputs, including the same code, must give byte-identical
+    output -- this is the test the task's own mutation exercise is built to
+    kill by making a resend derive a different code."""
+    first = compose(_registration(), _EVENT, "WXYZ-2345")
+    second = compose(_registration(), _EVENT, "WXYZ-2345")
+    assert first == second
+
+
+# ------------------------------------------------------------------ #
+# smtp_config_from_env(): D-13, all five secrets or none
+# ------------------------------------------------------------------ #
+
+
+def test_smtp_config_from_env_with_all_five_secrets() -> None:
+    config = smtp_config_from_env(_CONFIG_ENV)
+    assert config == SmtpConfig(
+        host="smtp.example.org",
+        port=587,
+        user="convener-registration@example.org",
+        password="shh",
+        sender="convener-registration@example.org",
+    )
+
+
+def test_smtp_config_from_env_with_nothing_set_is_none() -> None:
+    assert smtp_config_from_env({}) is None
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "CONVENER_SMTP_HOST",
+        "CONVENER_SMTP_PORT",
+        "CONVENER_SMTP_USER",
+        "CONVENER_SMTP_PASSWORD",
+        "CONVENER_SMTP_FROM",
+    ],
+)
+def test_smtp_config_from_env_is_none_when_any_one_secret_is_missing(
+    missing: str,
+) -> None:
+    env = dict(_CONFIG_ENV)
+    del env[missing]
+    assert smtp_config_from_env(env) is None
+
+
+def test_smtp_config_from_env_treats_a_blank_secret_as_absent() -> None:
+    env = dict(_CONFIG_ENV)
+    env["CONVENER_SMTP_HOST"] = "   "
+    assert smtp_config_from_env(env) is None
+
+
+@pytest.mark.parametrize("port", ["not-a-number", "0", "-1", "65536", "587.0"])
+def test_smtp_config_from_env_rejects_an_unusable_port(port: str) -> None:
+    env = dict(_CONFIG_ENV)
+    env["CONVENER_SMTP_PORT"] = port
+    assert smtp_config_from_env(env) is None
+
+
+def test_smtp_config_from_env_accepts_the_implicit_tls_port() -> None:
+    env = dict(_CONFIG_ENV)
+    env["CONVENER_SMTP_PORT"] = "465"
+    config = smtp_config_from_env(env)
+    assert config is not None
+    assert config.port == 465
+
+
+# ------------------------------------------------------------------ #
+# deliver(): the transport, and D-13's log fallback -- no test opens a
+# socket; the real transport is only ever reached through a fake.
+# ------------------------------------------------------------------ #
+
+
+def test_deliver_with_no_transport_returns_unsent_and_composes_the_body() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+
+    result = deliver(message, {})
+
+    assert result.sent is False
+    assert result.unsent_body is not None
+    assert "ada@example.org" in result.unsent_body
+    assert "WXYZ-2345" in result.unsent_body
+    assert message.subject in result.unsent_body
+
+
+def test_deliver_sends_through_the_configured_transport() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    transport = FakeTransport()
+
+    result = deliver(message, _CONFIG_ENV, transport=transport)
+
+    assert result == SendResult(sent=True, unsent_body=None)
+    assert len(transport.calls) == 1
+    config, sent_message = transport.calls[0]
+    assert config.host == "smtp.example.org"
+    assert sent_message == message
+
+
+def test_deliver_falls_back_to_the_log_when_the_transport_raises_smtp_exception() -> (
+    None
+):
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    transport = FakeTransport(raises=smtplib.SMTPRecipientsRefused({}))
+
+    result = deliver(message, _CONFIG_ENV, transport=transport)
+
+    assert result.sent is False
+    assert result.unsent_body is not None
+    assert "WXYZ-2345" in result.unsent_body
+
+
+def test_deliver_falls_back_to_the_log_when_the_transport_raises_os_error() -> None:
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    transport = FakeTransport(raises=OSError("connection refused"))
+
+    result = deliver(message, _CONFIG_ENV, transport=transport)
+
+    assert result.sent is False
+    assert result.unsent_body is not None
+
+
+def test_deliver_does_not_swallow_an_unrelated_exception() -> None:
+    """Only a real transport failure is caught -- a programming mistake in
+    a fake (or a future real transport) must still surface as itself."""
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+    transport = FakeTransport(raises=ValueError("not a transport failure"))
+
+    with pytest.raises(ValueError, match="not a transport failure"):
+        deliver(message, _CONFIG_ENV, transport=transport)
+
+
+def test_deliver_never_prints_anything_on_any_path(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The property the module docstring's whole transport section exists
+    for: this module must never be the thing that puts an address or a
+    code into stdout, on any of the three paths -- unconfigured, sent, or a
+    failed send."""
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+
+    deliver(message, {})
+    deliver(message, _CONFIG_ENV, transport=FakeTransport())
+    deliver(message, _CONFIG_ENV, transport=FakeTransport(raises=OSError("x")))
+
+    assert capsys.readouterr() == ("", "")
+
+
+# ------------------------------------------------------------------ #
+# The real transport's own branching (implicit TLS vs STARTTLS), exercised
+# with smtplib's own classes replaced -- still no socket opened.
+# ------------------------------------------------------------------ #
+
+
+class _FakeSmtpClient:
+    instances: ClassVar[list[_FakeSmtpClient]] = []
+
+    def __init__(self, host: str, port: int, timeout: float) -> None:
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+        self.starttls_called = False
+        self.login_calls: list[tuple[str, str]] = []
+        self.sent: list[Any] = []
+        _FakeSmtpClient.instances.append(self)
+
+    def starttls(self) -> None:
+        self.starttls_called = True
+
+    def login(self, user: str, password: str) -> None:
+        self.login_calls.append((user, password))
+
+    def send_message(self, message: Any) -> None:
+        self.sent.append(message)
+
+    def __enter__(self) -> _FakeSmtpClient:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+
+def test_smtp_transport_uses_starttls_on_an_ordinary_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from convener_ops.confirmation import _SmtpTransport
+
+    _FakeSmtpClient.instances = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _FakeSmtpClient)
+    config = SmtpConfig(
+        host="smtp.example.org", port=587, user="u", password="p", sender="from@x"
+    )
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+
+    _SmtpTransport().send(config, message)
+
+    assert len(_FakeSmtpClient.instances) == 1
+    client = _FakeSmtpClient.instances[0]
+    assert client.port == 587
+    assert client.starttls_called is True
+    assert client.login_calls == [("u", "p")]
+    assert len(client.sent) == 1
+
+
+def test_smtp_transport_uses_implicit_tls_on_port_465(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from convener_ops.confirmation import _SmtpTransport
+
+    _FakeSmtpClient.instances = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP_SSL", _FakeSmtpClient)
+    config = SmtpConfig(
+        host="smtp.example.org", port=465, user="u", password="p", sender="from@x"
+    )
+    message = compose(_registration(), _EVENT, "WXYZ-2345")
+
+    _SmtpTransport().send(config, message)
+
+    assert len(_FakeSmtpClient.instances) == 1
+    client = _FakeSmtpClient.instances[0]
+    assert client.port == 465
+    # Implicit TLS: never calls starttls, since the connection is already
+    # encrypted from the first byte.
+    assert client.starttls_called is False
+    assert client.login_calls == [("u", "p")]
+
+
+# ------------------------------------------------------------------ #
+# Confirmation.__eq__ / SendResult -- plain dataclasses, pinned so a field
+# added later without updating a caller is at least visible in a diff.
+# ------------------------------------------------------------------ #
+
+
+def test_confirmation_is_a_plain_comparable_value() -> None:
+    a = Confirmation(to="x@example.org", subject="s", body="b")
+    b = Confirmation(to="x@example.org", subject="s", body="b")
+    assert a == b
+
+
+# ------------------------------------------------------------------ #
+# D-14: the two load-bearing sentences (the matching-code instruction and
+# the update warning) are pinned against the documentation copy a board
+# member reads, so the two cannot quietly say different things -- the same
+# discipline `tools/tests/fixtures/governance-cases.json` applies across
+# Python and TypeScript, applied here across code and documentation
+# instead.
+# ------------------------------------------------------------------ #
+
+_DOCS_TEMPLATE = (
+    Path(__file__).resolve().parents[2]
+    / "docs"
+    / "toolkit"
+    / "emails"
+    / "registration-confirmed.md"
+)
+
+
+def _normalised_docs_template() -> str:
+    """The docs page's prose with line wrapping collapsed -- a soft-wrapped
+    sentence in the markdown source is one sentence, not two, and a plain
+    substring check must see it that way too."""
+    text = _DOCS_TEMPLATE.read_text(encoding="utf-8")
+    return " ".join(text.split())
+
+
+def test_the_matching_instruction_matches_the_documentation_copy() -> None:
+    assert MATCHING_INSTRUCTION in _normalised_docs_template()
+
+
+def test_the_update_warning_matches_the_documentation_copy() -> None:
+    assert UPDATE_WARNING in _normalised_docs_template()

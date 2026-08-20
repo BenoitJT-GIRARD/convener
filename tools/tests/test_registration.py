@@ -15,6 +15,7 @@ from convener_ops.registration import (
     RegistrationFile,
     dump_registration_file,
     event_id_from_payload,
+    find_by_email,
     load_registration_file,
     matching_code,
     to_registration,
@@ -436,6 +437,83 @@ def test_load_registration_file_rejects_an_entry_missing_a_field() -> None:
 
     with pytest.raises(ValueError, match="not exactly ciphertext"):
         load_registration_file(text)
+
+
+# ------------------------------------------------------------------ #
+# find_by_email(): the same question upsert() answers internally, asked
+# about a file's state *before* an upsert call -- task 7's own need.
+# ------------------------------------------------------------------ #
+
+
+def test_find_by_email_is_none_on_an_empty_file() -> None:
+    private_pem, _ = eventkeys.generate()
+    assert find_by_email(RegistrationFile(), "ada@example.org", private_pem) is None
+
+
+def test_find_by_email_finds_the_matching_entry() -> None:
+    private_pem, _ = eventkeys.generate()
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    file = RegistrationFile()
+    for registration in (ada, grace):
+        file, _replaced = upsert(file, registration, private_pem=private_pem)
+
+    found = find_by_email(file, "ada@example.org", private_pem)
+
+    assert found == ada
+
+
+def test_find_by_email_matches_regardless_of_case_or_whitespace() -> None:
+    private_pem, _ = eventkeys.generate()
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    file, _replaced = upsert(RegistrationFile(), ada, private_pem=private_pem)
+
+    found = find_by_email(file, " Ada@Example.ORG ", private_pem)
+
+    assert found == ada
+
+
+def test_find_by_email_is_none_when_no_entry_matches() -> None:
+    private_pem, _ = eventkeys.generate()
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    file, _replaced = upsert(RegistrationFile(), ada, private_pem=private_pem)
+
+    assert find_by_email(file, "grace@example.org", private_pem) is None
+
+
+def test_find_by_email_skips_an_entry_it_cannot_decrypt() -> None:
+    """The `find_by_email` twin of the `upsert` test above with a matching
+    name: a stray entry from another event's key must never read as a
+    match."""
+    private_pem, _ = eventkeys.generate()
+    stray_entry = {
+        "v": 1,
+        "encrypted_key": "AA==",
+        "iv": "AAAAAAAAAAAAAAAA",
+        "ciphertext": "AAAAAAAAAAAAAAAAAAAAAAA=",
+    }
+    file = RegistrationFile(entries=(stray_entry,))
+
+    assert find_by_email(file, "ada@example.org", private_pem) is None
+
+
+def test_find_by_email_reflects_an_update_before_it_was_applied() -> None:
+    """The property task 7 needs directly: called against the file *before*
+    `upsert`, this returns the pre-update registration, not the one about
+    to replace it."""
+    private_pem, _ = eventkeys.generate()
+    first = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    file, _replaced = upsert(RegistrationFile(), first, private_pem=private_pem)
+    second = Registration(
+        "Ada", "Lovelace", "ada@example.org", "Analytical Engines Institute", True
+    )
+
+    old = find_by_email(file, second.email, private_pem)
+    updated, replaced = upsert(file, second, private_pem=private_pem)
+
+    assert old == first
+    assert replaced is True
+    assert to_registration(json.dumps(updated.entries[0]), private_pem) == second
 
 
 # ------------------------------------------------------------------ #

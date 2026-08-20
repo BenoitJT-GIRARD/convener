@@ -10,18 +10,20 @@ import re
 import subprocess  # nosec B404
 import sys
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
 import yaml
 
-from convener_ops import eventkeys
+from convener_ops import confirmation, eventkeys
 from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
+from convener_ops.platform import Room
+from convener_ops.platform_fcc import platform_from_env
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
 from convener_ops.public_data import to_public
 from convener_ops.register import (
@@ -31,9 +33,12 @@ from convener_ops.register import (
     render_register,
 )
 from convener_ops.registration import (
+    Registration,
     dump_registration_file,
     event_id_from_payload,
+    find_by_email,
     load_registration_file,
+    matching_code,
     to_registration,
     upsert,
 )
@@ -388,6 +393,77 @@ def handle_proposal() -> int:
     return 0
 
 
+#: Where an unsent confirmation is left for inspection: never printed, and
+#: `.gitignore`d -- see `confirmation.py`'s module docstring for why a
+#: message carrying an address and a matching code is written to a file
+#: rather than to this job's own stdout, the way `NOTIFY_BODY` above is for
+#: a message that carries neither. Overwritten on every attempt, the same
+#: "one fixed name inside the run's own isolated workspace" idiom
+#: `NOTIFY_BODY` already uses -- a fresh `actions/checkout` per run means
+#: two runs never share a workspace to collide in.
+UNSENT_CONFIRMATION: Final = "unsent-confirmation.eml"
+
+
+def _send_confirmation(
+    event_id: str, registration: Registration, changed: Sequence[str]
+) -> None:
+    """Compose and attempt to deliver the confirmation for `registration`,
+    then print exactly one line naming the event id (already public) and
+    the outcome -- never the registration's own fields, and never the
+    composed message. See `confirmation.py`'s module docstring for the
+    reasoning; this function is only the disk-and-stdout half of it, kept
+    in `cli.py` the way `_notify` keeps `notify.py`'s own file write.
+
+    `changed` is the field labels the caller already worked out
+    (`confirmation.changed_fields`) -- this function does not compute it,
+    so a resend (`resend_confirmation`, always `changed=()`) and a fresh or
+    updated registration (`handle_registration`) share one code path with
+    no branch of their own in here.
+
+    Never lets a room lookup that fails (`confirmation.EventNotFoundError`
+    -- no speaker record matches `event_id`) stop the confirmation from
+    being composed and sent: the registration this call follows was already
+    decrypted and stored, and a missing speaker record must not lose it a
+    second time. The message that goes out in that case simply has no room
+    link, which the print line below says plainly.
+    """
+    root = repo_root()
+    speakers, _errors = _load(root / "data" / "speakers.yml")
+    cfg, _errors = _load(root / "data" / "config.yml")
+    speaker_list = speakers if isinstance(speakers, list) else []
+    config_map = cfg if isinstance(cfg, dict) else None
+    platform = platform_from_env(os.environ, speaker_list, config_map)
+
+    try:
+        event = confirmation.event_details(speaker_list, event_id, platform)
+    except confirmation.EventNotFoundError:
+        print(
+            f"no speaker record matches event {event_id} -- confirmation "
+            "composed with no room link"
+        )
+        event = confirmation.EventDetails(
+            title="", date="", room=Room(join_url="", instructions="")
+        )
+
+    salt = os.environ.get("CONVENER_MATCHING_SALT")
+    code = matching_code(event_id, registration.email, salt)
+    message = confirmation.compose(registration, event, code, changed)
+    result = confirmation.deliver(message, os.environ)
+
+    if result.sent:
+        print(f"confirmation for event {event_id} sent")
+        return
+
+    (root / UNSENT_CONFIRMATION).write_text(
+        result.unsent_body or "", encoding="utf-8", newline=""
+    )
+    print(
+        f"confirmation for event {event_id} not sent -- no email transport "
+        f"configured or delivery failed; composed message left in "
+        f"{UNSENT_CONFIRMATION}"
+    )
+
+
 def resolve_registration_secret() -> int:
     """`convener-registration-secret-name`: the first of the two steps
     `.github/workflows/registration.yml` runs for one incoming
@@ -444,6 +520,15 @@ def handle_registration() -> int:
     exception `eventkeys.py`'s module docstring names: this job exits in
     error rather than doing anything at all with the ciphertext it was
     handed, the same as a genuinely undecryptable one.
+
+    Once the record is stored, this also composes and attempts to deliver
+    the confirmation (task 7) -- and, on an update (R-9), names which
+    fields changed rather than which values, from the *prior* entry read
+    via `find_by_email` before `upsert` overwrites it. Delivery is best
+    effort: whatever `_send_confirmation` finds -- sent, logged instead, or
+    a missing speaker record -- never changes this function's own return
+    value, because the registration is already safely stored by the point
+    it runs.
     """
     payload = os.environ.get("REGISTRATION_PAYLOAD", "")
     event_id = event_id_from_payload(payload)
@@ -473,12 +558,81 @@ def handle_registration() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
+    old = find_by_email(current, registration.email, private_pem)
     updated, replaced = upsert(current, registration, private_pem=private_pem)
     enc_path.parent.mkdir(parents=True, exist_ok=True)
     enc_path.write_text(dump_registration_file(updated), encoding="utf-8", newline="")
 
     verb = "updated" if replaced else "recorded"
     print(f"{verb} a registration for event {event_id} ({len(updated.entries)} total)")
+
+    changed = confirmation.changed_fields(old, registration) if old is not None else ()
+    _send_confirmation(event_id, registration, changed)
+    return 0
+
+
+def resend_confirmation() -> int:
+    """`convener-resend-confirmation`: re-send the confirmation already on file
+    for one address, without regenerating anything -- the manual resend the
+    phase 4 spec's risk table asks for (S:9: "a certificate in the spam
+    folder does not exist").
+
+    Reads `EVENT_ID` and `REGISTRATION_EMAIL` -- both plain, operator-typed
+    values, not the encrypted relay payload `handle_registration` reads:
+    this is a human running a manual step (through a `workflow_dispatch`
+    input), never a public endpoint, so there is nothing here for a
+    stranger to reach. `EVENT_PRIVATE_KEY` is the same per-event secret
+    `handle_registration` reads.
+
+    Finds the one entry for `REGISTRATION_EMAIL` in `registrations.enc`
+    (`registration.find_by_email`) and re-composes the message
+    `_send_confirmation` would have composed for it, with `changed=()`: a
+    resend repeats the current, stored registration -- it does not
+    describe an update to it, even if the stored registration is itself
+    the result of one.
+
+    Nothing here is regenerated: `matching_code` is a pure function of the
+    event id, the address and `CONVENER_MATCHING_SALT` (see its own docstring),
+    so calling it again reproduces exactly the code the original
+    confirmation carried, with nothing stored anywhere to look it up from
+    instead. A resend that produced a *different* code would make the
+    first message a lie about which code is current.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    email = os.environ.get("REGISTRATION_EMAIL", "").strip()
+    if not email:
+        print("no registration e-mail address supplied", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    registration = find_by_email(current, email, private_pem)
+    if registration is None:
+        print(f"no registration found for event {event_id}", file=sys.stderr)
+        return 1
+
+    _send_confirmation(event_id, registration, ())
     return 0
 
 

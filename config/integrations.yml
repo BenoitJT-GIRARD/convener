@@ -72,8 +72,21 @@ integrations:
       - CONVENER_SMTP_PASSWORD
       - CONVENER_SMTP_FROM
     absent_behaviour: >-
-      Outbound messages are written to an inspectable log instead of being
-      sent, and the interface says so. Nothing is silently dropped.
+      Outbound messages are composed and kept for inspection instead of
+      being sent, and the interface says so. Nothing is silently dropped --
+      but "kept for inspection" does not mean the job's own stdout here,
+      the way it does for board_notifications below. The one message this
+      row's absence affects that carries personal data is the registration
+      confirmation (task 7): every copy of it names a participant's address
+      and their matching code, and printing either into a GitHub Actions
+      log would write them somewhere this project never puts personal
+      data, on purpose, for as long as the log is retained. So
+      tools/convener_ops/confirmation.py never prints a composed message, sent
+      or not; a message that could not be sent is written to a single
+      local, .gitignore'd file inside the job's own workspace instead, and
+      .github/workflows/registration.yml uploads that file as a short-
+      retention, access-controlled build artifact when it exists, which is
+      what "inspectable" means for this row specifically.
 
   - name: video_publishing
     label: Video channel

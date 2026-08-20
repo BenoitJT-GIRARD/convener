@@ -40,6 +40,15 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'toolkit/emails/registration-confirmation.md',
     anchor: null,
   },
+  // Not "registration-confirmation" above -- that one is the speaker's own
+  // announcement e-mail. This is the participant confirmation task 7 sends
+  // automatically; kept in the registry for the same reason every other
+  // outbound message is, even though nobody opens it from the Templates
+  // screen to send it by hand -- see the file's own header note.
+  'toolkit/emails/registration-confirmed': {
+    file: 'toolkit/emails/registration-confirmed.md',
+    anchor: null,
+  },
 
   // toolkit — posts
   'toolkit/forum-post-announce': { file: 'toolkit/forum-post-announce.md', anchor: null },

@@ -95,9 +95,9 @@ class Registration:
     `to_registration` has to recover.
 
     `email` is stored exactly as submitted, not normalised: normalisation
-    (`_normalize_email`) exists only for *comparing* and *hashing* an
-    address, in `upsert` and `matching_code`, never for what a person reads
-    back."""
+    (`normalize_email`) exists only for *comparing* and *hashing* an
+    address, in `upsert`, `find_by_email` and `matching_code`, never for
+    what a person reads back."""
 
     first_name: str
     surname: str
@@ -117,14 +117,21 @@ _FIELDS: Final = frozenset(
 _STRING_FIELDS: Final = ("first_name", "surname", "email", "institution")
 
 
-def _normalize_email(email: str) -> str:
-    """The form `upsert` and `matching_code` both compare or hash an address
-    by. Local-part case is technically significant per RFC 5321, but no
-    mail provider in practice treats it that way, and a participant who
-    resubmits with different capitalisation -- an autocapitalising phone
-    keyboard is a common cause -- is still the same registrant, not a
-    second one. The value stored on `Registration.email` is never passed
-    through this; only comparisons and the matching-code derivation are."""
+def normalize_email(email: str) -> str:
+    """The form `upsert`, `find_by_email` and `matching_code` all compare or
+    hash an address by. Local-part case is technically significant per RFC
+    5321, but no mail provider in practice treats it that way, and a
+    participant who resubmits with different capitalisation -- an
+    autocapitalising phone keyboard is a common cause -- is still the same
+    registrant, not a second one. The value stored on `Registration.email`
+    is never passed through this; only comparisons and the matching-code
+    derivation are.
+
+    Public rather than module-private: task 7's confirmation module needs
+    the identical rule to decide whether an update changed the *address
+    itself* (see `find_by_email`'s docstring) -- a second, hand-written
+    definition of "the same address" here would risk disagreeing with this
+    one about a case `upsert` already treats as a match."""
     return email.strip().lower()
 
 
@@ -305,13 +312,13 @@ def upsert(
             eventkeys.derive_public_pem(private_pem), _to_plaintext(registration)
         )
     )
-    target = _normalize_email(registration.email)
+    target = normalize_email(registration.email)
 
     kept: list[Mapping[str, Any]] = []
     replaced = False
     for entry in file.entries:
         existing = None if replaced else to_registration(json.dumps(entry), private_pem)
-        if existing is not None and _normalize_email(existing.email) == target:
+        if existing is not None and normalize_email(existing.email) == target:
             kept.append(new_entry)
             replaced = True
         else:
@@ -319,6 +326,32 @@ def upsert(
     if not replaced:
         kept.append(new_entry)
     return RegistrationFile(entries=tuple(kept)), replaced
+
+
+def find_by_email(
+    file: RegistrationFile, email: str, private_pem: str
+) -> Registration | None:
+    """The existing entry addressed to `email` (case/whitespace-insensitive,
+    via `normalize_email`), or `None` -- the same question `upsert` already
+    answers internally to decide what to replace, exposed here so a caller
+    can ask it about a file's state *before* calling `upsert`, which is
+    exactly what the confirmation email (task 7) needs: `upsert` overwrites
+    the matched entry, so the *prior* `Registration` -- to say what changed
+    (R-9) -- has to be read out first, from the same file, under the same
+    key, using the same notion of "the same registrant" `upsert` uses. A
+    second, hand-written comparison here would risk drifting from that one.
+
+    Decrypts entries in order and stops at the first match, the same
+    early-exit `upsert`'s own loop performs; an entry that fails to decrypt
+    under `private_pem` is skipped rather than treated as a match, mirroring
+    `upsert`'s own handling of a stray undecryptable entry.
+    """
+    target = normalize_email(email)
+    for entry in file.entries:
+        existing = to_registration(json.dumps(entry), private_pem)
+        if existing is not None and normalize_email(existing.email) == target:
+            return existing
+    return None
 
 
 #: The alphabet a matching code is drawn from: digits 2-9 and every
@@ -364,7 +397,7 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
     Salted, not constant: a code anyone could derive from an address alone
     would prove nothing about who holds that address -- see `matching_salt`
     in `config/integrations.yml` for why this secret exists at all.
-    `_normalize_email` keeps the same property `upsert` relies on: two
+    `normalize_email` keeps the same property `upsert` relies on: two
     submissions of the same address, differently capitalised, still derive
     one code, matching `upsert`'s own notion of "the same registration".
 
@@ -378,7 +411,7 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
         return None
     digest = hmac.new(
         salt.encode("utf-8"),
-        f"{event_id}\0{_normalize_email(email)}".encode(),
+        f"{event_id}\0{normalize_email(email)}".encode(),
         sha256,
     ).digest()
     symbols = "".join(

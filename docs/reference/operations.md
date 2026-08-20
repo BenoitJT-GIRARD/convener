@@ -309,16 +309,38 @@ documents the same reasoning from the code's side.
 
 ## Outbound email
 
-**Without it:** messages are written to an inspectable log instead of being
-sent, and the interface says so. Nothing is silently dropped.
+**Without it:** the registration confirmation (task 7) is composed all the
+same and left in a single local file, `unsent-confirmation.eml`, inside the
+job's own workspace — never printed, and never committed. Nothing is
+silently dropped, but unlike every other row on this page, "kept for
+inspection" here does not mean the job's own log: that message carries a
+participant's address and their matching code, and this project never puts
+personal data into a GitHub Actions log, on purpose.
+`.github/workflows/registration.yml` uploads that file as a short-retention
+(14 days), access-controlled build artifact whenever it exists, which is
+where a volunteer reads it instead. See `tools/convener_ops/confirmation.py`'s
+module docstring for the full reasoning.
 
-**To create:** see phase 4.
+**To create:** an organisation mailbox reachable over SMTP (D-07's
+arbitration: no external transactional-email service, no subscription).
+Gmail and most providers want port `587` with STARTTLS; some want `465`
+with implicit TLS instead — `tools/convener_ops/confirmation.py` picks between
+the two from `CONVENER_SMTP_PORT` itself, so either works without a code change.
 
 **Secrets to set:** `CONVENER_SMTP_HOST`, `CONVENER_SMTP_PORT`, `CONVENER_SMTP_USER`,
 `CONVENER_SMTP_PASSWORD`, `CONVENER_SMTP_FROM`.
 
 **To verify:** run `cd tools && uv run convener-check-config`; *Outbound email*
 moves from `absent` to `production`.
+
+**Manual resend:** the `Resend a registration confirmation` workflow
+(`.github/workflows/resend-confirmation.yml`, `workflow_dispatch`) re-sends
+the confirmation already on file for one event and address, without
+regenerating anything — the matching code is a pure function of the event,
+the address and `CONVENER_MATCHING_SALT`, so it is always exactly the code the
+first message carried. Use it when a confirmation is reported missing;
+spec S:9's own reasoning is that a certificate in the spam folder does not
+exist.
 
 ## Video channel
 

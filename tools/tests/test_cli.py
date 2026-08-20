@@ -6,6 +6,7 @@ import hmac
 import json
 from datetime import UTC, datetime, tzinfo
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 import yaml
@@ -13,15 +14,17 @@ from conftest import board_member, config, speaker
 
 from convener_ops import eventkeys
 from convener_ops.cli import (
+    UNSENT_CONFIRMATION,
     _load,
     handle_proposal,
     handle_registration,
     public_data,
+    resend_confirmation,
     resolve_registration_secret,
     sweep,
     validate,
 )
-from convener_ops.registration import load_registration_file, to_registration
+from convener_ops.registration import load_registration_file, matching_code, to_registration
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -801,4 +804,374 @@ def test_handle_registration_rejects_a_malformed_committed_file(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert handle_registration() == 1
+    assert "registrations.enc" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ #
+# handle_registration()'s confirmation step (task 7), and
+# resend_confirmation(): the manual resend spec S:9 asks for.
+#
+# Every test below that expects the confirmation to be *unsent* checks the
+# file it was left in, never stdout -- `_assert_no_leak` (above) is applied
+# to every one of them, now also covering the matching code, which the
+# original registration tests could not leak because nothing computed one.
+# ------------------------------------------------------------------ #
+
+
+def _write_event(tmp_path: Path, **overrides: object) -> None:
+    """`data/speakers.yml` and `data/config.yml`, with one record whose
+    `edition_code` matches the `mrg-042` event id every fixture above
+    already submits against."""
+    record = speaker(
+        edition_code="MRG-042",
+        zoom_link="https://meet.example.org/permanent-room",
+        title="On analytical engines",
+        date="2026-09-01",
+    )
+    record.update(overrides)
+    _write_data(tmp_path, [record], config())
+
+
+def _clear_transport_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
+        "CONVENER_SMTP_HOST",
+        "CONVENER_SMTP_PORT",
+        "CONVENER_SMTP_USER",
+        "CONVENER_SMTP_PASSWORD",
+        "CONVENER_SMTP_FROM",
+        "CONVENER_MATCHING_SALT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_handle_registration_leaves_an_unsent_confirmation_with_no_transport(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+
+    assert handle_registration() == 0
+
+    out = _assert_no_leak(capsys)
+    assert "confirmation for event mrg-042 not sent" in out
+    assert UNSENT_CONFIRMATION in out
+
+    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert "ada@example.org" in unsent
+    assert "https://meet.example.org/permanent-room" in unsent
+    assert "On analytical engines" in unsent
+
+
+def test_handle_registration_confirmation_carries_the_code_when_salted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The property task 7 exists for: the matching code reaches the
+    message, and never reaches stdout -- only the file does."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "shh")
+
+    assert handle_registration() == 0
+
+    code = matching_code("mrg-042", "ada@example.org", "shh")
+    assert code is not None
+
+    out = capsys.readouterr()
+    combined = out.out + out.err
+    assert code not in combined, "the matching code leaked into stdout/stderr"
+
+    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert code in unsent
+
+
+def test_handle_registration_confirmation_names_what_changed_on_an_update(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    assert handle_registration() == 0
+
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD",
+        _registration_payload("mrg-042", public_pem, institution="Somewhere Else"),
+    )
+    assert handle_registration() == 0
+
+    _assert_no_leak(capsys)
+    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert "institution" in unsent
+    assert "This confirms an update" in unsent
+    # Named, never quoted (R-9): neither the old nor the new value appears.
+    assert "Analytical Engines Institute" not in unsent
+    assert "Somewhere Else" not in unsent
+
+
+def test_handle_registration_confirmation_says_nothing_about_an_update_the_first_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+
+    assert handle_registration() == 0
+
+    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert "This confirms an update" not in unsent
+
+
+def test_handle_registration_confirmation_degrades_with_no_speaker_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """No `data/speakers.yml` at all -- the state every registration test
+    before this one already ran in. The registration must still be
+    recorded and a confirmation still composed, only without a room link."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+
+    assert handle_registration() == 0
+
+    out = _assert_no_leak(capsys)
+    assert "no speaker record matches event mrg-042" in out
+
+    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert "ada@example.org" in unsent
+
+
+class _RecordingSmtpClient:
+    """A fake `smtplib.SMTP`, substituted so `handle_registration` can
+    exercise a genuine "sent" outcome without opening a socket."""
+
+    sent: ClassVar[list[object]] = []
+
+    def __init__(self, host: str, port: int, timeout: float) -> None:
+        self.host = host
+        self.port = port
+
+    def starttls(self) -> None:
+        pass
+
+    def login(self, user: str, password: str) -> None:
+        pass
+
+    def send_message(self, message: object) -> None:
+        _RecordingSmtpClient.sent.append(message)
+
+    def __enter__(self) -> _RecordingSmtpClient:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+
+def test_handle_registration_sends_through_a_configured_transport(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
+    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
+    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+
+    assert handle_registration() == 0
+
+    out = _assert_no_leak(capsys)
+    assert "confirmation for event mrg-042 sent" in out
+    assert not (tmp_path / UNSENT_CONFIRMATION).exists()
+    assert len(_RecordingSmtpClient.sent) == 1
+
+
+# --- resend_confirmation() -------------------------------------------- #
+
+
+def test_resend_confirmation_reproduces_the_original_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The property S:9's manual resend depends on directly: it must
+    reproduce the *same* code the original confirmation carried, or the
+    first message becomes a lie about which code is current."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "shh")
+
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    assert handle_registration() == 0
+    original = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    (tmp_path / UNSENT_CONFIRMATION).unlink()
+
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    assert resend_confirmation() == 0
+
+    resent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    code = matching_code("mrg-042", "ada@example.org", "shh")
+    assert code is not None
+    assert code in original
+    assert code in resent
+    assert original == resent
+
+    _assert_no_leak(capsys)
+
+
+def test_resend_confirmation_does_not_claim_an_update(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A resend repeats the current, stored registration -- even one that
+    is itself the result of an earlier update must not be described as
+    changing again on every resend."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    assert handle_registration() == 0
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD",
+        _registration_payload("mrg-042", public_pem, institution="Somewhere Else"),
+    )
+    assert handle_registration() == 0
+    (tmp_path / UNSENT_CONFIRMATION).unlink()
+
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    assert resend_confirmation() == 0
+
+    resent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert "This confirms an update" not in resent
+
+    _assert_no_leak(capsys)
+
+
+def test_resend_confirmation_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+    assert resend_confirmation() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_resend_confirmation_with_an_invalid_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "../escape")
+    assert resend_confirmation() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_resend_confirmation_with_no_email_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
+    assert resend_confirmation() == 1
+    assert "no registration e-mail" in capsys.readouterr().err
+
+
+def test_resend_confirmation_without_a_configured_key_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert resend_confirmation() == 1
+    assert "no private key configured for event mrg-042" in capsys.readouterr().err
+
+
+def test_resend_confirmation_with_nothing_recorded_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert resend_confirmation() == 1
+    assert "no registrations recorded for event mrg-042" in capsys.readouterr().err
+
+
+def test_resend_confirmation_for_an_unknown_address_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    assert handle_registration() == 0
+    (tmp_path / UNSENT_CONFIRMATION).unlink()
+
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "grace@example.org")
+
+    assert resend_confirmation() == 1
+    assert "no registration found for event mrg-042" in capsys.readouterr().err
+    assert not (tmp_path / UNSENT_CONFIRMATION).exists()
+
+
+def test_resend_confirmation_rejects_a_malformed_committed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, _ = _publish_event_key(tmp_path)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert resend_confirmation() == 1
     assert "registrations.enc" in capsys.readouterr().err

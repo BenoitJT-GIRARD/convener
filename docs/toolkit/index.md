@@ -41,6 +41,16 @@ instruction rather than as a field the workspace forgot to fill.
 - [Decision — parked](emails/decision-parked.md) — to a candidate kept for later
 - [Outreach — sourcing](emails/outreach-sourcing.md) — invite a lab/institute to suggest speakers
 
+## Sent automatically, not from here
+
+One message is not on the list above because nobody sends it from this
+page: [Registration confirmed](emails/registration-confirmed.md) goes out
+the moment a participant registers, composed and sent by
+`tools/convener_ops/confirmation.py`. It is kept in this section anyway, for the
+same reason every other message is — so its exact wording is one click
+away — but its placeholders are written in square brackets, not double
+braces, since nobody ever opens it here to fill them in.
+
 ## Posts & scripts
 
 - [Forum post — announce](forum-post-announce.md)
