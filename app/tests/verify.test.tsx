@@ -16,7 +16,11 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
  */
 
 const SIGNED = cases.signed_example;
-const REAL_PROJECTION = cases.projection_example.certificates;
+// Important 4 (fix round 1): projection_example is the real, bare-array
+// wire shape directly -- it used to be nested under a "certificates" key,
+// which read as the wire shape and was not; the fixture itself was
+// corrected.
+const REAL_PROJECTION = cases.projection_example;
 
 function pathFor(identifier: string, token?: string): string {
   return token ? `/verify/${identifier}?token=${encodeURIComponent(token)}` : `/verify/${identifier}`;
@@ -52,6 +56,41 @@ function renderVerify(path: string) {
       </Routes>
     </MemoryRouter>,
   );
+}
+
+// Minor 1 (fix round 1) needs a genuinely-signed payload with no
+// `identifier` field, which the shared fixture cannot supply --
+// `signing.py::sign` always writes one, by construction. Same small,
+// independent key-pair helpers `verify-crypto.test.ts` keeps for its own
+// "signed, but still will not parse" cases, duplicated here rather than
+// imported across test files -- two small, independent copies keep each
+// side legible on its own, the same trade this module's own source files
+// make deliberately elsewhere (see verify.ts::pemToDer's own comment).
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+async function generateSigningKeyPair(): Promise<{ publicPem: string; privateKey: CryptoKey }> {
+  const { publicKey, privateKey } = await crypto.subtle.generateKey(
+    { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+    true,
+    ['sign', 'verify'],
+  );
+  const der = await crypto.subtle.exportKey('spki', publicKey);
+  const b64 = bytesToBase64(new Uint8Array(der));
+  const lines = b64.match(/.{1,64}/g) ?? [b64];
+  return { publicPem: `-----BEGIN PUBLIC KEY-----\n${lines.join('\n')}\n-----END PUBLIC KEY-----\n`, privateKey };
+}
+
+async function signRawBytes(privateKey: CryptoKey, bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+  const signature = await crypto.subtle.sign({ name: 'RSASSA-PKCS1-v1_5' }, privateKey, bytes);
+  return JSON.stringify({
+    v: 1,
+    payload: bytesToBase64(bytes),
+    signature: bytesToBase64(new Uint8Array(signature)),
+  });
 }
 
 afterEach(() => {
@@ -131,11 +170,18 @@ describe('VerifyPage -- with a token', () => {
     expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
   });
 
-  it('state unknown: genuine signature, identifier genuinely not (yet) in a successfully-read register', async () => {
+  it('not yet in the register: genuine signature, register read successfully but does not mention this identifier (Important 1a -- must not read as "could not reach our register")', async () => {
     stubFetch({ projection: [] });
     renderVerify(pathFor(SIGNED.identifier, SIGNED.token));
 
-    await screen.findByText('We cannot confirm the current state');
+    await screen.findByText('Not yet reflected in our register');
+    // A decisive fact from a register we *did* read successfully --
+    // must never share StateUnknown's "we could not reach it" copy, and
+    // the signature is still genuine, so the name still shows.
+    expect(screen.getByText(SIGNED.payload_decoded.name)).toBeInTheDocument();
+    expect(screen.queryByText('We cannot confirm the current state')).not.toBeInTheDocument();
+    const text = document.body.textContent ?? '';
+    expect(text).not.toMatch(/could not reach our register/i);
   });
 
   it('never consults the register for a token whose signature does not verify', async () => {
@@ -145,6 +191,24 @@ describe('VerifyPage -- with a token', () => {
     renderVerify(pathFor(SIGNED.identifier, truncated.token));
 
     await screen.findByText('We cannot confirm this certificate');
+    const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
+    expect(calls.some(url => url.endsWith('/certificates.json'))).toBe(false);
+  });
+});
+
+describe('VerifyPage -- a signature-confirmed payload with no identifier field (Minor 1)', () => {
+  it('renders "we cannot confirm the current state", never "certificate verified" -- this is our own bug, never a forger\'s', async () => {
+    const { publicPem, privateKey } = await generateSigningKeyPair();
+    const payload = { event: 'A workshop', name: 'Someone', date: '2026-01-01', duration_hours: 1.5 };
+    const token = await signRawBytes(privateKey, new TextEncoder().encode(JSON.stringify(payload)));
+    stubFetch({ keys: [publicPem] });
+    // The route identifier is unused by VerifyWithToken -- it always
+    // reads the token's own confirmed payload, never the URL segment.
+    renderVerify(pathFor('00000000000000000000000000000000', token));
+
+    await screen.findByText('We cannot confirm the current state');
+    expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
+    // Never asked the register: there was no identifier to ask it about.
     const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
     expect(calls.some(url => url.endsWith('/certificates.json'))).toBe(false);
   });
@@ -196,6 +260,15 @@ describe('VerifyPage -- no token (the printed-page flow, ruling 5)', () => {
     await screen.findByText('We cannot confirm this right now');
     expect(screen.queryByText('Not found in our register')).not.toBeInTheDocument();
   });
+
+  it('refuses a URL identifier not shaped like one of ours, without ever asking the register (Minor 3)', async () => {
+    stubFetch({});
+    renderVerify(pathFor('not-a-real-identifier'));
+
+    await screen.findByText('Not a certificate identifier');
+    const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
+    expect(calls.some(url => url.endsWith('/certificates.json'))).toBe(false);
+  });
 });
 
 describe('VerifyPage -- a route with no identifier at all', () => {
@@ -211,12 +284,19 @@ describe('VerifyPage -- a route with no identifier at all', () => {
   });
 });
 
-describe('VerifyPage -- the keys fetch itself failing folds into "not verifiable", not a fifth state', () => {
-  it('a network error fetching the signing keys', async () => {
+describe('VerifyPage -- the keys fetch itself failing must not read as "no key confirms this" (Important 1b, mutation 3)', () => {
+  it('a network error fetching the signing keys renders "cannot check right now", never "not verifiable"', async () => {
     stubFetch({ keys: 'fail' });
     renderVerify(pathFor(SIGNED.identifier, SIGNED.token));
 
-    await screen.findByText('We cannot confirm this certificate');
+    await screen.findByText('We cannot check this certificate right now');
+    // The exact regression this guards: a failure to load our own key
+    // list must never read as a signature that genuinely failed to
+    // verify -- that paints a certificate we simply could not check the
+    // same shade of "danger" as one that is actually forged.
+    expect(screen.queryByText('We cannot confirm this certificate')).not.toBeInTheDocument();
+    const text = document.body.textContent ?? '';
+    expect(text).not.toMatch(/does not check out against any signing key/i);
   });
 });
 

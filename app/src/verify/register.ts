@@ -9,15 +9,17 @@
  * own output -- `tools/convener_ops/cli.py::certificates_public_data` writes it
  * as **a bare JSON array** of `{"identifier", "state"}` objects, e.g.
  * `[{"identifier":"...","state":"issued"}, ...]`, confirmed against that
- * function's own `test_certificates_public_data_aggregates_every_events_register`
- * -- not the `{"certificates": [...]}` shape
- * `certificate-verification.json`'s `projection_example` key might suggest
- * at a glance. That key name only labels *a property inside the fixture
- * file*, holding the same two worked rows either way; it is not a claim
- * about the wire shape. `isProjection` below is written, and tested,
+ * function's own `test_certificates_public_data_aggregates_every_events_register`.
+ * (Important 4, fix round 1: `certificate-verification.json`'s own
+ * `projection_example` key used to nest the same two worked rows under a
+ * `{"certificates": [...]}` envelope, which read as the wire shape and
+ * was not -- the fixture itself was corrected, not merely documented
+ * around, since a binding fixture that states the wrong shape is worse
+ * than no fixture at all.) `isProjection` below is written, and tested,
  * against the real shape `cli.py` puts on disk, and a body shaped like
- * `{"certificates": [...]}` is deliberately one of this file's own "wrong
- * shape" test cases -- not treated as a friendlier alternative to accept.
+ * `{"certificates": [...]}` is deliberately kept as one of this file's
+ * own "wrong shape" test cases -- not treated as a friendlier alternative
+ * to accept.
  *
  * This function fetches that whole file for every lookup, rather than
  * asking for one identifier's row -- deliberately the more expensive
@@ -61,13 +63,38 @@ function registerUrl(): string {
 }
 
 /** A hung fetch has no other end -- the same reasoning
- *  `SignupForm.tsx::KEY_FETCH_TIMEOUT_MS` gives for its own key fetch,
+ *  `SignupForm.tsx::SUBMIT_TIMEOUT_MS` gives for its own submit POST
+ *  (Minor 7, fix round 1: this used to cite `KEY_FETCH_TIMEOUT_MS`, which
+ *  actually uses `AbortController` + `setTimeout`, a different idiom for
+ *  the same intent -- `AbortSignal.timeout` is `SUBMIT_TIMEOUT_MS`'s own),
  *  applied here so a flaky connection resolves to "state unknown" rather
  *  than leaving a visitor looking at "Checking…" forever. */
 const REGISTER_FETCH_TIMEOUT_MS = 15_000;
 
 export const STATE_ISSUED = 'issued';
 export const STATE_REVOKED = 'revoked';
+
+/**
+ * Mirrors `certificate._CERTIFICATE_ID_RE` -- 32 lowercase hexadecimal
+ * characters, nothing more, nothing embedded, the exact shape
+ * `certificate._new_identifier` always produces. Pinned against the
+ * shared fixture's own `identifier_pattern` in
+ * `app/tests/verify-register.test.ts` (D-14: a rule written on both
+ * sides of the language boundary, bound by one fixture read from both,
+ * never hand-retyped and left to drift).
+ *
+ * Minor 3 (fix round 1): before this, the token-less flow (below) printed
+ * whatever text sat in the URL's `:identifier` segment as page text under
+ * an official heading, with no shape check -- unable to tell a mistyped
+ * identifier from a genuinely absent one, and (though React already
+ * escapes it, so this was never an XSS risk) willing to print
+ * arbitrary attacker-chosen text under this project's own heading.
+ */
+export const IDENTIFIER_PATTERN = /^[0-9a-f]{32}$/;
+
+export function isValidIdentifierShape(identifier: string): boolean {
+  return IDENTIFIER_PATTERN.test(identifier);
+}
 
 /**
  * What the register says about one identifier -- four outcomes, not two,

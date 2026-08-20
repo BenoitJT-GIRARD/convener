@@ -1,12 +1,17 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { verify, NO_MATCHING_KEY } from './verify';
+import { verify } from './verify';
 import type { VerifyResult } from './verify';
 import { asDisplayCertificate } from './format';
 import type { DisplayCertificate } from './format';
 import { loadSigningPublicKeys } from './publicKeys';
-import { lookupCertificateState, STATE_ISSUED, STATE_REVOKED } from './register';
+import {
+  isValidIdentifierShape,
+  lookupCertificateState,
+  STATE_ISSUED,
+  STATE_REVOKED,
+} from './register';
 import type { LookupResult } from './register';
 
 /**
@@ -44,19 +49,43 @@ import type { LookupResult } from './register';
  * never 'invalid certificate'". `NotVerifiable` below is reachable purely
  * from a signature check, with no register call involved at all.
  *
- * Four answers, four appearances
- * ---------------------------------
- * `valid` / `revoked` / `not verifiable` / `state unknown` -- distinct
- * headings, distinct tones (`primary` / `accent` / `danger` / `info`).
- * `NO_MATCHING_KEY` and `MALFORMED` (see verify.ts) share the one
- * `not verifiable` appearance rather than getting a fifth of their own:
- * this task's own ruling is explicit that a well-formed, unmatched token
- * and a genuinely malformed one both mean the same thing to a stranger
- * standing here -- "I cannot confirm this" -- and naming which of the two
- * happened would risk reading as "prove it harder", not as an honest
- * report. The distinction still exists as data (`verify.ts`'s own return
- * type, tested against the shared fixture's two reason spellings); it is
- * simply not a second visual state.
+ * Every appearance states only what was actually established (ruling 1)
+ * -----------------------------------------------------------------------
+ * `valid` / `revoked` / `not verifiable` share their tone with what the
+ * brief names (`primary` / `accent` / `danger`), but "state unknown" is
+ * not one appearance -- it is one *shape* of honesty applied to three
+ * different established facts, because "we could not reach our register"
+ * and "we read it, and it does not (yet) mention this identifier" and "we
+ * could not even load our own signing keys" are three different claims,
+ * and the second of each pair is never the holder's fault:
+ *
+ * - `NotVerifiable` (danger) -- a signing-key manifest was loaded
+ *   successfully (even a genuinely empty one) and this token's signature
+ *   does not check out against anything in it. `NO_MATCHING_KEY` and
+ *   `MALFORMED` (see verify.ts) still share this one appearance rather
+ *   than getting one each -- a well-formed, unmatched token and a
+ *   genuinely malformed one both mean the same thing to a stranger
+ *   standing here, "I cannot confirm this", and naming which of the two
+ *   happened would risk reading as "prove it harder". The distinction
+ *   still exists as data (verify.ts's own return type, pinned against the
+ *   shared fixture's two reason spellings); it is simply not a second
+ *   visual state.
+ * - `CannotCheckSignature` (info) -- the signing-key manifest itself could
+ *   not be loaded at all (`publicKeys.ts::loadSigningPublicKeys` returned
+ *   `null`, not `[]`). Nothing has been checked against anything yet, so
+ *   this must never read as `NotVerifiable` -- that would paint a
+ *   certificate we simply could not check the same shade of "danger" as
+ *   one that is genuinely forged (Important 1b).
+ * - `StateUnknown` (info) -- the signature *is* genuine, and either the
+ *   register could not be reached, or (a distinct, rarer cause) the
+ *   confirmed payload carries no `identifier` field to look one up with
+ *   at all (Minor 1 -- this system's own bug, never a forger's). The body
+ *   text names which, so it never claims to have reached a register it
+ *   never asked.
+ * - `NotInRegister` (info) -- the signature is genuine, the register
+ *   *was* read successfully, and it simply does not list this identifier
+ *   -- a decisive fact, distinct from "we do not know", and never shown
+ *   with `StateUnknown`'s "we could not reach it" wording (Important 1a).
  *
  * No nominative data leaves this component
  * --------------------------------------------
@@ -190,14 +219,82 @@ function NotVerifiable() {
   );
 }
 
-function StateUnknown({ cert }: { cert: DisplayCertificate }) {
+/**
+ * Important 1b: reachable only when `loadSigningPublicKeys()` returned
+ * `null` -- the keys manifest itself could not be fetched or parsed, so
+ * nothing has been checked against anything yet. Must never share
+ * `NotVerifiable`'s copy or tone: that would tell a stranger a genuine
+ * certificate "does not check out against any signing key we currently
+ * publish", a claim this page never actually established.
+ */
+function CannotCheckSignature() {
+  return (
+    <Panel tone="info" title="We cannot check this certificate right now">
+      <p>
+        We could not load the signing keys we publish, so we could not check whether this
+        certificate&apos;s signature is genuine. This is not a sign that anything is wrong
+        with it -- please try again shortly, or contact{' '}
+        <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
+          {CONTACT_EMAIL}
+        </a>{' '}
+        if this persists.
+      </p>
+    </Panel>
+  );
+}
+
+/**
+ * Important 1a: the signature is genuine, and the register either could
+ * not be reached (`reason: 'register_unreachable'`) or the confirmed
+ * payload carries no `identifier` field to look one up with at all
+ * (`reason: 'no_identifier'`, Minor 1 -- this system's own bug, never a
+ * forger's). Same title and tone either way -- in both cases the honest
+ * claim is "we do not know" -- but the body text names which is true,
+ * since "we could not reach our register" would be false for the second.
+ */
+function StateUnknown({
+  cert,
+  reason,
+}: {
+  cert: DisplayCertificate;
+  reason: 'register_unreachable' | 'no_identifier';
+}) {
   return (
     <Panel tone="info" title="We cannot confirm the current state">
       <p>
         This certificate&apos;s signature is genuine -- it was issued to the person named
-        below. We could not reach our register just now to confirm whether it is still
-        current or has since been revoked. This is not a sign that the certificate is
-        invalid -- please try again shortly, or contact{' '}
+        below.{' '}
+        {reason === 'register_unreachable'
+          ? 'We could not reach our register just now to confirm whether it is still current or has since been revoked.'
+          : "This certificate does not carry an identifier we can look up, so we cannot confirm whether it is still current or has since been revoked."}{' '}
+        This is not a sign that the certificate is invalid -- please try again shortly, or
+        contact{' '}
+        <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
+          {CONTACT_EMAIL}
+        </a>
+        .
+      </p>
+      <CertificateDetails cert={cert} />
+    </Panel>
+  );
+}
+
+/**
+ * Important 1a: the signature is genuine *and* the register was read
+ * successfully -- unlike `StateUnknown`, this is a decisive fact ("it is
+ * not there"), not "we do not know". Kept at tone `info`, not `danger`:
+ * the signature already confirms this is genuinely one of ours, so this
+ * must never read as an accusation the way the token-less path's
+ * `RecordNotFound` (which has no such confirmation) is allowed to.
+ */
+function NotInRegister({ cert }: { cert: DisplayCertificate }) {
+  return (
+    <Panel tone="info" title="Not yet reflected in our register">
+      <p>
+        This certificate&apos;s signature is genuine -- it was issued to the person named
+        below. We read our register successfully, but it does not currently list this
+        certificate&apos;s identifier. This can happen briefly right after issuance and is not
+        a sign that anything is wrong -- if it persists, contact{' '}
         <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
           {CONTACT_EMAIL}
         </a>
@@ -276,22 +373,57 @@ function RecordUnknown({ identifier }: { identifier: string }) {
   );
 }
 
+/**
+ * Minor 3: the token-less flow's only input is the raw `:identifier` URL
+ * segment, never confirmed by any signature -- unlike `VerifyWithToken`,
+ * below, which always uses the token's own cryptographically-confirmed
+ * `identifier` field instead of the URL segment when both are available.
+ * Applying `certificate._CERTIFICATE_ID_RE`'s own shape here closes the
+ * one gap that leaves: a URL that never named one of our certificates at
+ * all no longer reads as "not found" (which implies a real, absent
+ * identifier) or gets echoed verbatim under this page's own heading.
+ */
+function InvalidIdentifierShape({ identifier }: { identifier: string }) {
+  return (
+    <Panel tone="danger" title="Not a certificate identifier">
+      <p>
+        <IdentifierText id={identifier} /> is not shaped like one of our certificate
+        identifiers (32 lowercase hexadecimal characters). Check that you typed or copied it
+        correctly, or use the full verification link if you have it.
+      </p>
+    </Panel>
+  );
+}
+
 function VerifyWithToken({ token }: { token: string }) {
-  const [sig, setSig] = useState<'checking' | VerifyResult>('checking');
+  const [sig, setSig] = useState<'checking' | 'keys_unavailable' | VerifyResult>('checking');
   const [lookup, setLookup] = useState<'checking' | LookupResult>('checking');
 
   useEffect(() => {
     let cancelled = false;
     loadSigningPublicKeys()
-      .then(keys => verify(token, keys))
-      .then(result => {
-        if (!cancelled) setSig(result);
+      .then(keys => {
+        if (cancelled) return undefined;
+        // Important 1b: `null` means the keys manifest itself could not
+        // be loaded -- nothing has been checked against anything yet, so
+        // this must never reach `verify()` and read as a signature that
+        // genuinely failed. `[]` (a manifest that was read successfully
+        // and lists no key) still reaches `verify()` below exactly as
+        // before -- it deterministically reports `NO_MATCHING_KEY`, the
+        // correct, honest "not verifiable" outcome for that case.
+        if (keys === null) {
+          setSig('keys_unavailable');
+          return undefined;
+        }
+        return verify(token, keys).then(result => {
+          if (!cancelled) setSig(result);
+        });
       })
       // `verify`/`loadSigningPublicKeys` never reject -- this mirrors the
       // defence-in-depth `.catch` `SignupForm.tsx`'s own key fetch keeps,
       // so a surprise rejection can never leave this stuck at "Checking…".
       .catch(() => {
-        if (!cancelled) setSig({ valid: false, reason: NO_MATCHING_KEY });
+        if (!cancelled) setSig('keys_unavailable');
       });
     return () => {
       cancelled = true;
@@ -306,7 +438,8 @@ function VerifyWithToken({ token }: { token: string }) {
   // rather than have an effect call `setLookup` for a lookup that was
   // never going to run.
   const identifier =
-    sig !== 'checking' && sig.valid && typeof sig.payload.identifier === 'string'
+    sig !== 'checking' && sig !== 'keys_unavailable' && sig.valid &&
+    typeof sig.payload.identifier === 'string'
       ? sig.payload.identifier
       : null;
 
@@ -322,24 +455,31 @@ function VerifyWithToken({ token }: { token: string }) {
   }, [identifier]);
 
   if (sig === 'checking') return <Checking />;
+  if (sig === 'keys_unavailable') return <CannotCheckSignature />;
   if (!sig.valid) return <NotVerifiable />;
 
   const cert = asDisplayCertificate(sig.payload);
-  if (!identifier) return <StateUnknown cert={cert} />;
+  if (!identifier) return <StateUnknown cert={cert} reason="no_identifier" />;
   if (lookup === 'checking') return <Checking />;
   if (lookup.status === STATE_ISSUED) return <Valid cert={cert} />;
   if (lookup.status === STATE_REVOKED) return <Revoked cert={cert} />;
-  // 'not_found' or 'unavailable': the register was either unreachable, or
-  // read successfully but does not (yet, or any longer) mention an
-  // identifier a signature has just confirmed genuine -- neither is
-  // grounds to say "issued" or "revoked", so both land here.
-  return <StateUnknown cert={cert} />;
+  // 'not_found': the register was read successfully and simply does not
+  // (yet, or any longer) mention an identifier a signature has just
+  // confirmed genuine -- a decisive fact, distinct from "we do not know"
+  // (Important 1a). 'unavailable': the register itself could not be
+  // reached at all -- genuinely "we do not know".
+  if (lookup.status === 'not_found') return <NotInRegister cert={cert} />;
+  return <StateUnknown cert={cert} reason="register_unreachable" />;
 }
 
 function VerifyTokenless({ identifier }: { identifier: string }) {
   const [lookup, setLookup] = useState<'checking' | LookupResult>('checking');
+  const validShape = isValidIdentifierShape(identifier);
 
   useEffect(() => {
+    // Minor 3: an identifier that is not even shaped like one of ours has
+    // nothing worth looking up -- never asks the register for it.
+    if (!validShape) return;
     let cancelled = false;
     lookupCertificateState(identifier).then(result => {
       if (!cancelled) setLookup(result);
@@ -347,8 +487,9 @@ function VerifyTokenless({ identifier }: { identifier: string }) {
     return () => {
       cancelled = true;
     };
-  }, [identifier]);
+  }, [identifier, validShape]);
 
+  if (!validShape) return <InvalidIdentifierShape identifier={identifier} />;
   if (lookup === 'checking') return <Checking />;
   if (lookup.status === STATE_ISSUED) return <RecordIssued identifier={identifier} />;
   if (lookup.status === STATE_REVOKED) return <RecordRevoked identifier={identifier} />;

@@ -18,24 +18,24 @@
  * is where "absent, or unreadable, or not shaped like a projection at
  * all" all fold into that same `[]`.
  *
+ * The actual write (`writeProjection`) and the destination directory
+ * (`PUBLIC_DIR`) both live in `certificates-projection.mjs` now, not
+ * here -- this file is a thin wrapper around them so
+ * `app/tests/copy-certificates.test.ts` can run the real write against a
+ * temporary directory without triggering this file's own side effect
+ * (Important 2, fix round 1).
+ *
  * Runs before `vite dev` and `vite build`, alongside the other copy
  * scripts.
  */
-import { mkdir, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { resolve, dirname, relative } from 'node:path';
+import { relative, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEST_FILENAME, readProjection } from './certificates-projection.mjs';
+import { PUBLIC_DIR, writeProjection } from './certificates-projection.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(__dirname, '..', '..', 'public-data', 'certificates-public.json');
-const DST_DIR = resolve(__dirname, '..', 'public');
 
-if (!existsSync(DST_DIR)) await mkdir(DST_DIR, { recursive: true });
-
-const rows = await readProjection(SRC);
-const dest = resolve(DST_DIR, DEST_FILENAME);
-await writeFile(dest, JSON.stringify(rows), 'utf8');
+const { rows, dest } = await writeProjection(SRC, PUBLIC_DIR);
 
 console.log(
   `copy-certificates: published ${rows.length} certificate state(s) -> ${relative(process.cwd(), dest)}`,

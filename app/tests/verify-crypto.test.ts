@@ -157,6 +157,40 @@ describe('verify -- malformed input the fixture does not enumerate', () => {
   });
 });
 
+describe('verify -- a corrupt or unparsable key in the list must not stop the rest from being tried (Minor 2)', () => {
+  // signing-keys-files.mjs:61 copies whatever .pub text it finds under
+  // keys/signing/ with no validation at all, so a truncated or corrupted
+  // key file is a reachable input in production. verifiesWith's two
+  // blanket catches (an unparsable PEM at crypto.subtle.importKey, and
+  // crypto.subtle.verify itself throwing) are the module's only
+  // uncovered lines -- and the rotation guarantee
+  // keys/signing/README.md rests on depends on one bad key never
+  // stopping the loop before it reaches a good one.
+  it('an unparsable PEM ahead of the genuine key still lets the genuine key verify', async () => {
+    const result = await verify(cases.signed_example.token, [
+      'not a PEM at all',
+      cases.signed_example.public_pem,
+    ]);
+    expect(result.valid).toBe(true);
+    if (!result.valid) throw new Error('unreachable');
+    expect(result.payload).toEqual(cases.signed_example.payload_decoded);
+  });
+
+  it('a well-formed but non-matching key ahead of a corrupt one still tries every key (no_matching_key, not a crash)', async () => {
+    const result = await verify(cases.signed_example.token, [
+      cases.integer_duration_example.public_pem,
+      'also not a PEM, and also not the signing key',
+    ]);
+    expect(result).toEqual({ valid: false, reason: NO_MATCHING_KEY });
+  });
+
+  it('a corrupt key ahead of a non-matching one still reaches the end of the list, never throwing', async () => {
+    await expect(
+      verify(cases.signed_example.token, ['garbage', '-----BEGIN PUBLIC KEY-----\nnot valid base64 either\n-----END PUBLIC KEY-----\n']),
+    ).resolves.toEqual({ valid: false, reason: NO_MATCHING_KEY });
+  });
+});
+
 describe('verify -- signed by one of our own keys, but the payload still will not parse', () => {
   // signing.py's own docstring: this shape is this system's own bug, never
   // a forger's -- reachable only once a key has already confirmed the

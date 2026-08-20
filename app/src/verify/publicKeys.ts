@@ -44,30 +44,37 @@ function keysUrl(): string {
 const KEYS_FETCH_TIMEOUT_MS = 15_000;
 
 /**
- * Every published signing public key, newest first, or `[]` on any
- * failure to fetch or parse them -- never throws.
+ * Every published signing public key, newest first; `null` if they could
+ * not be fetched or parsed at all; `[]` only for a manifest that was
+ * fetched and read successfully and genuinely lists no key. Never throws.
  *
- * `[]` is not a distinct failure state a caller has to handle specially:
- * `verify()` called with no keys at all deterministically returns
- * `NO_MATCHING_KEY` for every token (see verify.ts), exactly the same
- * "cannot confirm" outcome a genuinely-empty `keys/signing/` produces --
- * `keys/signing/README.md`'s own "What task 13 needs from this directory"
- * section names this as the current, real, normal state, not an error.
- * So a keys request that fails outright folds into the same honest
- * "not verifiable" appearance a page with zero published keys already
- * has to show, rather than inventing a second, distinct "the keys could
- * not be loaded" message nothing in this design asks for.
+ * Important 1b (fix round 1): these two failure-shaped outcomes used to
+ * both return `[]`, on the reasoning that `verify([], token)`
+ * deterministically returns `NO_MATCHING_KEY` either way (see verify.ts),
+ * so a keys request that failed outright folded into the same "not
+ * verifiable" appearance a page with zero *published* keys already shows.
+ * That conflated two different facts: "no key we publish confirms this"
+ * (true once a manifest was actually read, even an empty one --
+ * `keys/signing/README.md`'s own "What task 13 needs from this
+ * directory" section names an empty directory as the current, real,
+ * normal state) and "we could not check, because we could not even load
+ * our own key list" (a transient failure that says nothing about the
+ * certificate at all). Painting a genuine certificate the same shade of
+ * "danger" as a forged one, merely because our own fetch had a bad
+ * moment, is exactly the overclaim the whole page is built to avoid --
+ * see `VerifyPage.tsx`'s own `CannotCheckSignature`, the appearance a
+ * caller renders for `null` instead of `NotVerifiable`.
  */
-export async function loadSigningPublicKeys(): Promise<string[]> {
+export async function loadSigningPublicKeys(): Promise<string[] | null> {
   try {
     const response = await fetch(keysUrl(), {
       signal: AbortSignal.timeout(KEYS_FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) return [];
+    if (!response.ok) return null;
     const data: unknown = await response.json();
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) return null;
     return data.filter((entry): entry is string => typeof entry === 'string');
   } catch {
-    return [];
+    return null;
   }
 }
