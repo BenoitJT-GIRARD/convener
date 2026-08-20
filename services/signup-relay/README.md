@@ -8,13 +8,14 @@ holds a private key and never can: it only ever sees `{event_id, v,
 encrypted_key, iv, ciphertext}`, and every field but `event_id` is base64
 ciphertext.
 
-It accepts `POST` on a single route (`/`) and nothing else. It reads the
-body raw, checks its **shape**, applies the abuse protection below, and — if
-everything holds — turns it into a `registration-submitted`
-`repository_dispatch`, byte-identical to what it received, the same
-`client_payload.body` pattern `services/form-relay` uses. It logs no request
-body and keeps nothing beyond the per-event counter described below, and
-that counter is a count, never the data that produced it.
+It accepts `POST` (and the `OPTIONS` preflight a browser sends ahead of it)
+on a single route (`/`) and nothing else. It reads the body raw, checks its
+**shape**, applies the abuse protection below, and — if everything holds —
+turns it into a `registration-submitted` `repository_dispatch`,
+byte-identical to what it received, the same `client_payload.body` pattern
+`services/form-relay` uses. It logs no request body and keeps nothing
+beyond the per-event counter described below, and that counter is a count,
+never the data that produced it.
 
 ## What "shape" means here, and what it deliberately cannot mean
 
@@ -24,14 +25,21 @@ point of encrypting in the browser (see `tools/convener_ops/eventkeys.py`'s and
 **shape** check, never a **content** check, and this README does not claim
 otherwise:
 
-- the five expected fields are present, and no others;
+- the five expected fields are present, and no others, and none of them is
+  spelled twice (`hasDuplicateKey` in `src/index.js` — `JSON.parse` keeps
+  only the last occurrence of a repeated key, so a check on the *parsed*
+  object alone cannot see a second `"event_id"` hiding in the raw bytes
+  this worker still forwards byte-identical);
 - `event_id` is shaped like one (mirrors
   `tools/convener_ops/commit_format._TOKEN`) and names an event whose public key
-  (`keys/events/<event_id>.pub`) actually exists in the repository;
+  (`keys/events/<event_id>.pub`) actually exists in the repository (see
+  "Known events" below for how, and why);
 - `v` is the wire version this worker was written against;
 - `encrypted_key`, `iv` and `ciphertext` are valid base64 that decode to the
   lengths the wire format fixes: 256 bytes, 12 bytes, and at least 16 bytes
-  (`tools/convener_ops/eventkeys.py`'s module docstring documents all three).
+  (`tools/convener_ops/eventkeys.py`'s module docstring documents all three),
+  measured in real bytes, not the UTF-16 code units JavaScript's own
+  `.length` would give.
 
 None of this proves the ciphertext decrypts to a real registration, or that
 whoever sent it is a real participant rather than anyone who fetched the
@@ -57,6 +65,29 @@ not. That is a different enough trust boundary to keep it in its own
 worker, sharing only the Cloudflare account and the dispatch pattern, not
 the code.
 
+## Cross-origin requests (CORS)
+
+The registration page is served from a different origin than this worker,
+so a browser sends a preflight `OPTIONS` before the real `POST` — the form
+sets `content-type: application/json`, which the Fetch spec does not
+exempt from a preflight (only a handful of simple header values are).
+`services/auth-proxy/src/index.js` already solved this once for a
+different worker; this one copies that pattern rather than inventing a
+second one: an `ALLOWED_ORIGIN` var (`wrangler.toml`), a 204 answer to the
+preflight, and CORS headers on *every* response this worker sends, success
+or error — a caller's `fetch` cannot read a response body or even a bare
+status code cross-origin without `Access-Control-Allow-Origin` on that
+specific response, not only on the ones that happen to succeed.
+
+A request whose `Origin` does not exactly match `ALLOWED_ORIGIN` (including
+one with no `Origin` header at all, and every request if `ALLOWED_ORIGIN`
+itself is unset) gets a bare `403` with no CORS headers — again mirroring
+`auth-proxy` exactly. This is not a security boundary; `Origin` is a header
+any non-browser caller can set to anything, and this worker's real
+authorisation is that it takes no data it cannot forward safely regardless
+of who sent it. It exists so real browsers behave correctly, not so this
+worker can trust it.
+
 ## Fail closed, not open
 
 `tools/convener_ops/proposal.py::verify_signature` tolerates an absent secret by
@@ -64,80 +95,191 @@ design — it sits behind an authenticated `repository_dispatch`, so an
 unset `TALLY_WEBHOOK_SECRET` there just skips a check a forged dispatch
 could not have passed anyway. This worker has no such shelter: it is the
 first thing a request from the open internet reaches. So a missing
-`CONVENER_DISPATCH_TOKEN`, or a `SIGNUP_RELAY_KV` binding that was never set up,
-refuses every request with `502` rather than falling back to "no ceiling"
-or "no known-event check" — neither GitHub nor the counter is ever touched
-on a misconfigured deploy. `test/index.test.js` pins this for both.
+`CONVENER_DISPATCH_TOKEN`, a `SIGNUP_RELAY_KV` binding that was never set up, or
+a `SIGNUP_RATE_LIMITER` binding that was never set up, refuses every
+request with `502` rather than falling back to "no ceiling," "no burst
+limit" or "no known-event check" — none of GitHub, the counter or the
+limiter is ever touched on a misconfigured deploy. `test/index.test.js`
+pins this for all three. `ALLOWED_ORIGIN` fails closed too, but visibly
+differently — see "Cross-origin requests" above — because an unset var
+naturally cannot equal any real `Origin` a browser sends, with no extra
+code needed to enforce it.
 
 ## Abuse protection
 
 No shared secret is possible — a browser cannot hold one — so this
-endpoint is open by construction. Of the three options considered:
+endpoint is open by construction. Of the three options this task's brief
+named:
 
 | Option | Why not, here |
 |---|---|
 | Cloudflare rate-limiting rules | Configured in the dashboard, outside version control — a setting a successor inherits with no record of why it has the value it has, unlike everything else in this repository. It also targets traffic through a Cloudflare-proxied zone; this worker, like the other two, deploys to a plain `*.workers.dev` route with no custom domain, so the product would need one added first. |
 | Turnstile | Costs nothing and stays on the same account, but it is a third-party script embedded in the registration page itself — outside this worker's own files, widening a diff this task does not own — on a page whose whole design argument (`SignupForm.tsx`'s own comments) is that nothing runs there beyond what the participant strictly needs. |
-| **A limiter inside the worker** | **Chosen.** Needs state, so a storage binding — Workers KV, same account, no new vendor. |
+| **A limiter inside the worker** | **Chosen** — but the first pass at this, Workers KV alone, turned out not to hold against the exact scenario it was written to defend. What replaced it is below. |
 
-**Workers KV, verified rather than assumed** (Cloudflare's published Free
-plan limits, checked while writing this): 100,000 reads/day, writes to
-**1,000 distinct keys per day**, and — separately, on every plan, not just
-Free — at most **one write per second to the same key**. That last number
-shapes the design directly: this worker holds exactly one mutable key per
-event (`count:<event_id>`), so an event's entire registration volume,
-however large, only ever spends **one** of the 1,000-distinct-keys/day
-budget — the limiting factor at this project's scale would have to be well
-over a thousand events open for registration on the same day. The
-one-write-per-second-per-key limit is the real constraint: two people
-registering for the same popular event within the same second can collide,
-and the loser's write may be rejected or delayed by KV's own eventual
-consistency (up to ~60 seconds to propagate globally).
+### What Workers KV alone did not do
 
-That collision is accepted, not defended against, because of what this
-counter is *for*. **A per-event ceiling is needed regardless of which of
-the three options above was chosen** — an event does not have ten thousand
-registrants, and a count that goes past a sane ceiling is worth surfacing
-as a signal even where it is not, on its own, a hard defence. So the
-counter is read before the two GitHub calls (cheaper to refuse here than to
-spend an API call on a request that will be refused anyway), a read
-failure is treated as "no count yet" rather than blocking a legitimate
-registration, and the write happens only after a confirmed dispatch and is
-itself best-effort: a registration that already reached GitHub is never
-undone because the count afterwards could not be written. None of this
-needs to be exact to do its job — three or four registrations racing past
-the ceiling in the same second is not the failure this design defends
-against; a script hammering one event to ten thousand rows is.
+The first version of this worker used a single `SIGNUP_RELAY_KV` counter
+per event, read before dispatching and incremented after, with a ceiling of
+500. That does not survive a fast burst: Workers KV serves reads from an
+edge cache that can be up to **60 seconds** stale, and restricts writes to
+the **same key** to **one per second**, on every plan, not only Free. Ten
+thousand requests arriving quickly at one event would see roughly the same
+stale, under-500 count on every read for most of that window, and only
+around sixty of the resulting writes would actually land in that first
+minute — the other 9,940-odd requests would all read a ceiling that was
+never breached, and all get dispatched. The counter was real, but it could
+not count fast enough to stop what it existed to stop.
 
-The ceiling itself, `PER_EVENT_CEILING` in `src/index.js`, is `500` — an
-order of magnitude above any real seminar's attendance, and three orders of
-magnitude below a number ("ten thousand registrants") nobody would mistake
-for a real one.
+### The free-tier numbers, honestly
+
+Two of Cloudflare's own pages disagree with each other. The **limits**
+page (`developers.cloudflare.com/kv/platform/limits/`) says "Writes to
+different keys: 1,000 per day." The **pricing** page
+(`developers.cloudflare.com/workers/platform/pricing/`) says "Keys
+written: 1,000 / day," with no "different keys" qualifier — read plainly,
+every write counts, not only the first one to a new key. This worker's
+design does not depend on resolving that contradiction: because
+`count:<event_id>` is one key reused for the whole life of an event's
+registration window, the generous reading costs this worker nothing extra
+either way it turns out to be true, and the conservative reading only
+matters if a single event's counter is written to more than 1,000 times —
+above `PER_EVENT_CEILING` itself, so the ceiling would already have
+refused further registrations for that event before the write quota could.
+Both pages are cited so a successor can re-check them rather than trust
+this paragraph.
+
+### The burst limiter
+
+`SIGNUP_RATE_LIMITER` (`wrangler.toml`, `[[ratelimits]]`) is Cloudflare's
+**Workers Rate Limiting binding**, a native binding rather than the
+zone-level rules ruled out above — and it exists for exactly the scenario
+KV alone could not stop. Verified from
+`developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/`
+rather than assumed: the binding needs Wrangler `>= 4.36.0` (this worker's
+`package.json` was bumped from the `^3.99.0` the other two relays still
+pin, to `^4.36.0`, for this reason alone), and Cloudflare's own docs state
+its behaviour plainly: *"The Rate Limiting API is permissive, eventually
+consistent, and intentionally designed to not be used as an accurate
+accounting system"* — quoted, not paraphrased, because that sentence is
+the honest ceiling on what this section can claim.
+
+**Plan availability could not be confirmed either way from the
+documentation**, and that gap is recorded rather than papered over: the
+binding's own reference page states no Free/Paid restriction at all, and —
+unlike Workers KV, Durable Objects, Queues, D1, Hyperdrive, Vectorize, R2
+and Containers, every one of which appears with explicit Free/Paid figures
+on the pricing page — "Rate Limiting" does not appear on that page as a
+line item at all, metered or not. The balance of that evidence (no stated
+restriction, no billing line) leans toward free-tier availability, but it
+is an inference, not a quoted confirmation, and it was checked directly
+against `wrangler deploy --dry-run`, which resolved the binding and printed
+`env.SIGNUP_RATE_LIMITER (30 requests/60s)` without needing a real
+Cloudflare account — evidence the *configuration* is valid, not evidence
+of *plan* availability. If the account this worker actually deploys to
+cannot use it, `wrangler deploy` fails loudly, in CI, with Cloudflare's own
+error naming the reason — a visible, fast failure, not a silent one.
+
+Keyed per event (`rateLimiter.limit({ key: eventId })`, `simple = { limit:
+30, period: 60 }`), so one flooded event's budget cannot starve another's.
+Set to 30 requests per 60 seconds: generous enough that a genuine spike —
+thirty people clicking a link within a minute of an announcement email — is
+never refused, while cutting a ten-thousand-request burst at one event down
+to roughly 30 requests per minute reaching the rest of the pipeline. That
+throughput is comfortably under the very KV per-second-per-key limit that
+broke the first design, which is what makes the two mechanisms work
+together rather than merely coexist: the limiter is what keeps the counter
+able to count. A thrown `.limit()` call is treated the same as every other
+fail-closed check above — refused (`502`), never silently skipped.
+
+### Why both, not one
+
+The two are not redundant. `SIGNUP_RATE_LIMITER` bounds **velocity** — no
+more than 30 requests per event per minute, checked first, before either
+GitHub call. `SIGNUP_RELAY_KV`'s `count:<event_id>` bounds a **cumulative
+total** over an event's entire registration window, which can span weeks —
+a slow, sustained trickle of 25 requests/minute for hours would never trip
+the limiter but would still climb toward, and eventually hit,
+`PER_EVENT_CEILING`. Neither is exact — the limiter is explicitly "not…an
+accurate accounting system," and the counter's read-before/write-after
+shape (see `src/index.js`) is not atomic either — but together they cover
+the two failure modes ("fast" and "sustained") a single mechanism does not.
+An event does not have ten thousand registrants, and a count that goes
+past a sane ceiling is worth surfacing as a signal even where it is not, on
+its own, a hard defence; `500` — an order of magnitude above any real
+seminar's attendance, three orders of magnitude below "ten thousand" — is
+that ceiling.
+
+A KV **write** failure after a successful dispatch is no longer discarded
+silently: `console.error` records the event id (already public — the same
+identifier every dispatch and every workflow run already names) and a
+fixed message, never the body, so a counter that stops advancing leaves a
+trace instead of just going quiet — the one thing a signal must not do.
 
 Cloudflare's own network-level DDoS mitigation sits beneath all of this,
 for every Worker, on every plan, automatically — nothing here replaces
 that layer or claims to; this design exists for the layer above it, where
 one event's registration count needs to stay a plausible number.
 
+## Known events: a live check, not a baked allow-list
+
+`eventKeyExists` in `src/index.js` asks GitHub's Contents API,
+`GET /repos/.../contents/keys/events/<event_id>.pub`, live, on every
+request, rather than checking a list of known event ids baked into the
+worker at deploy time.
+
+An earlier version of this rationale claimed the live check avoids
+"deploy-time coupling between a new event key being committed and this
+worker being redeployed." That does not hold up: the browser never fetches
+the public key from this worker or from GitHub — it fetches
+`keys/events/<id>.pub` from the **app's own origin**
+(`SignupForm.tsx`, `eventPublicKeyUrl`), which `app/scripts/
+copy-event-keys.mjs` publishes there as an `app/package.json` `prebuild`
+step, and `.github/workflows/deploy.yml` rebuilds and republishes the app
+on **every** push to `main`. A newly committed event key is invisible to a
+participant until that rebuild happens regardless of whether *this* worker
+is ever redeployed — so the redeploy the live check was said to avoid
+happens anyway, on the same commit, for an unrelated reason.
+
+What the live check genuinely buys instead: no *stale allow-list* failure
+mode, where a skipped or failed `deploy-signup-relay.yml` run would leave
+this worker silently refusing a perfectly real, newly created event
+indefinitely with no visible cause; and no new build tooling — a generated
+list of ids and a `paths:` entry watching `keys/events/**`, mirroring what
+`copy-event-keys.mjs` already does for the app. Both are real, if modest,
+advantages, worth the one extra GitHub API call and its own timeout per
+registration (`GITHUB_FETCH_TIMEOUT_MS`) — not worth abandoning the design
+for a claim that did not survive checking it against the rest of the
+pipeline.
+
 ## Response codes
 
-The caller only ever sees one of these six:
+The caller only ever sees one of these seven:
 
 - `204` — accepted and dispatched.
-- `400` — the body is not well-shaped: not JSON, wrong or extra fields,
-  invalid base64, or a field decoding to the wrong length. Also the one
-  case checked before the body is even read: a declared `Content-Length`
-  already past the plausible ceiling.
-- `404` — either the route (any path but `/`), or a well-shaped `event_id`
-  naming an event whose public key does not exist in the repository. A
-  caller cannot tell these apart and does not need to; both mean "there is
-  nothing here to send this to."
-- `405` — any method other than `POST`.
-- `429` — this event has already reached its registration ceiling.
+- `400` — the body is not well-shaped: not JSON, wrong, extra or duplicated
+  fields, invalid base64, a field decoding to the wrong length, or a body
+  that could not even be read (an aborted or broken request stream). Also
+  the case checked before the body is read at all: a declared
+  `Content-Length`, or the real encoded byte length once read, already past
+  the plausible ceiling.
+- `403` — the request's `Origin` does not match `ALLOWED_ORIGIN` (including
+  no `Origin` at all). See "Cross-origin requests" above for why this is
+  not a security check.
+- `404` — either the route (a `POST`/`OPTIONS` to any path but `/`; a
+  method other than those two is `405` regardless of path, checked first),
+  or a well-shaped `event_id` naming an event whose public key does not
+  exist in the repository. A caller cannot tell these two apart and does
+  not need to; both mean "there is nothing here to send this to."
+- `405` — any method other than `POST` or `OPTIONS`.
+- `429` — this event has either tripped the burst limiter or already
+  reached its cumulative ceiling; either way the response carries
+  `Retry-After: 60`.
 - `502` — this worker could not complete the request: a missing secret or
-  storage binding (see "Fail closed" above), or the dispatch to GitHub
-  itself failed. Never GitHub's own status or body — a caller has no need
-  to see GitHub's error detail, and passing it through would blur this
+  storage/limiter binding (see "Fail closed" above), the known-event check
+  failed for a reason other than "no such event," or the dispatch to
+  GitHub itself failed. Never GitHub's own status or body — a caller has no
+  need to see GitHub's error detail, and passing it through would blur this
   worker's taxonomy with GitHub's, the same reasoning
   `services/form-relay/README.md` gives for its own `502`.
 
@@ -154,6 +296,9 @@ npx wrangler kv namespace create SIGNUP_RELAY_KV   # once, then paste the
 npx wrangler deploy
 ```
 
+`SIGNUP_RATE_LIMITER` needs no equivalent creation step — see its comment
+in `wrangler.toml`.
+
 ## Secrets
 
 - Wrangler secret `CONVENER_DISPATCH_TOKEN` — set with
@@ -161,14 +306,22 @@ npx wrangler deploy
   *Contents: read & write* on `example-instance/example-cockpit`, the same
   scope `services/form-relay/README.md` documents for its own token: this
   worker uses it both to check whether an event's public key exists
-  (a Contents-API read) and to send the `repository_dispatch` itself. It
-  may be the same credential already created for the form relay, or a
-  separate one with the same scope — Wrangler secrets are per-worker
-  either way, so it is set here independently regardless.
+  (a Contents-API read) and to send the `repository_dispatch` itself.
+  Prefer a **separate** token from the form relay's, even though the scope
+  is identical: this worker spends two GitHub API calls per registration
+  against the same 5,000/hour authenticated budget the form relay also
+  draws on, and sharing one token couples the two workers' quotas together
+  — a flood at one becomes a `502` storm at the other. Wrangler secrets are
+  per-worker regardless, so a separate token costs nothing extra to set up.
 - `SIGNUP_RELAY_KV` — not a secret, but specific to the Cloudflare account
   this worker deploys to (see "Deploying" above); its namespace id belongs
   in `wrangler.toml`, never guessed or shared with another worker's
-  namespace.
+  namespace. `deploy-signup-relay.yml`'s own gate skips the deploy — rather
+  than letting `wrangler deploy` fail on it — while this is still the
+  placeholder `wrangler.toml` ships with.
+- `SIGNUP_RATE_LIMITER` — also not a secret; see "The burst limiter" above
+  and its comment in `wrangler.toml` for why, unlike the KV namespace, it
+  needs no per-account value and ships already configured.
 
-Neither belongs in `wrangler.toml` as a literal secret value — see that
-file's own comments.
+Neither `CONVENER_DISPATCH_TOKEN` nor a KV namespace id belongs in
+`wrangler.toml` as a literal secret value — see that file's own comments.

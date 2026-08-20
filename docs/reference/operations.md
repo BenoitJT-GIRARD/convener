@@ -147,9 +147,10 @@ secret-free authentication relay. Unlike the form relay, there is no
 shared secret its caller could sign with — a static registration page
 cannot hold one — so its endpoint is open by construction where the form
 relay's is not; see `services/signup-relay/README.md` for the abuse
-protection chosen for that (a per-event ceiling held in Workers KV) and
-the reasoning recorded alongside it, including the Workers KV free-tier
-numbers checked while choosing it.
+protection chosen for that (a per-event burst limiter and a per-event
+cumulative ceiling, in two separate Cloudflare bindings) and the reasoning
+recorded alongside it, including the Workers KV and Workers Rate Limiting
+free-tier evidence checked while choosing it.
 
 Unlike the other two, this worker cannot read what it forwards at all —
 the body is ciphertext the browser encrypted under the target event's
@@ -157,18 +158,26 @@ public key (`tools/convener_ops/eventkeys.py`), and this worker holds no
 private key. Its validation is a shape check, not a content check: see
 its README for exactly what that does and does not verify.
 
+It also answers cross-origin requests: the registration page and this
+worker are served from different origins, so it follows the same CORS
+pattern `services/auth-proxy/` already established (see its README's
+"Cross-origin requests" section) rather than a second one.
+
 **To create:**
 1. Deploy the worker from `services/signup-relay/`: `npm install`, then
    `npx wrangler kv namespace create SIGNUP_RELAY_KV` once and paste the
    printed id into that folder's `wrangler.toml`, then `npx wrangler
    deploy` — see its README — to the same Cloudflare account used for the
-   other two workers.
+   other two workers. `SIGNUP_RATE_LIMITER`, the burst limiter, needs no
+   equivalent creation step and ships already configured in
+   `wrangler.toml`.
 2. Set repository **variable** `VITE_SIGNUP_RELAY_URL` (Settings → Secrets
    and variables → Actions → Variables) to the deployed worker's URL. Public
    by construction, like `VITE_AUTH_PROXY_URL` above — a relay URL ships
    inside the bundle — so it belongs in Variables, not Secrets. Like those,
-   it is read only at build time; setting or changing it has no effect
-   until the application is rebuilt.
+   it is read only at build time (forwarded into the build by
+   `.github/workflows/deploy.yml`'s own `Build` step); setting or changing
+   it has no effect until the application is rebuilt.
 
 **Secrets to set:**
 - Wrangler secret `CONVENER_DISPATCH_TOKEN` on the worker — set with
@@ -177,19 +186,24 @@ its README for exactly what that does and does not verify.
   write* on `example-cockpit` only — the same scope the form relay's own
   `CONVENER_DISPATCH_TOKEN` uses, since this worker both reads
   `keys/events/<id>.pub` to confirm an event is known and sends the
-  `repository_dispatch` itself. It may be the same credential already
-  created for the form relay's token, or a separate one with the same
-  scope; either way it is set here independently, since Wrangler secrets
-  are per-worker.
+  `repository_dispatch` itself. Create a **separate** token from the form
+  relay's rather than reusing it: this worker spends two GitHub API calls
+  per registration against the same 5,000/hour budget the form relay also
+  draws on, and one shared token would couple the two workers' quotas
+  together — see the README's "Secrets" section for the failure mode that
+  creates.
 - Repository secret `CLOUDFLARE_API_TOKEN` — the same one already set for
   *Deploy auth relay* and *Deploy form relay* above; *Deploy signup relay*
   reads it too, since all three workers deploy to the same Cloudflare
   account.
 
-`SIGNUP_RELAY_KV` is not a secret — a namespace id is not sensitive — but
-it is specific to the Cloudflare account this worker deploys to, so it is
-set directly in `services/signup-relay/wrangler.toml` rather than as a
-Wrangler secret; see that file's own comments.
+`SIGNUP_RELAY_KV` and `SIGNUP_RATE_LIMITER` are not secrets — see the
+README's "Secrets" section for what each needs and why only the former
+needs a creation step; both are set directly in
+`services/signup-relay/wrangler.toml` rather than as Wrangler secrets.
+`deploy-signup-relay.yml`'s own gate skips the deploy, rather than letting
+`wrangler deploy` fail, while the KV namespace id is still the placeholder
+`wrangler.toml` ships with.
 
 **To verify:** with `VITE_SIGNUP_RELAY_URL` set and the app rebuilt, submit
 the registration form for an event with a published key; the worker
