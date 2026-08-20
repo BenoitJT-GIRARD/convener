@@ -271,7 +271,7 @@ export async function handle(request, env) {
 
   // Fixed 204, not upstream.status -- see services/form-relay/src/index.js
   // for why an unexpected 2xx must not leak through as-is. The caller only
-  // ever sees one of 204, 400, 404, 429 or 502 from this worker.
+  // ever sees one of 204, 400, 404, 405, 429 or 502 from this worker.
   return new Response(null, { status: 204 });
 }
 

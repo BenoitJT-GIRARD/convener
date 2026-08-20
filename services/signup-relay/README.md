@@ -121,17 +121,18 @@ one event's registration count needs to stay a plausible number.
 
 ## Response codes
 
-The caller only ever sees one of these five:
+The caller only ever sees one of these six:
 
 - `204` — accepted and dispatched.
 - `400` — the body is not well-shaped: not JSON, wrong or extra fields,
   invalid base64, or a field decoding to the wrong length. Also the one
   case checked before the body is even read: a declared `Content-Length`
   already past the plausible ceiling.
-- `404` — either the route (anything but `POST /`), or a well-shaped
-  `event_id` naming an event whose public key does not exist in the
-  repository. A caller cannot tell these apart and does not need to; both
-  mean "there is nothing here to send this to."
+- `404` — either the route (any path but `/`), or a well-shaped `event_id`
+  naming an event whose public key does not exist in the repository. A
+  caller cannot tell these apart and does not need to; both mean "there is
+  nothing here to send this to."
+- `405` — any method other than `POST`.
 - `429` — this event has already reached its registration ceiling.
 - `502` — this worker could not complete the request: a missing secret or
   storage binding (see "Fail closed" above), or the dispatch to GitHub
