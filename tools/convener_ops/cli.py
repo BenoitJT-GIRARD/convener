@@ -37,7 +37,7 @@ from convener_ops.platform_fcc import (
     platform_from_env,
 )
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
-from convener_ops.public_data import to_public
+from convener_ops.public_data import recording_withheld, to_public
 from convener_ops.register import (
     LOG_FORMAT,
     REGISTER_PATH,
@@ -913,9 +913,10 @@ def match_attendance() -> int:
 
 def release_recording() -> int:
     """`convener-release-recording`: retrieve, verify the retrieval, then
-    delete -- the one place in this whole package allowed to call
-    `Platform.delete_recording` (pinned by
-    `tools/tests/test_cli.py::test_delete_recording_has_exactly_one_call_site_in_the_whole_package`).
+    delete -- one of exactly two places in this whole package allowed to
+    call `Platform.delete_recording`, the other being `discard_recording`
+    below (pinned by
+    `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`).
     `delete_recording` exists because of the chosen platform's
     storage quota (spec Section 2/9: a 90-minute recording costs roughly
     1.6x the free tier's entire 1 GB allowance) -- freeing it after every
@@ -952,7 +953,8 @@ def release_recording() -> int:
     published would never have satisfied it despite being genuinely
     retrieved, and the quota it occupies would never have been freed.
 
-    **This function is only for a recording headed to YouTube.** A
+    **This function is only for a recording headed to YouTube, and it now
+    enforces that rather than only documenting it (fix round 3).** A
     recording that must never become public -- the discussion segment
     (recorded on purpose, phase 3's own three-step discipline, but never
     published), or a talk whose publication consent was withheld -- must
@@ -960,14 +962,21 @@ def release_recording() -> int:
     MP4, and a converted file stays *publicly reachable at its own URL
     even after the conference is deleted* (verified empirically). Proving
     retrieval this way is exactly the exposure those two cases exist to
-    prevent. `discard_recording` below is the other route: no proof of
-    retrieval is asked for or accepted, because none may ever exist. See
-    its own docstring, and `platform_fcc.py`'s module docstring's "Which
-    recordings take which route" section, for the full split. This
-    function never downloads the recording itself, and calls nothing that
-    could trigger a conversion on its own -- only the host's Download
-    click does that, and only a recording meant for YouTube should ever
-    receive one.
+    prevent. So before either trace is even checked, this function refuses
+    when `public_data.recording_withheld` -- the same predicate that keeps
+    a link out of the public feed, reused rather than restated -- reads
+    the event's own speaker record as not cleared: `publication.consent`
+    must be `"granted"` and `publication.outcome` must be `"published"`,
+    with silence on either counting as withheld. `discard_recording` below
+    is the other route: no proof of retrieval is asked for or accepted,
+    because none may ever exist. See its own docstring, and
+    `platform_fcc.py`'s module docstring's "Which recordings take which
+    route" section, for the full split and for why the refusal fires for
+    almost every fresh talk (`outcome` is not written until
+    `finalize-archive` runs, well after an event). This function never
+    downloads the recording itself, and calls nothing that could trigger a
+    conversion on its own -- only the host's Download click does that, and
+    only a cleared recording headed for YouTube should ever receive one.
 
     The quota is checked *after* deletion, deliberately (spec Section 9:
     "alerte si l'espace reste occupe"), because a saturated quota breaks
@@ -1016,6 +1025,28 @@ def release_recording() -> int:
     runbook_progress = record.get("runbook_progress")
     if not isinstance(runbook_progress, dict):
         runbook_progress = {}
+
+    # Enforced, not only documented (fix round 3): the same predicate
+    # `public_data.py` uses to keep a link out of the public feed, reused
+    # rather than restated, so the two questions -- "does this leave the
+    # public feed" and "does this leave FCC at all" -- cannot drift apart
+    # on what "cleared" means. See platform_fcc.py's module docstring's
+    # "Which recordings take which route" section for why neither
+    # `publication.consent` nor `publication.outcome` alone would do.
+    # find_speaker returns Mapping[str, Any] (platform.py); recording_withheld
+    # is typed dict[str, Any] (public_data.py). A shallow copy satisfies
+    # mypy without touching public_data.py's own signature for a predicate
+    # this task reuses rather than restates.
+    if recording_withheld(dict(record)):
+        print(
+            f"publication is not cleared for event {event_id} "
+            "(publication.consent must be 'granted' and publication.outcome "
+            "must be 'published') -- release_recording refuses; if this "
+            "recording is never going to be published, use "
+            "discard_recording instead",
+            file=sys.stderr,
+        )
+        return 1
 
     conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
     conference_ids = {event_id: conference_id} if conference_id else {}

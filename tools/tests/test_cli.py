@@ -1834,16 +1834,50 @@ class _FakeRecordingTransport:
 
 
 def _write_speaker_for_recording(
-    tmp_path: Path, event_id: str = "mrg-042", retrieved: bool = False
+    tmp_path: Path,
+    event_id: str = "mrg-042",
+    retrieved: bool = False,
+    cleared: bool = False,
 ) -> None:
     """`retrieved=True` ticks `RETRIEVED_TICK` on `runbook_progress` --
     trace 1, since fix round 1. Never sets `youtube_url`: that field is a
     publication signal, deliberately irrelevant to this guard now (see
-    Important 4)."""
+    Important 4).
+
+    `cleared=True` (fix round 3) sets `publication.consent: "granted"`
+    and `publication.outcome: "published"` -- the two conditions
+    `public_data.recording_withheld` requires together before
+    `release_recording` will even attempt the two-trace check. Defaults
+    to `False` (the ordinary state for a fresh, unarchived talk, and the
+    only state `discard_recording`'s own tests need, since that function
+    never reads `publication` at all)."""
     runbook_progress = {RETRIEVED_TICK: True} if retrieved else {}
+    publication = (
+        {
+            "consent": "granted",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [],
+            "outcome": "published",
+        }
+        if cleared
+        else {
+            "consent": "",
+            "approved_by": "",
+            "approved_on": "",
+            "objections": [],
+            "outcome": "",
+        }
+    )
     _write_data(
         tmp_path,
-        [speaker(edition_code=event_id.upper(), runbook_progress=runbook_progress)],
+        [
+            speaker(
+                edition_code=event_id.upper(),
+                runbook_progress=runbook_progress,
+                publication=publication,
+            )
+        ],
         config(),
     )
 
@@ -1921,64 +1955,19 @@ def test_release_recording_reports_a_malformed_speakers_file_and_returns_1(
     assert "invalid YAML" in capsys.readouterr().out
 
 
-def test_release_recording_without_a_configured_account_is_a_noop(
+def test_release_recording_refuses_when_publication_is_not_cleared(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """D-13: no token is the ordinary state. ManualPlatform holds no
-    recording storage of its own, so this is a harmless no-op, not a
-    failure."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    """Fix round 3: enforced, not only documented. A fresh talk (the
+    default, unfixtured `publication` block -- consent and outcome both
+    blank, the ordinary state before `finalize-archive` has ever run) is
+    refused before any platform interaction at all -- not the two-trace
+    check that ran here before, a different, earlier one."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
-
-    assert release_recording() == 0
-    assert "nothing to release" in capsys.readouterr().out
-
-
-def test_release_recording_is_a_noop_when_nothing_is_recorded(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
-    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    _set_fcc_env(monkeypatch)
-    transport = _FakeRecordingTransport({_PATH: [_recording_payload(available=False)]})
-    _patch_platform(monkeypatch, transport)
-
-    assert release_recording() == 0
-    assert "nothing to release" in capsys.readouterr().out
-    assert transport.delete_calls == []
-
-
-def test_release_recording_treats_a_malformed_runbook_progress_as_empty(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """`runbook_progress` loaded as `None`, or any non-mapping, must
-    refuse rather than crash -- the same "empty means missing" reading
-    `release_recording` gives a genuinely absent tick."""
-    _write_data(
-        tmp_path,
-        [speaker(edition_code="MRG-042", runbook_progress=None)],
-        config(),
-    )
-    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    _set_fcc_env(monkeypatch)
-    transport = _FakeRecordingTransport(
-        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
-    )
-    _patch_platform(monkeypatch, transport)
-
-    assert release_recording() == 1
-    assert RETRIEVED_TICK in capsys.readouterr().err
-    assert transport.delete_calls == []
-
-
-def test_release_recording_refuses_without_the_retrieved_tick(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=False)
-    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    _set_fcc_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_MEETING_API_TOKEN", "test-token")
+    monkeypatch.setenv("CONVENER_FCC_CONFERENCE_ID", _CONFERENCE_ID)
     transport = _FakeRecordingTransport(
         {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
     )
@@ -1986,48 +1975,20 @@ def test_release_recording_refuses_without_the_retrieved_tick(
 
     assert release_recording() == 1
     err = capsys.readouterr().err
-    assert RETRIEVED_TICK in err
+    assert "publication is not cleared" in err
+    assert "discard_recording" in err
+    assert transport.get_calls == []
     assert transport.delete_calls == []
 
 
-def test_release_recording_ignores_youtube_url_and_still_requires_the_tick(
+def test_release_recording_refuses_when_consent_is_refused_even_with_a_tick(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Important 4, fix round 1: `youtube_url` is a publication signal,
-    not a retrieval one, and must not satisfy this guard by itself --
-    even when it is set to something plausible."""
-    _write_data(
-        tmp_path,
-        [
-            speaker(
-                edition_code="MRG-042",
-                youtube_url="https://youtu.be/abc123",
-                runbook_progress={},
-            )
-        ],
-        config(),
-    )
-    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    _set_fcc_env(monkeypatch)
-    transport = _FakeRecordingTransport(
-        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
-    )
-    _patch_platform(monkeypatch, transport)
-
-    assert release_recording() == 1
-    assert RETRIEVED_TICK in capsys.readouterr().err
-    assert transport.delete_calls == []
-
-
-def test_release_recording_succeeds_for_a_recording_never_meant_for_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """The concrete regression test for Important 4: a speaker who
-    withheld publication consent has no `youtube_url` and never will, but
-    the host still retrieved the recording (ticked `RETRIEVED_TICK`) and
-    the provider still confirms the converted copy exists. This must
-    succeed -- refusing forever here is exactly the quota-saturation
-    failure this task exists to prevent."""
+    """The exact Important 4 scenario, now expected to refuse rather than
+    succeed: a speaker who explicitly refused consent, with the host
+    having retrieved the recording regardless. `release_recording` is the
+    wrong route for this -- `discard_recording` is (see the dedicated
+    test in that section)."""
     _write_data(
         tmp_path,
         [
@@ -2049,6 +2010,188 @@ def test_release_recording_succeeds_for_a_recording_never_meant_for_publication(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert release_recording() == 1
+    assert "publication is not cleared" in capsys.readouterr().err
+    assert transport.delete_calls == []
+
+
+def test_release_recording_refuses_when_consent_is_granted_but_outcome_is_not_published(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Proves both halves of the predicate are required, not only
+    consent: a speaker who agreed, on a talk `finalize-archive` has not
+    yet run for (the ordinary state right after an event), still
+    refuses."""
+    _write_data(
+        tmp_path,
+        [
+            speaker(
+                edition_code="MRG-042",
+                publication={
+                    "consent": "granted",
+                    "approved_by": "",
+                    "approved_on": "",
+                    "objections": [],
+                    "outcome": "",
+                },
+                runbook_progress={RETRIEVED_TICK: True},
+            )
+        ],
+        config(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert release_recording() == 1
+    assert "publication is not cleared" in capsys.readouterr().err
+    assert transport.delete_calls == []
+
+
+def test_release_recording_without_a_configured_account_is_a_noop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """D-13: no token is the ordinary state. ManualPlatform holds no
+    recording storage of its own, so this is a harmless no-op, not a
+    failure. `cleared=True` so this test still reaches that branch rather
+    than the (new, earlier) publication gate."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042", cleared=True)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert release_recording() == 0
+    assert "nothing to release" in capsys.readouterr().out
+
+
+def test_release_recording_is_a_noop_when_nothing_is_recorded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042", cleared=True)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    transport = _FakeRecordingTransport({_PATH: [_recording_payload(available=False)]})
+    _patch_platform(monkeypatch, transport)
+
+    assert release_recording() == 0
+    assert "nothing to release" in capsys.readouterr().out
+    assert transport.delete_calls == []
+
+
+def test_release_recording_treats_a_malformed_runbook_progress_as_empty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`runbook_progress` loaded as `None`, or any non-mapping, must
+    refuse rather than crash -- the same "empty means missing" reading
+    `release_recording` gives a genuinely absent tick. Publication cleared
+    so this test still reaches the retrieval-tick check, not the (new,
+    earlier) publication gate."""
+    _write_data(
+        tmp_path,
+        [
+            speaker(
+                edition_code="MRG-042",
+                runbook_progress=None,
+                publication={
+                    "consent": "granted",
+                    "approved_by": "",
+                    "approved_on": "",
+                    "objections": [],
+                    "outcome": "published",
+                },
+            )
+        ],
+        config(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert release_recording() == 1
+    assert RETRIEVED_TICK in capsys.readouterr().err
+    assert transport.delete_calls == []
+
+
+def test_release_recording_refuses_without_the_retrieved_tick(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=False, cleared=True
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert release_recording() == 1
+    err = capsys.readouterr().err
+    assert RETRIEVED_TICK in err
+    assert transport.delete_calls == []
+
+
+def test_release_recording_ignores_youtube_url_and_still_requires_the_tick(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 4, fix round 1: `youtube_url` is a publication signal,
+    not a retrieval one, and must not satisfy this guard by itself --
+    even when it is set to something plausible. Publication cleared so
+    this test still reaches the retrieval-tick check."""
+    _write_data(
+        tmp_path,
+        [
+            speaker(
+                edition_code="MRG-042",
+                youtube_url="https://youtu.be/abc123",
+                runbook_progress={},
+                publication={
+                    "consent": "granted",
+                    "approved_by": "",
+                    "approved_on": "",
+                    "objections": [],
+                    "outcome": "published",
+                },
+            )
+        ],
+        config(),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    transport = _FakeRecordingTransport(
+        {_PATH: [_recording_payload()]}, head_responses={_VIDEO_URL: _video_headers()}
+    )
+    _patch_platform(monkeypatch, transport)
+
+    assert release_recording() == 1
+    assert RETRIEVED_TICK in capsys.readouterr().err
+    assert transport.delete_calls == []
+
+
+def test_release_recording_succeeds_once_publication_is_cleared_and_both_traces_agree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The positive case fix round 3 still has to permit: a talk whose
+    publication gate genuinely opened (`consent: granted`,
+    `outcome: published`) and whose retrieval is genuinely verified must
+    still succeed -- the new gate narrows who may use this route, it does
+    not additionally weaken the two traces that already governed it."""
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    _set_fcc_env(monkeypatch)
+    transport = _FakeRecordingTransport(
         {_PATH: [_recording_payload(), _recording_payload(available=False)]},
         head_responses={_VIDEO_URL: _video_headers()},
     )
@@ -2062,7 +2205,9 @@ def test_release_recording_succeeds_for_a_recording_never_meant_for_publication(
 def test_release_recording_refuses_when_the_converted_video_is_not_reachable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     # No head_responses entry: the fake answers `None` for every URL, the
@@ -2082,7 +2227,9 @@ def test_release_recording_refuses_a_200_that_looks_like_an_error_page(
     """Reviewer probe, round 1, Important 3: a 200 with
     `Content-Type: text/html` (a CDN's own error page, or a followed
     redirect to one) must not count as proof of conversion."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
@@ -2101,7 +2248,9 @@ def test_release_recording_does_not_delete_when_get_recording_raises(
 ) -> None:
     """The mutation-B guard this task's own brief asks for: a failed
     retrieval must never still delete."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
@@ -2123,7 +2272,9 @@ def test_release_recording_refuses_a_non_numeric_conference_id(
     digit-only validation (Important 2's fix) and is refused before any
     transport call -- never silently deletes whatever the fake happens to
     have registered under a different, hardcoded path."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch, conference_id="THIS-IS-THE-WRONG-CONFERENCE")
     transport = _FakeRecordingTransport(
@@ -2143,7 +2294,9 @@ def test_release_recording_refuses_a_path_shaped_conference_id(
 ) -> None:
     """Reviewer probe, round 1, Important 2: a hand-typed conference id
     shaped like a path-traversal payload must never reach `DELETE`."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch, conference_id="618/../999")
     transport = _FakeRecordingTransport(
@@ -2167,7 +2320,9 @@ def test_release_recording_returns_1_when_no_conference_id_is_configured(
     1) -- an absent `CONVENER_FCC_CONFERENCE_ID` must refuse cleanly, not
     silently resolve to whatever `conference_ids` happened to hold
     before."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("CONVENER_MEETING_API_TOKEN", "test-token")
@@ -2192,7 +2347,9 @@ def test_release_recording_deletes_the_conference_named_by_the_environment(
     other_id = "777777"
     other_path = f"/conferences/{other_id}"
     other_video_url = "https://cdn.example.org/rec/777777.video.mp4"
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch, conference_id=other_id)
     transport = _FakeRecordingTransport(
@@ -2219,7 +2376,9 @@ def test_release_recording_deletes_the_conference_named_by_the_environment(
 def test_release_recording_deletes_once_both_traces_agree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
@@ -2236,7 +2395,9 @@ def test_release_recording_deletes_once_both_traces_agree(
 def test_release_recording_reports_when_delete_recording_itself_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
@@ -2260,7 +2421,9 @@ def test_release_recording_alerts_when_space_stays_occupied_after_deletion(
     """Spec Section 9: an alert, not silence, when the quota is still
     occupied after deletion -- checked *after*, since a saturated quota
     breaks the *next* session's recording."""
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
@@ -2279,7 +2442,9 @@ def test_release_recording_alerts_when_space_stays_occupied_after_deletion(
 def test_release_recording_reports_when_the_post_delete_check_fails(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
+    _write_speaker_for_recording(
+        tmp_path, event_id="mrg-042", retrieved=True, cleared=True
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_fcc_env(monkeypatch)
     transport = _FakeRecordingTransport(
@@ -2607,6 +2772,29 @@ def test_discard_recording_reports_when_the_post_delete_check_fails(
     err = capsys.readouterr().err
     assert "discarded" in err
     assert "could not be confirmed" in err
+
+
+def test_discard_recording_refuses_a_self_consistent_typo_into_a_nonexistent_event(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The residual the review named: an operator who fat-fingers the same
+    wrong event id into both `event_id` and `confirm_discard` produces a
+    self-consistent pair that sails past the confirmation check alone --
+    but `find_speaker` still refuses it, because the typo does not name a
+    real event. This is the half of "narrow it where it is cheap" that
+    costs nothing extra: `find_speaker` is already called, unconditionally,
+    before any platform is even constructed."""
+    _write_speaker_for_recording(tmp_path, event_id="mrg-042")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-999")
+    monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-999")
+    transport = _FakeRecordingTransport({})
+    _patch_platform(monkeypatch, transport)
+
+    assert discard_recording() == 1
+    assert "mrg-999" in capsys.readouterr().err
+    assert transport.get_calls == []
+    assert transport.delete_calls == []
 
 
 def _delete_recording_call_sites(package_dir: Path) -> list[str]:

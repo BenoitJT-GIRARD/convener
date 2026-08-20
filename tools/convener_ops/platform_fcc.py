@@ -258,6 +258,53 @@ confirmation phrase can substitute for the two traces it actually
 requires. The two operations share nothing but the primitive they both,
 separately, are allowed to call.
 
+The consent-withheld routing above is enforced, not only documented.
+`release_recording` refuses outright when `public_data.recording_withheld`
+-- the same predicate that keeps a link out of the public feed -- reads
+this event's speaker record as not cleared: `publication.consent` must be
+`"granted"` **and** `publication.outcome` must be `"published"`, with any
+silence on either side, or a standing objection, counting as withheld.
+Neither field alone was sufficient (found on review): `outcome` stays
+`""` until `finalize-archive` runs, long after a recording may need
+releasing, so `consent` alone -- checked first, historically -- would have
+let a merely-not-yet-archived talk through, and `outcome` alone would
+reject a talk that was never going to be archived in the first place. The
+predicate is reused from `public_data.py`, not restated, so the two
+callers -- "does this leave the public feed" and "does this leave FCC at
+all" -- can never drift apart on what "cleared" means. **This means
+`release_recording` will typically refuse for a fresh talk immediately
+after its event**, since `finalize-archive` has not run yet regardless of
+consent -- an operator seeing the refusal has to read the actual
+`publication` block to tell "not yet decided" from "decided against"
+before choosing to wait or to run `discard_recording`; the refusal
+message names the exact condition rather than guessing which it is.
+
+**A residual limit of `discard_recording`'s guard, accepted rather than
+solved.** A *self-consistent* fat-finger -- an operator who types the
+wrong event id into `event_id` and, naturally, the same wrong id into
+`confirm_discard` -- satisfies the confirmation check on its own terms,
+because that check only ever compares the two inputs to each other, never
+to anything external. Two things are still true, though: a typo into an
+event that does not exist, or that has no recording, is still refused --
+`find_speaker` and `recording.available` are unconditional, checked
+regardless of what the confirmation said, and cost nothing extra since
+both are already required for the operation to do anything at all --
+pinned in `tools/tests/test_cli.py` by
+`test_discard_recording_refuses_a_self_consistent_typo_into_a_nonexistent_event`.
+What is **not** caught: a self-consistent typo into a *different, real,
+already-recorded* event. `release_recording`
+does not share this weakness -- its guard verifies facts external to the
+invocation itself (a real download must already have happened, a tick
+must already be committed), so a merely self-consistent input is not
+enough there. This asymmetry is inherent to "type the name to confirm"
+guards generally, not a defect specific to this implementation: the
+alternative, an interactive prompt showing exactly what is about to be
+destroyed before asking for confirmation, is not available in a
+`workflow_dispatch` form, and the ruling that created this operation
+explicitly forbade the one substitute that *would* close the gap -- the
+retrieval traces -- since accepting them here would let the two
+operations collapse into one.
+
 No transport is exercised by a test
 -------------------------------------
 `FCCTransport` is the seam: `PlatformFCC` is constructed with one, real
@@ -668,14 +715,17 @@ class PlatformFCC:
         not verified retrieval -- because it structurally cannot: nothing
         this class holds can tell it whether a file landed safely on
         someone's laptop. **A caller MUST confirm the recording was
-        retrieved before invoking this method.** Deciding how, and on what
-        evidence, is deliberately not this method's job: `Platform`'s
-        four-method shape is fixed by task 2 and this class does not
-        extend it, so the structural guard lives at the call site instead
-        -- `missing_retrieval_evidence` below, and `cli.py::release_recording`,
-        the one place in this package that is allowed to call this
-        method at all (pinned by
-        `tools/tests/test_cli.py::test_delete_recording_has_exactly_one_call_site_in_the_whole_package`)."""
+        retrieved -- or must have deliberately chosen never to -- before
+        invoking this method.** Deciding how, and on what evidence, is
+        deliberately not this method's job: `Platform`'s four-method shape
+        is fixed by task 2 and this class does not extend it, so the
+        structural guard lives at the call site instead -- there are
+        exactly two, `cli.py::release_recording` (the two-trace guard,
+        `missing_retrieval_evidence` below) and `cli.py::discard_recording`
+        (the typed-confirmation guard, for a recording that must never be
+        retrieved -- see this module's own "Which recordings take which
+        route" section above). Both, and only those two, are pinned by
+        `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`."""
         conference_id = self._conference_id(event_id)
         self.transport.delete(f"/conferences/{conference_id}", self.access_token)
 
