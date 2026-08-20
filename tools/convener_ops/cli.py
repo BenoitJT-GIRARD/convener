@@ -298,7 +298,20 @@ def handle_proposal() -> int:
         print("invalid signature", file=sys.stderr)
         return 1
 
-    payload = json.loads(payload_str)
+    # `payload_str` is signature-checked above, never schema-checked: a
+    # signature only proves who sent the body, not that it parses as JSON
+    # or that it is a JSON object rather than, say, an array. With no
+    # secret configured, verify_signature accepts anything (D-13), which
+    # makes this reachable in production, not just a defensive guess.
+    try:
+        payload = json.loads(payload_str)
+    except json.JSONDecodeError:
+        print("invalid JSON payload", file=sys.stderr)
+        return 1
+    if not isinstance(payload, dict):
+        print("invalid JSON payload", file=sys.stderr)
+        return 1
+
     fields_list = (
         payload.get("data", {}).get("fields")
         if isinstance(payload.get("data"), dict)

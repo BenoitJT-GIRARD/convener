@@ -298,6 +298,36 @@ def test_handle_proposal_reports_load_errors_and_returns_1(
     assert "file missing" in capsys.readouterr().out
 
 
+def test_handle_proposal_with_a_non_json_payload_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Reachable in production: with no TALLY_WEBHOOK_SECRET configured,
+    # verify_signature accepts any body (D-13), so a malformed one reaches
+    # json.loads unguarded unless this raises a clean message instead of an
+    # unhandled JSONDecodeError traceback.
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", "not json at all")
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 1
+    assert "invalid JSON payload" in capsys.readouterr().err
+
+
+def test_handle_proposal_with_a_json_array_payload_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Valid JSON, but not an object -- payload.get(...) would otherwise
+    # raise AttributeError on a list.
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("PROPOSAL_PAYLOAD", "[1, 2, 3]")
+    monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
+    monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
+
+    assert handle_proposal() == 1
+    assert "invalid JSON payload" in capsys.readouterr().err
+
+
 def test_handle_proposal_resolves_a_picker_shaped_gender_field(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
