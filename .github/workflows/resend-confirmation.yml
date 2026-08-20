@@ -1,0 +1,72 @@
+name: Resend a registration confirmation
+
+# The manual resend the phase 4 spec's risk table asks for (S:9: "a
+# certificate in the spam folder does not exist"). `workflow_dispatch`
+# rather than a script a volunteer runs locally: `EVENT_PRIVATE_KEY` and
+# `email_transport`'s five secrets live only in this repository's own
+# secrets (eventkeys.py's module docstring; config/integrations.yml), never
+# on a laptop, so re-sending has to happen in a job that already holds
+# them -- the same reason `convener-handle-registration` itself only ever runs
+# here.
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Event id, exactly as published (e.g. mrg-042)'
+        required: true
+        type: string
+      email:
+        description: "The registrant's e-mail address, exactly as they typed it at signup"
+        required: true
+        type: string
+
+jobs:
+  resend:
+    runs-on: ubuntu-latest
+    # Checkout, `uv sync`, one decrypt pass over at most 500 entries
+    # (registration.py's own module docstring gives the ceiling) and one
+    # send attempt -- generous.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Resolve the event's key secret
+        id: resolve
+        working-directory: tools
+        env:
+          # Built with `toJSON`, not string interpolation, so a stray quote
+          # in either input cannot break out of the payload this step
+          # hands to `convener-registration-secret-name` -- the same discipline
+          # registration.yml already applies to the relayed payload it
+          # reads, here applied to a value a trusted operator typed by
+          # hand instead of one a stranger's browser produced.
+          REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
+        run: uv run convener-registration-secret-name
+      - name: Re-send the confirmation
+        working-directory: tools
+        env:
+          EVENT_ID: ${{ inputs.event_id }}
+          REGISTRATION_EMAIL: ${{ inputs.email }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
+          CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
+          CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
+          CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
+          CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
+        run: uv run convener-resend-confirmation
+      - name: Preserve an unsent confirmation for inspection
+        # Same reasoning as registration.yml's own step of this name: never
+        # a line in this job's log, which would put an address and a
+        # matching code somewhere this project never puts personal data.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: unsent-confirmation-resend-${{ github.run_id }}
+          path: unsent-confirmation.eml
+          if-no-files-found: ignore
+          retention-days: 14

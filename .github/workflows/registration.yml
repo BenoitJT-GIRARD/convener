@@ -129,3 +129,27 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- this registration was not saved"
           exit 1
+      - name: Preserve an unsent confirmation for inspection
+        # `always()`: this file exists exactly when the confirmation this
+        # run composed (task 7) could not be delivered -- unrelated to
+        # whether the registration itself was stored, so it must be kept
+        # even on a failed run above, not skipped because an earlier step
+        # did not succeed.
+        #
+        # This is `config/integrations.yml`'s "an inspectable log" for
+        # `email_transport`, made concrete for the one message here that
+        # carries personal data: `tools/convener_ops/confirmation.py` never
+        # prints an address or a matching code, so there is nothing for
+        # this job's own log to leak in the first place -- what would
+        # otherwise be lost is preserved here instead, as a short-
+        # retention, access-controlled artefact, never as a line in the
+        # log stream itself. `if-no-files-found: ignore` because the
+        # ordinary case -- a confirmation that sent -- leaves no file at
+        # all.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: unsent-confirmation-${{ steps.resolve.outputs.event_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: unsent-confirmation.eml
+          if-no-files-found: ignore
+          retention-days: 14
