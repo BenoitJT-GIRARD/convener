@@ -38,3 +38,9 @@ Thumbs.db
 *.pem
 keys/events/*
 !keys/events/*.pub
+
+# Raw attendance export (tools/convener_ops/platform.py::ManualPlatform). Contains
+# personal data -- display names and addresses off the meeting platform --
+# and is dropped here only for one read, never committed. The event's own
+# config.yml alongside it holds no personal data and is not excluded.
+data/events/*/attendance-import.csv

@@ -34,8 +34,11 @@ integrations:
     secrets:
       - CONVENER_MEETING_API_TOKEN
     absent_behaviour: >-
-      The manual adapter is used: room links are typed by hand and attendance
-      is imported from a file. No room link is published automatically.
+      The manual adapter (tools/convener_ops/platform.py::ManualPlatform) is used:
+      the room link is typed by hand into data/events/<id>/config.yml, and
+      attendance is imported from data/events/<id>/attendance-import.csv, a
+      file that is never committed. No room link is published automatically,
+      and no recording storage is managed on our side.
 
   - name: email_transport
     label: Outbound email
