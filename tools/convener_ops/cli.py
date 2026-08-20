@@ -426,6 +426,21 @@ def _send_confirmation(
     decrypted and stored, and a missing speaker record must not lose it a
     second time. The message that goes out in that case simply has no room
     link, which the print line below says plainly.
+
+    Nothing below this docstring is allowed to raise past this function,
+    caught by one broad `except Exception` around the compose-deliver-write
+    sequence: `handle_registration` calls this only *after* it has already
+    written `registrations.enc` to disk, inside a workflow step run under
+    `set -e`. An exception escaping here would abort that step before its
+    `git add`/`commit`/`push` ever run -- turning a registration that was
+    genuinely decrypted and stored into one silently dropped from the
+    repository entirely, which is a strictly worse failure than "the
+    confirmation could not be composed". A confirmation that failed this
+    way is recoverable by hand (`convener-resend-confirmation`, once whatever
+    broke is fixed); a registration git never saw is not recoverable at
+    all. Every failure this function already anticipates -- no room, no
+    transport, a transport that raises -- is handled above this comment and
+    never reaches the broad catch; it exists for what nobody anticipated.
     """
     root = repo_root()
     speakers, _errors = _load(root / "data" / "speakers.yml")
@@ -445,23 +460,30 @@ def _send_confirmation(
             title="", date="", room=Room(join_url="", instructions="")
         )
 
-    salt = os.environ.get("CONVENER_MATCHING_SALT")
-    code = matching_code(event_id, registration.email, salt)
-    message = confirmation.compose(registration, event, code, changed)
-    result = confirmation.deliver(message, os.environ)
+    try:
+        salt = os.environ.get("CONVENER_MATCHING_SALT")
+        code = matching_code(event_id, registration.email, salt)
+        message = confirmation.compose(registration, event, code, changed)
+        result = confirmation.deliver(message, os.environ)
 
-    if result.sent:
-        print(f"confirmation for event {event_id} sent")
-        return
+        if result.sent:
+            print(f"confirmation for event {event_id} sent")
+            return
 
-    (root / UNSENT_CONFIRMATION).write_text(
-        result.unsent_body or "", encoding="utf-8", newline=""
-    )
-    print(
-        f"confirmation for event {event_id} not sent -- no email transport "
-        f"configured or delivery failed; composed message left in "
-        f"{UNSENT_CONFIRMATION}"
-    )
+        (root / UNSENT_CONFIRMATION).write_text(
+            result.unsent_body or "", encoding="utf-8", newline=""
+        )
+        print(
+            f"confirmation for event {event_id} not sent -- no email "
+            f"transport configured or delivery failed; composed message "
+            f"left in {UNSENT_CONFIRMATION}"
+        )
+    except Exception:  # deliberately broad -- see the docstring above
+        print(
+            f"confirmation for event {event_id} could not be composed or "
+            "sent, for a reason this job did not anticipate; the "
+            "registration itself is already stored"
+        )
 
 
 def resolve_registration_secret() -> int:

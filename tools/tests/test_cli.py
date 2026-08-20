@@ -966,6 +966,41 @@ def test_handle_registration_confirmation_degrades_with_no_speaker_record(
     assert "ada@example.org" in unsent
 
 
+def test_handle_registration_survives_an_unanticipated_confirmation_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The property `_send_confirmation`'s docstring names directly: a
+    registration already decrypted and written to `registrations.enc` must
+    never be lost because composing or sending its confirmation broke in a
+    way this job did not anticipate. Simulated by making `compose` itself
+    raise -- something no branch above the broad `except` already guards
+    against."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    _clear_transport_env(monkeypatch)
+
+    def _broken_compose(*args: object, **kwargs: object) -> object:
+        raise RuntimeError("an unanticipated failure inside compose()")
+
+    monkeypatch.setattr("convener_ops.cli.confirmation.compose", _broken_compose)
+
+    assert handle_registration() == 0
+
+    out = _assert_no_leak(capsys)
+    assert "recorded a registration for event mrg-042 (1 total)" in out
+    assert "could not be composed or sent" in out
+    assert not (tmp_path / UNSENT_CONFIRMATION).exists()
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    file = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    assert len(file.entries) == 1
+
+
 class _RecordingSmtpClient:
     """A fake `smtplib.SMTP`, substituted so `handle_registration` can
     exercise a genuine "sent" outcome without opening a socket."""
