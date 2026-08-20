@@ -41,7 +41,15 @@ integrations:
       account is the permanent room), and attendance is imported from
       data/events/<id>/attendance-import.csv, a file that is never committed.
       No room link is published automatically, and no recording storage is
-      managed on our side.
+      managed on our side. Once set, tools/convener_ops/platform_fcc.py::PlatformFCC
+      is used instead (selected by platform_fcc.py::platform_from_env, D-13):
+      real per-person attendance is read from the provider's own calls
+      endpoint -- undocumented by the vendor, but verified empirically -- and
+      the recording is reported and deleted through its own API instead of
+      being tracked by hand. The value is the current access token itself,
+      not a client id and secret; it expires and must be renewed roughly
+      monthly, a step of the event journey rather than a one-time secret --
+      see docs/reference/operations.md's "Meeting platform" section.
 
   - name: email_transport
     label: Outbound email

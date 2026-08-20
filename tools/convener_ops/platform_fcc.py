@@ -1,0 +1,427 @@
+"""The chosen platform's `Platform` implementation (D-05), beside
+`platform.py`'s `ManualPlatform` rather than instead of it.
+
+This is what `platform.py`'s own module docstring calls "the other" answer
+to the same four operations: `get_room`, `get_attendance`, `get_recording`
+and `delete_recording`. `PlatformFCC` calls the meeting provider's own HTTP
+API instead of reading a file or a hand-typed field. Neither implementation
+inherits from the other, and `Platform` is a structural `Protocol` for
+exactly that reason -- a caller written against "a platform" accepts either
+without knowing which one it was handed.
+
+The endpoint is not documented by the vendor
+---------------------------------------------
+`GET /api/v4/conferences/{id}/calls` returns one row per participant --
+`custom_name`, `email`, `service_types`, `time_created_utc`,
+`time_disconnected_utc`, `audio_duration`, `is_host` -- and it answers.
+Verified against a real token, against a real conference, more than once.
+But it is absent from the provider's own published API reference: the
+reference declares the `Call` object this response matches field for
+field, and a `CallsResponse` wrapper, and neither is attached to any
+documented path. That gap is evidence about the documentation, not about
+the capability -- FCC's own developer page advertises "real-time and
+historical call detail records", and a 401 on an unauthenticated probe of
+any path, real or invented, proves nothing about routing. Still: nothing
+here promises the vendor will keep answering. `ManualPlatform` is not a
+fallback kept around out of caution -- it is D-13's default, is still
+correct on its own terms, and `platform_from_env` below is what lets the
+whole chain keep working through it the day this endpoint stops answering,
+exactly as it does today when no account is configured at all.
+
+The email boundary, inherited rather than re-decided
+----------------------------------------------------
+`service_types == ["toll"]` is a telephone joiner. `email` becomes `None`
+for that row -- never `""` -- for the same reason `platform.py` gives for
+the manual CSV path: a phone joiner has no address to give, the platform
+never collects one, and mapping the empty case to `""` would let two
+telephone joiners collide on the same "address" when matched against a
+registration. `AttendanceRow.email: str | None` is `platform.py`'s type,
+consumed here unchanged.
+
+Two facts this module deliberately does not act on, for the same reason
+`platform.py` does not act on its CSV equivalents
+-------------------------------------------------------------------------
+* **A disconnect-and-rejoin produces several rows.** Verified empirically
+  (conference `618516753`): one person, two rows, the same address, 12
+  seconds then 157 seconds of real audio. This reader returns both --
+  summing them (169 seconds, not either row alone, and not the span between
+  first join and last leave) is `attendance.py`'s job, done once, in the
+  one place that also has to decide what "per person" means. Summing here
+  would make it impossible to do correctly later: once two rows are merged
+  into one, which reconnection contributed which part of the total is gone
+  for good.
+* **Name capitalisation varies between two connections by the same
+  person**, retyped fresh on each join. `custom_name` is returned verbatim
+  as `display_name`. The address is the join key, never the name --
+  normalising the name here would hide from the matching code the very
+  fact it is written to rely on.
+
+The token, and why renewing it is a step of an event's journey, not a
+secret set once
+----------------------------------------------------------------------
+`CONVENER_MEETING_API_TOKEN` (`TOKEN_ENV` below) is the bearer access token
+itself, sent as `Authorization: Bearer <token>` -- not a client id and
+secret this module exchanges for one. Two things follow from how the
+provider's OAuth works, and neither is solved in this module:
+
+1. **The access token expires** (31 days on one grant observed, 14 on
+   another) -- short enough against a monthly series that renewal cannot
+   be "do it once and forget it".
+2. **The refresh token rotates on every use.** Exchanging it for a new
+   access token also issues a new refresh token, and the old one stops
+   working -- so a refresh token cannot simply be stored once as a secret
+   the way an access token is; whatever holds it must be rewritten on
+   every renewal, including by the person renewing, not by an unattended
+   job with write access to repository secrets.
+
+The design this points to -- and what a later task is expected to wire
+into the event journey `phases.ts` already drives, beside a line like
+"Waiting room and co-host rights set up" -- is a **human-in-the-loop
+renewal**, not automation: the refresh token lives in the shared vault,
+never in this repository; a volunteer does a short browser consent step
+roughly monthly, matching the series' own cadence, and pastes the new
+access token into `CONVENER_MEETING_API_TOKEN`; and if nobody has, before the
+token's remaining life runs low, a **notice is posted to the board thread**
+(the same channel `notify.py` already posts through) rather than the
+integration failing silently on the day of a seminar. Skipping the step
+costs a manual attendance import for that one event, through
+`platform_from_env` below -- not a cancelled seminar, and not a security
+incident. None of that renewal or notice logic lives in this module: this
+module only ever *uses* whatever token it is given, the same "receives what
+it needs, does not go looking" rule `platform.py` already follows for
+speaker records and config. See `docs/reference/operations.md`'s "Meeting
+platform" section for the renewal procedure as a reader would follow it.
+
+Which FCC conference is which event -- the one thing this module does
+not attempt
+------------------------------------------------------------------------
+The account is a single permanent room (D-06): every seminar is a fresh
+*conference* under it, each with its own numeric id the provider assigns,
+and nothing in the documented or undocumented API ties one to a
+`data/speakers.yml` record. A partner's working rule -- match a conference
+to an event by its timestamp, sound at one seminar a month -- was floated
+during research, but doing that automatically means listing conferences
+(`GET /conferences`) and trusting a response shape that was never
+empirically verified the way `/calls` was; this module does not build on
+an endpoint nobody has actually read a response from. So `PlatformFCC`
+takes `conference_ids`, an already-resolved `event_id -> FCC conference id`
+mapping, as a constructor parameter -- the same "receives already-loaded
+data, does not read a file or call an endpoint to go find it" rule
+`ManualPlatform` follows for `speakers` and `config`. Populating that
+mapping (by hand today; perhaps by the timestamp rule tomorrow, once it is
+verified) is left to whoever constructs this class.
+
+get_room does not call the API
+-------------------------------
+D-06 again: the provider does not create meetings, so there is no request
+that could return a join link `ManualPlatform.get_room` does not already
+give from the same two sources -- `zoom_link` on the matching speaker
+record, `instructions` from `data/config.yml` (R-4, R-6). `PlatformFCC`
+reads them the same way rather than composing `ManualPlatform`, so that
+constructing a room never has to build the unrelated `events_dir` default
+`ManualPlatform` needs only for `get_attendance`.
+
+get_recording and delete_recording are the raw primitives, not the
+retrieval discipline
+-------------------------------------------------------------------------
+A 90-minute recording is roughly 1,645 MB against the free tier's 1 GB
+quota, so `delete_recording` is a condition of operation rather than an
+optimisation -- confirmed by direct measurement. `get_recording` reports
+what the provider says about the conference's recording (`recording_url`,
+`file_size`, `is_recorded`, `deleted`); `delete_recording` calls
+`DELETE /conferences/{id}`, verified to remove the recording while leaving
+the conference record and every `/calls` row intact. What this module does
+*not* do is decide **when** it is safe to call `delete_recording` -- never
+before the host's own downloaded copy is confirmed to exist, the ordering
+a later task's own step names as non-negotiable. That sequencing is the
+caller's job, exactly as it already is for `ManualPlatform.delete_recording`
+(a documented no-op there, for a different reason: nothing is held on our
+side to reclaim).
+
+No transport is exercised by a test
+-------------------------------------
+`FCCTransport` is the seam: `PlatformFCC` is constructed with one, real
+callers get `_UrllibTransport` (the only place in this module that imports
+`urllib`), and every test in `tools/tests/test_platform_fcc.py` substitutes
+a fake that returns fixture data built to match the fields verified
+empirically. No test opens a socket.
+"""
+
+from __future__ import annotations
+
+import json
+import urllib.error
+import urllib.request
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any, Final, Protocol
+
+from .platform import (
+    AttendanceRow,
+    EventNotFoundError,
+    ManualPlatform,
+    Recording,
+    Room,
+    find_speaker,
+)
+
+#: The secret `config/integrations.yml` declares for `meeting_provider`.
+#: `test_platform_fcc.py::test_token_env_matches_the_declared_integration_secret`
+#: pins the two together, so a rename on one side without the other fails a
+#: test instead of silently drifting.
+TOKEN_ENV: Final = "CONVENER_MEETING_API_TOKEN"
+
+_BASE_URL: Final = "https://www.freeconferencecall.com/api/v4"
+
+
+class FCCRequestError(Exception):
+    """A call to the provider's API did not come back usable: a network
+    failure, a non-2xx status, or a response whose shape this module does
+    not recognise. Named generically rather than "attendance" or
+    "recording" -- `get_attendance`, `get_recording` and `delete_recording`
+    all raise it the same way, because from a caller's point of view "the
+    platform did not answer" needs the same handling regardless of which
+    operation asked. Never silently read as "no data": a caller that wants
+    to fall back to the manual path on this exception has to decide to,
+    the same way `platform_from_env` decides once, up front, from whether a
+    token is configured at all -- see the module docstring."""
+
+
+class FCCTransport(Protocol):
+    """What `PlatformFCC` needs from an HTTP client: one authenticated GET
+    that returns parsed JSON, one authenticated DELETE. The real
+    implementation (`_UrllibTransport`) wraps `urllib.request`; every test
+    substitutes a fake, which is what keeps this whole suite off the
+    network (task 3 brief, step 2)."""
+
+    def get_json(self, path: str, token: str) -> Any: ...
+
+    def delete(self, path: str, token: str) -> None: ...
+
+
+@dataclass(frozen=True)
+class _UrllibTransport:
+    """The only piece of this module that touches the network. Never
+    constructed by a test -- `PlatformFCC`'s `transport` parameter exists
+    so a test never has to."""
+
+    base_url: str = _BASE_URL
+    timeout: float = 15.0
+
+    def _request(self, path: str, token: str, method: str) -> bytes:
+        request = urllib.request.Request(
+            self.base_url + path,
+            method=method,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            },
+        )
+        try:
+            # `base_url` is the module constant above, always https; `path`
+            # is built from an already-validated event id turned into a
+            # provider-assigned conference id (never raw user input), so
+            # this is not the "URL built from unchecked input" bandit's
+            # urlopen check (B310) exists to catch.
+            with urllib.request.urlopen(  # nosec B310
+                request, timeout=self.timeout
+            ) as response:
+                return response.read()  # type: ignore[no-any-return]
+        except urllib.error.HTTPError as exc:
+            raise FCCRequestError(f"{method} {path} returned HTTP {exc.code}") from exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise FCCRequestError(f"{method} {path} failed: {exc}") from exc
+
+    def get_json(self, path: str, token: str) -> Any:
+        body = self._request(path, token, "GET")
+        try:
+            return json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise FCCRequestError(f"GET {path} did not return valid JSON") from exc
+
+    def delete(self, path: str, token: str) -> None:
+        self._request(path, token, "DELETE")
+
+
+def _iso_utc(epoch_seconds: Any) -> str:
+    """`time_created_utc` / `time_disconnected_utc` are exact-second UTC
+    epoch integers (verified empirically). Rendered as the same
+    `YYYY-MM-DDTHH:MM:SSZ` shape `platform.py`'s manual CSV path already
+    uses for `joined_at` / `left_at`, so a caller reading either platform's
+    rows sees one convention, not two."""
+    try:
+        seconds = int(epoch_seconds)
+    except (TypeError, ValueError):
+        seconds = 0
+    stamp = datetime.fromtimestamp(seconds, tz=UTC)
+    return stamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _is_telephone_joiner(call: Mapping[str, Any]) -> bool:
+    """The rule is keyed on `service_types`, exactly `["toll"]" -- not on
+    whatever the `email` field happens to hold, so a payload that sends an
+    empty string instead of `null` for a toll row still gets `None`."""
+    service_types = call.get("service_types")
+    return isinstance(service_types, list) and service_types == ["toll"]
+
+
+def _row_from_call(call: Mapping[str, Any]) -> AttendanceRow:
+    display_name = str(call.get("custom_name", "") or "")
+    if _is_telephone_joiner(call):
+        email = None
+    else:
+        raw_email = call.get("email")
+        email = str(raw_email).strip() or None if raw_email else None
+    try:
+        duration_seconds = int(call.get("audio_duration", 0) or 0)
+    except (TypeError, ValueError):
+        duration_seconds = 0
+    return AttendanceRow(
+        display_name=display_name,
+        email=email,
+        joined_at=_iso_utc(call.get("time_created_utc")),
+        left_at=_iso_utc(call.get("time_disconnected_utc")),
+        duration_seconds=duration_seconds,
+    )
+
+
+def _extract_calls(payload: Any) -> list[Mapping[str, Any]]:
+    """The endpoint is undocumented by the vendor -- everything verified
+    about it came from reading real responses, and every one of them was a
+    bare JSON array (`test_platform_fcc.py`'s fixtures are shaped that
+    way). The `data` key below is a defensive fallback only, never itself
+    verified against the real service -- see the module docstring."""
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, Mapping):
+        wrapped = payload.get("data")
+        if isinstance(wrapped, list):
+            return wrapped
+    raise FCCRequestError(
+        "the calls endpoint returned a shape this module does not recognise"
+    )
+
+
+@dataclass(frozen=True)
+class PlatformFCC:
+    """The chosen platform's implementation of `Platform` (D-05). See the
+    module docstring for the token, the conference-id boundary, and the
+    get_recording / delete_recording split with task 10."""
+
+    #: The bearer access token, already obtained -- this class never
+    #: exchanges credentials or a refresh token for one. See the module
+    #: docstring's token section for why that exchange does not belong
+    #: here.
+    access_token: str
+    #: The loaded contents of `data/speakers.yml`, read the same way
+    #: `ManualPlatform` reads them -- never from a file this class opens
+    #: itself.
+    speakers: Sequence[Mapping[str, Any]] = ()
+    #: The loaded contents of `data/config.yml`, for `instructions` (R-6),
+    #: read the same way `ManualPlatform` reads it.
+    config: Mapping[str, Any] | None = None
+    #: `event_id -> FCC conference id`, already resolved by whoever
+    #: constructs this class. See the module docstring's "which FCC
+    #: conference is which event" section for why this module does not
+    #: resolve it itself.
+    conference_ids: Mapping[str, str] = field(default_factory=dict)
+    #: The HTTP seam. Defaults to the real implementation; every test
+    #: substitutes a fixture-backed fake.
+    transport: FCCTransport = field(default_factory=_UrllibTransport)
+
+    def _conference_id(self, event_id: str) -> str:
+        """Resolves the FCC conference id for `event_id` from
+        `conference_ids` -- the one piece of data `get_attendance`,
+        `get_recording` and `delete_recording` need that does not come from
+        a speaker record (see the module docstring's "which FCC conference
+        is which event" section). Raises `EventNotFoundError` -- the same
+        exception `find_speaker` raises for "no such event" -- naming
+        `event_id`, so a caller sees one exception type for "nothing to
+        answer with for this id" regardless of which `Platform` operation
+        or which implementation asked."""
+        try:
+            return self.conference_ids[event_id]
+        except KeyError:
+            raise EventNotFoundError(
+                f"no FCC conference is recorded for event {event_id!r}"
+            ) from None
+
+    def get_room(self, event_id: str) -> Room:
+        """D-06: the account is the permanent room. Reads the same two
+        sources `ManualPlatform.get_room` reads -- never the API, see the
+        module docstring."""
+        record = find_speaker(self.speakers, event_id)
+        join_url = str(record.get("zoom_link", "") or "")
+        instructions = ""
+        if self.config is not None:
+            instructions = str(self.config.get("instructions", "") or "")
+        return Room(join_url=join_url, instructions=instructions)
+
+    def get_attendance(self, event_id: str) -> list[AttendanceRow]:
+        conference_id = self._conference_id(event_id)
+        payload = self.transport.get_json(
+            f"/conferences/{conference_id}/calls", self.access_token
+        )
+        calls = _extract_calls(payload)
+        return [_row_from_call(call) for call in calls]
+
+    def get_recording(self, event_id: str) -> Recording:
+        conference_id = self._conference_id(event_id)
+        payload = self.transport.get_json(
+            f"/conferences/{conference_id}", self.access_token
+        )
+        if not isinstance(payload, Mapping):
+            raise FCCRequestError(
+                "the conference endpoint returned a shape this module "
+                "does not recognise"
+            )
+        url = str(payload.get("recording_url", "") or "")
+        is_recorded = bool(payload.get("is_recorded", False))
+        deleted = bool(payload.get("deleted", False))
+        available = bool(url) and is_recorded and not deleted
+        size = 0
+        if available:
+            try:
+                size = int(payload.get("file_size", 0) or 0)
+            except (TypeError, ValueError):
+                size = 0
+        return Recording(url=url, size=size, available=available)
+
+    def delete_recording(self, event_id: str) -> None:
+        """Calls `DELETE /conferences/{id}`, verified empirically to
+        remove the recording while leaving the conference record and every
+        `/calls` row intact -- deleting the recording never loses
+        attendance. This is the raw primitive: deciding *when* it is safe
+        to call it (never before the host's own download is confirmed) is
+        the caller's job, not this method's -- see the module docstring."""
+        conference_id = self._conference_id(event_id)
+        self.transport.delete(f"/conferences/{conference_id}", self.access_token)
+
+
+def platform_from_env(
+    env: Mapping[str, str],
+    speakers: Sequence[Mapping[str, Any]] = (),
+    config: Mapping[str, Any] | None = None,
+    conference_ids: Mapping[str, str] | None = None,
+) -> ManualPlatform | PlatformFCC:
+    """D-13, applied in full: an absent `CONVENER_MEETING_API_TOKEN` is the
+    ordinary case, not a degraded one, and the whole chain keeps working
+    through `ManualPlatform` -- the default, not a fallback bolted on.
+    Mirrors `notify.py::resolve_channel`'s shape: given the environment as
+    a plain mapping (never read from `os.environ` itself, so this stays as
+    pure as every other `convener_ops` module bar `cli.py`), decide once, up
+    front, which implementation a caller gets.
+
+    A blank token counts as unset, the same "empty string is not a value"
+    rule `convener_ops.integrations.resolve_states` already applies to every
+    other secret this project reads."""
+    token = (env.get(TOKEN_ENV) or "").strip()
+    if not token:
+        return ManualPlatform(speakers=speakers, config=config)
+    return PlatformFCC(
+        access_token=token,
+        speakers=speakers,
+        config=config,
+        conference_ids=conference_ids or {},
+    )
