@@ -159,7 +159,7 @@ integrations:
       - CONVENER_RETENTION_TOKEN
     absent_is_normal: false
     absent_behaviour: >-
-      Task 15's second exception to D-13, and the strongest one in this
+      Task 15's third exception to D-13, and the strongest one in this
       project. Destroying an event's key means deleting a repository
       secret, which the default GITHUB_TOKEN cannot do no matter what
       permissions: a workflow grants it -- this needs a fine-grained

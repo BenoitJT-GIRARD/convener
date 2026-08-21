@@ -586,14 +586,21 @@ phase 4 spec, §4), remove `CONVENER_EVENT_KEY_<EVENT ID>` from the repository's
 secrets. The encrypted registrations already committed under
 `data/events/<event id>/` stay in git, with no history rewrite, and become
 permanently unreadable the moment the secret is gone — nothing else needs
-to happen to the repository itself. Record the destruction
-(`convener_ops.eventkeys.destroy`) so the register can tell "destroyed on purpose" apart
-from "this event never had a key" two years from now — the two look
+to happen to the repository itself. Record the destruction by running
+`cd tools && DESTROYED_IDS=<event id> DESTROYED_ON=<YYYY-MM-DD> uv run
+convener-record-destructions` so the register can tell "destroyed on purpose"
+apart from "this event never had a key" two years from now — the two look
 identical from the repository alone, and only the register carries the
-difference. This happens automatically now — see *Retention and early
-erasure*, below, for the scheduled workflow that removes the secret and
-records the destruction together; done by hand instead, it is these two
-steps, always together, in that order.
+difference. That same command also removes `keys/events/<event id>.pub`
+once the registry write succeeds, so a destroyed event stops accepting new
+registrations too — do not delete the `.pub` by hand first, or
+`convener-record-destructions`' own guard (it refuses to record a destruction
+for an id whose key was never published) will refuse the very destruction
+it is meant to record. This happens automatically now — see *Retention and
+early erasure*, below, for the scheduled workflow that removes the secret
+and records the destruction together; done by hand instead, it is these
+two steps, always together, in that order: remove the secret, then run
+`convener-record-destructions`.
 
 ## Retention and early erasure
 
@@ -608,11 +615,33 @@ proved by a test (`tools/tests/test_retention.py`,
 90-day windows have elapsed (`convener_ops.eventkeys.is_due_for_destruction`,
 measured against `convener_ops.governance.paris_today` — never a raw clock
 read); deletes each one's `CONVENER_EVENT_KEY_<EVENT ID>` secret (`gh secret
-delete`); and records every destruction it actually carried out in
-`data/event-key-destructions.yml`, the registry `convener_ops.eventkeys.key_status`
-reads to tell "destroyed on purpose" apart from "this event never had a
-key". A day nothing is due is an ordinary, green run that changes
-nothing.
+delete`, converging on the secret being *absent* regardless of that
+command's own exit code — a secret already gone from a previous, partial
+run is success, not failure); and records every destruction it actually
+carried out (`convener-record-destructions`, reading `DESTROYED_IDS` and
+`DESTROYED_ON`) in `data/event-key-destructions.yml`, the registry
+`convener_ops.eventkeys.key_status` reads to tell "destroyed on purpose" apart
+from "this event never had a key". That same step also removes the
+event's `keys/events/<id>.pub` once the registry write succeeds, so a
+destroyed event stops accepting new registrations too — the signup relay
+has no other way to know an event has closed. One event failing to
+delete does not stop the run from still recording and closing every
+other event due the same day; the job still ends red if anything failed.
+A day nothing is due is an ordinary, green run that changes nothing. A
+speaker record this job cannot find, or cannot read a date from, is
+skipped rather than failing the run (one bad record must not block every
+other event's own deadline) but is reported with an `::warning::`
+annotation in the run's own summary, not merely on stderr, precisely so
+that skip does not look identical to a genuinely quiet day.
+
+**GitHub disables `schedule:` triggers in a repository with no activity
+for 60 days.** That is a platform behaviour, not specific to this job,
+but it matters most here: a job whose entire purpose is *not being
+remembered* is exactly the one an operator will not notice has stopped
+running. There is no automated way around this at zero cost; the mitigation
+is procedural — if in doubt, open this workflow's own Actions history and
+check its last run date, and use `workflow_dispatch` to run it by hand,
+the same manual catch-up any other scheduled job in this project uses.
 
 **`CONVENER_RETENTION_TOKEN` — the one credential this whole job depends on,
 and its absence is deliberately not an ordinary D-13 state (R-28).**
@@ -665,7 +694,11 @@ this is provable rather than merely asserted (spec §4).**
 `convener-erase-registration` checks `data/event-key-destructions.yml` first —
 before asking for a private key at all — and, if the event is already on
 record as destroyed, prints the destruction date and exits cleanly: the
-request is already satisfied.
+request is already satisfied. If `EVENT_PRIVATE_KEY` is supplied anyway
+for an event on record as destroyed, this refuses loudly instead: a key
+that still opens `registrations.enc` contradicts the registry, and that
+contradiction must never pass silently in the one command whose whole job
+is to prove there is nothing left.
 
 ## Certificate signing key
 
