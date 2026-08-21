@@ -8,6 +8,9 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -94,6 +97,9 @@ jobs:
 
   typescript:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -118,6 +124,9 @@ jobs:
 
   spelling:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -130,6 +139,9 @@ jobs:
 
   auth-proxy:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -151,6 +163,9 @@ jobs:
 
   form-relay:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -172,6 +187,9 @@ jobs:
 
   signup-relay:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:

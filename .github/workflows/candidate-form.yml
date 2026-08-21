@@ -7,6 +7,10 @@ on:
 jobs:
   handle:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): no job in this repository declared
+    # timeout-minutes before this sweep -- see test_workflows.py's own
+    # test_every_job_declares_a_timeout for the guard this closes.
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:

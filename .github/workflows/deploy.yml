@@ -33,6 +33,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -69,6 +72,18 @@ jobs:
       - name: Build public data
         working-directory: tools
         run: uv run convener-certificates-public-data
+      # R-37 (fix round 1, task 16): the post-event survey's per-event
+      # switch, published as an operational fact rather than baked into
+      # SurveyForm.tsx's own knowledge -- see convener_ops.cli.survey_status_
+      # public_data's own docstring for why this is a second file and a
+      # second step rather than folded into "Build public data" above.
+      # scripts/copy-survey-status.mjs (part of the app's own `npm run
+      # build`, below) is what actually bakes public-data/survey-status.json
+      # into dist/, the same two-step shape copy-certificates.mjs already
+      # uses for certificates.json.
+      - name: Build survey status
+        working-directory: tools
+        run: uv run convener-survey-status-public-data
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
