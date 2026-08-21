@@ -111,6 +111,16 @@ jobs:
             if [ -f "data/events/$EVENT_ID/registrations.enc" ]; then
               git add "data/events/$EVENT_ID/registrations.enc"
             fi
+            # Critical 1: convener-erase-registration also rewrites the
+            # committed attendance export when the erased person has rows
+            # there (R-45, tools/convener_ops/cli.py:1422-1457) -- staging only
+            # the registration file left that rewrite dying with the
+            # runner while the log reported it committed. Guarded the same
+            # way: the file may not exist for an event with no attendance
+            # export yet.
+            if [ -f "data/events/$EVENT_ID/attendance-import.csv.enc" ]; then
+              git add "data/events/$EVENT_ID/attendance-import.csv.enc"
+            fi
             if git diff --staged --quiet; then
               echo "::warning::convener-erase-registration ran but wrote nothing -- see this run's own log above for why"
               exit 0

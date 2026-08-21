@@ -33,6 +33,7 @@ from typing import Any
 import pytest
 
 from convener_ops import certificate, confirmation, platform_fcc, signing, survey_invite
+from convener_ops import cli as cli_module
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
 
@@ -994,6 +995,86 @@ def _env_vars_read(
     return names
 
 
+def _last_path_component(
+    expr: ast.expr, assigned: dict[str, ast.expr], _seen: frozenset[str] = frozenset()
+) -> str | None:
+    """The trailing literal component of a `Path(...) / a / b / c`-style
+    chain -- either a string constant (`"registrations.enc"`) or a
+    module-level constant `cli_module` itself imports by name
+    (`ENCRYPTED_ATTENDANCE_FILENAME`), resolved against the real module
+    rather than retyped. Recurses through `assigned` for a variable built
+    in an earlier statement (`enc_path = root / rel_path`, `rel_path = ...`),
+    the same "follow the assignment, do not hand-type the answer" idiom
+    `_env_vars_read` already uses for environment variables."""
+    if isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Div):
+        return _last_path_component(expr.right, assigned, _seen)
+    if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
+        return expr.value
+    if isinstance(expr, ast.Call):
+        # Path("data") -- the innermost call in a chain; only reachable
+        # when a chain has no `/` component after it, which none of this
+        # module's own path-building does today, but this keeps the walk
+        # from silently returning None for it if that ever changes.
+        if expr.args:
+            return _last_path_component(expr.args[-1], assigned, _seen)
+        return None
+    if isinstance(expr, ast.Name):
+        if hasattr(cli_module, expr.id):
+            value = getattr(cli_module, expr.id)
+            if isinstance(value, str):
+                return value
+        if expr.id in assigned and expr.id not in _seen:
+            return _last_path_component(assigned[expr.id], assigned, _seen | {expr.id})
+    return None
+
+
+def _files_written(path: Path, function_name: str) -> set[str]:
+    """The filename (final path component) of every `<var>.write_text(...)`
+    call inside `function_name`, derived from the assignment that built
+    `<var>` -- not a hand-typed list, which is exactly the shape that let
+    Critical 1 through: a fix that adds a second `write_text` call inside
+    the command changes what this function returns without anyone having
+    to remember to update a second, separate list."""
+    func = _function_node(path, function_name)
+    assigned: dict[str, ast.expr] = {}
+    for node in ast.walk(func):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
+            assigned[node.targets[0].id] = node.value
+
+    written: set[str] = set()
+    for node in ast.walk(func):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "write_text"
+            and isinstance(node.func.value, ast.Name)
+        ):
+            expr = assigned.get(node.func.value.id)
+            if expr is not None:
+                component = _last_path_component(expr, assigned)
+                if component:
+                    written.add(component)
+    return written
+
+
+def _staged_filenames(workflow_path: Path, job: str) -> set[str]:
+    """Every filename `git add "..."` stages anywhere in `job`'s steps,
+    read from the `run:` text rather than hand-copied -- the workflow side
+    of the same derivation `_files_written` makes for the command side."""
+    loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    job_data = loaded["jobs"][job]
+    staged: set[str] = set()
+    for step in job_data["steps"]:
+        run = step.get("run", "")
+        for match in re.finditer(r'git add "([^"]+)"', run):
+            staged.add(Path(match.group(1)).name)
+    return staged
+
+
 def _workflow_step_env_keys(
     workflow_path: Path, job: str, run_contains: str
 ) -> set[str]:
@@ -1801,6 +1882,31 @@ def test_erase_registration_step_carries_every_env_var_the_command_reads() -> No
     assert not missing, (
         f"erase-registration.yml does not forward {missing} to the step "
         "that runs convener-erase-registration, which reads it directly"
+    )
+
+
+def test_erase_registration_workflow_stages_every_file_the_command_writes() -> None:
+    """Critical 1: `convener-erase-registration` rewrites two files when the
+    erased person has attendance rows (R-45, `cli.py:1451-1457`), and
+    `erase-registration.yml` staged only one -- the rewritten attendance
+    export died with the runner while the job's own log claimed it was
+    committed. `_files_written` derives the set from the command's own
+    source rather than a hand-typed list, which is how the gap survived
+    every review of the two halves separately; a future third file this
+    command starts writing needs no matching edit here to stay caught."""
+    written = _files_written(CLI_MODULE_PATH, "erase_registration")
+    assert written == {"registrations.enc", "attendance-import.csv.enc"}, (
+        "the derivation itself found an unexpected set -- either "
+        "erase_registration changed what it writes, or this AST walk no "
+        "longer sees it correctly; investigate before trusting the "
+        "staged-files check below"
+    )
+    staged = _staged_filenames(ERASE_REGISTRATION_WORKFLOW, "erase")
+    missing = written - staged
+    assert not missing, (
+        f"erase-registration.yml does not stage {missing}, which "
+        "convener-erase-registration writes -- that rewrite dies with the "
+        "runner while the job reports it committed"
     )
 
 
