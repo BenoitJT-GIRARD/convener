@@ -128,3 +128,24 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'fragments/roles-host-pair': { file: 'roles.md', anchor: 'two-event-hosts-per-webinar' },
   'fragments/roles-no-ladder': { file: 'roles.md', anchor: 'no-ladder-to-climb' },
 };
+
+/** Files under `docs/` that ship alongside the content above without ever
+ *  being looked up by a content key: the visual kit's templates and finished
+ *  example, reached only through a relative link inside `toolkit/visual-kit.md`
+ *  (and, for the background, `workflow/3-hosting.md` too) rather than through
+ *  `fetchContent`. Kept out of `CONTENT_REGISTRY` itself so that map keeps
+ *  meaning exactly "pages the app renders" -- an SVG run through `substitute`
+ *  by a test sweeping every registry entry would be a category error, not a
+ *  page.
+ *
+ *  This list, together with `CONTENT_REGISTRY`'s own file paths, is the
+ *  *entire* allowlist `scripts/copy-handbook.mjs` publishes into the app's
+ *  built bundle: nothing under `docs/` reaches a reader who is not this
+ *  application unless its path is named on one of these two lists. See that
+ *  script's own comment, and `app/tests/copy-handbook.test.ts`. */
+export const PUBLIC_ASSETS: readonly string[] = [
+  'assets/announcement-template.svg',
+  'assets/flyer-template.svg',
+  'assets/zoom-background.png',
+  'assets/flyer-example.png',
+];
