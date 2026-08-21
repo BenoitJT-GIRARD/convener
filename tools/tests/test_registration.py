@@ -231,17 +231,33 @@ def test_to_registration_returns_none_for_a_plaintext_that_is_not_an_object() ->
 # ------------------------------------------------------------------ #
 # to_registration(): the length cap -- a reputation bound, not a
 # data-quality check (review round 1, Important 5).
+#
+# Important 1 (branch review): every test below built its input as
+# `_MAX_FIELD_LENGTH` characters, or `_MAX_FIELD_LENGTH + 1` -- which
+# passes for whatever value the constant holds, so mutating it from 200 to
+# 5000 survived the entire suite. Written against the literal `200` now,
+# the same way `test_survey.py`'s own boundary cases are written against
+# the literal `2000`, not `_MAX_FEEDBACK_LENGTH`: a mutated constant no
+# longer agrees with the literal, and the boundary these tests exist to
+# check moves out from under them.
 # ------------------------------------------------------------------ #
+
+
+def test_max_field_length_is_two_hundred() -> None:
+    """Pins the constant itself to the value every test below assumes --
+    if this ever changes on purpose, every literal `200` below has to
+    change with it, not silently keep passing against a stale number."""
+    assert _MAX_FIELD_LENGTH == 200
 
 
 def test_to_registration_accepts_a_field_at_exactly_the_cap() -> None:
     private_pem, public_pem = eventkeys.generate()
-    ciphertext = _envelope(public_pem, first_name="A" * _MAX_FIELD_LENGTH)
+    ciphertext = _envelope(public_pem, first_name="A" * 200)
 
     registration = to_registration(ciphertext, private_pem)
 
     assert registration is not None
-    assert registration.first_name == "A" * _MAX_FIELD_LENGTH
+    assert registration.first_name == "A" * 200
 
 
 @pytest.mark.parametrize("field", ["first_name", "surname", "email", "institution"])
@@ -253,13 +269,13 @@ def test_to_registration_returns_none_for_a_field_one_over_the_cap(
     would still deliver a stranger's text through the organisation's own
     mailbox, only a little shorter."""
     private_pem, public_pem = eventkeys.generate()
-    overrides: dict[str, Any] = {field: "A" * (_MAX_FIELD_LENGTH + 1)}
+    overrides: dict[str, Any] = {field: "A" * 201}
     if field == "email":
         # A field one over the cap that is still shaped like an address --
         # the cap must fire on length alone, not ride along on the "@"
         # check catching it for an unrelated reason.
-        overrides["email"] = ("a" * (_MAX_FIELD_LENGTH - 11)) + "@example.org"
-        assert len(overrides["email"]) == _MAX_FIELD_LENGTH + 1
+        overrides["email"] = ("a" * 189) + "@example.org"
+        assert len(overrides["email"]) == 201
     ciphertext = _envelope(public_pem, **overrides)
 
     assert to_registration(ciphertext, private_pem) is None

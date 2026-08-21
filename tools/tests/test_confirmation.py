@@ -634,6 +634,25 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     assert code == docs == signup == eventkeys == "90"
 
 
+def test_signup_form_max_field_length_matches_the_python_constant() -> None:
+    """Important 1 (branch review): `registration._MAX_FIELD_LENGTH`
+    mutated from 200 to 5000 survived every Python test, and `SignupForm.tsx`
+    had no `maxLength` counterpart at all -- a 201-character field was
+    accepted by the browser and the relay, shown as sent, and only then
+    dropped by `to_registration` as "could not be read". Bound here the
+    same D-14 way `test_the_contact_email_matches_the_signup_pages_own_
+    notice` already binds `CONTACT_EMAIL`, across the identical language
+    boundary: a hand-typed `200` on each side that could drift apart
+    exactly the way `SurveyForm.tsx`'s own `MAX_FEEDBACK_LENGTH` still
+    can, unbound, from `survey._MAX_FEEDBACK_LENGTH`."""
+    from convener_ops.registration import _MAX_FIELD_LENGTH
+
+    source = _SIGNUP_FORM.read_text(encoding="utf-8")
+    match = re.search(r"MAX_FIELD_LENGTH = (\d+)", source)
+    assert match is not None, "SignupForm.tsx no longer declares MAX_FIELD_LENGTH"
+    assert int(match.group(1)) == _MAX_FIELD_LENGTH
+
+
 # ------------------------------------------------------------------ #
 # Critical 2 (branch review): this page's own pinned claim -- "the room
 # is a permanent account, its link is not otherwise published" -- is only

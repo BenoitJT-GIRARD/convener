@@ -25,6 +25,19 @@ function relayUrl(): string | undefined {
 
 const CONTACT_EMAIL = 'reading-group@example.test';
 
+// Mirrors `tools/convener_ops/registration.py::_MAX_FIELD_LENGTH` (Important 1,
+// branch review). Bound here too, not only server-side: before this, a
+// 201-character field was accepted by this form and by the relay,
+// encrypted, shown as sent, and only then dropped by `to_registration` as
+// "could not be read" -- `convener-handle-registration` exits non-zero, no
+// registration is stored, and no confirmation is sent, with nothing on
+// this page ever telling the participant.
+// `test_confirmation.py::test_signup_form_max_field_length_matches_the_
+// python_constant` binds this number against the Python constant (D-14),
+// so the two cannot drift apart the way `SurveyForm.tsx`'s own
+// `MAX_FEEDBACK_LENGTH` still can.
+const MAX_FIELD_LENGTH = 200;
+
 type KeyState =
   | { status: 'loading' }
   | { status: 'ready'; publicKeyPem: string }
@@ -319,6 +332,7 @@ export function SignupForm() {
                   value={firstName}
                   onChange={e => setFirstName(e.target.value)}
                   required
+                  maxLength={MAX_FIELD_LENGTH}
                   className="w-full px-3 py-2 text-sm mt-1"
                   autoComplete="given-name"
                 />
@@ -332,6 +346,7 @@ export function SignupForm() {
                   value={surname}
                   onChange={e => setSurname(e.target.value)}
                   required
+                  maxLength={MAX_FIELD_LENGTH}
                   className="w-full px-3 py-2 text-sm mt-1"
                   autoComplete="family-name"
                 />
@@ -347,6 +362,7 @@ export function SignupForm() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                maxLength={MAX_FIELD_LENGTH}
                 className="w-full px-3 py-2 text-sm mt-1"
                 autoComplete="email"
               />
@@ -360,6 +376,7 @@ export function SignupForm() {
                 type="text"
                 value={institution}
                 onChange={e => setInstitution(e.target.value)}
+                maxLength={MAX_FIELD_LENGTH}
                 className="w-full px-3 py-2 text-sm mt-1"
                 autoComplete="organization"
               />

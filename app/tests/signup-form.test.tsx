@@ -228,6 +228,26 @@ describe('SignupForm -- what it collects, and nothing else', () => {
     expect(optIn).not.toBeChecked();
   });
 
+  it('caps every text field at the same length the relay and the handler enforce (Important 1, branch review)', async () => {
+    // Before this, a 201-character field was accepted here, encrypted,
+    // shown as sent, and only then dropped by `to_registration` as
+    // "could not be read" -- nothing on this page ever told the
+    // participant. `test_confirmation.py::test_signup_form_max_field_
+    // length_matches_the_python_constant` binds the number itself
+    // against `registration._MAX_FIELD_LENGTH`.
+    stubKeyFetchOk();
+    renderSignup();
+
+    const firstName = await screen.findByLabelText(/first name/i);
+    const surname = screen.getByLabelText(/surname/i);
+    const email = screen.getByLabelText(/email address/i);
+    const institution = screen.getByLabelText(/institution/i);
+
+    for (const field of [firstName, surname, email, institution]) {
+      expect(field).toHaveAttribute('maxLength', '200');
+    }
+  });
+
   it('fetches the event public key from the event-scoped, same-origin path', async () => {
     stubKeyFetchOk();
 
