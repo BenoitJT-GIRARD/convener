@@ -1968,8 +1968,63 @@ def test_erase_registration_workflow_is_dispatchable_by_hand() -> None:
 def test_retention_workflow_job_has_write_permission_and_a_timeout() -> None:
     loaded = safe_load((ROOT / RETENTION_WORKFLOW).read_text(encoding="utf-8"))
     job = loaded["jobs"]["retention"]
-    assert job.get("permissions") == {"contents": "write"}
+    # Important 2, branch review: `actions: write` joined `contents:
+    # write` -- the same pairing the three certificate workflows and
+    # sweep.yml already carry, for the identical recursion-guard reason.
+    assert job.get("permissions") == {"contents": "write", "actions": "write"}
     assert isinstance(job.get("timeout-minutes"), int)
+
+
+def test_retention_workflow_dispatches_both_publish_targets_after_a_real_push() -> None:
+    """Important 2, branch review: `record_destructions` deletes a
+    destroyed event's `keys/events/<id>.pub` and this job pushes that
+    deletion with `GITHUB_TOKEN`, the recursion guard `publish-vitrine.
+    yml`'s own header comment names. Without a direct dispatch, nothing
+    ever reruns `copy-event-keys.mjs`, so the deployed app bundle keeps
+    serving a destroyed event's public key -- the signup relay's own
+    "this event is open" gate -- until an unrelated push to `main`
+    happens to rebuild it. Same shape as `test_workflow_that_writes_the_
+    certificate_register_dispatches_both_publish_targets`: both dispatch
+    names must sit in the same pushed guard, and neither in the
+    nothing-changed one."""
+    script = _job_step_script(
+        RETENTION_WORKFLOW, "retention", "convener-record-destructions"
+    )
+
+    pushed = _guarded_block(script, "if git push; then")
+    assert PUBLISH_VITRINE_DISPATCH in pushed, (
+        "retention.yml changes keys/events and the destruction registry "
+        "and pushes it, but does not dispatch publish-vitrine.yml"
+    )
+    assert DEPLOY_DISPATCH in pushed, (
+        "retention.yml changes keys/events and the destruction registry "
+        "and pushes it, but does not dispatch deploy.yml -- a destroyed "
+        "event's public key would keep being served from the deployed "
+        "app bundle (Important 2)"
+    )
+
+    unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
+    assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
+        "retention.yml dispatches publish-vitrine.yml even when nothing "
+        "changed this run"
+    )
+    assert DEPLOY_DISPATCH not in unchanged, (
+        "retention.yml dispatches deploy.yml even when nothing changed this run"
+    )
+
+
+def test_retention_workflow_dispatch_step_authenticates_with_the_job_token() -> None:
+    """`gh workflow run` needs `GH_TOKEN` (or `GITHUB_TOKEN`) in its own
+    environment to authenticate at all -- the same check
+    `test_certificate_workflow_dispatch_step_authenticates_with_the_job_
+    token` already makes for the three certificate workflows."""
+    carried = _workflow_step_env_keys(
+        RETENTION_WORKFLOW, "retention", "convener-record-destructions"
+    )
+    assert "GH_TOKEN" in carried, (
+        "retention.yml calls gh workflow run without GH_TOKEN in its own "
+        "env -- the dispatch call would fail to authenticate"
+    )
 
 
 def test_erase_registration_workflow_job_has_write_permission_and_a_timeout() -> None:

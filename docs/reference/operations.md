@@ -669,7 +669,16 @@ carried out (`convener-record-destructions`, reading `DESTROYED_IDS` and
 from "this event never had a key". That same step also removes the
 event's `keys/events/<id>.pub` once the registry write succeeds, so a
 destroyed event stops accepting new registrations too — the signup relay
-has no other way to know an event has closed. One event failing to
+has no other way to know an event has closed. Once that commit actually
+pushes, the same step dispatches `deploy.yml` (Important 2, branch
+review): the commit itself lands with `GITHUB_TOKEN`, which never starts
+a new workflow run on its own, so without this the deployed app bundle —
+built from `copy-event-keys.mjs`'s own copy of `keys/events/` — would
+keep serving a destroyed event's public key until some unrelated push to
+`main` happened to rebuild it, the same suppression trap the certificate
+workflows already dispatch around. `publish-vitrine.yml` is dispatched
+alongside it for consistency with those workflows, though it watches
+neither path this job changes and runs as a no-op. One event failing to
 delete does not stop the run from still recording and closing every
 other event due the same day; the job still ends red if anything failed.
 A day nothing is due is an ordinary, green run that changes nothing. A

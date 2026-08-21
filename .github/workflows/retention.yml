@@ -45,6 +45,19 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      # Important 2, branch review: this job's own commit below (deleting
+      # a destroyed event's `keys/events/<id>.pub` among it) pushes with
+      # `GITHUB_TOKEN`, the recursion guard `publish-vitrine.yml`'s own
+      # header comment names -- GitHub does not start a new workflow run
+      # from a push made with that token. Without a direct dispatch,
+      # nothing ever rebuilds the app bundle `copy-event-keys.mjs`
+      # populates from `keys/events/`, so the deployed bundle keeps
+      # serving a destroyed event's public key until an unrelated push to
+      # `main` happens to rebuild it -- the exact suppression trap the
+      # three certificate workflows and sweep.yml already dispatch around.
+      # `actions: write` is what lets this job trigger that dispatch
+      # itself, the same as those four.
+      actions: write
     env:
       TARGET_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
@@ -151,6 +164,10 @@ jobs:
         env:
           DESTROYED_IDS: ${{ steps.delete.outputs.recorded_ids }}
           DESTROYED_ON: ${{ steps.sweep.outputs.destroyed_on }}
+          # Important 2, branch review: authenticates the `gh workflow run`
+          # dispatches below -- the same addition the three certificate
+          # workflows already carry, for the identical reason.
+          GH_TOKEN: ${{ github.token }}
         # `convener-record-destructions` re-run inside the retry loop, the same
         # shape registration.yml's own handling step already uses: a
         # rejected push resets the working tree back to origin, so
@@ -181,6 +198,24 @@ jobs:
             fi
             git commit -m "data: record the destruction of an event registration key"
             if git push; then
+              # Important 2, branch review: publish-vitrine.yml watches
+              # data/speakers.yml and data/events/*/certificates.yml, not
+              # keys/ or the destruction registry, so this dispatch finds
+              # nothing changed and exits as a no-op -- dispatched anyway,
+              # the same way the three certificate workflows dispatch it
+              # unconditionally, so this workflow's own trigger shape
+              # never has to be reasoned about specially.
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              # The dispatch that actually matters: deploy.yml's own build
+              # runs copy-event-keys.mjs, which is the only thing that
+              # ever removes a destroyed event's keys/events/<id>.pub from
+              # the deployed app bundle. Without this, the signup page for
+              # a destroyed event keeps accepting registrations that
+              # encrypt under a key nothing can ever decrypt again, until
+              # some unrelated push to main happens to rebuild.
+              gh workflow run deploy.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger deploy.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
             echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
