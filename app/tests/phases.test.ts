@@ -172,6 +172,7 @@ describe('the journey the volunteers actually keep', () => {
   it('runs the wrap-up in the order the work happens', () => {
     const phase = phaseOf('delivered')!;
     expect(phaseItems(phase, config()).map(i => i.key)).toEqual([
+      'delivered/attendance-export-encrypted',
       'delivered/recording-retrieved',
       'delivered/registrations',
       'delivered/live-peak',

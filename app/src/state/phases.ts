@@ -327,6 +327,27 @@ export const PHASES: PhaseDef[] = [
     label: 'Delivered — wrap-up',
     items: [
       {
+        // Task 17 fix round 1 (Important 2): the one manual step task 17
+        // itself created had no journey item and no handbook line, though
+        // every other new certification step is either automated or
+        // visible from the Actions tab -- download the attendance export
+        // off the meeting platform, run convener-encrypt-attendance-export
+        // locally, commit the result. It gates everything downstream:
+        // issuing certificates re-reads this file. Shown for every event,
+        // not only ones on the manual implementation -- the app has no
+        // field recording which meeting platform an event uses
+        // (CONVENER_MEETING_API_TOKEN is a CI secret, never data on the
+        // speaker record), so there is nothing here to condition on; an
+        // event with a meeting-platform account simply finds this tick
+        // easy (there is nothing to do) rather than the line being
+        // absent. See docs/reference/operations.md's own "Encrypting the
+        // manual attendance export" section for the procedure this line
+        // stands for.
+        key: 'delivered/attendance-export-encrypted',
+        form: 'checkbox',
+        label: 'Attendance export encrypted and committed (manual implementation only)',
+      },
+      {
         // Phase 4, task 10/17. The key -- 'delivered/recording-retrieved',
         // not renamed here -- is `tools/convener_ops/platform_fcc.py::RETRIEVED_TICK`,
         // read by `convener-release-recording` before it will let the meeting
@@ -338,10 +359,11 @@ export const PHASES: PhaseDef[] = [
         // here would mean a host ticks a box the release job never reads,
         // or one it reads under a name this journey never shows.
         //
-        // First in this phase because it is the first thing that happens
-        // once the session ends, well before the wrap-up fields below are
-        // usually filled in -- but it is a claim, not a fact the app can
-        // verify: only the host's own download makes it true.
+        // Near the front of this phase because it is one of the first
+        // things that happens once the session ends, well before the
+        // wrap-up fields below are usually filled in -- but it is a
+        // claim, not a fact the app can verify: only the host's own
+        // download makes it true.
         key: 'delivered/recording-retrieved',
         form: 'checkbox',
         label: 'Recording retrieved and archived somewhere durable',
