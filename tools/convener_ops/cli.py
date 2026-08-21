@@ -13,7 +13,7 @@ import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 from typing import Any, Final
 
@@ -45,7 +45,7 @@ from convener_ops.certificate import (
     revoke,
     sign_for,
 )
-from convener_ops.governance import paris_today
+from convener_ops.governance import PARIS, paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
@@ -908,9 +908,18 @@ def retention_sweep() -> int:
             try:
                 speaker_record = find_speaker(speaker_list, event_id)
             except EventNotFoundError:
+                # ::warning:: (Important 1): a skip nobody sees is exactly
+                # the failure R-28 exists to prevent -- this function's own
+                # docstring argues a retention job that exits green having
+                # destroyed nothing must never look, from the Actions tab,
+                # like a job that genuinely had nothing to do; a plain
+                # stderr line on an otherwise-green run is that same
+                # confusion, for the far more likely cause (an
+                # `edition_code` cleared, a speaker record deleted, a
+                # mismatched `.pub` filename), not just a missing PAT.
                 print(
-                    f"no speaker record for event {event_id} -- its "
-                    "retention deadline cannot be determined; skipped "
+                    f"::warning::no speaker record for event {event_id} -- "
+                    "its retention deadline cannot be determined; skipped "
                     "this run",
                     file=sys.stderr,
                 )
@@ -921,7 +930,7 @@ def retention_sweep() -> int:
                 )
             except ValueError:
                 print(
-                    f"event {event_id} has no usable date -- its "
+                    f"::warning::event {event_id} has no usable date -- its "
                     "retention deadline cannot be determined; skipped "
                     "this run",
                     file=sys.stderr,
@@ -950,24 +959,50 @@ def retention_sweep() -> int:
 def record_destructions() -> int:
     """`convener-record-destructions`: write `data/event-key-destructions.yml`
     with every id in `DESTROYED_IDS` (comma-joined, `retention_sweep`'s
-    own `$GITHUB_OUTPUT`) recorded as destroyed on `DESTROYED_ON` (that
-    same step's own output -- an ISO date; every event one sweep finds due
-    shares one Paris day) -- factored out of `retention_sweep` itself so
-    `retention.yml`'s commit-and-push retry loop can re-run *this* step
-    alone after a rejected push resets the working tree, without ever
-    repeating `gh secret delete` for a secret an earlier attempt already
-    removed. Pure with respect to the outside world in the sense that
-    matters here: it never calls the GitHub API, and calling it twice for
-    the same ids -- on the same day or a later one, as a genuine retry
-    would -- writes the identical file, by the same rule
-    `eventkeys.destroy` itself follows (see its own docstring): an id
-    already in the registry keeps its existing date (`dict.setdefault`),
-    never overwritten by whatever day the retry happens to run on. This
-    does not call `eventkeys.destroy` itself -- there is no
-    `key_was_published` to check here, since every id in `DESTROYED_IDS`
-    already named a published key by the time `retention_sweep` put it
-    there -- but it reproduces the one guarantee that matters from this
-    step's own vantage point.
+    own `$GITHUB_OUTPUT`, or a hand-run operator recovering from a wedged
+    sweep -- see `docs/reference/operations.md`, 'Retention and early
+    erasure') recorded as destroyed on `DESTROYED_ON` (an ISO date; every
+    event one sweep finds due shares one Paris day) -- factored out of
+    `retention_sweep` itself so `retention.yml`'s commit-and-push retry
+    loop can re-run *this* step alone after a rejected push resets the
+    working tree, without ever repeating `gh secret delete` for a secret
+    an earlier attempt already removed. Calling it twice for the same ids
+    -- on the same day or a later one, as a genuine retry would -- writes
+    the identical file: an id already in the registry keeps its existing
+    date, never overwritten by whatever day the retry happens to run on
+    (`eventkeys.destroy`'s own idempotence).
+
+    **Calls `eventkeys.destroy`, not a bare `dict.setdefault` (R-35,
+    Important 3 and Minor 6).** Every id `retention_sweep` itself ever
+    produces already names a published key by construction, but this
+    function is also `convener-record-destructions`, a console script an
+    operator can and does run by hand after a wedged sweep -- reading a
+    plain `DESTROYED_IDS` environment variable with no such guarantee.
+    `destroy`'s own `key_was_published` guard
+    (`public_key_path(event_id).exists()`) is exactly the missing
+    validation: it refuses a typo'd or never-published id instead of
+    writing a registry entry every reader then refuses. Its `ValueError`
+    -- also raised for an id that is not even a legal token, the same
+    `_validate_event_id` every other write path already goes through --
+    is caught here and turned into an ordinary exit 1.
+
+    **Only after every id above is durably written does this delete the
+    published `.pub` (R-35, Important 2).** `keys/events/<id>.pub` is the
+    signup relay's only "this event is open" gate
+    (`services/signup-relay/src/index.js`); leaving it published after
+    destruction lets a destroyed event keep accepting registrations that
+    can never be decrypted or erased again. The order is load-bearing, not
+    incidental: deleting the `.pub` *before* calling `destroy` would make
+    its `key_was_published` guard see a key that looks never-published and
+    refuse the destruction -- on every retry, forever, for exactly the ids
+    this step exists to record. Deleting it *after* the registry write
+    succeeds means a retry (the `.pub` already gone, the registry entry
+    already there) takes the idempotent `destroy` branch and never
+    consults `key_was_published` again -- safe either way, but the
+    ordering below does not rely on that, it is correct on its own terms.
+    `missing_ok=True` because an operator recovering by hand may be
+    re-running this against a `.pub` an earlier, partial attempt already
+    removed.
 
     A missing or malformed `DESTROYED_ON`, or a `data/event-key-
     destructions.yml` that failed to parse, is reported and the run exits
@@ -1001,8 +1036,23 @@ def record_destructions() -> int:
         print(registry_error, file=sys.stderr)
         return 1
 
+    # `destroy` is pure and wants a `datetime`, not the `date` this step
+    # was handed; round-tripping through midnight Paris time gives back
+    # exactly `destroyed_on` when `destroy` computes `paris_today` from it
+    # for an id not already on record.
+    now = datetime.combine(destroyed_on, time(), tzinfo=PARIS)
     for event_id in ids:
-        registry.setdefault(event_id, destroyed_on)
+        try:
+            key_was_published = eventkeys.public_key_path(event_id).exists()
+            record = eventkeys.destroy(
+                event_id, now, key_was_published=key_was_published, registry=registry
+            )
+        except ValueError as exc:
+            print(
+                f"cannot record the destruction of {event_id!r}: {exc}", file=sys.stderr
+            )
+            return 1
+        registry[event_id] = record.destroyed_on
 
     registry_path = eventkeys.destructions_path(root)
     registry_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1011,6 +1061,12 @@ def record_destructions() -> int:
         encoding="utf-8",
         newline="",
     )
+
+    # See the docstring above: this comes last, deliberately, after the
+    # registry write has already succeeded for every id.
+    for event_id in ids:
+        eventkeys.public_key_path(event_id).unlink(missing_ok=True)
+
     print(f"recorded {len(ids)} destruction(s): {', '.join(ids)}")
     return 0
 

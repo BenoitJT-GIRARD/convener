@@ -22,7 +22,11 @@ Two things are asserted instead of the two things the brief names:
 from __future__ import annotations
 
 import ast
+import os
 import re
+import shutil
+import stat
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import Any
 
@@ -1450,3 +1454,165 @@ def test_retention_workflow_has_its_own_concurrency_group() -> None:
     assert isinstance(concurrency, dict)
     assert concurrency.get("group") == "retention-sweep"
     assert concurrency.get("cancel-in-progress") is False
+# ------------------------------------------------------------------ #
+# R-34: the "Delete the destroyed event keys" step, executed for real
+# under a stubbed `gh` on PATH -- the constraint that no test may touch
+# the network, applied to shell rather than Python. The critical defect
+# this reproduces (a `break` that abandons a healthy later event, and a
+# failed `gh secret delete` on an already-absent secret wedging the sweep
+# forever) lives entirely in this shell script; a text-only assertion on
+# the YAML would not exercise it.
+# ------------------------------------------------------------------ #
+
+#: A stand-in for the real `gh` CLI, covering only the two subcommands
+#: this step calls. `GH_STUB_STORE` is a newline-separated file of
+#: currently-present secret names -- `secret delete` removes a present
+#: name and exits 0, or exits 1 leaving the store untouched (a missing
+#: name is never present to begin with, reproducing "deleting an
+#: already-deleted secret is an error"). `secret list --json name --jq
+#: '.[].name'` prints the store's current contents, one per line, exactly
+#: the shape the real step's own `grep -qx` expects. `GH_STUB_ALWAYS_FAIL`
+#: (comma-joined names) forces `secret delete` to fail *and* leaves the
+#: name in the store -- the genuine failure this stub can otherwise not
+#: produce, since an ordinary present name always deletes cleanly.
+_GH_STUB = """#!/usr/bin/env bash
+set -e
+store="$GH_STUB_STORE"
+fail_list=",${GH_STUB_ALWAYS_FAIL:-},"
+if [ "$1" = "secret" ] && [ "$2" = "delete" ]; then
+  name="$3"
+  if [ "$fail_list" != ",," ] && printf '%s' "$fail_list" | grep -qF ",$name,"; then
+    exit 1
+  fi
+  if [ -f "$store" ] && grep -qxF "$name" "$store"; then
+    grep -vxF "$name" "$store" > "$store.tmp" || true
+    mv "$store.tmp" "$store"
+    exit 0
+  fi
+  exit 1
+elif [ "$1" = "secret" ] && [ "$2" = "list" ]; then
+  [ -f "$store" ] && cat "$store"
+  exit 0
+fi
+exit 1
+"""
+
+
+def _delete_step_script() -> str:
+    loaded = safe_load((ROOT / RETENTION_WORKFLOW).read_text(encoding="utf-8"))
+    for step in loaded["jobs"]["retention"]["steps"]:
+        if step.get("id") == "delete":
+            run = step["run"]
+            assert isinstance(run, str)
+            return run
+    raise AssertionError("no step with id 'delete' in retention.yml::retention")
+
+
+def _run_delete_step(
+    tmp_path: Path,
+    *,
+    present_secrets: list[str],
+    destroyed_ids: str,
+    destroyed_secrets: str,
+    always_fail: list[str] | None = None,
+) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh_stub = bin_dir / "gh"
+    gh_stub.write_text(_GH_STUB, encoding="utf-8", newline="\n")
+    gh_stub.chmod(gh_stub.stat().st_mode | stat.S_IEXEC)
+
+    store = tmp_path / "store"
+    store.write_text("".join(f"{name}\n" for name in present_secrets), encoding="utf-8")
+    output_file = tmp_path / "gh_output"
+    output_file.write_text("", encoding="utf-8")
+
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+        "GH_STUB_STORE": str(store),
+        "GH_STUB_ALWAYS_FAIL": ",".join(always_fail or []),
+        "GH_TOKEN": "stub-token",
+        "GITHUB_REPOSITORY": "example/example-showcase",
+        "DESTROYED_IDS": destroyed_ids,
+        "DESTROYED_SECRETS": destroyed_secrets,
+        "GITHUB_OUTPUT": str(output_file),
+    }
+    assert _BASH_PATH is not None
+    result = subprocess.run(  # nosec B603
+        [_BASH_PATH, "-e", "-o", "pipefail", "-c", _delete_step_script()],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=30,
+    )
+    outputs: dict[str, str] = {}
+    for line in output_file.read_text(encoding="utf-8").splitlines():
+        if "=" in line:
+            key, _, value = line.partition("=")
+            outputs[key] = value
+    return result, outputs
+
+
+#: The full path, not the bare name: on Windows, a plain `["bash", ...]`
+#: argv lets `CreateProcess` search the Windows system directory before
+#: `PATH`, which can resolve to `System32\bash.exe` -- a WSL launcher that
+#: is not the same interpreter these tests need and fails outright with
+#: no WSL distribution installed. Resolving through `PATH` ourselves and
+#: passing the full path sidesteps that search order entirely.
+_BASH_PATH = shutil.which("bash")
+_BASH_MISSING = _BASH_PATH is None
+
+
+@pytest.mark.skipif(_BASH_MISSING, reason="bash is not on PATH")
+def test_delete_step_deletes_every_secret_on_an_ordinary_run(tmp_path: Path) -> None:
+    result, outputs = _run_delete_step(
+        tmp_path,
+        present_secrets=["CONVENER_EVENT_KEY_MRG_042", "CONVENER_EVENT_KEY_MRG_050"],
+        destroyed_ids="mrg-042,mrg-050",
+        destroyed_secrets="CONVENER_EVENT_KEY_MRG_042,CONVENER_EVENT_KEY_MRG_050",
+    )
+    assert result.returncode == 0, result.stderr
+    assert outputs["recorded_ids"] == "mrg-042,mrg-050"
+
+
+@pytest.mark.skipif(_BASH_MISSING, reason="bash is not on PATH")
+def test_delete_step_records_a_secret_that_was_already_absent(tmp_path: Path) -> None:
+    """Critical 1's own reproduction, the direction report concern 3 and
+    `retention.yml`'s comment assumed: `gh secret delete` on a secret that
+    is not there returns non-zero. The fix must converge on this anyway --
+    `gh secret list` confirms the secret is absent, which is what the
+    registry exists to record, regardless of the delete call's own exit
+    code. A mutant that trusts the exit code instead fails this: it would
+    leave `recorded_ids` empty and the step would exit 1."""
+    result, outputs = _run_delete_step(
+        tmp_path,
+        present_secrets=[],  # already gone -- e.g. a retry after Critical 1
+        destroyed_ids="mrg-042",
+        destroyed_secrets="CONVENER_EVENT_KEY_MRG_042",
+    )
+    assert result.returncode == 0, result.stderr
+    assert outputs["recorded_ids"] == "mrg-042"
+
+
+@pytest.mark.skipif(_BASH_MISSING, reason="bash is not on PATH")
+def test_delete_step_does_not_abandon_a_later_event_after_an_earlier_failure(
+    tmp_path: Path,
+) -> None:
+    """Critical 1's other half: a `break` on the first failure abandoned
+    every later, healthy event in the same batch. `mrg-042` fails for real
+    here (`GH_STUB_ALWAYS_FAIL` -- delete fails and the secret stays
+    present, the one failure this stub can produce that `gh secret list`
+    does not paper over); `mrg-050` is perfectly healthy and must still be
+    deleted and recorded. A `break` mutant fails this: `recorded_ids`
+    would be empty and `mrg-050` would never even be attempted."""
+    result, outputs = _run_delete_step(
+        tmp_path,
+        present_secrets=["CONVENER_EVENT_KEY_MRG_042", "CONVENER_EVENT_KEY_MRG_050"],
+        destroyed_ids="mrg-042,mrg-050",
+        destroyed_secrets="CONVENER_EVENT_KEY_MRG_042,CONVENER_EVENT_KEY_MRG_050",
+        always_fail=["CONVENER_EVENT_KEY_MRG_042"],
+    )
+    assert result.returncode == 1
+    assert outputs["recorded_ids"] == "mrg-050"
+    assert "CONVENER_EVENT_KEY_MRG_042" in result.stdout + result.stderr

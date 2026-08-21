@@ -68,17 +68,31 @@ jobs:
           DESTROYED_IDS: ${{ steps.sweep.outputs.destroyed_ids }}
           DESTROYED_SECRETS: ${{ steps.sweep.outputs.destroyed_secrets }}
         # Deliberately not inside the commit-and-push retry loop below:
-        # deleting an already-deleted secret is an error, not a no-op, so
-        # each secret is deleted at most once. `destroyed_ids` and
-        # `destroyed_secrets` are parallel, same-order lists (both built
-        # from the same `due` list in cli.py::retention_sweep), so this
-        # tracks which events actually had their secret removed
-        # (`recorded_ids`) and hands only that subset to the recording
-        # step below -- which runs on `if: always()`, so a failure partway
-        # through a multi-event batch still gets every secret that *did*
-        # come off recorded. The registry must never claim a destruction
-        # that did not happen (R-30); it also must never fail to record
-        # one that did.
+        # deleting an already-deleted secret with `gh secret delete`
+        # cannot be relied on to behave one particular way (R-34 -- two
+        # earlier drafts of this diff assumed opposite exit codes for
+        # that case, and nobody could settle which without a live call,
+        # which this suite must never make), so this step does not trust
+        # `gh secret delete`'s own exit code at all. It attempts the
+        # delete, then asks the one question that actually matters --
+        # `gh secret list`, is the secret *absent* now -- and treats
+        # absence as success however the delete itself exited. That
+        # converges under either behaviour, and is assertable offline
+        # against a stubbed `gh` on `PATH`.
+        #
+        # One event's failure must not abandon the others (R-34): the
+        # loop below `continue`s past a secret still present after the
+        # attempt, rather than `break`ing the whole batch, and collects
+        # every id that *did* end up absent into `recorded_ids` --
+        # `destroyed_ids` and `destroyed_secrets` are parallel, same-order
+        # lists (both built from the same `due` list in
+        # cli.py::retention_sweep) -- so a later, healthy event in the
+        # same batch still gets recorded even if an earlier one failed.
+        # The recording step below runs on `if: always()` and reads only
+        # `recorded_ids`, so the registry never claims a destruction that
+        # did not happen (R-30) and never fails to record one that did.
+        # `status` still ends non-zero if anything failed, so the job
+        # itself is red.
         run: |
           IFS=',' read -r -a names <<< "$DESTROYED_SECRETS"
           IFS=',' read -r -a ids <<< "$DESTROYED_IDS"
@@ -88,13 +102,14 @@ jobs:
             name="${names[$i]}"
             id="${ids[$i]}"
             echo "deleting $name"
-            if gh secret delete "$name" --repo "$GITHUB_REPOSITORY"; then
-              recorded="${recorded:+$recorded,}$id"
-            else
+            gh secret delete "$name" --repo "$GITHUB_REPOSITORY" || true
+            if gh secret list --repo "$GITHUB_REPOSITORY" --json name \
+                 --jq '.[].name' | grep -qx "$name"; then
               echo "::error::failed to delete $name for event $id"
               status=1
-              break
+              continue
             fi
+            recorded="${recorded:+$recorded,}$id"
           done
           echo "recorded_ids=$recorded" >> "$GITHUB_OUTPUT"
           exit $status
@@ -110,6 +125,14 @@ jobs:
         # than trying to re-push a commit `git reset --hard` just
         # discarded. Safe to re-run because `record_destructions` is
         # idempotent by construction -- see its own docstring.
+        #
+        # R-35: `record_destructions` itself now also removes each
+        # recorded event's `keys/events/<id>.pub`, in that order --
+        # `git add`ing `keys/events` here as well as the registry file is
+        # what puts that removal in the same commit as the registry entry
+        # (spec S4, Important 2: a destroyed event must stop accepting
+        # new registrations too, and the published `.pub` is the signup
+        # relay's only "this event is open" gate).
         run: |
           set -e
           git config user.name "convener-retention"
@@ -118,6 +141,7 @@ jobs:
           for attempt in 1 2 3; do
             (cd tools && uv run convener-record-destructions)
             git add data/event-key-destructions.yml
+            git add keys/events
             if git diff --staged --quiet; then
               echo "::warning::convener-retention-sweep found events due for destruction, but the registry already recorded them -- see this run's own log above"
               exit 0

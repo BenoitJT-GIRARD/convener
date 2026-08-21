@@ -27,6 +27,7 @@ Three layers, in three sections below:
 
 from __future__ import annotations
 
+import ast
 import json
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -40,6 +41,7 @@ from convener_ops import certificate, eventkeys
 from convener_ops.certificate import CertificateEntry, register_from_data, register_to_data
 from convener_ops.cli import erase_registration, record_destructions, retention_sweep
 from convener_ops.eventkeys import DecryptionError, decrypt, encrypt, generate
+from convener_ops.paths import repo_root
 from convener_ops.registration import (
     Registration,
     RegistrationFile,
@@ -97,6 +99,19 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
     destruction, in full. `del private_pem` below makes that literal: this
     test never holds the real key again after this line, exactly as a
     retention job never does once the secret is gone.
+
+    **What this does not cover (Minor 5).** This proves the *scheme*
+    cryptographically: destroying a key makes its ciphertext unreadable,
+    full stop. It never calls `retention_sweep`, `record_destructions` or
+    anything else in `cli.py`, and `del private_pem` is a no-op on a local
+    Python name -- it would stay exactly this green even if a future
+    change to production code quietly kept a second copy of the key
+    somewhere the retention sweep does not know to destroy. There is no
+    way to assert "the GitHub secret is actually gone" offline; the
+    nearest available check is
+    `test_no_write_call_in_convener_ops_ever_writes_a_private_key`, below,
+    which is the reason such a second copy is implausible rather than
+    merely untested.
     """
     private_pem, public_pem = generate()
     plaintext = b'{"first_name": "Ada", "surname": "Lovelace"}'
@@ -116,6 +131,46 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
     another_private_pem, _ = generate()
     with pytest.raises(DecryptionError):
         decrypt(another_private_pem, ciphertext)
+
+
+def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
+    """Minor 5's own strengthening: the assertion that *is* available
+    offline, since "the GitHub secret is gone" is not. Walks every `.py`
+    file's AST under `tools/convener_ops` and refuses any `.write_text(...)` or
+    `.write(...)` call whose argument is built from a name that looks like
+    a private key, or a string literal carrying the PEM marker itself --
+    which would catch a second, forgotten copy on disk the moment someone
+    wrote it, rather than trusting nobody ever will."""
+    suspect_fragments = ("private_pem", "private_key")
+    convener_ops_dir = repo_root() / "tools" / "convener_ops"
+    checked = 0
+    for path in sorted(convener_ops_dir.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in {"write_text", "write"}
+            ):
+                continue
+            checked += 1
+            for arg in (*node.args, *(kw.value for kw in node.keywords)):
+                for sub in ast.walk(arg):
+                    if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                        assert "PRIVATE KEY" not in sub.value.upper(), (
+                            f"{path.name}:{node.lineno} writes a string "
+                            "literal carrying the PEM private key marker"
+                        )
+                    if isinstance(sub, ast.Name) and any(
+                        fragment in sub.id.lower() for fragment in suspect_fragments
+                    ):
+                        raise AssertionError(
+                            f"{path.name}:{node.lineno} calls "
+                            f"{node.func.attr}(...) with {sub.id!r}, which "
+                            "looks like a private key -- see this test's "
+                            "own docstring (Minor 5)"
+                        )
+    assert checked > 0, "no write_text/write call found -- the walk itself is broken"
 
 
 # -------------------------------------------------------------------- #
@@ -480,13 +535,22 @@ def test_retention_sweep_reports_nothing_due_on_an_ordinary_day(
 class _FixedDatetime:
     """A stand-in for the `datetime` class `cli.py` imports, whose `now()`
     always returns the same instant -- the idiom this suite needs to pin
-    "today" for a boundary test without waiting for the calendar."""
+    "today" for a boundary test without waiting for the calendar.
+
+    `combine` is the real `datetime.combine`, not a fixed stand-in: a test
+    that patches `convener_ops.cli.datetime` to pin `retention_sweep`'s clock
+    and then, in the same test, also calls `record_destructions` (which
+    needs `datetime.combine` to turn `DESTROYED_ON` into a `now` for
+    `eventkeys.destroy`) would otherwise see an `AttributeError` on a
+    class this fixture never meant to touch."""
 
     def __init__(self, fixed: datetime) -> None:
         self._fixed = fixed
 
     def now(self, tz: Any = None) -> datetime:
         return self._fixed
+
+    combine = staticmethod(datetime.combine)
 
 
 def test_retention_sweep_finds_an_event_past_its_deadline(
@@ -510,6 +574,36 @@ def test_retention_sweep_finds_an_event_past_its_deadline(
     outputs = _outputs(output_file)
     assert outputs["destroyed_ids"] == "mrg-042"
     assert outputs["destroyed_secrets"] == "CONVENER_EVENT_KEY_MRG_042"
+    assert outputs["destroyed_on"] == "2026-04-01"
+
+
+def test_retention_sweep_uses_the_paris_day_not_the_utc_day(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Important 4: `today = paris_today(datetime.now(UTC))` at
+    `cli.py:899` -- pinned at the one kind of instant where the mutant
+    `datetime.now(UTC).date()` and the real implementation disagree.
+    Every other delivered clock in this suite is fixed at 03:00 or 12:00
+    UTC, where the Paris day and the UTC day happen to agree, which is
+    exactly why that mutant survived the whole suite at 100% branch
+    coverage (the review's own finding). An event held 2026-01-01, swept
+    at 2026-03-31 22:30Z: still day 89 in UTC (not due), already day 90 in
+    Paris, which is 2026-04-01 00:30 CEST after the spring change -- so
+    the correct implementation reports it due, and the mutant does not.
+    """
+    _publish_event_key(tmp_path, "mrg-042")
+    _write_speaker(tmp_path, "mrg-042", event_date="2026-01-01")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
+    output_file = _github_output(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "convener_ops.cli.datetime",
+        _FixedDatetime(datetime(2026, 3, 31, 22, 30, tzinfo=UTC)),
+    )
+
+    assert retention_sweep() == 0
+    outputs = _outputs(output_file)
+    assert outputs["destroyed_ids"] == "mrg-042"
     assert outputs["destroyed_on"] == "2026-04-01"
 
 
@@ -549,6 +643,12 @@ def test_retention_sweep_skips_an_event_with_no_speaker_record(
     err = capsys.readouterr().err
     assert "mrg-042" in err
     assert "cannot be determined" in err
+    # Important 1: the exit code and the message alone are not enough --
+    # both held on the delivered code even though the message landed on
+    # stderr, where nobody looks at a green job. `::warning::` is the
+    # annotation this diff already uses twice elsewhere and is what
+    # actually surfaces in the Actions run summary.
+    assert "::warning::" in err
 
 
 def test_retention_sweep_skips_an_event_with_no_usable_date(
@@ -567,6 +667,7 @@ def test_retention_sweep_skips_an_event_with_no_usable_date(
     assert retention_sweep() == 0
     err = capsys.readouterr().err
     assert "cannot be determined" in err
+    assert "::warning::" in err
 
 
 def test_retention_sweep_fails_on_a_malformed_registry(
@@ -636,6 +737,7 @@ def test_retention_sweep_with_no_keys_directory_reports_nothing_due(
 def test_record_destructions_writes_the_registry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    _publish_event_key(tmp_path, "mrg-042")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
     monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
@@ -646,6 +748,71 @@ def test_record_destructions_writes_the_registry(
     registry_path = eventkeys.destructions_path(tmp_path)
     data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
     assert eventkeys.registry_from_data(data) == {"mrg-042": date(2026, 4, 1)}
+
+
+def test_record_destructions_calls_eventkeys_destroy_and_refuses_a_malformed_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 3 / Minor 6: `record_destructions` is also
+    `convener-record-destructions`, a console script an operator can run by
+    hand against a plain `DESTROYED_IDS` environment variable with no
+    guarantee it names a real, published event -- unlike the ids
+    `retention_sweep` itself ever produces. Calling `eventkeys.destroy`
+    (rather than a bare `dict.setdefault`) is what makes its own
+    `_validate_event_id` guard apply here too, and this is the
+    reproduction from the review: `DESTROYED_IDS="vw 042 oops"` must
+    refuse rather than write a registry entry `registry_from_data` (the
+    reader every other command shares) then permanently refuses to load."""
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("DESTROYED_IDS", "vw 042 oops")
+    monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
+
+    assert record_destructions() == 1
+    assert "not a valid event id" in capsys.readouterr().err
+    assert not eventkeys.destructions_path(tmp_path).exists()
+
+
+def test_record_destructions_refuses_an_id_whose_key_was_never_published(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The other half of `destroy`'s guard: a legal-looking id that never
+    had a published key is not a destruction, it is a typo -- the same
+    distinction `eventkeys.destroy`'s own docstring draws."""
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("DESTROYED_IDS", "mrg-999")
+    monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
+
+    assert record_destructions() == 1
+    assert "mrg-999" in capsys.readouterr().err
+    assert not eventkeys.destructions_path(tmp_path).exists()
+
+
+def test_record_destructions_deletes_the_published_pub_only_after_recording(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R-35 / Important 2: `keys/events/<id>.pub` is the signup relay's
+    only "this event is open" gate, so it must go in the same operation
+    that records the destruction -- and strictly after, per the ruling's
+    own ordering, so `destroy`'s `key_was_published` guard still sees the
+    truth. Both ends of that are asserted here: the registry gained the
+    entry, and the `.pub` is gone afterward -- which is also, by
+    construction, the test that would fail if a future change deleted the
+    `.pub` first: `key_was_published` would already read `False` for this
+    never-before-recorded id, `destroy` would raise, and this would assert
+    `record_destructions() == 0` against a `1`."""
+    _, public_pem = _publish_event_key(tmp_path, "mrg-042")
+    pub_path = tmp_path / "keys" / "events" / "mrg-042.pub"
+    assert pub_path.read_text(encoding="ascii") == public_pem
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
+    monkeypatch.setenv("DESTROYED_ON", "2026-04-01")
+
+    assert record_destructions() == 0
+
+    registry_path = eventkeys.destructions_path(tmp_path)
+    data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    assert eventkeys.registry_from_data(data) == {"mrg-042": date(2026, 4, 1)}
+    assert not pub_path.exists()
 
 
 def test_record_destructions_never_overwrites_an_existing_destruction_date(
