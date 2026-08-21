@@ -383,6 +383,21 @@ export interface Speaker {
   /** Link to the forum announcement thread. */
   forum_thread: string;
 
+  /** Whether the post-event survey (phase 4 spec S:6) is open for this
+   *  event. A per-event fact, not a `data/config.yml` setting: the spec
+   *  says the survey is switched on per event, and every other per-event
+   *  fact -- the room link, the recording, the forum thread -- already
+   *  lives on the speaker record rather than in the shared config. The
+   *  three questions themselves are fixed for every event
+   *  (`tools/convener_ops/survey.py`'s module docstring); this is the only
+   *  thing that varies.
+   *
+   *  `false` by default, and an event with the switch off carries nothing
+   *  else about the survey: no `survey-responses.enc` file is ever
+   *  written, and the page renders no hidden section -- see
+   *  `app/src/survey/SurveyForm.tsx`. */
+  survey_enabled: boolean;
+
   /** Which lines of the journey are ticked, keyed `phase/item`. */
   runbook_progress: Record<string, boolean>;
   /** Who owes each line of the journey, keyed by runbook item. An item with
@@ -418,7 +433,8 @@ const SPEAKER_FIELD_SET: Record<keyof Speaker, true> = {
   assigned_to: true, links: true, host_1: true, host_2: true, status: true,
   selection: true, publication: true, edition_code: true,
   candidate_dates: true, date: true, time: true, zoom_link: true,
-  youtube_url: true, forum_thread: true, runbook_progress: true,
+  youtube_url: true, forum_thread: true, survey_enabled: true,
+  runbook_progress: true,
   checklist: true,
   metrics: true, notes: true,
 };
@@ -434,6 +450,21 @@ export interface Config {
   overlap_window_days: number;
   /** How long a seminar runs, in minutes. */
   seminar_duration_minutes: number;
+  /** A share of `seminar_duration_minutes` a matched attendee's summed
+   *  duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`:
+   *  above zero, at most one. Configuration, not a constant: the real
+   *  number has to align with accreditation requirements this project does
+   *  not yet know, and alignment happens by editing this file, not by
+   *  editing code.
+   *
+   *  `0.6666666666666666`, not the tidier-looking `0.6667`: the closest
+   *  float64 to exactly two thirds, chosen because it lands fractionally
+   *  *below* two thirds rather than above -- so a duration of exactly two
+   *  thirds of the session reads as eligible rather than being refused by a
+   *  rounding artefact nobody typing a shorter number could see or contest.
+   *  See `tools/convener_ops/attendance.py::EligibilityThreshold` for the
+   *  calculation this feeds. */
+  eligibility_share: number;
   /** The editorial board, one entry per member. Replaces the flat
    *  `board_members` list of logins. */
   board: BoardMember[];
@@ -466,6 +497,21 @@ export interface Config {
    *  configuration and not a constant, and why the field's label is built
    *  from it rather than typed. */
   view_count_window_days: number;
+  /** How to join the permanent room beyond the link itself -- a dial-in
+   *  number, an access code, anything the room needs that the URL alone
+   *  does not say. `''` is a legal answer: nothing more to add.
+   *
+   *  One value for the whole series, not one per event (phase 4, D-06):
+   *  the chosen platform's account *is* the permanent room, so these
+   *  instructions describe a room that never changes. Read by
+   *  `tools/convener_ops/platform.py::ManualPlatform.get_room`, which pairs
+   *  this with `data/speakers.yml`'s per-event `zoom_link`.
+   *
+   *  Kept immediately before `sla_days`, never between it and `channels`:
+   *  `data-validate.test.ts` regex-matches from `sla_days:` up to the next
+   *  `channels:` to isolate that block, which only works if nothing else
+   *  is serialised between the two. */
+  instructions: string;
   /** How long each piece of work is given before the inbox raises it.
    *
    *  Three keys, not four: the board's decision is timed by
@@ -480,6 +526,13 @@ export interface Config {
   };
   /** Where an event is announced, in the order the volunteers work through
    *  them. Read only through `state/channels.ts::channelsOf`; an empty list
-   *  is a legal answer and means nothing is promoted through this app. */
+   *  is a legal answer and means nothing is promoted through this app.
+   *
+   *  Kept as the *last* field, here and in `readConfig` / `data-doubles.ts`'s
+   *  `config()`: several `channels.test.ts` cases build a malformed file by
+   *  regex-replacing from `channels:` to the end of a real, valid
+   *  `serializeConfig` output, which only isolates the channels block if
+   *  nothing else is serialised after it. Add a field after this one and
+   *  those tests silently start asserting the wrong error. */
   channels: Channel[];
 }

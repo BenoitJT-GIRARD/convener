@@ -1,15 +1,65 @@
 name: Publish vitrine data
 
+# R-19 (fix round 1, task 12): a revocation is a change to
+# data/events/<id>/certificates.yml, and until this trigger named that
+# path, such a change would not even fire this workflow at all. The
+# `paths:` trigger below still names certificates.yml for that reason,
+# even though nothing in this job's own steps depends on that path any
+# more -- see the Minor 5 comment further down for what changed and why.
+#
+# Critical A (fix round 3): the `paths:` trigger above is still correct,
+# but it is unreachable in the one case it exists for. GitHub does not
+# start a new workflow run from a push made with the checkout's own
+# `GITHUB_TOKEN` -- the recursion guard -- and issue-certificates.yml,
+# reissue-certificate.yml, revoke-certificate.yml and sweep.yml all commit
+# with exactly that token (zero-cost: no new secret). So `workflow_dispatch`
+# is added here, and each of those four jobs invokes it directly as their
+# own last step once they have actually changed something --
+# `workflow_dispatch` is one of the documented exceptions to the recursion
+# guard, so the caller's own `GITHUB_TOKEN` is enough. See any of those
+# workflows' own "Trigger public data publication" step for the other half
+# of this fix.
+#
+# Minor 5 (fix round 1, task 13): this workflow used to also write
+# `public-data/certificates-public.json` to the showcase's own
+# `src/_data/certificates.json` -- a file no Eleventy template in that
+# repository ever reads (`grep -rn certificates src/` there is empty).
+# That write was removed: it made the three certificate workflows *look*
+# like they refreshed the public register, which is how the register
+# going stale survived three earlier fix rounds. What actually serves the
+# register a verifier reads is `deploy.yml`'s own "Build public data"
+# step, which ships `certificates.json` inside the app's own built
+# `dist/` -- see that workflow's own comment for why that, and not a
+# second write here, is the one writer for that file.
+#
+# Carried item 4 (fix wave 2): the three certificate workflows used to
+# still dispatch this workflow too, beside their own deploy.yml dispatch
+# (Critical 1), even though nothing they change affects
+# `events-public.json` either -- flagged as dead motion rather than
+# pruned when Critical 1 was fixed, since that ruling asked only for the
+# new dispatch beside the existing one, not a scope to remove it in.
+# Fixed now: `issue-certificates.yml`, `reissue-certificate.yml` and
+# `revoke-certificate.yml` no longer dispatch this workflow at all --
+# each dispatched run used to find nothing changed here and exit as a
+# no-op (the ordinary D-13 shape, not a defect, but motion with no
+# effect all the same). `sweep.yml` and `retention.yml` still dispatch
+# this workflow, unaffected: sweep.yml genuinely can change
+# `data/speakers.yml`, this workflow's own input.
 on:
   push:
     branches: [main]
     paths:
       - 'data/speakers.yml'
+      - 'data/events/*/certificates.yml'
       - 'tools/**'
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:

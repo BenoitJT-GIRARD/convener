@@ -37,6 +37,7 @@ coming along.
 - [ ] Forum announcement seeded
 - [ ] Seeded a question on the forum
 - [ ] Waiting room and co-host rights set up
+- [ ] Meeting platform access token renewed (if due) — roughly monthly; see [operations](../reference/operations.md#meeting-platform) for the short browser step
 - [ ] Plan for the day agreed between hosts — the [run of show](../toolkit/run-of-show.md)
 
 ### T-3 days
@@ -45,7 +46,7 @@ coming along.
 
 ### T-1 day
 
-- [ ] Final reminder sent, registration link checked
+- [ ] Final reminder sent, room link checked
 
 ### On the day
 

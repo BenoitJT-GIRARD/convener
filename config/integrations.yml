@@ -1,6 +1,9 @@
 # Every external dependency the *application code* (tools/convener_ops and
 # app/src) reads at runtime, and what happens without it. Absent is a normal
-# state: the feature degrades visibly, nothing breaks.
+# state: the feature degrades visibly, nothing breaks -- with one exception,
+# event_keys below, which declares `absent_is_normal: false` rather than
+# relying on its absent_behaviour text alone: a boolean `convener-check-config`
+# can act on, not only a paragraph a reader might skip.
 #
 # This deliberately excludes secrets that only CI ever reads (a workflow
 # step's `env:`, never something convener-check-config's own process sees) --
@@ -9,6 +12,49 @@
 # on every machine that isn't the CI runner, which is noise, not
 # information. They are documented instead in docs/reference/operations.md,
 # with what each is for and where it is set.
+#
+# event_keys is deliberately not excluded by that same reasoning, even
+# though it is also per-event and CI-only in practice: its absence is not
+# ordinary noise the way the three above are, and burying it in the
+# CI-only-secrets section of the handbook would make it too easy to miss.
+# See tools/convener_ops/eventkeys.py for the reason its absence is not a normal
+# state at all.
+#
+# signing_key is CI-only too (CONVENER_SIGNING_KEY, read only inside the job
+# that issues a certificate) and, despite sitting right next to event_keys
+# and sharing its "phase 4 cryptographic key" shape, its own absence *is*
+# ordinary D-13 noise: no certificate is issued, nothing else happens, and
+# nothing personal is at risk the way an undecryptable registration would
+# be. It earns its own row rather than living only in
+# docs/reference/operations.md for the same reason matching_salt does,
+# below: "is CONVENER_SIGNING_KEY actually set" is a structural fact
+# convener-check-config and its tests can see, not only a sentence a future edit
+# could silently stop being true under. See tools/convener_ops/signing.py for
+# why this key's lifecycle -- and therefore its absent_is_normal value --
+# runs opposite to event_keys'.
+#
+# matching_salt is CI-only too, and (fix round 1, Important 5) is now two
+# rows sharing one secret, not one row describing two behaviours in prose.
+# CONVENER_MATCHING_SALT has two independent consumers with two different shapes
+# of absence: registration.py::matching_code's own absence *is* ordinary
+# noise -- a documented, working fallback (S:5's cascade) -- and nothing
+# there needs to fail closed over it; certificate.py::fingerprint (task 12)
+# reads the same secret for a second, unrelated derivation (the certificate
+# register's salted fingerprint) whose absence is *not* ordinary -- see the
+# certificate_fingerprint row's own absent_behaviour below, and
+# tools/convener_ops/certificate.py for the reasoning in full. A single row could
+# only carry `absent_is_normal` once, so it necessarily lied about whichever
+# consumer disagreed with that one value -- `convener-check-config` reported this
+# secret as ordinary D-13 noise even after certificate.py made half of its
+# absence a fail-closed requirement, and test_integrations.py actively
+# enforced that the row stay that way (round 1's own review caught this: a
+# secret documented only in prose, as the three excluded above are, is a
+# promise nothing checks -- and one row here had quietly become exactly
+# that promise again for its second consumer). Two rows sharing one
+# `secrets` entry -- nothing in `resolve_states` keys on secret uniqueness
+# across rows -- makes both consumers' `absent_is_normal` a structural fact
+# `convener-check-config` and its tests can see, not only a sentence a future
+# edit could silently stop being true under.
 integrations:
   - name: auth_proxy
     label: Authentication relay
@@ -24,8 +70,22 @@ integrations:
     secrets:
       - CONVENER_MEETING_API_TOKEN
     absent_behaviour: >-
-      The manual adapter is used: room links are typed by hand and attendance
-      is imported from a file. No room link is published automatically.
+      The manual adapter (tools/convener_ops/platform.py::ManualPlatform) is used.
+      The room and recording links are typed by hand into data/speakers.yml's
+      existing zoom_link and youtube_url, join instructions into
+      data/config.yml's instructions (one value for the whole series -- the
+      account is the permanent room), and attendance is imported from
+      data/events/<id>/attendance-import.csv, a file that is never committed.
+      No room link is published automatically, and no recording storage is
+      managed on our side. Once set, tools/convener_ops/platform_fcc.py::PlatformFCC
+      is used instead (selected by platform_fcc.py::platform_from_env, D-13):
+      real per-person attendance is read from the provider's own calls
+      endpoint -- undocumented by the vendor, but verified empirically -- and
+      the recording is reported and deleted through its own API instead of
+      being tracked by hand. The value is the current access token itself,
+      not a client id and secret; it expires and must be renewed roughly
+      monthly, a step of the event journey rather than a one-time secret --
+      see docs/reference/operations.md's "Meeting platform" section.
 
   - name: email_transport
     label: Outbound email
@@ -36,8 +96,33 @@ integrations:
       - CONVENER_SMTP_PASSWORD
       - CONVENER_SMTP_FROM
     absent_behaviour: >-
-      Outbound messages are written to an inspectable log instead of being
-      sent, and the interface says so. Nothing is silently dropped.
+      Three consumers, all reported rather than retained (Critical 3,
+      branch review) -- none ever prints a composed message, sent or not,
+      and none writes one to a file or a build artefact either.
+      tools/convener_ops/confirmation.py (task 7): the registration
+      confirmation, carrying a participant's address and matching code,
+      used to be written to a local, .gitignore'd file and uploaded as a
+      short-retention build artefact instead of being sent -- removed once
+      docs/governance/traitement-donnees.md's own Recipients section
+      turned out to call that artefact a documented exception, when with
+      this row absent (this project's default state) it was the path
+      every registration took, not an exception. Every attempt is folded
+      into a bare sent/not-sent count instead, and convener-resend-confirmation
+      reproduces the identical message from the stored registration and
+      the same deterministic matching code, so nothing is ever the only
+      copy of anything. tools/convener_ops/delivery.py (task 14): the
+      certificate document this row would carry was never written
+      anywhere at all, not even to a private artefact, from the day this
+      module was written -- see that module's own docstring for why a
+      signed, nominative document must never land in any Actions surface
+      (spec S:7), a stricter constraint than task 7's confirmation had
+      until this same round. tools/convener_ops/survey_invite.py (task 16b):
+      the post-event survey invitation, reusing confirmation.py's own
+      transport rather than a third copy of it, degrades the same
+      bare-count way delivery.py does -- and for a related but distinct
+      reason: a survey invitation carries no identifier at all to keep an
+      unsent copy filed against, unlike a certificate, which at least has
+      a public one.
 
   - name: video_publishing
     label: Video channel
@@ -60,3 +145,98 @@ integrations:
       constructed at all. Both are needed because a thread with no mention
       posts into a page nobody is watching, and a mention with no thread has
       nowhere to be written.
+
+  - name: event_keys
+    label: Event registration encryption
+    secrets:
+      - CONVENER_EVENT_KEY_<ID>
+    absent_is_normal: false
+    absent_behaviour: >-
+      Unlike every other row here, this is not a normal state to degrade out
+      of. CONVENER_EVENT_KEY_<ID> is set once per event -- <ID> stands for the
+      event's own identifier, never a literal name -- so this row reports
+      absent everywhere, on every day no event's secret happens to be named
+      exactly that; its real check is per event, inside the job that
+      decrypts that event's registrations. Without the matching private key
+      that job fails closed and exits in error: it does not fall back to
+      writing personal data to disk unencrypted. See
+      tools/convener_ops/eventkeys.py for the reasoning.
+
+  - name: retention_token
+    label: Retention sweep credential
+    secrets:
+      - CONVENER_RETENTION_TOKEN
+    absent_is_normal: false
+    absent_behaviour: >-
+      Task 15's third exception to D-13, and the strongest one in this
+      project. Destroying an event's key means deleting a repository
+      secret, which the default GITHUB_TOKEN cannot do no matter what
+      permissions: a workflow grants it -- this needs a fine-grained
+      personal access token, scoped to this repository, with the
+      Secrets permission set to read and write and nothing else. Unlike
+      every other row here, and unlike CONVENER_EVENT_KEY_<ID> above, this
+      absence is loud on every single scheduled run, whether or not any
+      event is actually due for destruction that day: a retention job
+      that exits 0 having destroyed nothing must never look, from the
+      Actions tab, identical to one that genuinely had nothing to do --
+      a promise with legal weight deserves a red job every day until the
+      credential is set, not a quiet skip. See
+      tools/convener_ops/cli.py::retention_sweep and
+      docs/reference/operations.md, 'Retention and early erasure'.
+
+  - name: signing_key
+    label: Certificate signing key
+    secrets:
+      - CONVENER_SIGNING_KEY
+    absent_behaviour: >-
+      No certificate is issued in this run. The job that would sign one
+      (tools/convener_ops/certificate.py, task 12/14) cannot, and does not fall
+      back to anything -- there is no partially-written document, and
+      nothing sensitive is exposed by the absence, because signing attests
+      rather than conceals: unlike CONVENER_EVENT_KEY_<ID> above, there is no
+      confidentiality risk this row exists to prevent. This is an ordinary
+      D-13 absence, the same shape as video_publishing's "entered by hand"
+      or board_notifications' "printed instead of sent" -- a feature that
+      degrades, not a failure this repository fails closed over. Unlike
+      CONVENER_EVENT_KEY_<ID>, there is exactly one of these at a time (not one
+      per event), and it is never destroyed: see tools/convener_ops/signing.py
+      for why a certificate signing key's lifecycle runs opposite to an
+      event key's.
+
+  - name: matching_salt
+    label: Registration matching salt
+    secrets:
+      - CONVENER_MATCHING_SALT
+    absent_behaviour: >-
+      tools/convener_ops/registration.py::matching_code returns nothing: no
+      matching code is derived, printed, or put in the confirmation email
+      (task 7). Attendance falls back to task 8's cascade -- exact address,
+      then normalised name -- instead of the typed code. An ordinary D-13
+      absence: the salt exists so the code cannot be forged or guessed by
+      anyone who knows an address, not so a job can refuse to run without
+      it, and the cascade it degrades to is a documented, working fallback
+      rather than personal data landing somewhere it should not. The same
+      secret has a second, unrelated consumer with a different, non-ordinary
+      shape of absence -- see the certificate_fingerprint row below, which
+      declares that difference structurally rather than in this row's own
+      prose.
+
+  - name: certificate_fingerprint
+    label: Certificate register fingerprint
+    secrets:
+      - CONVENER_MATCHING_SALT
+    absent_is_normal: false
+    absent_behaviour: >-
+      tools/convener_ops/certificate.py::fingerprint (task 12) reads the same
+      CONVENER_MATCHING_SALT as the matching_salt row above, for a second,
+      domain-separated purpose: the certificate register's own salted trace
+      of an address. Here the absence is *not* ordinary: a fingerprint that
+      cannot be salted cannot be written to a register that must never
+      carry an address in the clear, so convener-issue-certificates and
+      convener-reissue-certificate issue nothing this run rather than write one
+      unsafely. Outwardly this still degrades the same way as an ordinary
+      absence (a printed line, a clean exit, nothing partially written) --
+      only the reason differs, named in each job's own message. This is one
+      of this project's rare exceptions to D-13's "an absent integration is
+      a normal state": an absent secret here forbids writing, it does not
+      license writing insecurely.

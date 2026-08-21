@@ -13,6 +13,34 @@ export interface SubstitutionContext {
 
 const MISSING = (path: string) => `«missing: ${path}»`;
 
+/**
+ * The public signup address, mirrored byte-for-byte against Python's
+ * `tools/convener_ops/registration.SIGNUP_BASE` -- pinned by
+ * `tools/tests/fixtures/signup-link.json`'s own `signup_base`, the D-14
+ * discipline `certificate-verification.json` and `governance-cases.json`
+ * already use. A `HashRouter` fragment (`App.tsx`'s `path="/signup/:eventId"`),
+ * the same convention `certificate.VERIFICATION_BASE` and
+ * `survey_invite.SURVEY_BASE` use for their own addresses.
+ */
+const SIGNUP_BASE = 'https://example-instance.github.io/example-showcase/app/#/signup/';
+
+/**
+ * The R-5 rule (`tools/convener_ops/platform.py::find_speaker`) computed here
+ * rather than left for a volunteer to fill in: "`event_id` is
+ * `edition_code`, lower-cased. Nothing else." A hand-filled event id in a
+ * *public* announcement is exactly the shape this project refuses
+ * everywhere else -- it depends on somebody remembering, and getting it
+ * right -- and getting it wrong publishes a dead registration link under
+ * the organisation's name. `''` (never a URL with nothing after the
+ * fragment) when `editionCode` is blank, so an incomplete Speaker record
+ * still renders the `«missing: speaker.signup_link»` marker, the same as
+ * every other derived field on this record.
+ */
+function signupLink(editionCode: string): string {
+  if (!editionCode) return '';
+  return `${SIGNUP_BASE}${encodeURIComponent(editionCode.toLowerCase())}`;
+}
+
 interface Resolved {
   /** What this repository publishes, composed from the field classification
    *  in `state/consent.ts` rather than restated in prose. A template that
@@ -62,6 +90,7 @@ function buildContext(ctx: SubstitutionContext): Resolved {
       zoom_link: s.zoom_link,
       youtube_url: s.youtube_url,
       forum_thread: s.forum_thread,
+      signup_link: signupLink(s.edition_code),
       // The one wrap-up number a message quotes back to the speaker. It is
       // recorded on the delivered checklist above the thank-you that reads
       // it, so an empty one is a line not yet filled in rather than a value

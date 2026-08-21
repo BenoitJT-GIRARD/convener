@@ -1,0 +1,113 @@
+name: Match attendance
+
+# I-4, branch review: `convener-match-attendance` (`docs/reference/operations.md`,
+# "Matching attendance") had no workflow of its own -- two other workflows'
+# own header comments told a volunteer to "run convener-match-attendance by hand
+# first" before either issuing certificates or inviting the survey, but
+# `EVENT_PRIVATE_KEY` never touches disk outside a CI job by design
+# (`eventkeys.py`'s own module docstring), so a volunteer could never
+# actually follow that instruction. This workflow is what makes it
+# reachable, the same way resend-confirmation.yml and revoke-certificate.yml
+# make their own manual procedures reachable rather than a script nobody can
+# run.
+#
+# The one artefact that reaches a human at all -- `unmatched-attendance.md`,
+# the only place spec S:5's unmatched/unreachable distinction (acceptance
+# criterion 9) is ever named for a person to act on -- was produced by this
+# same command and had nowhere to be read from either. Uploaded here as a
+# short-retention, access-controlled build artefact, the same restriction
+# `cli.py::UNMATCHED_ATTENDANCE`'s own comment requires: it carries display
+# names and addresses, so it is never a public artefact and never committed.
+#
+# No input carries an address: EVENT_ID and, optionally, conference_id are
+# the only things an operator names, the same shape issue-certificates.yml
+# and invite-survey.yml already use for the identical reason.
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Event id, exactly as published (e.g. mrg-042)'
+        required: true
+        type: string
+      conference_id:
+        description: >-
+          The FreeConferenceCall conference id for this event (only needed
+          with CONVENER_MEETING_API_TOKEN configured; see recording.yml's own
+          input of the same name). Leave blank for the manual
+          implementation.
+        required: false
+        type: string
+
+# Keyed on event_id alone, the same shape issue-certificates.yml and
+# invite-survey.yml already use: this command writes nothing to the
+# repository, so two dispatches for the same event racing each other is
+# harmless, but grouping them still keeps two overlapping runs' own logs
+# from interleaving in the run list.
+concurrency:
+  group: match-attendance-${{ inputs.event_id }}
+  cancel-in-progress: false
+
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    # Checkout, uv sync, one decrypt pass over at most 500 registrations
+    # and one attendance fetch -- generous, the same budget
+    # issue-certificates.yml's own equivalent read gives.
+    timeout-minutes: 5
+    permissions:
+      # Read-only: match_attendance never writes to the repository --
+      # UNMATCHED_ATTENDANCE is a `.gitignore`d file inside the job's own
+      # ephemeral workspace, uploaded as a build artefact below, never
+      # committed.
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Resolve the event's key secret
+        id: resolve
+        working-directory: tools
+        env:
+          # Built with toJSON, not string interpolation -- the same
+          # discipline erase-registration.yml and invite-survey.yml already
+          # apply to a trusted operator's own typed input, so a stray quote
+          # in event_id cannot break out of this payload.
+          REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
+        run: uv run convener-registration-secret-name
+      - name: Match attendance against registrations
+        working-directory: tools
+        env:
+          EVENT_ID: ${{ inputs.event_id }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          # Absent is ordinary D-13 here: with no salt configured, the
+          # attendance cascade's own matching-code level simply never
+          # finds anything and falls through to the address and name
+          # levels instead (attendance.py's own documented fallback) --
+          # the same reasoning invite-survey.yml's own identical env
+          # entry already gives.
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          # Absent is ordinary D-13 too: platform_from_env falls back to
+          # ManualPlatform, reading
+          # data/events/<id>/attendance-import.csv.
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
+        run: uv run convener-match-attendance
+      - name: Preserve the unmatched-attendance list for the host to resolve
+        # `always()`: this file exists exactly when the step above ran and
+        # found at least one unmatched or unreachable attendee -- kept even
+        # if a later step in this job were to fail, not skipped because
+        # something else did. `if-no-files-found: ignore` because the
+        # ordinary case -- everyone matched -- leaves no file at all.
+        #
+        # Short-retention and access-controlled, never a public artefact:
+        # this file carries display names and addresses, the same
+        # restriction `cli.py::UNMATCHED_ATTENDANCE`'s own comment
+        # requires of whatever uploads it.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: unmatched-attendance-${{ inputs.event_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: unmatched-attendance.md
+          if-no-files-found: ignore
+          retention-days: 14

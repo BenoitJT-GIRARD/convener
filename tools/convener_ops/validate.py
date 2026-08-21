@@ -51,6 +51,15 @@ PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
 #: field ends up silently optional. `app/src/data/validate.ts` draws the same
 #: line on the read side.
 SPEAKER_TEXT_V4 = ("photo_url", "bio", "linkedin", "seed_questions")
+#: Task 16 (phase 4 spec S:6): the post-event survey's per-event switch --
+#: a field on the speaker record, not `data/config.yml`, for the same
+#: "per-event fact beside the event's other per-event facts" reasoning
+#: `app/src/data/types.ts::Speaker.survey_enabled`'s own doc comment gives.
+#: Checked with `in` and `isinstance(..., bool)`, the same "absent is a
+#: defect, empty/false is an answer" discipline `SPEAKER_TEXT_V4` already
+#: holds itself to -- an absent key would otherwise read as `False` behind
+#: a validator that never noticed the record was incomplete.
+SPEAKER_BOOL_V5 = ("survey_enabled",)
 CANDIDATE_DATE_KEYS = frozenset({"date", "time", "answer"})
 #: What one line of the journey may say about itself. `assignee` is who owes
 #: that line -- not `assigned_to`, which is the board member who owns the
@@ -83,8 +92,23 @@ CONFIG_REQUIRED = frozenset(
         "inactivity_months",
         "balance_window_months",
         "view_count_window_days",
+        # Phase 4 (R-6): how to join the permanent room beyond the link
+        # itself. One value for the whole series, not one per event -- D-06
+        # makes the account itself the permanent room, so per-event
+        # instructions would describe a room that never changes.
+        "instructions",
         "sla_days",
         "channels",
+        # Phase 4 S:5's configurable eligibility threshold: a share of
+        # seminar_duration_minutes a matched attendee's summed duration must
+        # reach to count as present. Required, not merely validated when
+        # present, as an earlier version of this check had it: the spec's
+        # own reason for making this configuration at all is that it must
+        # be able to align with accreditation requirements this project
+        # does not yet know - and alignment happens by editing this file,
+        # not by editing tools/convener_ops/attendance.py. A threshold that only
+        # ever lives as a Python default is a constant with extra steps.
+        "eligibility_share",
     }
 )
 #: The two fields one promotion channel carries, and the only two.
@@ -492,6 +516,20 @@ def validate_speakers(
             elif not isinstance(entry[key], str):
                 errors.append(f"{where}: {key} must be a string")
 
+        # Task 16, schema v5. bool is checked, not merely "not a string" --
+        # a stray "true" (the string) or a 1 must be caught here rather than
+        # silently reaching handle_survey_response as a truthy-but-wrong
+        # type. isinstance(x, bool) is deliberately not preceded by an
+        # int-subclass guard the way an integer field would need
+        # (CONFIG_INTS above): a bool can never be mistaken for an int this
+        # check would otherwise wrongly accept, because this check accepts
+        # bool alone.
+        for key in SPEAKER_BOOL_V5:
+            if key not in entry:
+                errors.append(f"{where}: missing {key}")
+            elif not isinstance(entry[key], bool):
+                errors.append(f"{where}: {key} must be a boolean")
+
         if "checklist" not in entry:
             errors.append(f"{where}: missing checklist")
         else:
@@ -855,5 +893,31 @@ def validate_config(cfg: Any) -> list[str]:
         # is not a number of days anywhere else in this repository.
         if isinstance(value, bool) or not isinstance(value, int):
             errors.append(f"config.yml: {path} must be an integer")
+
+    # Phase 4 S:5's configurable eligibility threshold: a share of
+    # `seminar_duration_minutes` a matched attendee's summed duration must
+    # reach to count as present. `eligibility_share` is now in
+    # `CONFIG_REQUIRED` above (round 1 review: a threshold that only ever
+    # lives as a Python default is a constant with extra steps, and the
+    # spec's own rationale - alignment with accreditation requirements not
+    # yet known - happens by editing this file, not by editing
+    # `tools/convener_ops/attendance.py`). The `"eligibility_share" in cfg` guard
+    # below is not a leftover of the old, optional shape: it still has to
+    # be here, the same way `sla_days`'s own "must be a mapping" check is
+    # guarded the same way - a missing key is `CONFIG_REQUIRED`'s to
+    # report, once, by name; this block's job is only the range of a value
+    # that *is* present, so a config still missing the key must not also
+    # be told the missing value is out of range.
+    if "eligibility_share" in cfg:
+        eligibility_share = cfg["eligibility_share"]
+        if (
+            isinstance(eligibility_share, bool)
+            or not isinstance(eligibility_share, (int, float))
+            or not (0 < eligibility_share <= 1)
+        ):
+            errors.append(
+                "config.yml: eligibility_share must be a number in ]0, 1], "
+                f"got {eligibility_share!r}"
+            )
 
     return errors

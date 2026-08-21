@@ -12,6 +12,7 @@ import {
 } from '../src/state/phases';
 import type { Config, Speaker } from '../src/data/types';
 import { config, speaker as double } from './data-doubles';
+import eventChainKeys from '../../tools/tests/fixtures/event-chain-keys.json';
 
 /** The one line of the runbook that stops the archive, by the name
  *  `blockers` reports it under. */
@@ -158,6 +159,7 @@ describe('the journey the volunteers actually keep', () => {
       'scheduled/T-7/forum-announce',
       'scheduled/T-7/seed-questions',
       'scheduled/T-7/waiting-room',
+      'scheduled/T-7/token-renewal',
       'scheduled/T-7/plan-day',
       'scheduled/T-3/reminder',
       'scheduled/T-1/final-reminder',
@@ -170,6 +172,8 @@ describe('the journey the volunteers actually keep', () => {
   it('runs the wrap-up in the order the work happens', () => {
     const phase = phaseOf('delivered')!;
     expect(phaseItems(phase, config()).map(i => i.key)).toEqual([
+      'delivered/attendance-export-encrypted',
+      'delivered/recording-retrieved',
       'delivered/registrations',
       'delivered/live-peak',
       'delivered/youtube-url',
@@ -205,6 +209,23 @@ describe('the journey the volunteers actually keep', () => {
     const cfg = config({ channels: [{ key: 'posters', label: 'Printed posters' }] });
     const keys = phaseItems(phaseOf('scheduled')!, cfg).map(i => i.key);
     expect(keys.filter(k => k.startsWith('promotion/'))).toEqual(['promotion/posters']);
+  });
+
+  /**
+   * D-14: `tools/convener_ops/platform_fcc.py::RETRIEVED_TICK` is the one
+   * `runbook_progress` key Python itself reads (release_recording's own
+   * gate) -- if this journey ticked a differently-spelled key, a host
+   * could tick this box forever and the release job would never see it,
+   * or the reverse: a recording could be released on a tick this journey
+   * never shows. Pinned against the same fixture
+   * `tools/tests/test_platform_fcc.py::test_retrieved_tick_matches_the_shared_fixture`
+   * checks Python-side.
+   */
+  it('spells the recording-retrieved key the same way release_recording reads it', () => {
+    const keys = phaseOf('delivered')!.items.map(i => i.key);
+    expect(keys.filter(k => k === eventChainKeys.retrieved_tick_key)).toEqual([
+      eventChainKeys.retrieved_tick_key,
+    ]);
   });
 });
 

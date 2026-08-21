@@ -237,9 +237,9 @@ def test_an_object_field_is_flattened_and_a_list_gets_its_own_table() -> None:
     """One level of dots, because a list of records is not one record."""
     page = sample_page()
     assert "| `inner.colour` |" in page
-    assert "| `limits.top` | int | The highest it goes. |" in page
+    assert "| `limits.top` | number | The highest it goes. |" in page
     assert "### `wheels` entries" in page
-    assert "| `spokes` | int | How many spokes. |" in page
+    assert "| `spokes` | number | How many spokes. |" in page
 
 
 def test_a_map_of_records_gets_a_table_too() -> None:
@@ -252,7 +252,7 @@ def test_a_map_of_records_gets_a_table_too() -> None:
 def test_a_cell_cannot_break_the_table_it_sits_in() -> None:
     """`number | null` is a type a reader needs and a pipe a table cannot."""
     page = sample_page()
-    assert r"| `counts` | int \| null |" in page
+    assert r"| `counts` | number \| null |" in page
     assert "| `tags` | list&lt;string&gt; |" in page
 
 

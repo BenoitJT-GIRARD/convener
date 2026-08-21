@@ -1,0 +1,98 @@
+name: Deliver a certificate
+
+# Task 14, ruling 4: a manual resend for the one document spec S:9's own
+# risk table names ("un certificat dans les indesirables n'existe pas"),
+# for the one document R-22 forbids ever accepting an address to redeliver.
+#
+# The input is CERTIFICATE_ID, never an address -- exactly the same
+# reasoning `reissue-certificate.yml` and `revoke-certificate.yml` already
+# give for their own inputs (see either workflow's own header comment): a
+# `workflow_dispatch` input is rendered on the run page and retained with
+# the run for as long as its own history exists, longer than the 14-day
+# artefact this project uses everywhere else it has to carry personal data
+# at all. The certificate identifier is random, public by design, already
+# printed on the document and already published in
+# certificates-public.json -- it names exactly one certificate without
+# naming a person. `convener-deliver-certificate` resolves it to a registration
+# by reusing `convener-reissue-certificate`'s own fingerprint-reversal path
+# (`cli.py::_find_register_entry`, `cli.py::_find_attendee_by_fingerprint`)
+# rather than a second lookup of its own.
+#
+# Read only: unlike the three certificate workflows, this one never writes
+# certificates.yml (delivery is not a register state -- R-20) and never
+# commits anything, so it needs no write permission and no concurrency
+# group shared with them. It does need its own, narrower group (Minor 7,
+# fix round 1): two concurrent dispatches for the *same* certificate would
+# otherwise send two e-mails -- keyed on certificate_id alone, so two
+# dispatches for two different certificates still run in parallel.
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Event id, exactly as published (e.g. mrg-042)'
+        required: true
+        type: string
+      certificate_id:
+        description: 'Certificate id to (re)deliver, exactly as printed on the document'
+        required: true
+        type: string
+      conference_id:
+        description: >-
+          The FreeConferenceCall conference id for this event (only needed
+          with CONVENER_MEETING_API_TOKEN configured; see recording.yml's own
+          input of the same name). Leave blank for the manual
+          implementation.
+        required: false
+        type: string
+
+concurrency:
+  group: deliver-${{ inputs.certificate_id }}
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    # Checkout, `uv sync`, one decrypt pass, one attendance fetch, one
+    # signature and one e-mail send -- generous.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Resolve the event's key secret
+        id: resolve
+        working-directory: tools
+        env:
+          # Same idiom every other certificate workflow already uses for a
+          # typed, trusted operator input: `toJSON`, never string
+          # interpolation, so a stray quote in `event_id` cannot break out
+          # of the payload.
+          REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
+        run: uv run convener-registration-secret-name
+      - name: Deliver the named certificate
+        working-directory: tools
+        env:
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          # Same two deliberate D-13 exceptions as every other certificate
+          # workflow -- see issue-certificates.yml's own comment on
+          # CONVENER_SIGNING_KEY and CONVENER_MATCHING_SALT.
+          CONVENER_SIGNING_KEY: ${{ secrets.CONVENER_SIGNING_KEY }}
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
+          # A public certificate identifier, never an address -- see this
+          # workflow's own header comment (R-22).
+          CERTIFICATE_ID: ${{ inputs.certificate_id }}
+          # email_transport's five secrets -- absent is ordinary D-13 here
+          # too: the attempt is simply reported as not sent. See
+          # delivery.py's own module docstring.
+          CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
+          CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
+          CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
+          CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
+          CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
+        run: uv run convener-deliver-certificate

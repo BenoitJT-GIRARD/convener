@@ -33,10 +33,122 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 15
     permissions:
-      contents: read
+      # write, not read (fix round 2, R-41): this job now commits
+      # public-data/survey-status.json back to this repository itself --
+      # see the "Commit survey status" step below for why.
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      # Task 13 (certificate verification page): `certificates.json`, part
+      # of the app's own `public/` -- so it ships inside `app/dist/` and
+      # `deploy.yml`'s existing "Push to example-showcase" step below carries it
+      # into the showcase for free, with no second, separate write into
+      # that repo's `app/` subtree to race against this workflow's own
+      # wholesale refresh of it. Needs no secret: `convener-certificates-public-data`
+      # only ever reads committed `data/events/*/certificates.yml` files.
+      # An event with no certificates yet is a normal state (`cli.py`'s own
+      # `certificates_public_data`), so this step never fails for want of
+      # one -- `scripts/copy-certificates.mjs`, below, is equally tolerant
+      # of this step never having run at all.
+      #
+      # Critical 1 (fix round 1, task 13): this step is what actually
+      # keeps the register a verifier reads current, and it only runs when
+      # this workflow does -- which a certificate issuance or revocation's
+      # own push (made with the checkout's own GITHUB_TOKEN) can never
+      # trigger via the `push:` clause above (the same recursion guard
+      # `publish-vitrine.yml`'s own header comment explains). Each of
+      # issue-certificates.yml, reissue-certificate.yml and
+      # revoke-certificate.yml dispatches this workflow directly with
+      # `gh workflow run deploy.yml` as its own last step -- carried item
+      # 4 (fix wave 2) removed the `publish-vitrine.yml` dispatch each of
+      # those three used to send alongside it, once and for all: after
+      # Minor 5, that workflow no longer touches certificate data at all,
+      # so the dispatch was always a no-op run there, never a second
+      # publication anything depended on. This step, and this dispatch,
+      # are what a verifier's page actually depends on.
+      - name: Build public data
+        working-directory: tools
+        run: uv run convener-certificates-public-data
+      # R-37 (fix round 1, task 16): the post-event survey's per-event
+      # switch, published as an operational fact rather than baked into
+      # SurveyForm.tsx's own knowledge -- see convener_ops.cli.survey_status_
+      # public_data's own docstring for why this is a second file and a
+      # second step rather than folded into "Build public data" above.
+      # scripts/copy-survey-status.mjs (part of the app's own `npm run
+      # build`, below) is what actually bakes public-data/survey-status.json
+      # into dist/, the same two-step shape copy-certificates.mjs already
+      # uses for certificates.json.
+      - name: Build survey status
+        working-directory: tools
+        run: uv run convener-survey-status-public-data
+      # R-41 (fix round 2): committed here, not only baked into dist/ --
+      # services/signup-relay reads this exact file, at this exact path,
+      # through the GitHub Contents API against this repository (the same
+      # credential and the same call shape it already uses for
+      # keys/events/<id>.pub), because checking a deployed example-showcase URL
+      # made the relay's answer depend on a deployment that was never
+      # wired up, and made "the switch is on" true at a build-to-live lag
+      # the relay has no business inheriting. `.gitignore` carries a
+      # deliberate exception for this one file (see its own comment) --
+      # every other file `public-data/` collects stays generated-only.
+      #
+      # This step must stay before "Build" and "Push to example-showcase"
+      # below -- load-bearing, not incidental: the retry loop's own
+      # `git reset --hard` can only ever discard *this* step's own
+      # commit, never a build that has not happened yet. Moving this step
+      # after "Build" would let a reset silently discard app/dist along
+      # with it.
+      #
+      # Fix round 3: the retry on a rejected push is a fetch-and-reset-
+      # hard followed by *re-running the projection command*, not `git
+      # rebase` -- the same rule `registration.yml`'s own retry loop
+      # follows, and for the identical reason (see that workflow's own
+      # comment at length). `public-data/survey-status.json` is a
+      # generated JSON array, the same shape `registrations.enc` is:
+      # `git rebase` replays a diff over that array's own closing lines,
+      # which is exactly task 6's Critical 1 -- two runs each rewriting
+      # the array's tail, `git rebase` returns 1 on the conflict, and
+      # `set -e` kills the step before the `::error::` line below is ever
+      # reached, leaving the tree mid-rebase with no annotation at all.
+      # Re-running `uv run convener-survey-status-public-data` instead is safe
+      # specifically because it is a pure function of `data/speakers.yml`
+      # (deterministic, sorted, deduplicated): discarding the local
+      # commit and re-deriving against whatever landed on `main` in the
+      # meantime reproduces the identical file, never a conflict to
+      # resolve by hand. `git diff --staged --quiet` below is a real
+      # no-op check on every attempt, not only the first: a run where no
+      # event's switch changed commits nothing, on the first pass or any
+      # retry.
+      - name: Commit survey status
+        run: |
+          set -e
+          git config user.name "convener-publisher"
+          git config user.email "convener-publisher@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-survey-status-public-data)
+            git add public-data/survey-status.json
+            if git diff --staged --quiet; then
+              echo "no change to commit"
+              exit 0
+            fi
+            git commit -m "data: refresh the published survey switch list"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $GITHUB_REF_NAME and retrying"
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
+          done
+          echo "::error::push failed after 3 attempts -- survey-status.json was not published to this repo"
+          exit 1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
@@ -53,6 +165,7 @@ jobs:
         env:
           VITE_AUTH_PROXY_URL: ${{ vars.VITE_AUTH_PROXY_URL }}
           VITE_GITHUB_APP_CLIENT_ID: ${{ vars.VITE_GITHUB_APP_CLIENT_ID }}
+          VITE_SIGNUP_RELAY_URL: ${{ vars.VITE_SIGNUP_RELAY_URL }}
         run: npm run build
       - name: Push to example-showcase
         env:

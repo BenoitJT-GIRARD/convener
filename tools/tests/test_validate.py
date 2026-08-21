@@ -199,6 +199,60 @@ def test_a_stored_lead_decision_sla_is_reported_as_obsolete() -> None:
     assert any("sla_days.lead_decision is obsolete" in e for e in errors)
 
 
+def test_eligibility_share_is_required_configuration_not_a_constant() -> None:
+    """Phase 4 S:5, round 2 review: a threshold that only ever lives as a
+    Python default is a constant with extra steps, and alignment with an
+    accreditation body's requirement has to happen by editing this file.
+
+    Both languages have to require it, or the browser writes a file the
+    certificate calculation refuses -- or, worse, the other way round, and
+    a config without the key reaches `data/` where the eligibility
+    calculation then falls back to a default nobody chose to write down.
+    """
+    cfg = config()
+    del cfg["eligibility_share"]
+    errors = validate_config(cfg)
+    assert any("missing keys ['eligibility_share']" in e for e in errors)
+
+    assert validate_config(config(eligibility_share=0.6666666666666666)) == []
+
+
+def test_a_configured_eligibility_share_within_range_is_valid() -> None:
+    assert validate_config(config(eligibility_share=0.5)) == []
+    # The boundaries of ]0, 1]: 0 excluded, 1 included.
+    assert validate_config(config(eligibility_share=1)) == []
+
+
+def test_eligibility_share_of_zero_is_rejected_by_name() -> None:
+    errors = validate_config(config(eligibility_share=0))
+    assert any("eligibility_share must be a number in ]0, 1]" in e for e in errors), (
+        errors
+    )
+
+
+def test_eligibility_share_above_one_is_rejected() -> None:
+    errors = validate_config(config(eligibility_share=1.5))
+    assert any("eligibility_share must be a number in ]0, 1]" in e for e in errors)
+
+
+def test_a_negative_eligibility_share_is_rejected() -> None:
+    errors = validate_config(config(eligibility_share=-0.5))
+    assert any("eligibility_share must be a number in ]0, 1]" in e for e in errors)
+
+
+def test_eligibility_share_is_not_a_flag() -> None:
+    # `bool` first, the same reason `sla_days` entries and every other
+    # CONFIG_INTS setting check it: `isinstance(True, int)` is true in
+    # Python, and `true` is not a share of anything.
+    errors = validate_config(config(eligibility_share=True))
+    assert any("eligibility_share must be a number in ]0, 1]" in e for e in errors)
+
+
+def test_eligibility_share_must_be_a_number() -> None:
+    errors = validate_config(config(eligibility_share="two thirds"))
+    assert any("eligibility_share must be a number in ]0, 1]" in e for e in errors)
+
+
 def test_config_board_member_must_look_like_a_login() -> None:
     # Schema v3: board_members (flat login list) was replaced by board
     # (a list of BoardMember mappings) in Task 1 / Task 4. The rule this

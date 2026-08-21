@@ -119,10 +119,40 @@ function text(at: Cursor, raw: Record<string, unknown>, key: string): string {
   return value;
 }
 
+/** A plain yes/no. No field before `survey_enabled` (phase 4 spec S:6) was
+ *  ever a bare top-level boolean -- `runbook_progress`'s own values are
+ *  booleans, but `ticks()` reads them one map entry at a time, never as a
+ *  single field of a record. `typeof value !== 'boolean'` alone is enough
+ *  here: unlike `whole()`'s callers, nothing stores a boolean as `0`/`1`,
+ *  so there is no numeric case this needs to also refuse. */
+function bool(at: Cursor, raw: Record<string, unknown>, key: string): boolean {
+  const value = raw[key];
+  if (typeof value !== 'boolean') {
+    fail(at.file, at.where, `should give "${key}" as yes or no but gives ${shown(value)}`);
+  }
+  return value;
+}
+
 function whole(at: Cursor, raw: Record<string, unknown>, key: string): number {
   const value = raw[key];
   if (typeof value !== 'number' || !Number.isInteger(value)) {
     fail(at.file, at.where, `should give "${key}" as a whole number but gives ${shown(value)}`);
+  }
+  return value;
+}
+
+/** A bounded fraction, `]0, 1]`: above zero, at most one. Nothing in this
+ *  model was this shape before `eligibility_share` (phase 4 S:5) -- every
+ *  other number here is a whole count `whole()` above actively rejects a
+ *  fraction from, pinned by a test that a fractional window is refused
+ *  rather than rounded. No `isinstance(value, bool)`-style guard is needed
+ *  the way `tools/convener_ops/validate.py`'s mirror of this check needs one:
+ *  `typeof true === 'boolean'`, never `'number'`, so a boolean already
+ *  fails the first condition below on its own. */
+function share(at: Cursor, raw: Record<string, unknown>, key: string): number {
+  const value = raw[key];
+  if (typeof value !== 'number' || !Number.isFinite(value) || !(value > 0 && value <= 1)) {
+    fail(at.file, at.where, `should give "${key}" as a share in ]0, 1] but gives ${shown(value)}`);
   }
   return value;
 }
@@ -427,6 +457,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     zoom_link: text(here, raw, 'zoom_link'),
     youtube_url: text(here, raw, 'youtube_url'),
     forum_thread: text(here, raw, 'forum_thread'),
+    survey_enabled: bool(here, raw, 'survey_enabled'),
     runbook_progress: ticks(here, raw, 'runbook_progress'),
     checklist: assignees(here, raw, 'checklist'),
     metrics: readMetrics(here, raw.metrics),
@@ -574,9 +605,10 @@ function readSlaDays(at: Cursor, value: unknown): Config['sla_days'] {
 
 const CONFIG_KEYS = [
   'season', 'vw_counter', 'overlap_window_days', 'seminar_duration_minutes',
-  'board', 'nominations', 'board_min', 'board_max', 'vote_window_days',
-  'objection_window_working_days', 'inactivity_months', 'balance_window_months',
-  'view_count_window_days', 'sla_days', 'channels',
+  'eligibility_share', 'board', 'nominations', 'board_min', 'board_max',
+  'vote_window_days', 'objection_window_working_days', 'inactivity_months',
+  'balance_window_months', 'view_count_window_days', 'instructions', 'sla_days',
+  'channels',
 ] as const;
 
 /**
@@ -599,6 +631,7 @@ export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
     vw_counter: whole(at, raw, 'vw_counter'),
     overlap_window_days: whole(at, raw, 'overlap_window_days'),
     seminar_duration_minutes: whole(at, raw, 'seminar_duration_minutes'),
+    eligibility_share: share(at, raw, 'eligibility_share'),
     board: listOf({ file, where: 'the board' }, raw, 'board', readBoardMember),
     nominations: listOf({ file, where: 'the nominations' }, raw, 'nominations', readNomination),
     board_min: whole(at, raw, 'board_min'),
@@ -608,6 +641,7 @@ export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
     inactivity_months: whole(at, raw, 'inactivity_months'),
     balance_window_months: whole(at, raw, 'balance_window_months'),
     view_count_window_days: whole(at, raw, 'view_count_window_days'),
+    instructions: text(at, raw, 'instructions'),
     sla_days: readSlaDays(at, raw.sla_days),
     channels: readChannels(at, raw),
   };

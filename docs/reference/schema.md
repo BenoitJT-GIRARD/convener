@@ -67,12 +67,13 @@ given" — and is well formed.
 | `zoom_link` | string | The meeting link the session runs on. |
 | `youtube_url` | string | Where the recording sits. Recorded here; published only through the publication gate. |
 | `forum_thread` | string | Link to the forum announcement thread. |
+| `survey_enabled` | bool | Whether the post-event survey (phase 4 spec S:6) is open for this event. A per-event fact, not a `data/config.yml` setting: the spec says the survey is switched on per event, and every other per-event fact -- the room link, the recording, the forum thread -- already lives on the speaker record rather than in the shared config. The three questions themselves are fixed for every event (`tools/convener_ops/survey.py`'s module docstring); this is the only thing that varies. |
 | `runbook_progress` | map&lt;string, bool&gt; | Which lines of the journey are ticked, keyed `phase/item`. |
 | `checklist` | map&lt;string, ChecklistAssignee&gt; | Who owes each line of the journey, keyed by runbook item. An item with no entry here is nobody's in particular, which means the hosts' -- the behaviour the app has always had, and still the default. Never read from, and never written to, `assigned_to`. |
-| `metrics.registrations` | int \| null | How many people registered. |
-| `metrics.live_peak` | int \| null | Peak concurrent attendees during the live session. |
-| `metrics.youtube_views_30d` | int \| null | Views of the recording, read off the number of days after the talk that `view_count_window_days` sets. The key keeps its historical name; the window it is read at is configuration. |
-| `metrics.forum_replies` | int \| null | Replies on the forum thread. |
+| `metrics.registrations` | number \| null | How many people registered. |
+| `metrics.live_peak` | number \| null | Peak concurrent attendees during the live session. |
+| `metrics.youtube_views_30d` | number \| null | Views of the recording, read off the number of days after the talk that `view_count_window_days` sets. The key keeps its historical name; the window it is read at is configuration. |
+| `metrics.forum_replies` | number \| null | Replies on the forum thread. |
 | `notes` | string | Free-form notes about the record. |
 
 ### `selection.ballots` entries
@@ -157,22 +158,24 @@ One mapping, with the keys below.
 
 | Field | Type | Notes |
 |---|---|---|
-| `season` | int | Current season number. |
-| `vw_counter` | int | The next `MRG-N` to assign. |
-| `overlap_window_days` | int | Forbidden window around each scheduled date, in days. |
-| `seminar_duration_minutes` | int | How long a seminar runs, in minutes. |
+| `season` | number | Current season number. |
+| `vw_counter` | number | The next `MRG-N` to assign. |
+| `overlap_window_days` | number | Forbidden window around each scheduled date, in days. |
+| `seminar_duration_minutes` | number | How long a seminar runs, in minutes. |
+| `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`: above zero, at most one. Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |
 | `board` | list&lt;BoardMember&gt; | The editorial board, one entry per member. Replaces the flat `board_members` list of logins. |
 | `nominations` | list&lt;Nomination&gt; | Candidates put forward for the board, with their objection windows. |
-| `board_min` | int | Fewest members the board may hold. |
-| `board_max` | int | Most members the board may hold. |
-| `vote_window_days` | int | How long a vote stays open, in days, counted from `selection.opened_on`. |
-| `objection_window_working_days` | int | How long an objection window runs, in working days rather than calendar days (G-10). |
-| `inactivity_months` | int | How many months without a ballot make a member inactive (G-09). |
-| `balance_window_months` | int | How far back the programme balance report looks, in months. |
-| `view_count_window_days` | int | How long after a talk its view count is read off, in days. |
-| `sla_days.invitation_follow_up` | int | Days before an unanswered invitation is followed up. |
-| `sla_days.summary_after_delivery` | int | Days after a talk before the forum summary is overdue. |
-| `sla_days.recording_after_delivery` | int | Days after a talk before the recording is overdue. |
+| `board_min` | number | Fewest members the board may hold. |
+| `board_max` | number | Most members the board may hold. |
+| `vote_window_days` | number | How long a vote stays open, in days, counted from `selection.opened_on`. |
+| `objection_window_working_days` | number | How long an objection window runs, in working days rather than calendar days (G-10). |
+| `inactivity_months` | number | How many months without a ballot make a member inactive (G-09). |
+| `balance_window_months` | number | How far back the programme balance report looks, in months. |
+| `view_count_window_days` | number | How long after a talk its view count is read off, in days. |
+| `instructions` | string | How to join the permanent room beyond the link itself -- a dial-in number, an access code, anything the room needs that the URL alone does not say. `''` is a legal answer: nothing more to add. |
+| `sla_days.invitation_follow_up` | number | Days before an unanswered invitation is followed up. |
+| `sla_days.summary_after_delivery` | number | Days after a talk before the forum summary is overdue. |
+| `sla_days.recording_after_delivery` | number | Days after a talk before the recording is overdue. |
 | `channels` | list&lt;Channel&gt; | Where an event is announced, in the order the volunteers work through them. Read only through `state/channels.ts::channelsOf`; an empty list is a legal answer and means nothing is promoted through this app. |
 
 ### `board` entries

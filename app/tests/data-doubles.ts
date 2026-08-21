@@ -26,6 +26,7 @@ export function config(overrides: Partial<Config> = {}): Config {
     vw_counter: 1,
     overlap_window_days: 7,
     seminar_duration_minutes: 90,
+    eligibility_share: 0.6666666666666666,
     board: [],
     nominations: [],
     board_min: 3,
@@ -35,6 +36,10 @@ export function config(overrides: Partial<Config> = {}): Config {
     inactivity_months: 6,
     balance_window_months: 24,
     view_count_window_days: 30,
+    // Kept immediately before `sla_days`: `data-validate.test.ts` regex
+    // matches from `sla_days:` up to the next `channels:` to isolate that
+    // block, which only works with nothing serialised between the two.
+    instructions: '',
     sla_days: {
       invitation_follow_up: 30,
       summary_after_delivery: 7,
@@ -43,6 +48,11 @@ export function config(overrides: Partial<Config> = {}): Config {
     // Two, where `data/config.yml` lists seven: a double that restated the
     // seven would make every screen test depend on a list this task exists
     // to leave editable. A test about the channels states its own.
+    //
+    // Kept as the last field: `channels.test.ts` regex-replaces a real
+    // `configYaml()` output from `channels:` to the end of the string to
+    // build a malformed file, which only isolates the channels block if
+    // this is the last key serialised (see `types.ts::Config.channels`).
     channels: [
       { key: 'forum', label: 'The Example Collective forum' },
       { key: 'linkedin_page', label: 'TEC LinkedIn page' },
@@ -97,6 +107,7 @@ export function speaker(overrides: Partial<Speaker> = {}): Speaker {
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {},
     checklist: {},
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },

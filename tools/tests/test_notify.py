@@ -1542,13 +1542,55 @@ def test_immediate_reports_unreadable_current_data(
     assert "invalid YAML" in capsys.readouterr().out
 
 
-def test_git_show_reads_the_previous_revision_of_the_speaker_file() -> None:
-    """The one subprocess this feature adds, exercised against this very
-    repository: fixed argv, an argument that is either a constant or an object
-    name, and the failure half is what the callers above stub."""
-    text, error = cli._git_show(repo_root(), cli.PREVIOUS_SPEAKERS)
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not on PATH")
+def test_git_show_reads_the_previous_revision_of_the_speaker_file(
+    tmp_path: Path,
+) -> None:
+    """Minor 6, branch review: this used to run `cli._git_show` against
+    this very checkout's own `HEAD~1:data/speakers.yml` -- real repository
+    history, not a fixture. That passes inside the checkout and raises
+    `fatal: not a git repository` in any copy without a `.git` (an
+    isolated mutation-testing copy, most concretely), a false positive the
+    reviewer hit directly. A fresh, disposable repository built here
+    instead, the same discipline
+    `test_git_show_reports_an_error_rather_than_raising_on_a_repository_with_no_head`
+    just above already uses for `_git_show`'s failure half -- this is its
+    success-half counterpart, exercising the one subprocess this feature
+    adds without depending on anything about the repository the test
+    happens to run inside."""
+    subprocess.run(  # nosec B603 B607
+        ["git", "init", "--quiet", "--initial-branch=main"],
+        cwd=tmp_path,
+        check=True,
+    )
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "speakers.yml").write_text(
+        "- id: spk-001\n  name: Ada Lovelace\n", encoding="utf-8"
+    )
+    _git = ["git", "-c", "user.name=test", "-c", "user.email=test@example.org"]
+    subprocess.run(  # nosec B603 B607
+        [*_git, "add", "data/speakers.yml"], cwd=tmp_path, check=True
+    )
+    subprocess.run(  # nosec B603 B607
+        [*_git, "commit", "--quiet", "-m", "first revision"], cwd=tmp_path, check=True
+    )
+    (data_dir / "speakers.yml").write_text(
+        "- id: spk-001\n  name: Ada Lovelace\n- id: spk-002\n  name: Grace Hopper\n",
+        encoding="utf-8",
+    )
+    subprocess.run(  # nosec B603 B607
+        [*_git, "add", "data/speakers.yml"], cwd=tmp_path, check=True
+    )
+    subprocess.run(  # nosec B603 B607
+        [*_git, "commit", "--quiet", "-m", "second revision"], cwd=tmp_path, check=True
+    )
+
+    text, error = cli._git_show(tmp_path, cli.PREVIOUS_SPEAKERS)
+
     assert error == ""
     assert "- id: spk-001" in text
+    assert "spk-002" not in text
 
 
 def test_the_comparison_starts_where_the_branch_actually_moved_from() -> None:

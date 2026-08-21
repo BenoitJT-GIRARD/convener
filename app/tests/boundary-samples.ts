@@ -50,6 +50,12 @@
  *   `assigned_to` already stand for, one grain further down.
  * - `SPEAKERS[0].checklist` carrying an `assignee: ''`: legal, and the same
  *   fact as no entry at all -- nobody in particular, which is the hosts.
+ * - `SPEAKERS[0].survey_enabled: true`, `SPEAKERS[1]` and `SPEAKERS[2]`
+ *   left `false`: the post-event survey switch (task 16, phase 4 spec S:6)
+ *   is a plain top-level boolean, and both values have to appear somewhere
+ *   in this fixture for a reader that swapped the field for its own
+ *   negation, or dropped it and defaulted every record to one value, to
+ *   fail here.
  * - `CONFIG.channels`, three of them and not seven: the list is
  *   configuration, and a fixture with the seven of today would be the
  *   boundary asserting a number the file is free to change. A key with an
@@ -114,6 +120,7 @@ export const SPEAKERS: Speaker[] = [
     zoom_link: 'https://example.org/zoom/11',
     youtube_url: 'https://example.org/watch/11',
     forum_thread: 'https://example.org/forum/11',
+    survey_enabled: true,
     runbook_progress: { 'approved/invitation-sent': true, 'delivered/summary-posted': false },
     checklist: {
       'scheduled/T-30/visuals': { assignee: 'ada' },
@@ -153,6 +160,7 @@ export const SPEAKERS: Speaker[] = [
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {},
     checklist: {},
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },
@@ -197,6 +205,7 @@ export const SPEAKERS: Speaker[] = [
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {},
     checklist: { 'scheduled/T-21/linkedin': { assignee: 'erin' } },
     metrics: { registrations: 0, live_peak: null, youtube_views_30d: null, forum_replies: null },
@@ -209,6 +218,7 @@ export const CONFIG: Config = {
   vw_counter: 12,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
+  eligibility_share: 0.6666666666666666,
   board: [
     { login: 'alice', joined_on: '2025-01-06', status: 'active', unavailable_until: '' },
     { login: 'bob', joined_on: '2025-03-10', status: 'active', unavailable_until: '2026-09-01' },
@@ -236,6 +246,7 @@ export const CONFIG: Config = {
   inactivity_months: 6,
   balance_window_months: 24,
   view_count_window_days: 30,
+  instructions: 'Dial +33 1 23 45 67 89, code 0000# if the video link fails.',
   sla_days: {
     invitation_follow_up: 30,
     summary_after_delivery: 7,

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 #: `scripts/` holds the one-shot migrations. They live outside the installed
 #: package (they are run once, not shipped) but are tested with it, so their
@@ -10,6 +14,46 @@ from typing import Any
 _SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
+
+
+@pytest.fixture(autouse=True)
+def _isolate_environment() -> Iterator[None]:
+    """Task 17's own finding, from proving `test_event_chain.py`'s replay
+    tests actually bite: `monkeypatch.setenv`/`delenv` only undoes changes
+    made *through monkeypatch itself* -- a stray `os.environ[key] = value`
+    written directly by production code would survive past that test's
+    own teardown and leak into whichever test runs next in the same
+    process. Nothing in `convener_ops`, `scripts` or this test tree does that
+    today (fix round 1's review checked by grep and by removing this
+    fixture entirely: the suite's result is identical either way) -- this
+    guards against a mutant introducing exactly that coupling, not a live
+    leak. A mutant that made one CLI step secretly depend on a previous
+    one having "just run", by reading an env var the previous step's own
+    code sets on success, would go undetected purely because an earlier
+    test in the same session happened to set that variable first -- not
+    because the replay test was wrong, but because the process's
+    environment was never reset between tests at all. Verified with a
+    second, independent mutant beyond the one this fixture was first built
+    for: 0 failures across the suite without this fixture, 14 with it.
+
+    Snapshots `os.environ` before every test and restores exactly the keys
+    that changed afterwards -- diff-based, not `clear()` then `update()`,
+    so `PATH`, `SYSTEMROOT` and `TEMP` (on Windows) are never even briefly
+    unset while the restore runs.
+
+    **One gap, by construction, not by neglect: `os.putenv`.** It writes
+    the process environment directly, bypassing the `os.environ` mapping
+    this fixture snapshots and restores, so a write made that way is
+    invisible here and leaks into every later child process for the rest
+    of the session. Nothing in this tree calls `os.putenv`; if that ever
+    changes, this fixture does not cover it."""
+    before = dict(os.environ)
+    yield
+    for key in set(os.environ) - set(before):
+        del os.environ[key]
+    for key, value in before.items():
+        if os.environ.get(key) != value:
+            os.environ[key] = value
 
 
 def ballot(**overrides: Any) -> dict[str, Any]:
@@ -63,7 +107,7 @@ def nomination(**overrides: Any) -> dict[str, Any]:
 
 
 def speaker(**overrides: Any) -> dict[str, Any]:
-    """A minimal valid speaker (schema v4); override any field per test.
+    """A minimal valid speaker (schema v5); override any field per test.
 
     Minimal, not partial: every key the model declares is here, with the
     empty value where the record has nothing to say. A double that left keys
@@ -107,6 +151,7 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "zoom_link": "",
         "youtube_url": "",
         "forum_thread": "",
+        "survey_enabled": False,
         "runbook_progress": {},
         # Nobody down for any line, which is the state every record starts in
         # and most lines stay in.
@@ -130,6 +175,7 @@ def config(**overrides: Any) -> dict[str, Any]:
         "vw_counter": 5,
         "overlap_window_days": 7,
         "seminar_duration_minutes": 90,
+        "eligibility_share": 0.6666666666666666,
         "board": [
             board_member(login="Anonymous"),
             board_member(login="grace"),
@@ -143,6 +189,7 @@ def config(**overrides: Any) -> dict[str, Any]:
         "inactivity_months": 6,
         "balance_window_months": 12,
         "view_count_window_days": 30,
+        "instructions": "",
         "sla_days": {
             "invitation_follow_up": 7,
             "summary_after_delivery": 5,

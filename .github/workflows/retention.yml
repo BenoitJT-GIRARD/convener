@@ -1,0 +1,226 @@
+name: Retention sweep
+
+# Task 15: the job that makes the phase 4 spec's central promise true.
+# S:4's cycle-of-life table ends "destruction de la cle -- les donnees de
+# l'evenement deviennent definitivement illisibles" 90 days after the
+# event (tools/convener_ops/eventkeys.py::is_due_for_destruction); acceptance
+# criterion 6 requires this to actually run, not merely be documented.
+# Scheduled (R-33 -- a retention job that only runs when somebody
+# remembers is the failure this task exists to prevent), with
+# workflow_dispatch for an operator to run it by hand.
+#
+# R-28: CONVENER_RETENTION_TOKEN is deliberately not GITHUB_TOKEN. Deleting a
+# repository secret needs a credential GITHUB_TOKEN does not carry, no
+# matter what this job's own `permissions:` grants -- a fine-grained
+# personal access token, scoped to this repository, with the 'Secrets'
+# permission set to read and write and nothing else. See
+# docs/reference/operations.md, 'Retention and early erasure', for how to
+# create one. Without it, the "Compute what is due" step below fails this
+# job outright, on every run, whether or not anything is actually due for
+# destruction today -- see tools/convener_ops/cli.py::retention_sweep's own
+# docstring for why that is deliberate, not a bug: a green run that
+# destroyed nothing must never look the same, from the Actions tab, as a
+# green run that had nothing to destroy.
+on:
+  schedule:
+    - cron: '11 6 * * *'
+  workflow_dispatch:
+
+# Serialises this workflow's own runs against each other (a scheduled run
+# and a manual dispatch overlapping, in particular) -- the certificate
+# workflows key theirs on the one event id an operator names; there is no
+# such scope here, since one run can sweep every event at once.
+concurrency:
+  group: retention-sweep
+  cancel-in-progress: false
+
+jobs:
+  retention:
+    runs-on: ubuntu-latest
+    # Checkout, `uv sync`, a glob over keys/events/*.pub against
+    # data/speakers.yml and the destruction registry -- no decrypt, no
+    # network call from Python at all (see cli.py::retention_sweep's own
+    # docstring: it computes only, and never touches the GitHub API
+    # itself).
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      # Important 2, branch review: this job's own commit below (deleting
+      # a destroyed event's `keys/events/<id>.pub` among it) pushes with
+      # `GITHUB_TOKEN`, the recursion guard `publish-vitrine.yml`'s own
+      # header comment names -- GitHub does not start a new workflow run
+      # from a push made with that token. Without a direct dispatch,
+      # nothing ever rebuilds the app bundle `copy-event-keys.mjs`
+      # populates from `keys/events/`, so the deployed bundle keeps
+      # serving a destroyed event's public key until an unrelated push to
+      # `main` happens to rebuild it -- the exact suppression trap the
+      # three certificate workflows and sweep.yml already dispatch around.
+      # `actions: write` is what lets this job trigger that dispatch
+      # itself, the same as those four.
+      actions: write
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Compute what is due for destruction
+        id: sweep
+        working-directory: tools
+        env:
+          CONVENER_RETENTION_TOKEN: ${{ secrets.CONVENER_RETENTION_TOKEN }}
+        run: uv run convener-retention-sweep
+      - name: Delete the destroyed event keys from repository secrets
+        id: delete
+        if: steps.sweep.outputs.destroyed_secrets != ''
+        env:
+          GH_TOKEN: ${{ secrets.CONVENER_RETENTION_TOKEN }}
+          DESTROYED_IDS: ${{ steps.sweep.outputs.destroyed_ids }}
+          DESTROYED_SECRETS: ${{ steps.sweep.outputs.destroyed_secrets }}
+        # Deliberately not inside the commit-and-push retry loop below:
+        # deleting an already-deleted secret with `gh secret delete`
+        # cannot be relied on to behave one particular way (R-34 -- two
+        # earlier drafts of this diff assumed opposite exit codes for
+        # that case, and nobody could settle which without a live call,
+        # which this suite must never make), so this step does not trust
+        # `gh secret delete`'s own exit code at all. It attempts the
+        # delete, then asks the one question that actually matters --
+        # `gh secret list`, is the secret *absent* now -- and treats
+        # absence as success however the delete itself exited. That
+        # converges under either behaviour, and is assertable offline
+        # against a stubbed `gh` on `PATH`.
+        #
+        # R-36: the listing itself can fail (an expired PAT mid-run, a
+        # 403, `gh` missing, an API blip) -- a failed listing is a
+        # failure for that event, never an absence: reading "the
+        # question could not be answered" as "the answer is no" recorded
+        # a destruction that had not happened, deleted the published
+        # `.pub` on the strength of it, and the sweep's own
+        # skip-if-already-recorded rule then made that permanent -- the
+        # exact inverse of what this job exists to guarantee.
+        #
+        # Round 3: `listing="$(...)"; list_status=$?` looked right and
+        # was not -- GitHub's default `run:` shell is `bash -e {0}`
+        # (the neighbouring step below sets `-e` explicitly for the same
+        # reason), and under `-e` a failing command substitution inside a
+        # plain assignment terminates the script on the spot, before
+        # `list_status=$?` is ever reached -- so the branch that names the
+        # failure and records what came off earlier in the batch was
+        # dead code in production, however clean it read. Only a command
+        # whose exit status is *itself the thing being tested* --
+        # `if ! cmd; then`, `cmd || ...`, `cmd && ...` -- is exempt from
+        # `-e`; a bare assignment is not. `if ! listing="$(...)"; then`
+        # below is that exemption, not a style choice.
+        #
+        # One event's failure must not abandon the others (R-34): the
+        # loop below `continue`s past a secret still present after the
+        # attempt, rather than `break`ing the whole batch, and collects
+        # every id that *did* end up confirmed absent into `recorded_ids`
+        # -- `destroyed_ids` and `destroyed_secrets` are parallel,
+        # same-order lists (both built from the same `due` list in
+        # cli.py::retention_sweep) -- so a later, healthy event in the
+        # same batch still gets recorded even if an earlier one failed.
+        # The recording step below runs on `if: always()` and reads only
+        # `recorded_ids`, so the registry never claims a destruction that
+        # did not happen (R-30) and never fails to record one that did.
+        # `status` still ends non-zero if anything failed, so the job
+        # itself is red.
+        run: |
+          IFS=',' read -r -a names <<< "$DESTROYED_SECRETS"
+          IFS=',' read -r -a ids <<< "$DESTROYED_IDS"
+          recorded=""
+          status=0
+          for i in "${!names[@]}"; do
+            name="${names[$i]}"
+            id="${ids[$i]}"
+            echo "deleting $name"
+            gh secret delete "$name" --repo "$GITHUB_REPOSITORY" || true
+            if ! listing="$(gh secret list --repo "$GITHUB_REPOSITORY" --json name --jq '.[].name')"; then
+              # This phase has now hit the same shape three times -- a
+              # workflow that exited green having passed no secrets, a
+              # projection published to somewhere nothing serves, and
+              # now a question whose own failure was read as its answer.
+              # Absence of evidence is not evidence of absence: a failed
+              # listing settles nothing about whether the secret is gone,
+              # so it is recorded as a failure, never as an absence.
+              echo "::error::could not confirm whether $name was deleted for event $id (gh secret list failed)"
+              status=1
+              continue
+            fi
+            if printf '%s\n' "$listing" | grep -qx "$name"; then
+              echo "::error::failed to delete $name for event $id"
+              status=1
+              continue
+            fi
+            recorded="${recorded:+$recorded,}$id"
+          done
+          echo "recorded_ids=$recorded" >> "$GITHUB_OUTPUT"
+          exit $status
+      - name: Record the destructions and commit the registry
+        if: always() && steps.delete.outputs.recorded_ids != ''
+        env:
+          DESTROYED_IDS: ${{ steps.delete.outputs.recorded_ids }}
+          DESTROYED_ON: ${{ steps.sweep.outputs.destroyed_on }}
+          # Important 2, branch review: authenticates the `gh workflow run`
+          # dispatches below -- the same addition the three certificate
+          # workflows already carry, for the identical reason.
+          GH_TOKEN: ${{ github.token }}
+        # `convener-record-destructions` re-run inside the retry loop, the same
+        # shape registration.yml's own handling step already uses: a
+        # rejected push resets the working tree back to origin, so
+        # re-running the command recomputes the identical registry rather
+        # than trying to re-push a commit `git reset --hard` just
+        # discarded. Safe to re-run because `record_destructions` is
+        # idempotent by construction -- see its own docstring.
+        #
+        # R-35: `record_destructions` itself now also removes each
+        # recorded event's `keys/events/<id>.pub`, in that order --
+        # `git add`ing `keys/events` here as well as the registry file is
+        # what puts that removal in the same commit as the registry entry
+        # (spec S4, Important 2: a destroyed event must stop accepting
+        # new registrations too, and the published `.pub` is the signup
+        # relay's only "this event is open" gate).
+        run: |
+          set -e
+          git config user.name "convener-retention"
+          git config user.email "convener-retention@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-record-destructions)
+            git add data/event-key-destructions.yml
+            git add keys/events
+            if git diff --staged --quiet; then
+              echo "::warning::convener-retention-sweep found events due for destruction, but the registry already recorded them -- see this run's own log above"
+              exit 0
+            fi
+            git commit -m "data: record the destruction of an event registration key"
+            if git push; then
+              # Important 2, branch review: publish-vitrine.yml watches
+              # data/speakers.yml and data/events/*/certificates.yml, not
+              # keys/ or the destruction registry, so this dispatch finds
+              # nothing changed and exits as a no-op -- dispatched anyway,
+              # the same way the three certificate workflows dispatch it
+              # unconditionally, so this workflow's own trigger shape
+              # never has to be reasoned about specially.
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              # The dispatch that actually matters: deploy.yml's own build
+              # runs copy-event-keys.mjs, which is the only thing that
+              # ever removes a destroyed event's keys/events/<id>.pub from
+              # the deployed app bundle. Without this, the signup page for
+              # a destroyed event keeps accepting registrations that
+              # encrypt under a key nothing can ever decrypt again, until
+              # some unrelated push to main happens to rebuild.
+              gh workflow run deploy.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger deploy.yml -- rerun it manually from the Actions tab"
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+          done
+          echo "::error::push failed after 3 attempts -- the event key(s) were already destroyed, but the record was not saved; rerun this workflow to record it, or write data/event-key-destructions.yml by hand"
+          exit 1

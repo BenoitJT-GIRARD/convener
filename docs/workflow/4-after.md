@@ -16,6 +16,31 @@ Nobody writes the discussion down for you, so the two of you do — in a few lin
 
 Write your notes up into a short, readable summary and post it under the announcement thread — [template](../toolkit/forum-post-summary.md), which says how to structure it and what to check before posting. It is a **summary, not a record of everything said**: give context, be tactful, organise it well. Show the draft to the speaker before you post it.
 
+## If the event ran without a meeting-platform account
+
+Skip this section entirely if the series' own meeting-platform account handled the session — attendance is read automatically and nothing here applies.
+
+Otherwise, before anyone can issue certificates: download the attendance export from wherever the session actually ran, then encrypt and commit it.
+
+1. Save it locally as `data/events/<event id>/attendance-import.csv` (never commit this file directly — it holds names and addresses in the clear).
+2. From `tools/`, run `EVENT_ID=<event id> uv run convener-encrypt-attendance-export`. This needs no account and no secret; it only reads the event's already-published public key.
+3. Commit and push the `attendance-import.csv.enc` file this writes.
+
+See [operations reference](../reference/operations.md) ("Encrypting the manual attendance export") for the full procedure. Tick the matching line below once this is done — issuing certificates re-reads this file, so nothing can proceed without it.
+
+## Two boundaries when matching attendance
+
+Before certificates are issued, attendance is matched against registrations by matching code, then by address, then by normalised name. Two things can come out of that which are not the same, and must not be reported as if they were:
+
+- **Unmatched** — someone was in the room, but nothing tied their address or name to a registration. This is the case worth resolving by hand: [operations reference](../reference/operations.md#matching-attendance) ("Matching attendance") writes a short list for exactly that.
+- **Unreachable** — someone joined by telephone, so the platform gave us no address and no display name to match against at all. This is not a case to resolve — it is a boundary of the phone connection itself, and it is stated on the event page too, for the same reason: turning up without registering, or joining in a way that cannot be matched, are both reported honestly, never silently folded into "not eligible" without saying why.
+
+Never report a telephone joiner as unmatched. They were never reachable to begin with, and treating the two the same sends whoever is doing the manual review chasing an address the platform never collected.
+
+## Retrieve the recording before the platform copy is deleted
+
+Whichever platform hosted the session has limited storage, and a scheduled job frees it by deleting its own copy once retrieval is confirmed. Download the recording and archive it somewhere durable — your own drive, the series' own storage, wherever the team keeps these — before that happens. Tick the matching line below once it is safely saved elsewhere; only tick it once the file genuinely exists somewhere else, since a premature tick is what lets the platform's own copy be deleted.
+
 ## 🚪 The gate — publishing the recording
 
 {{> fragments/board-rules-publication-gate }}
@@ -37,6 +62,8 @@ Because it is a convention and not a law, it is configuration: `view_count_windo
 ## Checklist
 
 - [ ] Notes from the discussion written up while fresh
+- [ ] Attendance export encrypted and committed — manual implementation only, skip if the meeting-platform account handled the session
+- [ ] Recording retrieved and archived somewhere durable
 - [ ] Draft summary shown to the speaker
 - [ ] Summary posted on the forum thread
 - [ ] Recording published on the video channel — only after the Board's green light

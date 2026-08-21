@@ -1,7 +1,13 @@
 """External integrations: what they need, and what happens without them.
 
-An integration with no secret set is *absent*, which is a normal state — never
-an error. Nothing in this module raises because a secret is missing.
+An integration with no secret set is *absent*. For every integration but
+one, that is a normal state -- never an error, and nothing in this module
+raises because a secret is missing. The one exception is declared, not
+hard-coded here: `absent_is_normal: false` in `config/integrations.yml`
+(carried on `Integration` below) marks a row whose absence is not a
+harmless fallback. `event_keys` is that row today -- see
+`tools/convener_ops/eventkeys.py` for why -- and `cli.py::render_check` is what
+turns the flag into the operator-facing text.
 """
 
 from __future__ import annotations
@@ -23,6 +29,10 @@ class Integration:
     label: str
     secrets: list[str]
     absent_behaviour: str
+    #: True for every row but one. See the module docstring; the exception
+    #: is data, not a name checked against a hard-coded list, so a future
+    #: integration with the same property declares itself the same way.
+    absent_is_normal: bool = True
     state: str = ABSENT
     missing: list[str] = field(default_factory=list)
 
@@ -36,6 +46,7 @@ def load_declaration(path: Path) -> list[Integration]:
             label=entry["label"],
             secrets=list(entry.get("secrets") or []),
             absent_behaviour=entry["absent_behaviour"],
+            absent_is_normal=bool(entry.get("absent_is_normal", True)),
         )
         for entry in entries
     ]

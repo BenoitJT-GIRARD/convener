@@ -26,6 +26,7 @@ function config(board: BoardMember[]): Config {
     vw_counter: 1,
     overlap_window_days: 7,
     seminar_duration_minutes: 90,
+    eligibility_share: 0.6666666666666666,
     board,
     nominations: [],
     board_min: 3,
@@ -41,6 +42,7 @@ function config(board: BoardMember[]): Config {
       recording_after_delivery: 10,
     },
     channels: [],
+    instructions: '',
   };
 }
 

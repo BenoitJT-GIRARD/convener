@@ -216,6 +216,27 @@ function EditFields({ speaker }: { speaker: Speaker }) {
         <L label="Forum thread">
           <input className={input} value={draft.forum_thread} onChange={e => up('forum_thread', e.target.value)} />
         </L>
+        {/* Minor 9 (fix round 1, task 16): the one per-event field with no
+            control here before this -- `survey_enabled` round-tripped
+            safely regardless (a hand edit of data/speakers.yml, or this
+            very object spread, both preserve it), but the person who
+            needs to turn a survey on is a board member in this app, not
+            someone editing YAML by hand. */}
+        <L label="Post-event survey">
+          {/* No nested `<label>` and no extra text node here: `L` already
+              wraps this block in its own `<label>`, whose accessible name
+              becomes every text node inside it -- a sibling "Open" caption
+              would concatenate into that name ("Post-event survey Open"),
+              not stay a separate label of its own. The bare checkbox is
+              what that one accessible name targets; its checked state is
+              the only thing worth showing. */}
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={draft.survey_enabled}
+            onChange={e => up('survey_enabled', e.target.checked)}
+          />
+        </L>
         <L label="Registrations">
           <input
             className={input}

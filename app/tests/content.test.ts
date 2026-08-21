@@ -3,6 +3,7 @@ import { fetchContent, invalidateContent } from '../src/content/fetch';
 import { substitute } from '../src/content/render';
 import type { Speaker } from '../src/data/types';
 import { speaker as double } from './data-doubles';
+import signupLinkFixture from '../../tools/tests/fixtures/signup-link.json';
 
 beforeEach(() => {
   invalidateContent();
@@ -121,4 +122,34 @@ describe('substitute v2 context', () => {
     const s = makeSpeaker({ name: 'X', time: '14:30' });
     expect(substitute('starts at {{ speaker.time }}', { speaker: s })).toBe('starts at 14:30');
   });
+
+  it('derives speaker.signup_link as the missing marker when edition_code is blank', () => {
+    const s = makeSpeaker({ name: 'X', edition_code: '' });
+    expect(substitute('{{ speaker.signup_link }}', { speaker: s })).toMatch(
+      /«missing: speaker\.signup_link»/,
+    );
+  });
+});
+
+// Fix wave 2 correction: wave 1 published `registration.SIGNUP_BASE` as a
+// literal with the event id left for a volunteer to fill in by hand, on the
+// mistaken belief that no Speaker-to-event-id mapping existed. R-5
+// (`tools/convener_ops/platform.py::find_speaker`) is that mapping -- `event_id`
+// is `edition_code`, lower-cased -- and this file's `speaker.signup_link`
+// now computes it. Bound here against the same shared, worked fixture
+// `tools/tests/test_confirmation.py` reads on the Python side (D-14),
+// rather than trusting two lower-casing implementations to agree.
+describe('speaker.signup_link matches the shared D-14 fixture', () => {
+  it('carries the same signup_base as the fixture', () => {
+    expect(signupLinkFixture.signup_base).toBe(
+      'https://example-instance.github.io/example-showcase/app/#/signup/',
+    );
+  });
+
+  for (const c of signupLinkFixture.cases) {
+    it(`computes ${c.signup_url} for edition_code ${c.edition_code}`, () => {
+      const s = makeSpeaker({ name: 'X', edition_code: c.edition_code });
+      expect(substitute('{{ speaker.signup_link }}', { speaker: s })).toBe(c.signup_url);
+    });
+  }
 });

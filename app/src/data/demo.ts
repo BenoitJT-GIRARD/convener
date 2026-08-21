@@ -42,6 +42,7 @@ export const DEMO_CONFIG: Config = {
   vw_counter: 6,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
+  eligibility_share: 0.6666666666666666,
   board: [
     boardMember('alice', '2024-01-01'),
     boardMember('bob', '2024-01-01'),
@@ -56,6 +57,7 @@ export const DEMO_CONFIG: Config = {
   inactivity_months: 12,
   balance_window_months: 12,
   view_count_window_days: 30,
+  instructions: '',
   sla_days: {
     invitation_follow_up: 7,
     summary_after_delivery: 5,
@@ -122,6 +124,7 @@ export const DEMO_SPEAKERS: Speaker[] = [
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {},
     checklist: {},
     metrics: blankMetrics,
@@ -162,6 +165,7 @@ export const DEMO_SPEAKERS: Speaker[] = [
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: { 'approved/invitation-sent': true },
     checklist: {},
     metrics: blankMetrics,
@@ -208,6 +212,7 @@ export const DEMO_SPEAKERS: Speaker[] = [
     zoom_link: 'https://zoom.us/REPLACE',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {
       'approved/invitation-sent': true,
       'scheduled/T-30/visuals': true,
@@ -252,6 +257,7 @@ export const DEMO_SPEAKERS: Speaker[] = [
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {},
     checklist: {},
     metrics: blankMetrics,
@@ -298,6 +304,7 @@ export const DEMO_SPEAKERS: Speaker[] = [
     zoom_link: '',
     youtube_url: 'https://youtube.com/watch?v=def',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {
       'approved/invitation-sent': true,
       'delivered/forum-summary': true,

@@ -37,3 +37,12 @@ Segoe
 HMAC
 redeployable
 redeployability
+eventkeys
+ratelimits
+STARTTLS
+WXYZ
+replayable
+bypassable
+Referer
+traitement
+donnees

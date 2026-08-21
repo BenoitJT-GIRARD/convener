@@ -245,13 +245,22 @@ def test_a_re_run_does_not_blank_a_field_someone_filled_in_since() -> None:
 
 
 def test_the_migrated_data_passes_the_validator() -> None:
+    """The validator now also requires `survey_enabled` (task 16, schema
+    v5), which this migration does not add -- `test_migrate_v3.py`'s own
+    `test_the_migrated_data_passes_the_validator` names that gap
+    exhaustively at every stage; this one only needs the fact that it
+    exists, so a record freshly migrated to v4 alone is expected to still
+    be missing it here."""
     speakers = migrate_speakers(
         [
             v3_speaker(),
             v3_speaker(id="spk-002", status="lead", edition_code="", date=""),
         ]
     )
-    assert validate_speakers(speakers, {"Anonymous"}) == []
+    assert validate_speakers(speakers, {"Anonymous"}) == [
+        "speakers[0] (spk-001): missing survey_enabled",
+        "speakers[1] (spk-002): missing survey_enabled",
+    ]
 
 
 # --- the script as it is actually run -------------------------------------

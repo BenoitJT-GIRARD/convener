@@ -1,0 +1,61 @@
+name = "convener-signup-relay"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# The application's origin -- the only one this worker answers CORS
+# preflights for. Same value as services/auth-proxy/wrangler.toml's
+# ALLOWED_ORIGIN, for the same reason: Origin carries no path, so the app
+# being served from a subpath of this host does not change it. Not a
+# secret -- it ships in every CORS response header already.
+[vars]
+ALLOWED_ORIGIN = "https://example-instance.github.io"
+
+# R-37 (fix round 1, task 16) checked the survey switch against a plain
+# public HTTPS URL here (SURVEY_STATUS_URL), because it seemed like the
+# cheaper read: no token, no GitHub API budget. R-41 (fix round 2) removed
+# it: that URL pointed at a example-showcase deployment this project had never
+# actually wired up, so the check depended on a site that did not exist,
+# carried a build-to-live latency the relay had no reason to inherit on
+# top of the handler's, and was a hardcoded cross-origin literal nothing
+# derived. `surveyEnabled` in src/index.js now reads
+# `public-data/survey-status.json` through the same GitHub Contents API
+# credential (CONVENER_DISPATCH_TOKEN, below) this worker already spends one
+# read of for `keys/events/<id>.pub` -- one more read on an already
+# ceiling-capped route, in exchange for an answer that agrees with the
+# handler's by construction rather than by build timing. There is no var
+# to bind here any more: the repository (`REPO`, a source constant) and
+# the token cover both reads.
+
+# CONVENER_DISPATCH_TOKEN is a Wrangler secret, set with
+# `npx wrangler secret put CONVENER_DISPATCH_TOKEN` -- never here. See README.md.
+
+# SIGNUP_RELAY_KV backs the per-event registration ceiling (README.md,
+# "Abuse protection"). Not a secret -- a namespace id is not sensitive -- but
+# it is specific to the Cloudflare account this worker deploys to, so it
+# cannot be filled in until that namespace exists:
+#
+#   npx wrangler kv namespace create SIGNUP_RELAY_KV
+#
+# paste the "id" it prints below before the first deploy.
+# deploy-signup-relay.yml's own gate refuses to deploy while this is still
+# the placeholder, rather than letting `wrangler deploy` fail on it.
+[[kv_namespaces]]
+binding = "SIGNUP_RELAY_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# SIGNUP_RATE_LIMITER -- the per-event burst limiter (README.md, "Abuse
+# protection"). Unlike SIGNUP_RELAY_KV above, `namespace_id` needs no
+# `wrangler ... create` step and no account-specific value: Cloudflare's own
+# docs describe it as "a positive integer that uniquely defines this rate
+# limiting namespace within your Cloudflare account," chosen by the
+# developer, not allocated. "1" is safe to commit as-is because this is the
+# only rate limiter declared anywhere in this Cloudflare account today; if a
+# second one is ever added (in this worker or another), it must use a
+# different integer, or the two will silently share one bucket.
+[[ratelimits]]
+name = "SIGNUP_RATE_LIMITER"
+namespace_id = "1"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
