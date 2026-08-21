@@ -8,13 +8,14 @@ on:
 # Three other workflows push to main, so two "Deploy app" runs overlapping is
 # ordinary, not exotic. That is a different race from the one the retry loop
 # below handles: this job and `publish-vitrine.yml` write disjoint subtrees
-# of example-showcase (`app/` here, `src/_data/` there), so a rebase between them
-# always replays cleanly and both pushes must land -- which is exactly what
-# that loop is for, and it is untouched. Two *deploy* runs are not disjoint:
-# both rewrite all of `app/`, so a rebase between them either conflicts on
-# `index.html` (different hashed asset names from the same base, a red job)
-# or replays cleanly and lets the *older* build silently overwrite the
-# newer one -- worse, because nothing reports it.
+# of example-showcase (`app/` here, the site's own root-level files there --
+# `index.html`, `style.css`, `fonts/`, `.nojekyll`, task 2), so a rebase
+# between them always replays cleanly and both pushes must land -- which is
+# exactly what that loop is for, and it is untouched. Two *deploy* runs are
+# not disjoint: both rewrite all of `app/`, so a rebase between them either
+# conflicts on `index.html` (different hashed asset names from the same
+# base, a red job) or replays cleanly and lets the *older* build silently
+# overwrite the newer one -- worse, because nothing reports it.
 #
 # `cancel-in-progress: true` removes that case by construction rather than
 # serialising the two runs and hoping the order holds: once a newer commit
@@ -193,12 +194,13 @@ jobs:
             exit 0
           fi
           git commit -m "app: refresh build"
-          # This job and Publish vitrine data both clone example-showcase fresh
-          # and each only ever stages its own disjoint subtree (app/ here,
-          # src/_data/ there) -- but that makes the *commits* conflict-free,
-          # not the *push*. git push is branch-atomic, not path-atomic: two
-          # runs can each clone before the other pushes, and the loser's
-          # push is a plain non-fast-forward rejection. A rebase is safe
+          # This job and Publish vitrine both clone example-showcase fresh and
+          # each only ever stages its own disjoint subtree (app/ here, the
+          # site's own root-level files there) -- but that makes the
+          # *commits* conflict-free, not the *push*. git push is
+          # branch-atomic, not path-atomic: two runs can each clone before
+          # the other pushes, and the loser's push is a plain
+          # non-fast-forward rejection. A rebase is safe
           # here precisely because the subtrees never overlap, so replaying
           # this commit on top of the other's can never conflict.
           for attempt in 1 2 3; do

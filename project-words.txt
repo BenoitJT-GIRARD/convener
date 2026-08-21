@@ -46,3 +46,16 @@ bypassable
 Referer
 traitement
 donnees
+cadrage
+tagline
+preconnects
+stylesheet
+middot
+endfor
+linecap
+lede
+mdash
+affil
+rarr
+rsquo
+noopener

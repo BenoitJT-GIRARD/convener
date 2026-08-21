@@ -352,9 +352,9 @@ def test_deploy_workflow_push_step_only_touches_the_app_subtree() -> None:
     script = _push_step_script()
     assert "git add --force app" in script, (
         "the push step must stage only the target repo's app/ subtree, the "
-        "same discipline publish-vitrine.yml uses for src/_data/ -- and "
-        "with --force, since `git add` still honours the target "
-        "repository's own .gitignore"
+        "same discipline publish-vitrine.yml uses for the site's own "
+        "root-level files -- and with --force, since `git add` still "
+        "honours the target repository's own .gitignore"
     )
     assert "git add ." not in script and "git add -A" not in script
 
@@ -566,14 +566,137 @@ def test_publish_vitrine_push_step_no_longer_copies_certificates_data() -> None:
         "publish-vitrine.yml's push step still mentions certificates.json "
         "-- the dead write this test exists to keep gone"
     )
-    assert "git add src/_data/events.json" in script, (
-        "the events feed itself must still be staged and pushed"
-    )
 
 
 def test_publish_vitrine_workflow_permissions_are_read_only() -> None:
     job = _publish_vitrine_workflow()["jobs"]["publish"]
     assert job["permissions"] == {"contents": "read"}
+
+
+# ------------------------------------------------------------------ #
+# publish-vitrine.yml, task 2 (phase 5): the showcase's own templates
+# moved from `example-showcase` into this repository's `site/` (D-15). This job
+# now builds the whole site and pushes the built output to the vitrine's
+# root, rather than copying one generated data file into a checkout of a
+# separate Eleventy project living there.
+# ------------------------------------------------------------------ #
+
+
+def test_publish_vitrine_paths_trigger_includes_the_site_templates() -> None:
+    """A change under `site/` has no effect on `events-public.json`, so
+    without this the old `paths:` trigger (data + `tools/**`) would never
+    rebuild or republish the site at all -- the same gap R-19 closed for
+    `certificates.yml`, above."""
+    text = (ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    assert "'site/**'" in trigger
+
+
+def test_publish_vitrine_refreshes_site_data_before_building() -> None:
+    """`site/src/_data/events.json` is committed only as a build fixture
+    (see site/README.md); this step overwrites it from the file 'Build
+    public data' just generated, so the build that follows always reflects
+    current private data, not whatever a contributor last committed."""
+    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    names = [step.get("name") for step in job["steps"]]
+    assert "Refresh site data" in names
+    assert names.index("Refresh site data") > names.index("Build public data"), (
+        "the site data must be refreshed after the public data projection "
+        "runs, or it copies last run's file"
+    )
+    for step in job["steps"]:
+        if step.get("name") == "Refresh site data":
+            assert "public-data/events-public.json" in step["run"]
+            assert "site/src/_data/events.json" in step["run"]
+
+
+def test_publish_vitrine_builds_the_site_before_pushing() -> None:
+    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    names = [step.get("name") for step in job["steps"]]
+    assert "Install site" in names and "Build site" in names
+    assert names.index("Refresh site data") < names.index("Build site"), (
+        "the site must build from the refreshed data, not the committed fixture"
+    )
+    assert names.index("Build site") < names.index("Push to example-showcase"), (
+        "the build must run before the push step, or it publishes "
+        "whatever site/_site last held"
+    )
+
+
+def test_publish_vitrine_push_step_only_touches_the_root_site_files() -> None:
+    """The disjoint-subtree argument the retry loop relies on: this step
+    must never remove or restage `app/`, deploy.yml's own subtree of the
+    same repository."""
+    script = _publish_vitrine_push_script()
+    assert "! -name 'app'" in script, (
+        "the push step's wipe must exclude app/ -- deploy.yml's own "
+        "disjoint subtree -- or a site publish would delete the deployed "
+        "application"
+    )
+    assert "rm -rf /tmp/vit/app" not in script
+    assert "git add --force -A" in script, (
+        "the built site is a whole-tree replacement (task 5 and later add "
+        "pages without editing this step), staged in full, not one named "
+        "file"
+    )
+
+
+def test_publish_vitrine_push_step_clears_stale_files_before_copying() -> None:
+    script = _publish_vitrine_push_script()
+    wipe_at = script.find("find /tmp/vit")
+    copy_at = script.find("cp -r")
+    assert wipe_at != -1 and copy_at != -1 and wipe_at < copy_at, (
+        "a page removed from site/ must disappear from the publication "
+        "too -- the wipe has to happen before the fresh build is copied in"
+    )
+
+
+def test_publish_vitrine_push_step_retry_re_derives_rather_than_rebases() -> None:
+    """The same defence deploy.yml's own 'Commit survey status' step uses
+    (test_deploy_workflow_survey_status_retry_re_derives_rather_than_
+    rebases, above), for the identical reason: this commit is a wholesale
+    rewrite of generated files -- built HTML, a stylesheet, binary fonts --
+    not an append. Replaying a rebase's diff over a full-file rewrite is
+    exactly where it conflicts instead of applying; re-deriving discards
+    the local commit and reproduces the identical output against whatever
+    landed on main in the meantime."""
+    script = _publish_vitrine_push_script()
+    commands = [
+        line for line in script.splitlines() if not line.strip().startswith("#")
+    ]
+    assert not any("git rebase" in line for line in commands)
+    assert not any("git pull" in line for line in commands)
+    assert "git fetch origin main" in script
+    assert "git reset --hard origin/main" in script
+    retry_block = script.split("for attempt in 1 2 3; do", 1)[-1]
+    assert "refresh_published_site" in retry_block, (
+        "the retry must re-copy the already-built site over the freshly "
+        "reset tree on every attempt, not only stage whatever survived "
+        "the reset"
+    )
+    assert "git commit" in retry_block
+
+
+def test_publish_vitrine_site_ships_nojekyll() -> None:
+    """P-4's consequence: the vitrine's root is now a full site
+    (`index.html`, `style.css`, `fonts/`, `app/`), exactly what its
+    already-active GitHub Pages setting ('branch main, folder root')
+    serves -- but GitHub's default Jekyll processing swallows anything at
+    that root it does not recognise, which is what served the README
+    instead of the site until now. `.nojekyll` stops that. Sourced from
+    `site/src/.nojekyll` and passed through by `site/.eleventy.js`, not
+    `touch`-ed by this workflow, so the published site stays reproducible
+    from `site/` alone."""
+    assert (ROOT / "site/src/.nojekyll").exists(), (
+        "site/src/.nojekyll is missing -- the published root would carry "
+        "no .nojekyll marker, and GitHub's default Jekyll processing "
+        "would swallow the site"
+    )
+    eleventy_config = (ROOT / "site/.eleventy.js").read_text(encoding="utf-8")
+    assert "addPassthroughCopy('src/.nojekyll')" in eleventy_config, (
+        "site/.eleventy.js no longer passes .nojekyll through to _site/ -- "
+        "a build would silently drop it from the publication"
+    )
 
 
 # ------------------------------------------------------------------ #

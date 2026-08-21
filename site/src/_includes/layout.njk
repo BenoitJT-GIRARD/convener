@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{ site.title }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="{{ site.tagline }}">
+{# Fonts are self-hosted from /fonts/ — see the @font-face block in style.css.
+   This head previously carried two preconnects and a stylesheet link to
+   Google, which handed every visitor's address to a third party. The phase 5
+   specification forbids exactly that, and this page also carries the data
+   notice, so the contradiction was visible from the page itself. #}
+<link rel="preload" href="/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="container masthead__inner">
+    <a href="/" class="masthead__brand unstyled">
+      <span class="masthead__brand-mark">No.</span>
+      <span class="masthead__brand-name">The Example Collective</span>
+      <span class="masthead__brand-sub">Monthly Reading Group</span>
+    </a>
+    <a href="{{ site.organizerApp }}" class="masthead__access unstyled">Organizer access</a>
+  </div>
+</header>
+
+<main>{{ content | safe }}</main>
+
+<footer class="colophon">
+  <div class="container colophon__inner">
+    <p class="colophon__credit">
+      <em>Run by volunteers from</em> <a href="{{ site.forum }}">The Example Collective</a> <em>&middot; A community of behavioural-science researchers.</em>
+    </p>
+    <nav class="colophon__nav">
+      <a href="{{ site.forum }}" class="unstyled">Forum</a>
+      <a href="{{ site.organizerApp }}" class="unstyled">Organizer access</a>
+    </nav>
+  </div>
+</footer>
+
+</body>
+</html>
