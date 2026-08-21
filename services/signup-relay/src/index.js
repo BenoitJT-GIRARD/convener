@@ -240,6 +240,43 @@ async function eventKeyExists(eventId, token) {
   throw new Error(`unexpected status checking event key: ${res.status}`);
 }
 
+/**
+ * Whether `eventId` currently has the post-event survey switch on
+ * (R-37, fix round 1) -- checked only on `/survey`, never on `/`. Fetches
+ * `env.SURVEY_STATUS_URL` (a public HTTPS URL, no token: see
+ * `wrangler.toml`'s own comment for why this is not a GitHub Contents API
+ * read) and checks `eventId`'s membership in the bare JSON array it
+ * serves.
+ *
+ * Throws on anything the caller cannot read as a clean, definite
+ * "enabled" or "not enabled" -- a non-2xx response, a network failure,
+ * unparsable JSON, or JSON that is not an array -- so the caller reports
+ * that as this worker's own failure (502), the same "ambiguous is not
+ * false" split `eventKeyExists` already draws for `keys/events/<id>.pub`.
+ * A caller that *did* get a definite answer and it was "not enabled"
+ * reads that as `false`, refused as 404 -- the same bucket "no such
+ * event" already falls into, and for the identical reason: this worker's
+ * caller cannot tell the two apart from the outside and does not need to.
+ *
+ * This is the relay's own layer of the switch, not the only one: a page
+ * that skipped this check entirely and posted straight to this route
+ * would still be refused here, and `convener-handle-survey-response` checks
+ * again regardless, because this check -- reading a build-time-baked,
+ * possibly momentarily stale public file -- is a courtesy that saves a
+ * wasted workflow run, never the authority.
+ */
+async function surveyEnabled(eventId, statusUrl) {
+  const res = await fetch(statusUrl, { signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS) });
+  if (!res.ok) {
+    throw new Error(`unexpected status fetching survey status: ${res.status}`);
+  }
+  const ids = await res.json();
+  if (!Array.isArray(ids)) {
+    throw new Error('survey status response was not a JSON array');
+  }
+  return ids.includes(eventId);
+}
+
 function counterKey(eventId) {
   return `count:${eventId}`;
 }
@@ -414,6 +451,25 @@ export async function handle(request, env) {
   }
   if (!known) {
     return respond(404, env, 'Not Found');
+  }
+
+  // R-37 (fix round 1): the relay's own layer of the survey switch,
+  // checked only on `/survey` -- never on `/`, where it has no meaning --
+  // and only once the event is already known to exist, so a stranger
+  // guessing at event ids never learns anything new from this check that
+  // the one above did not already tell them. Refused the same way an
+  // unknown event is (404): the caller cannot tell "no such event" from
+  // "this event has no survey open" apart, and does not need to.
+  if (isSurvey) {
+    let enabled;
+    try {
+      enabled = await surveyEnabled(eventId, env.SURVEY_STATUS_URL);
+    } catch {
+      return respond(502, env, 'Bad Gateway');
+    }
+    if (!enabled) {
+      return respond(404, env, 'Not Found');
+    }
   }
 
   let upstream;

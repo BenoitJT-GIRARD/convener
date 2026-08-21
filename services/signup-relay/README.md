@@ -35,6 +35,25 @@ worker, not a route on either of the other two" below applies a second time
 between `/` and `/survey`: there is no second trust boundary here, only a
 second `client_payload.body` destination and a second `event_type`.
 
+What genuinely is *also* separate, since fix round 1 (R-37): `/survey`
+checks a second fact `/` never needs to, once the event is known to
+exist — whether that event's survey switch is actually on. Before this,
+the switch was enforced in exactly one of four layers (the CI handler,
+last), which meant a participant answering a closed survey was thanked and
+had the answer discarded with no one told. `surveyEnabled` (`src/index.js`)
+fetches `env.SURVEY_STATUS_URL`, a plain public HTTPS URL — not a GitHub
+Contents API read, because this fact is published to the public vitrine
+site precisely so it costs no token and no GitHub API budget to check —
+and refuses (`404`, the same bucket "no such event" already falls into)
+when the event is not in the array it serves. This is the relay's own
+layer, not the only one: `app/src/survey/SurveyForm.tsx` checks the
+identical file before ever rendering a form, and
+`convener-handle-survey-response` checks the authoritative
+`data/speakers.yml` again regardless — three layers, because a page check
+is bypassable by posting straight to this worker, and a relay check reads
+a build-time-baked, possibly momentarily stale file rather than the
+source of truth itself.
+
 What genuinely is separate is the abuse ceiling. `/survey` is keyed by its
 own KV counter (`count:survey:<event_id>`, distinct from `/`'s own
 `count:<event_id>`) and its own rate-limiter key (`survey:<event_id>`,
@@ -295,22 +314,27 @@ The caller only ever sees one of these seven:
 - `403` — the request's `Origin` does not match `ALLOWED_ORIGIN` (including
   no `Origin` at all). See "Cross-origin requests" above for why this is
   not a security check.
-- `404` — either the route (a `POST`/`OPTIONS` to any path but `/` or
-  `/survey`; a method other than those two is `405` regardless of path,
-  checked first), or a well-shaped `event_id` naming an event whose public
-  key does not exist in the repository. A caller cannot tell these two apart
-  and does not need to; both mean "there is nothing here to send this to."
+- `404` — the route (a `POST`/`OPTIONS` to any path but `/` or `/survey`;
+  a method other than those two is `405` regardless of path, checked
+  first), a well-shaped `event_id` naming an event whose public key does
+  not exist in the repository, or — on `/survey` only, since R-37 — an
+  event whose survey switch is not on. A caller cannot tell any of these
+  apart and does not need to; all three mean "there is nothing here to
+  send this to."
 - `405` — any method other than `POST` or `OPTIONS`.
 - `429` — this event has either tripped the burst limiter or already
   reached its cumulative ceiling; either way the response carries
   `Retry-After: 60`.
 - `502` — this worker could not complete the request: a missing secret or
   storage/limiter binding (see "Fail closed" above), the known-event check
-  failed for a reason other than "no such event," or the dispatch to
-  GitHub itself failed. Never GitHub's own status or body — a caller has no
-  need to see GitHub's error detail, and passing it through would blur this
-  worker's taxonomy with GitHub's, the same reasoning
-  `services/form-relay/README.md` gives for its own `502`.
+  failed for a reason other than "no such event," the dispatch to GitHub
+  itself failed, or — on `/survey` only — the survey-status check failed
+  for a reason other than "not enabled" (an unreachable
+  `SURVEY_STATUS_URL`, a non-2xx response, or a body that is not a JSON
+  array). Never GitHub's own status or body — a caller has no need to see
+  GitHub's error detail, and passing it through would blur this worker's
+  taxonomy with GitHub's, the same reasoning `services/form-relay/README.md`
+  gives for its own `502`.
 
 There is no `401`: unlike the form relay, there is no shared secret here
 for a caller to get wrong.

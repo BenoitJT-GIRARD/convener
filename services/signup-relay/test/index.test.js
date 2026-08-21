@@ -38,6 +38,10 @@ const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cock
 const CONTENTS_URL = (id) =>
   `https://api.github.com/repos/example-instance/example-cockpit/contents/keys/events/${id}.pub`;
 
+// Mirrors services/signup-relay/wrangler.toml's SURVEY_STATUS_URL (R-37,
+// fix round 1).
+const SURVEY_STATUS_URL = 'https://example-instance.github.io/example-showcase/app/survey-status.json';
+
 function post(body, headers = {}) {
   return new Request('https://relay.example/', {
     method: 'POST',
@@ -84,13 +88,24 @@ function env(overrides = {}) {
     SIGNUP_RELAY_KV: makeKv(),
     SIGNUP_RATE_LIMITER: makeRateLimiter(),
     ALLOWED_ORIGIN,
+    SURVEY_STATUS_URL,
     ...overrides,
   };
 }
 
 /** Routes the mocked fetch by URL: the existence check answers `known`
- *  (default true), the dispatch answers 204. */
-function stubFetch({ known = true, dispatchStatus = 204 } = {}) {
+ *  (default true), the dispatch answers 204, and (R-37, fix round 1) a GET
+ *  to SURVEY_STATUS_URL answers the array `surveyStatus` names (default:
+ *  just EVENT_ID, so a survey test that never overrides this gets an
+ *  enabled event for free) unless `surveyStatusStatus` overrides the HTTP
+ *  status, or `surveyStatusBody` overrides the response body directly. */
+function stubFetch({
+  known = true,
+  dispatchStatus = 204,
+  surveyStatus = [EVENT_ID],
+  surveyStatusStatus = 200,
+  surveyStatusBody,
+} = {}) {
   return vi.fn(async (url) => {
     const u = String(url);
     if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
@@ -98,6 +113,10 @@ function stubFetch({ known = true, dispatchStatus = 204 } = {}) {
     }
     if (u === DISPATCH_URL) {
       return new Response(null, { status: dispatchStatus });
+    }
+    if (u === SURVEY_STATUS_URL) {
+      const body = surveyStatusBody !== undefined ? surveyStatusBody : JSON.stringify(surveyStatus);
+      return new Response(body, { status: surveyStatusStatus });
     }
     throw new Error(`unexpected fetch in test: ${u}`);
   });
@@ -259,6 +278,23 @@ describe('signup relay -- shape validation (a shape check, not a content check)'
     expect(rateLimiter.limit).not.toHaveBeenCalled();
   });
 
+  // Important 2 (fix round 1): the module docstring's own claim --
+  // "validatedEventId below makes no distinction between the two routes
+  // at all" -- was enforced by nothing before this: nothing ever sent
+  // `/survey` a malformed envelope. The same table, run against both
+  // routes, closes that gap for good; each malformed body is refused with
+  // 400 on `/survey` exactly as it already was on `/`.
+  describe.each([
+    ['/', post],
+    ['/survey', postSurvey],
+  ])('the identical shape validation on route %s', (_route, postAt) => {
+    it.each(mutations)('refuses a body that %s, with 400', async (_label, make) => {
+      const res = await handle(postAt(make()), env());
+      expect(res.status).toBe(400);
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+  });
+
   it('refuses a body declared oversized by Content-Length before reading it', async () => {
     const res = await handle(
       post(VALID_BODY, { 'content-length': String(10 * 1024 * 1024) }),
@@ -320,6 +356,17 @@ describe('signup relay -- shape validation (a shape check, not a content check)'
     const dup = VALID_BODY.replace('"v":1,', '"v":1,"v":1,');
     expect(() => JSON.parse(dup)).not.toThrow();
     const res = await handle(post(dup), env());
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  // Important 2 (fix round 1): hasDuplicateKey, specifically, on /survey --
+  // the reviewer's own second mutant (skipping this guard only on the new
+  // route) survived all 60 tests before this.
+  it('refuses a body with a duplicated key on /survey too, not only on /', async () => {
+    const dup = SURVEY_BODY.replace('"v":1,', '"v":1,"v":1,');
+    expect(() => JSON.parse(dup)).not.toThrow();
+    const res = await handle(postSurvey(dup), env());
     expect(res.status).toBe(400);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
@@ -493,9 +540,12 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
 
     expect(res.status).toBe(204);
 
+    // Three calls, not two: the known-event check, R-37's own
+    // survey-status check, and the dispatch itself.
     const calls = globalThis.fetch.mock.calls;
-    expect(calls).toHaveLength(2);
-    const [, dispatchInit] = calls[1];
+    expect(calls).toHaveLength(3);
+    expect(String(calls[1][0])).toBe(SURVEY_STATUS_URL);
+    const [, dispatchInit] = calls[2];
     const sent = JSON.parse(dispatchInit.body);
     expect(sent.event_type).toBe('survey-response-submitted');
     expect(sent.client_payload.body).toBe(SURVEY_BODY);
@@ -537,6 +587,72 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     globalThis.fetch = stubFetch({ known: false });
     const res = await handle(postSurvey(SURVEY_BODY), env());
     expect(res.status).toBe(404);
+  });
+
+  describe('R-37 (fix round 1): the relay checks the survey switch itself, not only the page', () => {
+    it('refuses with 404 when the event is not in survey-status.json', async () => {
+      globalThis.fetch = stubFetch({ surveyStatus: [] });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(404);
+      // Never dispatched -- the survey-status check runs before GitHub is
+      // ever asked to create a repository_dispatch.
+      const calls = globalThis.fetch.mock.calls;
+      expect(calls.every(([url]) => url !== DISPATCH_URL)).toBe(true);
+    });
+
+    it("a different event's presence in survey-status.json does not enable this one", async () => {
+      globalThis.fetch = stubFetch({ surveyStatus: ['mrg-999'] });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(404);
+    });
+
+    it('fails closed (502) when survey-status.json cannot be fetched at all', async () => {
+      globalThis.fetch = stubFetch({ surveyStatusStatus: 500 });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(502);
+    });
+
+    it('fails closed (502) when survey-status.json is not valid JSON', async () => {
+      globalThis.fetch = stubFetch({ surveyStatusBody: 'not json at all' });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(502);
+    });
+
+    it('fails closed (502) when survey-status.json is valid JSON but not an array', async () => {
+      globalThis.fetch = stubFetch({ surveyStatusBody: JSON.stringify({ 'mrg-042': true }) });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(502);
+    });
+
+    it('fails closed (502) when the fetch itself throws (a real network failure)', async () => {
+      globalThis.fetch = vi.fn(async (url) => {
+        const u = String(url);
+        if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
+          return new Response(null, { status: 200 });
+        }
+        if (u === SURVEY_STATUS_URL) {
+          throw new TypeError('fetch failed');
+        }
+        throw new Error(`unexpected fetch in test: ${u}`);
+      });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(502);
+    });
+
+    it('is never checked on the bare registration route -- SURVEY_STATUS_URL is never fetched for /', async () => {
+      const res = await handle(post(VALID_BODY), env());
+      expect(res.status).toBe(204);
+      const calls = globalThis.fetch.mock.calls;
+      expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_URL)).toBe(true);
+    });
+
+    it('is checked only after the event is confirmed to exist, so an unknown event never reaches it', async () => {
+      const fetchSpy = stubFetch({ known: false });
+      globalThis.fetch = fetchSpy;
+      await handle(postSurvey(SURVEY_BODY), env());
+      const calls = fetchSpy.mock.calls;
+      expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_URL)).toBe(true);
+    });
   });
 
   describe('the survey path fails closed exactly like the registration path', () => {
