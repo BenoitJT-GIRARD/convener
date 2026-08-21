@@ -452,6 +452,40 @@ def erase(
     return RegistrationFile(entries=tuple(kept)), removed
 
 
+class AmbiguousMatchingCodeError(Exception):
+    """Raised by `find_by_matching_code` when more than one entry's own
+    code collides with the one supplied.
+
+    `matching_code`'s own docstring prices this at about 1.9e-7 at the
+    signup relay's 500-per-event ceiling -- negligible, and a reviewer
+    judged it not worth code for that reason. The ruling overriding that
+    recommendation is that the probability is not the point: a collision
+    erases the *wrong person's* data irreversibly, with no signal at all,
+    if the first match is trusted. `attendance._settle` already refuses to
+    resolve a tie by guessing, for exactly this reason (see its own
+    docstring, "guessing" section) -- this is the same rule, for the same
+    reason, at the one other place in this codebase two people's identity
+    can collide.
+
+    **Carries `tied`, every colliding `Registration`, because refusing is
+    not always the right answer.** A collision on the code alone must
+    refuse -- there is nothing else to go on, and picking one would be
+    exactly the guess `attendance._settle` exists to prevent. But R-32
+    already lets a requester supply `REGISTRATION_EMAIL` alongside the
+    code, and if that address picks out exactly one of the tied entries,
+    using it is not guessing -- it is reading the evidence the requester
+    actually gave us. Refusing anyway would deny erasure to someone who
+    supplied more than enough to identify themselves, which is the
+    opposite of what this rule is for. `cli.py::erase_registration` is the
+    one caller that attempts this second-field resolution against `tied`;
+    it still refuses if no address was given, or if the address given
+    does not narrow `tied` to exactly one entry."""
+
+    def __init__(self, message: str, *, tied: tuple[Registration, ...]) -> None:
+        super().__init__(message)
+        self.tied = tied
+
+
 def find_by_matching_code(
     file: RegistrationFile, event_id: str, code: str, salt: str | None, private_pem: str
 ) -> Registration | None:
@@ -473,19 +507,30 @@ def find_by_matching_code(
     without it; `cli.py` falls back to the address instead, R-32's own
     documented exception).
 
-    Decrypts entries in order and stops at the first match, the same
-    early-exit `find_by_email` already performs; an entry that fails to
-    decrypt under `private_pem` is skipped rather than treated as a match."""
+    Raises `AmbiguousMatchingCodeError` if more than one entry's own code
+    equals `code` -- refusing to guess which one was meant, rather than
+    returning whichever happens to be stored first. This is why every
+    entry is decrypted and compared rather than stopping at the first
+    match: a second match later in the file must still be seen. An entry
+    that fails to decrypt under `private_pem` is skipped rather than
+    treated as a match, unchanged from before."""
     if not salt:
         return None
     wanted = code.strip().upper()
+    matches: list[Registration] = []
     for entry in file.entries:
         existing = to_registration(json.dumps(entry), private_pem)
         if existing is None:
             continue
         if matching_code(event_id, existing.email, salt) == wanted:
-            return existing
-    return None
+            matches.append(existing)
+    if len(matches) > 1:
+        raise AmbiguousMatchingCodeError(
+            f"{len(matches)} registrations for event {event_id!r} share the "
+            f"matching code {wanted!r} -- refusing to guess which one to erase",
+            tied=tuple(matches),
+        )
+    return matches[0] if matches else None
 
 
 #: The alphabet a matching code is drawn from: digits 2-9 and every

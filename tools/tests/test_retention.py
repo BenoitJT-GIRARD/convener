@@ -43,6 +43,7 @@ from convener_ops.cli import erase_registration, record_destructions, retention_
 from convener_ops.eventkeys import DecryptionError, decrypt, encrypt, generate
 from convener_ops.paths import repo_root
 from convener_ops.registration import (
+    AmbiguousMatchingCodeError,
     Registration,
     RegistrationFile,
     dump_registration_file,
@@ -413,6 +414,40 @@ def test_find_by_matching_code_skips_an_entry_it_cannot_decrypt() -> None:
         find_by_matching_code(file, "mrg-042", "ABCD-2345", "s3cr3t-salt", private_pem)
         is None
     )
+
+
+def test_find_by_matching_code_refuses_a_collision_instead_of_returning_the_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Minor 8, against the reviewer's own recommendation: the probability
+    of two registrations sharing a matching code is negligible
+    (`matching_code`'s own docstring: ~1.9e-7 at the relay's 500-per-event
+    ceiling), but the consequence -- erasing the wrong person's data
+    irreversibly, with no signal -- is not something this codebase accepts
+    elsewhere (`attendance._settle` refuses the identical situation by
+    tying rather than guessing). A real collision is not reproducible
+    without astronomical luck, so `matching_code` itself is monkeypatched
+    to force one, the same technique the review used.
+
+    Also asserts `tied` carries both colliding entries: `cli.py::erase_
+    registration` reads this to attempt resolving the tie from a second
+    field the requester actually supplied (a coordinator ruling after the
+    review), so the exception must carry enough for that -- see
+    `test_erase_registration_resolves_an_ambiguous_matching_code_using_
+    the_address`."""
+    private_pem, _ = generate()
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    file, _replaced = upsert(RegistrationFile(), ada, private_pem=private_pem)
+    file, _replaced = upsert(file, grace, private_pem=private_pem)
+    monkeypatch.setattr(
+        "convener_ops.registration.matching_code",
+        lambda event_id, email, salt: "ABCD-2345",
+    )
+
+    with pytest.raises(AmbiguousMatchingCodeError) as excinfo:
+        find_by_matching_code(file, "mrg-042", "ABCD-2345", "s3cr3t-salt", private_pem)
+    assert set(excinfo.value.tied) == {ada, grace}
 
 
 # ==================================================================== #
@@ -989,6 +1024,28 @@ def test_erase_registration_after_destruction_proves_nothing_remains(
     assert "nothing to erase" in out
 
 
+def test_erase_registration_refuses_a_key_supplied_for_a_destroyed_event(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Minor 4: a key that still opens `registrations.enc` for an event
+    this registry already calls destroyed contradicts the one thing
+    `convener-erase-registration` exists to prove -- so this must refuse loudly
+    (exit 1) rather than confirm "nothing to erase" over a contradiction,
+    which is what the delivered code did (it never looked at
+    `EVENT_PRIVATE_KEY` once `destroyed_on` was found)."""
+    private_pem, _ = generate()
+    _write_destruction_registry(tmp_path, {"mrg-042": date(2026, 4, 1)})
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert erase_registration() == 1
+    err = capsys.readouterr().err
+    assert "mrg-042" in err
+    assert "2026-04-01" in err
+
+
 def test_erase_registration_with_no_identifying_input_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1090,6 +1147,104 @@ def test_erase_registration_prefers_the_matching_code_over_the_address(
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 1
     assert to_registration(json.dumps(remaining.entries[0]), private_pem) == grace
+
+
+def test_erase_registration_refuses_an_ambiguous_matching_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Minor 8, at the command `convener-erase-registration` an operator
+    actually runs: a colliding code with no address to disambiguate it
+    must not silently erase whichever entry happens to be stored first.
+    Forces the collision the same way
+    `test_find_by_matching_code_refuses_a_collision_instead_of_returning_
+    the_first` does, and additionally asserts neither entry was touched --
+    a refusal that erased one of the two anyway would be worse than
+    either concrete choice."""
+    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
+    monkeypatch.setattr(
+        "convener_ops.registration.matching_code",
+        lambda event_id, email, salt: "ABCD-2345",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("MATCHING_CODE", "ABCD-2345")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
+    monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
+
+    assert erase_registration() == 1
+    assert "share the matching code" in capsys.readouterr().err
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    assert len(remaining.entries) == 2
+
+
+def test_erase_registration_refuses_a_collision_the_address_does_not_narrow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The third case the coordinator own ruling names: a code collision
+    plus an address, but the address does not pick out exactly one of the
+    tied entries either (here, an address belonging to neither Ada nor
+    Grace) -- still refuses, the same as no address at all. Reading
+    evidence that does not resolve anything is not a reason to guess."""
+    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
+    monkeypatch.setattr(
+        "convener_ops.registration.matching_code",
+        lambda event_id, email, salt: "ABCD-2345",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("MATCHING_CODE", "ABCD-2345")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "not-ada-or-grace@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
+
+    assert erase_registration() == 1
+    assert "share the matching code" in capsys.readouterr().err
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    assert len(remaining.entries) == 2
+
+
+def test_erase_registration_resolves_an_ambiguous_matching_code_using_the_address(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The middle case a future reader will assume is a bug and is not:
+    a code collision, plus an address that narrows the tie to exactly one
+    entry, proceeds and erases that one -- using a second field the
+    requester actually supplied is not the guess attendance._settle (and
+    AmbiguousMatchingCodeError own docstring) refuses to make. Grace own
+    address disambiguates the tie between Ada and Grace; Ada must survive,
+    byte-for-byte untouched."""
+    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
+    monkeypatch.setattr(
+        "convener_ops.registration.matching_code",
+        lambda event_id, email, salt: "ABCD-2345",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("MATCHING_CODE", "ABCD-2345")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "grace@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
+
+    assert erase_registration() == 0
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    assert len(remaining.entries) == 1
+    assert to_registration(json.dumps(remaining.entries[0]), private_pem) == ada
 
 
 def test_erase_registration_falls_back_to_the_address_without_a_salt(

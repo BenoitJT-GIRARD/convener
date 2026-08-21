@@ -44,6 +44,18 @@ on:
         required: false
         type: string
 
+# Important 5: every other writing dispatch workflow in this repository
+# has one; this one shares registration.yml's own group name rather than
+# a name of its own, deliberately -- registrations.enc is the file both
+# workflows write, so an erasure racing a submission for the same event
+# is the actual collision to prevent, not merely two erasures racing each
+# other. `cancel-in-progress: false`, the same reason as everywhere else
+# this repository sets it: a run partway through rewriting the file must
+# finish, never be cut off mid-write.
+concurrency:
+  group: registration-${{ inputs.event_id }}
+  cancel-in-progress: false
+
 jobs:
   erase:
     runs-on: ubuntu-latest

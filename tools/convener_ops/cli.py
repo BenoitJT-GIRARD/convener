@@ -71,6 +71,7 @@ from convener_ops.register import (
     render_register,
 )
 from convener_ops.registration import (
+    AmbiguousMatchingCodeError,
     Registration,
     dump_registration_file,
     erase,
@@ -79,6 +80,7 @@ from convener_ops.registration import (
     find_by_matching_code,
     load_registration_file,
     matching_code,
+    normalize_email,
     to_registration,
     upsert,
 )
@@ -1091,6 +1093,13 @@ def erase_registration() -> int:
     refusing the request would be worse than the exposure). Both may be
     supplied; the code is tried first.
 
+    **A code collision (Minor 8) is resolved by the address, if one was
+    also given and it narrows the tie to exactly one entry** -- reading
+    the evidence the requester supplied is not guessing, so this proceeds;
+    with no address, or an address that does not narrow the tie, this
+    refuses rather than pick one (`AmbiguousMatchingCodeError`, whose own
+    docstring carries the full reasoning).
+
     **Checked before anything else touches disk: has this event's key
     already been destroyed?** `data/event-key-destructions.yml` is read
     first, and if it already names `event_id`, this prints the destruction
@@ -1101,6 +1110,15 @@ def erase_registration() -> int:
     `keys/events/<id>.pub`, and no destruction on record either) is
     refused instead -- that is not "already erased", it names nothing this
     repository ever registered.
+
+    **Unless `EVENT_PRIVATE_KEY` is supplied anyway (Minor 4).** A key
+    that still opens `registrations.enc` for an event this registry
+    already calls destroyed contradicts the one thing this command exists
+    to prove -- "there is nothing left" would then be an assertion, not a
+    demonstration, exactly the distinction spec S4 draws. So that
+    contradiction refuses loudly (exit 1) rather than confirming "nothing
+    to erase" over it; a caller with nothing to prove wrong simply omits
+    `EVENT_PRIVATE_KEY`, the ordinary case.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
@@ -1117,6 +1135,15 @@ def erase_registration() -> int:
 
     destroyed_on = registry.get(event_id)
     if destroyed_on is not None:
+        if os.environ.get("EVENT_PRIVATE_KEY", ""):
+            print(
+                f"event {event_id} is on record as destroyed on "
+                f"{destroyed_on.isoformat()}, but a private key was "
+                "supplied for it -- refusing rather than trusting a "
+                "registry a working key contradicts",
+                file=sys.stderr,
+            )
+            return 1
         print(
             f"nothing to erase for event {event_id}: its key was destroyed "
             f"on {destroyed_on.isoformat()}, and every registration for "
@@ -1153,7 +1180,28 @@ def erase_registration() -> int:
     target: Registration | None = None
     if code:
         salt = os.environ.get("CONVENER_MATCHING_SALT")
-        target = find_by_matching_code(current, event_id, code, salt, private_pem)
+        try:
+            target = find_by_matching_code(current, event_id, code, salt, private_pem)
+        except AmbiguousMatchingCodeError as exc:
+            # A collision on the code alone must refuse -- but if an
+            # address was also supplied (R-32) and it narrows the tied
+            # entries to exactly one, that is evidence in hand, not a
+            # guess: using it is the right side of the same rule that
+            # refuses when there is nothing else to go on.
+            resolved: Registration | None = None
+            if email:
+                wanted_email = normalize_email(email)
+                narrowed = [
+                    candidate
+                    for candidate in exc.tied
+                    if normalize_email(candidate.email) == wanted_email
+                ]
+                if len(narrowed) == 1:
+                    resolved = narrowed[0]
+            if resolved is None:
+                print(str(exc), file=sys.stderr)
+                return 1
+            target = resolved
     if target is None and email:
         target = find_by_email(current, email, private_pem)
     if target is None:

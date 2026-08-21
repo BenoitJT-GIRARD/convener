@@ -1454,6 +1454,19 @@ def test_retention_workflow_has_its_own_concurrency_group() -> None:
     assert isinstance(concurrency, dict)
     assert concurrency.get("group") == "retention-sweep"
     assert concurrency.get("cancel-in-progress") is False
+
+
+def test_erase_registration_workflow_has_a_concurrency_group() -> None:
+    """Important 5: every other writing dispatch workflow has one; this
+    one shares registration.yml's own group name deliberately, since both
+    workflows write the same `registrations.enc`."""
+    loaded = safe_load((ROOT / ERASE_REGISTRATION_WORKFLOW).read_text(encoding="utf-8"))
+    concurrency = loaded.get("concurrency")
+    assert isinstance(concurrency, dict)
+    assert concurrency.get("group") == "registration-${{ inputs.event_id }}"
+    assert concurrency.get("cancel-in-progress") is False
+
+
 # ------------------------------------------------------------------ #
 # R-34: the "Delete the destroyed event keys" step, executed for real
 # under a stubbed `gh` on PATH -- the constraint that no test may touch
