@@ -408,13 +408,15 @@ evidence"), carried into code rather than re-derived: it refuses to
 delete unless both
 
 1. the `delivered/recording-retrieved` step is ticked on the event's own
-   `runbook_progress` — **there is no cockpit checkbox for this yet; a
-   volunteer sets it today by editing `data/speakers.yml`'s
-   `runbook_progress` map directly**, the same raw-YAML edit `youtube_url`
-   itself already requires when set by hand, until a later task adds a
-   journey item for it. Ticked once the host has downloaded the recording
-   and archived it somewhere durable, independent of whether it will ever
-   be published — **not** `youtube_url`, which records where a *published*
+   `runbook_progress` — task 17 gave this its own cockpit checkbox
+   ("Recording retrieved and archived somewhere durable", first line of
+   the Delivered — wrap-up journey, `app/src/state/phases.ts`); a
+   volunteer without the app to hand can still set it directly on
+   `data/speakers.yml`'s `runbook_progress` map, the same raw-YAML edit
+   `youtube_url` itself already tolerates when set by hand. Ticked once
+   the host has downloaded the recording and archived it somewhere
+   durable, independent of whether it will ever be published — **not**
+   `youtube_url`, which records where a *published*
    recording lives, is legitimately empty for one that never will be, and
    is read nowhere in this guard; and
 2. the provider's own converted copy answers with `video/mp4` and
@@ -1064,18 +1066,49 @@ full, including what to do instead if this secret ever leaks.
 **To verify:** run `cd tools && uv run convener-check-config`; *Registration
 matching salt* moves from `absent` to `production`.
 
+## Encrypting the manual attendance export (task 17)
+
+For an event using the manual implementation (no `CONVENER_MEETING_API_TOKEN`
+configured), the host's own attendance export never reaches continuous
+integration in the clear -- personal data must not, and `.gitignore` keeps
+`data/events/<event id>/attendance-import.csv` out of every checkout on
+purpose. `convener-encrypt-attendance-export`
+(`tools/convener_ops/cli.py::encrypt_attendance_export`) is the step that
+closes that gap:
+
+1. Download the attendance export from the meeting platform, saving it
+   locally as `data/events/<event id>/attendance-import.csv` (never
+   committed).
+2. Run, on your own machine, no CI job and no secret needed: `cd tools &&
+   EVENT_ID=<event id> uv run convener-encrypt-attendance-export`. This reads
+   only the event's already-published public key
+   (`keys/events/<event id>.pub`) and the plaintext file above, and writes
+   `data/events/<event id>/attendance-import.csv.enc` -- one `eventkeys`
+   envelope, safe to commit: the public key that produced it cannot
+   decrypt it back.
+3. Commit and push `attendance-import.csv.enc`. `convener-match-attendance` and
+   `convener-issue-certificates`, run in CI, decrypt it with
+   `EVENT_PRIVATE_KEY` -- the same secret they already read to decrypt
+   `registrations.enc` -- the moment it is checked out.
+
+Never runs against the private key, and cannot: `EVENT_PRIVATE_KEY` is not
+among the environment variables this command reads at all. If both the
+encrypted and the plaintext export happen to sit on disk at once (a stray
+leftover from local testing), the encrypted one is read and the plaintext
+one is ignored.
+
 ## Matching attendance
 
 `convener-match-attendance` (`tools/convener_ops/cli.py::match_attendance`) reads one
 event's stored registrations and its attendance export -- the platform's own
 API, or, with no `CONVENER_MEETING_API_TOKEN` configured, the manual
-implementation's `data/events/<event id>/attendance-import.csv` -- and joins
-them through the phase 4 spec's own cascade (§5: matching code, then
-address, then normalised name). It is the diagnostic step an operator runs
-before issuing certificates for an event: it reports only counts on
-stdout (matched, unmatched, unreachable, rows read) and writes the host's
-short list of ties and unmatched attendees to `unmatched-attendance.md`, at
-the repository root -- `.gitignore`'d, and never printed, because it names
+implementation's attendance export -- and joins them through the phase 4
+spec's own cascade (§5: matching code, then address, then normalised
+name). It is the diagnostic step an operator runs before issuing
+certificates for an event: it reports only counts on stdout (matched,
+unmatched, unreachable, rows read) and writes the host's short list of
+ties and unmatched attendees to `unmatched-attendance.md`, at the
+repository root -- `.gitignore`'d, and never printed, because it names
 people. `convener-issue-certificates` (below) re-runs the same join internally
 and never reads this file; it exists for a human to resolve an ambiguity by
 hand before certificates are minted, not as an input to anything automated.
@@ -1092,19 +1125,31 @@ rather than silently left undocumented; wiring it up is not this round's
 scope either -- it is task 8's, already carried to the phase's final fix
 wave.
 
-**It cannot currently be run against real attendance at all (fix round
-3).** With no `CONVENER_MEETING_API_TOKEN`, the manual implementation looks
-for `data/events/<event id>/attendance-import.csv`, which `.gitignore`
-keeps out of every checkout -- there is nowhere to run this command *from*
-that could hold that file. With a token configured, this command never
-populates `conference_ids` either (unlike `convener-issue-certificates` and
-`convener-reissue-certificate` below, since it has no `workflow_dispatch` of
-its own to take a `conference_id` input from), so the FCC path always
-refuses with "no FCC conference is recorded for event ...". Fix round 3
-closed the one real defect this exposed -- that refusal used to be an
-unhandled traceback, not the clean, one-line message every other failure
-in this command already gave -- so what an operator should actually
-expect today is a clean refusal either way, not a working diagnostic run.
+**The manual implementation can now be run against real attendance in CI
+(task 17, closing the gap fix round 3 recorded here).** Before this, with
+no `CONVENER_MEETING_API_TOKEN`, the manual implementation looked only for
+`data/events/<event id>/attendance-import.csv`, which `.gitignore` keeps
+out of every checkout -- there was nowhere to run this command *from* that
+could hold that file, and `docs/superpowers/deferred-work.md` entry 10
+recorded the resulting contradiction with acceptance criterion 8 in full.
+`ManualPlatform.get_attendance` now reads
+`data/events/<event id>/attendance-import.csv.enc` first: a host encrypts
+the raw export under the event's own published public key with
+`convener-encrypt-attendance-export` (needs no secret at all -- see *Event
+registration keys* above for why the public half is not one) and commits
+the result; a CI job holding this event's `EVENT_PRIVATE_KEY` -- the same
+key it already reads to decrypt `registrations.enc` -- decrypts it the
+moment it is checked out. `tools/tests/test_event_chain.py` drives the
+real commands against exactly this shape and asserts the chain completes,
+closing AC8 for the manual implementation. With a token configured, this
+command still never populates `conference_ids` (unlike
+`convener-issue-certificates` and `convener-reissue-certificate` below, since it has
+no `workflow_dispatch` of its own to take a `conference_id` input from),
+so the FCC path always refuses with "no FCC conference is recorded for
+event ..." -- a clean refusal, not an unhandled traceback (fix round 3),
+but still not a working diagnostic run for that path; wiring a
+`conference_id` input through remains task 8's own item above, not this
+one's.
 
 ## Issuing, reissuing and revoking certificates
 

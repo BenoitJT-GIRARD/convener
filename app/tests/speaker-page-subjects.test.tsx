@@ -111,12 +111,14 @@ describe('what the record screen writes down', () => {
     const b = backend([delivered()]);
     vi.stubGlobal('fetch', b.fetchMock);
     show(delivered());
-    // The first checkbox of the wrap-up phase, which the label beside it
-    // says is the forum summary -- the subject below names the key, so a
-    // journey reordered under this test fails it rather than passing on a
-    // different line.
-    expect(await screen.findByText(/Forum summary posted/)).toBeTruthy();
-    const box = screen.getAllByRole('checkbox')[0];
+    // Found by its own label, not by position in the list: task 17 gave
+    // the wrap-up phase an earlier checkbox of its own
+    // (delivered/recording-retrieved), so "the first checkbox" stopped
+    // meaning "the forum summary" -- the subject below still has to name
+    // the key belonging to *this* label, whichever position it sits at.
+    const label = await screen.findByText(/Forum summary posted/);
+    const box = label.closest('div.border')!.querySelector('input[type="checkbox"]');
+    if (!(box instanceof HTMLInputElement)) throw new Error('no checkbox found');
     fireEvent.click(box);
     await waitFor(() => expect(b.messages).toHaveLength(1));
     expect(b.messages[0]).toBe('data: spk-001 runbook delivered/forum-summary=true');
@@ -126,7 +128,12 @@ describe('what the record screen writes down', () => {
     const b = backend([delivered()]);
     vi.stubGlobal('fetch', b.fetchMock);
     show(delivered());
-    const owner = (await screen.findAllByRole('combobox'))[0];
+    // Found by its own label -- see the test above for why position alone
+    // no longer picks out "Registrations" now that the wrap-up phase opens
+    // with a different line.
+    const label = await screen.findByText('Registrations');
+    const owner = label.closest('label')!.parentElement!.querySelector('select');
+    if (!(owner instanceof HTMLSelectElement)) throw new Error('no owner select found');
     fireEvent.change(owner, { target: { value: 'alice' } });
     await waitFor(() => expect(b.messages).toHaveLength(1));
     expect(b.messages[0]).toBe('data: spk-001 owner for delivered/registrations');

@@ -204,12 +204,16 @@ describe('what the three checks do not do', () => {
     // Three lines whose wording already says what each of them is would only
     // turn the device into wallpaper. The whole journey's notes are listed
     // here rather than counted, so that a fourth one has to be argued for in
-    // this test before it reaches a volunteer's screen: they are the two
-    // steps whose cost, once skipped, cannot be paid back -- a discussion
-    // recorded by mistake, and a publication announced before it was allowed.
+    // this test before it reaches a volunteer's screen: they are the steps
+    // whose cost, once skipped, cannot be paid back -- a discussion recorded
+    // by mistake, a recording released on a tick that was never true (task
+    // 17: a false delivered/recording-retrieved risks losing it for good,
+    // the same bar the other two already meet), and a publication announced
+    // before it was allowed.
     const noted = PHASES.flatMap(p => p.items).filter(i => i.note !== undefined);
     expect(noted.map(i => i.key)).toEqual([
       'scheduled/T-0/recording-stopped-before-discussion',
+      'delivered/recording-retrieved',
       'delivered/video-online',
     ]);
     for (const key of THREE) expect(itemByKey(key)!.note).toBeUndefined();

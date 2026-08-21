@@ -879,6 +879,8 @@ def platform_from_env(
     speakers: Sequence[Mapping[str, Any]] = (),
     config: Mapping[str, Any] | None = None,
     conference_ids: Mapping[str, str] | None = None,
+    *,
+    private_pem: str | None = None,
 ) -> ManualPlatform | PlatformFCC:
     """D-13, applied in full: an absent `CONVENER_MEETING_API_TOKEN` is the
     ordinary case, not a degraded one, and the whole chain keeps working
@@ -890,10 +892,18 @@ def platform_from_env(
 
     A blank token counts as unset, the same "empty string is not a value"
     rule `convener_ops.integrations.resolve_states` already applies to every
-    other secret this project reads."""
+    other secret this project reads.
+
+    `private_pem` (task 17) is forwarded to `ManualPlatform` alone --
+    `PlatformFCC.get_attendance` reads real per-person attendance straight
+    from the provider's own API and never touches a committed, encrypted
+    export, so it has no use for an event's private key. Every one of
+    `cli.py`'s callers that calls this function already decrypts
+    `registrations.enc` with this same key in a local `private_pem`, so
+    forwarding it here costs nothing new."""
     token = (env.get(TOKEN_ENV) or "").strip()
     if not token:
-        return ManualPlatform(speakers=speakers, config=config)
+        return ManualPlatform(speakers=speakers, config=config, private_pem=private_pem)
     return PlatformFCC(
         access_token=token,
         speakers=speakers,

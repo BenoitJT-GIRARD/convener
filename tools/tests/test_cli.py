@@ -29,6 +29,7 @@ from convener_ops.cli import (
     deliver_certificate,
     deliver_certificates,
     discard_recording,
+    encrypt_attendance_export,
     handle_proposal,
     handle_registration,
     handle_survey_response,
@@ -49,7 +50,8 @@ from convener_ops.cli import (
     validate,
 )
 from convener_ops.governance import paris_today
-from convener_ops.platform import AttendanceRow, EventNotFoundError
+from convener_ops.platform import AttendanceRow, EventNotFoundError, parse_attendance_csv
+from convener_ops.platform import encrypt_attendance_export as _platform_encrypt_attendance
 from convener_ops.platform_fcc import RETRIEVED_TICK, FCCRequestError, PlatformFCC
 from convener_ops.registration import (
     Registration,
@@ -1802,6 +1804,124 @@ def _write_attendance_csv(tmp_path: Path, event_id: str, *rows: str) -> None:
     path.write_text("\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n", encoding="utf-8")
 
 
+def _write_attendance_csv_encrypted(
+    tmp_path: Path, event_id: str, public_pem: str, *rows: str
+) -> None:
+    """The committed shape task 17 adds:
+    `data/events/<id>/attendance-import.csv.enc`, one `eventkeys` envelope
+    wrapping the whole CSV text -- built through the real
+    `platform.encrypt_attendance_export`, never a hand-rolled stand-in for
+    it, the same discipline `_write_registrations` already holds for
+    `registrations.enc`."""
+    csv_bytes = ("\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n").encode("utf-8")
+    envelope = _platform_encrypt_attendance(public_pem, csv_bytes)
+    path = tmp_path / "data" / "events" / event_id / "attendance-import.csv.enc"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(envelope + "\n", encoding="utf-8", newline="")
+
+
+def test_encrypt_attendance_export_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+
+    assert encrypt_attendance_export() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_encrypt_attendance_export_without_a_published_key_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert encrypt_attendance_export() == 1
+    assert "no public key published" in capsys.readouterr().err
+
+
+def test_encrypt_attendance_export_without_a_plaintext_csv_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert encrypt_attendance_export() == 1
+    err = capsys.readouterr().err
+    assert "no attendance export to encrypt" in err
+    assert "data/events/mrg-042/attendance-import.csv" in err
+    assert str(tmp_path) not in err
+
+
+def test_encrypt_attendance_export_writes_a_decryptable_committed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The whole point: needs no `EVENT_PRIVATE_KEY` at all (never reads
+    it), yet what it writes is exactly what `convener-match-attendance` can
+    later decrypt with that key -- proven here by decrypting the file this
+    command wrote and parsing it back into the original rows, not by
+    trusting the envelope's shape alone."""
+    private_pem, _public_pem = _publish_event_key(tmp_path)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    (events_dir / "attendance-import.csv").write_text(
+        _ATTENDANCE_CSV_HEADER + "\n"
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+        "2026-08-20T19:30:00Z,5400\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert encrypt_attendance_export() == 0
+    out = capsys.readouterr().out
+    assert "attendance-import.csv.enc" in out
+    assert "convener-match-attendance" in out
+
+    enc_path = events_dir / "attendance-import.csv.enc"
+    assert enc_path.exists()
+    envelope_text = enc_path.read_text(encoding="utf-8")
+    assert envelope_text.endswith("\n")
+    assert not envelope_text.endswith("\n\n")
+
+    plaintext = eventkeys.decrypt(private_pem, envelope_text)
+    rows, issues = parse_attendance_csv(plaintext.decode("utf-8"))
+    assert issues == []
+    assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+def test_encrypt_attendance_export_never_reads_the_private_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Never touches `EVENT_PRIVATE_KEY` -- the whole reason this command
+    can run on a host's own laptop with no CI job and no secret at all
+    (spec S:7: the private half `n'est utilisee qu'en integration
+    continue`). Asserted by monkeypatching `os.environ.get` itself and
+    failing the moment this name is ever asked for, not merely by leaving
+    it unset (which a bug reading it with `or ''` would pass silently)."""
+    _publish_event_key(tmp_path)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    (events_dir / "attendance-import.csv").write_text(
+        _ATTENDANCE_CSV_HEADER + "\nAda,ada@example.org,x,y,60\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    import os as os_module
+
+    real_get = os_module.environ.get
+
+    def _guarded_get(key: str, default: str | None = None) -> str | None:
+        assert key != "EVENT_PRIVATE_KEY", "must never read the event private key"
+        return real_get(key, default)
+
+    monkeypatch.setattr(os_module.environ, "get", _guarded_get)
+
+    assert encrypt_attendance_export() == 0
+
+
 def test_match_attendance_with_no_event_id_returns_1(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2011,6 +2131,37 @@ def test_match_attendance_prints_only_counts_and_writes_the_host_list(
     assert "+1 555 0100" in host_list
     assert "Ada" not in host_list
     assert "ada@example.org" not in host_list
+
+
+def test_match_attendance_reads_the_committed_encrypted_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """AC8, end to end through this one command: no `CONVENER_MEETING_API_TOKEN`,
+    no plaintext CSV anywhere on disk -- only the committed encrypted
+    export a host would have produced with `convener-encrypt-attendance-export`
+    and the same `EVENT_PRIVATE_KEY` every other command in this event's
+    chain already reads. This is the manual implementation's own path,
+    proven to actually decrypt and match, not merely accepted as present."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv_encrypted(
+        tmp_path,
+        "mrg-042",
+        public_pem,
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+
+    assert match_attendance() == 0
+
+    printed = capsys.readouterr().out.lower()
+    assert "1 matched, 0 unmatched, 0 unreachable" in printed
+    assert not (tmp_path / UNMATCHED_ATTENDANCE).exists()
 
 
 def test_match_attendance_unlinks_a_stale_host_list_when_all_matched(
@@ -3113,6 +3264,8 @@ def _patch_fcc_platform(
         speakers: Any = (),
         config: Any = None,
         conference_ids: Any = None,
+        *,
+        private_pem: str | None = None,
     ) -> PlatformFCC:
         return PlatformFCC(
             access_token="tok",

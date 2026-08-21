@@ -55,6 +55,7 @@ from convener_ops.platform import (
     Room,
     find_speaker,
 )
+from convener_ops.platform import encrypt_attendance_export as _encrypt_attendance_export
 from convener_ops.platform_fcc import (
     FCCRequestError,
     PlatformFCC,
@@ -1439,6 +1440,81 @@ def erase_registration() -> int:
 UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
 
 
+def encrypt_attendance_export() -> int:
+    """`convener-encrypt-attendance-export`: turn a host's raw, never-committed
+    `data/events/<id>/attendance-import.csv` into a committable,
+    encrypted `data/events/<id>/attendance-import.csv.enc` (task 17,
+    closing `docs/superpowers/deferred-work.md` entry 10).
+
+    Runs entirely outside continuous integration, on a host's own
+    machine, against the plaintext export they just downloaded off the
+    meeting platform -- the manual implementation's whole point. Needs no
+    secret at all: `keys/events/<id>.pub` is already published, public
+    data (`eventkeys.py`'s own module docstring, "the public half is a
+    file, not a secret"), and encrypting under a public key is exactly
+    the operation a stranger with no account could already perform.
+    `EVENT_PRIVATE_KEY` never enters this function, and must not: the
+    matching private half stays exactly where spec S:7 requires it, in a
+    CI job's own environment, never on the machine this command runs on.
+
+    Reads `EVENT_ID` -- the same operator-typed, manual-trigger shape
+    `resend_confirmation` and `match_attendance` already read -- and the
+    plaintext CSV at `data/events/<id>/attendance-import.csv`. Refuses
+    (exit 1) when the event id is not shaped like one, when no public key
+    has been published for it yet (`keys/events/<id>.pub` absent -- an
+    operator has to create the event's key pair, per
+    `docs/reference/operations.md`'s "Event registration keys" section,
+    before anyone can register for it at all, so this is never the first
+    command run against a fresh event), or when there is no plaintext
+    export to encrypt at the expected path.
+
+    Writes the encrypted envelope -- one line of JSON, one trailing
+    newline, the same "content plus one trailing newline" shape every
+    other committed file in this package already uses -- and prints
+    where it landed and what to do next: commit it, then run
+    `convener-match-attendance` (or `convener-issue-certificates`, which re-derives
+    the same join internally) from a CI job holding this event's private
+    key. Never reads, prints, or otherwise touches anything about the
+    CSV's own rows -- see `platform.encrypt_attendance_export` for the one
+    line of real work this function wraps.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    public_path = eventkeys.public_key_path(event_id)
+    if not public_path.exists():
+        print(f"no public key published for event {event_id}", file=sys.stderr)
+        return 1
+
+    plain_path = root / "data" / "events" / event_id / "attendance-import.csv"
+    if not plain_path.exists():
+        relative = Path("data") / "events" / event_id / "attendance-import.csv"
+        print(
+            f"no attendance export to encrypt for event {event_id}: expected "
+            f"{relative.as_posix()}",
+            file=sys.stderr,
+        )
+        return 1
+
+    public_pem = public_path.read_text(encoding="utf-8")
+    envelope = _encrypt_attendance_export(public_pem, plain_path.read_bytes())
+
+    enc_path = plain_path.parent / f"{plain_path.name}.enc"
+    enc_path.write_text(envelope + "\n", encoding="utf-8", newline="")
+    rel_enc = Path("data") / "events" / event_id / enc_path.name
+    print(
+        f"encrypted attendance export written to {rel_enc.as_posix()} -- "
+        "commit it, then run convener-match-attendance or convener-issue-certificates "
+        "from a job holding this event's private key"
+    )
+    return 0
+
+
 def match_attendance() -> int:
     """`convener-match-attendance`: read the platform's attendance export for
     one event, join it against that event's stored registrations through
@@ -1497,7 +1573,9 @@ def match_attendance() -> int:
     cfg, _errors = _load(root / "data" / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     config_map = cfg if isinstance(cfg, dict) else None
-    platform = platform_from_env(os.environ, speaker_list, config_map)
+    platform = platform_from_env(
+        os.environ, speaker_list, config_map, private_pem=private_pem
+    )
 
     try:
         rows = platform.get_attendance(event_id)
@@ -1754,7 +1832,11 @@ def invite_survey() -> int:
     config_map = cfg if isinstance(cfg, dict) else None
 
     platform = platform_from_env(
-        os.environ, speaker_list, config_map, _conference_ids_from_env(event_id)
+        os.environ,
+        speaker_list,
+        config_map,
+        _conference_ids_from_env(event_id),
+        private_pem=private_pem,
     )
     try:
         rows = platform.get_attendance(event_id)
@@ -1996,7 +2078,11 @@ def issue_certificates() -> int:
         return 1
 
     platform = platform_from_env(
-        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+        os.environ,
+        speaker_list,
+        cfg,
+        _conference_ids_from_env(event_id),
+        private_pem=private_pem,
     )
     try:
         rows = platform.get_attendance(event_id)
@@ -2384,7 +2470,11 @@ def reissue_certificate() -> int:
         return 1
 
     platform = platform_from_env(
-        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+        os.environ,
+        speaker_list,
+        cfg,
+        _conference_ids_from_env(event_id),
+        private_pem=private_pem,
     )
     try:
         rows = platform.get_attendance(event_id)
@@ -2714,7 +2804,11 @@ def deliver_certificates() -> int:
         return 1
 
     platform = platform_from_env(
-        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+        os.environ,
+        speaker_list,
+        cfg,
+        _conference_ids_from_env(event_id),
+        private_pem=private_pem,
     )
     try:
         rows = platform.get_attendance(event_id)
@@ -2987,7 +3081,11 @@ def deliver_certificate() -> int:
         return 1
 
     platform = platform_from_env(
-        os.environ, speaker_list, cfg, _conference_ids_from_env(event_id)
+        os.environ,
+        speaker_list,
+        cfg,
+        _conference_ids_from_env(event_id),
+        private_pem=private_pem,
     )
     try:
         rows = platform.get_attendance(event_id)

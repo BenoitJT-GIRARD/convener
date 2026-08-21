@@ -68,8 +68,8 @@ about that path was in question:
 
     data/events/<id>/attendance-import.csv
 
-The CSV is never committed
------------------------------
+The plaintext CSV is never committed -- the encrypted export is (task 17)
+-----------------------------------------------------------------------------
 `attendance-import.csv` is a raw export off the chosen platform:
 `display_name` and `email` are personal data. "No personal data in the
 repository, ever" is a hard constraint of this phase, so this path is
@@ -78,17 +78,48 @@ under `data/` like everything else here -- it is dropped locally (or into
 an ephemeral job workspace) for this reader to consume once, never checked
 in.
 
-One consequence worth stating rather than leaving for an auditor to
-rediscover: acceptance criterion 8 ("the whole chain is executable end to
-end with the manual implementation, without any external account") cannot
-be *demonstrated in CI* for this path, and that is correct, not a gap. A
-CI job has no attendance export to read, on purpose -- the only way one
-could is by checking a real export into the repository, which the
-constraint above forbids outright. "Manual" means a human drops the file
-and runs the job; it does not mean "reproducible from a fixture committed
-alongside the code." AC8 is exercised by running the chain by hand against
-a real drop, not by a test in this suite, and no test here claims
-otherwise.
+That, on its own, used to make acceptance criterion 8 ("the whole chain is
+executable end to end with the manual implementation, without any external
+account") undemonstrable for this path: `EVENT_PRIVATE_KEY` must never
+leave a CI job's environment (`eventkeys.py`'s own module docstring), yet
+the plaintext CSV can never reach a CI checkout at all (the `.gitignore`
+rule above forbids it) -- so the manual path could run neither in CI (no
+file) nor locally (no key). `docs/superpowers/deferred-work.md` entry 10
+recorded this in full.
+
+**The fix is the same trick this design already plays twice for
+`registrations.enc` and `survey_responses.enc`: encrypt under the event's
+own *public* key, which needs no secret at all, and commit the ciphertext.**
+`get_attendance` below looks first for
+`data/events/<event id>/attendance-import.csv.enc` -- one `eventkeys`
+envelope (see that module's own wire-format docs) wrapping the whole CSV
+text, produced locally by a host running `convener-encrypt-attendance-export`
+against the plaintext export and the event's already-published
+`keys/events/<id>.pub`, then committed like any other file under `data/`.
+A CI job holds the matching private half already (`EVENT_PRIVATE_KEY`, the
+same secret every other command in this event's chain reads to decrypt
+`registrations.enc`), so it can decrypt this file the moment it is
+checked out -- no plaintext ever has to reach a CI runner, and no key ever
+has to leave one. This is what makes AC8 genuinely true for the manual
+implementation: `tools/tests/test_event_chain.py` drives the real
+`convener-encrypt-attendance-export` and `convener-match-attendance` /
+`convener-issue-certificates` commands against nothing but committed,
+encrypted fixtures and asserts the chain completes -- not "by hand against
+a real drop", a real, automated proof.
+
+Reading the encrypted export requires `private_pem` (below); its absence,
+with the encrypted file present, is not D-13's ordinary state -- it is the
+same "guards personal data, fails closed" exception `eventkeys.py` already
+carves out for `registrations.enc`, so `get_attendance` refuses outright
+rather than silently reporting "no attendance" for an event that plainly
+has some, committed and waiting.
+
+The plaintext path (`attendance-import.csv`, no `.enc`) is kept, unchanged,
+as a second, lower-priority source: a host or a test working entirely
+outside CI, with no reason to encrypt anything first, can still drop the
+raw file directly. Production traffic through `ManualPlatform` is expected
+to use the encrypted path exclusively, since the plaintext one still
+cannot exist in a CI checkout for the reason above.
 
 The CSV columns, and what "reads it" means
 ----------------------------------------------
@@ -153,6 +184,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Protocol, runtime_checkable
 
+from . import eventkeys
 from .commit_format import _TOKEN
 from .paths import repo_root
 
@@ -237,11 +269,24 @@ class Platform(Protocol):
     def delete_recording(self, event_id: str) -> None: ...
 
 
+#: The committed, encrypted attendance export -- one `eventkeys` envelope
+#: (see that module's wire format) wrapping the whole plaintext CSV,
+#: produced by `convener-encrypt-attendance-export` and checked in like
+#: `registrations.enc`. Read in preference to the plaintext filename
+#: below; see the module docstring's "the encrypted export" section.
+ENCRYPTED_ATTENDANCE_FILENAME: Final = "attendance-import.csv.enc"
+
+#: The never-committed raw export -- `.gitignore`d, see the module
+#: docstring.
+PLAINTEXT_ATTENDANCE_FILENAME: Final = "attendance-import.csv"
+
+
 class AttendanceImportError(Exception):
     """The attendance export could not be read at all: the file is absent,
-    or its header is missing one of the required columns. Always names the
-    event or the column, never just "could not import" -- a volunteer
-    reading this needs to know what to fix, not that something failed."""
+    it could not be decrypted, or its header is missing one of the required
+    columns. Always names the event or the column, never just "could not
+    import" -- a volunteer reading this needs to know what to fix, not that
+    something failed."""
 
 
 class EventNotFoundError(Exception):
@@ -404,6 +449,13 @@ class ManualPlatform:
     #: data-integrity failure the way a missing speaker record is, it is
     #: the same "nothing more to say" an explicit empty string would be.
     config: Mapping[str, Any] | None = None
+    #: The event's own decrypted private key (task 17), read from
+    #: `EVENT_PRIVATE_KEY` by whoever constructs this class (`cli.py`,
+    #: never this module) -- the same key every other command touching
+    #: `registrations.enc` already holds. Only needed to read
+    #: `ENCRYPTED_ATTENDANCE_FILENAME`; `None` is fine as long as no event
+    #: has an encrypted export committed yet (see `get_attendance`).
+    private_pem: str | None = None
 
     def _event_dir(self, event_id: str) -> Path:
         _validate_event_id(event_id)
@@ -420,8 +472,40 @@ class ManualPlatform:
         return Room(join_url=join_url, instructions=self._instructions())
 
     def get_attendance(self, event_id: str) -> list[AttendanceRow]:
-        path = self._event_dir(event_id) / "attendance-import.csv"
-        if not path.exists():
+        event_dir = self._event_dir(event_id)
+        encrypted_path = event_dir / ENCRYPTED_ATTENDANCE_FILENAME
+        plain_path = event_dir / PLAINTEXT_ATTENDANCE_FILENAME
+
+        if encrypted_path.exists():
+            # Task 17: the committed, encrypted export takes priority over
+            # a local plaintext drop -- see the module docstring's "the
+            # encrypted export" section. An absent or wrong `private_pem`
+            # here is not D-13's ordinary state: this file is personal
+            # data, committed on the promise that only the matching
+            # private key can ever read it, so this refuses outright
+            # rather than reporting "no attendance" for an event that
+            # plainly has some.
+            if not self.private_pem:
+                raise AttendanceImportError(
+                    f"no private key configured to decrypt the attendance "
+                    f"export for event {event_id!r}"
+                )
+            try:
+                plaintext = eventkeys.decrypt(
+                    self.private_pem, encrypted_path.read_text(encoding="utf-8")
+                )
+            except eventkeys.DecryptionError as exc:
+                raise AttendanceImportError(
+                    f"the attendance export for event {event_id!r} could "
+                    "not be decrypted"
+                ) from exc
+            #: Not "utf-8" -- see the module docstring's note on the BOM a
+            #: Windows or Excel-adjacent export tool commonly writes; a
+            #: `bytes.decode` accepts the same codec name as `Path.read_text`.
+            text = plaintext.decode("utf-8-sig")
+        elif plain_path.exists():
+            text = plain_path.read_text(encoding="utf-8-sig")
+        else:
             # Small item 2, fix round 3: named relative to the repository,
             # never as the absolute `path` this class actually checked --
             # that would carry CONVENER_REPO_ROOT (a CI runner's own filesystem
@@ -430,15 +514,17 @@ class ManualPlatform:
             # `cli.py`'s own register-path messages. `_validate_event_id`
             # inside `_event_dir` above has already accepted `event_id` by
             # this point, so it is safe to reuse verbatim in a relative,
-            # hand-built path rather than in `path` itself.
-            relative = Path("data") / "events" / event_id / "attendance-import.csv"
+            # hand-built path rather than in either path above.
+            relative = (
+                Path("data") / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
+            )
             raise AttendanceImportError(
                 f"no attendance export for event {event_id!r}: expected "
-                f"{relative.as_posix()}"
+                f"{relative.as_posix()} (or its never-committed plaintext "
+                f"equivalent, {PLAINTEXT_ATTENDANCE_FILENAME})"
             )
-        #: Not "utf-8" -- see the module docstring's note on the BOM a
-        #: Windows or Excel-adjacent export tool commonly writes.
-        rows, issues = parse_attendance_csv(path.read_text(encoding="utf-8-sig"))
+
+        rows, issues = parse_attendance_csv(text)
         for issue in issues:
             print(f"attendance-import.csv line {issue.line_number}: {issue.reason}")
         return rows
@@ -459,3 +545,30 @@ class ManualPlatform:
         named a real event directory."""
         _validate_event_id(event_id)
         return None
+
+
+def encrypt_attendance_export(public_pem: str, csv_bytes: bytes) -> str:
+    """Encrypt a raw attendance export (`csv_bytes`, exactly the bytes an
+    operator downloaded off the meeting platform) under an event's own
+    published public key, ready to be committed as
+    `ENCRYPTED_ATTENDANCE_FILENAME` -- see the module docstring's "the
+    encrypted export" section for why this exists at all (task 17,
+    closing `docs/superpowers/deferred-work.md` entry 10).
+
+    A thin, one-line wrapper over `eventkeys.encrypt` -- kept here, in the
+    module that owns the concept of "an attendance export", rather than
+    inlined at `cli.py`'s one call site, so a test can exercise the
+    encrypt/decrypt round trip directly against `ManualPlatform.get_attendance`
+    without going through the CLI layer at all.
+
+    Takes `public_pem`, never a private key or a secret: `keys/events/
+    <id>.pub` is committed, public, non-confidential data (`eventkeys.py`'s
+    own module docstring, "the public half is a file, not a secret"), so
+    this function -- and the host running it, on their own laptop, with no
+    account and no network call -- needs nothing this project keeps in CI.
+    `csv_bytes` is arbitrary length (not the short RSA-OAEP block alone):
+    `eventkeys.encrypt`'s hybrid construction (a fresh AES-256-GCM key,
+    itself RSA-OAEP-wrapped) is exactly why a whole CSV, not just a short
+    registration, can go through this same wire format.
+    """
+    return eventkeys.encrypt(public_pem, csv_bytes)

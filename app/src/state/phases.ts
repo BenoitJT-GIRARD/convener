@@ -232,6 +232,31 @@ export const PHASES: PhaseDef[] = [
         window: 7,
       },
       {
+        // Decided at phase 4's task 3 (docs/reference/operations.md,
+        // "Meeting platform" -> "Renewing the token"), wired here at task
+        // 17: the chosen meeting platform's access token is short-lived
+        // (roughly a month) and cannot be renewed unattended -- the
+        // provider's refresh token rotates on every use, so whatever holds
+        // it must be rewritten by a human each time, never by a scheduled
+        // job with write access to repository secrets. Placed beside
+        // "Waiting room and co-host rights set up" because that is the
+        // cadence the renewal already follows -- roughly monthly, at the
+        // same T-7 preparations every event's runbook already carries.
+        //
+        // No `note` here, deliberately: that field is for a step whose
+        // cost, if skipped, cannot be paid back (`RunbookItem.note`'s own
+        // doc comment) -- the recording sequence three lines below is the
+        // example it exists for. Skipping this one costs a single event's
+        // manual attendance import through the fallback, never a
+        // cancelled seminar and never a security incident
+        // (`docs/reference/operations.md`), which is the opposite of
+        // that bar.
+        key: 'scheduled/T-7/token-renewal',
+        form: 'checkbox',
+        label: 'Meeting platform access token renewed (if due)',
+        window: 7,
+      },
+      {
         // The run of show is offered here, at the moment the two hosts sit
         // down to divide the session between them. It is a template and not a
         // rule: it carries the split the hosts who have run these sessions
@@ -301,6 +326,27 @@ export const PHASES: PhaseDef[] = [
     status: 'delivered',
     label: 'Delivered — wrap-up',
     items: [
+      {
+        // Phase 4, task 10/17. The key -- 'delivered/recording-retrieved',
+        // not renamed here -- is `tools/convener_ops/platform_fcc.py::RETRIEVED_TICK`,
+        // read by `convener-release-recording` before it will let the meeting
+        // platform's own copy be deleted (its own storage quota is a
+        // condition of the next session recording at all). Pinned against
+        // that same string by `tools/tests/test_platform_fcc.py` and
+        // `phases.test.ts`, both reading
+        // `tools/tests/fixtures/event-chain-keys.json` (D-14) -- a drift
+        // here would mean a host ticks a box the release job never reads,
+        // or one it reads under a name this journey never shows.
+        //
+        // First in this phase because it is the first thing that happens
+        // once the session ends, well before the wrap-up fields below are
+        // usually filled in -- but it is a claim, not a fact the app can
+        // verify: only the host's own download makes it true.
+        key: 'delivered/recording-retrieved',
+        form: 'checkbox',
+        label: 'Recording retrieved and archived somewhere durable',
+        note: 'Only tick this once the file is genuinely downloaded and saved elsewhere -- it is one of two proofs the release job checks before deleting the platform copy, and a false tick risks losing the recording for good.',
+      },
       {
         key: 'delivered/registrations',
         form: 'field',

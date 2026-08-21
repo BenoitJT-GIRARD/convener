@@ -1181,6 +1181,27 @@ def test_platform_from_env_forwards_speakers_and_config_either_way() -> None:
     assert fcc.config == config
 
 
+def test_platform_from_env_forwards_private_pem_to_the_manual_implementation() -> None:
+    """Task 17: `ManualPlatform.get_attendance` needs an event's private
+    key to read a committed, encrypted attendance export -- `cli.py`'s
+    callers already hold it (the same key that decrypts
+    `registrations.enc`), and `platform_from_env` is the one seam that
+    hands it to `ManualPlatform` without either side reading it directly."""
+    manual = platform_from_env({}, private_pem="a-pem-string")
+    assert isinstance(manual, ManualPlatform)
+    assert manual.private_pem == "a-pem-string"
+
+
+def test_platform_from_env_does_not_pass_private_pem_to_platform_fcc() -> None:
+    """`PlatformFCC` reads attendance from the provider's own API and never
+    touches a committed export, so it has no `private_pem` field to
+    receive -- forwarding it there would be a `TypeError` waiting to
+    happen, not silently accepted."""
+    fcc = platform_from_env({TOKEN_ENV: "tok"}, private_pem="a-pem-string")
+    assert isinstance(fcc, PlatformFCC)
+    assert not hasattr(fcc, "private_pem")
+
+
 def test_platform_from_env_forwards_conference_ids() -> None:
     platform = platform_from_env(
         {TOKEN_ENV: "tok"}, conference_ids={"mrg-901": "618515381"}
@@ -1202,3 +1223,23 @@ def test_token_env_matches_the_declared_integration_secret() -> None:
     declaration = load_declaration(repo_root() / "config" / "integrations.yml")
     meeting_provider = next(i for i in declaration if i.name == "meeting_provider")
     assert meeting_provider.secrets == [TOKEN_ENV]
+
+
+# ------------------------------------------------------------------ #
+# D-14: RETRIEVED_TICK is the one runbook_progress key both Python and
+# the app agree on by name (task 17 wires phases.ts's own key against
+# this same fixture -- see tools/tests/fixtures/event-chain-keys.json's
+# own comment for why a drift here is worse than most).
+# ------------------------------------------------------------------ #
+
+
+def test_retrieved_tick_matches_the_shared_fixture() -> None:
+    import json
+    from pathlib import Path
+
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures" / "event-chain-keys.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert fixture["retrieved_tick_key"] == RETRIEVED_TICK

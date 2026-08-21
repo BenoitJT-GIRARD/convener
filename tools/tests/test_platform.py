@@ -6,7 +6,9 @@ from typing import Any
 
 import pytest
 
+from convener_ops import eventkeys
 from convener_ops.platform import (
+    ENCRYPTED_ATTENDANCE_FILENAME,
     AttendanceImportError,
     AttendanceIssue,
     AttendanceRow,
@@ -14,6 +16,7 @@ from convener_ops.platform import (
     ManualPlatform,
     Platform,
     Recording,
+    encrypt_attendance_export,
     find_speaker,
     parse_attendance_csv,
 )
@@ -23,6 +26,15 @@ CSV_HEADER = "display_name,email,joined_at,left_at,duration_seconds"
 
 def _write_csv(path: Path, *rows: str) -> None:
     path.write_text("\n".join((CSV_HEADER, *rows)) + "\n", encoding="utf-8")
+
+
+def _write_encrypted_csv(path: Path, public_pem: str, *rows: str) -> None:
+    """The committed shape (task 17): the same CSV bytes `_write_csv` would
+    have written, hybrid-encrypted under `public_pem` via
+    `encrypt_attendance_export` -- the real function this module ships,
+    never a hand-rolled stand-in for it."""
+    csv_bytes = ("\n".join((CSV_HEADER, *rows)) + "\n").encode("utf-8")
+    path.write_text(encrypt_attendance_export(public_pem, csv_bytes), encoding="utf-8")
 
 
 def _speaker(**overrides: Any) -> dict[str, Any]:
@@ -43,9 +55,13 @@ def _platform(
     tmp_path: Path,
     speakers: Sequence[Mapping[str, Any]] = (),
     config: Mapping[str, Any] | None = None,
+    private_pem: str | None = None,
 ) -> ManualPlatform:
     return ManualPlatform(
-        events_dir=tmp_path / "events", speakers=speakers, config=config
+        events_dir=tmp_path / "events",
+        speakers=speakers,
+        config=config,
+        private_pem=private_pem,
     )
 
 
@@ -594,6 +610,121 @@ def test_get_attendance_ignores_extra_cells_on_an_over_long_row(
     rows = _platform(tmp_path).get_attendance("mrg-933")
 
     assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+# ------------------------------------------------------------------ #
+# get_attendance -- the encrypted export (task 17, AC8: the manual
+# implementation must run end to end with no external account). See
+# `platform.py`'s own module docstring, "the plaintext CSV is never
+# committed -- the encrypted export is", for why this exists at all.
+# ------------------------------------------------------------------ #
+
+
+def test_get_attendance_reads_the_encrypted_export_in_preference_to_plaintext(
+    tmp_path: Path,
+) -> None:
+    """The committed shape a real event uses: `attendance-import.csv.enc`,
+    produced by `convener-encrypt-attendance-export` and decrypted here with the
+    same private key `EVENT_PRIVATE_KEY` already supplies every other
+    command in this event's chain. Also proves the encrypted file wins when
+    both exist -- the production shape never has both, but a caller must
+    not be able to smuggle an unencrypted row past this path by dropping a
+    plaintext file alongside a stale encrypted one."""
+    private_pem, public_pem = eventkeys.generate()
+    event_dir = tmp_path / "events" / "mrg-940"
+    event_dir.mkdir(parents=True)
+    _write_encrypted_csv(
+        event_dir / ENCRYPTED_ATTENDANCE_FILENAME,
+        public_pem,
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+    _write_csv(
+        event_dir / "attendance-import.csv",
+        "Someone Else,someone@example.org,2026-08-20T18:00:00Z,"
+        "2026-08-20T18:10:00Z,600",
+    )
+
+    rows = _platform(tmp_path, private_pem=private_pem).get_attendance("mrg-940")
+
+    assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+def test_get_attendance_refuses_the_encrypted_export_without_a_private_key(
+    tmp_path: Path,
+) -> None:
+    """Fail closed, not D-13's ordinary absence: a committed encrypted
+    export is personal data waiting to be read, so a caller with no key
+    configured must get a loud refusal, never a quiet "no attendance"."""
+    _, public_pem = eventkeys.generate()
+    event_dir = tmp_path / "events" / "mrg-941"
+    event_dir.mkdir(parents=True)
+    _write_encrypted_csv(
+        event_dir / ENCRYPTED_ATTENDANCE_FILENAME,
+        public_pem,
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+
+    with pytest.raises(AttendanceImportError, match="no private key configured"):
+        _platform(tmp_path, private_pem=None).get_attendance("mrg-941")
+
+
+def test_get_attendance_refuses_an_encrypted_export_under_the_wrong_key(
+    tmp_path: Path,
+) -> None:
+    """A private key that does not match the committed export's own public
+    half must fail loudly, the same `eventkeys.DecryptionError` -> refusal
+    every other reader of an event-keyed file in this codebase already
+    gives -- never silently read as empty."""
+    _, public_pem = eventkeys.generate()
+    other_private_pem, _ = eventkeys.generate()
+    event_dir = tmp_path / "events" / "mrg-942"
+    event_dir.mkdir(parents=True)
+    _write_encrypted_csv(
+        event_dir / ENCRYPTED_ATTENDANCE_FILENAME,
+        public_pem,
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
+    )
+
+    with pytest.raises(AttendanceImportError, match="could not be decrypted"):
+        _platform(tmp_path, private_pem=other_private_pem).get_attendance("mrg-942")
+
+
+def test_get_attendance_encrypted_export_handles_a_utf8_bom_the_same_way(
+    tmp_path: Path,
+) -> None:
+    """The BOM-handling guarantee `test_get_attendance_reads_a_file_with_a_
+    utf8_bom` already gives the plaintext path must survive encryption too:
+    a host's export tool writes a BOM whether or not the file is encrypted
+    afterwards."""
+    private_pem, public_pem = eventkeys.generate()
+    event_dir = tmp_path / "events" / "mrg-943"
+    event_dir.mkdir(parents=True)
+    content = (
+        CSV_HEADER + "\n"
+        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+        "2026-08-20T19:30:00Z,5400\n"
+    )
+    csv_bytes = b"\xef\xbb\xbf" + content.encode("utf-8")
+    envelope = encrypt_attendance_export(public_pem, csv_bytes)
+    (event_dir / ENCRYPTED_ATTENDANCE_FILENAME).write_text(envelope, encoding="utf-8")
+
+    rows = _platform(tmp_path, private_pem=private_pem).get_attendance("mrg-943")
+
+    assert rows[0].display_name == "Ada Lovelace"
+
+
+def test_encrypt_attendance_export_round_trips_through_eventkeys(
+    tmp_path: Path,
+) -> None:
+    """`encrypt_attendance_export` is a thin wrapper over `eventkeys.encrypt`
+    -- pinned directly, independent of `ManualPlatform`, so a future change
+    to either side shows up here first."""
+    private_pem, public_pem = eventkeys.generate()
+    csv_bytes = (CSV_HEADER + "\nAda,ada@example.org,x,y,60\n").encode("utf-8")
+
+    envelope = encrypt_attendance_export(public_pem, csv_bytes)
+
+    assert eventkeys.decrypt(private_pem, envelope) == csv_bytes
 
 
 # ------------------------------------------------------------------ #

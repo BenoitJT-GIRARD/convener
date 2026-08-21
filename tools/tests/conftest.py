@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 #: `scripts/` holds the one-shot migrations. They live outside the installed
 #: package (they are run once, not shipped) but are tested with it, so their
@@ -10,6 +13,32 @@ from typing import Any
 _SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
+
+
+@pytest.fixture(autouse=True)
+def _isolate_environment() -> Any:
+    """Task 17's own finding, from proving `test_event_chain.py`'s replay
+    tests actually bite: `monkeypatch.setenv`/`delenv` only undoes changes
+    made *through monkeypatch itself* -- a stray `os.environ[key] = value`
+    written directly by application code (a bug this suite exists to
+    catch, not a pattern anything here uses on purpose) survives past that
+    test's own teardown and leaks into whichever test runs next in the
+    same process. A mutant that made one CLI step secretly depend on a
+    previous one having "just run", by reading an env var the previous
+    step's own code sets on success, would have gone undetected purely
+    because an earlier test in the same session happened to set that
+    variable first -- not because the replay test was wrong, but because
+    the whole process's environment was never reset between tests at all.
+
+    Snapshots `os.environ` before every test and restores it byte for
+    byte afterwards, regardless of what the test itself, `monkeypatch`, or
+    the code under test did to it in between -- so a leak like the one
+    above fails the very next test that depends on the variable being
+    unset, instead of silently passing forever."""
+    before = dict(os.environ)
+    yield
+    os.environ.clear()
+    os.environ.update(before)
 
 
 def ballot(**overrides: Any) -> dict[str, Any]:
