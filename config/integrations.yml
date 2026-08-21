@@ -96,29 +96,33 @@ integrations:
       - CONVENER_SMTP_PASSWORD
       - CONVENER_SMTP_FROM
     absent_behaviour: >-
-      Three consumers, degrading three different ways -- none ever prints a
-      composed message, sent or not. tools/convener_ops/confirmation.py (task
-      7): the registration confirmation, carrying a participant's address
-      and matching code, is written to a single local, .gitignore'd file
-      inside the job's own workspace instead of being sent, and
-      .github/workflows/registration.yml uploads that file as a short-
-      retention, access-controlled build artefact when it exists --
-      fourteen days, not longer for safety's own sake, since a resend
+      Three consumers, all reported rather than retained (Critical 3,
+      branch review) -- none ever prints a composed message, sent or not,
+      and none writes one to a file or a build artefact either.
+      tools/convener_ops/confirmation.py (task 7): the registration
+      confirmation, carrying a participant's address and matching code,
+      used to be written to a local, .gitignore'd file and uploaded as a
+      short-retention build artefact instead of being sent -- removed once
+      docs/governance/traitement-donnees.md's own Recipients section
+      turned out to call that artefact a documented exception, when with
+      this row absent (this project's default state) it was the path
+      every registration took, not an exception. Every attempt is folded
+      into a bare sent/not-sent count instead, and convener-resend-confirmation
       reproduces the identical message from the stored registration and
-      the same deterministic matching code, so nothing there is ever the
-      only copy of anything. tools/convener_ops/delivery.py (task 14): the
-      certificate document this row would carry is never written anywhere
-      at all, not even to a private artefact -- see that module's own
-      docstring for why task 7's pattern is the wrong one for a signed,
-      nominative document (spec S:7 forbids it landing in any Actions
-      surface). Every attempt is folded into a bare sent/not-sent count
-      instead, and a retry reproduces the identical document rather than
-      keeping a copy of an old one. tools/convener_ops/survey_invite.py (task
-      16b): the post-event survey invitation, reusing confirmation.py's own
-      transport rather than a third copy of it, degrades the same bare-count
-      way delivery.py does -- and for a related but distinct reason: a
-      survey invitation carries no identifier at all to keep an unsent copy
-      filed against, unlike a certificate, which at least has a public one.
+      the same deterministic matching code, so nothing is ever the only
+      copy of anything. tools/convener_ops/delivery.py (task 14): the
+      certificate document this row would carry was never written
+      anywhere at all, not even to a private artefact, from the day this
+      module was written -- see that module's own docstring for why a
+      signed, nominative document must never land in any Actions surface
+      (spec S:7), a stricter constraint than task 7's confirmation had
+      until this same round. tools/convener_ops/survey_invite.py (task 16b):
+      the post-event survey invitation, reusing confirmation.py's own
+      transport rather than a third copy of it, degrades the same
+      bare-count way delivery.py does -- and for a related but distinct
+      reason: a survey invitation carries no identifier at all to keep an
+      unsent copy filed against, unlike a certificate, which at least has
+      a public one.
 
   - name: video_publishing
     label: Video channel
