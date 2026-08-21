@@ -62,6 +62,15 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'toolkit/emails/certificate-delivered.md',
     anchor: null,
   },
+  // The post-event survey's own invitation (phase 4 task 16b), composed
+  // by tools/convener_ops/survey_invite.py and sent by an operator dispatching
+  // .github/workflows/invite-survey.yml. Same reasoning as
+  // certificate-delivered above: nobody sends this by hand, kept here so
+  // a board member can read the copy without opening the Python module.
+  'toolkit/emails/survey-invitation': {
+    file: 'toolkit/emails/survey-invitation.md',
+    anchor: null,
+  },
 
   // toolkit — posts
   'toolkit/forum-post-announce': { file: 'toolkit/forum-post-announce.md', anchor: null },

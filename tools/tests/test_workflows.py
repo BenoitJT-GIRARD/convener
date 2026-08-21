@@ -844,6 +844,26 @@ def _calls_delivery_deliver(func: ast.FunctionDef) -> bool:
     )
 
 
+def _calls_confirmation_deliver(func: ast.FunctionDef) -> bool:
+    """Task 16b's own analogue of `_calls_delivery_deliver` above:
+    `cli.py::invite_survey` calls `confirmation.deliver(message, os.environ)`
+    directly -- there is no dedicated transport for a survey invitation to
+    duplicate (`survey_invite.py`'s own module docstring explains why it
+    reuses `confirmation.Confirmation`/`confirmation.deliver` rather than
+    building a third copy of the same `smtplib` wiring `delivery.py`
+    already had to justify duplicating once). Kept as a second, separate
+    check rather than folded into `_calls_delivery_deliver` itself: that
+    one is named for, and only ever matches, `delivery.deliver`."""
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "deliver"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "confirmation"
+        for node in ast.walk(func)
+    )
+
+
 def _module_function_names(path: Path) -> frozenset[str]:
     """Every function `path`'s own module defines, at any nesting depth --
     the universe `_env_vars_read`'s recursion (below) is allowed to walk
@@ -893,19 +913,23 @@ def _env_vars_read(
     below, the second special case this walk knows about by name, for the
     identical reason `platform_from_env` needed one: `delivery.deliver`
     hands `os.environ` on to `confirmation.smtp_config_from_env`, a read
-    genuinely inside a different module's own AST.
+    genuinely inside a different module's own AST. Task 16b adds a third,
+    identical case, `_calls_confirmation_deliver`: `cli.py::invite_survey`
+    calls `confirmation.deliver` directly, rather than through
+    `delivery.deliver`'s own indirection, so the same read needs its own
+    name to match on.
 
     **What this still cannot see**, so the docstring does not claim more
     than the walk does: a call reached only through a name that is not a
-    plain `ast.Name` or, for `delivery.deliver`, a plain `module.attr`
-    (a method call on an instance, a call through a variable holding a
-    function reference, `getattr`-style indirection), and any read inside
-    a function this module imports from elsewhere -- `platform_from_env`
-    and `delivery.deliver` are the only two such cases this function
-    already knows about by name, since walking a different module's own
-    AST from scratch is out of this function's own scope by design (it
-    answers "what does `cli.py` read", not "what does everything `cli.py`
-    calls read")."""
+    plain `ast.Name` or, for `delivery.deliver`/`confirmation.deliver`, a
+    plain `module.attr` (a method call on an instance, a call through a
+    variable holding a function reference, `getattr`-style indirection),
+    and any read inside a function this module imports from elsewhere --
+    `platform_from_env`, `delivery.deliver` and `confirmation.deliver` are
+    the only such cases this function already knows about by name, since
+    walking a different module's own AST from scratch is out of this
+    function's own scope by design (it answers "what does `cli.py` read",
+    not "what does everything `cli.py` calls read")."""
     if function_name in _seen:
         return set()
     func = _function_node(path, function_name)
@@ -929,6 +953,8 @@ def _env_vars_read(
     if _calls_platform_from_env(func):
         names.add(platform_fcc.TOKEN_ENV)
     if _calls_delivery_deliver(func):
+        names |= confirmation.SMTP_ENV_VARS
+    if _calls_confirmation_deliver(func):
         names |= confirmation.SMTP_ENV_VARS
 
     seen = _seen | {function_name}
@@ -1739,6 +1765,107 @@ def test_erase_registration_workflow_has_a_concurrency_group() -> None:
     assert isinstance(concurrency, dict)
     assert concurrency.get("group") == "registration-${{ inputs.event_id }}"
     assert concurrency.get("cancel-in-progress") is False
+
+
+# ------------------------------------------------------------------ #
+# Task 16b: invite-survey.yml. Same derived-environment idiom as the
+# certificate trio above -- the same gap this whole idiom exists to catch
+# (task 7's workflow forwarding three of nine variables its own command
+# read) applies just as much to a brand-new workflow as to an edited one.
+# ------------------------------------------------------------------ #
+
+INVITE_SURVEY_WORKFLOW = Path(".github/workflows/invite-survey.yml")
+
+
+def _invite_survey_workflow() -> dict[str, Any]:
+    return safe_load((ROOT / INVITE_SURVEY_WORKFLOW).read_text(encoding="utf-8"))
+
+
+def test_invite_survey_workflow_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "invite_survey")
+    assert expected == {
+        "EVENT_ID",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_MATCHING_SALT",
+        "RESEND_ALL",
+        "CONVENER_MEETING_API_TOKEN",
+        "CONVENER_FCC_CONFERENCE_ID",
+        *confirmation.SMTP_ENV_VARS,
+    }, (
+        "the derivation itself found an unexpected set -- either "
+        "invite_survey changed what it reads, or this AST walk no longer "
+        "sees it correctly; investigate before trusting the carried-forward "
+        "check below"
+    )
+    carried = _workflow_step_env_keys(
+        INVITE_SURVEY_WORKFLOW, "invite", "convener-invite-survey"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"invite-survey.yml does not forward {missing} to the step that "
+        "runs convener-invite-survey, which reads it directly -- task 7 shipped "
+        "exactly this gap"
+    )
+
+
+def test_record_survey_invitation_step_carries_every_env_var_the_command_reads() -> (
+    None
+):
+    expected = _env_vars_read(CLI_MODULE_PATH, "record_survey_invitation")
+    assert expected == {"EVENT_ID"}
+    carried = _workflow_step_env_keys(
+        INVITE_SURVEY_WORKFLOW, "invite", "convener-record-survey-invitation"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"invite-survey.yml does not forward {missing} to the step that "
+        "runs convener-record-survey-invitation, which reads it directly"
+    )
+
+
+def test_invite_survey_workflow_is_dispatchable_by_hand_only() -> None:
+    loaded = _invite_survey_workflow()
+    assert set(loaded[True]) == {"workflow_dispatch"}, (
+        "invite-survey.yml must be reachable only by an operator's own "
+        "decision -- never scheduled, never triggered by a push: an "
+        "invitation is an outbound message to real people"
+    )
+
+
+def test_invite_survey_workflow_has_a_resend_all_input_defaulting_false() -> None:
+    loaded = _invite_survey_workflow()
+    inputs = loaded[True]["workflow_dispatch"]["inputs"]
+    assert inputs["resend_all"]["type"] == "boolean"
+    assert inputs["resend_all"]["default"] is False
+    assert inputs["resend_all"]["required"] is False
+
+
+def test_invite_survey_workflow_job_has_write_permission_and_a_timeout() -> None:
+    loaded = _invite_survey_workflow()
+    job = loaded["jobs"]["invite"]
+    assert job.get("permissions") == {"contents": "write"}
+    assert isinstance(job.get("timeout-minutes"), int)
+
+
+def test_invite_survey_workflow_has_its_own_concurrency_group() -> None:
+    loaded = _invite_survey_workflow()
+    concurrency = loaded.get("concurrency")
+    assert isinstance(concurrency, dict)
+    assert concurrency.get("group") == "survey-invite-${{ inputs.event_id }}"
+    assert concurrency.get("cancel-in-progress") is False
+
+
+def test_invite_survey_workflow_records_only_when_something_was_sent() -> None:
+    """The whole point of the two-step split (`invite_survey`'s own
+    docstring): the recording step must be conditioned on the send step's
+    own `record` output, never run unconditionally -- an unconditional
+    record would mark an event invited even on a run that sent nothing."""
+    loaded = _invite_survey_workflow()
+    steps = loaded["jobs"]["invite"]["steps"]
+    record_step = next(
+        step for step in steps if "convener-record-survey-invitation" in step.get("run", "")
+    )
+    assert record_step.get("if") == "steps.invite.outputs.record == 'true'"
 
 
 # ------------------------------------------------------------------ #

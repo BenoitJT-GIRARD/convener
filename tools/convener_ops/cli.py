@@ -19,7 +19,7 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops import confirmation, delivery, eventkeys, signing
+from convener_ops import confirmation, delivery, eventkeys, signing, survey_invite
 from convener_ops.attendance import (
     EligibilityThreshold,
     MatchedAttendee,
@@ -116,6 +116,13 @@ CERTIFICATES_HEADER = (
 #: registry lives in one file".
 DESTRUCTIONS_HEADER = (
     "# Event key destruction registry; see tools/convener_ops/eventkeys.py\n"
+)
+#: The survey invitation registry (task 16b) holds only an event id and a
+#: date -- see tools/convener_ops/survey_invite.py's module docstring, "ruling
+#: 3", for why this is the whole bound a resend is checked against.
+SURVEY_INVITATIONS_HEADER = (
+    "# Survey invitation registry -- no name, no address; "
+    "see tools/convener_ops/survey_invite.py\n"
 )
 
 
@@ -1592,6 +1599,226 @@ def _conference_ids_from_env(event_id: str) -> dict[str, str]:
     this -- not reopened here."""
     conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
     return {event_id: conference_id} if conference_id else {}
+
+
+# ------------------------------------------------------------------ #
+# Inviting the post-event survey (task 16b, phase 4 spec S:6): "envoye
+# apres coup aux seules personnes reconnues presentes." Two commands, the
+# same split registration.yml already draws between storing and sending
+# (Important 2, task 6/7's own review): `invite_survey` composes and sends
+# -- once, never retried, so a rejected push downstream can never turn
+# into a second copy of the same message -- and `record_survey_invitation`
+# writes the one, person-free fact that stops a re-dispatch from doing it
+# again, inside a commit-and-push retry loop exactly like every other
+# writer in this file uses. See `survey_invite.py`'s own module docstring
+# for the reasoning this split rests on (ruling 3): there is no
+# identifier here the way `certificate.py`'s own register gives R-27, so
+# the whole bound is "this event was invited", never "these people were".
+# ------------------------------------------------------------------ #
+
+
+def _load_invitation_registry(
+    root: Path,
+) -> tuple[survey_invite.InvitationRegistry, str | None]:
+    """`(registry, None)` on success, `({}, message)` on a malformed
+    committed file -- mirrors `_load_destruction_registry` exactly, for
+    the same reason: a *missing* file is not an error (no event has ever
+    been invited yet), and never raises, so `invite_survey` can print one
+    line and return 1 the same way every other "closed shape" loader in
+    this module already does."""
+    registry_path = survey_invite.invitations_path(root)
+    if not registry_path.exists():
+        return {}, None
+    try:
+        data = yaml_safe_load(registry_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return {}, f"{survey_invite.INVITATIONS_PATH.as_posix()}: invalid YAML - {exc}"
+    try:
+        return survey_invite.registry_from_data(data), None
+    except ValueError as exc:
+        return {}, f"{survey_invite.INVITATIONS_PATH.as_posix()}: {exc}"
+
+
+def invite_survey() -> int:
+    """`convener-invite-survey`: e-mail the post-event survey link to every
+    currently *matched* attendee of one event (spec S:6) -- see
+    `survey_invite.py`'s own module docstring, "ruling 1", for why matched
+    and only matched, never a registrant, an unmatched attendee (no
+    address to send to) or a telephone joiner (never had one).
+
+    Checked in this order, cheapest and least sensitive first, and every
+    refusal prints one line naming only the event id (already public) --
+    never a name or an address, on any path, mirroring `issue_certificates`
+    and `deliver_certificates`'s own discipline:
+
+    1. the event id is a legal token at all;
+    2. **the survey switch is on** (`_survey_enabled`) -- ruling 6: an
+       invitation to a closed survey would be a fourth hole in the same
+       switch `handle_survey_response`, the signup relay and `SurveyForm.tsx`
+       already enforce (`_survey_enabled`'s own docstring, "task 16's own
+       mutant to kill");
+    3. **this event has not already been invited**
+       (`data/survey-invitations.yml`), unless `RESEND_ALL=true` -- ruling
+       3's own bound, checked before anything is decrypted so a routine
+       re-dispatch after nothing changed touches no registration at all;
+    4. the event's private key is configured;
+    5. `registrations.enc` exists and parses;
+    6. the attendance platform answers.
+
+    Composes and sends through `confirmation.deliver` -- reused, not
+    rebuilt, see `survey_invite.py`'s own module docstring for why -- and
+    prints only counts: how many matched attendees were invited, how many
+    sends failed, and how many people this event's own attendance export
+    named but this run never had an address for (unmatched plus
+    unreachable, folded into one number here since neither is actionable
+    from this job the way a certificate's own `UNMATCHED_ATTENDANCE` file
+    is for a host with the room roster).
+
+    **Writes `record` to `$GITHUB_OUTPUT`** (`true` when at least one
+    invitation actually sent this run, `false` otherwise) --
+    `invite-survey.yml`'s own follow-up step reads this to decide whether
+    `convener-record-survey-invitation` should run at all. Deliberately gated
+    on *sent*, not *attempted*: a run that sent nothing (no matched
+    attendee, or `email_transport` unconfigured) must not mark this event
+    as invited, or a later run -- once the real cause is fixed -- would
+    refuse itself outright for an invitation that, in fact, never went
+    anywhere.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    if not _survey_enabled(root, event_id):
+        print(
+            f"the survey is not enabled for event {event_id} -- refusing to "
+            "invite anyone",
+            file=sys.stderr,
+        )
+        return 1
+
+    registry, registry_error = _load_invitation_registry(root)
+    if registry_error:
+        print(registry_error, file=sys.stderr)
+        return 1
+
+    resend_all = os.environ.get("RESEND_ALL", "").strip().lower() == "true"
+    if event_id in registry and not resend_all:
+        print(
+            f"event {event_id} was already invited on "
+            f"{registry[event_id].isoformat()} -- no invitations sent this "
+            "run (tick resend_all for a deliberate resend)"
+        )
+        _write_github_output("record=false\n")
+        return 0
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    registrations: list[Registration] = []
+    for entry in current.entries:
+        registration = to_registration(json.dumps(entry), private_pem)
+        if registration is not None:
+            registrations.append(registration)
+
+    speakers, _errors = _load(root / "data" / "speakers.yml")
+    cfg, _errors = _load(root / "data" / "config.yml")
+    speaker_list = speakers if isinstance(speakers, list) else []
+    config_map = cfg if isinstance(cfg, dict) else None
+
+    platform = platform_from_env(
+        os.environ, speaker_list, config_map, _conference_ids_from_env(event_id)
+    )
+    try:
+        rows = platform.get_attendance(event_id)
+    except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    salt = os.environ.get("CONVENER_MATCHING_SALT")
+    matched = match(rows, registrations, MatchEvent(event_id=event_id, salt=salt))
+
+    record: Mapping[str, Any] = {}
+    with contextlib.suppress(EventNotFoundError):
+        record = find_speaker(speaker_list, event_id)
+    event_title = str(record.get("title", "") or "")
+
+    sent_count = 0
+    unsent_count = 0
+    for attendee in matched.matched:
+        message = survey_invite.compose(attendee.registration, event_title, event_id)
+        result = confirmation.deliver(message, os.environ)
+        if result.sent:
+            sent_count += 1
+        else:
+            unsent_count += 1
+
+    not_invited = len(matched.unmatched) + len(matched.unreachable)
+    print(
+        f"survey invitations for event {event_id}: {sent_count} sent, "
+        f"{unsent_count} not sent ({len(matched.matched)} matched attendee(s); "
+        f"{not_invited} present but not invited -- no address on file)"
+    )
+    _write_github_output(f"record={'true' if sent_count else 'false'}\n")
+    return 0
+
+
+def record_survey_invitation() -> int:
+    """`convener-record-survey-invitation`: the second, retried half of *Invite
+    the post-event survey* -- see `invite_survey`'s own docstring for why
+    sending and recording are two separate steps.
+
+    Reads `EVENT_ID` and idempotently adds it to
+    `data/survey-invitations.yml` with today's Paris date -- `setdefault`,
+    never overwritten, so calling this again for an event already on
+    record (a git-push retry that re-runs this command after a rejected
+    push resets the working tree, or an operator re-dispatching the whole
+    workflow by hand) reproduces the identical file rather than moving the
+    date forward. Never sends anything and never reads a private key: by
+    the time this runs, `invite_survey` has already sent whatever it is
+    going to send, and this command's only job is to write the one fact
+    that a re-dispatch checks."""
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    registry, registry_error = _load_invitation_registry(root)
+    if registry_error:
+        print(registry_error, file=sys.stderr)
+        return 1
+
+    today = paris_today(datetime.now(UTC))
+    registry.setdefault(event_id, today)
+
+    registry_path = survey_invite.invitations_path(root)
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        SURVEY_INVITATIONS_HEADER + _dump(survey_invite.registry_to_data(registry)),
+        encoding="utf-8",
+        newline="",
+    )
+    print(f"recorded a survey invitation for event {event_id}")
+    return 0
 
 
 def issue_certificates() -> int:

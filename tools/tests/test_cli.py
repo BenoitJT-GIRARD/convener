@@ -32,9 +32,11 @@ from convener_ops.cli import (
     handle_proposal,
     handle_registration,
     handle_survey_response,
+    invite_survey,
     issue_certificates,
     match_attendance,
     public_data,
+    record_survey_invitation,
     reissue_certificate,
     release_recording,
     resend_confirmation,
@@ -2146,6 +2148,428 @@ def test_match_attendance_skips_an_entry_that_fails_to_decrypt(
 
     assert match_attendance() == 0
     assert "1 matched, 0 unmatched, 0 unreachable" in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------ #
+# invite_survey() / record_survey_invitation(): task 16b -- e-mail the
+# post-event survey link to every currently *matched* attendee of one
+# event (spec S:6), and never a second time by default. Like
+# match_attendance above, these tests check that no name or address ever
+# reaches stdout, on any path including a refusal -- and that an unmatched
+# or an unreachable attendee is never invited, that a closed survey
+# refuses outright, and that a resend without resend_all invites nobody.
+# ------------------------------------------------------------------ #
+
+
+def _prepare_survey_event(
+    tmp_path: Path,
+    *,
+    event_id: str = "mrg-042",
+    registrations: tuple[Registration, ...] = (),
+    attendance_rows: tuple[str, ...] = (),
+    survey_enabled: bool = True,
+) -> str:
+    """Everything `invite_survey` needs on disk for one event, short of the
+    environment variables a test still sets for itself. Returns
+    `event_private_pem`. Mirrors `_prepare_event` (the certificate
+    section's own twin) but never writes `config.yml` -- `invite_survey`
+    computes no eligibility threshold, so it tolerates a missing one, the
+    same way `match_attendance` already does."""
+    private_pem, _ = _publish_event_key(tmp_path, event_id)
+    if registrations:
+        _write_registrations(tmp_path, event_id, private_pem, *registrations)
+    if attendance_rows:
+        _write_attendance_csv(tmp_path, event_id, *attendance_rows)
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "speakers.yml").write_text(
+        yaml.safe_dump(
+            [
+                speaker(
+                    edition_code=event_id.upper(),
+                    title="On analytical engines",
+                    date="2026-08-20",
+                    survey_enabled=survey_enabled,
+                )
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return private_pem
+
+
+_ADA_REG = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+
+_SURVEY_SMTP_ENV: dict[str, str] = {
+    "CONVENER_SMTP_HOST": "smtp.example.org",
+    "CONVENER_SMTP_PORT": "587",
+    "CONVENER_SMTP_USER": "convener-survey@example.org",
+    "CONVENER_SMTP_PASSWORD": "shh",
+    "CONVENER_SMTP_FROM": "convener-survey@example.org",
+}
+
+
+def test_invite_survey_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+    assert invite_survey() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_invite_survey_with_an_invalid_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "../escape")
+    assert invite_survey() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_invite_survey_refuses_when_the_switch_is_off(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Ruling 6: inviting people to a closed survey would be a fourth
+    hole beside the three `_survey_enabled` already guards."""
+    _prepare_survey_event(tmp_path, survey_enabled=False)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert invite_survey() == 1
+    captured = capsys.readouterr()
+    assert "the survey is not enabled for event mrg-042" in captured.err
+    combined = (captured.out + captured.err).lower()
+    for secret in _LEAK_STRINGS:
+        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+
+
+def test_invite_survey_with_no_speaker_record_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert invite_survey() == 1
+    assert "the survey is not enabled for event mrg-042" in capsys.readouterr().err
+
+
+def test_invite_survey_without_a_configured_key_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _prepare_survey_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert invite_survey() == 1
+    assert "no private key configured" in capsys.readouterr().err
+
+
+def test_invite_survey_with_nothing_recorded_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem = _prepare_survey_event(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert invite_survey() == 1
+    assert "no registrations recorded" in capsys.readouterr().err
+
+
+def test_invite_survey_catches_a_platform_request_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem = _prepare_survey_event(tmp_path, registrations=(_ADA_REG,))
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    # No attendance-import.csv on disk at all -- ManualPlatform's own
+    # missing-file failure, the same one match_attendance already catches.
+
+    assert invite_survey() == 1
+    assert "no attendance export" in capsys.readouterr().err
+
+
+def test_invite_survey_only_invites_the_matched_attendee(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Ruling 1's own mutant: an attendance export naming a matched
+    attendee, an unmatched one (an address the cascade cannot tie to any
+    registration) and an unreachable one (a telephone joiner, no address
+    at all) -- only the first is ever composed or sent, and the message is
+    reported as one count, never targeting the other two."""
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+            "Grace Hopper,grace@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,3600",
+            "Some Caller,,2026-08-20T18:00:00Z,2026-08-20T19:00:00Z,1800",
+        ),
+    )
+    for key, value in _SURVEY_SMTP_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+
+    assert invite_survey() == 0
+    captured = capsys.readouterr()
+    assert (
+        "1 sent, 0 not sent (1 matched attendee(s); 2 present but not "
+        "invited -- no address on file)" in captured.out
+    )
+    combined = (captured.out + captured.err).lower()
+    for stray in (
+        "grace",
+        "hopper",
+        "grace@example.org",
+        "some caller",
+        *_LEAK_STRINGS,
+    ):
+        assert stray.lower() not in combined, f"{stray!r} leaked into job output"
+
+    assert len(_RecordingSmtpClient.sent) == 1
+    email = _RecordingSmtpClient.sent[0]
+    assert email["To"] == "ada@example.org"
+
+
+def test_invite_survey_composes_the_same_link_for_every_matched_attendee(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG, grace),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+            "Grace Hopper,grace@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    for key, value in _SURVEY_SMTP_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+
+    assert invite_survey() == 0
+    assert "2 sent, 0 not sent" in capsys.readouterr().out
+
+    assert len(_RecordingSmtpClient.sent) == 2
+    bodies = [message.get_content() for message in _RecordingSmtpClient.sent]
+    links = {re.search(r"https://\S+", body).group(0) for body in bodies}  # type: ignore[union-attr]
+    assert links == {
+        "https://example-instance.github.io/example-showcase/app/#/survey/mrg-042"
+    }
+
+
+def test_invite_survey_with_no_transport_configured_reports_all_unsent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    for key in _SURVEY_SMTP_ENV:
+        monkeypatch.delenv(key, raising=False)
+
+    assert invite_survey() == 0
+    captured = capsys.readouterr()
+    assert "0 sent, 1 not sent" in captured.out
+    combined = (captured.out + captured.err).lower()
+    for secret in _LEAK_STRINGS:
+        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+
+    output_path = tmp_path / "gh_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
+    output_path.write_text("", encoding="utf-8")
+    assert invite_survey() == 0
+    assert "record=false" in output_path.read_text(encoding="utf-8")
+
+
+def test_invite_survey_writes_record_true_to_github_output_when_something_sent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    for key, value in _SURVEY_SMTP_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+    output_path = tmp_path / "gh_output"
+    output_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
+
+    assert invite_survey() == 0
+    assert "record=true" in output_path.read_text(encoding="utf-8")
+
+
+def test_invite_survey_refuses_a_second_time_without_resend_all(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Ruling 3's own mutant: once this event is on record as invited, a
+    routine re-dispatch sends nothing further -- and touches no
+    registration at all, so it cannot leak anything either."""
+    _prepare_survey_event(tmp_path)
+    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+    monkeypatch.delenv("RESEND_ALL", raising=False)
+
+    assert invite_survey() == 0
+    captured = capsys.readouterr()
+    assert "already invited on 2026-08-01" in captured.out
+    assert "no invitations sent this run" in captured.out
+    combined = (captured.out + captured.err).lower()
+    for secret in _LEAK_STRINGS:
+        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+
+
+def test_invite_survey_resend_all_invites_the_matched_attendee_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
+        encoding="utf-8",
+    )
+    for key, value in _SURVEY_SMTP_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("RESEND_ALL", "true")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+
+    assert invite_survey() == 0
+    assert "1 sent, 0 not sent" in capsys.readouterr().out
+    assert len(_RecordingSmtpClient.sent) == 1
+
+
+def test_invite_survey_rejects_a_malformed_committed_registry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _prepare_survey_event(tmp_path)
+    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text("not valid at all: [", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert invite_survey() == 1
+    assert "survey-invitations.yml" in capsys.readouterr().err
+
+
+def test_record_survey_invitation_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+    assert record_survey_invitation() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_record_survey_invitation_writes_a_fresh_entry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert record_survey_invitation() == 0
+
+    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    assert data == {
+        "v": 1,
+        "invitations": [
+            {
+                "event_id": "mrg-042",
+                "invited_on": paris_today(datetime.now(UTC)).isoformat(),
+            }
+        ],
+    }
+
+
+def test_record_survey_invitation_is_idempotent_and_keeps_the_first_date(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert record_survey_invitation() == 0
+
+    data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    assert data["invitations"] == [{"event_id": "mrg-042", "invited_on": "2026-08-01"}]
+
+
+def test_record_survey_invitation_rejects_a_malformed_committed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text("not valid at all: [", encoding="utf-8")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert record_survey_invitation() == 1
+    assert "survey-invitations.yml" in capsys.readouterr().err
 
 
 # ------------------------------------------------------------------ #

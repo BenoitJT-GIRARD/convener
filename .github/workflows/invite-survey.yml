@@ -1,0 +1,150 @@
+name: Invite the post-event survey
+
+# Task 16b, phase 4 spec S:6: "Facultatif, activable par evenement. Court.
+# Envoye apres coup aux seules personnes reconnues presentes." An
+# invitation is an outbound message to real people -- exactly the same
+# reason issue-certificates.yml is workflow_dispatch only -- so this is
+# never scheduled and never fires on a push. Run convener-match-attendance by
+# hand first to review the join before inviting from it
+# (docs/reference/operations.md).
+#
+# No input carries an address: event_id and, optionally, conference_id are
+# the only things an operator names, the same shape issue-certificates.yml
+# already uses for the identical reason (a provider identifier is not
+# personal data).
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Event id, exactly as published (e.g. mrg-042)'
+        required: true
+        type: string
+      conference_id:
+        description: >-
+          The FreeConferenceCall conference id for this event (only needed
+          with CONVENER_MEETING_API_TOKEN configured; see recording.yml's own
+          input of the same name). Leave blank for the manual
+          implementation.
+        required: false
+        type: string
+      resend_all:
+        description: >-
+          By default this run refuses outright once this event already has
+          an entry in data/survey-invitations.yml -- there is no
+          per-person record to restrict a resend to the way
+          issue-certificates.yml's own resend_all (R-27) can, since a
+          survey invitation carries no identifier (see
+          tools/convener_ops/survey_invite.py's own module docstring, "ruling
+          3"), so the only choice this input offers is all or nothing: tick
+          it to deliberately invite every currently matched attendee
+          again, including everyone the first run already reached. Never
+          the default.
+        required: false
+        type: boolean
+        default: false
+
+# Keyed on event_id alone, the same as issue-certificates.yml's own group:
+# two dispatches for the same event must serialise (never two invitation
+# runs deciding "not yet invited" from the same stale read), while two
+# different events still run in parallel. Queued, not cancelled: a run
+# mid-send must finish, never be cut off partway through a batch.
+concurrency:
+  group: survey-invite-${{ inputs.event_id }}
+  cancel-in-progress: false
+
+jobs:
+  invite:
+    runs-on: ubuntu-latest
+    # Checkout, uv sync, one decrypt pass over at most 500 registrations,
+    # one attendance fetch, one send attempt per matched attendee, plus the
+    # recording step's own retry loop below.
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      # Read once, used by both the checkout below and the retry loop, so
+      # the two can never name different branches -- registration.yml's
+      # own reasoning for this same pattern.
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Resolve the event's key secret
+        id: resolve
+        working-directory: tools
+        env:
+          # Same idiom issue-certificates.yml already uses for a typed,
+          # trusted operator input: toJSON, never string interpolation, so
+          # a stray quote in event_id cannot break out of the payload.
+          REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
+        run: uv run convener-registration-secret-name
+      - name: Invite the post-event survey
+        # id: so the recording step below can read this step's own
+        # `record` output (written by convener-invite-survey itself, straight
+        # to $GITHUB_OUTPUT).
+        id: invite
+        working-directory: tools
+        env:
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          # Absent is ordinary D-13 here: with no salt configured, the
+          # attendance cascade's own matching-code level simply never
+          # finds anything and falls through to the address and name
+          # levels instead (attendance.py's own documented fallback) --
+          # unlike issue_certificates, nothing here fingerprints a
+          # certificate, so there is no stronger exception to make.
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          # Absent is ordinary D-13 too: platform_from_env falls back to
+          # ManualPlatform, reading
+          # data/events/<id>/attendance-import.csv.
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
+          RESEND_ALL: ${{ inputs.resend_all }}
+          # email_transport's five secrets (config/integrations.yml) --
+          # every one of the five task 7 shipped a workflow forwarding
+          # only three of, once, with its whole suite green
+          # (test_workflows.py's own derived-environment check now catches
+          # exactly this for this command).
+          CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
+          CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
+          CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
+          CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
+          CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
+        run: uv run convener-invite-survey
+      - name: Record the invitation
+        # Only once convener-invite-survey actually sent at least one message
+        # this run -- see that command's own docstring for why the gate is
+        # "sent", never "attempted". A separate, unretried-in-content step
+        # from the one above (Important 2, registration.yml's own
+        # precedent): the loop below retries the *commit*, never the send,
+        # by re-running the idempotent recording command alone, so a
+        # rejected push can never turn into a second batch of e-mail.
+        if: steps.invite.outputs.record == 'true'
+        env:
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+        run: |
+          set -e
+          git config user.name "convener-survey-invite"
+          git config user.email "convener-survey-invite@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-record-survey-invitation)
+            git add data/survey-invitations.yml
+            if git diff --staged --quiet; then
+              echo "no change to commit"
+              exit 0
+            fi
+            git commit -m "data: invite the survey for $EVENT_ID"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+          done
+          echo "::error::push failed after 3 attempts -- the invitation was sent but not recorded"
+          exit 1

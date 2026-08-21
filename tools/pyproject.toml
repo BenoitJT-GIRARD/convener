@@ -61,6 +61,8 @@ convener-record-destructions = "convener_ops.cli:record_destructions"
 convener-erase-registration = "convener_ops.cli:erase_registration"
 convener-survey-secret-name = "convener_ops.cli:resolve_survey_secret"
 convener-handle-survey-response = "convener_ops.cli:handle_survey_response"
+convener-invite-survey = "convener_ops.cli:invite_survey"
+convener-record-survey-invitation = "convener_ops.cli:record_survey_invitation"
 
 [build-system]
 requires = ["hatchling"]

@@ -1303,6 +1303,90 @@ as an HTML attachment. Run *Deliver a certificate* for one of the
 identifiers `certificates-public.json` already lists to confirm the
 resend path independently.
 
+## Inviting the post-event survey
+
+Spec §6's own French sentence is precise, and this is its plain English
+sense, not a loosened paraphrase: optional, switched on per event, short,
+sent afterwards, and only to people recognised as present. Task 16 splits
+it in two — `tools/convener_ops/survey.py` (16a) is the anonymous
+storage side, already covered above under *Handling a survey response*;
+`tools/convener_ops/survey_invite.py` (16b) is who gets asked, which needs an
+identity to invite even though the answer it collects carries none.
+
+**`.github/workflows/invite-survey.yml`**, `workflow_dispatch` only, never
+scheduled and never triggered by a push — an invitation is an outbound
+message to real people, the same reason `issue-certificates.yml` is
+dispatch-only. Run `convener-match-attendance` by hand first to review the join
+before inviting from it, exactly as *Issuing, reissuing and revoking
+certificates* already recommends. Inputs: the event id, the same optional
+FreeConferenceCall conference id every attendance-reading workflow already
+takes, and `resend_all` (below).
+
+**Only a *matched* attendee is invited** — a stored registration the
+attendance cascade (`tools/convener_ops/attendance.py`, spec §5) tied to a room
+presence, `attendance.match`'s own `matched` outcome, never `eligible`
+(the certificate-issuing duration threshold, task 12): spec §6 asks only
+whether we recognised someone present, not whether they stayed long enough
+to earn a certificate. Neither an **unmatched** attendee (present, but the
+cascade could not tie the address it saw to any registration) nor an
+**unreachable** one (joined by phone, no address on file, at any point) is
+invited — not by policy, but by fact: neither has an address this pipeline
+holds. See `tools/convener_ops/survey_invite.py`'s own module docstring,
+"ruling 1", for the argument in full.
+
+**The invitation carries no per-person token, on purpose.** Every matched
+attendee of the same event receives the exact same link
+(`#/survey/<event id>`, no query string), because a per-person token would
+be an identifier — the one thing `survey.py`'s own storage design refuses
+to let a stored response carry. The e-mail itself is an ordinary,
+personally-addressed message (`Dear <first name>,`, sent to the address on
+that participant's own registration) — nothing about *sending* it is
+anonymous; only the *response* the link leads to is designed to be. See
+[Survey invitation](../toolkit/emails/survey-invitation.md) for the exact
+wording, and this document's own "Anonymous against a stranger;
+pseudonymous by metadata against the organiser" section, above, for the
+claim this page and that one must never overstate.
+
+**A resend invites everyone again — there is no finer grain available.**
+Unlike `issue-certificates.yml`'s own `resend_all` (R-27), which restricts
+an ordinary run to what was freshly minted and can name a single failed
+delivery by its certificate's own public identifier, a survey invitation
+mints no identifier at all. `data/survey-invitations.yml` records only
+that an event was invited, and on what day — no name, no address, no
+count. By default, `convener-invite-survey` refuses outright once an event
+already has an entry there, printing that date and sending nothing; the
+workflow's own `resend_all` input is the only override, and it re-invites
+*every* currently matched attendee, including everyone the first run
+already reached. **What an operator does about one bounce**: nothing
+targeted. The message carries no attachment and no signed document, so a
+duplicate is a mild inconvenience, not a second copy of anything sensitive
+loose in the world — `resend_all` is the whole recovery. See
+`tools/convener_ops/survey_invite.py`'s own module docstring, "ruling 3", for
+why this bound was chosen deliberately rather than solved: building the
+handle that would make a precise retry possible is the same handle that
+would make a stored response traceable.
+
+**Secrets read:** `CONVENER_EVENT_KEY_<EVENT ID>` and, optionally,
+`CONVENER_MEETING_API_TOKEN` — the same two *Matching attendance* already
+reads, for the identical reason (attendance is re-derived, never trusted
+from a prior run) — plus `email_transport`'s five `CONVENER_SMTP_*` secrets
+(*Outbound email*, above). `CONVENER_MATCHING_SALT` is read too, but absent is
+ordinary D-13 here, unlike for certificate issuance: nothing this command
+does fingerprints anything, so the attendance cascade simply falls
+through to the address and name levels, its own documented fallback.
+Absent `email_transport` secrets are ordinary D-13 as well: every attempt
+is folded into a bare sent/not-sent count, and — like a certificate
+delivery, unlike the registration confirmation — nothing is written
+anywhere as a fallback, because there is no identifier here to keep an
+unsent message filed against.
+
+**To verify:** with a test event whose survey is enabled and at least one
+matched attendee, dispatch *Invite the post-event survey*; the run's own
+summary line reports a sent count, the configured mailbox receives one
+message per matched attendee, and `data/survey-invitations.yml` gains one
+entry. Re-dispatching the same event without `resend_all` sends nothing
+further and says so.
+
 ## CI-only secrets
 
 These gate GitHub Actions workflow behaviour rather than anything the

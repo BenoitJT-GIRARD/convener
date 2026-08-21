@@ -96,7 +96,7 @@ integrations:
       - CONVENER_SMTP_PASSWORD
       - CONVENER_SMTP_FROM
     absent_behaviour: >-
-      Two consumers, degrading two different ways -- neither ever prints a
+      Three consumers, degrading three different ways -- none ever prints a
       composed message, sent or not. tools/convener_ops/confirmation.py (task
       7): the registration confirmation, carrying a participant's address
       and matching code, is written to a single local, .gitignore'd file
@@ -113,7 +113,12 @@ integrations:
       nominative document (spec S:7 forbids it landing in any Actions
       surface). Every attempt is folded into a bare sent/not-sent count
       instead, and a retry reproduces the identical document rather than
-      keeping a copy of an old one.
+      keeping a copy of an old one. tools/convener_ops/survey_invite.py (task
+      16b): the post-event survey invitation, reusing confirmation.py's own
+      transport rather than a third copy of it, degrades the same bare-count
+      way delivery.py does -- and for a related but distinct reason: a
+      survey invitation carries no identifier at all to keep an unsent copy
+      filed against, unlike a certificate, which at least has a public one.
 
   - name: video_publishing
     label: Video channel
