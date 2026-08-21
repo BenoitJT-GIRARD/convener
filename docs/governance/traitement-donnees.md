@@ -29,9 +29,9 @@ process; see [How we validate speakers](selection-criteria.md).
   name and no address attached to any of it. See "Survey answers" under
   Measures, below.
 - **Certificates**: a public identifier and a state, published for anyone to
-  check; a narrower internal register alongside it that adds the event id,
-  the date of issue, and a salted fingerprint of the address — never the
-  address itself, and never a name.
+  check; an internal register alongside it, open to a narrower audience,
+  that adds the event id, the date of issue, and a salted fingerprint of
+  the address — never the address itself, and never a name.
 
 ## Purpose
 
@@ -76,10 +76,11 @@ named in `config/integrations.yml` and `docs/reference/operations.md`.
 Registration and attendance data is destroyed **90 days** after the event,
 by destroying the one key that could ever decrypt it — the retention window
 `tools/convener_ops/eventkeys.py` reads for every event. The encrypted files
-themselves are not deleted: `data/events/<id>/registrations.enc` and the
-attendance export stay committed, exactly as spec §4 asks — unreadable, not
-absent, so no commit history anywhere in this repository is ever rewritten
-to make that happen. The one credential this destruction depends on is the
+themselves are not deleted: `data/events/<id>/registrations.enc`, the
+attendance export and `survey_responses.enc` all stay committed, exactly
+as spec §4 asks — unreadable, not absent, so no commit history anywhere in
+this repository is ever rewritten to make that happen. The one credential
+this destruction depends on is the
 one integration this project will not let fail quietly: if it is missing,
 the scheduled job that would destroy an event's key fails outright, every
 day, rather than skipping the day's work unnoticed.
@@ -91,8 +92,19 @@ touched by this deadline.
 
 ## Rights
 
-- **Access and rectification.** Handled by hand, during retention, by
-  writing to the contact address below.
+- **Access and rectification.** Rectifying the name, institution or
+  announce-list preference on a registration has a procedure: registering
+  again with the same address is an update, not a second entry
+  (`tools/convener_ops/registration.py::upsert`) — the same "second submission
+  updates the first" mechanism the event page's form already uses.
+  Rectifying the address itself, and access to what is held beyond that,
+  do not: `convener-resend-confirmation` reproduces most of a registration back
+  to a participant's own address — their name and their matching code —
+  but not their institution or announce-list preference, and nothing
+  automates correcting an address or answering "what do you hold about
+  me" in full. Both are handled by hand, during retention, by writing to
+  the contact address below, and this record does not claim a procedure
+  for them that does not exist.
 - **Erasure before the deadline.** A documented, tested procedure removes
   one participant's own registration from the encrypted file, without
   touching any other registrant's entry.

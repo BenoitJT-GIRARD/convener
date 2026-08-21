@@ -23,7 +23,6 @@ from convener_ops.certificate import fingerprint as certificate_fingerprint
 from convener_ops.certificate import issue as certificate_issue
 from convener_ops.cli import (
     UNMATCHED_ATTENDANCE,
-    UNSENT_CONFIRMATION,
     _load,
     certificates_public_data,
     deliver_certificate,
@@ -1006,9 +1005,12 @@ def test_handle_registration_prints_changed_when_github_output_is_unset(
     assert "changed=" in capsys.readouterr().out
 
 
-def test_handle_registration_leaves_an_unsent_confirmation_with_no_transport(
+def test_handle_registration_reports_and_never_writes_an_unsent_confirmation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Critical 3, branch review: an unsent confirmation is reported, not
+    retained -- no `.gitignore`d file, no build artefact, only a printed
+    line naming the recovery (`convener-resend-confirmation`)."""
     private_pem, public_pem = _publish_event_key(tmp_path)
     _write_event(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1022,19 +1024,17 @@ def test_handle_registration_leaves_an_unsent_confirmation_with_no_transport(
 
     out = _assert_no_leak(capsys)
     assert "confirmation for event mrg-042 not sent" in out
-    assert UNSENT_CONFIRMATION in out
-
-    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
-    assert "ada@example.org" in unsent
-    assert "https://meet.example.org/permanent-room" in unsent
-    assert "On analytical engines" in unsent
+    assert "convener-resend-confirmation" in out
+    assert not (tmp_path / "unsent-confirmation.eml").exists()
 
 
 def test_handle_registration_confirmation_carries_the_code_when_salted(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The property task 7 exists for: the matching code reaches the
-    message, and never reaches stdout -- only the file does."""
+    message, and never reaches stdout. Inspected on the *sent* message
+    (Critical 3, branch review: an unsent confirmation is reported rather
+    than retained, so there is no longer a file to read it back from)."""
     private_pem, public_pem = _publish_event_key(tmp_path)
     _write_event(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1042,8 +1042,14 @@ def test_handle_registration_confirmation_carries_the_code_when_salted(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
     )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
+    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
+    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "shh")
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     _handle_and_send(tmp_path, monkeypatch)
 
@@ -1054,8 +1060,9 @@ def test_handle_registration_confirmation_carries_the_code_when_salted(
     combined = out.out + out.err
     assert code not in combined, "the matching code leaked into stdout/stderr"
 
-    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
-    assert code in unsent
+    assert len(_RecordingSmtpClient.sent) == 1
+    body = _RecordingSmtpClient.sent[0].get_content()
+    assert code in body
 
 
 def test_handle_registration_confirmation_names_what_changed_on_an_update(
@@ -1065,7 +1072,14 @@ def test_handle_registration_confirmation_names_what_changed_on_an_update(
     _write_event(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
+    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
+    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     monkeypatch.setenv(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
@@ -1079,7 +1093,8 @@ def test_handle_registration_confirmation_names_what_changed_on_an_update(
     _handle_and_send(tmp_path, monkeypatch)
 
     _assert_no_leak(capsys)
-    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert len(_RecordingSmtpClient.sent) == 2
+    body = _RecordingSmtpClient.sent[1].get_content()
     # The whole sentence, not a bare "institution" substring (review round
     # 1, Important 6): that word also appears in the data-protection
     # paragraph of every message ever composed, so a check for it alone
@@ -1087,10 +1102,10 @@ def test_handle_registration_confirmation_names_what_changed_on_an_update(
     assert (
         "This confirms an update to an earlier registration for this "
         "event: we changed the institution."
-    ) in unsent
+    ) in body
     # Named, never quoted (R-9): neither the old nor the new value appears.
-    assert "Analytical Engines Institute" not in unsent
-    assert "Somewhere Else" not in unsent
+    assert "Analytical Engines Institute" not in body
+    assert "Somewhere Else" not in body
 
 
 def test_handle_registration_confirmation_says_nothing_about_an_update_the_first_time(
@@ -1103,12 +1118,20 @@ def test_handle_registration_confirmation_says_nothing_about_an_update_the_first
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
     )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
+    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
+    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     _handle_and_send(tmp_path, monkeypatch)
 
-    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
-    assert "This confirms an update" not in unsent
+    assert len(_RecordingSmtpClient.sent) == 1
+    body = _RecordingSmtpClient.sent[0].get_content()
+    assert "This confirms an update" not in body
 
 
 def test_handle_registration_confirmation_degrades_with_no_speaker_record(
@@ -1116,22 +1139,30 @@ def test_handle_registration_confirmation_degrades_with_no_speaker_record(
 ) -> None:
     """No `data/speakers.yml` at all -- the state every registration test
     before this one already ran in. The registration must still be
-    recorded and a confirmation still composed, only without a room link."""
+    recorded and a confirmation still composed and sent, only without a
+    room link."""
     private_pem, public_pem = _publish_event_key(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
     )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
+    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
+    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     _handle_and_send(tmp_path, monkeypatch)
 
     out = _assert_no_leak(capsys)
     assert "no speaker record matches event mrg-042" in out
 
-    unsent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
-    assert "ada@example.org" in unsent
+    assert len(_RecordingSmtpClient.sent) == 1
+    assert _RecordingSmtpClient.sent[0]["To"] == "ada@example.org"
 
 
 def test_handle_registration_survives_an_unanticipated_confirmation_failure(
@@ -1162,7 +1193,6 @@ def test_handle_registration_survives_an_unanticipated_confirmation_failure(
     out = _assert_no_leak(capsys)
     assert "recorded a registration for event mrg-042 (1 total)" in out
     assert "could not be composed or sent" in out
-    assert not (tmp_path / UNSENT_CONFIRMATION).exists()
 
     enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
     file = load_registration_file(enc_path.read_text(encoding="utf-8"))
@@ -1218,42 +1248,7 @@ def test_handle_registration_sends_through_a_configured_transport(
 
     out = _assert_no_leak(capsys)
     assert "confirmation for event mrg-042 sent" in out
-    assert not (tmp_path / UNSENT_CONFIRMATION).exists()
     assert len(_RecordingSmtpClient.sent) == 1
-
-
-def test_send_confirmation_unlinks_a_stale_unsent_file_once_it_sends(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """Review round 1, Important 1: a file an earlier, failed attempt left
-    behind must not survive a later, successful send -- an
-    `if: always()` upload step would otherwise preserve a stale address
-    and code as though the message had not gone out."""
-    private_pem, public_pem = _publish_event_key(tmp_path)
-    _write_event(tmp_path)
-    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    monkeypatch.setenv(
-        "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
-    )
-    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    (tmp_path / UNSENT_CONFIRMATION).write_text(
-        "a stale, previous attempt", encoding="utf-8"
-    )
-
-    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
-    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
-    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
-    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
-    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
-    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
-    monkeypatch.setenv("CHANGED_FIELDS", "")
-    _RecordingSmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
-
-    assert send_confirmation() == 0
-
-    _assert_no_leak(capsys)
-    assert not (tmp_path / UNSENT_CONFIRMATION).exists()
 
 
 def test_send_confirmation_with_no_payload_returns_1(
@@ -1301,20 +1296,26 @@ def test_resend_confirmation_reproduces_the_original_code(
 ) -> None:
     """The property S:9's manual resend depends on directly: it must
     reproduce the *same* code the original confirmation carried, or the
-    first message becomes a lie about which code is current."""
+    first message becomes a lie about which code is current. Inspected on
+    the *sent* messages (Critical 3, branch review: an unsent confirmation
+    is reported rather than retained, so there is no file to compare)."""
     private_pem, public_pem = _publish_event_key(tmp_path)
     _write_event(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    _clear_transport_env(monkeypatch)
+    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
+    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
+    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "shh")
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     monkeypatch.setenv(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
     )
     _handle_and_send(tmp_path, monkeypatch)
-    original = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
-    (tmp_path / UNSENT_CONFIRMATION).unlink()
 
     code = matching_code("mrg-042", "ada@example.org", "shh")
     assert code is not None
@@ -1322,13 +1323,16 @@ def test_resend_confirmation_reproduces_the_original_code(
     assert code not in (original_captured.out + original_captured.err), (
         "the matching code leaked into stdout/stderr on the original send"
     )
+    assert len(_RecordingSmtpClient.sent) == 1
+    original = _RecordingSmtpClient.sent[0].get_content()
+    assert code in original
 
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
     assert resend_confirmation() == 0
 
-    resent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
-    assert code in original
+    assert len(_RecordingSmtpClient.sent) == 2
+    resent = _RecordingSmtpClient.sent[1].get_content()
     assert code in resent
     assert original == resent
 
@@ -1361,11 +1365,20 @@ def test_resend_confirmation_does_not_claim_an_update(
     )
     assert handle_registration() == 0
 
+    monkeypatch.setenv("CONVENER_SMTP_HOST", "smtp.example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PORT", "587")
+    monkeypatch.setenv("CONVENER_SMTP_USER", "convener-registration@example.org")
+    monkeypatch.setenv("CONVENER_SMTP_PASSWORD", "shh")
+    monkeypatch.setenv("CONVENER_SMTP_FROM", "convener-registration@example.org")
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
     assert resend_confirmation() == 0
 
-    resent = (tmp_path / UNSENT_CONFIRMATION).read_text(encoding="utf-8")
+    assert len(_RecordingSmtpClient.sent) == 1
+    resent = _RecordingSmtpClient.sent[0].get_content()
     assert "This confirms an update" not in resent
 
     _assert_no_leak(capsys)
@@ -1439,7 +1452,6 @@ def test_resend_confirmation_for_an_unknown_address_returns_1(
 
     assert resend_confirmation() == 1
     assert "no registration found for event mrg-042" in capsys.readouterr().err
-    assert not (tmp_path / UNSENT_CONFIRMATION).exists()
 
 
 def test_resend_confirmation_rejects_a_malformed_committed_file(

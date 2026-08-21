@@ -501,17 +501,6 @@ def handle_proposal() -> int:
     return 0
 
 
-#: Where an unsent confirmation is left for inspection: never printed, and
-#: `.gitignore`d -- see `confirmation.py`'s module docstring for why a
-#: message carrying an address and a matching code is written to a file
-#: rather than to this job's own stdout, the way `NOTIFY_BODY` above is for
-#: a message that carries neither. Overwritten on every attempt, the same
-#: "one fixed name inside the run's own isolated workspace" idiom
-#: `NOTIFY_BODY` already uses -- a fresh `actions/checkout` per run means
-#: two runs never share a workspace to collide in.
-UNSENT_CONFIRMATION: Final = "unsent-confirmation.eml"
-
-
 def _write_github_output(line: str) -> None:
     """`line` (already `key=value\n`-shaped, one or more) to
     `$GITHUB_OUTPUT`, or printed when that path is unset -- a run outside
@@ -534,8 +523,21 @@ def _send_confirmation(
     then print exactly one line naming the event id (already public) and
     the outcome -- never the registration's own fields, and never the
     composed message. See `confirmation.py`'s module docstring for the
-    reasoning; this function is only the disk-and-stdout half of it, kept
-    in `cli.py` the way `_notify` keeps `notify.py`'s own file write.
+    reasoning.
+
+    **Reported, not retained (Critical 3, branch review).** An unsent
+    confirmation used to be written to a `.gitignore`d file and uploaded as
+    a 14-day build artefact -- `docs/governance/traitement-donnees.md`'s
+    own Recipients section named this an exception, but with
+    `email_transport` unconfigured (this project's default state) it was
+    the path *every* registration took, not an exception at all. Removed
+    outright, the same way `delivery.py` already handles an unsent
+    certificate (that module's own docstring, "never written to disk"):
+    `confirmation.deliver` hands back only `SendResult.sent`, nothing else
+    to write anywhere, and this function prints that a confirmation could
+    not be sent and names the recovery -- `convener-resend-confirmation`
+    reproduces the identical message from the *stored* registration, so
+    nothing composed here is ever the only copy of anything.
 
     `changed` is the field labels the caller already worked out
     (`confirmation.changed_fields`) -- this function does not compute it,
@@ -551,7 +553,7 @@ def _send_confirmation(
     the print line below says plainly.
 
     Nothing in this function is allowed to raise past it: the whole body,
-    not only the compose-deliver-write sequence, is wrapped in one broad
+    not only the compose-and-deliver sequence, is wrapped in one broad
     `except Exception`. That catch is no longer a defence against `set -e`
     aborting a commit -- since review round 1 (Important 2), sending is a
     separate, non-retried step from storing, so a failure here can no
@@ -592,21 +594,15 @@ def _send_confirmation(
         message = confirmation.compose(registration, event, code, changed)
         result = confirmation.deliver(message, os.environ)
 
-        unsent_path = root / UNSENT_CONFIRMATION
         if result.sent:
-            # A previous attempt in this same workspace may have left a
-            # file behind (review round 1, Important 1): once a message
-            # has genuinely gone out, nothing should remain that an
-            # `if: always()` step would then upload as though it had not.
-            unsent_path.unlink(missing_ok=True)
             print(f"confirmation for event {event_id} sent")
             return
 
-        unsent_path.write_text(result.unsent_body or "", encoding="utf-8", newline="")
         print(
             f"confirmation for event {event_id} not sent -- no email "
-            f"transport configured or delivery failed; composed message "
-            f"left in {UNSENT_CONFIRMATION}"
+            f"transport configured or delivery failed; run "
+            f"convener-resend-confirmation for this registrant once the reason "
+            f"is understood"
         )
     except Exception:  # deliberately broad -- see the docstring above
         print(
@@ -1471,21 +1467,17 @@ def erase_registration() -> int:
 
 #: Where the host's short list of attendance to resolve by hand lands --
 #: names and addresses a volunteer needs to read directly, so this file is
-#: `.gitignore`d and never printed, the same way `UNSENT_CONFIRMATION`
-#: already handles a composed message that carries the same kind of data.
-#: Written only when there is something to report; unlinked otherwise, so a
-#: stale file from an earlier run of this same job workspace is never
-#: mistaken for this run's answer.
+#: `.gitignore`d and never printed. Written only when there is something to
+#: report; unlinked otherwise, so a stale file from an earlier run of this
+#: same job workspace is never mistaken for this run's answer.
 #:
-#: WARNING for whoever wires this into a workflow next (task 17's own
-#: enchaînement, most likely): `unsent-confirmation.eml`'s own upload step
-#: (`.github/workflows/registration.yml`) is a short-retention *private*
-#: build artefact, restricted to the run's own collaborators -- never a
-#: public one. This file carries the same kind of data and must be
-#: uploaded the identical way if it ever is; inheriting the artefact
-#: *pattern* without also inheriting that access restriction would publish
-#: names and addresses this whole module exists to keep out of anything a
-#: stranger can read.
+#: WARNING for whoever uploads this as a workflow artefact (I-4, branch
+#: review, wired below): it must be a short-retention *private* build
+#: artefact, restricted to the run's own collaborators -- never a public
+#: one, the same restriction every other artefact in this repository that
+#: carries a name or an address already applies. Publishing it any other
+#: way would put names and addresses this whole module exists to keep out
+#: of anything a stranger can read.
 UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
 
 
@@ -2738,11 +2730,14 @@ def deliver_certificates() -> int:
     written to a file, an artefact, or printed. A failed delivery is
     reported -- folded into the printed count, never named individually --
     and replayed by re-running this same command; see `delivery.py`'s own
-    module docstring, "never written to disk", for why the pattern task 7
-    uses for an unsent confirmation (`UNSENT_CONFIRMATION`, a 14-day
-    build artefact) is the wrong one here: what it would retain is a
-    nominative, signed document, in an Actions surface, exactly what spec
-    S:7 forbids.
+    module docstring, "never written to disk", for why writing it
+    anywhere would be the wrong pattern here regardless: what it would
+    retain is a nominative, signed document, in an Actions surface,
+    exactly what spec S:7 forbids -- the same "reported, not retained"
+    rule `_send_confirmation` now applies to an unsent registration
+    confirmation too (Critical 3, branch review), once that message
+    stopped being the one documented case a build artefact was the right
+    place for it.
 
     Two secrets gate whether anything is delivered this run, checked
     before any registration is even decrypted -- the same two

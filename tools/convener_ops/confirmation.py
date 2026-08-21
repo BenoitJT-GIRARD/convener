@@ -65,27 +65,36 @@ practical purposes, and never something this project puts personal data
 into on purpose (the same hard rule `registration.py` exists to uphold for
 the committed file, applied here to a *log* rather than to git history).
 
-So `deliver` below never prints anything, on any path. When no transport is
-configured -- or when the real one raises -- it hands the *whole* composed
-text back to the caller as `SendResult.unsent_body`, and does nothing else
-with it: writing it anywhere is `cli.py`'s job, to a single fixed,
-`.gitignore`d file inside the job's own ephemeral workspace, never to
-stdout and never committed. `.github/workflows/registration.yml`
-additionally uploads that file as a short-retention, access-controlled
-build artefact when it exists, which is what keeps "inspectable" true in
-the sense that matters -- a volunteer with the same access as the job log
-already has can still read the message -- without the address or the code
-ever entering the log stream itself, which is copy-pasteable, greppable by
-anyone who can read Actions logs, and effectively permanent in a way a
-short-retention artefact is not.
+So `deliver` below never prints anything, on any path. **Reported, not
+retained (Critical 3, whole-branch review).** An earlier version of
+this module handed the *whole* composed text back to the caller as
+`SendResult.unsent_body`, for `cli.py` to write to a single fixed,
+`.gitignore`d file that `.github/workflows/registration.yml` and
+`.github/workflows/resend-confirmation.yml` then uploaded as a 14-day,
+access-controlled build artefact. That was reasonable for "do not lose an
+unsent message" in isolation, but it was wrong for what
+`docs/governance/traitement-donnees.md`'s own Recipients section had to
+say about it: the page named this artefact a *documented exception* to
+"a registration's plaintext exists only inside the job that read it, for
+the length of that job's run" -- true only when SMTP is configured. With
+`email_transport` unset, which is this project's default state, the
+artefact was not an exception at all; it was the path *every* registration
+took.
 
-Fourteen days, not a longer number chosen for safety's own sake: nothing
-this artefact carries is ever lost when it expires. `convener-resend-confirmation`
+What makes deleting the copy safe is exactly what task 14 already
+established for an unsent *certificate* (`delivery.py`'s own module
+docstring, "never written to disk"): nothing here is computed randomly, so
+nothing is lost by never keeping a copy. `convener-resend-confirmation`
 reproduces the identical message from the *stored* registration and the
-same deterministic matching code (see `deliver`'s own docstring below), so
-the artefact is a convenience for diagnosing why a send failed, never the
-only copy of anything -- which is what makes a short retention window the
-right default rather than merely an arbitrary one.
+same deterministic matching code (`registration.matching_code`, see
+`deliver`'s own docstring below) -- a replay, not a second copy of a
+first attempt. So `SendResult` carries only `sent: bool`, the same
+deliberately narrow shape `DeliveryResult` already uses and for the
+identical reason (that dataclass's own docstring): an unsent confirmation
+is *reported* -- the job says it could not be sent and names the recovery
+-- never retained anywhere a stranger with run access could read a name,
+an address and a matching code fourteen days after the run that composed
+it.
 
 `deliver` catches only `smtplib.SMTPException` and `OSError` -- a real
 network or protocol failure, never a caller mistake such as a bad argument
@@ -487,21 +496,18 @@ class _SmtpTransport:
 class SendResult:
     """The outcome of trying to deliver one `Confirmation`.
 
-    `unsent_body` is set exactly when `sent` is `False`, and holds the
-    *whole* composed message, address and code included -- this module
-    never prints it. Writing it anywhere at all is the caller's decision;
-    see the module docstring's transport section for what `cli.py` does
-    with it."""
+    **Deliberately narrower than an earlier version of this type** (Critical
+    3, branch review): no `unsent_body` field at all, the same shape
+    `delivery.DeliveryResult` already uses and for the identical reason --
+    see that dataclass's own docstring. `sent` alone is everything `cli.py`
+    needs to print a one-line outcome and name the recovery
+    (`convener-resend-confirmation`); the composed message itself is never
+    carried out of this module on the unsent path, so there is nothing left
+    for a future caller to "helpfully" write to a file or an artefact the
+    way `cli.py::_send_confirmation` once wrote this field to
+    `unsent-confirmation.eml`."""
 
     sent: bool
-    unsent_body: str | None
-
-
-def _rendered(message: Confirmation) -> str:
-    """The plain-text form `cli.py` writes to its own log file when a
-    message could not be delivered -- readable, and pasteable straight into
-    a mail client for a manual send if it ever comes to that."""
-    return f"To: {message.to}\nSubject: {message.subject}\n\n{message.body}"
 
 
 def deliver(
@@ -510,22 +516,22 @@ def deliver(
     *,
     transport: EmailTransport | None = None,
 ) -> SendResult:
-    """Send `message`, or hand it back unsent -- see the module docstring
-    for why "unsent" never means "printed" here. Two causes collapse to the
-    same `SendResult`, deliberately, the same way `notify.dispatch`
-    collapses "nothing to say" and "no channel configured": no transport
-    configured, and a configured transport that raised
-    `smtplib.SMTPException` or `OSError` while sending. Both are D-13's
-    ordinary absence from this caller's point of view -- the registration
-    itself was already recorded before this function is ever called, so
-    neither cause should fail the job that called it.
+    """Send `message`, or report it unsent -- see the module docstring for
+    why "unsent" means neither "printed" nor "written anywhere" here. Two
+    causes collapse to the same `SendResult`, deliberately, the same way
+    `notify.dispatch` collapses "nothing to say" and "no channel
+    configured": no transport configured, and a configured transport that
+    raised `smtplib.SMTPException` or `OSError` while sending. Both are
+    D-13's ordinary absence from this caller's point of view -- the
+    registration itself was already recorded before this function is ever
+    called, so neither cause should fail the job that called it.
     """
     config = smtp_config_from_env(env)
     if config is None:
-        return SendResult(sent=False, unsent_body=_rendered(message))
+        return SendResult(sent=False)
     active_transport = transport if transport is not None else _SmtpTransport()
     try:
         active_transport.send(config, message)
     except (smtplib.SMTPException, OSError):
-        return SendResult(sent=False, unsent_body=_rendered(message))
-    return SendResult(sent=True, unsent_body=None)
+        return SendResult(sent=False)
+    return SendResult(sent=True)

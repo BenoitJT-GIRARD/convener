@@ -221,8 +221,11 @@ def test_compose_is_deterministic_so_a_resend_reproduces_it_exactly() -> None:
 # ------------------------------------------------------------------ #
 # deliver(): the transport, and D-13's absent-integration shape -- no
 # test opens a socket; the real transport is only ever reached through a
-# fake. Deliberately narrower than confirmation.SendResult: DeliveryResult
-# carries only `sent`, never the document -- see the module docstring.
+# fake. `DeliveryResult` carries only `sent`, never the document -- see
+# the module docstring. `confirmation.SendResult` was narrowed to the
+# identical shape by Critical 3 (branch review); this module never had
+# the wider one in the first place -- see the module docstring's "never
+# written to disk" section for why.
 # ------------------------------------------------------------------ #
 
 

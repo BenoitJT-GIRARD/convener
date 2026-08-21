@@ -240,9 +240,10 @@ jobs:
           # absent is ordinary D-13 here too: every attempt this step makes
           # is simply reported as not sent, in the printed counts, never a
           # failed step. See delivery.py's own module docstring for why an
-          # unsent certificate is never written anywhere, unlike an unsent
-          # registration confirmation (registration.yml's own
-          # UNSENT_CONFIRMATION artefact).
+          # unsent certificate is never written anywhere -- the same
+          # "reported, not retained" rule an unsent registration
+          # confirmation now follows too (Critical 3, branch review;
+          # `confirmation.py`'s own module docstring).
           CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
           CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}

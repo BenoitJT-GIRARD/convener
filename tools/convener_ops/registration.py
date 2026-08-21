@@ -106,7 +106,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any, Final
-from urllib.parse import quote
 
 from . import eventkeys
 
@@ -133,15 +132,18 @@ FILE_VERSION: Final = 1
 #: `test_workflows.py` pins this against `EXPECTED_BASE_PATH` and against
 #: `App.tsx`'s own route literal, the same D-14 discipline it already
 #: applies to the other two bases.
+#: No `signup_url(event_id)` alongside this, unlike `certificate.
+#: verification_url` and `survey_invite.survey_url`: neither of those two
+#: is ever built from a Speaker record the way a signup link would need to
+#: be (no `event_id` field exists on one -- `eventkeys.py`'s own module
+#: docstring: "No `Identifier` type exists yet anywhere in this codebase
+#: ... event ids are new to phase 4"), so the two public announcement
+#: templates that publish this address publish `SIGNUP_BASE` itself, with
+#: the event id filled in by hand, the same way every other per-event fact
+#: on those templates already is (`{{ speaker.date }}`, `{{ speaker.time
+#: }}`, and the reason line neither template has ever auto-filled). A
+#: function nothing would call is not a smaller surface than none at all.
 SIGNUP_BASE: Final = "https://example-instance.github.io/example-showcase/app/#/signup/"
-
-
-def signup_url(event_id: str) -> str:
-    """The address to publish for `event_id`'s own registration page --
-    `certificate.verification_url` and `survey_invite.survey_url`'s own
-    sibling, for the one public address this module did not yet mint
-    itself."""
-    return f"{SIGNUP_BASE}{quote(event_id, safe='')}"
 
 
 @dataclass(frozen=True)

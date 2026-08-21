@@ -470,18 +470,19 @@ disclosed limit, not an oversight.
 ## Outbound email
 
 **Without it:** the registration confirmation (task 7) is composed all the
-same and left in a single local file, `unsent-confirmation.eml`, inside the
-job's own workspace — never printed, and never committed. Nothing is
-silently dropped, but unlike every other row on this page, "kept for
-inspection" here does not mean the job's own log: that message carries a
-participant's address and their matching code, and this project never puts
-personal data into a GitHub Actions log, on purpose.
-`.github/workflows/registration.yml` uploads that file as a short-retention
-(14 days), access-controlled build artefact whenever it exists, which is
-where a volunteer reads it instead. Fourteen days, not longer for safety's
-own sake: a manual resend (below) reproduces the identical message from
-the stored registration and the same deterministic matching code, so
-nothing here is ever the only copy of anything. See
+same, and reported unsent — the job prints one line naming the event and
+saying a confirmation could not be sent, never the composed message
+itself. Nothing is silently dropped: the registration is already stored by
+the time this step runs, so nothing here is the only copy of anything a
+manual resend (below) cannot reproduce. **Reported, not retained (Critical
+3, branch review).** An earlier version of this row described the composed
+message being written to a local file and uploaded as a 14-day, access-
+controlled build artefact — that pattern is gone: `docs/governance/
+traitement-donnees.md`'s own Recipients section named it a documented
+exception to "a registration's plaintext exists only inside the job that
+read it, for the length of that job's run", but with outbound email
+unconfigured (this project's default state) it was the path every
+registration took, not an exception. See
 `tools/convener_ops/confirmation.py`'s module docstring for the full reasoning.
 
 **To create:** an organisation mailbox reachable over SMTP (D-07's
@@ -507,9 +508,8 @@ exist.
 
 One exception to the no-personal-data-in-a-retained-surface rule above:
 `workflow_dispatch`'s own `email` input is retained by GitHub on the run
-page for as long as the run's history exists, longer than the 14-day
-artefact this design otherwise relies on. Deliberate, not an oversight —
-no other identifier for one registration exists to name it by instead
+page for as long as the run's history exists. Deliberate, not an oversight
+— no other identifier for one registration exists to name it by instead
 (`tools/convener_ops/registration.py`'s own module docstring), and
 `workflow_dispatch` is restricted to collaborators with repository write
 access, the same trust boundary as the job log itself.
@@ -1350,11 +1350,11 @@ reissuing and revoking certificates* already documents -- plus
 `email_transport`'s five `CONVENER_SMTP_*` secrets (*Outbound email*, above),
 read here for the first time by anything other than the registration
 confirmation. Absent `email_transport` secrets are ordinary D-13 here too,
-but degrade differently than they do for the confirmation: nothing is ever
-written anywhere, not even to a private, short-retention artefact -- see
-`tools/convener_ops/delivery.py`'s own module docstring for why task 7's
-`UNSENT_CONFIRMATION` pattern is the wrong one for a signed, nominative
-document.
+and degrade the same way the confirmation now does (Critical 3, branch
+review): nothing is ever written anywhere, not even to a private, short-
+retention artefact -- see `tools/convener_ops/delivery.py`'s own module
+docstring for why that would have been the wrong pattern here regardless,
+for a signed, nominative document.
 
 **Replayable, bounded by retention.** A failed or retried delivery
 reproduces the byte-identical document -- `certificate.issue`'s own

@@ -12,6 +12,7 @@ from convener_ops.registration import (
     _CODE_ALPHABET,
     _MAX_FIELD_LENGTH,
     FILE_VERSION,
+    SIGNUP_BASE,
     Registration,
     RegistrationFile,
     dump_registration_file,
@@ -704,6 +705,24 @@ def test_event_id_from_payload_returns_none_for_anything_malformed(
     payload: str,
 ) -> None:
     assert event_id_from_payload(payload) is None
+
+
+# ------------------------------------------------------------------ #
+# SIGNUP_BASE -- Critical 2 (branch review): before this, nothing in the
+# repository carried the address that reaches the registration page at
+# all. No `signup_url(event_id)` alongside it -- see the constant's own
+# comment in registration.py for why -- so this is a narrower pin than
+# `survey_invite.SURVEY_BASE`'s own tests give `survey_url`:
+# `test_workflows.py::test_registration_signup_base_targets_the_vitrine_
+# app_subtree` and `..._app_route_matches_registration_signup_base`
+# already bind the value itself against `vite.config.ts` and `App.tsx`;
+# this only pins the literal shape a reader of this module can check
+# without cross-referencing either.
+# ------------------------------------------------------------------ #
+
+
+def test_signup_base_is_a_hash_router_fragment_under_signup() -> None:
+    assert SIGNUP_BASE.endswith("#/signup/")
 
 
 # ------------------------------------------------------------------ #

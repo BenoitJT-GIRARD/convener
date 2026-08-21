@@ -57,33 +57,36 @@ rather than typed by a person. `test_cli.py`'s own
 `test_deliver_certificates_never_writes_anything_to_disk` is the test that
 would fail the moment a future edit adds exactly that write.
 
-Task 7 faced the analogous problem -- an unsent confirmation -- and
-answered it by writing the composed message to a single, `.gitignore`d
-file inside the job's own workspace, which
-`.github/workflows/registration.yml` then uploads as a 14-day,
-access-controlled build artefact (`UNSENT_CONFIRMATION`,
-`cli.py::_send_confirmation`). **That pattern is wrong here, deliberately,
-not by oversight.** A build artefact is still an Actions surface: it is
-retained, downloadable by anyone with the run's own access, and -- unlike
-a registration confirmation, which carries an address and a matching code
-but no cryptographic attestation of anything -- what an unsent certificate
+Task 7 originally faced the analogous problem -- an unsent confirmation --
+and answered it differently: writing the composed message to a single,
+`.gitignore`d file inside the job's own workspace, uploaded as a 14-day,
+access-controlled build artefact. **That pattern was wrong here,
+deliberately, not by oversight, from the day this module was written** --
+and the whole-branch review that found Critical 3 later ruled it wrong for
+task 7's own confirmation too, once `docs/governance/traitement-donnees.md`
+turned out to call that artefact a documented *exception*, when with SMTP
+unconfigured (this project's default state) it was the path every
+registration took. `confirmation.py`'s own module docstring now carries
+that history in full; this module never had the artefact in the first
+place, for a reason narrower and stronger than "it should not be the
+default path" -- a build artefact is still an Actions surface, retained
+and downloadable by anyone with the run's own access, and unlike a
+registration confirmation, which carries an address and a matching code
+but no cryptographic attestation of anything, what an unsent certificate
 document *is* is exactly the nominative, signed document spec S:7 says may
-never be "depose dans un depot". Task 7's artefact is a reasonable answer
-to "do not lose an unsent message"; it is the wrong answer to "do not let
-a nominative document rest anywhere retrievable outside the one inbox it
-was addressed to", which is this module's own, stricter constraint.
+never be "depose dans un depot". No retention window makes that the right
+place for it, fourteen days or otherwise.
 
-What makes never keeping a copy safe here, that was not equally true for
-task 7's confirmation, is that delivery is *replayable* (see the next
-section): the identical document is reproduced from scratch, on demand, by
-calling this module's own functions again with the same inputs. So an
-undelivered certificate is never stashed anywhere -- it is *reported* as
-unsent (`DeliveryResult.sent is False`, no document, no body, nothing but
-a boolean) and *replayed*: re-running the same command, or the whole
-workflow, regenerates and re-sends the same document, because nothing
-about it was ever computed randomly. `DeliveryResult` is deliberately
-narrower than `confirmation.SendResult` for exactly this reason -- see
-that dataclass's own docstring, below.
+What makes never keeping a copy safe here is that delivery is *replayable*
+(see the next section): the identical document is reproduced from scratch,
+on demand, by calling this module's own functions again with the same
+inputs. So an undelivered certificate is never stashed anywhere -- it is
+*reported* as unsent (`DeliveryResult.sent is False`, no document, no
+body, nothing but a boolean) and *replayed*: re-running the same command,
+or the whole workflow, regenerates and re-sends the same document, because
+nothing about it was ever computed randomly. `DeliveryResult` was already
+the shape `confirmation.SendResult` only later adopted, once Critical 3
+narrowed that type to match -- see that dataclass's own docstring, below.
 
 Replayable, not regenerated -- and bounded by retention (ruling 3)
 ------------------------------------------------------------------------
@@ -478,19 +481,21 @@ class _SmtpDeliveryTransport:
 class DeliveryResult:
     """The outcome of trying to deliver one certificate document.
 
-    Deliberately narrower than `confirmation.SendResult`: **no `document`
-    or `unsent_body` field at all.** See the module docstring's "never
-    written to disk" section (ruling 1, ruling 2) for why holding the
-    rendered document here, even only transiently, would open exactly the
-    door those rulings close -- a future caller "helpfully" writing an
-    unsent certificate to a file the way `cli.py::_send_confirmation`
-    already writes `confirmation.SendResult.unsent_body` to
-    `UNSENT_CONFIRMATION`. That pattern is right for an unsent
-    *confirmation*, which carries no cryptographic attestation of
-    anything and which `confirmation.py`'s own module docstring already
-    argues an artefact is a safe place to keep; it is wrong for a signed,
-    nominative certificate, which spec S:7 says may never be "depose dans
-    un depot" -- an Actions build artefact included. `sent` alone is
+    No `document` field, and (since always) no `unsent_body` field either:
+    **no way to hold the rendered document here at all**, even
+    transiently. See the module docstring's "never written to disk"
+    section (ruling 1, ruling 2) for why -- a future caller must never be
+    able to "helpfully" write an unsent certificate to a file, an artefact
+    included, the way an earlier version of `cli.py::_send_confirmation`
+    once wrote `confirmation.SendResult.unsent_body` to
+    `unsent-confirmation.eml`. That pattern was already wrong for an
+    unsent *confirmation* too, once Critical 3 (whole-branch review) found
+    it the default path rather than the documented exception the record
+    called it -- `confirmation.py`'s own module docstring carries that
+    history -- but it would have been wrong here regardless of what that
+    module did: a signed, nominative certificate is exactly what spec S:7
+    says may never be "depose dans un depot", an Actions build artefact
+    included, and no retention window changes that. `sent` alone is
     everything `cli.py` needs to print a one-line count; the certificate
     itself is never lost by this type refusing to carry a copy, because a
     retry reproduces it byte-identically (see the module docstring's

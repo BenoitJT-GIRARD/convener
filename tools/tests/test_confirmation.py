@@ -381,16 +381,16 @@ def test_smtp_config_from_env_accepts_the_implicit_tls_port() -> None:
 # ------------------------------------------------------------------ #
 
 
-def test_deliver_with_no_transport_returns_unsent_and_composes_the_body() -> None:
+def test_deliver_with_no_transport_returns_unsent() -> None:
+    """Critical 3, branch review: `SendResult` carries only `sent` now --
+    no `unsent_body`, the same narrow shape `delivery.DeliveryResult`
+    already used. Nothing here holds the composed message on the unsent
+    path any more, so there is nothing left to inspect but the boolean."""
     message = compose(_registration(), _EVENT, "WXYZ-2345")
 
     result = deliver(message, {})
 
-    assert result.sent is False
-    assert result.unsent_body is not None
-    assert "ada@example.org" in result.unsent_body
-    assert "WXYZ-2345" in result.unsent_body
-    assert message.subject in result.unsent_body
+    assert result == SendResult(sent=False)
 
 
 def test_deliver_sends_through_the_configured_transport() -> None:
@@ -399,14 +399,14 @@ def test_deliver_sends_through_the_configured_transport() -> None:
 
     result = deliver(message, _CONFIG_ENV, transport=transport)
 
-    assert result == SendResult(sent=True, unsent_body=None)
+    assert result == SendResult(sent=True)
     assert len(transport.calls) == 1
     config, sent_message = transport.calls[0]
     assert config.host == "smtp.example.org"
     assert sent_message == message
 
 
-def test_deliver_falls_back_to_the_log_when_the_transport_raises_smtp_exception() -> (
+def test_deliver_falls_back_to_unsent_when_the_transport_raises_smtp_exception() -> (
     None
 ):
     message = compose(_registration(), _EVENT, "WXYZ-2345")
@@ -414,19 +414,16 @@ def test_deliver_falls_back_to_the_log_when_the_transport_raises_smtp_exception(
 
     result = deliver(message, _CONFIG_ENV, transport=transport)
 
-    assert result.sent is False
-    assert result.unsent_body is not None
-    assert "WXYZ-2345" in result.unsent_body
+    assert result == SendResult(sent=False)
 
 
-def test_deliver_falls_back_to_the_log_when_the_transport_raises_os_error() -> None:
+def test_deliver_falls_back_to_unsent_when_the_transport_raises_os_error() -> None:
     message = compose(_registration(), _EVENT, "WXYZ-2345")
     transport = FakeTransport(raises=OSError("connection refused"))
 
     result = deliver(message, _CONFIG_ENV, transport=transport)
 
-    assert result.sent is False
-    assert result.unsent_body is not None
+    assert result == SendResult(sent=False)
 
 
 def test_deliver_does_not_swallow_an_unrelated_exception() -> None:

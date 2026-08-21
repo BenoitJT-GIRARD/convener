@@ -172,34 +172,3 @@ jobs:
           CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
           CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
         run: uv run convener-send-confirmation
-      - name: Preserve an unsent confirmation for inspection
-        # `always()`: this file exists exactly when the step above ran and
-        # the confirmation it composed could not be delivered -- so it
-        # must be kept even if a *later* step in this job were to fail,
-        # not skipped because something else did.
-        #
-        # This is `config/integrations.yml`'s "an inspectable log" for
-        # `email_transport`, made concrete for the one message here that
-        # carries personal data: `tools/convener_ops/confirmation.py` never
-        # prints an address or a matching code, so there is nothing for
-        # this job's own log to leak in the first place -- what would
-        # otherwise be lost is preserved here instead, as a short-
-        # retention, access-controlled artefact, never as a line in the
-        # log stream itself. `if-no-files-found: ignore` because the
-        # ordinary case -- a confirmation that sent -- leaves no file at
-        # all (and `send_confirmation` removes one a stale, earlier
-        # attempt left behind, before ever reporting success).
-        #
-        # Fourteen days, not a longer number chosen for safety's own sake:
-        # nothing this artefact carries is ever lost when it expires.
-        # `convener-resend-confirmation` reproduces the identical message from
-        # the *stored* registration and the same deterministic matching
-        # code, so this artefact is a convenience for diagnosing why a
-        # send failed, never the only copy of anything.
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: unsent-confirmation-${{ steps.resolve.outputs.event_id }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: unsent-confirmation.eml
-          if-no-files-found: ignore
-          retention-days: 14

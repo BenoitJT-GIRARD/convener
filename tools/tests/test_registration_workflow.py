@@ -112,10 +112,14 @@ def test_the_store_step_does_not_hold_any_confirmation_secret() -> None:
         assert secret not in block, f"{secret} leaked back onto the store step"
 
 
-def test_the_artifact_step_runs_always() -> None:
-    block = _step_block(_REGISTRATION, "Preserve an unsent confirmation for inspection")
-    assert "if: always()" in block
-    assert "retention-days: 14" in block
+def test_the_workflow_never_uploads_an_unsent_confirmation_artefact() -> None:
+    """Critical 3, branch review: an unsent confirmation is reported, not
+    retained. There used to be a step here uploading the composed message
+    as a 14-day build artefact; it is gone, and this pins that it does not
+    come back -- `docs/governance/traitement-donnees.md`'s own Recipients
+    section is only true again because it does not exist."""
+    assert "unsent-confirmation" not in _REGISTRATION
+    assert "upload-artifact" not in _REGISTRATION
 
 
 def test_the_job_grants_no_permission_beyond_contents_write() -> None:
@@ -139,12 +143,11 @@ def test_the_resend_step_carries_every_confirmation_secret() -> None:
         assert f"secrets.{secret}" in block, f"{secret} missing from the resend step"
 
 
-def test_the_resend_artifact_name_includes_the_run_attempt() -> None:
-    """Minor 1, review round 1: without `run_attempt`, re-running a failed
-    resend from the Actions UI collides on the artefact name the first
-    attempt already claimed."""
-    block = _step_block(_RESEND, "Preserve an unsent confirmation for inspection")
-    assert "${{ github.run_attempt }}" in block
+def test_the_resend_workflow_never_uploads_an_unsent_confirmation_artefact() -> None:
+    """Same pin as `test_the_workflow_never_uploads_an_unsent_confirmation_
+    artefact`, for this workflow's own now-removed step."""
+    assert "unsent-confirmation" not in _RESEND
+    assert "upload-artifact" not in _RESEND
 
 
 def test_the_resend_workflow_grants_no_write_permission() -> None:
