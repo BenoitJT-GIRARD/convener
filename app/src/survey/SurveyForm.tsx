@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { encryptSurveyResponse, importEventPublicKey } from './encrypt';
 import type { SurveyResponse } from './encrypt';
+import { surveyStatusUrl } from './surveyStatus';
 
 // Same idiom as `signup/SignupForm.tsx`'s own `BASE`: the base the app
 // itself is served from, so the fetch below resolves against the deployed
@@ -45,16 +46,14 @@ function eventPublicKeyUrl(eventId: string): string {
   return `${BASE}/keys/events/${encodeURIComponent(eventId)}.pub`;
 }
 
-/** `scripts/copy-survey-status.mjs`'s own destination -- see that script's
- *  and `survey-status-projection.mjs`'s docstrings for the whole
- *  publish-and-fetch pipeline this closes (R-37): a bare JSON array of
- *  the event ids currently open for the survey, derived from
- *  `data/speakers.yml`'s `survey_enabled` field and published outside the
- *  consent gate entirely, because it is an operational fact rather than
- *  programme data. */
-function surveyStatusUrl(): string {
-  return `${BASE}/survey-status.json`;
-}
+// `surveyStatusUrl` (R-42, fix round 2) lives in `./surveyStatus`, not
+// here: this file is a component file, and `SURVEY_STATUS_FILENAME`, the
+// constant a test needs to pin against `scripts/survey-status-
+// projection.mjs::DEST_FILENAME`, cannot be exported alongside a
+// component under this project's own `react-refresh/only-export-
+// components` rule -- see that module's own docstring, and
+// `SignupForm.tsx::eventPublicKeyUrl`'s comment for the identical
+// constraint on the sibling form.
 
 // Same reasoning, same values, as `SignupForm.tsx`'s own two timeouts: a
 // hung request has no other end, and a page that never says so is silence,

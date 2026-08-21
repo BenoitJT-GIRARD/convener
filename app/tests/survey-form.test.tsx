@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SurveyForm } from '../src/survey/SurveyForm';
+import { SURVEY_STATUS_FILENAME } from '../src/survey/surveyStatus';
 import { App } from '../src/App';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 
@@ -124,7 +125,12 @@ describe('SurveyForm -- the notice', () => {
     const text = document.body.textContent ?? '';
     expect(text).toMatch(/recorded as present/i);
     expect(text).toMatch(/same key.*your registration/i);
-    expect(text).toMatch(/90 days/);
+    // Minor 3 (fix round 2): pins the claim, not only the number --
+    // before this, only `/90 days/` was asserted, so weakening the
+    // sentence to "Answers are kept for 90 days" (dropping "destroyed
+    // together with the event's key," the actual mechanism task 15's own
+    // retention sweep implements) left this test green.
+    expect(text).toMatch(/destroyed together with the event.s key 90 days after the event/i);
     expect(text).toContain('reading-group@example.test');
   });
 
@@ -191,6 +197,25 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
 
     const calls = vi.mocked(fetch).mock.calls.map(c => String(c[0]));
     expect(calls.some(u => u.endsWith('/survey-status.json'))).toBe(true);
+  });
+
+  it('requests exactly BASE/survey-status.json, not merely a URL ending in that filename (R-42, fix round 2)', async () => {
+    // R-42: a suffix-only match here is exactly what let SurveyForm.tsx's
+    // own fetch URL drift while every test in this file (including the
+    // one just above) stayed green -- `${BASE}/data/survey-status.json`
+    // still ends in "/survey-status.json", and the round proved
+    // `surveyStatusUrl` pointed at an arbitrary third-party origin passed
+    // too. Exact equality against BASE, independently recomputed rather
+    // than imported from SurveyForm.tsx, actually pins the whole URL, not
+    // only the leaf filename.
+    stubFetchReady();
+
+    renderSurvey('mrg-042');
+    await screen.findByRole('group', { name: /rate this session overall/i });
+
+    const calls = vi.mocked(fetch).mock.calls.map(c => String(c[0]));
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+    expect(calls).toContain(`${base}/${SURVEY_STATUS_FILENAME}`);
   });
 
   it('the submit button starts disabled until both required questions are answered', async () => {
@@ -465,6 +490,35 @@ describe('SurveyForm -- sending', () => {
     expect(screen.getByLabelText(/anything else you would like to tell us/i)).toHaveValue(
       'Loved the live Q&A.',
     );
+  });
+
+  it('R-40: an answer that would overflow the pad target once encrypted is refused cleanly, not an unhandled crash', async () => {
+    // `maxLength` on the real textarea caps this in the browser, but
+    // `fireEvent.change` sets the DOM value directly the same way an
+    // adversarial or buggy caller bypassing that attribute would --
+    // exactly the "if this ever got past the character cap" scenario
+    // `survey.py`'s own equivalent test (`test_to_survey_response_
+    // refuses_rather_than_lets_pad_raise`) simulates on the Python side.
+    // `padPlaintext` (encrypt.ts) throws when this happens; the point of
+    // this test is that `submit`'s own try/catch turns that throw into
+    // the same clean, existing error state a relay failure produces --
+    // never an uncaught exception reaching React.
+    stubFetchReady();
+    renderSurvey('mrg-042');
+    const ratingGroup = await screen.findByRole('group', { name: /rate this session overall/i });
+    fireEvent.click(within(ratingGroup).getAllByRole('radio')[4]); // 5
+    const recommendGroup = screen.getByRole('group', { name: /recommend this series/i });
+    fireEvent.click(within(recommendGroup).getByRole('radio', { name: 'Yes' }));
+    fireEvent.change(screen.getByLabelText(/anything else you would like to tell us/i), {
+      // 2100 emoji at 4 UTF-8 bytes each = 8400 bytes alone, already past
+      // PLAINTEXT_PAD_BYTES (8192) before the JSON envelope around it.
+      target: { value: '\u{1F600}'.repeat(2100) },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    await screen.findByText(/could not be encrypted/i);
+    expect(screen.queryByText(/your answers have been sent/i)).not.toBeInTheDocument();
   });
 });
 

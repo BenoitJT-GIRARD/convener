@@ -9,6 +9,7 @@ import {
   readProjection,
   writeProjection,
 } from '../scripts/survey-status-projection.mjs';
+import { SURVEY_STATUS_FILENAME } from '../src/survey/surveyStatus';
 
 // This suite exercises real filesystem paths under a temp directory, never
 // the app's own `public/survey-status.json` -- `copy-survey-status.mjs`
@@ -24,6 +25,21 @@ const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 describe('PUBLIC_DIR is the exact directory SurveyForm.tsx fetches from', () => {
   it('resolves to app/public, independent of cwd', () => {
     expect(PUBLIC_DIR).toBe(resolve(APP_ROOT, 'public'));
+  });
+});
+
+describe('the filename copy-survey-status.mjs writes and SurveyForm.tsx fetches (R-42, fix round 2: two literals, pinned equal, not one shared import)', () => {
+  it('pins scripts/survey-status-projection.mjs::DEST_FILENAME to src/survey/SurveyForm.tsx::SURVEY_STATUS_FILENAME', () => {
+    // Not one shared import -- survey-status-projection.mjs reaches into
+    // node:fs, node:path and node:url, none of which exist in a browser
+    // bundle, so SurveyForm.tsx cannot import this module directly. Before
+    // this test, either constant could be renamed alone and every other
+    // test in this suite (and survey-form.test.tsx's own) stayed green:
+    // the build would still publish under the old name, the page would
+    // still fetch under the new one, both would 404, and the survey
+    // switch would read as closed for every event, forever, with nothing
+    // turning red anywhere -- the exact failure R-42 named.
+    expect(DEST_FILENAME).toBe(SURVEY_STATUS_FILENAME);
   });
 });
 
