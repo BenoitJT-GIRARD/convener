@@ -1621,6 +1621,13 @@ def match_attendance() -> int:
     ever reach stdout, never a name or an address. The host's actual short
     list goes to `UNMATCHED_ATTENDANCE` instead, never printed and never
     committed (see its own comment above).
+
+    **`CONVENER_MATCHING_SALT` and `CONVENER_FCC_CONFERENCE_ID`** (I-4, branch
+    review): the same optional matching-salt and per-event conference id
+    `issue_certificates` and `invite_survey` already read, via the
+    identical `_conference_ids_from_env` resolution -- match-attendance.yml
+    gives this command the same `EVENT_ID`/`conference_id` input shape
+    those two workflows already use, rather than a shape of its own.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
@@ -1657,7 +1664,16 @@ def match_attendance() -> int:
     speaker_list = speakers if isinstance(speakers, list) else []
     config_map = cfg if isinstance(cfg, dict) else None
     platform = platform_from_env(
-        os.environ, speaker_list, config_map, private_pem=private_pem
+        os.environ,
+        speaker_list,
+        config_map,
+        # I-4, branch review: this now has a workflow of its own
+        # (match-attendance.yml), with the same `conference_id` input
+        # `issue_certificates` and `invite_survey` already take -- so the
+        # resolution those two already share is shared here too, rather
+        # than leaving this the one caller still missing it.
+        _conference_ids_from_env(event_id),
+        private_pem=private_pem,
     )
 
     try:
@@ -1672,14 +1688,11 @@ def match_attendance() -> int:
         # Catching only the first would leave a real API outage as an
         # uncaught traceback instead of the same clean one-line failure
         # every other error path in this function already gives.
-        # `EventNotFoundError` joined the tuple in fix round 3 (Critical B):
-        # this function never populates `conference_ids` (out of this
-        # round's own scope -- it has no workflow to receive a
-        # `conference_id` input from at all), so `PlatformFCC._conference_id`
-        # always raises it today when the FCC path is in play, and it was
-        # not caught here -- the identical hole `issue_certificates` and
-        # `reissue_certificate` had, closed the same way in all three
-        # places.
+        # `EventNotFoundError` joined the tuple in fix round 3 (Critical B),
+        # for the FCC path raising it whenever conference_ids resolved
+        # nothing for event_id -- still reachable even now that
+        # conference_ids is populated (I-4): an operator can still leave
+        # `conference_id` blank.
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -1829,11 +1842,18 @@ def invite_survey() -> int:
     Composes and sends through `confirmation.deliver` -- reused, not
     rebuilt, see `survey_invite.py`'s own module docstring for why -- and
     prints only counts: how many matched attendees were invited, how many
-    sends failed, and how many people this event's own attendance export
-    named but this run never had an address for (unmatched plus
-    unreachable, folded into one number here since neither is actionable
-    from this job the way a certificate's own `UNMATCHED_ATTENDANCE` file
-    is for a host with the room roster).
+    sends failed, and, kept apart rather than folded into one number
+    (Minor 4, branch review), how many this event's own attendance export
+    named but never invited for each of the two different reasons spec S:5
+    distinguishes -- unmatched (an address was seen; no registration tied
+    to it, so there is nothing on file to compose an invitation *from*,
+    never mind send it to) and unreachable (a telephone joiner; no address
+    was ever collected at all). `invite_survey` is the only *reachable*
+    command that counts either population at all -- `unmatched-attendance.md`
+    (`match-attendance.yml`, above) is the only place a host can act on the
+    unmatched half, but nothing here reads that file back, so this line
+    was the one place acceptance criterion 9's own distinction could still
+    be erased even after it was.
 
     **Writes `record` to `$GITHUB_OUTPUT`** (`true` when at least one
     invitation actually sent this run, `false` otherwise) --
@@ -1951,11 +1971,16 @@ def invite_survey() -> int:
         else:
             unsent_count += 1
 
-    not_invited = len(matched.unmatched) + len(matched.unreachable)
+    # Minor 4, branch review: kept apart rather than folded into one
+    # "present but not invited" count -- see this function's own docstring
+    # for why the two are not the same finding, and why this print line
+    # was the one reachable place that still erased the difference.
     print(
         f"survey invitations for event {event_id}: {sent_count} sent, "
         f"{unsent_count} not sent ({len(matched.matched)} matched attendee(s); "
-        f"{not_invited} present but not invited -- no address on file)"
+        f"{len(matched.unmatched)} unmatched -- present, but no registration "
+        f"found for their address; {len(matched.unreachable)} unreachable -- "
+        "joined by phone, no address ever collected)"
     )
     _write_github_output(f"record={'true' if sent_count else 'false'}\n")
     return 0

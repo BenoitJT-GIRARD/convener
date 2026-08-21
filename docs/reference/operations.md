@@ -1143,13 +1143,24 @@ Like every other command in this section, it needs `EVENT_PRIVATE_KEY` to
 decrypt `registrations.enc` -- and per *Event registration keys* above, that
 key "must never... be written to a file outside a CI job's environment", so
 this command is not meant to be run against a real event from a laptop.
-**No workflow currently invokes it** -- unlike `convener-issue-certificates`,
-`convener-reissue-certificate` and `convener-revoke-certificate` below, all three
-wired to a `workflow_dispatch` in fix round 2 (task 12, R-23),
-`convener-match-attendance` still has no caller in this repository. Noted here
-rather than silently left undocumented; wiring it up is not this round's
-scope either -- it is task 8's, already carried to the phase's final fix
-wave.
+**Its own workflow now makes it reachable** (`.github/workflows/
+match-attendance.yml`, I-4, branch review) -- the same `workflow_dispatch`
+shape `convener-issue-certificates`, `convener-reissue-certificate` and
+`convener-revoke-certificate` below already use, with the same `event_id` and
+optional `conference_id` inputs `convener-issue-certificates` and
+`convener-invite-survey` take. Before this workflow existed, two other
+workflows' own header comments told an operator to "run
+`convener-match-attendance` by hand first" -- an instruction nobody could ever
+actually follow, since the private key it needs never touches a laptop by
+design; both headers now name this workflow instead.
+
+`unmatched-attendance.md` -- the only artefact naming who could not be
+matched, and the only place acceptance criterion 9's unmatched/unreachable
+distinction ever reaches a human -- is uploaded by this workflow's own
+last step as a short-retention (14 days), access-controlled build
+artefact, the same restriction `cli.py::UNMATCHED_ATTENDANCE`'s own
+comment requires of anything that publishes it: it carries display names
+and addresses, so it is never a public artefact and never committed.
 
 **The manual implementation can now be run against real attendance in CI
 (task 17, closing the gap fix round 3 recorded here).** Before this, with
@@ -1168,14 +1179,15 @@ key it already reads to decrypt `registrations.enc` -- decrypts it the
 moment it is checked out. `tools/tests/test_event_chain.py` drives the
 real commands against exactly this shape and asserts the chain completes,
 closing AC8 for the manual implementation. With a token configured, this
-command still never populates `conference_ids` (unlike
-`convener-issue-certificates` and `convener-reissue-certificate` below, since it has
-no `workflow_dispatch` of its own to take a `conference_id` input from),
-so the FCC path always refuses with "no FCC conference is recorded for
-event ..." -- a clean refusal, not an unhandled traceback (fix round 3),
-but still not a working diagnostic run for that path; wiring a
-`conference_id` input through remains task 8's own item above, not this
-one's.
+command now populates `conference_ids` too (I-4, branch review), the same
+`_conference_ids_from_env` resolution `convener-issue-certificates` and
+`convener-reissue-certificate` below already share -- match-attendance.yml
+gives it the same `conference_id` input those two workflows take, closing
+the gap the paragraph above once left open. Left blank, the FCC path still
+refuses cleanly with "no FCC conference is recorded for event ..." rather
+than an unhandled traceback (fix round 3); that refusal is now reachable
+by choice, not only by a workflow that could not have named the id at
+all.
 
 ## Issuing, reissuing and revoking certificates
 

@@ -2606,8 +2606,10 @@ def test_invite_survey_only_invites_the_matched_attendee(
     """Ruling 1's own mutant: an attendance export naming a matched
     attendee, an unmatched one (an address the cascade cannot tie to any
     registration) and an unreachable one (a telephone joiner, no address
-    at all) -- only the first is ever composed or sent, and the message is
-    reported as one count, never targeting the other two."""
+    at all) -- only the first is ever composed or sent, and never invited,
+    the message counts the other two separately (Minor 4, branch review),
+    not folded into one "not invited" figure that would misdescribe the
+    unmatched half as having no address on file at all."""
     private_pem = _prepare_survey_event(
         tmp_path,
         registrations=(_ADA_REG,),
@@ -2632,8 +2634,9 @@ def test_invite_survey_only_invites_the_matched_attendee(
     assert invite_survey() == 0
     captured = capsys.readouterr()
     assert (
-        "1 sent, 0 not sent (1 matched attendee(s); 2 present but not "
-        "invited -- no address on file)" in captured.out
+        "1 sent, 0 not sent (1 matched attendee(s); 1 unmatched -- present, "
+        "but no registration found for their address; 1 unreachable -- "
+        "joined by phone, no address ever collected)" in captured.out
     )
     out = captured.out + captured.err
     _assert_survey_leak_sweep(out)

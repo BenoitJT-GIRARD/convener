@@ -4,9 +4,12 @@ name: Invite the post-event survey
 # Envoye apres coup aux seules personnes reconnues presentes." An
 # invitation is an outbound message to real people -- exactly the same
 # reason issue-certificates.yml is workflow_dispatch only -- so this is
-# never scheduled and never fires on a push. Run convener-match-attendance by
-# hand first to review the join before inviting from it
-# (docs/reference/operations.md).
+# never scheduled and never fires on a push. Run match-attendance.yml
+# first to review the join before inviting from it
+# (docs/reference/operations.md). I-4, branch review: this used to say
+# "run convener-match-attendance by hand", which nobody could ever actually
+# do -- EVENT_PRIVATE_KEY never touches a laptop by design -- until that
+# command had a workflow of its own.
 #
 # No input carries an address: event_id and, optionally, conference_id are
 # the only things an operator names, the same shape issue-certificates.yml

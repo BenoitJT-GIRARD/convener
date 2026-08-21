@@ -7,9 +7,11 @@ name: Issue certificates
 # repository's own secrets and is used only in continuous integration
 # (spec S:7: "n'est utilisee qu'en integration continue"), so issuing has
 # to happen here, on an operator's own decision once an event's attendance
-# data is ready -- run `convener-match-attendance` by hand first to review the
-# join before certificates are minted from it
-# (docs/reference/operations.md).
+# data is ready -- run match-attendance.yml first to review the join
+# before certificates are minted from it (docs/reference/operations.md).
+# I-4, branch review: this used to say "run convener-match-attendance by hand",
+# which nobody could ever actually do -- EVENT_PRIVATE_KEY never touches a
+# laptop by design -- until that command had a workflow of its own.
 #
 # No input carries an address: `EVENT_ID` and, optionally, `conference_id`
 # are the only things an operator names -- a provider identifier, not

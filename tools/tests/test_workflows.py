@@ -2155,6 +2155,85 @@ def test_invite_survey_workflow_records_only_when_something_was_sent() -> None:
 
 
 # ------------------------------------------------------------------ #
+# I-4, branch review: match-attendance.yml is what makes
+# `convener-match-attendance` reachable at all -- before this workflow existed,
+# two others' own header comments told a volunteer to run it by hand, a
+# command that reads EVENT_PRIVATE_KEY, which by design never touches a
+# laptop. Same derived-environment idiom as the certificate trio and
+# invite-survey.yml above.
+# ------------------------------------------------------------------ #
+
+MATCH_ATTENDANCE_WORKFLOW = Path(".github/workflows/match-attendance.yml")
+
+
+def test_match_attendance_workflow_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "match_attendance")
+    assert expected == {
+        "EVENT_ID",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_MEETING_API_TOKEN",
+        "CONVENER_FCC_CONFERENCE_ID",
+    }, (
+        "the derivation itself found an unexpected set -- either "
+        "match_attendance changed what it reads, or this AST walk no "
+        "longer sees it correctly; investigate before trusting the "
+        "carried-forward check below"
+    )
+    carried = _workflow_step_env_keys(
+        MATCH_ATTENDANCE_WORKFLOW, "match", "convener-match-attendance"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"match-attendance.yml does not forward {missing} to the step "
+        "that runs convener-match-attendance, which reads it directly"
+    )
+
+
+def test_match_attendance_workflow_is_dispatchable_by_hand_only() -> None:
+    loaded = safe_load((ROOT / MATCH_ATTENDANCE_WORKFLOW).read_text(encoding="utf-8"))
+    assert set(loaded[True]) == {"workflow_dispatch"}, (
+        "match-attendance.yml must be reachable only by an operator's own "
+        "decision, the same as the workflows that depend on it"
+    )
+
+
+def test_match_attendance_workflow_job_has_read_permission_and_a_timeout() -> None:
+    loaded = safe_load((ROOT / MATCH_ATTENDANCE_WORKFLOW).read_text(encoding="utf-8"))
+    job = loaded["jobs"]["match"]
+    assert job.get("permissions") == {"contents": "read"}, (
+        "match_attendance never writes to the repository -- a write "
+        "permission here would be broader than this job ever needs"
+    )
+    assert isinstance(job.get("timeout-minutes"), int)
+
+
+def test_match_attendance_workflow_has_its_own_concurrency_group() -> None:
+    loaded = safe_load((ROOT / MATCH_ATTENDANCE_WORKFLOW).read_text(encoding="utf-8"))
+    concurrency = loaded.get("concurrency")
+    assert isinstance(concurrency, dict)
+    assert concurrency.get("group") == "match-attendance-${{ inputs.event_id }}"
+
+
+def test_match_attendance_workflow_uploads_the_unmatched_list_privately() -> None:
+    """The only artefact naming who could not be matched, and the only
+    place acceptance criterion 9's own distinction ever reaches a human --
+    must be a short-retention, access-controlled build artefact, never a
+    public one, the same restriction `cli.py::UNMATCHED_ATTENDANCE`'s own
+    comment requires."""
+    loaded = safe_load((ROOT / MATCH_ATTENDANCE_WORKFLOW).read_text(encoding="utf-8"))
+    steps = loaded["jobs"]["match"]["steps"]
+    upload = next(
+        step
+        for step in steps
+        if step.get("uses", "").startswith("actions/upload-artifact")
+    )
+    assert upload["with"]["path"] == "unmatched-attendance.md"
+    assert upload["with"]["retention-days"] == 14
+    assert upload["if"] == "always()"
+
+
+# ------------------------------------------------------------------ #
 # R-34: the "Delete the destroyed event keys" step, executed for real
 # under a stubbed `gh` on PATH -- the constraint that no test may touch
 # the network, applied to shell rather than Python. The critical defect
