@@ -69,16 +69,22 @@ The Example Collective team
   outcomes, not two". Neither exclusion is a policy choice this message
   enforces; both are a plain fact this pipeline cannot get around.
 - **A resend invites everyone again, not only whoever missed the first
-  round.** Unlike a certificate resend, which `certificate.py`'s own
-  public identifiers let target precisely, a survey invitation carries no
-  identifier at all — see `tools/convener_ops/survey_invite.py`'s own module
-  docstring, "ruling 3", for the full argument. By default, once an event
-  has already been invited once (`data/survey-invitations.yml`), a second
-  dispatch of this workflow sends nothing further; ticking that workflow's
-  own `resend_all` input is the only recovery for a single bounce, and it
-  re-sends to everyone the first run already reached too — a harmless
-  duplicate, since this message carries no attachment and no signed
-  document, unlike a certificate resend.
+  round — by choice, not because anonymity forces it.** Unlike a
+  certificate resend, which `certificate.py`'s own public identifiers let
+  target precisely, `convener-invite-survey` mints no identifier at all — see
+  `tools/convener_ops/survey_invite.py`'s own module docstring, "ruling 3,
+  corrected in fix round 1", for the full argument: a per-person handle
+  here would not undo the survey response's own anonymity, but it would be
+  a permanent, cross-event linkage kept for a purpose that expires in
+  days, so it is not built. A single in-place retry inside the same run
+  (needing no identifier at all) already removes most transient failures.
+  By default, once an event has already been invited once
+  (`data/survey-invitations.yml`), a second dispatch of this workflow
+  sends nothing further; ticking that workflow's own `resend_all` input is
+  the recovery for what the in-run retry could not fix, and it re-sends to
+  everyone the first run already reached too — a harmless duplicate, since
+  this message carries no attachment and no signed document, unlike a
+  certificate resend.
 - **Without `email_transport`'s five secrets configured**
   (`config/integrations.yml`), nothing here is sent, and — unlike the
   registration confirmation — nothing is written anywhere as a fallback

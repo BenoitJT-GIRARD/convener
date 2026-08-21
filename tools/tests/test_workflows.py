@@ -32,7 +32,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops import certificate, confirmation, platform_fcc, signing
+from convener_ops import certificate, confirmation, platform_fcc, signing, survey_invite
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
 
@@ -181,6 +181,31 @@ def test_app_route_matches_certificate_verification_base() -> None:
         "certificate.VERIFICATION_BASE's own fragment, or every printed "
         "QR code lands a stranger on the authenticated Shell instead of "
         "the public verification page"
+    )
+
+
+def test_certificate_verification_base_targets_the_vitrine_app_subtree() -> None:
+    """M4, fix round 1 (task 16b's review): the D-14 pin just above binds
+    `#/verify/` to `App.tsx`'s route literal, but nothing bound the host
+    and path *before* that fragment -- `/example-showcase/app/` -- to
+    `vite.config.ts`'s own `base`. Changing that base would make every
+    printed QR code 404 with the route pin still green, because the pin
+    only ever looks at what comes after `#`."""
+    assert EXPECTED_BASE_PATH in certificate.VERIFICATION_BASE, (
+        f"certificate.VERIFICATION_BASE does not carry {EXPECTED_BASE_PATH!r} "
+        f"-- it would not match app/vite.config.ts's own base, and every "
+        "printed QR code would 404 once served"
+    )
+
+
+def test_survey_base_targets_the_vitrine_app_subtree() -> None:
+    """M4's identical gap, applied to `survey_invite.SURVEY_BASE`: the D-14
+    pin in `test_survey_invite.py` binds `#/survey/` to `App.tsx`'s route,
+    but not the deployment base that comes before it."""
+    assert EXPECTED_BASE_PATH in survey_invite.SURVEY_BASE, (
+        f"survey_invite.SURVEY_BASE does not carry {EXPECTED_BASE_PATH!r} -- "
+        "it would not match app/vite.config.ts's own base, and every "
+        "survey invitation link would 404 once served"
     )
 
 
@@ -1647,6 +1672,72 @@ def test_issue_certificates_workflow_has_a_resend_all_input_defaulting_false() -
     assert inputs["resend_all"]["type"] == "boolean"
     assert inputs["resend_all"]["default"] is False
     assert inputs["resend_all"]["required"] is False
+
+
+# ------------------------------------------------------------------ #
+# M1, fix round 1 (task 16b's review): the widened AST walk
+# (`_calls_confirmation_deliver`) surfaced a pre-existing gap that
+# predates this whole task -- `_send_confirmation` (`cli.py::_send_confirmation`)
+# resolves the room link through `platform_from_env`, which reads
+# `CONVENER_MEETING_API_TOKEN`, and neither workflow that reaches it forwarded
+# it. Benign today (the confirmation falls back to the manual `zoom_link`
+# rather than failing), but the same class of defect this whole derived-
+# environment idiom exists to catch, so it is asserted here now that the
+# walk can see it at all.
+# ------------------------------------------------------------------ #
+
+REGISTRATION_WORKFLOW = Path(".github/workflows/registration.yml")
+RESEND_CONFIRMATION_WORKFLOW = Path(".github/workflows/resend-confirmation.yml")
+
+
+def test_registration_workflow_send_step_carries_every_env_var_the_command_reads() -> (
+    None
+):
+    expected = _env_vars_read(CLI_MODULE_PATH, "send_confirmation")
+    assert expected == {
+        "REGISTRATION_PAYLOAD",
+        "EVENT_PRIVATE_KEY",
+        "CHANGED_FIELDS",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_MEETING_API_TOKEN",
+        *confirmation.SMTP_ENV_VARS,
+    }, (
+        "the derivation itself found an unexpected set -- either "
+        "send_confirmation changed what it reads, or this AST walk no "
+        "longer sees it correctly"
+    )
+    carried = _workflow_step_env_keys(
+        REGISTRATION_WORKFLOW, "handle", "convener-send-confirmation"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"registration.yml does not forward {missing} to the step that "
+        "runs convener-send-confirmation, which reads it directly"
+    )
+
+
+def test_resend_confirmation_workflow_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "resend_confirmation")
+    assert expected == {
+        "EVENT_ID",
+        "REGISTRATION_EMAIL",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_MATCHING_SALT",
+        "CONVENER_MEETING_API_TOKEN",
+        *confirmation.SMTP_ENV_VARS,
+    }, (
+        "the derivation itself found an unexpected set -- either "
+        "resend_confirmation changed what it reads, or this AST walk no "
+        "longer sees it correctly"
+    )
+    carried = _workflow_step_env_keys(
+        RESEND_CONFIRMATION_WORKFLOW, "resend", "convener-resend-confirmation"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"resend-confirmation.yml does not forward {missing} to the step "
+        "that runs convener-resend-confirmation, which reads it directly"
+    )
 
 
 # ------------------------------------------------------------------ #

@@ -74,50 +74,79 @@ participant reads it, in full, before answering anything, and a second,
 shorter paraphrase in an e-mail could only say it less precisely, never
 more.
 
-A resend must not re-invite everybody, and what is honestly not solved
-(ruling 3)
+A resend must not re-invite everybody, and why that is a choice, not a
+forced consequence of anonymity (ruling 3, corrected in fix round 1)
 -----------------------------------------------------------------------------
 `certificate.py`'s own identifiers let R-27 (task 14's own fix) restrict a
 resend to exactly what one run minted, and report exactly which identifier
 failed, because an identifier is a certificate's own public name, never a
-person's. This module has no such name to give anything: a survey
-invitation is not a register entry, and inventing one -- even a public,
-content-free one, "invitation #7 for event mrg-042" -- would still be a
-handle that let whoever holds `data/events/<id>/survey_responses.enc` and
-the invitation log line up "the seventh person invited" against "the
-response that arrived nine minutes after invitation seven went out",
-exactly the metadata-pairing `operations.md`'s pseudonymity section already
-names as the one channel padding cannot close. So this module does not
-build a per-person restriction at all, and says so rather than pretending
-otherwise:
+person's. This module could, in principle, keep the equivalent for an
+invitation: a salted HMAC of an address, committed to
+`data/survey-invitations.yml` and never published -- the exact construction
+`certificate.fingerprint` already uses, domain-separated the same way, for
+the identical purpose of idempotence without a public name. **That
+construction would not undo the survey response's own anonymity.** A
+delivery record here would never leave the repository, never appear in the
+invitation, never appear on the survey page, and never appear in a
+response -- so it could not pair with anything a response carries, for the
+same reason `certificate.fingerprint` does not compromise a certificate's
+own verification address. An earlier version of this docstring argued
+otherwise (that building such a handle "would make a stored answer
+traceable"); that argument was reviewed and is wrong, and is not the reason
+this module does without one.
 
-**The bound is per event, not per person.** `data/survey-invitations.yml`
-(`registry_from_data`/`registry_to_data`, below) records only that event
-*X* was invited, and on what day -- no name, no address, no count of how
-many. `cli.py::invite_survey` refuses outright, before composing anything,
-once an event already carries an entry here, unless an operator ticks the
-workflow's own `resend_all` -- which then re-invites *every* currently
-matched attendee, including everyone the first run already reached.
-Duplicate, not targeted: this module cannot single out the one recipient
-whose message actually bounced, because nothing it holds says which one
-that was. That is the honest cost of carrying no identifier -- accepted
-here for the same reason `survey.py`'s own module docstring accepts no
-per-response erasure: building the handle that would make a precise retry
-possible is the same handle that would make a stored answer traceable, and
-this feature does not need precision badly enough to buy it at that price.
+**The real reason is proportionality, not privacy.** A certificate register
+earns its permanence: a certificate is an attestation its holder may need
+verified years later, so R-29 deliberately makes `certificates.yml` survive
+the very key destruction that makes `registrations.enc` unreadable. A
+survey-invitation record exists for one narrow, short-lived purpose -- not
+mailing the same person twice inside a single campaign, whose entire useful
+life is the days between an invitation and a reply. Giving that purpose a
+permanent, salted, committed linkage between a person and the event they
+attended would outlive its own reason to exist, and it would outlive it
+specifically by surviving the one event meant to end it: task 15's
+retention sweep destroys `CONVENER_EVENT_KEY_<ID>` per event, but
+`data/survey-invitations.yml` is one file shared across every event (unlike
+`certificates.yml`, which already lives under `data/events/<id>/` and is
+swept by construction) -- so a per-person fingerprint kept there would not
+be swept with any one event's key at all, and would need moving under
+`data/events/<id>/` to ever be, a real structural cost this module does not
+pay for a two-day problem. The second cost is `CONVENER_MATCHING_SALT`: an
+ordinary D-13 absence for this command (`invite_survey` never refuses
+without it, unlike `issue_certificates`, which cannot fingerprint safely
+without one) -- so a per-person handle here could not always be computed in
+the first place, only sometimes, which is a worse property for an
+idempotence key than having none at all.
 
-**What an operator actually does about one bounce**: nothing automated.
-The invitation carries no attachment and no cryptographic attestation --
-unlike a certificate, a duplicate is a mild inconvenience, not a second
-copy of a nominative document loose in the world -- so the deliberate,
-supported recovery is `resend_all`, accepting that everyone who already
-received it gets a second, identical copy. An operator who happens to know
-the one address that bounced (because the room roster or the delivery
-error named it to them directly, never because this module printed it) has
-no purpose-built command to hand a single message to either; writing to
-that person by hand, pasting `survey_url(event_id)`, is the whole
-recovery, the same way a volunteer already writes to a participant by hand
-for anything this codebase does not automate.
+**So the bound is per event, not per person, by choice: convenient, not
+forced.** `data/survey-invitations.yml` (`registry_from_data`/
+`registry_to_data`, below) records only that event *X* was invited, and on
+what day -- no name, no address, no count of how many. `cli.py::invite_survey`
+refuses outright, before composing anything, once an event already carries
+an entry here, unless an operator ticks the workflow's own `resend_all` --
+which then re-invites *every* currently matched attendee, including
+everyone the first run already reached. Duplicate, not targeted.
+
+**What actually shrinks how often that matters: a single in-place retry,
+which needs no identifier at all (Important 4, fix round 1).**
+`cli.py::invite_survey` retries one immediate resend attempt for any
+attendee whose first delivery attempt failed, inside the same run, before
+moving on -- a transient SMTP hiccup at message 3 of 40 no longer forces
+mailing all 40 again, because it usually never leaves this loop at all. The
+per-event bound above, and `resend_all`, exist for what a same-run retry
+cannot fix (the mailbox was never configured, or the run itself was never
+dispatched again in time): the deliberate, supported recovery for those is
+still `resend_all`, accepting that everyone who already received it gets a
+second, identical copy -- the invitation carries no attachment and no
+cryptographic attestation, so a duplicate is a mild inconvenience, never a
+second copy of a nominative document loose in the world. An operator who
+happens to know the one address that still failed after the in-run retry
+(because the room roster or the delivery error named it to them directly,
+never because this module printed it) has no purpose-built command to hand
+a single message to either; writing to that person by hand, pasting
+`survey_url(event_id)`, is the whole recovery, the same way a volunteer
+already writes to a participant by hand for anything this codebase does
+not automate.
 
 Nothing nominative reaches a job log, on every path (ruling 4)
 -------------------------------------------------------------------

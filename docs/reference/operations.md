@@ -1347,24 +1347,44 @@ wording, and this document's own "Anonymous against a stranger;
 pseudonymous by metadata against the organiser" section, above, for the
 claim this page and that one must never overstate.
 
-**A resend invites everyone again — there is no finer grain available.**
-Unlike `issue-certificates.yml`'s own `resend_all` (R-27), which restricts
-an ordinary run to what was freshly minted and can name a single failed
-delivery by its certificate's own public identifier, a survey invitation
-mints no identifier at all. `data/survey-invitations.yml` records only
-that an event was invited, and on what day — no name, no address, no
-count. By default, `convener-invite-survey` refuses outright once an event
-already has an entry there, printing that date and sending nothing; the
-workflow's own `resend_all` input is the only override, and it re-invites
-*every* currently matched attendee, including everyone the first run
-already reached. **What an operator does about one bounce**: nothing
-targeted. The message carries no attachment and no signed document, so a
-duplicate is a mild inconvenience, not a second copy of anything sensitive
-loose in the world — `resend_all` is the whole recovery. See
-`tools/convener_ops/survey_invite.py`'s own module docstring, "ruling 3", for
-why this bound was chosen deliberately rather than solved: building the
-handle that would make a precise retry possible is the same handle that
-would make a stored response traceable.
+**A resend invites everyone again, by choice, not because a finer grain is
+unsafe (corrected in fix round 1).** Unlike `issue-certificates.yml`'s own
+`resend_all` (R-27), which restricts an ordinary run to what was freshly
+minted and can name a single failed delivery by its certificate's own
+public identifier, `convener-invite-survey` mints no identifier at all.
+`data/survey-invitations.yml` records only that an event was invited, and
+on what day — no name, no address, no count. By default, it refuses
+outright once an event already has an entry there, printing that date and
+sending nothing; the workflow's own `resend_all` input is the only
+override, and it re-invites *every* currently matched attendee, including
+everyone the first run already reached.
+
+This is not forced by anonymity — a repository-only, salted delivery
+record (the same construction `certificate.fingerprint` already uses)
+would not compromise the survey response's own anonymity, since it would
+never appear in the invitation, the survey page, or the response. The real
+reason is proportionality: a certificate register earns its permanence
+because a certificate is an attestation its holder may need verified years
+later; an invitation record exists only to avoid mailing one person twice
+inside a single campaign, a purpose whose useful life is days, not years —
+and `data/survey-invitations.yml` is one file shared across every event,
+so a per-person handle kept there would not be swept with any one event's
+key at all, unlike `certificates.yml`, which already lives under
+`data/events/<id>/`. `CONVENER_MATCHING_SALT` is also ordinary D-13 for this
+command (unlike for certificate issuance), so such a handle could not
+always be computed in the first place. See
+`tools/convener_ops/survey_invite.py`'s own module docstring, "ruling 3,
+corrected in fix round 1", for the argument in full.
+
+**What actually reduces how often a bounce needs any recovery at all: an
+in-run retry, which needs no identifier (fix round 1).**
+`convener-invite-survey` retries one immediate resend, in the same run, for any
+delivery that fails on its first attempt — a transient SMTP hiccup no
+longer forces mailing a whole batch again. `resend_all` remains the
+recovery for what that cannot fix (the mailbox was never configured, or
+the run itself was never re-dispatched at all): the message carries no
+attachment and no signed document, so a duplicate is a mild inconvenience,
+not a second copy of anything sensitive loose in the world.
 
 **Secrets read:** `CONVENER_EVENT_KEY_<EVENT ID>` and, optionally,
 `CONVENER_MEETING_API_TOKEN` — the same two *Matching attendance* already
@@ -1386,6 +1406,19 @@ summary line reports a sent count, the configured mailbox receives one
 message per matched attendee, and `data/survey-invitations.yml` gains one
 entry. Re-dispatching the same event without `resend_all` sends nothing
 further and says so.
+
+**If the recording step's own commit-and-push retry loop ever exhausts its
+three attempts** (`::error::push failed after 3 attempts -- the invitation
+was sent but not recorded`), the invitation itself already went out — only
+the record that stops a re-dispatch from doing it again did not land. This
+is the one state where re-dispatching the workflow re-invites every
+currently matched attendee, which is exactly what ruling 3's whole bound
+exists to prevent. **Do not re-dispatch to recover from it.** Instead,
+commit `data/survey-invitations.yml` by hand, adding this event's own
+`event_id`/`invited_on` row (`convener-record-survey-invitation`, run locally
+with `EVENT_ID` set, produces the exact row to add) — the same recovery a
+wedged `retention_sweep` already documents for its own registry, applied
+here to a smaller one.
 
 ## CI-only secrets
 

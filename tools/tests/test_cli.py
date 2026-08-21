@@ -2209,6 +2209,55 @@ _SURVEY_SMTP_ENV: dict[str, str] = {
 }
 
 
+def _assert_survey_leak_sweep(captured_text: str) -> None:
+    """Important 2, fix round 1: the sweep every `invite_survey` test in
+    this section now runs, on every path including a refusal -- took the
+    already-captured text as a plain string, never `capsys` itself, the
+    exact fix the harness bug (found during the first round, and again by
+    the review) needs: a helper that re-reads `capsys.readouterr()` after
+    the caller already drained it observes nothing and passes vacuously.
+    Asserting the text is non-empty first is what makes that failure mode
+    itself fail loudly here, rather than pass silently forever."""
+    assert captured_text.strip(), (
+        "expected some output to sweep for a leak, got none -- a sweep "
+        "with nothing to check proves nothing"
+    )
+    combined = captured_text.lower()
+    for secret in _LEAK_STRINGS:
+        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+
+
+class _FlakySurveySmtpClient:
+    """Important 4, fix round 1: a fake `smtplib.SMTP` whose *first* send
+    attempt across the whole test fails with a transient `OSError`, and
+    every attempt after that succeeds -- proves `invite_survey` retries a
+    failed delivery once, in place, before counting it as unsent."""
+
+    attempts: ClassVar[int] = 0
+    sent: ClassVar[list[object]] = []
+
+    def __init__(self, host: str, port: int, timeout: float) -> None:
+        pass
+
+    def starttls(self) -> None:
+        pass
+
+    def login(self, user: str, password: str) -> None:
+        pass
+
+    def send_message(self, message: object) -> None:
+        _FlakySurveySmtpClient.attempts += 1
+        if _FlakySurveySmtpClient.attempts == 1:
+            raise OSError("transient failure")
+        _FlakySurveySmtpClient.sent.append(message)
+
+    def __enter__(self) -> _FlakySurveySmtpClient:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+
 def test_invite_survey_with_no_event_id_returns_1(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2238,9 +2287,7 @@ def test_invite_survey_refuses_when_the_switch_is_off(
     assert invite_survey() == 1
     captured = capsys.readouterr()
     assert "the survey is not enabled for event mrg-042" in captured.err
-    combined = (captured.out + captured.err).lower()
-    for secret in _LEAK_STRINGS:
-        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
 
 def test_invite_survey_with_no_speaker_record_refuses(
@@ -2250,7 +2297,9 @@ def test_invite_survey_with_no_speaker_record_refuses(
     monkeypatch.setenv("EVENT_ID", "mrg-042")
 
     assert invite_survey() == 1
-    assert "the survey is not enabled for event mrg-042" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert "the survey is not enabled for event mrg-042" in captured.err
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
 
 def test_invite_survey_without_a_configured_key_returns_1(
@@ -2262,7 +2311,9 @@ def test_invite_survey_without_a_configured_key_returns_1(
     monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
 
     assert invite_survey() == 1
-    assert "no private key configured" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert "no private key configured" in captured.err
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
 
 def test_invite_survey_with_nothing_recorded_returns_1(
@@ -2274,12 +2325,19 @@ def test_invite_survey_with_nothing_recorded_returns_1(
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert invite_survey() == 1
-    assert "no registrations recorded" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert "no registrations recorded" in captured.err
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
 
 def test_invite_survey_catches_a_platform_request_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Important 2, fix round 1: `cli.py:1751`'s own `except` re-prints
+    whatever `platform.py`/`platform_fcc.py` composed -- text this module
+    does not control. Mutating that line to append every decrypted
+    address (`Reproduction A` in the review) survived the full suite
+    before this sweep existed; it does not now."""
     private_pem = _prepare_survey_event(tmp_path, registrations=(_ADA_REG,))
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
@@ -2289,7 +2347,9 @@ def test_invite_survey_catches_a_platform_request_failure(
     # missing-file failure, the same one match_attendance already catches.
 
     assert invite_survey() == 1
-    assert "no attendance export" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert "no attendance export" in captured.err
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
 
 def test_invite_survey_only_invites_the_matched_attendee(
@@ -2327,15 +2387,13 @@ def test_invite_survey_only_invites_the_matched_attendee(
         "1 sent, 0 not sent (1 matched attendee(s); 2 present but not "
         "invited -- no address on file)" in captured.out
     )
-    combined = (captured.out + captured.err).lower()
-    for stray in (
-        "grace",
-        "hopper",
-        "grace@example.org",
-        "some caller",
-        *_LEAK_STRINGS,
-    ):
-        assert stray.lower() not in combined, f"{stray!r} leaked into job output"
+    out = captured.out + captured.err
+    _assert_survey_leak_sweep(out)
+    for stray in ("grace", "hopper", "grace@example.org", "some caller"):
+        assert stray not in out.lower(), f"{stray!r} leaked into job output"
+    assert out.isascii(), (
+        "M6, fix round 1: this command's own output is ASCII by construction"
+    )
 
     assert len(_RecordingSmtpClient.sent) == 1
     email = _RecordingSmtpClient.sent[0]
@@ -2367,7 +2425,9 @@ def test_invite_survey_composes_the_same_link_for_every_matched_attendee(
     monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     assert invite_survey() == 0
-    assert "2 sent, 0 not sent" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "2 sent, 0 not sent" in captured.out
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
     assert len(_RecordingSmtpClient.sent) == 2
     bodies = [message.get_content() for message in _RecordingSmtpClient.sent]
@@ -2399,9 +2459,7 @@ def test_invite_survey_with_no_transport_configured_reports_all_unsent(
     assert invite_survey() == 0
     captured = capsys.readouterr()
     assert "0 sent, 1 not sent" in captured.out
-    combined = (captured.out + captured.err).lower()
-    for secret in _LEAK_STRINGS:
-        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
     output_path = tmp_path / "gh_output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
@@ -2435,7 +2493,9 @@ def test_invite_survey_writes_record_true_to_github_output_when_something_sent(
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
 
     assert invite_survey() == 0
+    captured = capsys.readouterr()
     assert "record=true" in output_path.read_text(encoding="utf-8")
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
 
 def test_invite_survey_refuses_a_second_time_without_resend_all(
@@ -2443,7 +2503,10 @@ def test_invite_survey_refuses_a_second_time_without_resend_all(
 ) -> None:
     """Ruling 3's own mutant: once this event is on record as invited, a
     routine re-dispatch sends nothing further -- and touches no
-    registration at all, so it cannot leak anything either."""
+    registration at all, so it cannot leak anything either. Also M2, fix
+    round 1: asserts `record=false` was actually written -- mutating that
+    line to `record=true` survived the full suite until this assertion
+    existed, harmless only because the recorder is itself idempotent."""
     _prepare_survey_event(tmp_path)
     registry_path = tmp_path / "data" / "survey-invitations.yml"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2455,14 +2518,79 @@ def test_invite_survey_refuses_a_second_time_without_resend_all(
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
     monkeypatch.delenv("RESEND_ALL", raising=False)
+    output_path = tmp_path / "gh_output"
+    output_path.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_path))
 
     assert invite_survey() == 0
     captured = capsys.readouterr()
     assert "already invited on 2026-08-01" in captured.out
     assert "no invitations sent this run" in captured.out
-    combined = (captured.out + captured.err).lower()
-    for secret in _LEAK_STRINGS:
-        assert secret.lower() not in combined, f"{secret!r} leaked into job output"
+    _assert_survey_leak_sweep(captured.out + captured.err)
+    assert "record=false" in output_path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("resend_all_value", "expect_resend"),
+    [
+        ("true", True),
+        ("True", True),
+        ("TRUE", True),
+        ("false", False),
+        ("False", False),
+        ("", False),
+        ("1", False),
+        ("yes", False),
+    ],
+)
+def test_invite_survey_resend_all_only_recognises_the_literal_true(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    resend_all_value: str,
+    expect_resend: bool,
+) -> None:
+    """Important 1, fix round 1: `RESEND_ALL: ${{ inputs.resend_all }}` is
+    the literal string `"false"` when an operator leaves the workflow's own
+    checkbox unticked -- never tested before this round, every existing
+    test either deleted the variable or set it to `"true"`. Mutating the
+    comparison from `== "true"` to `!= ""` survived the full suite and made
+    every dispatch a full resend; this parametrisation exercises every
+    value the workflow (`"true"`/`"false"`, exactly what a boolean
+    `workflow_dispatch` input renders as) or a raw API dispatch could
+    actually send, and pins that only `"true"`, case-insensitively, forces
+    a resend."""
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
+        encoding="utf-8",
+    )
+    for key, value in _SURVEY_SMTP_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.setenv("RESEND_ALL", resend_all_value)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+
+    assert invite_survey() == 0
+    if expect_resend:
+        assert len(_RecordingSmtpClient.sent) == 1
+    else:
+        assert len(_RecordingSmtpClient.sent) == 0
+        assert "already invited" in capsys.readouterr().out
 
 
 def test_invite_survey_resend_all_invites_the_matched_attendee_again(
@@ -2494,8 +2622,41 @@ def test_invite_survey_resend_all_invites_the_matched_attendee_again(
     monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     assert invite_survey() == 0
-    assert "1 sent, 0 not sent" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "1 sent, 0 not sent" in captured.out
+    _assert_survey_leak_sweep(captured.out + captured.err)
     assert len(_RecordingSmtpClient.sent) == 1
+
+
+def test_invite_survey_retries_a_failed_delivery_once_before_giving_up(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 4, fix round 1: a transient failure on the first attempt
+    must not force a whole-batch `resend_all` -- `invite_survey` retries
+    once, in place, and this attendee's second attempt succeeds."""
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    for key, value in _SURVEY_SMTP_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _FlakySurveySmtpClient.attempts = 0
+    _FlakySurveySmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _FlakySurveySmtpClient)
+
+    assert invite_survey() == 0
+    assert "1 sent, 0 not sent" in capsys.readouterr().out
+    assert _FlakySurveySmtpClient.attempts == 2
+    assert len(_FlakySurveySmtpClient.sent) == 1
 
 
 def test_invite_survey_rejects_a_malformed_committed_registry(
@@ -2509,7 +2670,9 @@ def test_invite_survey_rejects_a_malformed_committed_registry(
     monkeypatch.setenv("EVENT_ID", "mrg-042")
 
     assert invite_survey() == 1
-    assert "survey-invitations.yml" in capsys.readouterr().err
+    captured = capsys.readouterr()
+    assert "survey-invitations.yml" in captured.err
+    _assert_survey_leak_sweep(captured.out + captured.err)
 
 
 def test_record_survey_invitation_with_no_event_id_returns_1(

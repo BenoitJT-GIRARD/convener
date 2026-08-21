@@ -1683,6 +1683,17 @@ def invite_survey() -> int:
     as invited, or a later run -- once the real cause is fixed -- would
     refuse itself outright for an invitation that, in fact, never went
     anywhere.
+
+    **A single in-place retry, needing no identifier at all (Important 4,
+    fix round 1).** A delivery that fails is retried once, immediately,
+    inside this same loop, before counting it as unsent -- see
+    `survey_invite.py`'s own module docstring, "ruling 3, corrected in fix
+    round 1", for why this -- not a per-person resend handle -- is the
+    right place to spend effort on a transient failure: it needs nothing
+    committed anywhere, so it costs nothing in proportionality or in
+    `CONVENER_MATCHING_SALT`'s own ordinary absence, and it means a run of 40
+    where message 3 hiccups once no longer has to be re-run wholesale
+    (`resend_all`) to reach the other 39 a first attempt already reached.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
@@ -1764,6 +1775,12 @@ def invite_survey() -> int:
     for attendee in matched.matched:
         message = survey_invite.compose(attendee.registration, event_title, event_id)
         result = confirmation.deliver(message, os.environ)
+        if not result.sent:
+            # Important 4, fix round 1: one immediate retry, in place --
+            # see this function's own docstring and survey_invite.py's
+            # module docstring ("ruling 3") for why this, not a per-person
+            # resend handle, is the right answer to a transient failure.
+            result = confirmation.deliver(message, os.environ)
         if result.sent:
             sent_count += 1
         else:

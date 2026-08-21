@@ -186,3 +186,35 @@ def test_survey_base_matches_app_tsxs_own_survey_route() -> None:
         "SURVEY_BASE would link to a route that does not exist"
     )
     assert SURVEY_BASE.endswith("#/survey/")
+
+
+# ------------------------------------------------------------------ #
+# Important 3, fix round 1: `survey_invite.py:196-201` and
+# `docs/toolkit/emails/survey-invitation.md:12-14` both claimed this test
+# already existed. It did not -- rewording `NOTICE` survived the full
+# suite. Same idiom as `test_confirmation.py`'s `_normalised_docs_template`
+# and `test_delivery.py`'s own copy of it: collapse the markdown's line
+# wrapping to one string and check the composed text is a substring of it.
+# ------------------------------------------------------------------ #
+
+_DOCS_TEMPLATE = (
+    Path(__file__).resolve().parents[2]
+    / "docs"
+    / "toolkit"
+    / "emails"
+    / "survey-invitation.md"
+)
+
+
+def _normalised_docs_template() -> str:
+    text = _DOCS_TEMPLATE.read_text(encoding="utf-8")
+    return " ".join(text.split())
+
+
+def test_the_notice_matches_the_documentation_copy() -> None:
+    assert NOTICE in _normalised_docs_template()
+
+
+def test_the_subject_matches_the_documentation_copy() -> None:
+    message = compose(_registration(), "[the event's title, when known]", "x")
+    assert message.subject in _normalised_docs_template()
