@@ -107,6 +107,7 @@ def speaker(**overrides: Any) -> dict[str, Any]:
         "zoom_link": "",
         "youtube_url": "",
         "forum_thread": "",
+        "survey_enabled": False,
         "runbook_progress": {},
         # Nobody down for any line, which is the state every record starts in
         # and most lines stay in.

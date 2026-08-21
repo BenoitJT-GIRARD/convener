@@ -51,6 +51,15 @@ PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
 #: field ends up silently optional. `app/src/data/validate.ts` draws the same
 #: line on the read side.
 SPEAKER_TEXT_V4 = ("photo_url", "bio", "linkedin", "seed_questions")
+#: Task 16 (phase 4 spec S:6): the post-event survey's per-event switch --
+#: a field on the speaker record, not `data/config.yml`, for the same
+#: "per-event fact beside the event's other per-event facts" reasoning
+#: `app/src/data/types.ts::Speaker.survey_enabled`'s own doc comment gives.
+#: Checked with `in` and `isinstance(..., bool)`, the same "absent is a
+#: defect, empty/false is an answer" discipline `SPEAKER_TEXT_V4` already
+#: holds itself to -- an absent key would otherwise read as `False` behind
+#: a validator that never noticed the record was incomplete.
+SPEAKER_BOOL_V5 = ("survey_enabled",)
 CANDIDATE_DATE_KEYS = frozenset({"date", "time", "answer"})
 #: What one line of the journey may say about itself. `assignee` is who owes
 #: that line -- not `assigned_to`, which is the board member who owns the
@@ -506,6 +515,20 @@ def validate_speakers(
                 errors.append(f"{where}: missing {key}")
             elif not isinstance(entry[key], str):
                 errors.append(f"{where}: {key} must be a string")
+
+        # Task 16, schema v5. bool is checked, not merely "not a string" --
+        # a stray "true" (the string) or a 1 must be caught here rather than
+        # silently reaching handle_survey_response as a truthy-but-wrong
+        # type. isinstance(x, bool) is deliberately not preceded by an
+        # int-subclass guard the way an integer field would need
+        # (CONFIG_INTS above): a bool can never be mistaken for an int this
+        # check would otherwise wrongly accept, because this check accepts
+        # bool alone.
+        for key in SPEAKER_BOOL_V5:
+            if key not in entry:
+                errors.append(f"{where}: missing {key}")
+            elif not isinstance(entry[key], bool):
+                errors.append(f"{where}: {key} must be a boolean")
 
         if "checklist" not in entry:
             errors.append(f"{where}: missing checklist")

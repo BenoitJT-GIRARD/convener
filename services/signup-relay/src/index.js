@@ -24,12 +24,38 @@
  * check, a preflight answer, and CORS headers on every response, error or
  * not, so a caller can actually read what this worker sends back.
  *
- * It logs no request body and keeps nothing beyond the per-event counter
- * README.md describes -- and that counter is a count, never the data that
+ * It logs no request body and keeps nothing beyond the per-event counters
+ * README.md describes -- and a counter is a count, never the data that
  * produced it.
+ *
+ * A second route, not a second worker (task 16, phase 4 spec S:6)
+ * -------------------------------------------------------------------
+ * `POST /survey` accepts a post-event survey response -- `app/src/survey/
+ * SurveyForm.tsx` and `app/src/survey/encrypt.ts`, the sibling of the
+ * registration page and its own `encrypt.ts` -- and forwards it as a
+ * `survey-response-submitted` dispatch instead of `registration-submitted`.
+ * It is the *same* worker, not a fourth one, because spec S:6 says the
+ * survey travels through "meme entree que l'inscription": the envelope this
+ * worker validates is byte-identical in shape (`validatedEventId` below
+ * makes no distinction between the two routes at all), the known-event
+ * check is the same lookup against the same `keys/events/<id>.pub`, and the
+ * GitHub token is the same one already scoped to this repository. Splitting
+ * that into a second deployment would buy nothing this worker's own
+ * reasoning for being a *third* worker (see "Why this is a third worker"
+ * below) actually asked for -- there is no second trust boundary here, only
+ * a second `client_payload.body` destination.
+ *
+ * What *is* separate is the abuse ceiling: `/survey` gets its own KV
+ * counter key and its own rate-limiter key (`surveyCounterKey`,
+ * `surveyRateLimiterKey` below), so a flooded survey cannot spend a
+ * registration's budget or vice versa -- the same per-event isolation the
+ * existing counter already gives one event over another, applied a second
+ * time across the two routes. See README.md, "A second route, not a second
+ * worker" for the full reasoning.
  */
 
 const ROUTE = '/';
+const SURVEY_ROUTE = '/survey';
 const REPO = 'example-instance/example-cockpit';
 const DISPATCH_URL = `https://api.github.com/repos/${REPO}/dispatches`;
 const USER_AGENT = 'convener-signup-relay';
@@ -218,6 +244,25 @@ function counterKey(eventId) {
   return `count:${eventId}`;
 }
 
+/** The survey's own cumulative-ceiling counter key -- deliberately distinct
+ *  from `counterKey`'s (`count:<id>` vs `count:survey:<id>`) rather than a
+ *  shared prefix scheme, specifically so an event's *existing*, already
+ *  live `count:<id>` registration counter is untouched by this task: no
+ *  in-flight registration count is renumbered or reset by this route's
+ *  addition. */
+function surveyCounterKey(eventId) {
+  return `count:survey:${eventId}`;
+}
+
+/** The survey's own burst-limiter key -- distinct from the bare `eventId`
+ *  `SIGNUP_RATE_LIMITER` is keyed by for registration, for the identical
+ *  reason `surveyCounterKey` is distinct from `counterKey`: one event's
+ *  survey burst must not spend, or be blocked by, that same event's
+ *  registration burst budget. */
+function surveyRateLimiterKey(eventId) {
+  return `survey:${eventId}`;
+}
+
 export async function handle(request, env) {
   // CORS, first: the in-repo pattern services/auth-proxy/src/index.js
   // uses, copied rather than reinvented. A mismatched or absent Origin
@@ -238,9 +283,10 @@ export async function handle(request, env) {
   }
 
   const { pathname } = new URL(request.url);
-  if (pathname !== ROUTE) {
+  if (pathname !== ROUTE && pathname !== SURVEY_ROUTE) {
     return respond(404, env, 'Not Found');
   }
+  const isSurvey = pathname === SURVEY_ROUTE;
 
   if (request.method === 'OPTIONS') {
     // The preflight a browser sends before the real POST, because
@@ -324,9 +370,16 @@ export async function handle(request, env) {
   // system" -- quoted, not paraphrased, in README.md -- so a thrown
   // `.limit()` call is treated the same as any other fail-closed check
   // here: refused, not silently skipped.
+  // The survey path gets its own limiter key and counter key -- see
+  // surveyRateLimiterKey/surveyCounterKey's own docstrings for why a
+  // flooded survey must neither spend nor be blocked by that same event's
+  // registration budget.
+  const rateLimiterKey = isSurvey ? surveyRateLimiterKey(eventId) : eventId;
+  const eventCounterKey = isSurvey ? surveyCounterKey(eventId) : counterKey(eventId);
+
   let limited;
   try {
-    limited = await rateLimiter.limit({ key: eventId });
+    limited = await rateLimiter.limit({ key: rateLimiterKey });
   } catch {
     return respond(502, env, 'Bad Gateway');
   }
@@ -339,10 +392,12 @@ export async function handle(request, env) {
   // request that will be refused anyway. A KV read failure is treated as
   // "no count yet" rather than refusing the request -- see README.md,
   // "Abuse protection", for why an approximate ceiling is the accepted
-  // trade here, not a defect.
+  // trade here, not a defect. Applies identically to `/survey`: the same
+  // ceiling, on the survey's own counter key -- an open path with no
+  // ceiling at all would be a mailer for anyone who knows an event id.
   let count = 0;
   try {
-    const stored = await kv.get(counterKey(eventId));
+    const stored = await kv.get(eventCounterKey);
     count = stored ? Number.parseInt(stored, 10) || 0 : 0;
   } catch {
     count = 0;
@@ -376,7 +431,7 @@ export async function handle(request, env) {
       // ${{ github.event.client_payload.body }} interpolation, which only
       // renders raw JSON when the value is a string.
       body: JSON.stringify({
-        event_type: 'registration-submitted',
+        event_type: isSurvey ? 'survey-response-submitted' : 'registration-submitted',
         client_payload: { body },
       }),
       signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
@@ -408,9 +463,10 @@ export async function handle(request, env) {
   // dispatch and every workflow run already names -- and a fixed message;
   // never the body.
   try {
-    await kv.put(counterKey(eventId), String(count + 1));
+    await kv.put(eventCounterKey, String(count + 1));
   } catch {
-    console.error(`signup-relay: failed to update the registration counter for event ${eventId}`);
+    const label = isSurvey ? 'survey response' : 'registration';
+    console.error(`signup-relay: failed to update the ${label} counter for event ${eventId}`);
   }
 
   // Fixed 204, not upstream.status -- see services/form-relay/src/index.js

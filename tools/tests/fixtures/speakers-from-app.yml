@@ -80,6 +80,7 @@
   zoom_link: https://example.org/zoom/11
   youtube_url: https://example.org/watch/11
   forum_thread: https://example.org/forum/11
+  survey_enabled: true
   runbook_progress:
     approved/invitation-sent: true
     delivered/summary-posted: false
@@ -132,6 +133,7 @@
   zoom_link: ''
   youtube_url: ''
   forum_thread: ''
+  survey_enabled: false
   runbook_progress: {}
   checklist: {}
   metrics:
@@ -186,6 +188,7 @@
   zoom_link: ''
   youtube_url: ''
   forum_thread: ''
+  survey_enabled: false
   runbook_progress: {}
   checklist:
     scheduled/T-21/linkedin:

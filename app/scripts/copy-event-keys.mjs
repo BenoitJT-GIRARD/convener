@@ -1,6 +1,8 @@
 /* Copy ../../keys/events/*.pub into public/keys/events/ so the registration
- * page (`src/signup/SignupForm.tsx`) can fetch an event's published public
- * half from the same origin the app itself is served from -- the same
+ * page (`src/signup/SignupForm.tsx`) -- and, since task 16, the post-event
+ * survey page (`src/survey/SurveyForm.tsx`), which fetches the identical
+ * file under the identical event id -- can fetch an event's published
+ * public half from the same origin the app itself is served from -- the same
  * reasoning `copy-handbook.mjs` gives for `docs/`, applied to a directory
  * that is public for a different reason: nothing under `keys/events/*.pub`
  * is a secret (see `tools/convener_ops/eventkeys.py`'s module docstring), only

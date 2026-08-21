@@ -31,6 +31,7 @@ from convener_ops.cli import (
     discard_recording,
     handle_proposal,
     handle_registration,
+    handle_survey_response,
     issue_certificates,
     match_attendance,
     public_data,
@@ -38,6 +39,7 @@ from convener_ops.cli import (
     release_recording,
     resend_confirmation,
     resolve_registration_secret,
+    resolve_survey_secret,
     revoke_certificate,
     send_confirmation,
     sweep,
@@ -56,6 +58,7 @@ from convener_ops.registration import (
     upsert,
 )
 from convener_ops.signing import derive_public_pem, generate, verify
+from convener_ops.survey import SurveyResponse, to_survey_response
 
 
 def test_load_missing_file_reports_error(tmp_path: Path) -> None:
@@ -1407,6 +1410,240 @@ def test_resend_confirmation_rejects_a_malformed_committed_file(
 
     assert resend_confirmation() == 1
     assert "registrations.enc" in capsys.readouterr().err
+
+
+# ------------------------------------------------------------------ #
+# resolve_survey_secret() / handle_survey_response(): task 16, phase 4
+# spec S:6. The same "no name, no address, ever printed" discipline the
+# registration tests above hold themselves to -- irrelevant to leak-testing
+# by content here (a survey response carries no identity at all, see
+# survey.py's own module docstring), but the switch-off refusal and the
+# never-decrypt-when-refused property are exactly the shape task 16's own
+# mutant-kill list asks for.
+# ------------------------------------------------------------------ #
+
+
+def _survey_fields(**overrides: object) -> dict[str, object]:
+    base: dict[str, object] = {
+        "overall_rating": 5,
+        "recommend": True,
+        "feedback": "Loved the live Q&A.",
+    }
+    base.update(overrides)
+    return base
+
+
+def _survey_payload(event_id: str, public_pem: str, **overrides: object) -> str:
+    plaintext = json.dumps(_survey_fields(**overrides)).encode("utf-8")
+    envelope = json.loads(eventkeys.encrypt(public_pem, plaintext))
+    return json.dumps({"event_id": event_id, **envelope})
+
+
+def test_resolve_survey_secret_with_no_payload_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("SURVEY_PAYLOAD", raising=False)
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+
+    assert resolve_survey_secret() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_resolve_survey_secret_writes_to_github_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, public_pem = eventkeys.generate()
+    output_file = tmp_path / "gh_output"
+    output_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_file))
+
+    assert resolve_survey_secret() == 0
+
+    text = output_file.read_text(encoding="utf-8")
+    assert "event_id=mrg-042\n" in text
+    assert "secret_name=CONVENER_EVENT_KEY_MRG_042\n" in text
+
+
+def test_handle_survey_response_with_no_payload_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.delenv("SURVEY_PAYLOAD", raising=False)
+
+    assert handle_survey_response() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_handle_survey_response_refuses_when_the_switch_is_off(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Task 16's own named mutant: an event whose survey switch is off
+    must refuse before anything is decrypted or written -- never write an
+    empty file, never create the events/<id> directory at all."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path, survey_enabled=False)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_survey_response() == 1
+
+    err = capsys.readouterr().err
+    assert "not enabled for event mrg-042" in err
+    assert not (tmp_path / "data" / "events").exists()
+
+
+def test_handle_survey_response_fails_closed_when_speakers_yml_is_unreadable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_survey_enabled`'s own fail-closed branch: no `data/speakers.yml`
+    at all (a repository checkout gone wrong, or simply no data directory
+    in this job's own workspace) must read as "switch is off", never as an
+    exception this job forgets to catch or, worse, as "we could not check,
+    so allow it"."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_survey_response() == 1
+    assert not (tmp_path / "data" / "events").exists()
+
+
+def test_handle_survey_response_refuses_for_an_event_with_no_speaker_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fail closed on the unknown case too: no record for this event id
+    at all is treated exactly like an explicit `survey_enabled: false`,
+    never as an implicit yes."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_data(tmp_path, [], config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_survey_response() == 1
+    assert not (tmp_path / "data" / "events").exists()
+
+
+def test_handle_survey_response_fails_closed_without_a_configured_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path, survey_enabled=True)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
+
+    assert handle_survey_response() == 1
+
+    err = capsys.readouterr().err
+    assert "no private key configured for event mrg-042" in err
+    assert not (tmp_path / "data" / "events").exists()
+
+
+def test_handle_survey_response_stores_a_response_when_the_switch_is_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path, survey_enabled=True)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_survey_response() == 0
+
+    out = capsys.readouterr().out
+    assert "recorded a survey response for event mrg-042 (1 total)" in out
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey_responses.enc"
+    stored = json.loads(enc_path.read_text(encoding="utf-8"))
+    assert len(stored["responses"]) == 1
+    entry = stored["responses"][0]
+    # Never in the clear, on disk, at any point (spec S:6, "meme stockage
+    # chiffre") -- an entry is exactly ciphertext, never anything a
+    # stranger reading the committed file could learn without the key.
+    assert set(entry) == eventkeys.ENVELOPE_FIELDS
+    response = to_survey_response(json.dumps(entry), private_pem)
+    assert response == SurveyResponse(
+        overall_rating=5, recommend=True, feedback="Loved the live Q&A."
+    )
+
+
+def test_handle_survey_response_never_writes_plaintext_to_disk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The mutation task 16's brief names first: a survey answer written to
+    disk in the clear. Scans every byte written under `data/events/` for
+    the plaintext feedback text, not merely the top-level entry shape."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path, survey_enabled=True)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "SURVEY_PAYLOAD",
+        _survey_payload("mrg-042", public_pem, feedback="A very identifiable sentence."),
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_survey_response() == 0
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey_responses.enc"
+    on_disk = enc_path.read_text(encoding="utf-8")
+    assert "A very identifiable sentence." not in on_disk
+
+
+def test_handle_survey_response_appends_a_second_response_without_merging(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path, survey_enabled=True)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    monkeypatch.setenv(
+        "SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem, overall_rating=5)
+    )
+    assert handle_survey_response() == 0
+    monkeypatch.setenv(
+        "SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem, overall_rating=1)
+    )
+    assert handle_survey_response() == 0
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey_responses.enc"
+    stored = json.loads(enc_path.read_text(encoding="utf-8"))
+    assert len(stored["responses"]) == 2
+
+
+def test_handle_survey_response_returns_none_for_undecryptable_ciphertext(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_event(tmp_path, survey_enabled=True)
+    other_private, _ = eventkeys.generate()
+    _, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", other_private)
+
+    assert handle_survey_response() == 1
+    assert "could not be decrypted" in capsys.readouterr().err
+
+
+def test_handle_survey_response_rejects_a_malformed_committed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    _write_event(tmp_path, survey_enabled=True)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    (events_dir / "survey_responses.enc").write_text(
+        "not json at all", encoding="utf-8"
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("SURVEY_PAYLOAD", _survey_payload("mrg-042", public_pem))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_survey_response() == 1
+    assert "survey_responses.enc" in capsys.readouterr().err
 
 
 # ------------------------------------------------------------------ #

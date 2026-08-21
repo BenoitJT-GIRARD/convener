@@ -2311,6 +2311,7 @@
       "selection",
       "publication",
       "candidate_dates",
+      "survey_enabled",
       "runbook_progress",
       "checklist",
       "metrics",
@@ -2354,6 +2355,31 @@
           "membership_opt_in": true
         },
         "envelope": "{\"v\":1,\"encrypted_key\":\"UkPD4GxxNZqnwJ7BcA5zP+mS16OAMSiwd12RXQdebk0pT6XR4iOCH8t8lFagF1KdETLt+b9teMwixIj7U7cwAA3v3vWVGYhw3GOdjW5h6AV1ZvTjQ//FaOii2VoXkrr/aaZaoncq3dOBq3+ByGjBgUvDR9PmbaUs+2A+eswBEhSWFQ+KOOesv5K81MTsQvoSBrlfPdeYo1x+37CdOixEtgjLC/nPefQ21wj6bG6AdgxdOcDuLHTgGjJk4g+OZY5LIgznIeQxINAk7GccGQigqYOivV3ZSor9tI9VMRzFsj6Yhj3EXsvtEB29UjIxHZ8qVyPwx3rtNja+0tAJfaxOmw==\",\"iv\":\"Hc5l6QqwZujwa89o\",\"ciphertext\":\"luOj57nZfjMCPiujvUV3IeAma3/B4zlnlQxQmUk8gkqbLHufZijFBoJLF9FyQ61eQee6zXQm0jAYLudJNkagGlEfKLnmTbREOeU42eSsKoWF55CZucKZjqBSZVcfiG1JYjpauvrZ981DO6iD1jXXQ4tDpezWcTggByurqxl1QFJ+3m12YzzVPFZHvjYRiOzqvr3r6HRpEjWbXoPKmeYN67ASY9SXRhoO\"}"
+      }
+    ]
+  },
+  "_event_survey_response_encryption_comment": "The same wire format as event_registration_encryption above -- see that key's own comment for the reasoning; this is its twin for the post-event survey (spec S:6). Reuses the identical throwaway RSA-2048 key pair rather than generating a second one: the crypto is not what differs between the two intake pages (both use the exact wire format tools/convener_ops/eventkeys.py documents), only the plaintext shape being encrypted -- so one key pair pinning both is sufficient and keeps this fixture from growing a redundant keypair. Each case's envelope is the literal, unedited output of the real browser code (encryptSurveyResponse, run once under Node's own crypto.subtle) encrypting fields under public_pem -- captured and pinned rather than recomputed, for the same reason event_registration_encryption's own envelopes are pinned rather than recomputed (AES-GCM draws fresh randomness every call). tools/tests/test_survey.py decrypts each pinned envelope with private_pem through the real eventkeys.decrypt and to_survey_response, and checks the recovered fields equal fields -- the one place that proves a browser-encrypted survey response is actually readable by the job that has to read it. app/tests/survey-encrypt.test.ts reads the same cases to re-encrypt fields fresh and check the wire shape, and to confirm the pinned envelope itself still has that shape.",
+  "event_survey_response_encryption": {
+    "public_pem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2q9C/nOAfN0W7tQYWCpg\nsYcPH+nFDiMCILfIv5cnifwiufU4sT7xdoVtHYz2WOrHyWTeMr+DPW+UUqdXZ81N\nhcohxPhg1oGg/xsk4lQcAEMk4QlrH0ZG29aM0QDuSfdk+3Kssda+k0cnc809ZmXx\n8fUasGWNFUZey+KOpwqljGSKBj62Ws5htQuZbLIJI7aY+c4iX+He+y5Flez+D1dW\nZswiFANLZaoefye8BS6hdhTrZ2fbf1u5lRIa6Q8XTQoEdLyUkYaIgR616KM4ay3m\nCmViYCB+8zbeKvNwDGihEGDxzdewbP6DIT3fNq/fkybvcKPciybTpvDYxkZJbeq0\nnwIDAQAB\n-----END PUBLIC KEY-----\n",
+    "private_pem": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDar0L+c4B83Rbu\n1BhYKmCxhw8f6cUOIwIgt8i/lyeJ/CK59TixPvF2hW0djPZY6sfJZN4yv4M9b5RS\np1dnzU2FyiHE+GDWgaD/GyTiVBwAQyThCWsfRkbb1ozRAO5J92T7cqyx1r6TRydz\nzT1mZfHx9RqwZY0VRl7L4o6nCqWMZIoGPrZazmG1C5lssgkjtpj5ziJf4d77LkWV\n7P4PV1ZmzCIUA0tlqh5/J7wFLqF2FOtnZ9t/W7mVEhrpDxdNCgR0vJSRhoiBHrXo\nozhrLeYKZWJgIH7zNt4q83AMaKEQYPHN17Bs/oMhPd82r9+TJu9wo9yLJtOm8NjG\nRklt6rSfAgMBAAECggEANh6nqsc05jHlCggNWkxqj6TIFnLJJL1/Ok+ha+DhlSGE\nCpdoh1z3bwiIP4byNIEuHmZLIy4IMb0abPYjCHpjlBe5EcESXiPIjznNgAGmyF3V\nk6e8DgpbYO6Q/OyJDF8ga6YunPhzQ4mZduw1JNFX9jRdfYg0SS6YKUcRXL+ixsJp\nkIlZcfe98g5kVf2eNUfnl/JySet/mAXE62d9QvuhcJqyBiidhCX9zC6x+1TO7GIk\ne9EQmZ7b6MmJ3L/l4lxrgdLQjQm+6uDiEj+Jo/sspPakUj6ynZmgWITf+m2TOsHL\nL+312EyDSNowqQNUzpDGKIgHc2ucJ7DgkC1rJ/td0QKBgQD9MiUm3x+DOQwk4fvO\n93bVQEx4rYi5vruXVKKLmewru56UVj9n9viIgATpVZw/XCLlBBv5anFZCdTcz1gZ\n5HewUNSHNGDPZrVXgGWyxK16TcwPY5v0813g1sOTSYY2V8X8Otg2xCLpXr0u+9jk\nZL8jofEnPyaqS5mkIK+0J2sDaQKBgQDdG0Vkj8Hf1EWwCpQRT02wH5CfUiHw21LU\nXt0Nw+4CTi0+bd9bjVKFHu7T+s0sp2JoqNDrZjIXT9pYiLYcm/mjAkQJAoLdaYYg\nwMNPA5EYOLw3zubcCiqgAwW6JGup7j0j65dJ9NYNHnPZE1UpNXu4RyBwRDvlDgvN\nOr80q9bexwKBgQDCb/fH2iDBDNYenMxbK/691RrksZ8FxUsZ84y/1/xduT8WewVG\nOYqyiF09MtlCbub9KCKzbuKMldg5maD2gVTIucn76mVN4HnyME/o8NCn04aZas0h\nVqMJPuQB/7xpjw4jnKzdodGNlYuCwTTWb+e43Wvrz7tJm7TpLZDAsGSlwQKBgCZt\nXOwTSACcpdfonr87Zyca9UmbPqbbl1OtgQGpca4Y5CgbdFw2/YaBT8SrrAj8tk+2\nN0kSI9aFXE9Sw0PJn+NCu4xNUW0lr9f1aHxNBGSPR7bzUJAhfDL/E3m8ZrHL4/hg\nM5T45lK1XjD1+TEGSJBIXEzmrvoqLMboVN7Ulq11AoGAOFxZEPw+orQGMpLvCyks\nCxz8+PQLdbXo+ECf1wn7payvm6kfWLHid58hVlXmug8do7sDeixpZg8k6O5wLxNo\ntxUQpU7NUvaaR1imTWFtIkqb9vxaD2W77rMlqvll1EMZXx8ErUCLjosElsHyBiN/\ntV4P4+64Q9ucVtltwA7c0sI=\n-----END PRIVATE KEY-----\n",
+    "cases": [
+      {
+        "name": "a five-star response recommending the series, with feedback",
+        "fields": {
+          "overall_rating": 5,
+          "recommend": true,
+          "feedback": "Loved the live Q&A."
+        },
+        "envelope": "{\"v\":1,\"encrypted_key\":\"uV83MTGIl7tkydXpoGwaQvwJZjMeVD4pj5nBizB5PBWuHo6ZwTisMiFYX66P6wjVVPlDEyvQggs5ly83em8hYnEniMHmFLuO5v3zNavf6cB+KZI7PbxnaX0xA3Co94SN9/3Eu7saeeeHDx7sznVilre9l0D5/m0FSrsifmFn1PaT6vYxospdsdQw8Jbek7pr1TlAYXjzJoqslYlXrHabsEJJcpvrILtJzD0bqiKbGrtr1TvWdeY5VRVWcMpFrHfk2N83COAfQY30Citsvp/HhGejgGV4IhlU1l3Ht7QPDi4ONU/EMQ9RL8AG5t+QUdiHRnTWApjArql2m+Rlb5/f6g==\",\"iv\":\"y6++bfi+LR+UkhJK\",\"ciphertext\":\"GG9ZRrGfXI48ad84uqu6Tb4bGLFt8vKAW2I7DIAIlD3pmMG6idMsFUkWsgTlKtF+jIRRs4frBYKcmcy2VoZZr5NAW7OiXIVasdz0hU0e5KRyX9LAceM=\"}"
+      },
+      {
+        "name": "a middling response, not recommending, no feedback given",
+        "fields": {
+          "overall_rating": 3,
+          "recommend": false,
+          "feedback": ""
+        },
+        "envelope": "{\"v\":1,\"encrypted_key\":\"VA7eVpcoSGYVKbpJG61gE5iUrxhvzTPNx1ktEHZpKHU8krod8p5/PUw2AVgGtZdkoYUTL3FxjfBYYU7c7bJ/MPWzHuD54EsIjBJKyGl+6TLCa6Zyiiz9xjgg35Lq3JkJjCAw3Hz2VrGGy/1OizB/ld8gk2LjXVHycXtu/w92pzGWefd1/xBQHzPJiINbkUtObfusivkU4Okswc0h4m2Goyrr4APb4O61+fzaGJtFQBEbZg3usEgnxuK96UJBpUfxqkRRN+UnCobSkfdK1e0U7Ie4NZumTYZpkLm7oyY+gr8fvxTCvLfuOUY+/rMZrT4wXQn23n2ugBAOQBCSXGAQqA==\",\"iv\":\"2RP1vHGeGkje6obD\",\"ciphertext\":\"oBIi1LjjyqcZ3bvayXxJG4Qh28+GqaW+N7cKwntthgAiCqp+dBPoQm7KyElSE+0qGI/Kh/506E8Gx0Db2TyLLDw6w6o=\"}"
       }
     ]
   }

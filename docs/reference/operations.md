@@ -163,6 +163,15 @@ worker are served from different origins, so it follows the same CORS
 pattern `services/auth-proxy/` already established (see its README's
 "Cross-origin requests" section) rather than a second one.
 
+Since task 16, it also answers `POST /survey`, the post-event survey's own
+intake (phase 4 spec S:6) — the same worker, not a fourth one; see its
+README's "A second route, not a second worker" section for why, and for the
+separate KV counter and rate-limiter key that route gets so a flooded
+survey cannot spend, or be blocked by, a registration's own budget. Nothing
+here needs a second deployment, a second variable or a second secret: it is
+the same `VITE_SIGNUP_RELAY_URL`, with `/survey` appended by
+`SurveyForm.tsx` itself.
+
 **To create:**
 1. Deploy the worker from `services/signup-relay/`: `npm install`, then
    `npx wrangler kv namespace create SIGNUP_RELAY_KV` once and paste the
@@ -610,6 +619,14 @@ permanently unreadable — carried out automatically, on a schedule, and
 proved by a test (`tools/tests/test_retention.py`,
 `test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever`).
 
+**Since task 16, this same destruction also covers
+`data/events/<id>/survey_responses.enc`, the post-event survey's own
+storage (§6) — with no change to this job at all.** `CONVENER_EVENT_KEY_<ID>`
+is the one key both files are encrypted under; deleting the secret makes
+both permanently unreadable in the same one operation. There is no second
+retention path to remember, because none was built: task 16 deliberately
+did not create a second thing to destroy.
+
 **`.github/workflows/retention.yml`** runs daily and on demand
 (`workflow_dispatch`, no inputs). Each run: computes which events'
 90-day windows have elapsed (`convener_ops.eventkeys.is_due_for_destruction`,
@@ -699,6 +716,17 @@ for an event on record as destroyed, this refuses loudly instead: a key
 that still opens `registrations.enc` contradicts the registry, and that
 contradiction must never pass silently in the one command whose whole job
 is to prove there is nothing left.
+
+**There is no equivalent early-erasure command for one person's own survey
+responses, and this is a recorded gap, not an oversight.** A survey
+response (`tools/convener_ops/survey.py`) carries no name and no address — see
+that module's own docstring, "Why no identity travels with a response" —
+so nothing stored there can be matched back to a specific participant the
+way `convener-erase-registration` matches a registration by matching code or
+address. The only lever an operator has for "erase this event's survey
+answers before the retention deadline" is the same lever that erases its
+registrations: destroying `CONVENER_EVENT_KEY_<ID>` early, which erases both
+files together, not one response on its own.
 
 ## Certificate signing key
 
@@ -856,6 +884,50 @@ key (see *Signup relay* above); *Handle registration* runs, and
 again with the same address updates that same entry rather than adding a
 second one. Submitting for two different addresses to the same event in
 quick succession — the case the retry loop exists for — leaves both.
+
+## Handling a survey response
+
+**Without it:** the signup relay's `/survey` route (see *Signup relay*
+above) has nowhere to send the `survey-response-submitted` dispatch it
+produces; the encrypted envelope it forwards is simply never turned into a
+stored response.
+
+*Handle survey response* (`.github/workflows/survey.yml`) is *Handling a
+registration*'s own twin, cut down: it decrypts, checks the survey switch,
+and re-encrypts, into `data/events/<event id>/survey_responses.enc`
+(`tools/convener_ops/survey.py`) — one independent envelope per response, for
+the same reason `registrations.enc` holds one per registration. Unlike a
+registration, a response is never matched to an existing entry: nothing
+about it identifies who submitted it (see `survey.py`'s own docstring,
+"Why no identity travels with a response"), so `convener-handle-survey-response`
+only ever appends.
+
+**The survey switch is checked before anything is decrypted or written.**
+`services/signup-relay`'s own known-event check only proves an event's
+public key exists, never that its organiser turned the survey on — so
+`convener-handle-survey-response` reads the event's speaker record
+(`survey_enabled`, `data/speakers.yml`) itself and refuses, with the job
+ending red, when it is off. There is no D-13 fallback here: a switch that
+is off is the ordinary state for most events, but a *response arriving*
+for one is not something this job may quietly discard by writing nothing
+and exiting clean — an unexplained green run that stored nothing would be
+indistinguishable from an ordinary day, and this is a case worth an
+operator's attention (the same reasoning the retention sweep's own
+`::warning::` annotations follow, above, for a different silence).
+
+There is no third step sending a confirmation, unlike registration's own
+workflow: nothing is returned to a participant for answering a survey, so
+there is nothing here for R-9's "one step, gated `if: success()`" split to
+apply to.
+
+**To verify:** with an event's `survey_enabled` set to `true` in
+`data/speakers.yml`, submit the survey form (`#/survey/<event id>`);
+*Handle survey response* runs, and
+`data/events/<event id>/survey_responses.enc` gains one entry. Submitting
+again adds a second, independent entry — this is by design, not a defect;
+see `survey.py`'s own docstring. With `survey_enabled` left `false` (the
+default for every event, task 16 ruling 1), the same submission is refused
+and no file is written at all.
 
 ## Registration matching salt
 

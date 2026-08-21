@@ -97,6 +97,7 @@ NEVER_PUBLISHED = frozenset(
         "selection",
         "publication",
         "candidate_dates",
+        "survey_enabled",
         "runbook_progress",
         "checklist",
         "metrics",

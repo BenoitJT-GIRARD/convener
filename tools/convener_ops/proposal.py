@@ -343,6 +343,10 @@ def to_lead(
         "zoom_link": "",
         "youtube_url": "",
         "forum_thread": "",
+        # Off by default, the same "absent means off" default the v5
+        # migration gives every existing record (task 16 ruling 1): a new
+        # lead never starts with a survey nobody asked for.
+        "survey_enabled": False,
         "runbook_progress": {},
         # Nobody is down for any line yet, and nobody has to be: an item with
         # no owner is the hosts', which is what every line has always meant.

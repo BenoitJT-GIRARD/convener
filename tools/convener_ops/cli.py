@@ -84,6 +84,12 @@ from convener_ops.registration import (
     to_registration,
     upsert,
 )
+from convener_ops.survey import (
+    add_response,
+    dump_response_file,
+    load_response_file,
+    to_survey_response,
+)
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import (
@@ -802,6 +808,138 @@ def resend_confirmation() -> int:
         return 1
 
     _send_confirmation(event_id, registration, ())
+    return 0
+
+
+# ------------------------------------------------------------------ #
+# The post-event survey (task 16, phase 4 spec S:6): "meme entree que
+# l'inscription, meme stockage chiffre, meme destruction de cle." The
+# three steps below are `.github/workflows/survey.yml`'s own twin of
+# registration.yml's `resolve_registration_secret` / `handle_registration`
+# -- see `tools/convener_ops/survey.py`'s module docstring for the storage
+# design, and that workflow's own comments for why there is no third,
+# "send a confirmation" step here: nothing is sent back to a participant
+# for submitting a survey response, so there is nothing to split for the
+# reason registration.yml's own send step was split off (R-9 round 1).
+# ------------------------------------------------------------------ #
+
+
+def resolve_survey_secret() -> int:
+    """`convener-survey-secret-name`: the first of the two steps
+    `.github/workflows/survey.yml` runs for one incoming survey response.
+
+    Identical in every respect to `resolve_registration_secret` except the
+    environment variable it reads -- `SURVEY_PAYLOAD` rather than
+    `REGISTRATION_PAYLOAD` -- because the envelope shape, and the secret it
+    names, are the same one `eventkeys.py` already defines: a survey
+    response is encrypted under the *same* per-event key a registration is
+    (spec S:6), so there is no second key, and no second naming scheme, to
+    resolve here.
+    """
+    payload = os.environ.get("SURVEY_PAYLOAD", "")
+    event_id = event_id_from_payload(payload)
+    if event_id is None:
+        print("no valid event id in the survey payload", file=sys.stderr)
+        return 1
+
+    _write_github_output(
+        f"event_id={event_id}\nsecret_name={eventkeys.secret_name(event_id)}\n"
+    )
+    return 0
+
+
+def _survey_enabled(root: Path, event_id: str) -> bool:
+    """Whether `event_id`'s speaker record has the survey switch on --
+    ruling 2 of task 16: the switch is a field on the speaker record, a
+    per-event fact beside the event's other per-event facts, not a
+    `data/config.yml` setting. `False` for every failure to determine it
+    cleanly: a speaker file that will not load, no record for this event
+    id, or `False` on the record itself all mean the same thing here --
+    this event's survey is not open -- because a job that decrypts and
+    stores an answer nobody asked for is the one outcome this check exists
+    to prevent, and there is no direction it is safer to guess wrong in
+    than "closed".
+    """
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors or not isinstance(speakers, list):
+        return False
+    try:
+        record = find_speaker(speakers, event_id)
+    except EventNotFoundError:
+        return False
+    return bool(record.get("survey_enabled") is True)
+
+
+def handle_survey_response() -> int:
+    """`convener-handle-survey-response`: the second of the two steps
+    `.github/workflows/survey.yml` runs -- decrypt one survey response and
+    append it, re-encrypted, to
+    `data/events/<id>/survey_responses.enc`.
+
+    Checked in this order, cheapest first, and every failure refuses
+    before anything is decrypted or written:
+
+    1. the payload names a valid event id;
+    2. **that event's survey switch is on** (`_survey_enabled` above) --
+       task 16's own mutant to kill: `services/signup-relay`'s own
+       known-event check only proves `keys/events/<id>.pub` exists, never
+       that this event's survey is open, so anyone who knows a live event
+       id could otherwise reach this far with a well-shaped envelope for
+       an event whose organiser never turned the survey on;
+    3. the event's private key is configured (D-13 does not apply here,
+       the same exception `eventkeys.py`'s own module docstring names for
+       `handle_registration`);
+    4. the ciphertext actually decrypts to a `SurveyResponse`
+       (`survey.to_survey_response`).
+
+    Never prints anything decrypted from the payload -- every message here
+    names only the event id, already public.
+    """
+    payload = os.environ.get("SURVEY_PAYLOAD", "")
+    event_id = event_id_from_payload(payload)
+    if event_id is None:
+        print("no valid event id in the survey payload", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    if not _survey_enabled(root, event_id):
+        print(
+            f"the survey is not enabled for event {event_id} -- refusing to "
+            "store this response",
+            file=sys.stderr,
+        )
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    response = to_survey_response(payload, private_pem)
+    if response is None:
+        print(
+            f"survey response for event {event_id} could not be decrypted",
+            file=sys.stderr,
+        )
+        return 1
+
+    rel_path = Path("data") / "events" / event_id / "survey_responses.enc"
+    enc_path = root / rel_path
+    existing_text = enc_path.read_text(encoding="utf-8") if enc_path.exists() else None
+    try:
+        current = load_response_file(existing_text)
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    updated = add_response(current, response, private_pem=private_pem)
+    enc_path.parent.mkdir(parents=True, exist_ok=True)
+    enc_path.write_text(dump_response_file(updated), encoding="utf-8", newline="")
+
+    print(
+        f"recorded a survey response for event {event_id} "
+        f"({len(updated.entries)} total)"
+    )
     return 0
 
 

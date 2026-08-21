@@ -18,9 +18,16 @@ if (!REGISTRATION_CASES || REGISTRATION_CASES.length === 0) {
   throw new Error('event_registration_encryption fixture is empty');
 }
 
+const SURVEY_CASES = fixture.event_survey_response_encryption?.cases;
+if (!SURVEY_CASES || SURVEY_CASES.length === 0) {
+  throw new Error('event_survey_response_encryption fixture is empty');
+}
+
 const EVENT_ID = 'mrg-042';
 const VALID_ENVELOPE = JSON.parse(REGISTRATION_CASES[0].envelope);
 const VALID_BODY = JSON.stringify({ event_id: EVENT_ID, ...VALID_ENVELOPE });
+const SURVEY_ENVELOPE = JSON.parse(SURVEY_CASES[0].envelope);
+const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 
 // Mirrors services/signup-relay/wrangler.toml's ALLOWED_ORIGIN, which in
 // turn mirrors services/auth-proxy/wrangler.toml's -- the app's origin,
@@ -33,6 +40,16 @@ const CONTENTS_URL = (id) =>
 
 function post(body, headers = {}) {
   return new Request('https://relay.example/', {
+    method: 'POST',
+    headers: { Origin: ALLOWED_ORIGIN, ...headers },
+    body,
+  });
+}
+
+/** Same as `post`, against `/survey` instead of the bare registration
+ *  route. */
+function postSurvey(body, headers = {}) {
+  return new Request('https://relay.example/survey', {
     method: 'POST',
     headers: { Origin: ALLOWED_ORIGIN, ...headers },
     body,
@@ -143,7 +160,7 @@ describe('signup relay -- routing', () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it('answers 404 on a path other than the one route', async () => {
+  it('answers 404 on a path other than the two known routes', async () => {
     const res = await handle(requestAt('/unknown', 'POST'), env());
     expect(res.status).toBe(404);
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -466,5 +483,123 @@ describe('signup relay -- the per-event cumulative ceiling', () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+});
+
+describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
+  it('accepts a well-shaped, known-event survey envelope, and dispatches it as survey-response-submitted', async () => {
+    const kv = makeKv();
+    const res = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RELAY_KV: kv }));
+
+    expect(res.status).toBe(204);
+
+    const calls = globalThis.fetch.mock.calls;
+    expect(calls).toHaveLength(2);
+    const [, dispatchInit] = calls[1];
+    const sent = JSON.parse(dispatchInit.body);
+    expect(sent.event_type).toBe('survey-response-submitted');
+    expect(sent.client_payload.body).toBe(SURVEY_BODY);
+
+    // A distinct counter key from registration's own, so the two never
+    // share -- or corrupt -- one budget.
+    expect(kv.put).toHaveBeenCalledWith('count:survey:mrg-042', '1');
+  });
+
+  it('forwards every pinned survey case from the shared fixture', async () => {
+    for (const c of SURVEY_CASES) {
+      globalThis.fetch = stubFetch();
+      const envelope = JSON.parse(c.envelope);
+      const body = JSON.stringify({ event_id: EVENT_ID, ...envelope });
+      const res = await handle(postSurvey(body), env());
+      expect(res.status).toBe(204);
+    }
+  });
+
+  it('applies the identical shape validation as the registration route -- a malformed envelope is refused with 400', async () => {
+    const res = await handle(postSurvey('not json'), env());
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('answers the OPTIONS preflight on /survey the same as on /', async () => {
+    const res = await handle(
+      new Request('https://relay.example/survey', {
+        method: 'OPTIONS',
+        headers: { Origin: ALLOWED_ORIGIN },
+      }),
+      env(),
+    );
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED_ORIGIN);
+  });
+
+  it('refuses an unknown event id on /survey with 404, the same as on /', async () => {
+    globalThis.fetch = stubFetch({ known: false });
+    const res = await handle(postSurvey(SURVEY_BODY), env());
+    expect(res.status).toBe(404);
+  });
+
+  describe('the survey path fails closed exactly like the registration path', () => {
+    it.each([
+      ['CONVENER_DISPATCH_TOKEN is unset', { CONVENER_DISPATCH_TOKEN: undefined }],
+      ['SIGNUP_RELAY_KV is not bound', { SIGNUP_RELAY_KV: undefined }],
+      ['SIGNUP_RATE_LIMITER is not bound', { SIGNUP_RATE_LIMITER: undefined }],
+    ])('refuses every well-shaped /survey request when %s, and never calls GitHub', async (_label, override) => {
+      const res = await handle(postSurvey(SURVEY_BODY), env(override));
+      expect(res.status).toBe(502);
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the survey path has its own abuse ceiling -- not a bypass of the registration one', () => {
+    it('keys the burst limiter separately from the registration route, for the same event', async () => {
+      const rateLimiter = makeRateLimiter(true);
+      await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
+      expect(rateLimiter.limit).toHaveBeenCalledWith({ key: 'survey:mrg-042' });
+    });
+
+    it('refuses once the survey burst limiter trips, with Retry-After, and never calls GitHub', async () => {
+      const rateLimiter = makeRateLimiter(false);
+      const res = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
+      expect(res.status).toBe(429);
+      expect(res.headers.get('Retry-After')).toBe('60');
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it('refuses once the survey cumulative ceiling is reached, on its own counter key, without touching the registration counter', async () => {
+      const kv = makeKv({ 'count:survey:mrg-042': '500' });
+      const res = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RELAY_KV: kv }));
+      expect(res.status).toBe(429);
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+      expect(kv.put).not.toHaveBeenCalled();
+    });
+
+    it('a survey at its ceiling does not block a registration for the same event, and vice versa', async () => {
+      // The registration counter is already at the ceiling; the survey
+      // counter for the same event is untouched. A registration must still
+      // be refused (its own ceiling) while a survey response for the same
+      // event must still be accepted (a fresh counter under a different key).
+      const kv = makeKv({ 'count:mrg-042': '500' });
+      const registrationRes = await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
+      expect(registrationRes.status).toBe(429);
+
+      const surveyRes = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RELAY_KV: kv }));
+      expect(surveyRes.status).toBe(204);
+      expect(kv.put).toHaveBeenCalledWith('count:survey:mrg-042', '1');
+    });
+
+    it('a registration burst limiter trip does not block a survey response for the same event', async () => {
+      // A rate limiter whose .limit() answers false only when keyed exactly
+      // as the bare event id (registration's own key) -- a survey response,
+      // keyed 'survey:<id>', must sail through untouched.
+      const rateLimiter = {
+        limit: vi.fn(async ({ key }) => ({ success: key !== EVENT_ID })),
+      };
+      const registrationRes = await handle(post(VALID_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
+      expect(registrationRes.status).toBe(429);
+
+      const surveyRes = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
+      expect(surveyRes.status).toBe(204);
+    });
   });
 });

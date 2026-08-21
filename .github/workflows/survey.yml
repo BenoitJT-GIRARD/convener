@@ -1,0 +1,99 @@
+name: Handle survey response
+
+on:
+  repository_dispatch:
+    types: [survey-response-submitted]
+
+# Its own concurrency group, not registration.yml's: this workflow writes
+# data/events/<id>/survey_responses.enc, registration.yml writes
+# data/events/<id>/registrations.enc -- two different files for the same
+# event, so there is no shared array for two concurrent runs to corrupt the
+# way registration.yml's own comment explains for its own file. Serialising
+# survey responses against registrations for the same event would only add
+# queuing delay neither file's own writer needs. `queue: max` and
+# `cancel-in-progress: false` for the identical reason registration.yml
+# gives: a burst of responses to one event is the ordinary case, not an
+# edge case, and a run mid-write must finish, never be cut off.
+concurrency:
+  group: survey-${{ fromJSON(github.event.client_payload.body).event_id }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  handle:
+    runs-on: ubuntu-latest
+    # Same budget as registration.yml, for the same reason: checkout,
+    # `uv sync`, one decrypt/re-encrypt/commit, bounded at three push-retry
+    # attempts.
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      # Read once, used twice -- see registration.yml's own comment for why
+      # this must be the branch tip, not the commit repository_dispatch
+      # pinned github.sha to.
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Resolve the event's key secret
+        id: resolve
+        working-directory: tools
+        env:
+          # services/signup-relay forwards the browser's whole POST body,
+          # byte for byte, as client_payload.body -- see
+          # convener_ops.registration.event_id_from_payload's own docstring,
+          # which this step's entry point reuses unchanged: the envelope
+          # shape a survey response arrives in is byte-identical to a
+          # registration's own (phase 4 spec S:6, "meme entree que
+          # l'inscription").
+          SURVEY_PAYLOAD: ${{ github.event.client_payload.body }}
+        run: uv run convener-survey-secret-name
+      - name: Decrypt, store and commit the survey response
+        id: handle
+        env:
+          SURVEY_PAYLOAD: ${{ github.event.client_payload.body }}
+          # See registration.yml's own comment: the secret name to look up
+          # can only be selected here, from the previous step's own output,
+          # never computed inside a running step. Resolves to an empty
+          # string when no secret by that name is set;
+          # convener-handle-survey-response treats that exactly like
+          # eventkeys.py's own "absent is not a normal D-13 state here"
+          # exception and refuses to decrypt or write anything.
+          EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
+          EVENT_ID: ${{ steps.resolve.outputs.event_id }}
+        # The same retry discipline as registration.yml, for the same
+        # reason: a rejected push is handled by re-deriving against the
+        # latest branch tip and re-running the handler, never by
+        # `git pull --rebase` against a JSON array. See that workflow's own
+        # comment for why the rebase alternative destroyed a record once.
+        # `tools/convener_ops/survey.py::add_response` is append-only and holds
+        # no identity to deduplicate on, so a re-run against a tip someone
+        # else just pushed appends this response once more, beside whatever
+        # that other push added -- never merging or overwriting anything.
+        run: |
+          set -e
+          git config user.name "convener-survey"
+          git config user.email "convener-survey@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-handle-survey-response)
+            git add "data/events/$EVENT_ID/survey_responses.enc"
+            if git diff --staged --quiet; then
+              echo "no change to commit"
+              exit 0
+            fi
+            git commit -m "data: record a survey response for $EVENT_ID"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+          done
+          echo "::error::push failed after 3 attempts -- this survey response was not saved"
+          exit 1

@@ -119,6 +119,20 @@ function text(at: Cursor, raw: Record<string, unknown>, key: string): string {
   return value;
 }
 
+/** A plain yes/no. No field before `survey_enabled` (phase 4 spec S:6) was
+ *  ever a bare top-level boolean -- `runbook_progress`'s own values are
+ *  booleans, but `ticks()` reads them one map entry at a time, never as a
+ *  single field of a record. `typeof value !== 'boolean'` alone is enough
+ *  here: unlike `whole()`'s callers, nothing stores a boolean as `0`/`1`,
+ *  so there is no numeric case this needs to also refuse. */
+function bool(at: Cursor, raw: Record<string, unknown>, key: string): boolean {
+  const value = raw[key];
+  if (typeof value !== 'boolean') {
+    fail(at.file, at.where, `should give "${key}" as yes or no but gives ${shown(value)}`);
+  }
+  return value;
+}
+
 function whole(at: Cursor, raw: Record<string, unknown>, key: string): number {
   const value = raw[key];
   if (typeof value !== 'number' || !Number.isInteger(value)) {
@@ -443,6 +457,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
     zoom_link: text(here, raw, 'zoom_link'),
     youtube_url: text(here, raw, 'youtube_url'),
     forum_thread: text(here, raw, 'forum_thread'),
+    survey_enabled: bool(here, raw, 'survey_enabled'),
     runbook_progress: ticks(here, raw, 'runbook_progress'),
     checklist: assignees(here, raw, 'checklist'),
     metrics: readMetrics(here, raw.metrics),

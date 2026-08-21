@@ -383,6 +383,21 @@ export interface Speaker {
   /** Link to the forum announcement thread. */
   forum_thread: string;
 
+  /** Whether the post-event survey (phase 4 spec S:6) is open for this
+   *  event. A per-event fact, not a `data/config.yml` setting: the spec
+   *  says the survey is switched on per event, and every other per-event
+   *  fact -- the room link, the recording, the forum thread -- already
+   *  lives on the speaker record rather than in the shared config. The
+   *  three questions themselves are fixed for every event
+   *  (`tools/convener_ops/survey.py`'s module docstring); this is the only
+   *  thing that varies.
+   *
+   *  `false` by default, and an event with the switch off carries nothing
+   *  else about the survey: no `survey_responses.enc` file is ever
+   *  written, and the page renders no hidden section -- see
+   *  `app/src/survey/SurveyForm.tsx`. */
+  survey_enabled: boolean;
+
   /** Which lines of the journey are ticked, keyed `phase/item`. */
   runbook_progress: Record<string, boolean>;
   /** Who owes each line of the journey, keyed by runbook item. An item with
@@ -418,7 +433,8 @@ const SPEAKER_FIELD_SET: Record<keyof Speaker, true> = {
   assigned_to: true, links: true, host_1: true, host_2: true, status: true,
   selection: true, publication: true, edition_code: true,
   candidate_dates: true, date: true, time: true, zoom_link: true,
-  youtube_url: true, forum_thread: true, runbook_progress: true,
+  youtube_url: true, forum_thread: true, survey_enabled: true,
+  runbook_progress: true,
   checklist: true,
   metrics: true, notes: true,
 };

@@ -15,6 +15,7 @@ import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
 import { NewSpeaker } from './screens/NewSpeaker';
 import { SignupForm } from './signup/SignupForm';
+import { SurveyForm } from './survey/SurveyForm';
 import { VerifyPage } from './verify/VerifyPage';
 
 /**
@@ -68,6 +69,15 @@ function SignupRoute() {
   return <SignupForm key={eventId} />;
 }
 
+/** The same remount discipline as `SignupRoute`, applied to the survey page
+ *  for the identical reason: editing the event id in the address bar must
+ *  reset `SurveyForm`'s own `keyState` rather than let a previous event's
+ *  fetched key silently answer for a new one. */
+function SurveyRoute() {
+  const { eventId } = useParams<{ eventId: string }>();
+  return <SurveyForm key={eventId} />;
+}
+
 /**
  * The same remount discipline `SignupRoute` applies to `eventId`, applied
  * here to `identifier` *and* `token` together: editing either in the
@@ -100,6 +110,12 @@ export function App() {
               involved, and this route never reaches `Shell` or
               `DataProvider`, which is the gate that actually matters here.) */}
           <Route path="/signup/:eventId" element={<SignupRoute />} />
+          {/* Public, by construction, the same way `/signup/:eventId` is
+              above: the post-event survey (spec S:6) is reached from a
+              link in an e-mail, never from `Shell`'s own navigation, and a
+              participant answering it has no more of an account than one
+              registering does. */}
+          <Route path="/survey/:eventId" element={<SurveyRoute />} />
           {/* Public, by construction, the same way `/signup/:eventId` is
               above: a stranger checking a certificate has no account
               either, and this route never reaches `Shell`'s auth gate.

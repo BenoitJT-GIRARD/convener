@@ -26,6 +26,7 @@ from migrate_v3 import (
     migrate_speakers,
 )
 from migrate_v4 import migrate_speakers as migrate_speakers_v4
+from migrate_v5 import migrate_speakers as migrate_speakers_v5
 
 from convener_ops.cli import SPEAKERS_HEADER
 from convener_ops.validate import validate_config, validate_speakers
@@ -258,26 +259,42 @@ V4_FIELDS = (
     "checklist",
 )
 
+#: Task 16, schema v5's own single addition -- the same "named exhaustively,
+#: not merely tolerated" discipline `V4_FIELDS` above already follows.
+V5_FIELDS = ("survey_enabled",)
+
 
 def test_the_migrated_data_passes_the_validator() -> None:
-    """What this one-shot produces is v3, and the validator now reads v4.
+    """What this one-shot produces is v3, and the validator now reads v5.
 
     The gap is named rather than tolerated: the errors this asserts are the
-    exhaustive list of what schema v4 asks for and the v3 migration cannot
-    know about -- the six fields that were never in a v2 file to migrate.
-    Anything else the validator finds still fails here.
+    exhaustive list of what schema v4 and schema v5 ask for and the v3
+    migration cannot know about -- the six v4 fields that were never in a
+    v2 file to migrate, plus v5's own single addition, `survey_enabled`
+    (task 16), which did not exist when this migration was written and
+    which the validator now requires unconditionally, regardless of which
+    schema version a record claims. Anything else the validator finds
+    still fails here.
 
-    The gap is no longer open: `scripts/migrate_v4.py` closes it, and the
-    second half of this test runs the two one-shots in the order they were
-    actually run against `data/` and asserts the validator then finds
-    nothing at all. Naming the gap and naming what closes it is what keeps
-    this assertion exhaustive instead of merely tolerant -- a v3 output that
-    grew a sixth defect would still fail here, before and after v4.
+    The gap closes in two steps, not one, and each is named separately:
+    `scripts/migrate_v4.py` closes the six v4 fields but leaves
+    `survey_enabled` still missing (`expected_v5_gap` below), and
+    `scripts/migrate_v5.py` closes that. The third assertion runs all
+    three one-shots in the order they were actually run against `data/`
+    and asserts the validator then finds nothing at all. Naming each gap
+    and naming what closes it is what keeps this assertion exhaustive
+    instead of merely tolerant -- a v3 output that grew a further defect
+    would still fail here, at every stage.
     """
     expected_v4_gap = sorted(
         f"speakers[{index}] ({sid}): missing {field}"
         for index, sid in enumerate(("spk-001", "spk-002"))
-        for field in V4_FIELDS
+        for field in (*V4_FIELDS, *V5_FIELDS)
+    )
+    expected_v5_gap = sorted(
+        f"speakers[{index}] ({sid}): missing {field}"
+        for index, sid in enumerate(("spk-001", "spk-002"))
+        for field in V5_FIELDS
     )
     speakers = migrate_speakers(
         [
@@ -293,6 +310,10 @@ def test_the_migrated_data_passes_the_validator() -> None:
     config = migrate_config(v2_config(), ballot_voters(speakers))
     logins = {m["login"] for m in config["board"]}
     assert sorted(validate_speakers(speakers, logins)) == expected_v4_gap
+    assert (
+        sorted(validate_speakers(migrate_speakers_v4(speakers), logins))
+        == expected_v5_gap
+    )
     # The config has gaps of the same kind, and they are named the same way.
     # The promotion channels are configuration somebody writes, not data a
     # migration can derive: there was nothing in a v2 config to turn into
@@ -308,7 +329,10 @@ def test_the_migrated_data_passes_the_validator() -> None:
     assert validate_config(config) == [
         "config.yml: missing keys ['channels', 'eligibility_share', 'instructions']"
     ]
-    assert validate_speakers(migrate_speakers_v4(speakers), logins) == []
+    assert (
+        validate_speakers(migrate_speakers_v5(migrate_speakers_v4(speakers)), logins)
+        == []
+    )
 
 
 # --- the script as it is actually run -------------------------------------

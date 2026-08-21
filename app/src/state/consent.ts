@@ -122,9 +122,12 @@ export const PUBLISHABLE_ON_CONSENT = [
  *   become a label attached to a named researcher on the open web;
  * - **the team's own working record**: `id` (the internal key -- the feed's
  *   `id` is the edition number), `source`, `proposed_by`, `assigned_to`,
- *   `selection`, `publication`, `candidate_dates`, `runbook_progress`,
- *   `metrics`, `notes` and `conflicts_of_interest`. These are how a decision
- *   was reached, not what was decided. `candidate_dates` in particular records
+ *   `selection`, `publication`, `candidate_dates`, `survey_enabled`,
+ *   `runbook_progress`, `metrics`, `notes` and `conflicts_of_interest`. These
+ *   are how a decision was reached, not what was decided. `survey_enabled`
+ *   (task 16, phase 4 spec S:6) is an operational switch a participant never
+ *   needs to read off the public feed: they learn it exists by receiving the
+ *   survey itself, never by looking it up. `candidate_dates` in particular records
  *   which slots a speaker turned down and why -- their availability, not the
  *   programme. `publication` is read by the gate and never published by it: a
  *   record of a permission is not itself public. `conflicts_of_interest` is a
@@ -154,6 +157,7 @@ export const NEVER_PUBLISHED = [
   'selection',
   'publication',
   'candidate_dates',
+  'survey_enabled',
   'runbook_progress',
   'checklist',
   'metrics',

@@ -107,6 +107,7 @@ export function speaker(overrides: Partial<Speaker> = {}): Speaker {
     zoom_link: '',
     youtube_url: '',
     forum_thread: '',
+    survey_enabled: false,
     runbook_progress: {},
     checklist: {},
     metrics: { registrations: null, live_peak: null, youtube_views_30d: null, forum_replies: null },

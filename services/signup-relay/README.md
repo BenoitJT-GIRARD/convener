@@ -9,13 +9,42 @@ encrypted_key, iv, ciphertext}`, and every field but `event_id` is base64
 ciphertext.
 
 It accepts `POST` (and the `OPTIONS` preflight a browser sends ahead of it)
-on a single route (`/`) and nothing else. It reads the body raw, checks its
-**shape**, applies the abuse protection below, and — if everything holds —
-turns it into a `registration-submitted` `repository_dispatch`,
-byte-identical to what it received, the same `client_payload.body` pattern
-`services/form-relay` uses. It logs no request body and keeps nothing
-beyond the per-event counter described below, and that counter is a count,
-never the data that produced it.
+on two routes, `/` and `/survey`, and nothing else. It reads the body raw,
+checks its **shape**, applies the abuse protection below, and — if
+everything holds — turns it into a `repository_dispatch`, byte-identical to
+what it received, the same `client_payload.body` pattern `services/form-relay`
+uses. `/` dispatches `registration-submitted`; `/survey` dispatches
+`survey-response-submitted` (see "A second route, not a second worker"
+below). It logs no request body and keeps nothing beyond the per-event
+counters described below, and a counter is a count, never the data that
+produced it.
+
+## A second route, not a second worker
+
+`app/src/survey/SurveyForm.tsx` — the post-event survey (phase 4 spec S:6,
+task 16) — encrypts a response in the browser exactly the way
+`SignupForm.tsx` encrypts a registration (`app/src/survey/encrypt.ts` is the
+sibling of `app/src/signup/encrypt.ts`, same wire format), and POSTs it to
+`/survey` on this same worker rather than to a fourth worker. That is
+deliberate, not a shortcut: the envelope this worker validates is
+byte-identical in shape whichever route receives it — `validatedEventId`
+draws no distinction between the two — the known-event check is the same
+`keys/events/<id>.pub` lookup, and the GitHub token is the one already
+scoped to this repository. None of the reasoning in "Why this is a third
+worker, not a route on either of the other two" below applies a second time
+between `/` and `/survey`: there is no second trust boundary here, only a
+second `client_payload.body` destination and a second `event_type`.
+
+What genuinely is separate is the abuse ceiling. `/survey` is keyed by its
+own KV counter (`count:survey:<event_id>`, distinct from `/`'s own
+`count:<event_id>`) and its own rate-limiter key (`survey:<event_id>`,
+distinct from the bare `<event_id>` `/` uses) — see `surveyCounterKey` and
+`surveyRateLimiterKey` in `src/index.js`. Reusing `/`'s counter and limiter
+keys for `/survey` would have let a flooded survey spend a registration's
+budget, or a flooded registration silently starve a survey nobody has
+abused at all; a distinct pair of keys on the *same* limiter and the *same*
+KV namespace avoids that while adding no new binding, no new secret and no
+new deploy.
 
 ## What "shape" means here, and what it deliberately cannot mean
 
@@ -266,11 +295,11 @@ The caller only ever sees one of these seven:
 - `403` — the request's `Origin` does not match `ALLOWED_ORIGIN` (including
   no `Origin` at all). See "Cross-origin requests" above for why this is
   not a security check.
-- `404` — either the route (a `POST`/`OPTIONS` to any path but `/`; a
-  method other than those two is `405` regardless of path, checked first),
-  or a well-shaped `event_id` naming an event whose public key does not
-  exist in the repository. A caller cannot tell these two apart and does
-  not need to; both mean "there is nothing here to send this to."
+- `404` — either the route (a `POST`/`OPTIONS` to any path but `/` or
+  `/survey`; a method other than those two is `405` regardless of path,
+  checked first), or a well-shaped `event_id` naming an event whose public
+  key does not exist in the repository. A caller cannot tell these two apart
+  and does not need to; both mean "there is nothing here to send this to."
 - `405` — any method other than `POST` or `OPTIONS`.
 - `429` — this event has either tripped the burst limiter or already
   reached its cumulative ceiling; either way the response carries
