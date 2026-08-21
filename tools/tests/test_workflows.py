@@ -81,6 +81,63 @@ def _push_step_script() -> str:
     )
 
 
+def _survey_status_step_script() -> str:
+    """The `run:` block of the step that commits
+    `public-data/survey-status.json` back to this repository (R-41, fix
+    round 2).
+
+    Found by the file it writes rather than by its `name:`, the identical
+    reasoning `_push_step_script` above gives for its own lookup -- a
+    rename of the step does not silently stop this module from checking
+    it.
+    """
+    for step in _build_job()["steps"]:
+        run = step.get("run")
+        if isinstance(run, str) and "public-data/survey-status.json" in run:
+            return run
+    raise AssertionError(
+        "no step in the build job writes public-data/survey-status.json — "
+        "the survey-status commit step is missing or was renamed away from it"
+    )
+
+
+def test_deploy_workflow_survey_status_retry_re_derives_rather_than_rebases() -> None:
+    """Fix round 3: the same defence `registration.yml`'s and
+    `survey.yml`'s own retry loops use -- a rejected push is handled by
+    fetching the branch tip, hard-resetting, and re-running the
+    projection command, never actually *running* `git rebase`.
+
+    `public-data/survey-status.json` is a generated JSON array, the same
+    shape `registrations.enc` and `survey_responses.enc` are: task 6's
+    Critical 1, reproduced end to end with real git, showed that
+    `git rebase` on two runs each rewriting an array's own closing lines
+    returns 1 on the conflict, and `set -e` kills the step before the
+    `::error::` line is ever reached -- an unexplained red with the tree
+    left mid-rebase. Before fix round 3, this exact step ran `git rebase`
+    on a rejected push (the phrase itself is named in an explanatory
+    comment, which this checks for separately, on uncommented lines
+    only)."""
+    script = _survey_status_step_script()
+    commands = [
+        line for line in script.splitlines() if not line.strip().startswith("#")
+    ]
+    assert not any("git rebase" in line for line in commands), (
+        "the survey-status commit step still rebases on a rejected push -- "
+        "see registration.yml's own comment for why replaying a diff over "
+        "a generated array is unsafe"
+    )
+    assert not any("git pull" in line for line in commands)
+    assert 'git fetch origin "$GITHUB_REF_NAME"' in script
+    assert 'git reset --hard "origin/$GITHUB_REF_NAME"' in script
+    assert (
+        "uv run convener-survey-status-public-data" in script.split("for attempt", 1)[-1]
+    ), (
+        "the retry loop must re-run the projection command on every "
+        "attempt, not only build it once before the loop starts"
+    )
+    assert "for attempt in 1 2 3; do" in script
+
+
 def test_vite_config_base_path_targets_the_vitrine_app_subtree() -> None:
     config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
     assert f"base: '{EXPECTED_BASE_PATH}'" in config, (
