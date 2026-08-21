@@ -648,7 +648,7 @@ proved by a test (`tools/tests/test_retention.py`,
 `test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever`).
 
 **Since task 16, this same destruction also covers
-`data/events/<id>/survey_responses.enc`, the post-event survey's own
+`data/events/<id>/survey-responses.enc`, the post-event survey's own
 storage (§6) — with no change to this job at all.** `CONVENER_EVENT_KEY_<ID>`
 is the one key both files are encrypted under; deleting the secret makes
 both permanently unreadable in the same one operation. There is no second
@@ -767,7 +767,7 @@ files together, not one response on its own.
 
 **Dropping one response by hand is possible, without erasing the rest —
 `survey.py`'s own module docstring names the property, this is the
-procedure.** `data/events/<id>/survey_responses.enc` holds one JSON object
+procedure.** `data/events/<id>/survey-responses.enc` holds one JSON object
 per response under its top-level `"responses"` array
 (`tools/convener_ops/survey.py::ResponseFile`), each entry an independent
 hybrid-encrypted envelope with its own AES key and nonce — removing one
@@ -795,7 +795,7 @@ organiser — who holds the key, and is the only party for whom anonymity is
 a promise rather than a mathematical certainty — one channel remains
 outside the encryption on purpose: `.github/workflows/survey.yml` commits
 once per response, `data: record a survey response for <id>`, at the
-wall-clock minute it arrived. Array position N in `survey_responses.enc`
+wall-clock minute it arrived. Array position N in `survey-responses.enc`
 is therefore paired with a timestamp, permanently, in the git history. For
 a seminar with a handful of attendees answering within hours of the
 session, "the one who answered at 19:04" is a workable handle for whoever
@@ -973,7 +973,7 @@ stored response.
 
 *Handle survey response* (`.github/workflows/survey.yml`) is *Handling a
 registration*'s own twin, cut down: it decrypts, checks the survey switch,
-and re-encrypts, into `data/events/<event id>/survey_responses.enc`
+and re-encrypts, into `data/events/<event id>/survey-responses.enc`
 (`tools/convener_ops/survey.py`) — one independent envelope per response, for
 the same reason `registrations.enc` holds one per registration. Unlike a
 registration, a response is never matched to an existing entry: nothing
@@ -1016,7 +1016,7 @@ apply to.
 `data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
 (`AdminOverride.tsx`, fix round 1's minor 9) — submit the survey form
 (`#/survey/<event id>`); *Handle survey response* runs, and
-`data/events/<event id>/survey_responses.enc` gains one entry. Submitting
+`data/events/<event id>/survey-responses.enc` gains one entry. Submitting
 again adds a second, independent entry — this is by design, not a defect;
 see `survey.py`'s own docstring. With `survey_enabled` left `false` (the
 default for every event, task 16 ruling 1), the same submission is refused
@@ -1094,7 +1094,7 @@ closes that gap:
    (`keys/events/<event id>.pub`) and the plaintext file above, and writes
    `data/events/<event id>/attendance-import.csv.enc` -- one independent
    `eventkeys` envelope per attendance row (fix round 1, R-45; the same
-   per-record shape `registrations.enc` and `survey_responses.enc` already
+   per-record shape `registrations.enc` and `survey-responses.enc` already
    use, not one envelope for the whole file), safe to commit: the public
    key that produced it cannot decrypt any of it back. Running this again
    against a changed local export overwrites the committed file with
@@ -1280,32 +1280,33 @@ their own sections above. Revoking reads neither an event key nor either
 certificate secret, exactly as its own bullet above says: revocation never
 touches anything that would need one.
 
-**How the public projection actually gets rebuilt (corrected, fix round
-3).** *Publish vitrine data*'s own `paths:` trigger names
-`data/events/*/certificates.yml`, but a `push` trigger only fires from an
+**How the public projection actually gets rebuilt (corrected, carried item
+4, fix wave 2).** *Deploy app*'s own `push:` trigger only fires from an
 event GitHub itself raises for the push -- and none of these three jobs'
 own commits raise one: all three push with the checkout's default
 `GITHUB_TOKEN`, and GitHub does not start a new workflow run from an
-event triggered by that same token (the recursion guard). Before fix
-round 3 this meant *Publish vitrine data* never ran after issuing,
-re-issuing or revoking a certificate at all -- the register's own
-authority on state (spec §7 says plainly that it is the register, not the
-signature, that has the final say) had no observable effect on any
-verifier, R-19's own finding come back one layer up. Each of
-the three jobs now dispatches *Publish vitrine data* directly, as its own
-last step, with `gh workflow run publish-vitrine.yml` -- `workflow_dispatch`
-(added to that workflow this same round) is one of the documented
-exceptions to the recursion guard, so the job's own `GITHUB_TOKEN` is
-enough and no new secret is needed. The dispatch only fires once a change
-was genuinely pushed, never on a run that wrote nothing.
+event triggered by that same token (the recursion guard). Each of the
+three jobs dispatches *Deploy app* directly, as its own last step, with
+`gh workflow run deploy.yml` -- `workflow_dispatch` is one of the
+documented exceptions to the recursion guard, so the job's own
+`GITHUB_TOKEN` is enough and no new secret is needed. The dispatch only
+fires once a change was genuinely pushed, never on a run that wrote
+nothing. *Deploy app*'s own "Build public data" step is what actually
+rebuilds `certificates.json` inside the app's built `dist/` -- the file
+`src/verify/register.ts` fetches -- so this dispatch, not a *Publish
+vitrine data* one, is what a verifier's page depends on. These three jobs
+used to *also* dispatch *Publish vitrine data* alongside it, but nothing
+a certificate change writes ever touches `data/speakers.yml`, the only
+input that workflow's own "Build public data" step turns into anything
+it pushes -- so that second dispatch was always a no-op run there, never
+a second publication anything depended on, and it was removed.
 
 **To verify:** run one of the three workflows for a test event with a
 published key and a settled attendance export; `data/events/<event
 id>/certificates.yml` gains, changes or flips the state of one row, and
-that same job's own dispatch step starts *Publish vitrine data*, which
-republishes `certificates-public.json` with the new state -- visible as a
-second, separate workflow run on the Actions tab, started a few seconds
-after the first.
+that same job's own dispatch step starts *Deploy app*, which republishes
+`certificates.json` with the new state -- visible as a second, separate
+workflow run on the Actions tab, started a few seconds after the first.
 
 ## Delivering a certificate
 

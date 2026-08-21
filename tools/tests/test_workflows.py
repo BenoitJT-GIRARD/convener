@@ -116,7 +116,7 @@ def test_deploy_workflow_survey_status_retry_re_derives_rather_than_rebases() ->
     projection command, never actually *running* `git rebase`.
 
     `public-data/survey-status.json` is a generated JSON array, the same
-    shape `registrations.enc` and `survey_responses.enc` are: task 6's
+    shape `registrations.enc` and `survey-responses.enc` are: task 6's
     Critical 1, reproduced end to end with real git, showed that
     `git rebase` on two runs each rewriting an array's own closing lines
     returns 1 on the conflict, and `set -e` kills the step before the
@@ -997,12 +997,23 @@ def _env_vars_read(
     for node in ast.walk(func):
         if isinstance(node, ast.Call):
             callee = node.func
-            if (
+            is_os_environ_get = (
                 isinstance(callee, ast.Attribute)
                 and callee.attr == "get"
                 and _is_os_environ(callee.value)
-                and node.args
-            ):
+            )
+            # Carried item 9 (fix wave 2): `_env_flag_is_true(name)` reads
+            # `os.environ.get(name, ...)` one level down, through its own
+            # parameter -- invisible to the recursion below, which only
+            # ever sees a literal passed directly to `os.environ.get`
+            # itself, never one threaded through a second function's own
+            # argument. The literal lives at the *call site* here, not
+            # inside the helper's body, so it is read directly off this
+            # call rather than by walking into `_env_flag_is_true` at all.
+            is_env_flag_is_true = (
+                isinstance(callee, ast.Name) and callee.id == "_env_flag_is_true"
+            )
+            if (is_os_environ_get or is_env_flag_is_true) and node.args:
                 name = _literal_env_name(node.args[0])
                 if name and name not in _RUNNER_PROVIDED_ENV_VARS:
                     names.add(name)
@@ -1459,7 +1470,7 @@ def _guarded_block(script: str, if_line: str) -> str:
     ],
     ids=lambda value: value if isinstance(value, str) else value.name,
 )
-def test_certificate_workflow_dispatches_publish_vitrine_only_after_a_real_push(
+def test_certificate_workflow_dispatches_deploy_only_after_a_real_push(
     workflow_path: Path, job: str, run_contains: str
 ) -> None:
     """The mutation this round's own ruling names directly: "make the
@@ -1467,20 +1478,27 @@ def test_certificate_workflow_dispatches_publish_vitrine_only_after_a_real_push(
     fail." Two halves, both required: the dispatch must be reachable once
     a push genuinely succeeds, and must not be reachable on the "nothing
     to commit" branch, where nothing was ever pushed for a publication to
-    reflect."""
+    reflect.
+
+    Carried item 4 (fix wave 2): this used to assert the identical shape
+    for `publish-vitrine.yml`, dispatched here unconditionally alongside
+    deploy.yml. That dispatch is gone now (dead motion -- see
+    `test_certificate_register_workflows_no_longer_dispatch_publish_vitrine`),
+    so this test follows the one dispatch that remains and still matters:
+    deploy.yml, the file a verification page actually depends on."""
     script = _job_step_script(workflow_path, job, run_contains)
 
     pushed = _guarded_block(script, "if git push; then")
-    assert PUBLISH_VITRINE_DISPATCH in pushed, (
-        f"{workflow_path.as_posix()}::{job} does not dispatch "
-        "publish-vitrine.yml once a change is genuinely pushed -- a "
-        "revocation, issuance or correction would reach nobody (Critical A)"
+    assert DEPLOY_DISPATCH in pushed, (
+        f"{workflow_path.as_posix()}::{job} does not dispatch deploy.yml "
+        "once a change is genuinely pushed -- a revocation, issuance or "
+        "correction would reach nobody (Critical A / Critical 1)"
     )
 
     unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
-    assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
-        f"{workflow_path.as_posix()}::{job} dispatches publish-vitrine.yml "
-        "even when nothing changed this run -- the dispatch step must be "
+    assert DEPLOY_DISPATCH not in unchanged, (
+        f"{workflow_path.as_posix()}::{job} dispatches deploy.yml even "
+        "when nothing changed this run -- the dispatch step must be "
         "conditional on a real push, not unconditional"
     )
 
@@ -1528,7 +1546,22 @@ def test_sweep_workflow_dispatches_publish_vitrine_only_after_a_real_push() -> N
 
 DEPLOY_DISPATCH = "gh workflow run deploy.yml"
 
-_CERTIFICATES_STAGED_RE = re.compile(r'git add ["\'][^\n"\']*certificates\.yml')
+#: Carried item 3 (fix wave 2): this used to require a quoted
+#: `git add "path"` (`r'git add ["\'][^\n"\']*certificates\.yml'`) --
+#: an unquoted `git add data/events/*/certificates.yml`, the ordinary
+#: shape for a glob (quoting it would stop the shell from expanding it),
+#: escaped the scan silently. `_register_writing_jobs` below found no
+#: workflow job at all for that mutation, and the mutation was
+#: reproducible: adding a job whose `run:` staged the register with an
+#: unquoted glob passed `_register_writing_jobs`'s own "no workflow job
+#: stages a change to certificates.yml" sanity assertion as if the
+#: register were unwritten, then silently skipped every dispatch check
+#: below it -- exactly the rot vector this phase's own history (Critical
+#: 1's docstring, above: "four rounds in a row") already warns about.
+#: No longer anchored on a leading quote: matches `git add` followed by
+#: any run of non-whitespace characters that contains `certificates.yml`,
+#: quoted or not.
+_CERTIFICATES_STAGED_RE = re.compile(r"git add\s+\S*certificates\.yml\S*")
 
 
 def _register_writing_jobs() -> list[tuple[Path, str]]:
@@ -1554,22 +1587,49 @@ def _register_writing_jobs() -> list[tuple[Path, str]]:
 
 
 @pytest.mark.parametrize(
+    "run_line",
+    [
+        'git add "data/events/$EVENT_ID/certificates.yml"',
+        "git add 'data/events/$EVENT_ID/certificates.yml'",
+        # Carried item 3: the unquoted shape a glob actually needs --
+        # quoting `*` would stop the shell expanding it -- used to escape
+        # `_CERTIFICATES_STAGED_RE` entirely.
+        "git add data/events/*/certificates.yml",
+        "git add data/events/mrg-042/certificates.yml",
+    ],
+)
+def test_certificates_staged_re_matches_quoted_and_unquoted_git_add(
+    run_line: str,
+) -> None:
+    assert _CERTIFICATES_STAGED_RE.search(run_line), (
+        f"_CERTIFICATES_STAGED_RE does not match {run_line!r} -- a workflow "
+        "staging the register this way would escape every dispatch check "
+        "below it silently"
+    )
+
+
+@pytest.mark.parametrize(
     "workflow_path,job",
     _register_writing_jobs(),
     ids=lambda value: value if isinstance(value, str) else value.name,
 )
-def test_workflow_that_writes_the_certificate_register_dispatches_both_publish_targets(
+def test_workflow_that_writes_the_certificate_register_dispatches_deploy(
     workflow_path: Path, job: str
 ) -> None:
     """A workflow that changes `certificates.yml` and pushes with
-    GITHUB_TOKEN must dispatch publish-vitrine.yml *and* deploy.yml once
-    that push genuinely lands, or it does not count: publish-vitrine.yml
-    alone only ever refreshed a showcase file nothing serves; deploy.yml
-    is what rebuilds app/dist/certificates.json, the file a verification
-    page actually fetches. One assertion that both names sit in the same
-    guard -- not two separate "a dispatch exists" checks, which is
-    exactly the weaker shape that let a workflow dispatch only one of the
-    two survive three earlier fix rounds undetected."""
+    GITHUB_TOKEN must dispatch deploy.yml once that push genuinely lands,
+    or it does not count: deploy.yml is what rebuilds
+    app/dist/certificates.json, the file a verification page actually
+    fetches (Critical 1).
+
+    Carried item 4 (fix wave 2): this used to also require
+    publish-vitrine.yml dispatched in the same guard. That requirement is
+    gone on purpose, not merely relaxed -- see
+    `test_certificate_register_workflows_no_longer_dispatch_publish_vitrine`
+    just below, which pins the opposite: none of these jobs dispatch it
+    any more, because nothing a certificate change writes ever touches
+    `data/speakers.yml`, the only input that dispatch ever did anything
+    with."""
     loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
     run = next(
         step["run"]
@@ -1578,15 +1638,41 @@ def test_workflow_that_writes_the_certificate_register_dispatches_both_publish_t
         and _CERTIFICATES_STAGED_RE.search(step["run"])
     )
     pushed = _guarded_block(run, "if git push; then")
-    assert PUBLISH_VITRINE_DISPATCH in pushed, (
-        f"{workflow_path.as_posix()}::{job} changes the certificate "
-        "register and pushes it, but does not dispatch publish-vitrine.yml"
-    )
     assert DEPLOY_DISPATCH in pushed, (
         f"{workflow_path.as_posix()}::{job} changes the certificate "
         "register and pushes it, but does not dispatch deploy.yml -- the "
         "file src/verify/register.ts actually fetches would never be "
         "rebuilt (Critical 1)"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow_path,job",
+    _register_writing_jobs(),
+    ids=lambda value: value if isinstance(value, str) else value.name,
+)
+def test_certificate_register_workflows_no_longer_dispatch_publish_vitrine(
+    workflow_path: Path, job: str
+) -> None:
+    """Carried item 4 (fix wave 2): dispatching publish-vitrine.yml
+    alongside deploy.yml was dead motion for every workflow that only
+    ever changes `certificates.yml` -- that dispatch's own job never
+    touches anything but `data/speakers.yml`, so a certificate-only push
+    always found nothing changed there and exited as a no-op. Removed
+    from `issue-certificates.yml`, `reissue-certificate.yml` and
+    `revoke-certificate.yml`; pinned here so it cannot quietly come back
+    (`sweep.yml`, which genuinely can change `data/speakers.yml`, is not
+    one of these jobs and keeps its own dispatch)."""
+    loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    run = next(
+        step["run"]
+        for step in loaded["jobs"][job]["steps"]
+        if isinstance(step.get("run"), str)
+        and _CERTIFICATES_STAGED_RE.search(step["run"])
+    )
+    assert PUBLISH_VITRINE_DISPATCH not in run, (
+        f"{workflow_path.as_posix()}::{job} dispatches publish-vitrine.yml "
+        "for a certificate-only change -- dead motion, carried item 4"
     )
 
 

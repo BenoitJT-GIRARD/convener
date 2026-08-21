@@ -65,13 +65,14 @@ jobs:
       # trigger via the `push:` clause above (the same recursion guard
       # `publish-vitrine.yml`'s own header comment explains). Each of
       # issue-certificates.yml, reissue-certificate.yml and
-      # revoke-certificate.yml now dispatches this workflow directly with
-      # `gh workflow run deploy.yml` as its own last step, alongside its
-      # existing `publish-vitrine.yml` dispatch (which, after Minor 5,
-      # no longer touches certificate data at all -- see that workflow's
-      # own comment). Before this, only publish-vitrine.yml was dispatched,
-      # which rebuilt a file the showcase never served; this step, and
-      # this dispatch, are what a verifier's page actually depends on.
+      # revoke-certificate.yml dispatches this workflow directly with
+      # `gh workflow run deploy.yml` as its own last step -- carried item
+      # 4 (fix wave 2) removed the `publish-vitrine.yml` dispatch each of
+      # those three used to send alongside it, once and for all: after
+      # Minor 5, that workflow no longer touches certificate data at all,
+      # so the dispatch was always a no-op run there, never a second
+      # publication anything depended on. This step, and this dispatch,
+      # are what a verifier's page actually depends on.
       - name: Build public data
         working-directory: tools
         run: uv run convener-certificates-public-data

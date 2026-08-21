@@ -32,14 +32,19 @@ name: Publish vitrine data
 # `dist/` -- see that workflow's own comment for why that, and not a
 # second write here, is the one writer for that file.
 #
-# The three certificate workflows still dispatch this workflow too
-# (beside their own new deploy.yml dispatch, Critical 1) even though
-# nothing they change affects `events-public.json` either -- the ruling
-# for that fix asked for the new dispatch beside the existing one, not in
-# place of it, so removing it is left alone as out of this change's own
-# scope. Such a dispatch now finds nothing changed here and exits as a
-# no-op, the ordinary D-13 shape, not a defect -- flagged in this round's
-# own report rather than pruned unasked.
+# Carried item 4 (fix wave 2): the three certificate workflows used to
+# still dispatch this workflow too, beside their own deploy.yml dispatch
+# (Critical 1), even though nothing they change affects
+# `events-public.json` either -- flagged as dead motion rather than
+# pruned when Critical 1 was fixed, since that ruling asked only for the
+# new dispatch beside the existing one, not a scope to remove it in.
+# Fixed now: `issue-certificates.yml`, `reissue-certificate.yml` and
+# `revoke-certificate.yml` no longer dispatch this workflow at all --
+# each dispatched run used to find nothing changed here and exit as a
+# no-op (the ordinary D-13 shape, not a defect, but motion with no
+# effect all the same). `sweep.yml` and `retention.yml` still dispatch
+# this workflow, unaffected: sweep.yml genuinely can change
+# `data/speakers.yml`, this workflow's own input.
 on:
   push:
     branches: [main]
