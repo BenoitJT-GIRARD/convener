@@ -190,6 +190,65 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
     const tooLong = { overall_rating: 1, recommend: true, feedback: 'x'.repeat(9000) };
     await expect(encryptSurveyResponse(publicPem, tooLong)).rejects.toThrow();
   });
+
+  it('R-40: a 2000-character non-Latin answer round-trips, now that JSON.stringify and ensure_ascii=False agree byte for byte', async () => {
+    // The browser side of R-40's own fix: `JSON.stringify` here always
+    // left non-ASCII as itself (at most 4 UTF-8 bytes/char), so this side
+    // never needed a code change -- this test exists to prove the claim,
+    // not to fix anything here. 2000 CJK characters (3 bytes each) is
+    // comfortably under PLAINTEXT_PAD_BYTES, same as the Python-side
+    // equivalent (test_every_script_at_the_character_cap_still_fits_the_
+    // pad_target).
+    const { publicPem, privateKey } = await generateEventKeyPair();
+    const fields: SurveyResponse = {
+      overall_rating: 4,
+      recommend: true,
+      feedback: '你'.repeat(2000),
+    };
+
+    const envelope = JSON.parse(await encryptSurveyResponse(publicPem, fields));
+    const aesKeyBytes = await crypto.subtle.decrypt(
+      { name: 'RSA-OAEP' },
+      privateKey,
+      base64ToBytes(envelope.encrypted_key),
+    );
+    const aesKey = await crypto.subtle.importKey('raw', aesKeyBytes, { name: 'AES-GCM' }, false, [
+      'decrypt',
+    ]);
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: base64ToBytes(envelope.iv) },
+      aesKey,
+      base64ToBytes(envelope.ciphertext),
+    );
+    expect(new Uint8Array(plaintext).length).toBe(PLAINTEXT_PAD_BYTES);
+    const unpadded = unpadPlaintext(new Uint8Array(plaintext));
+    expect(JSON.parse(new TextDecoder().decode(unpadded))).toEqual(fields);
+  });
+
+  it('R-40: an over-long non-Latin answer is refused cleanly, the same as an over-long ASCII one', async () => {
+    const { publicPem } = await generateEventKeyPair();
+    // 2100 emoji (an astral character, 4 UTF-8 bytes each) = 8400 bytes
+    // alone, already past PLAINTEXT_PAD_BYTES before the JSON envelope
+    // around it -- what to_survey_response's own byte-bound check exists
+    // to catch server-side if this ever got past the character cap; here,
+    // padPlaintext itself must still throw a clean Error rather than
+    // truncate or hang, the identical contract the ASCII case above pins.
+    const tooLong = { overall_rating: 1, recommend: true, feedback: '\u{1F600}'.repeat(2100) };
+    await expect(encryptSurveyResponse(publicPem, tooLong)).rejects.toThrow();
+  });
+});
+
+describe('the pad target (Minor 2, fix round 2): bound by the shared fixture, not only by this file\'s own literal', () => {
+  it("pins this file's own PLAINTEXT_PAD_BYTES to governance-cases.json::event_survey_response_encryption.pad_bytes", () => {
+    // Before this test, changing survey.py::_PLAINTEXT_PAD_BYTES left
+    // this whole suite green: every assertion here compared against this
+    // file's own separately-hardcoded PLAINTEXT_PAD_BYTES, which by
+    // definition always agrees with itself. The fixture's own pad_bytes
+    // is an independent literal, written once when its R-40 case was
+    // captured, that a real cross-language disagreement now fails
+    // against.
+    expect(PLAINTEXT_PAD_BYTES).toBe(cases.event_survey_response_encryption.pad_bytes);
+  });
 });
 
 describe('cannot decrypt what it just encrypted -- the page only ever holds the published half', () => {

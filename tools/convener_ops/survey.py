@@ -202,6 +202,39 @@ def _unpad(data: bytes) -> bytes:
     return data.split(b"\x00", 1)[0]
 
 
+def _to_plaintext(response: SurveyResponse) -> bytes:
+    """The inverse of `to_survey_response`'s field extraction -- the JSON
+    `add_response` encrypts afresh for storage, and the same bytes
+    `to_survey_response`'s own R-40 length check below measures before
+    accepting a response at all. Parsed back through `json.loads`, never by
+    position, so field order here does not have to match anything; only the
+    same three keys have to round trip.
+
+    `ensure_ascii=False` (fix round 2, R-40): the default flips every
+    non-ASCII character to a `\\uXXXX` escape -- six bytes for a BMP
+    character, twelve for an astral one via a surrogate pair -- while
+    `encrypt.ts`'s `JSON.stringify` leaves non-ASCII as itself, at most 4
+    UTF-8 bytes per character. `_PLAINTEXT_PAD_BYTES`'s own sizing
+    (`4 * 2000 + 100 = 8100`) was always computed on that 4-byte
+    assumption; with the default `ensure_ascii=True` here, Python alone
+    could produce up to `12 * 2000 = 24000` bytes for the same
+    `_MAX_FEEDBACK_LENGTH`-length answer, silently breaking the assumption
+    the pad target was sized against. `ensure_ascii=False` makes both
+    languages measure the same bytes for the same characters, which is
+    what the two encoders have to do to agree at all (D-14) -- not an
+    optimisation, the fix.
+    """
+    return json.dumps(
+        {
+            "overall_rating": response.overall_rating,
+            "recommend": response.recommend,
+            "feedback": response.feedback,
+        },
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
 def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | None:
     """Decrypt one submitted envelope into a `SurveyResponse`, or `None`.
 
@@ -215,10 +248,21 @@ def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | No
     reasoning `registration.to_registration` gives for its own uniform
     `None`: a ciphertext that does not decrypt at all, a plaintext that is
     not the JSON object this module writes, a field missing, extra, or of
-    the wrong type, a rating outside `[1, 5]`, or feedback text longer than
-    `_MAX_FEEDBACK_LENGTH` once stripped. This is the first code that ever
-    reads what a stranger encrypted with a *public* key, so every failure
-    is untrusted input, never a bug worth raising on.
+    the wrong type, a rating outside `[1, 5]`, feedback text longer than
+    `_MAX_FEEDBACK_LENGTH` once stripped in code points, or -- R-40, fix
+    round 2 -- a response whose re-encoded bytes would not fit
+    `_PLAINTEXT_PAD_BYTES` once re-serialised for storage. That last check
+    exists because `_MAX_FEEDBACK_LENGTH` bounds *characters*, not bytes:
+    a script where each character costs up to 4 UTF-8 bytes (most non-Latin
+    scripts, all emoji) can pass the character cap while still not fitting
+    the pad target `add_response` re-encrypts into, and `_pad` itself
+    raises rather than truncates on overflow (see its own docstring) -- a
+    guard that can throw past its caller is not a guard, so this function
+    checks the exact bytes `_to_plaintext` will produce, here, and refuses
+    with the same uniform `None` every other rejection in this function
+    uses, before `add_response` ever runs. This is the first code that
+    ever reads what a stranger encrypted with a *public* key, so every
+    failure is untrusted input, never a bug worth raising on.
     """
     try:
         plaintext = eventkeys.decrypt(private_pem, ciphertext)
@@ -254,26 +298,20 @@ def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | No
     if len(feedback) > _MAX_FEEDBACK_LENGTH:
         return None
 
-    return SurveyResponse(
+    candidate = SurveyResponse(
         overall_rating=rating,
         recommend=data["recommend"],
         feedback=feedback,
     )
+    # R-40, fix round 2: the character cap above is not a byte cap -- see
+    # this function's own docstring. `>=`, not `>`, to match `_pad`'s own
+    # boundary exactly: `_pad` raises at `>= _PLAINTEXT_PAD_BYTES`, so this
+    # must refuse at that same boundary for `_pad` to never be reachable
+    # with an over-target plaintext from here.
+    if len(_to_plaintext(candidate)) >= _PLAINTEXT_PAD_BYTES:
+        return None
 
-
-def _to_plaintext(response: SurveyResponse) -> bytes:
-    """The inverse of `to_survey_response`'s field extraction -- the JSON
-    `add_response` encrypts afresh for storage. Parsed back through
-    `json.loads`, never by position, so field order here does not have to
-    match anything; only the same three keys have to round trip."""
-    return json.dumps(
-        {
-            "overall_rating": response.overall_rating,
-            "recommend": response.recommend,
-            "feedback": response.feedback,
-        },
-        separators=(",", ":"),
-    ).encode("utf-8")
+    return candidate
 
 
 @dataclass(frozen=True)

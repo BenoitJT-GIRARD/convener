@@ -13,6 +13,7 @@ from convener_ops.survey import (
     ResponseFile,
     SurveyResponse,
     _pad,
+    _to_plaintext,
     _unpad,
     add_response,
     dump_response_file,
@@ -480,3 +481,104 @@ def test_a_browser_encrypted_envelope_becomes_the_same_survey_response(
     assert response.overall_rating == case["fields"]["overall_rating"]
     assert response.recommend == case["fields"]["recommend"]
     assert response.feedback == case["fields"]["feedback"]
+
+
+def test_the_pad_target_is_bound_by_the_shared_fixture_not_its_own_symbol() -> None:
+    """Minor 2, fix round 2: before this test, every assertion in the
+    `_pad`/`_unpad` block above compared `_PLAINTEXT_PAD_BYTES` to itself
+    (`len(_pad(...)) == _PLAINTEXT_PAD_BYTES`), so changing the constant
+    to 4096 left this whole suite green -- every comparison moved with it.
+    `governance-cases.json::event_survey_response_encryption.pad_bytes` is
+    a literal, independent of this module's own symbol, written once when
+    the fixture's own R-40 case was captured; `encrypt.ts`'s test suite
+    binds the identical literal on its own side (`survey-encrypt.test.ts`).
+    A real disagreement between the two languages -- or a drive-by change
+    to just one -- fails here, not by coincidence."""
+    assert _FIXTURE["pad_bytes"] == _PLAINTEXT_PAD_BYTES
+
+
+# ------------------------------------------------------------------ #
+# R-40, fix round 2: `_to_plaintext`'s `ensure_ascii=False`, and
+# `to_survey_response`'s own byte-bound check. `governance-cases.json`'s
+# third survey case (2000 non-Latin code points) is the D-14 half of this
+# -- read from both languages, captured once under Node's own
+# crypto.subtle exactly like the first two cases. What follows here is
+# the Python-only half: the two failure directions a shared fixture case
+# alone cannot exercise (the byte-bound *rejecting* something, and a
+# direct measurement proving the two encoders now agree byte for byte).
+# ------------------------------------------------------------------ #
+
+
+def test_to_plaintext_agrees_with_json_stringify_on_non_ascii_byte_length() -> None:
+    """The mechanism R-40 names directly: `json.dumps`'s default
+    `ensure_ascii=True` would have inflated a non-ASCII character to a
+    six-byte (or, for an astral character, twelve-byte) escape, while
+    `encrypt.ts`'s `JSON.stringify` leaves it as itself -- at most 4 UTF-8
+    bytes. `_to_plaintext`'s own `ensure_ascii=False` closes that gap by
+    matching the 4-byte-per-character ceiling `_PLAINTEXT_PAD_BYTES` was
+    always sized against (`4 * 2000 + 100 = 8100`, see that constant's own
+    docstring)."""
+    feedback = "你" * 2000  # a BMP character: 3 UTF-8 bytes each, not 6
+    response = SurveyResponse(overall_rating=4, recommend=True, feedback=feedback)
+    plaintext = _to_plaintext(response)
+
+    # Reconstructed independently of _to_plaintext's own implementation --
+    # the feedback's raw UTF-8 bytes plus the JSON envelope around an
+    # empty feedback string, the same "content plus fixed overhead" shape
+    # _PLAINTEXT_PAD_BYTES's own docstring reasons from.
+    overhead = len(
+        json.dumps(
+            {"overall_rating": 4, "recommend": True, "feedback": ""},
+            separators=(",", ":"),
+        )
+    )
+    assert len(plaintext) == len(feedback.encode("utf-8")) + overhead
+    # Comfortably inside the pad target -- before ensure_ascii=False, the
+    # same input measured 12051 bytes here (six bytes per character) and
+    # overflowed it by nearly a factor of 1.5.
+    assert len(plaintext) < _PLAINTEXT_PAD_BYTES
+
+
+@pytest.mark.parametrize(
+    "feedback",
+    [
+        "x" * 2000,  # ASCII: 1 byte/char, the cheapest case
+        "你" * 2000,  # CJK, a BMP character: 3 bytes/char
+        "\U0001f600" * 2000,  # emoji, an astral character: 4 bytes/char
+    ],
+    ids=["ascii", "cjk", "emoji"],
+)
+def test_every_script_at_the_character_cap_fits_the_pad_target(feedback: str) -> None:
+    """R-40's own headline claim, proven for the worst case in each byte
+    class UTF-8 can produce: at `_MAX_FEEDBACK_LENGTH` (2000) code points,
+    even an answer written entirely in 4-byte characters must still round
+    -trip, not crash. Before this fix, the emoji and CJK cases here both
+    raised an uncaught `ValueError` out of `add_response` -- accepted by
+    the browser and the relay, confirmed to the participant as sent, then
+    destroyed."""
+    private_pem, public_pem = eventkeys.generate()
+    response = SurveyResponse(overall_rating=5, recommend=True, feedback=feedback)
+    envelope = eventkeys.encrypt(public_pem, _pad(_to_plaintext(response)))
+    decoded = to_survey_response(envelope, private_pem)
+    assert decoded == response
+
+
+def test_to_survey_response_refuses_rather_than_lets_pad_raise() -> None:
+    """R-40's other half: `_MAX_FEEDBACK_LENGTH` bounds code points, not
+    bytes, so a hypothetical future change to it (or a bug in the byte
+    math) must not resurrect the crash by way of `_pad` itself raising
+    inside `add_response`, past `to_survey_response`'s own uniform `None`
+    contract. Simulated here by raising the character cap far enough that
+    an astral-heavy feedback text exceeds `_PLAINTEXT_PAD_BYTES` once
+    re-serialised -- `to_survey_response` must refuse it with `None`
+    itself, at the point it decrypts and validates, never handing
+    `add_response` something `_pad` would raise on."""
+    private_pem, public_pem = eventkeys.generate()
+    feedback = "\U0001f600" * 3000  # 4 bytes/char * 3000 = 12000 bytes alone
+    response = SurveyResponse(overall_rating=1, recommend=False, feedback=feedback)
+    # Bypasses to_survey_response's own MAX_FEEDBACK_LENGTH gate on the way
+    # in -- the module under test is being asked "if this ever got past
+    # the character cap, would the byte cap still catch it," not "does the
+    # character cap work" (already covered elsewhere in this file).
+    envelope = eventkeys.encrypt(public_pem, _to_plaintext(response))
+    assert to_survey_response(envelope, private_pem) is None
