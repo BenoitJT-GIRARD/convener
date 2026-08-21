@@ -3,10 +3,12 @@
 Published public halves of the certificate signing key -- see
 `tools/convener_ops/signing.py`'s module docstring for the full design, and
 `docs/reference/operations.md`'s "Certificate signing key" section for the
-operator procedure. This file documents the layout as a contract: task 13
-(the public verification page) will read this directory and embed what it
-finds, so the shape below is something a future task depends on, not just
-a note to a future reader.
+operator procedure. This file documents the layout as a contract: the
+public verification page (`app/src/verify/`) reads this directory at
+build time and fetches what it finds at runtime -- see "What the
+verification page actually does with this directory" below for the exact
+mechanism -- so the shape below is something that page depends on, not
+just a note to a future reader.
 
 **This directory is deliberately empty of keys right now.** No certificate
 signing key has been generated yet -- that is an operator's action, done
@@ -156,24 +158,45 @@ verifier skip straight to one file -- see `signing.py`'s module docstring
 for why that was considered and rejected. Reading every `.pub` file here
 and trying each is the whole mechanism.
 
-## What task 13 needs from this directory
+## What the verification page actually does with this directory (corrected, carried item 5)
 
-Full offline verification, with no per-verification network request: every
-published public half is meant to be bundled into the built verification
-page at build time (the same idea `app/scripts/copy-event-keys.mjs`
-already applies to `keys/events/`, adapted for "embed," not "fetch on
-demand," since a verification page has no single event id to key a fetch
-off of). A build step for this directory should:
+This section used to describe a design where every published public half
+is bundled straight into the verification page's own JS at build time.
+That is not what was built, and the difference is worth stating plainly
+rather than leaving the two documents disagree about it: `app/scripts/
+copy-signing-keys.mjs` copies every `keys/signing/*.pub` verbatim into
+`app/public/keys/signing/` at build time, newest-first order recorded
+separately in a generated `index.json` manifest (one array of PEM
+strings) -- the same idiom `copy-event-keys.mjs` already applies to
+`keys/events/`. `app/src/verify/publicKeys.ts::loadSigningPublicKeys`
+then **fetches** `index.json` at runtime, once, the first time the
+verification page needs to check a signature.
 
-1. Glob `keys/signing/*.pub`.
-2. Sort filenames descending (newest first, see above).
-3. Embed the resulting list in the page's bundle, in that order.
+That fetch is same-origin and same-build, never a request to a live
+backend: `index.json` is a static asset deployed alongside the page
+itself, identical for every visitor regardless of which certificate they
+are checking, and small (a handful of keys, ever, appended to, never
+rewritten). It carries nothing that could identify a lookup, unlike
+`certificates.json` (see `register.ts`), which does vary per request.
+"Fetched once at page load, from the same deployment, with nothing
+certificate-specific in the request" is the property that actually
+matters here -- not whether the bytes technically live inside the page's
+own JS bundle or beside it.
 
-An empty directory at build time -- the current, real state -- should
-produce an empty embedded list, not a build failure. `verify` handed an
-empty list returns `NO_MATCHING_KEY` for every token, cleanly: no crash,
-and no token is ever treated as valid with nothing to check it against. A
-verification page built against zero published keys will show its
-"cannot confirm this certificate right now" state for every certificate it
-is asked to check -- see "How a verifier should use this directory" above
-for exactly that wording, and why it must not read as an accusation.
+This distinction is not cosmetic: `loadSigningPublicKeys` can fail (a
+transient network error, a malformed response) in a way a truly bundled
+list never could, and it deliberately returns `null` for that case rather
+than `[]` -- `VerifyPage.tsx`'s own `CannotCheckSignature` state, kept
+apart from `NotVerifiable` (`verify()` returning `NO_MATCHING_KEY` against
+a genuinely empty, successfully-read list), precisely because a page that
+could not check its own key list yet says nothing about whether a
+certificate is genuine.
+
+`verify` handed an empty list returns `NO_MATCHING_KEY` for every token,
+cleanly: no crash, and no token is ever treated as valid with nothing to
+check it against. An empty `keys/signing/` directory at build time -- the
+current, real state -- produces an empty `index.json` (`[]`), not a build
+failure, and the verification page shows its "cannot confirm this
+certificate right now" state for every certificate it is asked to check --
+see "How a verifier should use this directory" above for exactly that
+wording, and why it must not read as an accusation.
