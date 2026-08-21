@@ -302,3 +302,45 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
         out.append(row)
     out.sort(key=lambda row: row.get("date", ""), reverse=True)
     return out
+
+
+def to_survey_status(speakers: list[dict[str, Any]]) -> list[str]:
+    """The event ids currently open for the post-event survey (task 16,
+    fix round 1, R-37), sorted -- what `convener-survey-status-public-data`
+    publishes to `public-data/survey-status.json` and, from there,
+    `app/scripts/copy-survey-status.mjs` bakes into the app's own built
+    output for `SurveyForm.tsx` to fetch same-origin, the same way
+    `copy-certificates.mjs` publishes `certificates.json` for the
+    verification page.
+
+    Deliberately not a projection of `Speaker` through the consent
+    classification `to_public` uses: `survey_enabled` is `NEVER_PUBLISHED`
+    there on purpose (`app/src/state/consent.ts`, `NEVER_PUBLISHED` above)
+    -- it is an operational fact about running the series, not part of the
+    programme a speaker consented to have shown, and folding it through
+    that gate would either publish it unconditionally (wrong -- it is not
+    programme data) or hide it behind a publication consent that has
+    nothing to do with whether a survey is open (also wrong). This
+    function reads exactly one field, `survey_enabled`, and emits exactly
+    one fact about it: which event ids currently have it on. No name, no
+    email, no title, nothing else about the record ever reaches this
+    output -- there is no allowlist to maintain here because there is
+    only one field to ever emit.
+
+    A record with `survey_enabled: true` but no `edition_code` is skipped:
+    `SurveyForm.tsx` and the signup relay both key on the lower-cased
+    edition code (`app/src/state/dates.ts`'s and `platform.find_speaker`'s
+    own R-5 rule), so a record with nothing to key on can never be looked
+    up by either consumer regardless of what this function does with it.
+    """
+    ids: list[str] = []
+    for entry in speakers:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("survey_enabled") is not True:
+            continue
+        edition_code = entry.get("edition_code")
+        if not isinstance(edition_code, str) or not edition_code:
+            continue
+        ids.append(edition_code.lower())
+    return sorted(set(ids))

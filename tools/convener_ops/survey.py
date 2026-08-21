@@ -61,6 +61,19 @@ address. Two things follow from that, deliberately:
    and what this module can deliver for anonymous survey text -- recorded
    here rather than quietly assumed away.
 
+Anonymity is achieved by what does not travel with a response -- no name,
+no address, no matching code -- and by `_PLAINTEXT_PAD_BYTES` (below),
+which closes the one channel outside that list the encryption itself did
+not already cover: an unpadded ciphertext's length reveals `feedback`'s
+length. What remains, on purpose, is the one channel padding cannot touch
+-- `data/events/<id>/survey_responses.enc`'s own commit history pairs
+array position with arrival time, at whatever resolution the workflow that
+writes it commits at. That is a property of an append-only git store, not
+a defect this module introduces or could remove without breaking the
+independent-envelope-per-response shape task 15 needs -- see
+`docs/reference/operations.md`'s "Retention and early erasure" section,
+which carries the full argument for whoever next builds on this file.
+
 Same storage shape, same reason, as `registration.py`
 --------------------------------------------------------
 `data/events/<id>/survey_responses.enc` is one JSON object::
@@ -137,6 +150,57 @@ _RATING_MAX: Final = 5
 #: See the module docstring's "A length cap" section.
 _MAX_FEEDBACK_LENGTH: Final = 2000
 
+#: R-39 (fix round 1): AES-GCM does not pad, so an unpadded ciphertext's
+#: length is a deterministic function of the plaintext's -- measured
+#: before this fix, an empty `feedback` produced a 92-character base64
+#: ciphertext and a 2000-character one produced 2756, and even
+#: `recommend: true` differed from `false` by a byte. Against a stranger
+#: that is harmless (the encryption already hides the content), but
+#: against the organiser -- who holds the key and is the only party for
+#: whom anonymity is a promise rather than a tautology -- a distinctively
+#: long or short answer is a distinctive length, a real quasi-identifier
+#: on a small cohort. Padding every plaintext to this one fixed size
+#: before encryption makes every stored and transmitted ciphertext the
+#: same length regardless of content, removing the channel rather than
+#: merely documenting it.
+#:
+#: Sized generously above the worst case rather than tightly: the JSON
+#: encoding of a `SurveyResponse` is at most `_MAX_FEEDBACK_LENGTH`
+#: characters of `feedback`, each up to 4 UTF-8 bytes, plus
+#: `overall_rating`, `recommend` and JSON punctuation (well under 100
+#: bytes) -- `4 * 2000 + 100 = 8100`, rounded up to 8192 (8 KiB) for a
+#: clean, round margin. At the signup relay's own per-event ceiling (500
+#: responses) that is at most ~4 MB of padding overhead across an event's
+#: whole file, which is nothing next to what it buys.
+_PLAINTEXT_PAD_BYTES: Final = 8192
+
+
+def _pad(data: bytes) -> bytes:
+    """Pad `data` to exactly `_PLAINTEXT_PAD_BYTES` with trailing zero
+    bytes. Raises `ValueError` if `data` is already at or past that size --
+    a caller's bug, not untrusted input: every caller here first validates
+    through `to_survey_response`'s own length cap, so this should be
+    unreachable in practice, and a silent truncation would be a worse
+    failure than a loud one."""
+    if len(data) >= _PLAINTEXT_PAD_BYTES:
+        raise ValueError("plaintext is already at or past the pad target")
+    return data + b"\x00" * (_PLAINTEXT_PAD_BYTES - len(data))
+
+
+def _unpad(data: bytes) -> bytes:
+    """The inverse of `_pad`: everything up to the first `0x00` byte.
+
+    Sound, not approximate: JSON's own grammar forbids a literal NUL byte
+    anywhere in valid output -- every control character below `0x20`,
+    NUL included, is escaped as `\u0000` rather than written raw (both
+    `json.dumps` here and `JSON.stringify` in `encrypt.ts` do this by
+    default) -- so the first `0x00` byte in a decrypted plaintext can only
+    ever be padding, never content. A plaintext with no `0x00` at all
+    (unpadded, e.g. an older wire-format entry) round-trips unchanged:
+    `bytes.split` on an absent separator returns the whole input.
+    """
+    return data.split(b"\x00", 1)[0]
+
 
 def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | None:
     """Decrypt one submitted envelope into a `SurveyResponse`, or `None`.
@@ -162,7 +226,7 @@ def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | No
         return None
 
     try:
-        data: Any = json.loads(plaintext)
+        data: Any = json.loads(_unpad(plaintext))
     except (json.JSONDecodeError, UnicodeDecodeError):
         # Same reasoning as registration.to_registration's identical guard:
         # `UnicodeDecodeError.object` is the plaintext itself and must never
@@ -214,10 +278,14 @@ def _to_plaintext(response: SurveyResponse) -> bytes:
 
 @dataclass(frozen=True)
 class ResponseFile:
-    """`survey_responses.enc`'s in-memory shape: a version and the entries.
-    Every entry is a `dict` carrying exactly `eventkeys`'s wire-format keys
-    -- see the module docstring for why one independent envelope per entry,
-    not one envelope for the whole file."""
+    """`survey_responses.enc`'s in-memory shape: the entries. (Minor 3, fix
+    round 1: this dataclass carries `entries` only -- the file's own `"v"`
+    key is a module constant, `FILE_VERSION`, supplied by
+    `dump_response_file` on the way out and checked by `load_response_file`
+    on the way in; it is never stored on this object.) Every entry is a
+    `dict` carrying exactly `eventkeys`'s wire-format keys -- see the
+    module docstring for why one independent envelope per entry, not one
+    envelope for the whole file."""
 
     entries: tuple[Mapping[str, Any], ...] = ()
 
@@ -275,10 +343,16 @@ def add_response(
     mathematically matches the private key this call already needs to have
     been handed to decrypt the incoming submission in the first place --
     never whatever happens to be committed at `keys/events/<id>.pub`.
+
+    The plaintext is padded to `_PLAINTEXT_PAD_BYTES` before encryption
+    (R-39): re-encrypting for storage is exactly the moment this module
+    controls the plaintext going into AES-GCM, so it is also the moment
+    that fixes the stored ciphertext's length regardless of what
+    `response.feedback` holds.
     """
     new_entry: dict[str, Any] = json.loads(
         eventkeys.encrypt(
-            eventkeys.derive_public_pem(private_pem), _to_plaintext(response)
+            eventkeys.derive_public_pem(private_pem), _pad(_to_plaintext(response))
         )
     )
     return ResponseFile(entries=(*file.entries, new_entry))

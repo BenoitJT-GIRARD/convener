@@ -15,6 +15,7 @@ from convener_ops.public_data import (
     PUBLISHABLE_ALWAYS,
     PUBLISHABLE_ON_CONSENT,
     to_public,
+    to_survey_status,
 )
 
 
@@ -495,3 +496,74 @@ def test_the_availability_and_the_deliberation_stay_in_the_repository() -> None:
         "advises the funder",
     ):
         assert forbidden not in serialised
+
+
+# ------------------------------------------------------------------ #
+# to_survey_status(): R-37, fix round 1 -- the enabled set as an
+# operational fact, published outside the consent gate entirely.
+# ------------------------------------------------------------------ #
+
+
+def test_to_survey_status_includes_only_enabled_events() -> None:
+    speakers = [
+        speaker(id="spk-001", edition_code="MRG-01", survey_enabled=False),
+        speaker(id="spk-002", edition_code="MRG-02", survey_enabled=True),
+    ]
+    assert to_survey_status(speakers) == ["mrg-02"]
+
+
+def test_to_survey_status_lower_cases_the_edition_code() -> None:
+    assert to_survey_status([speaker(edition_code="MRG-42", survey_enabled=True)]) == [
+        "mrg-42"
+    ]
+
+
+def test_to_survey_status_skips_a_record_with_no_edition_code() -> None:
+    """A record with the switch on but nothing to key on can never be
+    reached by SurveyForm.tsx or the relay either, which both look up by
+    edition code -- publishing it would be a dead entry, not a bug in
+    itself, but it is worth excluding rather than shipping."""
+    assert to_survey_status([speaker(edition_code="", survey_enabled=True)]) == []
+
+
+def test_to_survey_status_ignores_publication_status_and_consent() -> None:
+    """Deliberately not a projection of PUBLISHABLE_ALWAYS/ON_CONSENT: a
+    lead with no scheduled date and no publication consent at all still
+    has its switch honoured -- the survey status feed answers a different
+    question than the programme feed does."""
+    assert to_survey_status(
+        [speaker(edition_code="MRG-09", status="lead", survey_enabled=True)]
+    ) == ["mrg-09"]
+
+
+def test_to_survey_status_is_sorted_and_deduplicated() -> None:
+    speakers = [
+        speaker(id="spk-001", edition_code="MRG-09", survey_enabled=True),
+        speaker(id="spk-002", edition_code="MRG-02", survey_enabled=True),
+    ]
+    assert to_survey_status(speakers) == ["mrg-02", "mrg-09"]
+
+
+def test_to_survey_status_carries_nothing_but_the_id() -> None:
+    """The structural guarantee the module docstring claims: no name, no
+    email, no title -- checked directly on the output, not merely on the
+    function's declared return type."""
+    out = to_survey_status(
+        [
+            speaker(
+                id="spk-001",
+                name="Ada Lovelace",
+                email="ada@example.org",
+                edition_code="MRG-03",
+                survey_enabled=True,
+            )
+        ]
+    )
+    assert out == ["mrg-03"]
+    serialised = repr(out)
+    assert "Ada" not in serialised
+    assert "ada@example.org" not in serialised
+
+
+def test_to_survey_status_ignores_a_non_mapping_entry() -> None:
+    assert to_survey_status(["not a mapping"]) == []

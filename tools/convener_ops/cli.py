@@ -63,7 +63,7 @@ from convener_ops.platform_fcc import (
     platform_from_env,
 )
 from convener_ops.proposal import field_value, skip_reason, to_lead, verify_signature
-from convener_ops.public_data import to_public
+from convener_ops.public_data import to_public, to_survey_status
 from convener_ops.register import (
     LOG_FORMAT,
     REGISTER_PATH,
@@ -102,7 +102,7 @@ from convener_ops.yaml_safe import safe_load as yaml_safe_load
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
 #: same two strings: it is the browser's half of this file format, and the
 #: YAML-boundary fixture is written by one side and read by the other.
-SPEAKERS_HEADER = "# Speakers (unified schema v3 — see docs/reference/schema.md)\n"
+SPEAKERS_HEADER = "# Speakers (unified schema v5 — see docs/reference/schema.md)\n"
 CONFIG_HEADER = "# Repo-wide config for the Convener app\n"
 #: certificates.yml holds no name and no address by construction -- see
 #: tools/convener_ops/certificate.py's module docstring for why this file
@@ -370,6 +370,40 @@ def public_data() -> int:
         json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(rows)} events")
+    return 0
+
+
+def survey_status_public_data() -> int:
+    """`convener-survey-status-public-data`: rebuild
+    `public-data/survey-status.json` from `data/speakers.yml`'s own
+    `survey_enabled` field (R-37, fix round 1) -- `public_data`'s own
+    precedent (above), for a different consumer and a different field: an
+    operational fact, not the programme feed `to_public` projects through
+    the consent gate.
+
+    Deliberately its own file, its own command, its own step in
+    `deploy.yml` -- not folded into `public_data()`'s own
+    `events-public.json` -- because the two answer different questions for
+    different readers: `events-public.json` is the programme a visitor
+    reads, gated on consent; `survey-status.json` is a closed list of ids
+    `SurveyForm.tsx` checks membership against before it ever renders a
+    question, and it must never require the consent gate to have opened
+    for an event that has not even happened yet.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"  - {error}")
+        return 1
+
+    ids = to_survey_status(speakers or [])
+    out_dir = root / "public-data"
+    out_dir.mkdir(exist_ok=True)
+    (out_dir / "survey-status.json").write_text(
+        json.dumps(ids, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(ids)} event(s) with the survey open")
     return 0
 
 
@@ -893,7 +927,13 @@ def handle_survey_response() -> int:
        (`survey.to_survey_response`).
 
     Never prints anything decrypted from the payload -- every message here
-    names only the event id, already public.
+    names only the event id, already public. The success line no longer
+    carries a running count either (R-39, fix round 1): "recorded a
+    survey response for event <id> (N total)" paired an index with a run
+    timestamp in the job log, a third channel the finding named as free to
+    close, on top of what the encryption already covers -- see
+    `survey.py::_PLAINTEXT_PAD_BYTES`'s own docstring for the two the
+    encryption covers directly.
     """
     payload = os.environ.get("SURVEY_PAYLOAD", "")
     event_id = event_id_from_payload(payload)
@@ -917,8 +957,16 @@ def handle_survey_response() -> int:
 
     response = to_survey_response(payload, private_pem)
     if response is None:
+        # Important 3 (fix round 1): "could not be read", not "could not be
+        # decrypted". to_survey_response's own uniform None folds a
+        # too-long answer into the same outcome as an undecryptable one --
+        # correct for the untrusted-input reason its own docstring gives --
+        # but this operator-facing line no longer names the narrower,
+        # sometimes-wrong cause. A participant whose long, careful answer
+        # tripped the length cap deserves an honest "could not be read",
+        # not a claim about decryption that did not happen to fail.
         print(
-            f"survey response for event {event_id} could not be decrypted",
+            f"survey response for event {event_id} could not be read",
             file=sys.stderr,
         )
         return 1
@@ -936,10 +984,11 @@ def handle_survey_response() -> int:
     enc_path.parent.mkdir(parents=True, exist_ok=True)
     enc_path.write_text(dump_response_file(updated), encoding="utf-8", newline="")
 
-    print(
-        f"recorded a survey response for event {event_id} "
-        f"({len(updated.entries)} total)"
-    )
+    # R-39 (fix round 1): no count. `(N total)` was a third, needless
+    # channel revealing how many responses an event has received -- the
+    # only thing worth this job printing is that one more was recorded,
+    # named by event id (already public), never by index.
+    print(f"recorded a survey response for event {event_id}")
     return 0
 
 

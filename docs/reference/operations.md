@@ -172,6 +172,18 @@ here needs a second deployment, a second variable or a second secret: it is
 the same `VITE_SIGNUP_RELAY_URL`, with `/survey` appended by
 `SurveyForm.tsx` itself.
 
+**Since fix round 1 (R-37), `/survey` also checks the survey switch
+itself**, fetching `SURVEY_STATUS_URL` (a `wrangler.toml` var, not a
+secret — see that file's own comment) and refusing an event that is not
+in the array it serves. That file is `public-data/survey-status.json`,
+built by `convener-survey-status-public-data` (`deploy.yml`'s own "Build survey
+status" step, alongside "Build public data") and baked into the app's own
+built output by `app/scripts/copy-survey-status.mjs`, the same two-step
+shape `certificates.json` already uses. This is one of three layers now
+(the page, the relay, and the CI handler each check independently); see
+`tools/convener_ops/cli.py::handle_survey_response`'s own docstring for why one
+alone was not enough.
+
 **To create:**
 1. Deploy the worker from `services/signup-relay/`: `npm install`, then
    `npx wrangler kv namespace create SIGNUP_RELAY_KV` once and paste the
@@ -728,6 +740,48 @@ answers before the retention deadline" is the same lever that erases its
 registrations: destroying `CONVENER_EVENT_KEY_<ID>` early, which erases both
 files together, not one response on its own.
 
+**Dropping one response by hand is possible, without erasing the rest —
+`survey.py`'s own module docstring names the property, this is the
+procedure.** `data/events/<id>/survey_responses.enc` holds one JSON object
+per response under its top-level `"responses"` array
+(`tools/convener_ops/survey.py::ResponseFile`), each entry an independent
+hybrid-encrypted envelope with its own AES key and nonce — removing one
+array element and committing the result touches nothing else in the file,
+byte for byte, the same guarantee task 15's `convener-erase-registration` relies
+on for `registrations.enc`. There is no CLI command for this today (fair
+warning: a response cannot be *identified* by anything short of decrypting
+it, since none carries a name, address or matching code), so it is a
+by-hand edit: open the file, decrypt each entry with the event's
+`CONVENER_EVENT_KEY_<ID>` to find the one in question, delete that one JSON
+object from the array, and commit. Do this only for a request an operator
+can otherwise be confident about — there is no automated verification step
+standing between a hand edit and the committed file the way there is for
+`convener-erase-registration`.
+
+**Anonymous against a stranger; pseudonymous by metadata against the
+organiser — stated honestly, not fixed further, because fixing it further
+would cost more than the risk (R-39, fix round 1).** A stored entry is
+exactly `{v, encrypted_key, iv, ciphertext}`; the decrypted plaintext is
+exactly `{overall_rating, recommend, feedback}`, padded to a fixed size
+before encryption so the ciphertext's length no longer reveals how much a
+participant wrote. Against a stranger without the event's private key,
+that is complete: there is nothing else on the entry to read. Against the
+organiser — who holds the key, and is the only party for whom anonymity is
+a promise rather than a mathematical certainty — one channel remains
+outside the encryption on purpose: `.github/workflows/survey.yml` commits
+once per response, `data: record a survey response for <id>`, at the
+wall-clock minute it arrived. Array position N in `survey_responses.enc`
+is therefore paired with a timestamp, permanently, in the git history. For
+a seminar with a handful of attendees answering within hours of the
+session, "the one who answered at 19:04" is a workable handle for whoever
+also holds the attendance list — and the organiser already holds the
+attendance list. This is accepted, not fixed: one commit per response as
+it arrives is what an append-only git store *is*, and batching responses
+to hide arrival time would break the very per-response independence task
+15 needs to drop one entry without touching its neighbours. Task 18, or
+whoever next writes anything that treats these responses as anonymous to
+the organiser specifically, should read this paragraph first.
+
 ## Certificate signing key
 
 **Do not confuse this with *Event registration keys* above.** That key
@@ -902,18 +956,31 @@ about it identifies who submitted it (see `survey.py`'s own docstring,
 "Why no identity travels with a response"), so `convener-handle-survey-response`
 only ever appends.
 
-**The survey switch is checked before anything is decrypted or written.**
-`services/signup-relay`'s own known-event check only proves an event's
-public key exists, never that its organiser turned the survey on — so
-`convener-handle-survey-response` reads the event's speaker record
-(`survey_enabled`, `data/speakers.yml`) itself and refuses, with the job
-ending red, when it is off. There is no D-13 fallback here: a switch that
-is off is the ordinary state for most events, but a *response arriving*
-for one is not something this job may quietly discard by writing nothing
-and exiting clean — an unexplained green run that stored nothing would be
-indistinguishable from an ordinary day, and this is a case worth an
-operator's attention (the same reasoning the retention sweep's own
-`::warning::` annotations follow, above, for a different silence).
+**The survey switch is checked before anything is decrypted or written —
+and, since fix round 1 (R-37), this is the third of three checks, not the
+only one.** Before R-37, `services/signup-relay`'s own known-event check
+proved only that an event's public key existed, never that its organiser
+turned the survey on, and neither `SurveyForm.tsx` nor the relay had any
+way to know the switch existed at all (`survey_enabled` is `NEVER_PUBLISHED`
+on both languages' own consent classification, so a static page had no
+file to read it from). The consequence was concrete, not theoretical: every
+one of the 31 live records shipped with the switch off, so *every*
+submission this pipeline could receive followed the one path that did
+check — the participant was thanked, the relay answered `204`, and the
+answer was discarded here, silently, with nobody told. Now the page checks
+first (never offering the form), the relay checks second (refusing the
+dispatch, see *Signup relay* above), and `convener-handle-survey-response` still
+checks a third time, reading the event's speaker record
+(`survey_enabled`, `data/speakers.yml`) itself, because it is the only one
+of the three reading the authoritative file rather than a possibly
+momentarily stale, published copy of it. There is no D-13 fallback here at
+any of the three layers: a switch that is off is the ordinary state for
+most events, but a *response arriving* for one is not something this job
+may quietly discard by writing nothing and exiting clean — an unexplained
+green run that stored nothing would be indistinguishable from an ordinary
+day, and this is a case worth an operator's attention (the same reasoning
+the retention sweep's own `::warning::` annotations follow, above, for a
+different silence).
 
 There is no third step sending a confirmation, unlike registration's own
 workflow: nothing is returned to a participant for answering a survey, so

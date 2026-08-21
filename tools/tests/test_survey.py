@@ -8,9 +8,12 @@ import pytest
 
 from convener_ops import eventkeys
 from convener_ops.survey import (
+    _PLAINTEXT_PAD_BYTES,
     FILE_VERSION,
     ResponseFile,
     SurveyResponse,
+    _pad,
+    _unpad,
     add_response,
     dump_response_file,
     load_response_file,
@@ -219,6 +222,56 @@ def test_to_survey_response_length_cap_is_checked_after_stripping() -> None:
 
     assert response is not None
     assert response.feedback == "Great!"
+
+
+# ------------------------------------------------------------------ #
+# _pad() / _unpad(): R-39, fix round 1 -- the fixed-size plaintext
+# padding that removes the ciphertext-length quasi-identifier.
+# ------------------------------------------------------------------ #
+
+
+def test_pad_reaches_exactly_the_target_size() -> None:
+    assert len(_pad(b"hello")) == _PLAINTEXT_PAD_BYTES
+
+
+def test_pad_of_empty_bytes_still_reaches_the_target_size() -> None:
+    assert len(_pad(b"")) == _PLAINTEXT_PAD_BYTES
+
+
+def test_pad_appends_only_zero_bytes() -> None:
+    padded = _pad(b"hello")
+    assert padded[:5] == b"hello"
+    assert padded[5:] == b"\x00" * (_PLAINTEXT_PAD_BYTES - 5)
+
+
+def test_pad_refuses_data_already_at_the_target_size() -> None:
+    with pytest.raises(ValueError, match="pad target"):
+        _pad(b"x" * _PLAINTEXT_PAD_BYTES)
+
+
+def test_pad_refuses_data_past_the_target_size() -> None:
+    with pytest.raises(ValueError, match="pad target"):
+        _pad(b"x" * (_PLAINTEXT_PAD_BYTES + 1))
+
+
+def test_unpad_recovers_the_original_bytes() -> None:
+    assert _unpad(_pad(b"hello")) == b"hello"
+
+
+def test_unpad_recovers_empty_bytes() -> None:
+    assert _unpad(_pad(b"")) == b""
+
+
+def test_unpad_is_a_no_op_on_data_with_no_null_byte() -> None:
+    # Backward-compatible with an older, unpadded wire-format entry: no
+    # NUL means nothing to strip.
+    assert _unpad(b"hello") == b"hello"
+
+
+def test_two_different_lengths_pad_to_the_identical_size() -> None:
+    # The property R-39 exists for, pinned directly rather than only
+    # through the two layers (encrypt.ts, add_response) that use it.
+    assert len(_pad(b"short")) == len(_pad(b"a much, much longer message"))
 
 
 # ------------------------------------------------------------------ #

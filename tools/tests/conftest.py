@@ -63,7 +63,7 @@ def nomination(**overrides: Any) -> dict[str, Any]:
 
 
 def speaker(**overrides: Any) -> dict[str, Any]:
-    """A minimal valid speaker (schema v4); override any field per test.
+    """A minimal valid speaker (schema v5); override any field per test.
 
     Minimal, not partial: every key the model declares is here, with the
     empty value where the record has nothing to say. A double that left keys
