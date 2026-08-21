@@ -525,9 +525,17 @@ def find_by_matching_code(
         if matching_code(event_id, existing.email, salt) == wanted:
             matches.append(existing)
     if len(matches) > 1:
+        # Minor 3 (round 2): the code itself does not go in this message.
+        # It reaches this point from MATCHING_CODE, a workflow_dispatch
+        # input already rendered on the run page, but that is R-32's own
+        # documented exception for *that* surface, not licence to repeat
+        # it here -- this message reaches stderr through erase_registration
+        # unconditionally, on a path R-32 never named. The invariant every
+        # refusal path in convener_ops already holds -- no name, no address, no
+        # matching code -- applies here too.
         raise AmbiguousMatchingCodeError(
-            f"{len(matches)} registrations for event {event_id!r} share the "
-            f"matching code {wanted!r} -- refusing to guess which one to erase",
+            f"{len(matches)} registrations for event {event_id!r} share one "
+            "matching code -- refusing to guess which one to erase",
             tied=tuple(matches),
         )
     return matches[0] if matches else None

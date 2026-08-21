@@ -1013,6 +1013,13 @@ def record_destructions() -> int:
     An empty `DESTROYED_IDS` is not an error: `retention_sweep` writes it
     empty on an ordinary day nothing was due, and this step has nothing to
     record.
+
+    **This function is all-or-nothing across `ids`, unlike the delete
+    step above, which is per-event tolerant (R-34) -- a deliberate
+    asymmetry, not an oversight.** If recording aborts partway, the
+    secrets already confirmed gone are simply left unrecorded; the next
+    sweep finds those events still due, re-deletes secrets that are
+    already absent (which R-34 made safe), and records them then.
     """
     ids = [
         event_id

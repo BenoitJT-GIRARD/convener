@@ -137,11 +137,13 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
 def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
     """Minor 5's own strengthening: the assertion that *is* available
     offline, since "the GitHub secret is gone" is not. Walks every `.py`
-    file's AST under `tools/convener_ops` and refuses any `.write_text(...)` or
-    `.write(...)` call whose argument is built from a name that looks like
-    a private key, or a string literal carrying the PEM marker itself --
-    which would catch a second, forgotten copy on disk the moment someone
-    wrote it, rather than trusting nobody ever will."""
+    file's AST under `tools/convener_ops` and refuses any `.write_text(...)`,
+    `.write(...)` or `.write_bytes(...)` call whose argument is built from
+    a name that looks like a private key, or a string literal carrying the
+    PEM marker itself -- which would catch a second, forgotten copy on
+    disk the moment someone wrote it, rather than trusting nobody ever
+    will. `write_bytes` has no caller in this module today (round 2
+    trivia); it is here so that stays true rather than merely assumed."""
     suspect_fragments = ("private_pem", "private_key")
     convener_ops_dir = repo_root() / "tools" / "convener_ops"
     checked = 0
@@ -151,7 +153,7 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
             if not (
                 isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Attribute)
-                and node.func.attr in {"write_text", "write"}
+                and node.func.attr in {"write_text", "write", "write_bytes"}
             ):
                 continue
             checked += 1
@@ -640,6 +642,40 @@ def test_retention_sweep_uses_the_paris_day_not_the_utc_day(
     outputs = _outputs(output_file)
     assert outputs["destroyed_ids"] == "mrg-042"
     assert outputs["destroyed_on"] == "2026-04-01"
+
+
+def test_retention_sweep_uses_the_paris_day_not_a_fixed_cest_offset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Important 4, second half: the probe above pins one direction only
+    -- it is fixed in summer, so a mutant that hardcodes CEST
+    (`datetime.now(UTC) + timedelta(hours=2)`, always two hours ahead)
+    agrees with the real implementation there and survives. Paris has two
+    offsets, not one, and this project runs on Paris time year round.
+
+    An event held 2025-10-04, swept at 2026-01-01 22:30Z: the real Paris
+    offset in January is CET, one hour, not two. 22:30 UTC + 1 hour is
+    23:30, still 2026-01-01 -- day 89, not due. A permanent-CEST mutant
+    adds two hours instead, landing on 2026-01-02 -- day 90, wrongly due
+    a day early. The two disagree only in this direction; the sibling
+    test above disagrees only in the other (a permanent-CET mutant
+    survives it, since CEST is the correct summer answer there) -- both
+    are needed, and this one is not redundant with it.
+    """
+    _publish_event_key(tmp_path, "mrg-042")
+    _write_speaker(tmp_path, "mrg-042", event_date="2025-10-04")
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
+    output_file = _github_output(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "convener_ops.cli.datetime",
+        _FixedDatetime(datetime(2026, 1, 1, 22, 30, tzinfo=UTC)),
+    )
+
+    assert retention_sweep() == 0
+    outputs = _outputs(output_file)
+    assert outputs["destroyed_ids"] == ""
+    assert outputs["destroyed_on"] == "2026-01-01"
 
 
 def test_retention_sweep_skips_an_event_already_in_the_registry(
@@ -1176,7 +1212,11 @@ def test_erase_registration_refuses_an_ambiguous_matching_code(
     monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
 
     assert erase_registration() == 1
-    assert "share the matching code" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "share one matching code" in err
+    # Minor 3 (round 2): the code itself must never reach stderr -- the
+    # invariant every other refusal path in convener_ops already holds.
+    assert "ABCD-2345" not in err
 
     enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
@@ -1186,7 +1226,7 @@ def test_erase_registration_refuses_an_ambiguous_matching_code(
 def test_erase_registration_refuses_a_collision_the_address_does_not_narrow(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The third case the coordinator own ruling names: a code collision
+    """The third case the coordinator's own ruling names: a code collision
     plus an address, but the address does not pick out exactly one of the
     tied entries either (here, an address belonging to neither Ada nor
     Grace) -- still refuses, the same as no address at all. Reading
@@ -1207,7 +1247,9 @@ def test_erase_registration_refuses_a_collision_the_address_does_not_narrow(
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
 
     assert erase_registration() == 1
-    assert "share the matching code" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "share one matching code" in err
+    assert "ABCD-2345" not in err
 
     enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
@@ -1221,7 +1263,7 @@ def test_erase_registration_resolves_an_ambiguous_matching_code_using_the_addres
     a code collision, plus an address that narrows the tie to exactly one
     entry, proceeds and erases that one -- using a second field the
     requester actually supplied is not the guess attendance._settle (and
-    AmbiguousMatchingCodeError own docstring) refuses to make. Grace own
+    AmbiguousMatchingCodeError's own docstring) refuses to make. Grace's own
     address disambiguates the tie between Ada and Grace; Ada must survive,
     byte-for-byte untouched."""
     private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
