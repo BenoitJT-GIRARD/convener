@@ -5,7 +5,7 @@ on:
     types: [survey-response-submitted]
 
 # Its own concurrency group, not registration.yml's: this workflow writes
-# data/events/<id>/survey_responses.enc, registration.yml writes
+# data/events/<id>/survey-responses.enc, registration.yml writes
 # data/events/<id>/registrations.enc -- two different files for the same
 # event, so there is no shared array for two concurrent runs to corrupt the
 # way registration.yml's own comment explains for its own file. Serialising
@@ -82,7 +82,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-handle-survey-response)
-            git add "data/events/$EVENT_ID/survey_responses.enc"
+            git add "data/events/$EVENT_ID/survey-responses.enc"
             if git diff --staged --quiet; then
               echo "no change to commit"
               exit 0

@@ -66,7 +66,7 @@ no address, no matching code -- and by `_PLAINTEXT_PAD_BYTES` (below),
 which closes the one channel outside that list the encryption itself did
 not already cover: an unpadded ciphertext's length reveals `feedback`'s
 length. What remains, on purpose, is the one channel padding cannot touch
--- `data/events/<id>/survey_responses.enc`'s own commit history pairs
+-- `data/events/<id>/survey-responses.enc`'s own commit history pairs
 array position with arrival time, at whatever resolution the workflow that
 writes it commits at. That is a property of an append-only git store, not
 a defect this module introduces or could remove without breaking the
@@ -76,7 +76,7 @@ which carries the full argument for whoever next builds on this file.
 
 Same storage shape, same reason, as `registration.py`
 --------------------------------------------------------
-`data/events/<id>/survey_responses.enc` is one JSON object::
+`data/events/<id>/survey-responses.enc` is one JSON object::
 
     {"v": 1, "responses": [ {<envelope>}, {<envelope>}, ... ]}
 
@@ -93,7 +93,7 @@ Same destruction, and nothing new to destroy
 ------------------------------------------------
 `eventkeys.destroy` operates on an event id, not on a filename: destroying
 `CONVENER_EVENT_KEY_<ID>` makes *both* `registrations.enc` and
-`survey_responses.enc` for that event permanently unreadable in the same
+`survey-responses.enc` for that event permanently unreadable in the same
 one operation, on the same 90-day schedule task 15 already sweeps. Nothing
 in `tools/convener_ops/cli.py::retention_sweep` or `record_destructions` needed
 to change for this file to be covered -- that is the point of "meme
@@ -121,7 +121,7 @@ from typing import Any, Final
 
 from . import eventkeys
 
-#: `survey_responses.enc`'s own format version -- the file-level analogue of
+#: `survey-responses.enc`'s own format version -- the file-level analogue of
 #: `eventkeys.WIRE_VERSION` and `registration.FILE_VERSION`.
 FILE_VERSION: Final = 1
 
@@ -316,7 +316,7 @@ def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | No
 
 @dataclass(frozen=True)
 class ResponseFile:
-    """`survey_responses.enc`'s in-memory shape: the entries. (Minor 3, fix
+    """`survey-responses.enc`'s in-memory shape: the entries. (Minor 3, fix
     round 1: this dataclass carries `entries` only -- the file's own `"v"`
     key is a module constant, `FILE_VERSION`, supplied by
     `dump_response_file` on the way out and checked by `load_response_file`
@@ -329,7 +329,7 @@ class ResponseFile:
 
 
 def load_response_file(text: str | None) -> ResponseFile:
-    """Parse `survey_responses.enc`, or start empty when `text` is `None`
+    """Parse `survey-responses.enc`, or start empty when `text` is `None`
     -- the event's first response, which finds no file on disk yet.
 
     Raises `ValueError` on anything committed that is not this format --
@@ -340,23 +340,23 @@ def load_response_file(text: str | None) -> ResponseFile:
         return ResponseFile()
     data: Any = json.loads(text)
     if not isinstance(data, dict) or data.get("v") != FILE_VERSION:
-        raise ValueError("survey_responses.enc is not a supported format version")
+        raise ValueError("survey-responses.enc is not a supported format version")
     entries = data.get("responses")
     if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
-        raise ValueError("survey_responses.enc is malformed")
+        raise ValueError("survey-responses.enc is malformed")
     # Every entry's key set must be exactly the wire format's four fields --
     # the structural guard against a "helpful" extra field sitting in plain
     # sight beside the ciphertext it was meant to replace, mirroring
     # registration.load_registration_file's identical check.
     if not all(set(e) == eventkeys.ENVELOPE_FIELDS for e in entries):
         raise ValueError(
-            "survey_responses.enc holds an entry that is not exactly ciphertext"
+            "survey-responses.enc holds an entry that is not exactly ciphertext"
         )
     return ResponseFile(entries=tuple(entries))
 
 
 def dump_response_file(file: ResponseFile) -> str:
-    """The bytes `survey_responses.enc` is written as: stable structure,
+    """The bytes `survey-responses.enc` is written as: stable structure,
     two-space indent, one trailing newline -- the same shape
     `registration.dump_registration_file` writes its own file as."""
     return (

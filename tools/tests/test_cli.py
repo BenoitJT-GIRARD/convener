@@ -1712,7 +1712,7 @@ def test_handle_survey_response_stores_a_response_when_the_switch_is_on(
     # R-39 (fix round 1): the count is gone from this line too.
     assert "recorded a survey response for event mrg-042" in out
     assert "1 total" not in out
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey_responses.enc"
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey-responses.enc"
     stored = json.loads(enc_path.read_text(encoding="utf-8"))
     assert len(stored["responses"]) == 1
     entry = stored["responses"][0]
@@ -1746,7 +1746,7 @@ def test_handle_survey_response_never_writes_plaintext_to_disk(
 
     captured = capsys.readouterr()
     assert "A very identifiable sentence." not in captured.out + captured.err
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey_responses.enc"
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey-responses.enc"
     on_disk = enc_path.read_text(encoding="utf-8")
     assert "A very identifiable sentence." not in on_disk
 
@@ -1770,7 +1770,7 @@ def test_handle_survey_response_appends_a_second_response_without_merging(
     assert handle_survey_response() == 0
     _assert_no_survey_leak(capsys)
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey_responses.enc"
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "survey-responses.enc"
     stored = json.loads(enc_path.read_text(encoding="utf-8"))
     assert len(stored["responses"]) == 2
 
@@ -1820,7 +1820,7 @@ def test_handle_survey_response_rejects_a_malformed_committed_file(
     _write_event(tmp_path, survey_enabled=True)
     events_dir = tmp_path / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
-    (events_dir / "survey_responses.enc").write_text(
+    (events_dir / "survey-responses.enc").write_text(
         "not json at all", encoding="utf-8"
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1829,7 +1829,7 @@ def test_handle_survey_response_rejects_a_malformed_committed_file(
 
     assert handle_survey_response() == 1
     _out, err = _assert_no_survey_leak(capsys)
-    assert "survey_responses.enc" in err
+    assert "survey-responses.enc" in err
 
 
 # ------------------------------------------------------------------ #
@@ -2372,7 +2372,8 @@ def test_match_attendance_skips_an_entry_that_fails_to_decrypt(
     """A stray entry encrypted under an unrelated key pair -- well-formed
     envelope shape, but undecryptable with this event's own key. Skipped,
     not treated as a match, the same handling find_by_email and upsert
-    already give a stray undecryptable entry."""
+    already give a stray undecryptable entry -- but, carried item 10, no
+    longer silently: the printed line now says so."""
     private_pem, _ = _publish_event_key(tmp_path)
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     file = load_registration_file(None)
@@ -2395,7 +2396,9 @@ def test_match_attendance_skips_an_entry_that_fails_to_decrypt(
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
 
     assert match_attendance() == 0
-    assert "1 matched, 0 unmatched, 0 unreachable" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "1 matched, 0 unmatched, 0 unreachable" in out
+    assert "1 registration(s) could not be read" in out
 
 
 # ------------------------------------------------------------------ #
@@ -2636,7 +2639,8 @@ def test_invite_survey_only_invites_the_matched_attendee(
     assert (
         "1 sent, 0 not sent (1 matched attendee(s); 1 unmatched -- present, "
         "but no registration found for their address; 1 unreachable -- "
-        "joined by phone, no address ever collected)" in captured.out
+        "joined by phone, no address ever collected; 0 registration(s) could "
+        "not be read)" in captured.out
     )
     out = captured.out + captured.err
     _assert_survey_leak_sweep(out)
@@ -2649,6 +2653,46 @@ def test_invite_survey_only_invites_the_matched_attendee(
     assert len(_RecordingSmtpClient.sent) == 1
     email = _RecordingSmtpClient.sent[0]
     assert email["To"] == "ada@example.org"
+
+
+def test_invite_survey_skips_an_entry_that_fails_to_decrypt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A stray entry encrypted under an unrelated key pair -- well-formed
+    envelope shape, but undecryptable with this event's own key. Skipped,
+    not treated as a match, the same handling `match_attendance` and
+    `issue_certificates` already give a stray undecryptable entry --
+    carried item 10, the fourth of the four commands that share
+    `_load_registrations`: it must not go unreported here either."""
+    private_pem = _prepare_survey_event(
+        tmp_path,
+        registrations=(_ADA_REG,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    file = load_registration_file(path.read_text(encoding="utf-8"))
+    _other_private, other_public = eventkeys.generate()
+    stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
+    file = RegistrationFile(entries=(*file.entries, stray))
+    path.write_text(dump_registration_file(file), encoding="utf-8")
+    for key, value in _SURVEY_SMTP_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
+    _RecordingSmtpClient.sent = []
+    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
+
+    assert invite_survey() == 0
+    out = capsys.readouterr().out
+    assert "1 sent, 0 not sent" in out
+    assert "1 registration(s) could not be read" in out
+    assert len(_RecordingSmtpClient.sent) == 1
 
 
 def test_invite_survey_composes_the_same_link_for_every_matched_attendee(
@@ -3296,7 +3340,10 @@ def test_issue_certificates_issues_one_certificate_for_an_eligible_attendee(
 
     assert issue_certificates() == 0
     captured = capsys.readouterr()
-    assert "1 issued, 0 already on record (1 eligible)" in captured.out
+    assert (
+        "1 issued, 0 already on record (1 eligible;"
+        " 0 registration(s) could not be read)" in captured.out
+    )
     _assert_no_personal_data_leaked(captured.out + captured.err)
 
     register_text = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
@@ -3307,6 +3354,52 @@ def test_issue_certificates_issues_one_certificate_for_an_eligible_attendee(
     assert entry["state"] == "issued"
     assert entry["issued_on"] == paris_today(datetime.now(UTC)).isoformat()
     _assert_no_personal_data_leaked(register_text)
+
+
+def test_issue_certificates_warns_when_the_event_title_is_truncated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Carried item 8 (fix wave 2): before this, a title over
+    `certificate._MAX_TITLE_LENGTH` was truncated on the signed,
+    delivered certificate with nothing telling an operator it happened."""
+    from convener_ops.certificate import _MAX_TITLE_LENGTH
+
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    event_private_pem, signing_private_pem = _prepare_event(
+        tmp_path,
+        registrations=(ada,),
+        attendance_rows=(
+            "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
+            "2026-08-20T19:30:00Z,5400",
+        ),
+    )
+    # Overwrite the speaker record `_prepare_event` already wrote, with an
+    # over-long title -- everything else about the event stays identical.
+    (tmp_path / "data" / "speakers.yml").write_text(
+        yaml.safe_dump(
+            [
+                speaker(
+                    edition_code="MRG-042",
+                    title="x" * (_MAX_TITLE_LENGTH + 50),
+                    date="2026-08-20",
+                )
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
+    monkeypatch.setenv("CONVENER_SIGNING_KEY", signing_private_pem)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+
+    assert issue_certificates() == 0
+    captured = capsys.readouterr()
+    assert "::warning::" in captured.err
+    assert "mrg-042" in captured.err
+    assert "truncated" in captured.err
+    _assert_no_personal_data_leaked(captured.out + captured.err)
 
 
 # ------------------------------------------------------------------ #
@@ -3406,7 +3499,10 @@ def test_issue_certificates_uses_the_conference_id_named_by_the_environment(
     assert issue_certificates() == 0
     assert transport.get_calls == [f"/conferences/{conference_id}/calls"]
     captured = capsys.readouterr()
-    assert "1 issued, 0 already on record (1 eligible)" in captured.out
+    assert (
+        "1 issued, 0 already on record (1 eligible;"
+        " 0 registration(s) could not be read)" in captured.out
+    )
     _assert_no_personal_data_leaked(captured.out + captured.err)
 
 
@@ -3507,7 +3603,8 @@ def test_issue_certificates_skips_an_entry_that_fails_to_decrypt(
     """A stray entry encrypted under an unrelated key pair -- well-formed
     envelope shape, undecryptable with this event's own key. Skipped, not
     treated as a match, the same handling `match_attendance` already gives
-    a stray undecryptable entry."""
+    a stray undecryptable entry -- but, carried item 10, no longer
+    silently: the printed line now says so."""
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     event_private_pem, signing_private_pem = _prepare_event(
         tmp_path,
@@ -3532,7 +3629,9 @@ def test_issue_certificates_skips_an_entry_that_fails_to_decrypt(
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
 
     assert issue_certificates() == 0
-    assert "1 issued, 0 already on record (1 eligible)" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "1 issued, 0 already on record (1 eligible" in out
+    assert "1 registration(s) could not be read" in out
 
 
 def test_issue_certificates_skips_an_attendee_below_the_eligibility_threshold(
@@ -3557,7 +3656,10 @@ def test_issue_certificates_skips_an_attendee_below_the_eligibility_threshold(
 
     assert issue_certificates() == 0
     captured = capsys.readouterr()
-    assert "0 issued, 0 already on record (0 eligible)" in captured.out
+    assert (
+        "0 issued, 0 already on record (0 eligible;"
+        " 0 registration(s) could not be read)" in captured.out
+    )
     assert not _certificates_register_path(tmp_path).exists()
     _assert_no_personal_data_leaked(captured.out + captured.err)
 
@@ -3597,7 +3699,10 @@ def test_issue_certificates_run_twice_does_not_grow_the_register(
 
     assert issue_certificates() == 0
     second_captured = capsys.readouterr()
-    assert "0 issued, 1 already on record (1 eligible)" in second_captured.out
+    assert (
+        "0 issued, 1 already on record (1 eligible;"
+        " 0 registration(s) could not be read)" in second_captured.out
+    )
     _assert_no_personal_data_leaked(second_captured.out + second_captured.err)
     second_register = _certificates_register_path(tmp_path).read_text(encoding="utf-8")
     assert second_register == first_register
@@ -4909,8 +5014,9 @@ def test_deliver_certificates_with_no_transport_configured_reports_all_unsent(
     assert deliver_certificates() == 0
     captured = capsys.readouterr()
     assert (
-        "0 sent, 1 not sent, 0 failed to render, 0 not targeted this run "
-        "(1 eligible)" in captured.out
+        "0 sent, 1 not sent, 0 refused (revoked), 0"
+        " failed to render, 0 not targeted this run "
+        "(1 eligible; 0 registration(s) could not be read)" in captured.out
     )
     _assert_no_personal_data_leaked(captured.out + captured.err)
     assert "not sent: " in captured.out
@@ -4944,8 +5050,9 @@ def test_deliver_certificates_delivers_to_an_eligible_attendee_and_leaks_nothing
     assert deliver_certificates() == 0
     captured = capsys.readouterr()
     assert (
-        "1 sent, 0 not sent, 0 failed to render, 0 not targeted this run "
-        "(1 eligible)" in captured.out
+        "1 sent, 0 not sent, 0 refused (revoked), 0"
+        " failed to render, 0 not targeted this run "
+        "(1 eligible; 0 registration(s) could not be read)" in captured.out
     )
     _assert_no_personal_data_leaked(captured.out + captured.err)
 
@@ -5142,7 +5249,7 @@ def test_deliver_certificates_never_delivers_a_revoked_certificate_with_no_reiss
     assert deliver_certificates() == 0
     deliver_captured = capsys.readouterr()
     _assert_no_personal_data_leaked(deliver_captured.out + deliver_captured.err)
-    assert "0 sent" in deliver_captured.out
+    assert "0 sent, 0 not sent, 1 refused (revoked)" in deliver_captured.out
     assert len(_RecordingCertificateSmtpClient.sent) == 0
 
     after = yaml.safe_load(
@@ -5416,8 +5523,9 @@ def test_deliver_certificates_with_deliver_only_targets_just_those_identifiers(
     captured = capsys.readouterr()
     _assert_no_personal_data_leaked(captured.out + captured.err)
     assert (
-        "1 sent, 0 not sent, 0 failed to render, 1 not targeted this run "
-        "(2 eligible)" in captured.out
+        "1 sent, 0 not sent, 0 refused (revoked), 0"
+        " failed to render, 1 not targeted this run "
+        "(2 eligible; 0 registration(s) could not be read)" in captured.out
     )
 
     assert len(_RecordingCertificateSmtpClient.sent) == 1
@@ -5452,8 +5560,9 @@ def test_deliver_certificates_with_deliver_only_empty_targets_nobody(
     assert deliver_certificates() == 0
     captured = capsys.readouterr()
     assert (
-        "0 sent, 0 not sent, 0 failed to render, 1 not targeted this run "
-        "(1 eligible)" in captured.out
+        "0 sent, 0 not sent, 0 refused (revoked), 0"
+        " failed to render, 1 not targeted this run "
+        "(1 eligible; 0 registration(s) could not be read)" in captured.out
     )
     assert len(_RecordingCertificateSmtpClient.sent) == 0
 
@@ -5497,8 +5606,9 @@ def test_deliver_certificates_resend_all_ignores_deliver_only(
     assert deliver_certificates() == 0
     captured = capsys.readouterr()
     assert (
-        "2 sent, 0 not sent, 0 failed to render, 0 not targeted this run "
-        "(2 eligible)" in captured.out
+        "2 sent, 0 not sent, 0 refused (revoked), 0"
+        " failed to render, 0 not targeted this run "
+        "(2 eligible; 0 registration(s) could not be read)" in captured.out
     )
     assert len(_RecordingCertificateSmtpClient.sent) == 2
 
@@ -5605,8 +5715,9 @@ def test_deliver_certificates_skips_an_entry_that_fails_to_decrypt(
 
     assert deliver_certificates() == 0
     assert (
-        "0 sent, 1 not sent, 0 failed to render, 0 not targeted this run "
-        "(1 eligible)" in capsys.readouterr().out
+        "0 sent, 1 not sent, 0 refused (revoked), 0"
+        " failed to render, 0 not targeted this run "
+        "(1 eligible; 1 registration(s) could not be read)" in capsys.readouterr().out
     )
 
 
@@ -5686,8 +5797,9 @@ def test_deliver_certificates_continues_past_a_render_failure_for_one_attendee(
     # Important 3, fix round 1: a render crash is counted separately from
     # a transport failure -- see deliver_certificates's own docstring.
     assert (
-        "0 sent, 0 not sent, 1 failed to render, 0 not targeted this run "
-        "(1 eligible)" in captured.out
+        "0 sent, 0 not sent, 0 refused (revoked), 1"
+        " failed to render, 0 not targeted this run "
+        "(1 eligible; 0 registration(s) could not be read)" in captured.out
     )
     _assert_no_personal_data_leaked(captured.out + captured.err)
     assert "RuntimeError" not in captured.out
@@ -7434,11 +7546,32 @@ def test_discard_recording_refuses_a_self_consistent_typo_into_a_nonexistent_eve
     but `find_speaker` still refuses it, because the typo does not name a
     real event. This is the half of "narrow it where it is cheap" that
     costs nothing extra: `find_speaker` is already called, unconditionally,
-    before any platform is even constructed."""
+    before any platform is even constructed.
+
+    Carried item 1 (fix wave 2): before this, `CONVENER_FCC_CONFERENCE_ID` was
+    left unset here, so `conference_ids` resolved to `{}` and
+    `PlatformFCC._conference_id` raised its *own* `EventNotFoundError` for
+    'mrg-999' the moment `platform.get_recording` ran -- the identical
+    message shape, from a different guard entirely. Removing the
+    `find_speaker` call this test claims to pin left every assertion
+    green: the same exception type, the same event id in the text, and
+    `transport.get_calls == []` because the redundant failure happens
+    inside `_conference_id`, before any transport call. Setting a
+    validly-shaped `CONVENER_FCC_CONFERENCE_ID` for this exact (wrong) event id
+    makes `_conference_id('mrg-999')` resolve cleanly, so the only thing
+    left that can refuse the run at all is `find_speaker`'s own guard --
+    removing it now lets the function reach `transport.get_json` against
+    an empty `_FakeRecordingTransport`, which raises `AssertionError`
+    instead of returning 1, failing this test loudly rather than quietly
+    passing for the wrong reason."""
     _write_speaker_for_recording(tmp_path, event_id="mrg-042")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-999")
     monkeypatch.setenv("CONFIRM_DISCARD", "discard mrg-999")
+    # Carried item 1: a validly-shaped conference id for the *wrong* event
+    # id, so `PlatformFCC._conference_id` cannot coincidentally refuse this
+    # run for a reason that has nothing to do with `find_speaker`.
+    monkeypatch.setenv("CONVENER_FCC_CONFERENCE_ID", _CONFERENCE_ID)
     transport = _FakeRecordingTransport({})
     _patch_platform(monkeypatch, transport)
 

@@ -393,7 +393,7 @@ export interface Speaker {
    *  thing that varies.
    *
    *  `false` by default, and an event with the switch off carries nothing
-   *  else about the survey: no `survey_responses.enc` file is ever
+   *  else about the survey: no `survey-responses.enc` file is ever
    *  written, and the page renders no hidden section -- see
    *  `app/src/survey/SurveyForm.tsx`. */
   survey_enabled: boolean;

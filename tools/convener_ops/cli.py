@@ -926,7 +926,7 @@ def handle_survey_response() -> int:
     """`convener-handle-survey-response`: the second of the two steps
     `.github/workflows/survey.yml` runs -- decrypt one survey response and
     append it, re-encrypted, to
-    `data/events/<id>/survey_responses.enc`.
+    `data/events/<id>/survey-responses.enc`.
 
     Checked in this order, cheapest first, and every failure refuses
     before anything is decrypted or written:
@@ -989,7 +989,7 @@ def handle_survey_response() -> int:
         )
         return 1
 
-    rel_path = Path("data") / "events" / event_id / "survey_responses.enc"
+    rel_path = Path("data") / "events" / event_id / "survey-responses.enc"
     enc_path = root / rel_path
     existing_text = enc_path.read_text(encoding="utf-8") if enc_path.exists() else None
     try:
@@ -1598,6 +1598,61 @@ def encrypt_attendance_export() -> int:
     return 0
 
 
+def _load_registrations(
+    entries: Sequence[Mapping[str, Any]], private_pem: str
+) -> tuple[list[Registration], int]:
+    """Every registration `private_pem` can actually read out of `entries`
+    (`current.entries`, from a loaded `registrations.enc`), and how many
+    could not be -- carried item 10: `match_attendance`, `issue_certificates`,
+    `deliver_certificates` and `invite_survey` each carried their own copy
+    of this loop, and each silently dropped an entry that failed to decrypt
+    or did not parse as `to_registration` expects, reporting a count that
+    never mentioned it. "Four divergent fixes would be worse than the
+    defect" -- so this is the one place the loop is written, and the one
+    place its silence was fixed.
+
+    Not the same shape as R-46's fix to `platform.decrypt_attendance_rows`:
+    that one refuses outright when *every* row in a non-empty file fails --
+    the wrong-file case. This is the *partial* case R-46 deliberately left
+    open ("some rows failing is a damaged file -- tolerable"): one
+    undecryptable entry among many good ones is not refused here either,
+    for the same reason -- it would let one damaged entry take down a
+    whole event's registrations, matching, and certification. What was
+    missing was never the tolerance, only the honesty: the second element
+    of the return value is that count, and every caller now reports it
+    rather than letting it vanish into "0 matched" with no explanation.
+    """
+    registrations: list[Registration] = []
+    unreadable = 0
+    for entry in entries:
+        registration = to_registration(json.dumps(entry), private_pem)
+        if registration is not None:
+            registrations.append(registration)
+        else:
+            unreadable += 1
+    return registrations, unreadable
+
+
+def _warn_if_title_truncated(event: CertificateEvent) -> None:
+    """Carried item 8 (fix wave 2): `CertificateEvent.__post_init__`
+    truncates a title over `certificate._MAX_TITLE_LENGTH` silently --
+    correct for the document and the signature (R-22, they must never
+    disagree about which title they carry), but silent for the operator
+    too, until now. Every one of the four commands that construct a
+    `CertificateEvent` (`issue_certificates`, `reissue_certificate`,
+    `deliver_certificates`, `deliver_certificate`) calls this right after,
+    so a shortened title is always named once, on stderr, never
+    swallowed -- the same "surfaced, not folded away" discipline this
+    module already gives R-26's revoked-refusal case."""
+    if event.title_truncated:
+        print(
+            f"::warning::the title for event {event.event_id} was too "
+            "long and has been truncated on the certificate -- see "
+            "data/speakers.yml's own title field for that event",
+            file=sys.stderr,
+        )
+
+
 def match_attendance() -> int:
     """`convener-match-attendance`: read the platform's attendance export for
     one event, join it against that event's stored registrations through
@@ -1609,10 +1664,13 @@ def match_attendance() -> int:
     automatic schedule -- and `EVENT_PRIVATE_KEY`, the same per-event
     secret every other step in this file that touches
     `registrations.enc` reads. Every existing entry is decrypted once, in
-    memory, into `Registration` objects; an entry that fails to decrypt
-    under this key is skipped rather than treated as a match, the same
-    handling `find_by_email` and `upsert` already give a stray
-    undecryptable entry.
+    memory, into `Registration` objects via `_load_registrations`; an
+    entry that fails to decrypt under this key is skipped rather than
+    treated as a match, the same tolerance `find_by_email` and `upsert`
+    already give a stray undecryptable entry -- but no longer silently:
+    carried item 10, this fix wave, made every one of the four commands
+    that share this loop report how many entries it skipped, rather than
+    a count that never mentioned them.
 
     `attendance.py` is pure and never prints; this function is the only
     place its answer is turned into output, and it draws the same line
@@ -1653,11 +1711,9 @@ def match_attendance() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    registrations: list[Registration] = []
-    for entry in current.entries:
-        registration = to_registration(json.dumps(entry), private_pem)
-        if registration is not None:
-            registrations.append(registration)
+    registrations, unreadable_registrations = _load_registrations(
+        current.entries, private_pem
+    )
 
     speakers, _errors = _load(root / "data" / "speakers.yml")
     cfg, _errors = _load(root / "data" / "config.yml")
@@ -1702,7 +1758,8 @@ def match_attendance() -> int:
     print(
         f"attendance for event {event_id}: {len(result.matched)} matched, "
         f"{len(result.unmatched)} unmatched, {len(result.unreachable)} "
-        f"unreachable ({len(rows)} row(s) read)"
+        f"unreachable ({len(rows)} row(s) read; {unreadable_registrations} "
+        "registration(s) could not be read)"
     )
 
     unmatched_path = root / UNMATCHED_ATTENDANCE
@@ -1773,6 +1830,26 @@ def _conference_ids_from_env(event_id: str) -> dict[str, str]:
     this -- not reopened here."""
     conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
     return {event_id: conference_id} if conference_id else {}
+
+
+def _env_flag_is_true(name: str) -> bool:
+    """This project's own convention for a boolean `workflow_dispatch`
+    input, named here rather than nowhere (carried item 9, fix wave 2):
+    the literal string `"true"`, matched case-insensitively after
+    stripping surrounding whitespace -- never `bool(os.environ.get(...))`
+    (a non-empty `"false"` string is still truthy in Python) and never a
+    bare `== "true"` (a boolean `workflow_dispatch` input renders as the
+    exact lowercase literal `"true"`/`"false"` today, but this project's
+    own convention reads it case-insensitively anyway, the same way an
+    operator typing a raw `gh workflow run -f resend_all=True` expects to
+    work). `RESEND_ALL` was matched this way at two call sites
+    (`invite_survey`, `deliver_certificates`) with the comparison
+    retyped, identically, at each -- a third call site retyping it a
+    third time, slightly differently, is exactly the drift this function
+    exists to close off. `test_invite_survey_resend_all_only_recognises_
+    the_literal_true` pins every value a `workflow_dispatch` boolean input
+    or a raw API dispatch could actually send."""
+    return os.environ.get(name, "").strip().lower() == "true"
 
 
 # ------------------------------------------------------------------ #
@@ -1897,7 +1974,7 @@ def invite_survey() -> int:
         print(registry_error, file=sys.stderr)
         return 1
 
-    resend_all = os.environ.get("RESEND_ALL", "").strip().lower() == "true"
+    resend_all = _env_flag_is_true("RESEND_ALL")
     if event_id in registry and not resend_all:
         print(
             f"event {event_id} was already invited on "
@@ -1923,11 +2000,9 @@ def invite_survey() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    registrations: list[Registration] = []
-    for entry in current.entries:
-        registration = to_registration(json.dumps(entry), private_pem)
-        if registration is not None:
-            registrations.append(registration)
+    registrations, unreadable_registrations = _load_registrations(
+        current.entries, private_pem
+    )
 
     speakers, _errors = _load(root / "data" / "speakers.yml")
     cfg, _errors = _load(root / "data" / "config.yml")
@@ -1980,7 +2055,8 @@ def invite_survey() -> int:
         f"{unsent_count} not sent ({len(matched.matched)} matched attendee(s); "
         f"{len(matched.unmatched)} unmatched -- present, but no registration "
         f"found for their address; {len(matched.unreachable)} unreachable -- "
-        "joined by phone, no address ever collected)"
+        "joined by phone, no address ever collected; "
+        f"{unreadable_registrations} registration(s) could not be read)"
     )
     _write_github_output(f"record={'true' if sent_count else 'false'}\n")
     return 0
@@ -2169,11 +2245,9 @@ def issue_certificates() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    registrations: list[Registration] = []
-    for entry in current.entries:
-        registration = to_registration(json.dumps(entry), private_pem)
-        if registration is not None:
-            registrations.append(registration)
+    registrations, unreadable_registrations = _load_registrations(
+        current.entries, private_pem
+    )
 
     speakers, speaker_errors = _load(root / "data" / "speakers.yml")
     cfg, _errors = _load(root / "data" / "config.yml")
@@ -2236,6 +2310,7 @@ def issue_certificates() -> int:
     register_path, existing = loaded_register
 
     event = CertificateEvent(event_id=event_id, title=title, date=event_date)
+    _warn_if_title_truncated(event)
     issued_on = paris_today(datetime.now(UTC))
     max_duration_seconds = threshold.seminar_duration_minutes * 60
 
@@ -2299,7 +2374,8 @@ def issue_certificates() -> int:
     print(
         f"certificates for event {event_id}: {issued_count} issued, "
         f"{already_count} already on record"
-        f"{refused_note if refused_count else ''} ({len(eligible)} eligible)"
+        f"{refused_note if refused_count else ''} ({len(eligible)} eligible; "
+        f"{unreadable_registrations} registration(s) could not be read)"
     )
     return 0
 
@@ -2548,11 +2624,9 @@ def reissue_certificate() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    registrations: list[Registration] = []
-    for entry in current.entries:
-        registration = to_registration(json.dumps(entry), private_pem)
-        if registration is not None:
-            registrations.append(registration)
+    registrations, _unreadable_registrations = _load_registrations(
+        current.entries, private_pem
+    )
 
     loaded_register = _load_certificate_register(root, event_id)
     if loaded_register is None:
@@ -2636,6 +2710,7 @@ def reissue_certificate() -> int:
         return 1
 
     event = CertificateEvent(event_id=event_id, title=title, date=event_date)
+    _warn_if_title_truncated(event)
     capped_attendee = replace(
         attendee,
         duration_seconds=min(
@@ -2801,15 +2876,19 @@ def deliver_certificates() -> int:
     command is dispatchable on its own, so the guard is not decorative.
 
     Once eligibility is computed, this command never fails the whole run
-    again. Three outcomes, each counted separately and printed by name,
+    again. Four outcomes, each counted separately and printed by name,
     never folded into one indistinguishable bucket (Important 3, fix
-    round 1):
+    round 1; carried item 7, fix wave 2):
 
     - **`issue` refuses (R-26):** every register row for this fingerprint
-      is revoked. Counted with the ordinary "not sent" total -- a revoked
-      certificate is never delivered, by any path, but this is not a
-      renderer crash or a transport failure, so it does not inflate
-      either of those.
+      is revoked. Counted as its own `refused_count`, not folded into
+      "not sent" (carried item 7, fix wave 2: it used to be, and an
+      operator reading the printed line could not tell "correctly not
+      sent, on purpose" from "the mail server is down" -- exactly the
+      distinction `unsent_count`'s own D-13 framing below depends on
+      meaning only one thing). A revoked certificate is never delivered,
+      by any path, but this is not a renderer crash or a transport
+      failure either, so it does not inflate those two counts.
     - **Rendering or composing the document raises:** counted separately
       from a transport failure (`render_failed_count`) -- `delivery.deliver`
       below never raises for an ordinary send failure, it *returns*
@@ -2898,11 +2977,9 @@ def deliver_certificates() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    registrations: list[Registration] = []
-    for entry in current.entries:
-        registration = to_registration(json.dumps(entry), private_pem)
-        if registration is not None:
-            registrations.append(registration)
+    registrations, unreadable_registrations = _load_registrations(
+        current.entries, private_pem
+    )
 
     speakers, speaker_errors = _load(root / "data" / "speakers.yml")
     cfg, _errors = _load(root / "data" / "config.yml")
@@ -2964,13 +3041,14 @@ def deliver_certificates() -> int:
         return 1
 
     event = CertificateEvent(event_id=event_id, title=title, date=event_date)
+    _warn_if_title_truncated(event)
     issued_on = paris_today(datetime.now(UTC))
     max_duration_seconds = threshold.seminar_duration_minutes * 60
 
     # R-27, fix round 1: restrict to what this run's own issuance step
     # just minted, unless an operator has explicitly asked for everyone.
     # See this function's own docstring for the full contract.
-    resend_all = os.environ.get("RESEND_ALL", "").strip().lower() == "true"
+    resend_all = _env_flag_is_true("RESEND_ALL")
     deliver_only_raw = os.environ.get("DELIVER_ONLY")
     deliver_only: frozenset[str] | None
     if resend_all or deliver_only_raw is None:
@@ -2982,6 +3060,7 @@ def deliver_certificates() -> int:
 
     sent_count = 0
     unsent_count = 0
+    refused_count = 0
     render_failed_count = 0
     skipped_count = 0
     unsent_ids: list[str] = []
@@ -2996,8 +3075,13 @@ def deliver_certificates() -> int:
             )
         except ValueError:
             # R-26: every register row for this fingerprint is revoked --
-            # never resurrect it here.
-            unsent_count += 1
+            # never resurrect it here. Carried item 7 (fix wave 2): counted
+            # separately from `unsent_count` -- a revoked certificate that
+            # was correctly never delivered is not the same finding as a
+            # transport failure, and an operator could not previously tell
+            # "the mail server is down" from "this one is revoked, on
+            # purpose" in the printed line.
+            refused_count += 1
             continue
 
         if deliver_only is not None and result.entry.identifier not in deliver_only:
@@ -3033,8 +3117,10 @@ def deliver_certificates() -> int:
 
     print(
         f"certificates delivered for event {event_id}: {sent_count} sent, "
-        f"{unsent_count} not sent, {render_failed_count} failed to render, "
-        f"{skipped_count} not targeted this run ({len(eligible)} eligible)"
+        f"{unsent_count} not sent, {refused_count} refused (revoked), "
+        f"{render_failed_count} failed to render, {skipped_count} not "
+        f"targeted this run ({len(eligible)} eligible; "
+        f"{unreadable_registrations} registration(s) could not be read)"
     )
     if unsent_ids:
         # R-27, fix round 1: identifiers are public by design -- never a
@@ -3152,11 +3238,9 @@ def deliver_certificate() -> int:
         print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
         return 1
 
-    registrations: list[Registration] = []
-    for entry in current.entries:
-        registration = to_registration(json.dumps(entry), private_pem)
-        if registration is not None:
-            registrations.append(registration)
+    registrations, _unreadable_registrations = _load_registrations(
+        current.entries, private_pem
+    )
 
     loaded_register = _load_certificate_register(root, event_id)
     if loaded_register is None:
@@ -3242,6 +3326,7 @@ def deliver_certificate() -> int:
         return 1
 
     event = CertificateEvent(event_id=event_id, title=title, date=event_date)
+    _warn_if_title_truncated(event)
     capped_attendee = replace(
         attendee,
         duration_seconds=min(

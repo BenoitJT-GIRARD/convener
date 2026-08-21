@@ -77,7 +77,7 @@ Registration and attendance data is destroyed **90 days** after the event,
 by destroying the one key that could ever decrypt it — the retention window
 `tools/convener_ops/eventkeys.py` reads for every event. The encrypted files
 themselves are not deleted: `data/events/<id>/registrations.enc`, the
-attendance export and `survey_responses.enc` all stay committed, exactly
+attendance export and `survey-responses.enc` all stay committed, exactly
 as spec §4 asks — unreadable, not absent, so no commit history anywhere in
 this repository is ever rewritten to make that happen. The one credential
 this destruction depends on is the

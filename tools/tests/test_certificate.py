@@ -820,6 +820,9 @@ def test_certificate_event_truncates_a_title_longer_than_the_max_length() -> Non
 
     assert len(event.title) == _MAX_TITLE_LENGTH
     assert event.title == long_title[:_MAX_TITLE_LENGTH]
+    # Carried item 8, fix wave 2: the truncation is no longer silent --
+    # this flag is what cli.py's own `_warn_if_title_truncated` reads.
+    assert event.title_truncated is True
 
 
 def test_certificate_event_leaves_a_title_at_or_under_the_max_length_untouched() -> (
@@ -831,6 +834,7 @@ def test_certificate_event_leaves_a_title_at_or_under_the_max_length_untouched()
     event = CertificateEvent(event_id="mrg-042", title=exact_title, date="2026-08-20")
 
     assert event.title == exact_title
+    assert event.title_truncated is False
 
 
 def test_issue_signs_the_truncated_title_never_the_original() -> None:

@@ -352,7 +352,7 @@ import hmac
 import re
 import secrets
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from hashlib import sha256
@@ -536,15 +536,28 @@ class CertificateEvent:
     rather than refused (Important 3, fix round 1) -- see that constant's
     own comment for why. `__post_init__` on a frozen dataclass still needs
     `object.__setattr__` to apply the truncation; every other field is
-    left exactly as given."""
+    left exactly as given.
+
+    `title_truncated` (carried item 8, fix wave 2): `True` exactly when
+    the truncation above actually did something, `False` otherwise --
+    never a constructor argument (`init=False`), always derived the same
+    way `title` itself is. Before this, the truncation was silent: a
+    signed, delivered certificate could quietly carry a shortened title
+    with nothing anywhere telling an operator it happened. `cli.py`'s
+    `issue_certificates` and `deliver_certificates` both read this flag,
+    once, to print a `::warning::` naming the event -- the same
+    discipline this module already gives R-26's revoked-refusal case,
+    surfaced rather than swallowed."""
 
     event_id: str
     title: str
     date: str
+    title_truncated: bool = field(default=False, init=False, compare=False)
 
     def __post_init__(self) -> None:
         if len(self.title) > _MAX_TITLE_LENGTH:
             object.__setattr__(self, "title", self.title[:_MAX_TITLE_LENGTH])
+            object.__setattr__(self, "title_truncated", True)
 
 
 @dataclass(frozen=True)

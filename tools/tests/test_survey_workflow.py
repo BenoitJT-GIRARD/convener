@@ -95,7 +95,7 @@ def test_the_retry_loop_re_derives_rather_than_rebases() -> None:
 
 
 def test_the_committed_file_path_is_the_events_own_survey_responses_file() -> None:
-    assert 'git add "data/events/$EVENT_ID/survey_responses.enc"' in _SURVEY
+    assert 'git add "data/events/$EVENT_ID/survey-responses.enc"' in _SURVEY
 
 
 def test_the_job_grants_only_contents_write() -> None:

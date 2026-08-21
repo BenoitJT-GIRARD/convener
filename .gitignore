@@ -69,7 +69,7 @@ keys/signing/*
 # join instructions come from data/speakers.yml and data/config.yml instead
 # (R-5, R-6), never from a file under this directory. This filename-specific
 # pattern deliberately does not reach data/events/<id>/registrations.enc or
-# data/events/<id>/survey_responses.enc (tools/convener_ops/registration.py and
+# data/events/<id>/survey-responses.enc (tools/convener_ops/registration.py and
 # survey.py, task 16) -- both *are* committed, and both hold nothing but
 # per-record ciphertext, the opposite of what this rule exists to keep out.
 # Nor does it reach data/events/<id>/attendance-import.csv.enc (task 17,

@@ -560,7 +560,7 @@ def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
     assert deliver_certificates() == 0
     out = capsys.readouterr().out
     assert "0 sent, 2 not sent" in out
-    assert "(2 eligible)" in out
+    assert "(2 eligible; 0 registration(s) could not be read)" in out
 
     after = yaml.safe_load(register_path.read_text(encoding="utf-8"))
     assert {row["identifier"] for row in after["certificates"]} == {
