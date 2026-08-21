@@ -100,11 +100,21 @@ describe('a real run against the real docs/ tree', () => {
     expect(slash(await walkAll(dst)).some(p => p.startsWith('superpowers/'))).toBe(false);
   });
 
-  it('publishes nothing under docs/assets/ beyond the four files PUBLIC_ASSETS names', async () => {
+  it('publishes nothing under docs/assets/ beyond what PUBLIC_ASSETS names', async () => {
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     const publishedAssets = slash(await walkAll(dst)).filter(p => p.startsWith('assets/'));
     expect(publishedAssets).toEqual([...PUBLIC_ASSETS].sort());
+  });
+
+  it('never republishes docs/assets/flyer-example.png -- fix round 1: a real, named speaker\'s photograph, withdrawn from PUBLIC_ASSETS, not a synthetic example', async () => {
+    // Hard-coded, deliberately not derived from PUBLIC_ASSETS: the test
+    // above would still agree with itself if this path were ever added
+    // back there, which is exactly the silent-reinstatement this
+    // assertion exists to catch instead.
+    dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
+    await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
+    expect(slash(await walkAll(dst))).not.toContain('assets/flyer-example.png');
   });
 
   it('never publishes docs/index.md, docs/README.md or governance/register.md -- real, unregistered pages meant for a reader browsing the repository itself, not the app', async () => {

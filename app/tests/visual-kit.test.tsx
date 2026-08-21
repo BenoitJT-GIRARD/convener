@@ -36,7 +36,13 @@ const KIT_KEY = 'toolkit/visual-kit';
 const DOCS = resolve(__dirname, '../../docs');
 const TEMPLATES = ['assets/announcement-template.svg', 'assets/flyer-template.svg'];
 const BACKGROUND = 'assets/zoom-background.png';
-const EXAMPLE = 'assets/flyer-example.png';
+// Fix round 1: this used to be a fourth published asset. It was a real
+// speaker's own photograph and name, kept without a later, separate
+// consent to use them as a sample -- see `PUBLIC_ASSETS`'s own comment.
+// Named here so the tests below assert its absence rather than simply
+// omitting it -- an omission a later change could not tell apart from an
+// oversight.
+const WITHDRAWN_EXAMPLE = 'assets/flyer-example.png';
 
 function kit(): string {
   return readFileSync(resolve(DOCS, CONTENT_REGISTRY[KIT_KEY].file), 'utf-8');
@@ -84,12 +90,23 @@ describe('the build serves what the kit links to', () => {
   // from now on (see `handbook-registry.mjs`) -- unlike `walk(DOCS)` above,
   // asserting against it is asserting against what the build really does,
   // not against a rule the build no longer uses to decide this.
-  it('names exactly the kit\'s two templates, its background and its finished example', () => {
-    expect([...PUBLIC_ASSETS].sort()).toEqual([...TEMPLATES, BACKGROUND, EXAMPLE].sort());
+  it('names exactly the kit\'s two templates and its background -- no finished example', () => {
+    expect([...PUBLIC_ASSETS].sort()).toEqual([...TEMPLATES, BACKGROUND].sort());
   });
 
-  it.each([...TEMPLATES, BACKGROUND, EXAMPLE])('%s is in the allowlist the build publishes', file => {
+  it.each([...TEMPLATES, BACKGROUND])('%s is in the allowlist the build publishes', file => {
     expect(PUBLIC_ASSETS).toContain(file);
+  });
+
+  it('never republishes the withdrawn example -- a real speaker\'s photograph, not a synthetic one', () => {
+    expect(PUBLIC_ASSETS).not.toContain(WITHDRAWN_EXAMPLE);
+    // Nor does the page still point at it: the row was rewritten to say
+    // plainly that the slot is empty, not filled with a substitute. (Not
+    // asserted here: that the page's text no longer names the speaker --
+    // that would put her real name in the clear in this test file to
+    // check for it, which the fix this test is guarding is not allowed to
+    // do either.)
+    expect(localLinks()).not.toContain(`../${WITHDRAWN_EXAMPLE}`);
   });
 
   it('turns a link written for the repository into one the app can fetch', () => {

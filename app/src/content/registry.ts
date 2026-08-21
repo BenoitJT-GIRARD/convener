@@ -130,13 +130,27 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
 };
 
 /** Files under `docs/` that ship alongside the content above without ever
- *  being looked up by a content key: the visual kit's templates and finished
- *  example, reached only through a relative link inside `toolkit/visual-kit.md`
- *  (and, for the background, `workflow/3-hosting.md` too) rather than through
- *  `fetchContent`. Kept out of `CONTENT_REGISTRY` itself so that map keeps
- *  meaning exactly "pages the app renders" -- an SVG run through `substitute`
- *  by a test sweeping every registry entry would be a category error, not a
- *  page.
+ *  being looked up by a content key: the visual kit's two blank templates
+ *  and its background image, reached only through a relative link inside
+ *  `toolkit/visual-kit.md` (and, for the background, `workflow/3-hosting.md`
+ *  too) rather than through `fetchContent`. Kept out of `CONTENT_REGISTRY`
+ *  itself so that map keeps meaning exactly "pages the app renders" -- an
+ *  SVG run through `substitute` by a test sweeping every registry entry
+ *  would be a category error, not a page.
+ *
+ *  Every entry here was opened and read, not assumed safe from its
+ *  extension or its role: the two templates are hand-authored SVG with
+ *  `{{speaker.*}}` placeholders and a literal "speaker photo" placeholder
+ *  frame, never a real name or a real photograph; the background is a
+ *  branded graphic with no person in it. A fourth file, the kit's
+ *  "finished example", was on this list until fix round 1 of this task --
+ *  it was a real speaker's own photograph and name, kept without a later,
+ *  separate consent to use them as a sample (`git log --follow` on
+ *  `docs/assets/flyer-example.png` shows this: a pure rename, no content
+ *  change, from a filename that named the speaker directly). It is gone
+ *  from here and from the page; see `toolkit/visual-kit.md`'s own note on
+ *  that slot, and `app/tests/copy-handbook.test.ts`'s regression test
+ *  pinning this list to exactly the three that were actually checked.
  *
  *  This list, together with `CONTENT_REGISTRY`'s own file paths, is the
  *  *entire* allowlist `scripts/copy-handbook.mjs` publishes into the app's
@@ -147,5 +161,4 @@ export const PUBLIC_ASSETS: readonly string[] = [
   'assets/announcement-template.svg',
   'assets/flyer-template.svg',
   'assets/zoom-background.png',
-  'assets/flyer-example.png',
 ];
