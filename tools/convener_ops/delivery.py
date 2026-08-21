@@ -31,9 +31,19 @@ the call path. `_QR_ERROR_LEVEL = "m"` (roughly 15% error correction) was
 checked against this project's own realistic worst case, not chosen by
 guesswork: `registration._MAX_FIELD_LENGTH` bounds `first_name` and
 `surname` at 200 characters each, and a token built from two 200-character
-names plus a 300-character event title still encodes at QR version 35 of
-40 under "m" -- comfortable headroom, confirmed by generating one and
-checking `segno` did not raise, not merely assumed from a capacity table.
+names plus a 300-character event title still encodes at QR version 36 of
+40 under "m" (Minor 3, fix round 1: measured as 36, not the 35 an earlier
+draft of this comment assumed -- the whole point of this sentence is that
+the number was checked rather than assumed, so it has to be the checked
+one) -- comfortable headroom, confirmed by generating one and checking
+`segno` did not raise, not merely assumed from a capacity table. The
+300-character title is no longer only an assumed worst case either:
+`certificate.CertificateEvent.__post_init__` enforces it (Important 3,
+fix round 1) -- see that constant's own comment for the concrete overflow
+this closes (a title long enough on its own, regardless of name length,
+made `segno.make` raise `DataOverflowError`, which this module's caller
+folded silently into "not sent", forever, since every retry hit the
+identical wall).
 
 Never written to disk, never printed -- and why not task 7's own artefact
 (ruling 1, ruling 2)
@@ -94,6 +104,20 @@ avoid *breaking* that property, which is exactly what never caching or
 regenerating any part of the document from anything but its own
 deterministic inputs achieves.
 
+**What "byte-identical" actually covers, since Minor 5 (fix round 1): the
+document and the token, not the envelope.** `_SmtpDeliveryTransport.send`
+now sets a `Date` header (`email.utils.formatdate`, current send time) --
+spec S:9's own risk table names the spam folder explicitly ("un certificat
+dans les indesirables n'existe pas"), and a missing `Date` is a real
+spam-scoring signal, so a resend deserves one exactly as much as the first
+send did. This does not conflict with the replay guarantee above: a `Date`
+header changes the *message* on a retry, never the attachment or its
+signature, and nothing this module's own tests pin ever compares the
+envelope byte for byte -- only `_sent_attachment_html` and the token it
+carries. `confirmation.py`'s own transport has the identical gap
+(inherited, not introduced here) and is deliberately not touched by this
+round; it is carried to the phase's final fix wave instead.
+
 **That replayability is not unconditional forever, and this module does
 not claim it is.** `certificate.issue` needs the event's own decrypted
 registrations to find the attendee's fingerprint and address at all --
@@ -140,6 +164,7 @@ import smtplib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from email.message import EmailMessage
+from email.utils import formatdate
 from typing import Final, Protocol
 
 import segno
@@ -149,6 +174,7 @@ from .confirmation import CONTACT_EMAIL, SmtpConfig, smtp_config_from_env
 from .registration import Registration
 
 __all__ = [
+    "DOCUMENT_INSTRUCTION",
     "Delivery",
     "DeliveryResult",
     "DeliveryTransport",
@@ -218,7 +244,19 @@ def render_certificate(
     own registration) and `event_title` (a speaker's own talk title) both
     come from data this project accepts from people it has not otherwise
     sandboxed, and a certificate is exactly the kind of document a browser
-    might one day render untrusted."""
+    might one day render untrusted.
+
+    **Deliberately not sanitised: bidi overrides (`U+202E` and friends) and
+    a bare newline in `name` (Minor 6, fix round 1).** `html.escape` only
+    ever handles `<`, `>`, `&` and `"` -- markup, not direction control or
+    whitespace -- so a name carrying `U+202E` or `\\n` reaches this page
+    exactly as typed. Left alone on purpose, not merely unnoticed: the
+    verification page renders the *same* characters, out of the *same*
+    signed payload, so the document and the verifier always agree on what
+    the name is. Sanitising only here would make them disagree -- a
+    document showing one string while the verifier shows another -- which
+    is worse than the cosmetic spoofing (a right-to-left override
+    reordering how a name displays) it would prevent."""
     url = verification_url(identifier, token)
     qr_svg = segno.make(url, error=_QR_ERROR_LEVEL).svg_inline(scale=_QR_SCALE)
     safe_name = html.escape(name)
@@ -327,13 +365,34 @@ class Delivery:
     document_filename: str
 
 
+#: The load-bearing half of the body sentence describing the attachment --
+#: exported so `test_delivery.py` can pin it against
+#: `docs/toolkit/emails/certificate-delivered.md`'s own copy, the same
+#: "export the sentence, do not retype it" discipline
+#: `confirmation.MATCHING_INSTRUCTION` and `confirmation.UPDATE_WARNING`
+#: already use for their own pages (Minor 4, fix round 1). Before this,
+#: only the *subject* was pinned (`test_delivery.py`'s own
+#: `test_compose_subject_names_the_event`); the body had drifted
+#: typographically from the docs copy -- an ASCII "--" here where the docs
+#: page has already used an em dash ("—") since this task's own first
+#: round, matching `confirmation.compose`'s own subject-line precedent
+#: (`f"{subject} — {event.title}"`) -- so this also fixes that drift, not
+#: only pins against a future one.
+DOCUMENT_INSTRUCTION: Final = (
+    "as a self-contained web page you can open in any browser — print it, "
+    'or use your browser\'s own "print to PDF" if you would rather keep a '
+    "PDF copy."
+)
+
+
 def compose(
     registration: Registration, event_title: str, identifier: str, document: str
 ) -> Delivery:
     """The e-mail that carries `document` -- see
     `docs/toolkit/emails/certificate-delivered.md` for the copy this
-    mirrors. Deterministic in every argument, the same property
-    `confirmation.compose` has and for the same reason: a resend
+    mirrors, and `DOCUMENT_INSTRUCTION` above for the one sentence pinned
+    against it directly. Deterministic in every argument, the same
+    property `confirmation.compose` has and for the same reason: a resend
     (`cli.py::deliver_certificate`) reproduces the identical message, not
     merely one carrying the same document."""
     subject = "Your certificate of attendance"
@@ -344,10 +403,7 @@ def compose(
     lines = [
         f"Dear {registration.first_name},",
         "",
-        f"Attached is your certificate of attendance{what}, as a "
-        "self-contained web page you can open in any browser -- print it, "
-        'or use your browser\'s own "print to PDF" if you would rather '
-        "keep a PDF copy.",
+        f"Attached is your certificate of attendance{what}, {DOCUMENT_INSTRUCTION}",
         "",
         f"Identifier: {identifier}",
         "",
@@ -386,6 +442,13 @@ class _SmtpDeliveryTransport:
         email["Subject"] = delivery.subject
         email["From"] = config.sender
         email["To"] = delivery.to
+        # Minor 5, fix round 1: a real send time, not a fixed or omitted
+        # one -- see the module docstring's "what byte-identical actually
+        # covers" section for why this does not weaken the replay
+        # guarantee (it changes the envelope, never the document or its
+        # signature) and why it belongs here at all (spec S:9's own risk
+        # table names the spam folder by name).
+        email["Date"] = formatdate(localtime=True)
         # Same reasoning as confirmation.py's own transport: "reply to
         # this message" (the compose() body, implicitly, through this
         # header) must be literally true regardless of what CONVENER_SMTP_FROM

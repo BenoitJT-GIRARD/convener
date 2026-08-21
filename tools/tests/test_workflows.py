@@ -503,6 +503,18 @@ _DOTTED_ENV_NAMES: dict[tuple[str, str], str] = {
     ("signing", "SECRET_NAME"): signing.SECRET_NAME
 }
 
+#: Excluded from `_env_vars_read`'s own result (R-27, fix round 1):
+#: `_write_github_output` reads `GITHUB_OUTPUT` (`cli.py::issue_certificates`
+#: is the new caller this round adds, through that shared helper), but this
+#: is not a secret or an input a workflow author ever forwards through a
+#: step's own `env:` block -- the runner already sets it, unconditionally,
+#: for every step in a job. Treating it like `CONVENER_SIGNING_KEY` or
+#: `CERTIFICATE_ID` would make `test_issue_certificates_workflow_carries_
+#: every_env_var_the_command_reads` demand an `env:` entry that has no
+#: right-hand side to write and that no workflow in this repository ever
+#: needs.
+_RUNNER_PROVIDED_ENV_VARS = frozenset({"GITHUB_OUTPUT"})
+
 
 def _function_node(path: Path, name: str) -> ast.FunctionDef:
     tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
@@ -630,11 +642,11 @@ def _env_vars_read(
                 and node.args
             ):
                 name = _literal_env_name(node.args[0])
-                if name:
+                if name and name not in _RUNNER_PROVIDED_ENV_VARS:
                     names.add(name)
         elif isinstance(node, ast.Subscript) and _is_os_environ(node.value):
             name = _literal_env_name(node.slice)
-            if name:
+            if name and name not in _RUNNER_PROVIDED_ENV_VARS:
                 names.add(name)
     if _calls_platform_from_env(func):
         names.add(platform_fcc.TOKEN_ENV)
@@ -761,6 +773,10 @@ def test_issue_certificates_delivery_step_carries_every_env_var_it_reads() -> No
         "CONVENER_MATCHING_SALT",
         "CONVENER_MEETING_API_TOKEN",
         "CONVENER_FCC_CONFERENCE_ID",
+        # R-27, fix round 1: the identifier hand-off from the issuance
+        # step above, and the deliberate batch-retry override.
+        "DELIVER_ONLY",
+        "RESEND_ALL",
         "CONVENER_SMTP_HOST",
         "CONVENER_SMTP_PORT",
         "CONVENER_SMTP_USER",
@@ -814,7 +830,7 @@ def test_deliver_certificate_workflow_carries_every_env_var_the_command_reads() 
     )
 
 
-#: Minor 3, fix round 3: the exact three names any of these workflows'
+#: Minor 3, fix round 3: the exact names any of these workflows'
 #: `workflow_dispatch` inputs may ever carry -- an allowlist, not the
 #: one-word denylist (`"email" not in trigger.lower()`) this test used to
 #: be. R-22's own docstring calls "never an address" "the one property
@@ -823,8 +839,11 @@ def test_deliver_certificate_workflow_carries_every_env_var_the_command_reads() 
 #: untouched. This repository already argues the general case in
 #: `certificate.public_register`'s own docstring: an allowlist of exactly
 #: what may leave, not a denylist of the one thing that must not.
+#: `resend_all` (R-27, fix round 1) joined this set with
+#: `issue-certificates.yml`'s own delivery step: a boolean, never
+#: personal data, so R-22's own property still holds.
 _ALLOWED_CERTIFICATE_WORKFLOW_INPUTS = frozenset(
-    {"event_id", "certificate_id", "conference_id"}
+    {"event_id", "certificate_id", "conference_id", "resend_all"}
 )
 
 #: Matches a `workflow_dispatch` input's own name -- a key indented
@@ -1227,3 +1246,100 @@ def test_deliver_certificate_workflow_is_dispatchable_by_hand() -> None:
     text = (ROOT / DELIVER_CERTIFICATE_WORKFLOW).read_text(encoding="utf-8")
     trigger = text.split("jobs:")[0]
     assert "workflow_dispatch:" in trigger
+
+
+def test_deliver_certificate_workflow_has_its_own_concurrency_group() -> None:
+    """Minor 7, fix round 1: two concurrent dispatches for the *same*
+    certificate would otherwise send two e-mails. Keyed on
+    `certificate_id` alone -- narrower than, and never shared with, the
+    three certificate workflows' own `certificates-<event id>` group
+    (which this workflow never writes anything to at all)."""
+    loaded = _deliver_certificate_workflow()
+    concurrency = loaded.get("concurrency")
+    assert isinstance(concurrency, dict), (
+        "deliver-certificate.yml has no concurrency group"
+    )
+    assert concurrency.get("group") == "deliver-${{ inputs.certificate_id }}"
+    assert concurrency.get("cancel-in-progress") is False, (
+        "a resend mid-flight must finish, never be cancelled by another "
+        "dispatch for the same certificate starting"
+    )
+
+
+# ------------------------------------------------------------------ #
+# R-27, fix round 1: the issue step hands its own freshly-issued
+# identifiers to the delivery step, which restricts itself to that set by
+# default; Minor 8 stops a transient delivery failure from masking that
+# the certificates were already committed and pushed.
+# ------------------------------------------------------------------ #
+
+
+def _issue_certificates_workflow() -> dict[str, Any]:
+    loaded = safe_load((ROOT / ISSUE_CERTIFICATES_WORKFLOW).read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def test_issue_step_has_an_id_the_delivery_step_can_read_outputs_from() -> None:
+    loaded = _issue_certificates_workflow()
+    steps = loaded["jobs"]["issue"]["steps"]
+    issue_step = next(
+        step for step in steps if "convener-issue-certificates" in step.get("run", "")
+    )
+    assert issue_step.get("id") == "issue", (
+        "the step running convener-issue-certificates has no id -- "
+        "steps.issue.outputs.issued_ids could not resolve to anything"
+    )
+
+
+def test_delivery_step_reads_deliver_only_from_the_issue_steps_own_output() -> None:
+    """Pins the exact expression, not only that the key exists (the env
+    var test above already covers that): a mutation that hardcoded
+    `DELIVER_ONLY` to the empty string, or read some other step's output,
+    would still carry the right *name* and pass that test while
+    delivering to nobody -- or everybody -- regardless of what the issue
+    step actually minted."""
+    carried = _workflow_step_env(
+        ISSUE_CERTIFICATES_WORKFLOW, "issue", "convener-deliver-certificates"
+    )
+    assert carried.get("DELIVER_ONLY") == "${{ steps.issue.outputs.issued_ids }}"
+    assert carried.get("RESEND_ALL") == "${{ inputs.resend_all }}"
+
+
+def _workflow_step_env(
+    workflow_path: Path, job: str, run_contains: str
+) -> dict[str, Any]:
+    loaded = safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    for step in loaded["jobs"][job]["steps"]:
+        if run_contains in step.get("run", ""):
+            env = step.get("env") or {}
+            assert isinstance(env, dict)
+            return env
+    raise AssertionError(
+        f"no step in {workflow_path.as_posix()}::{job} runs a command "
+        f"containing {run_contains!r}"
+    )
+
+
+def test_delivery_step_does_not_fail_the_whole_run_on_its_own() -> None:
+    """Minor 8, fix round 1: a transient failure re-fetching attendance in
+    this step must not mark the whole run red after the certificates were
+    already committed and pushed by the step before it."""
+    loaded = _issue_certificates_workflow()
+    steps = loaded["jobs"]["issue"]["steps"]
+    delivery_step = next(
+        step for step in steps if "convener-deliver-certificates" in step.get("run", "")
+    )
+    assert delivery_step.get("continue-on-error") is True
+
+
+def test_issue_certificates_workflow_has_a_resend_all_input_defaulting_false() -> None:
+    """`loaded[True]`, not `loaded["on"]` -- PyYAML's YAML-1.1 bool
+    resolver reads a bare `on:` key as `True`, the same gotcha
+    `test_certificate_workflows_accept_only_the_allowlisted_inputs`'s own
+    docstring already names for this file."""
+    loaded = _issue_certificates_workflow()
+    inputs = loaded[True]["workflow_dispatch"]["inputs"]
+    assert inputs["resend_all"]["type"] == "boolean"
+    assert inputs["resend_all"]["default"] is False
+    assert inputs["resend_all"]["required"] is False

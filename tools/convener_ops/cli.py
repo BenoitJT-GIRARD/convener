@@ -29,6 +29,7 @@ from convener_ops.attendance import (
 )
 from convener_ops.certificate import (
     EVENTS_DIR,
+    STATE_REVOKED,
     CertificateEntry,
     CertificateEvent,
     certificates_path,
@@ -42,6 +43,7 @@ from convener_ops.certificate import (
     register_to_data,
     reissue,
     revoke,
+    sign_for,
 )
 from convener_ops.governance import paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
@@ -1047,6 +1049,23 @@ def issue_certificates() -> int:
     was freshly minted; reissuing every attendee already on record writes
     nothing and still exits 0.
 
+    **A fingerprint whose only rows are revoked is refused, not resurrected
+    (R-26, fix round 1, Critical 1).** `issue`'s own three-way lookup
+    raises `ValueError` for that one attendee; this loop catches it,
+    counts it separately (never crashing the whole run over it), and
+    leaves the register untouched for that fingerprint. The correction
+    path is `convener-reissue-certificate`, an operator's own deliberate act,
+    never something this scheduled-and-re-run command performs itself.
+
+    **Writes the freshly-issued identifiers to `$GITHUB_OUTPUT` as
+    `issued_ids=<comma-joined>` (R-27, fix round 1).** Identifiers are
+    public by design -- already printed on the document, already
+    published in `certificates-public.json` -- so nothing personal
+    travels. `issue-certificates.yml`'s delivery step
+    (`deliver_certificates`, below) reads this to restrict an ordinary run
+    to exactly what was minted just now, rather than re-mailing every past
+    attendee on every dispatch.
+
     Each eligible attendee's `duration_seconds` is capped at
     `threshold.seminar_duration_minutes * 60` before it ever reaches
     `issue` (R-17, fix round 1, Critical 1) -- see
@@ -1168,6 +1187,8 @@ def issue_certificates() -> int:
     entries = list(existing)
     issued_count = 0
     already_count = 0
+    refused_count = 0
+    freshly_issued_ids: list[str] = []
     for attendee in eligible:
         capped_attendee = replace(
             attendee,
@@ -1177,19 +1198,29 @@ def issue_certificates() -> int:
         # byte-identically (PKCS1v15 determinism -- see certificate.py's
         # own module docstring, "idempotent without being deterministic").
         # This is the payoff of the idempotence design, not an oversight.
-        result = issue(
-            capped_attendee,
-            event,
-            signing_key,
-            salt,
-            tuple(entries),
-            issued_on=issued_on,
-        )
+        try:
+            result = issue(
+                capped_attendee,
+                event,
+                signing_key,
+                salt,
+                tuple(entries),
+                issued_on=issued_on,
+            )
+        except ValueError:
+            # R-26, fix round 1: every register row for this fingerprint
+            # is revoked -- `issue`'s own three-way lookup refuses rather
+            # than resurrecting it. A routine re-run must skip this one
+            # attendee, never crash the whole run over it; the correction
+            # path is `convener-reissue-certificate`, run by hand.
+            refused_count += 1
+            continue
         if result.already_registered:
             already_count += 1
         else:
             entries.append(result.entry)
             issued_count += 1
+            freshly_issued_ids.append(result.entry.identifier)
 
     if issued_count:
         register_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1199,9 +1230,21 @@ def issue_certificates() -> int:
             newline="",
         )
 
+    # R-27, fix round 1: hand the freshly-issued identifiers (public by
+    # design -- already printed on the document, already published in
+    # certificates-public.json) to the delivery step through
+    # `$GITHUB_OUTPUT`, so a re-dispatch after a corrected export mails
+    # only the newly corrected certificates, not every past attendee
+    # again. Written even when empty -- an empty `issued_ids=` is exactly
+    # what tells `convener-deliver-certificates` this run minted nothing new,
+    # so it should deliver nothing (see that function's own docstring).
+    _write_github_output(f"issued_ids={','.join(freshly_issued_ids)}\n")
+
+    refused_note = f", {refused_count} refused (revoked, use convener-reissue-certificate)"
     print(
         f"certificates for event {event_id}: {issued_count} issued, "
-        f"{already_count} already on record ({len(eligible)} eligible)"
+        f"{already_count} already on record"
+        f"{refused_note if refused_count else ''} ({len(eligible)} eligible)"
     )
     return 0
 
@@ -1686,19 +1729,68 @@ def deliver_certificates() -> int:
     malformed `registrations.enc`, a missing or malformed
     `data/config.yml`, a platform that cannot answer, or a speaker record
     with no title and no date all refuse the whole run (exit 1) before
-    anything is delivered. Once eligibility is computed, this command
-    never fails the whole run again -- a failure rendering or delivering
-    one attendee's certificate is caught, counted as unsent, and never
-    stops delivery to the rest (the same "nobody is watching this job for
-    a Python traceback" reasoning `_send_confirmation` documents for
-    itself); the exception's own text is never printed, only counted.
+    anything is delivered. **A missing certificate register also refuses
+    (Minor 1, fix round 1):** with no `certificates.yml` on disk for this
+    event, `issue`'s own "no row" branch would mint a fresh identifier
+    that this function never persists (only `issue_certificates` writes
+    the register) -- a certificate mailed once and never again reproducible.
+    Unreachable from the shipped workflow, which only ever runs this step
+    after `issue_certificates` has already written the file, but this
+    command is dispatchable on its own, so the guard is not decorative.
 
-    Prints only counts, never a name or an address, on every path --
-    including an attendee who was already on record before this run
-    started (Important 10 in `certificate.py`'s own review history: a
-    name printed on exactly that branch survived a full green suite once
-    already, because the leak sweep that would have caught it only ever
-    ran on the freshly-issued path)."""
+    Once eligibility is computed, this command never fails the whole run
+    again. Three outcomes, each counted separately and printed by name,
+    never folded into one indistinguishable bucket (Important 3, fix
+    round 1):
+
+    - **`issue` refuses (R-26):** every register row for this fingerprint
+      is revoked. Counted with the ordinary "not sent" total -- a revoked
+      certificate is never delivered, by any path, but this is not a
+      renderer crash or a transport failure, so it does not inflate
+      either of those.
+    - **Rendering or composing the document raises:** counted separately
+      from a transport failure (`render_failed_count`) -- `delivery.deliver`
+      below never raises for an ordinary send failure, it *returns*
+      `sent=False`, so anything caught here is this module's own code
+      (the concrete, reachable case: `event.title` overflowing the QR --
+      see `certificate.CertificateEvent`'s own `_MAX_TITLE_LENGTH`, which
+      this round also added, for why that specific crash can no longer
+      happen, though a still-unanticipated one is handled identically).
+      An operator seeing this count knows to look at the code or the data,
+      never at the mail secrets.
+    - **`delivery.deliver` returns `sent=False`:** no transport configured,
+      or a configured one that raised and was already caught inside
+      `delivery.deliver` itself. Counted as `unsent_count`, the ordinary
+      D-13 shape.
+
+    None of these three stops delivery to the rest of `eligible`; the
+    exception's own text is never printed, only counted, and the message
+    also lists the *identifiers* (never a name or an address) that did not
+    go out (R-27, fix round 1) -- an operator whose one bounce failed can
+    then name it directly to `convener-deliver-certificate`, rather than
+    reaching for the batch that caused the problem in the first place.
+
+    **Restricted by default to what this run's own issuance step just
+    minted (R-27, fix round 1).** `DELIVER_ONLY` -- a comma-joined set of
+    identifiers, ordinarily `issue_certificates`'s own `issued_ids` output,
+    forwarded by `issue-certificates.yml` -- skips every eligible attendee
+    whose identifier is not in that set, counted separately
+    (`skipped_count`, "not targeted this run"), never as unsent. Unset
+    entirely (a manual, standalone run outside that workflow) or
+    `RESEND_ALL=true` (an operator's own deliberate batch retry, never the
+    default) both mean no restriction at all -- every eligible attendee is
+    targeted, the behaviour this function always had before this round.
+    `DELIVER_ONLY` set to the empty string -- an issuance run that minted
+    nothing new -- means every eligible attendee is skipped: the whole
+    point of the hand-off is that a re-dispatch after nothing changed
+    mails nobody again.
+
+    Prints only counts and public identifiers, never a name or an
+    address, on every path -- including an attendee who was already on
+    record before this run started (Important 10 in `certificate.py`'s
+    own review history: a name printed on exactly that branch survived a
+    full green suite once already, because the leak sweep that would have
+    caught it only ever ran on the freshly-issued path)."""
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
         eventkeys.secret_name(event_id)
@@ -1797,14 +1889,36 @@ def deliver_certificates() -> int:
     loaded_register = _load_certificate_register(root, event_id)
     if loaded_register is None:
         return 1
-    _register_path, existing = loaded_register
+    register_path, existing = loaded_register
+    if not register_path.exists():
+        # Minor 1, fix round 1: nothing to reproduce from -- see this
+        # function's own docstring for why minting here anyway would be
+        # unsafe (an identifier written nowhere).
+        print(f"no certificate register for event {event_id}", file=sys.stderr)
+        return 1
 
     event = CertificateEvent(event_id=event_id, title=title, date=event_date)
     issued_on = paris_today(datetime.now(UTC))
     max_duration_seconds = threshold.seminar_duration_minutes * 60
 
+    # R-27, fix round 1: restrict to what this run's own issuance step
+    # just minted, unless an operator has explicitly asked for everyone.
+    # See this function's own docstring for the full contract.
+    resend_all = os.environ.get("RESEND_ALL", "").strip().lower() == "true"
+    deliver_only_raw = os.environ.get("DELIVER_ONLY")
+    deliver_only: frozenset[str] | None
+    if resend_all or deliver_only_raw is None:
+        deliver_only = None
+    else:
+        deliver_only = frozenset(
+            piece for piece in deliver_only_raw.split(",") if piece
+        )
+
     sent_count = 0
     unsent_count = 0
+    render_failed_count = 0
+    skipped_count = 0
+    unsent_ids: list[str] = []
     for attendee in eligible:
         capped_attendee = replace(
             attendee,
@@ -1814,6 +1928,17 @@ def deliver_certificates() -> int:
             result = issue(
                 capped_attendee, event, signing_key, salt, existing, issued_on=issued_on
             )
+        except ValueError:
+            # R-26: every register row for this fingerprint is revoked --
+            # never resurrect it here.
+            unsent_count += 1
+            continue
+
+        if deliver_only is not None and result.entry.identifier not in deliver_only:
+            skipped_count += 1
+            continue
+
+        try:
             document = delivery.render_certificate(
                 name=full_name(capped_attendee),
                 event_title=event.title,
@@ -1828,19 +1953,28 @@ def deliver_certificates() -> int:
                 result.entry.identifier,
                 document,
             )
-            send_result = delivery.deliver(message, os.environ)
-        except Exception:  # nobody is watching this job for a traceback
-            unsent_count += 1
+        except Exception:  # Important 3: our own code, not the transport
+            render_failed_count += 1
+            unsent_ids.append(result.entry.identifier)
             continue
+
+        send_result = delivery.deliver(message, os.environ)
         if send_result.sent:
             sent_count += 1
         else:
             unsent_count += 1
+            unsent_ids.append(result.entry.identifier)
 
     print(
         f"certificates delivered for event {event_id}: {sent_count} sent, "
-        f"{unsent_count} not sent ({len(eligible)} eligible)"
+        f"{unsent_count} not sent, {render_failed_count} failed to render, "
+        f"{skipped_count} not targeted this run ({len(eligible)} eligible)"
     )
+    if unsent_ids:
+        # R-27, fix round 1: identifiers are public by design -- never a
+        # name or an address -- so an operator can copy one straight into
+        # convener-deliver-certificate's own CERTIFICATE_ID input.
+        print(f"not sent: {', '.join(sorted(unsent_ids))}")
     return 0
 
 
@@ -1859,16 +1993,34 @@ def deliver_certificate() -> int:
     accepting an address (see `reissue_certificate`'s own docstring for the
     full reasoning this shares).
 
+    **Signs `target_entry` directly, via `certificate.sign_for`, never
+    `certificate.issue` (R-26, fix round 1, Critical 1).** `issue`
+    re-resolves by *fingerprint*, taking the currently-issued row for that
+    fingerprint -- almost always `target_entry` itself, but not after a
+    revoke-and-reissue with no correction applied here: the register would
+    then read `[old(revoked)]` or (mid-correction) still resolve to a row
+    other than the one `CERTIFICATE_ID` named. Before this round this
+    function resolved `target_entry` correctly and then discarded it by
+    calling `issue` anyway -- naming one certificate in its own log while
+    delivering whatever `issue` happened to resolve. `sign_for` signs the
+    exact row this function already holds; nothing here re-resolves
+    anything by fingerprint at all.
+
+    **Refuses a revoked `target_entry` outright (R-26).** Checked
+    immediately after resolving it by `CERTIFICATE_ID`, before eligibility
+    is even computed -- a revoked certificate is not delivered, ever, by
+    any path; the correction is `convener-reissue-certificate`, run by hand.
+
     Every refusal before resolution mirrors `reissue_certificate`'s own
     handling: a bad event id, a missing private key, `CONVENER_SIGNING_KEY` or
     `CONVENER_MATCHING_SALT` absent (both ordinary D-13, nothing delivered, a
     clean exit -- for `CONVENER_MATCHING_SALT` the same stronger reason
     `certificate.py`'s module docstring gives), a missing or malformed
     `CERTIFICATE_ID`, missing or malformed `registrations.enc`, an unknown
-    certificate id, a missing or malformed `data/config.yml`, a platform
-    that cannot answer, an id that matches no currently eligible attendee,
-    or a speaker record with no title and no date -- all refuse (exit 1)
-    before anything is rendered or sent.
+    or revoked certificate id, a missing or malformed `data/config.yml`, a
+    platform that cannot answer, an id that matches no currently eligible
+    attendee, or a speaker record with no title and no date -- all refuse
+    (exit 1) before anything is rendered or sent.
 
     Once the attendee is resolved, this command always exits 0 and reports
     the outcome by message alone -- the same shape
@@ -1952,6 +2104,16 @@ def deliver_certificate() -> int:
             file=sys.stderr,
         )
         return 1
+    if target_entry.state == STATE_REVOKED:
+        # R-26, fix round 1, Critical 1: a revoked certificate is not
+        # delivered, ever, by any path -- refuse outright rather than
+        # ever reaching a signer with it.
+        print(
+            f"certificate {certificate_id} is revoked for event {event_id} "
+            "-- not delivered; use convener-reissue-certificate for a correction",
+            file=sys.stderr,
+        )
+        return 1
 
     speakers, speaker_errors = _load(root / "data" / "speakers.yml")
     cfg, _errors = _load(root / "data" / "config.yml")
@@ -2016,22 +2178,26 @@ def deliver_certificate() -> int:
             attendee.duration_seconds, threshold.seminar_duration_minutes * 60
         ),
     )
-    issued_on = paris_today(datetime.now(UTC))
-    result = issue(
-        capped_attendee, event, signing_key, salt, existing, issued_on=issued_on
-    )
-
     try:
+        # R-26, fix round 1, Critical 1: sign `target_entry` -- the row
+        # `CERTIFICATE_ID` actually named -- rather than calling `issue`,
+        # which re-resolves by fingerprint and could hand back a
+        # different row (the exact bug this round found: this command
+        # named one certificate in its own log and delivered another).
+        token = sign_for(target_entry, event, capped_attendee, signing_key)
         document = delivery.render_certificate(
             name=full_name(capped_attendee),
             event_title=event.title,
             event_date=event.date,
             duration_hours=duration_hours(capped_attendee.duration_seconds),
-            identifier=result.entry.identifier,
-            token=result.token,
+            identifier=target_entry.identifier,
+            token=token,
         )
         message = delivery.compose(
-            capped_attendee.registration, event.title, result.entry.identifier, document
+            capped_attendee.registration,
+            event.title,
+            target_entry.identifier,
+            document,
         )
         send_result = delivery.deliver(message, os.environ)
     except Exception:  # nobody is watching this job for a traceback

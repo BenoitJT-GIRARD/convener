@@ -35,6 +35,17 @@ on:
           implementation.
         required: false
         type: string
+      resend_all:
+        description: >-
+          R-27 (fix round 1): by default the delivery step below mails
+          only the certificates this run's own issuance step just minted
+          or reproduced -- never every past attendee again. Tick this for
+          a deliberate batch retry (e.g. after fixing outbound mail) that
+          re-sends every currently eligible attendee's certificate. A
+          choice an operator makes, never the default.
+        required: false
+        type: boolean
+        default: false
 
 # Shared with reissue-certificate.yml and revoke-certificate.yml,
 # deliberately: all three read and write the same certificates.yml for one
@@ -84,6 +95,12 @@ jobs:
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
         run: uv run convener-registration-secret-name
       - name: Issue certificates for this event
+        # R-27, fix round 1: `id` so the delivery step below can read this
+        # step's own `issued_ids` output (written by
+        # convener-issue-certificates itself, straight to $GITHUB_OUTPUT --
+        # the runner provides that env var to every step already, no
+        # entry needed in the `env:` block below for it).
+        id: issue
         env:
           EVENT_ID: ${{ steps.resolve.outputs.event_id }}
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
@@ -187,13 +204,21 @@ jobs:
       # (or, on a re-run, whatever an earlier run already committed) --
       # never a second, independent write of its own; this step never
       # touches git at all. A failed delivery is reported in this step's
-      # own summary count, never stashed anywhere: re-dispatching this
-      # whole workflow replays the identical documents
-      # (delivery.py's own module docstring, "replayable, not
-      # regenerated"), which is why this step carries no retry loop of its
-      # own the way the commit-and-push step above does.
+      # own summary, by identifier, never stashed anywhere: an operator
+      # names a specific failure to convener-deliver-certificate, or ticks
+      # resend_all above for a deliberate batch retry (R-27, fix round 1)
+      # -- which is why this step carries no retry loop of its own the way
+      # the commit-and-push step above does.
+      #
+      # Minor 8, fix round 1: `continue-on-error: true` -- a transient
+      # platform failure here (the same re-derived attendance fetch the
+      # issuance step above already made) must not mark the whole run red
+      # after the certificates were already committed and pushed. The
+      # issuance step's own outcome is what matters for the job's overall
+      # status; this step's own summary line still reports its result.
       - name: Deliver certificates for this event
         working-directory: tools
+        continue-on-error: true
         env:
           EVENT_ID: ${{ steps.resolve.outputs.event_id }}
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
@@ -204,6 +229,13 @@ jobs:
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
+          # R-27, fix round 1: restrict this run to what the issuance step
+          # above just minted or reproduced -- never every past attendee
+          # again -- unless the operator explicitly ticked resend_all.
+          # Identifiers are public by design (certificate.py's own module
+          # docstring); nothing personal crosses this boundary.
+          DELIVER_ONLY: ${{ steps.issue.outputs.issued_ids }}
+          RESEND_ALL: ${{ inputs.resend_all }}
           # email_transport's five secrets (config/integrations.yml) --
           # absent is ordinary D-13 here too: every attempt this step makes
           # is simply reported as not sent, in the printed counts, never a

@@ -34,6 +34,7 @@ from convener_ops.certificate import (
     register_to_data,
     reissue,
     revoke,
+    sign_for,
     verification_url,
 )
 from convener_ops.paths import repo_root
@@ -566,32 +567,82 @@ def test_revoke_matches_the_right_event_when_two_share_an_identifier() -> None:
     )
 
 
-def test_issuing_again_after_revocation_reproduces_it_without_resurrecting() -> None:
-    """R-18 (fix round 1): the guarantee that keeps `reissue` safe to add
-    at all. `issue`'s fingerprint lookup does not consult `state` -- a
-    routine re-run (a scheduled job, a retried delivery) must reuse
-    whatever entry it finds, revoked or not, and never mint a second row.
-    If a future edit "fixed" the entry-management story by having this
-    lookup skip revoked rows instead, this is the test that would catch
-    it: the register would silently grow a second, issued row for someone
-    an operator had deliberately revoked."""
-    private_pem, public_pem = generate()
+def test_issuing_again_after_revocation_refuses_rather_than_resurrecting() -> None:
+    """R-26 (fix round 1, Critical 1), superseding the round 1 test this
+    replaces (which pinned `issue` *reusing* a revoked row -- exactly the
+    defect Critical 1 found: a routine re-run of `convener-issue-certificates`
+    handing back, and `convener-deliver-certificates` mailing, a document whose
+    own register row says it no longer stands).
+
+    `issue`'s lookup is three-way, not two-way (see its own docstring):
+    a fingerprint whose *every* row is revoked must be refused, not
+    resurrected by reuse and not resurrected by minting a fresh one
+    either (R-18's own warning against the naive two-way "fix" -- see
+    `reissue`'s own docstring). This is the test the brief's own mutation
+    list names directly: "make the three-way lookup two-way (skip revoked
+    rows and mint) -- a test must fail, and it must be the one about a
+    routine re-run after a revocation." Reverting this round's fix to the
+    old reuse-the-revoked-row behaviour, or to a two-way skip-and-mint
+    behaviour, both fail this test."""
+    private_pem, _ = generate()
     issued = issue(
         _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
     )
     register = revoke((issued.entry,), _EVENT.event_id, issued.entry.identifier)
 
-    [revoked_entry] = register
-    replayed = issue(
-        _attendee(), _EVENT, private_pem, "salt", register, issued_on=date(2026, 8, 21)
+    with pytest.raises(ValueError, match="convener-reissue-certificate"):
+        issue(
+            _attendee(),
+            _EVENT,
+            private_pem,
+            "salt",
+            register,
+            issued_on=date(2026, 8, 21),
+        )
+
+    # Nothing resurrected, and nothing new minted either -- the register
+    # this call was handed is the one true source; `issue` never mutates
+    # it, so re-reading it after the refusal is only a belt-and-braces
+    # check that the call itself did not sneak a second row in past the
+    # exception.
+    assert register == (dataclasses.replace(issued.entry, state=STATE_REVOKED),)
+
+
+def test_issue_resolves_to_the_issued_row_after_a_reissue_not_the_revoked_one() -> None:
+    """The other half of Critical 1's own reproduction (b): after a
+    genuine correction (issue, revoke, reissue), the register holds both
+    the old, revoked row and the new, issued one for the same fingerprint
+    -- exactly the shape `reissue`'s own docstring describes. `issue`
+    must resolve to the *issued* row, never the first match in file order
+    (the old, revoked one comes first): mutating the three-way lookup back
+    to "first match regardless of state" is what this test catches."""
+    private_pem, public_pem = generate()
+    issued = issue(
+        _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+    revoked_register = revoke((issued.entry,), _EVENT.event_id, issued.entry.identifier)
+    corrected = reissue(
+        _attendee(),
+        _EVENT,
+        private_pem,
+        "salt",
+        revoked_register,
+        issued_on=date(2026, 8, 21),
+    )
+    register = (*revoked_register, corrected.entry)
+    assert register[0].state == STATE_REVOKED
+    assert register[1].state == STATE_ISSUED
+
+    resolved = issue(
+        _attendee(), _EVENT, private_pem, "salt", register, issued_on=date(2026, 8, 22)
     )
 
-    assert replayed.already_registered is True
-    assert replayed.entry == revoked_entry
-    assert replayed.entry.identifier == issued.entry.identifier
-    assert replayed.entry.state == STATE_REVOKED
-    assert replayed.token == issued.token
-    assert verify(replayed.token, [public_pem]).valid
+    assert resolved.already_registered is True
+    assert resolved.entry == corrected.entry
+    assert resolved.entry.identifier == corrected.entry.identifier
+    assert resolved.entry.identifier != issued.entry.identifier
+    assert resolved.token == corrected.token
+    assert verify(resolved.token, [public_pem]).valid
 
 
 # ------------------------------------------------------------------ #
@@ -664,6 +715,145 @@ def test_reissue_mints_a_new_identifier_while_the_old_row_stays_revoked() -> Non
     assert verified.payload is not None
     assert verified.payload["identifier"] == corrected.entry.identifier
     assert verified.payload["identifier"] != old_entry.identifier
+
+
+# ------------------------------------------------------------------ #
+# sign_for() -- R-26, fix round 1, Critical 1: sign an already-resolved
+# register row directly, with no fingerprint lookup at all. The primitive
+# cli.py::deliver_certificate needs so it can sign the exact row
+# CERTIFICATE_ID named, rather than re-resolving one through issue() and
+# risking naming one certificate while attaching another.
+# ------------------------------------------------------------------ #
+
+
+def test_sign_for_signs_the_row_it_is_given_not_one_it_resolves_itself() -> None:
+    """The one property this function exists for: two entries sharing a
+    fingerprint (the exact shape a revoke-and-reissue leaves behind) --
+    `sign_for` must sign whichever one it is handed, never look the other
+    up itself. Mutating this to resolve `entry` from a register instead of
+    signing the argument directly is the mutation the brief's own list
+    names: "make deliver_certificate sign something other than the row it
+    resolved -- a test must fail"; this is that property, pinned at the
+    unit level, one layer below the CLI test of the same name."""
+    private_pem, public_pem = generate()
+    attendee = _attendee()
+    revoked = CertificateEntry(
+        identifier="a" * 32,
+        event_id=_EVENT.event_id,
+        issued_on=date(2026, 8, 20),
+        fingerprint=fingerprint(_EVENT.event_id, attendee.registration.email, "salt"),
+        state=STATE_REVOKED,
+    )
+    issued = CertificateEntry(
+        identifier="b" * 32,
+        event_id=_EVENT.event_id,
+        issued_on=date(2026, 8, 21),
+        fingerprint=revoked.fingerprint,
+        state=STATE_ISSUED,
+    )
+
+    token_for_issued = sign_for(issued, _EVENT, attendee, private_pem)
+    token_for_revoked = sign_for(revoked, _EVENT, attendee, private_pem)
+
+    outcome_issued = verify(token_for_issued, [public_pem])
+    assert outcome_issued.payload is not None
+    assert outcome_issued.payload["identifier"] == issued.identifier
+
+    outcome_revoked = verify(token_for_revoked, [public_pem])
+    assert outcome_revoked.payload is not None
+    assert outcome_revoked.payload["identifier"] == revoked.identifier
+
+
+def test_sign_for_matches_the_token_issue_would_have_produced_for_the_same_entry() -> (
+    None
+):
+    """`sign_for` and `issue` share `_sign_certificate` -- this pins that
+    they never drift into two different ideas of what gets signed for the
+    same entry, attendee and event."""
+    private_pem, _ = generate()
+    attendee = _attendee()
+    result = issue(
+        attendee, _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+
+    token = sign_for(result.entry, _EVENT, attendee, private_pem)
+
+    assert token == result.token
+
+
+def test_sign_for_does_not_inspect_or_refuse_a_revoked_entry_itself() -> None:
+    """`sign_for` is a pure signing primitive -- refusing to deliver a
+    revoked certificate is `cli.py`'s own decision (both delivery
+    commands make it before ever calling this function), not something
+    silently baked into the signer. If it were, a caller that legitimately
+    needs to sign a revoked row for its own purposes (there is none today,
+    but the module docstring is explicit that this function performs no
+    state check) would be surprised by a refusal this function's own
+    docstring says it will never raise."""
+    private_pem, public_pem = generate()
+    attendee = _attendee()
+    revoked = CertificateEntry(
+        identifier="c" * 32,
+        event_id=_EVENT.event_id,
+        issued_on=date(2026, 8, 20),
+        fingerprint=fingerprint(_EVENT.event_id, attendee.registration.email, "salt"),
+        state=STATE_REVOKED,
+    )
+
+    token = sign_for(revoked, _EVENT, attendee, private_pem)
+
+    assert verify(token, [public_pem]).valid
+
+
+# ------------------------------------------------------------------ #
+# CertificateEvent.__post_init__ -- Important 3, fix round 1: the event
+# title is bounded here, once, so the signed payload and the rendered
+# document can never disagree about what it is (R-22).
+# ------------------------------------------------------------------ #
+
+
+def test_certificate_event_truncates_a_title_longer_than_the_max_length() -> None:
+    from convener_ops.certificate import _MAX_TITLE_LENGTH
+
+    long_title = "x" * (_MAX_TITLE_LENGTH + 50)
+    event = CertificateEvent(event_id="mrg-042", title=long_title, date="2026-08-20")
+
+    assert len(event.title) == _MAX_TITLE_LENGTH
+    assert event.title == long_title[:_MAX_TITLE_LENGTH]
+
+
+def test_certificate_event_leaves_a_title_at_or_under_the_max_length_untouched() -> (
+    None
+):
+    from convener_ops.certificate import _MAX_TITLE_LENGTH
+
+    exact_title = "y" * _MAX_TITLE_LENGTH
+    event = CertificateEvent(event_id="mrg-042", title=exact_title, date="2026-08-20")
+
+    assert event.title == exact_title
+
+
+def test_issue_signs_the_truncated_title_never_the_original() -> None:
+    """The property that keeps a truncated title from ever becoming a
+    "document says one thing, signature says another" bug (R-22): the
+    truncation lives on `CertificateEvent` itself, so `issue`'s signed
+    payload and any later `render_certificate` call reading
+    `event.title` both see the identical, already-short string -- there
+    is no way to reach the untruncated original from either."""
+    from convener_ops.certificate import _MAX_TITLE_LENGTH
+
+    private_pem, public_pem = generate()
+    long_title = "z" * (_MAX_TITLE_LENGTH + 200)
+    event = CertificateEvent(event_id="mrg-042", title=long_title, date="2026-08-20")
+
+    result = issue(
+        _attendee(), event, private_pem, "salt", (), issued_on=date(2026, 8, 20)
+    )
+
+    outcome = verify(result.token, [public_pem])
+    assert outcome.payload is not None
+    assert outcome.payload["event"] == long_title[:_MAX_TITLE_LENGTH]
+    assert outcome.payload["event"] != long_title
 
 
 # ------------------------------------------------------------------ #

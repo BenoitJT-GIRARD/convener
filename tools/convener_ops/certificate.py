@@ -384,6 +384,7 @@ __all__ = [
     "register_to_data",
     "reissue",
     "revoke",
+    "sign_for",
     "verification_url",
 ]
 
@@ -486,6 +487,32 @@ _FINGERPRINT_DOMAIN: Final = "convener-certificate-fingerprint-v1"
 _ROUNDING_INCREMENT: Final = Decimal("0.25")
 _SECONDS_PER_HOUR: Final = 3600
 
+#: The longest event title this module will ever sign or display, in
+#: characters (Important 3, fix round 1). `delivery.py`'s own module
+#: docstring already assumed "two 200-character names plus a
+#: 300-character event title" as the realistic worst case when it chose
+#: `_QR_ERROR_LEVEL` -- this is that same number, now enforced here rather
+#: than merely assumed. Measured by execution, not by a capacity table: a
+#: title longer than roughly 705-1089 characters (depending on how long
+#: the two signed names are) makes `segno.make` raise `DataOverflowError`,
+#: which the bulk delivery command's own broad `except Exception` folded
+#: silently into "not sent", forever, since every retry hit the identical
+#: wall -- `event.title` comes from `data/speakers.yml`, bounded nowhere
+#: before this. Truncated, not refused: unlike
+#: `registration._MAX_FIELD_LENGTH` (a reputation bound on a *stranger's*
+#: public-key-encrypted submission, refused rather than shortened because
+#: truncating would still deliver an attacker's text), a title comes from
+#: the organisation's own data, and a pasted abstract or a copy-paste
+#: accident should not silently stop every attendee of the event from
+#: receiving a certificate -- a shortened title is still recognisably the
+#: same talk. Enforced once, in `CertificateEvent.__post_init__`, so every
+#: caller -- `issue`, `reissue`, and every `render_certificate` call in
+#: `cli.py`, all of which read `CertificateEvent.title` -- signs and
+#: displays the identical, already-bounded string; a document showing one
+#: title while the signed payload carries another is exactly what R-22
+#: forbids, so this cannot be a truncation applied to the document alone.
+_MAX_TITLE_LENGTH: Final = 300
+
 
 @dataclass(frozen=True)
 class CertificateEvent:
@@ -503,11 +530,21 @@ class CertificateEvent:
     session happened, not the day a certificate for it was issued (that
     second date is `CertificateEntry.issued_on`, a genuinely different
     fact, which is why the two live on two different objects in this
-    module rather than sharing one field)."""
+    module rather than sharing one field).
+
+    `title` is bounded to `_MAX_TITLE_LENGTH` characters, truncated here
+    rather than refused (Important 3, fix round 1) -- see that constant's
+    own comment for why. `__post_init__` on a frozen dataclass still needs
+    `object.__setattr__` to apply the truncation; every other field is
+    left exactly as given."""
 
     event_id: str
     title: str
     date: str
+
+    def __post_init__(self) -> None:
+        if len(self.title) > _MAX_TITLE_LENGTH:
+            object.__setattr__(self, "title", self.title[:_MAX_TITLE_LENGTH])
 
 
 @dataclass(frozen=True)
@@ -666,14 +703,39 @@ def issue(
     means here and why it is safe to call this again for someone already
     registered.
 
-    Looks `attendee`'s `fingerprint` up against `existing` (this event's
-    current register, in whatever order the caller holds it -- this
-    function never sorts or mutates it); a match reuses that entry's
-    `identifier` and `issued_on` rather than minting a new pair, so the
-    register never grows a second row for the same person at the same
-    event no matter how many times this is called (spec S:8: "recalcule
-    sans réinscrire"). `already_registered` on the result tells the caller
-    whether to append `entry` to the register at all.
+    **Three-way, not two-way, since R-26 (fix round 1, Critical 1).** Looks
+    `attendee`'s `fingerprint` up against `existing` (this event's current
+    register, in whatever order the caller holds it -- this function never
+    sorts or mutates it):
+
+    - No row at all for this fingerprint at this event -> mint a fresh
+      one. The first certificate, exactly as before.
+    - An `issued` row exists -> reuse it, rather than the first match in
+      file order regardless of state. `already_registered=True`, the
+      register never grows a second row, and a routine re-run stays
+      idempotent (spec S:8: "recalcule sans réinscrire") -- unchanged
+      behaviour from before this round.
+    - Rows exist and *every one* is `STATE_REVOKED` -> refuse
+      (`ValueError`), naming `convener-reissue-certificate` as the correction
+      path.
+
+    The third branch is what closes Critical 1 without reopening the trap
+    R-18 named: filtering the lookup down to "an issued row, or nothing"
+    would make a fingerprint whose only row is revoked match nothing,
+    so a routine, scheduled re-run of `convener-issue-certificates` would then
+    silently mint a **fresh** certificate for someone whose certificate was
+    deliberately revoked -- worse than the defect this closes. Refusing
+    instead preserves the no-resurrection property `reissue`'s own
+    docstring already relies on (a revoked certificate is corrected only
+    by an operator's deliberate `reissue` call, never by this function),
+    while still stopping `issue` from ever handing back a document that no
+    longer stands. A caller iterating many attendees (`cli.py`'s own
+    per-attendee loops) is expected to catch this per attendee and
+    continue, the same way it already handles a render or transport
+    failure -- never let one revoked fingerprint stop the whole run.
+
+    `already_registered` on the result tells the caller whether to append
+    `entry` to the register at all.
 
     Signs a payload of exactly `signing.PAYLOAD_FIELDS` -- `identifier`
     (this entry's), `event` (`event.title`, spec S:7's "intitulé", not
@@ -685,17 +747,30 @@ def issue(
     `signing.sign` raises for a key that will not load
     (`signing.SigningError`); never raises for a bad `attendee` or `event`,
     because both are already-validated data by the time either reaches
-    this module.
+    this module -- the one new exception this round adds is the
+    `ValueError` above, for a fingerprint whose every row is revoked.
     """
     entry_fingerprint = fingerprint(event.event_id, attendee.registration.email, salt)
-    reused: CertificateEntry | None = None
-    for entry in existing:
-        if entry.event_id == event.event_id and entry.fingerprint == entry_fingerprint:
-            reused = entry
-            break
+    matches = [
+        entry
+        for entry in existing
+        if entry.event_id == event.event_id and entry.fingerprint == entry_fingerprint
+    ]
+    issued_match = next(
+        (entry for entry in matches if entry.state == STATE_ISSUED), None
+    )
 
-    if reused is not None:
-        target = reused
+    if issued_match is not None:
+        target = issued_match
+    elif matches:
+        # R-26: every existing row for this fingerprint is revoked -- do
+        # not resurrect it here. `reissue` (an operator's own deliberate
+        # act, never called from this loop) is the only correction path.
+        raise ValueError(
+            "every certificate on record for this fingerprint at this "
+            "event is revoked -- use convener-reissue-certificate to correct it, "
+            "not a routine re-run of convener-issue-certificates"
+        )
     else:
         target = CertificateEntry(
             identifier=_new_identifier(),
@@ -706,7 +781,38 @@ def issue(
         )
 
     token = _sign_certificate(target, event, attendee, private_pem)
-    return IssueResult(entry=target, token=token, already_registered=reused is not None)
+    return IssueResult(
+        entry=target, token=token, already_registered=issued_match is not None
+    )
+
+
+def sign_for(
+    entry: CertificateEntry,
+    event: CertificateEvent,
+    attendee: MatchedAttendee,
+    private_pem: str,
+) -> str:
+    """Sign `entry` for `attendee` at `event`, without performing any
+    register lookup at all (R-26, fix round 1, Critical 1) -- the exact
+    primitive `cli.py::deliver_certificate` needs: it has already resolved
+    `entry` by `CERTIFICATE_ID`, a stronger, caller-supplied key than
+    fingerprint, and must sign *that* row, never re-resolve one by
+    fingerprint through `issue` and risk naming one certificate in the
+    log while attaching another -- the exact bug Critical 1 found
+    (`deliver_certificate` named the certificate `CERTIFICATE_ID`
+    identified, then called `issue`, which re-resolved by fingerprint and
+    could hand back a different, revoked row).
+
+    A thin, public wrapper around `_sign_certificate` -- the same private
+    function `issue` and `reissue` already share -- rather than exposing
+    that name directly, so a caller cannot mistake this for participating
+    in either of their own register lookups. Raises whatever
+    `signing.sign` raises for a key that will not load
+    (`signing.SigningError`); never inspects `entry.state` itself --
+    refusing to sign a revoked entry is the caller's own decision
+    (`cli.py`'s both delivery commands make it before ever reaching this
+    function), not something a signing primitive should silently decide."""
+    return _sign_certificate(entry, event, attendee, private_pem)
 
 
 def _sign_certificate(
@@ -755,12 +861,17 @@ def reissue(
     attendee reuses the *same* identifier and signs a *different* token
     under it -- two contradictory documents, one register row, neither
     one distinguishable from the other (Important 3). Widening `issue`'s
-    own lookup to skip revoked rows would "fix" that by making every
-    scheduled re-run silently re-issue a certificate someone deliberately
-    revoked -- strictly worse than the defect (R-18's own warning). So
-    this is a second, separate function instead, never called from
-    `issue`'s own logic or from `cli.py::issue_certificates`'s loop --
-    see `cli.py::reissue_certificate` for the operator-facing command
+    own lookup to *skip* revoked rows and mint past them would "fix" that
+    by making every scheduled re-run silently re-issue a certificate
+    someone deliberately revoked -- strictly worse than the defect (R-18's
+    own warning). `issue` was widened once since, in fix round 1 (R-26,
+    Critical 1) -- but to a third branch that *refuses* a fingerprint whose
+    only rows are revoked, never one that mints past them, which is
+    exactly the property this paragraph's own warning still protects; see
+    `issue`'s own docstring, "three-way, not two-way". So this remains a
+    second, separate function, never called from `issue`'s own logic or
+    from `cli.py::issue_certificates`'s loop -- see
+    `cli.py::reissue_certificate` for the operator-facing command
     that calls this, run by hand, for one person at a time, never on a
     schedule.
 

@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import html
+import re
 import smtplib
 from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
+import segno
 
 from convener_ops.certificate import ORGANISER, verification_url
 from convener_ops.confirmation import CONTACT_EMAIL, SmtpConfig
 from convener_ops.delivery import (
+    DOCUMENT_INSTRUCTION,
     Delivery,
     DeliveryResult,
     compose,
@@ -93,11 +97,37 @@ def test_render_certificate_prints_a_whole_number_duration_without_a_decimal() -
 
 
 def test_render_certificate_carries_the_verification_url_as_text_and_as_a_qr() -> None:
+    """Important 2, fix round 1: the original version of this test proved
+    the URL appears as text and that *some* `<svg class="qr">` exists,
+    with nothing linking the two -- a QR encoding anything at all would
+    still pass. `segno.make(url, ...)` -> `segno.make(identifier, ...)`
+    survived 330 tests against the original test; this pins the embedded
+    SVG to a byte-identical re-encoding of the verification URL, the same
+    way the review proved it by hand."""
     doc = _document()
     url = verification_url(_IDENTIFIER, _TOKEN)
     assert url in doc
-    assert "<svg" in doc
     assert 'class="qr"' in doc
+
+    expected_svg = segno.make(url, error="m").svg_inline(scale=4)
+    assert expected_svg in doc, (
+        "the embedded QR is not a byte-identical encoding of the printed "
+        "verification URL -- it could be encoding anything at all and "
+        "this test would not know"
+    )
+
+
+def test_render_certificate_qr_decodes_to_the_same_url_as_the_printed_text() -> None:
+    """Belt and braces on the property above, pinned a different way: pull
+    the `<a href>` straight out of the rendered document (what a reader's
+    browser would actually follow) and confirm *that* is what the QR
+    encodes, rather than relying on both sides independently agreeing to
+    call `verification_url` the same way."""
+    doc = _document()
+    [href] = re.findall(r'<a href="([^"]+)">', doc)
+    href = html.unescape(href)
+    assert href == verification_url(_IDENTIFIER, _TOKEN)
+    assert segno.make(href, error="m").svg_inline(scale=4) in doc
 
 
 def test_render_certificate_is_a_complete_self_contained_html_document() -> None:
@@ -319,6 +349,12 @@ def test_smtp_delivery_transport_uses_starttls_on_an_ordinary_port(
     assert len(client.sent) == 1
     sent_email = client.sent[0]
     assert sent_email["Reply-To"] == CONTACT_EMAIL
+    # Minor 5, fix round 1: a real Date header -- spec S:9's own risk
+    # table names the spam folder by name, and a missing Date is a real
+    # scoring signal. Present, and not empty -- not asserting an exact
+    # value, since the real transport uses the actual send time.
+    assert sent_email["Date"] is not None
+    assert str(sent_email["Date"]).strip() != ""
     # The certificate document is attached, not inlined into the body.
     attachments = list(sent_email.iter_attachments())
     assert len(attachments) == 1
@@ -371,3 +407,20 @@ def test_the_subject_matches_the_documentation_copy() -> None:
         _registration(), "[the event's title, when known]", "x", "<html/>"
     )
     assert message.subject in _normalised_docs_template()
+
+
+def test_the_document_instruction_matches_the_documentation_copy() -> None:
+    """Minor 4, fix round 1: before this, only the subject was pinned --
+    the body had already drifted typographically from the docs copy (an
+    ASCII "--" where both the docs page and `compose`'s own subject line
+    already used an em dash). `DOCUMENT_INSTRUCTION` is exported so this
+    test, and `compose` itself, can never quietly diverge from
+    `docs/toolkit/emails/certificate-delivered.md` again -- the same
+    "export the sentence" discipline `test_confirmation.py` already
+    applies to `MATCHING_INSTRUCTION` and `UPDATE_WARNING`."""
+    assert DOCUMENT_INSTRUCTION in _normalised_docs_template()
+
+
+def test_compose_body_carries_the_document_instruction_verbatim() -> None:
+    message = compose(_registration(), "On analytical engines", _IDENTIFIER, "<html/>")
+    assert DOCUMENT_INSTRUCTION in message.body

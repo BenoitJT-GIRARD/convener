@@ -55,9 +55,17 @@ The Example Collective team
   (`convener-deliver-certificate`, keyed by the certificate's own public
   identifier, never by an address). Neither ever writes the rendered
   document to a file, an artefact, or a job log — a delivery that fails is
-  reported as a count, never stashed, and recovered by re-running the
-  command: the same identifier, the same signed token, the same document,
-  reproduced rather than regenerated.
+  reported by identifier, never stashed, and recovered a different way
+  depending on which command sent it (fix round 1): the bulk step only
+  ever mails what its own run just issued or reproduced, by default, so
+  the right recovery for one bounce is to hand that identifier to
+  *Deliver a certificate* — never to re-run the bulk step, which would not
+  even retry it under the ordinary default. A deliberate batch resend is
+  still available (the bulk workflow's own `resend_all` input), for when
+  every recipient genuinely needs a fresh copy. Whichever command sends
+  it, the document itself is always reproduced, never regenerated: the
+  same identifier, the same signed token, the same attached page, every
+  time.
 - **A resend is bounded by how long the registration it reads still
   exists.** The certificate itself verifies forever — the register's own
   state is what a verifier checks, and revocation never touches the

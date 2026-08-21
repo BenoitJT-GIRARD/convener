@@ -21,7 +21,10 @@ name: Deliver a certificate
 # Read only: unlike the three certificate workflows, this one never writes
 # certificates.yml (delivery is not a register state -- R-20) and never
 # commits anything, so it needs no write permission and no concurrency
-# group shared with them.
+# group shared with them. It does need its own, narrower group (Minor 7,
+# fix round 1): two concurrent dispatches for the *same* certificate would
+# otherwise send two e-mails -- keyed on certificate_id alone, so two
+# dispatches for two different certificates still run in parallel.
 on:
   workflow_dispatch:
     inputs:
@@ -41,6 +44,10 @@ on:
           implementation.
         required: false
         type: string
+
+concurrency:
+  group: deliver-${{ inputs.certificate_id }}
+  cancel-in-progress: false
 
 jobs:
   deliver:

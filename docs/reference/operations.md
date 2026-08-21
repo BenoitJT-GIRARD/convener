@@ -961,10 +961,29 @@ workflow step and one standalone workflow, both new this round (task 14).
   wrote (or, on a re-run, whatever an earlier run already wrote) rather
   than minting anything new -- renders a self-contained HTML certificate
   with an inline SVG verification code, and e-mails it as an attachment.
-  Never writes the rendered document anywhere: a failed send is folded
-  into a bare count ("N sent, M not sent") and recovered by re-running
-  this same step or the whole workflow, which reproduces the identical
-  document rather than a new one.
+  Never writes the rendered document anywhere.
+
+  **Restricted by default to what this run's own issuance step just
+  minted (R-27, fix round 1).** *Issue certificates* writes the freshly
+  issued identifiers to `$GITHUB_OUTPUT` -- public by design, already
+  printed on the document, already published in
+  `certificates-public.json` -- and this step reads them as `DELIVER_ONLY`,
+  skipping every attendee not in that set. A re-dispatch of this whole
+  workflow after nothing changed therefore mails nobody a second time; a
+  re-dispatch after a corrected attendance export mails only the newly
+  corrected certificates. Ticking the workflow's own `resend_all` input
+  overrides this for a deliberate batch retry (e.g. after fixing outbound
+  mail), sending every currently eligible attendee's certificate again --
+  a choice an operator makes, never the default. A failed send is reported
+  by *identifier*, not only as a count ("N sent, M not sent, ... not
+  sent: `<identifier>`, `<identifier>`"), so a single bounce can be named
+  directly to *Deliver a certificate* below rather than recovered by
+  re-running the batch that caused it. This step's own failure --
+  including a transient platform error re-fetching attendance -- no longer
+  marks the whole run red (`continue-on-error: true`, Minor 8, fix round
+  1): the certificates were already committed and pushed by the step
+  before it, and that outcome should not be hidden behind a delivery
+  hiccup.
 - **Deliver a certificate** (`.github/workflows/deliver-certificate.yml`,
   `convener-deliver-certificate`). A manual resend for one certificate -- a
   certificate sitting unread in a spam folder does not exist any more
@@ -975,7 +994,14 @@ workflow step and one standalone workflow, both new this round (task 14).
   certificate id to resend, and the same optional conference id the other
   three certificate workflows take. Read-only: this workflow writes
   nothing and dispatches nothing, so its job needs only `contents: read`,
-  unlike the three that write `certificates.yml`.
+  unlike the three that write `certificates.yml`. Its own `concurrency`
+  group is keyed on `certificate_id` alone (Minor 7, fix round 1), so two
+  dispatches naming the *same* certificate serialise against each other
+  (never two e-mails for one resend) while two dispatches naming different
+  certificates still run in parallel. **Refuses a revoked certificate
+  outright** (R-26, fix round 1, Critical 1): a certificate the register
+  marks revoked is never delivered, by this command or the bulk one above,
+  regardless of how it is invoked.
 
 **Secrets read:** both read `CONVENER_EVENT_KEY_<EVENT ID>`, `CONVENER_SIGNING_KEY`,
 `CONVENER_MATCHING_SALT` and `CONVENER_MEETING_API_TOKEN` -- the same four *Issuing,
