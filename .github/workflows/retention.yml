@@ -81,14 +81,26 @@ jobs:
         # against a stubbed `gh` on `PATH`.
         #
         # R-36: the listing itself can fail (an expired PAT mid-run, a
-        # 403, `gh` missing, an API blip) -- its exit status is captured
-        # and checked on its own, separately from what it printed. A
-        # failed listing is a failure for that event, never an absence:
-        # reading "the question could not be answered" as "the answer is
-        # no" recorded a destruction that had not happened, deleted the
-        # published `.pub` on the strength of it, and the sweep's own
+        # 403, `gh` missing, an API blip) -- a failed listing is a
+        # failure for that event, never an absence: reading "the
+        # question could not be answered" as "the answer is no" recorded
+        # a destruction that had not happened, deleted the published
+        # `.pub` on the strength of it, and the sweep's own
         # skip-if-already-recorded rule then made that permanent -- the
         # exact inverse of what this job exists to guarantee.
+        #
+        # Round 3: `listing="$(...)"; list_status=$?` looked right and
+        # was not -- GitHub's default `run:` shell is `bash -e {0}`
+        # (the neighbouring step below sets `-e` explicitly for the same
+        # reason), and under `-e` a failing command substitution inside a
+        # plain assignment terminates the script on the spot, before
+        # `list_status=$?` is ever reached -- so the branch that names the
+        # failure and records what came off earlier in the batch was
+        # dead code in production, however clean it read. Only a command
+        # whose exit status is *itself the thing being tested* --
+        # `if ! cmd; then`, `cmd || ...`, `cmd && ...` -- is exempt from
+        # `-e`; a bare assignment is not. `if ! listing="$(...)"; then`
+        # below is that exemption, not a style choice.
         #
         # One event's failure must not abandon the others (R-34): the
         # loop below `continue`s past a secret still present after the
@@ -113,9 +125,7 @@ jobs:
             id="${ids[$i]}"
             echo "deleting $name"
             gh secret delete "$name" --repo "$GITHUB_REPOSITORY" || true
-            listing="$(gh secret list --repo "$GITHUB_REPOSITORY" --json name --jq '.[].name')"
-            list_status=$?
-            if [ "$list_status" -ne 0 ]; then
+            if ! listing="$(gh secret list --repo "$GITHUB_REPOSITORY" --json name --jq '.[].name')"; then
               # This phase has now hit the same shape three times -- a
               # workflow that exited green having passed no secrets, a
               # projection published to somewhere nothing serves, and

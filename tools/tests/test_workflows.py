@@ -1493,9 +1493,14 @@ def test_erase_registration_workflow_has_a_concurrency_group() -> None:
 #: -- an eventual-consistency lag the real API can plausibly produce, and
 #: R-36's own second shape: a successful-looking delete must not be
 #: trusted either, only what `secret list` confirms. `GH_STUB_LIST_FAIL`
-#: ("1") makes `secret list` itself fail (non-zero exit, nothing
+#: ("1") makes every `secret list` call fail (non-zero exit, nothing
 #: printed) -- R-36's own reproduction: a listing that cannot answer the
-#: question must never be read as "the answer is no".
+#: question must never be read as "the answer is no". `GH_STUB_LIST_
+#: FAIL_ON_CALL` (an integer) fails only the Nth `secret list` call
+#: across the whole run -- fix round 3's own reproduction, a mixed batch
+#: where an earlier event's own listing succeeds and a later one's does
+#: not; the call count is tracked in `$GH_STUB_STORE.listcalls` since
+#: each invocation of this stub is a fresh process.
 _GH_STUB = """#!/usr/bin/env bash
 set -e
 store="$GH_STUB_STORE"
@@ -1516,7 +1521,13 @@ if [ "$1" = "secret" ] && [ "$2" = "delete" ]; then
   fi
   exit 1
 elif [ "$1" = "secret" ] && [ "$2" = "list" ]; then
-  if [ "${GH_STUB_LIST_FAIL:-}" = "1" ]; then
+  count_file="$store.listcalls"
+  count=0
+  [ -f "$count_file" ] && count="$(cat "$count_file")"
+  count=$((count + 1))
+  echo "$count" > "$count_file"
+  fail_on="${GH_STUB_LIST_FAIL_ON_CALL:-0}"
+  if [ "${GH_STUB_LIST_FAIL:-}" = "1" ] || [ "$count" = "$fail_on" ]; then
     echo "gh: HTTP 401: Bad credentials" >&2
     exit 1
   fi
@@ -1546,6 +1557,7 @@ def _run_delete_step(
     always_fail: list[str] | None = None,
     fake_success: list[str] | None = None,
     list_fail: bool = False,
+    list_fail_on_call: int = 0,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -1565,6 +1577,7 @@ def _run_delete_step(
         "GH_STUB_ALWAYS_FAIL": ",".join(always_fail or []),
         "GH_STUB_FAKE_SUCCESS": ",".join(fake_success or []),
         "GH_STUB_LIST_FAIL": "1" if list_fail else "0",
+        "GH_STUB_LIST_FAIL_ON_CALL": str(list_fail_on_call),
         "GH_TOKEN": "stub-token",
         "GITHUB_REPOSITORY": "example/example-showcase",
         "DESTROYED_IDS": destroyed_ids,
@@ -1573,7 +1586,12 @@ def _run_delete_step(
     }
     assert _BASH_PATH is not None
     result = subprocess.run(  # nosec B603
-        [_BASH_PATH, "-e", "-o", "pipefail", "-c", _delete_step_script()],
+        # Production runs this under GitHub's own default `run:` shell,
+        # `bash -e {0}` -- no `-o pipefail` (fix round 3: verified, not
+        # assumed, after `-o pipefail` masked nothing here but a second
+        # assumption about the runner's own shell was exactly what let
+        # `list_status=$?` read as reachable when it was not).
+        [_BASH_PATH, "-e", "-c", _delete_step_script()],
         capture_output=True,
         text=True,
         env=env,
@@ -1686,9 +1704,20 @@ def test_delete_step_fails_and_records_nothing_when_listing_fails(
     since the secret is still live. `GH_STUB_LIST_FAIL` makes `gh secret
     list` itself exit non-zero with nothing printed; the fix must record
     nothing for this event and fail the job, never read a failed question
-    as a negative answer. A mutant that discards the listing's own exit
-    status again fails this: `recorded_ids` would be `mrg-042` and the
-    step would exit 0."""
+    as a negative answer.
+
+    **The `::error::` annotation is asserted by name, not merely "the id
+    appears somewhere" (fix round 3).** Round 2's own version of this test
+    passed for the wrong reason: under production's actual shell (`bash -e
+    {0}`, no `-o pipefail`), `listing="$(...)"; list_status=$?` died on the
+    failed command substitution before `list_status=$?` was ever reached,
+    so the branch that prints this very annotation was dead code -- and
+    the assertion below, checking only that the exit code was 1 and
+    `recorded_ids` was empty, could not tell that apart from the intended
+    mechanism, because a script that dies mid-loop also exits non-zero
+    and never reaches the line that writes `recorded_ids` at all. Pinning
+    the annotation text is what distinguishes "the fix printed its own
+    diagnosis and continued" from "the script silently died"."""
     result, outputs = _run_delete_step(
         tmp_path,
         present_secrets=["CONVENER_EVENT_KEY_MRG_042"],
@@ -1698,4 +1727,42 @@ def test_delete_step_fails_and_records_nothing_when_listing_fails(
     )
     assert result.returncode == 1
     assert outputs.get("recorded_ids", "") == ""
-    assert "CONVENER_EVENT_KEY_MRG_042" in result.stdout + result.stderr
+    assert (
+        "::error::could not confirm whether CONVENER_EVENT_KEY_MRG_042 was deleted "
+        "for event mrg-042" in result.stdout
+    )
+
+
+@pytest.mark.skipif(_BASH_MISSING, reason="bash is not on PATH")
+def test_delete_step_still_records_an_earlier_event_when_a_later_listing_fails(
+    tmp_path: Path,
+) -> None:
+    """Fix round 3's own reproduction, and the assertion that actually
+    catches the `bash -e` defect the sibling test above could not: a
+    mixed batch where `mrg-042` deletes and confirms cleanly (the first
+    `secret list` call) and `mrg-050`'s own listing then fails (the
+    second call, `GH_STUB_LIST_FAIL_ON_CALL=2`). R-34's partial-batch
+    property says a later failure must not un-record an earlier success.
+
+    Under the dead `list_status=$?` mechanism this reproduces exactly
+    what the coordinator's own verification showed: the script died
+    partway through the loop -- after `mrg-042` was appended to `recorded`
+    in memory, but before the `echo "recorded_ids=$recorded"` line ever
+    ran -- so `recorded_ids` came out empty despite `mrg-042` having been
+    both deleted and confirmed absent. This test fails under that
+    mechanism (`recorded_ids` would be `""`, not `"mrg-042"`) and passes
+    under the `if ! listing=...; then` fix, which reaches the `echo`
+    line regardless of where in the loop a listing failed."""
+    result, outputs = _run_delete_step(
+        tmp_path,
+        present_secrets=["CONVENER_EVENT_KEY_MRG_042", "CONVENER_EVENT_KEY_MRG_050"],
+        destroyed_ids="mrg-042,mrg-050",
+        destroyed_secrets="CONVENER_EVENT_KEY_MRG_042,CONVENER_EVENT_KEY_MRG_050",
+        list_fail_on_call=2,
+    )
+    assert result.returncode == 1
+    assert outputs.get("recorded_ids", "") == "mrg-042"
+    assert (
+        "::error::could not confirm whether CONVENER_EVENT_KEY_MRG_050 was deleted "
+        "for event mrg-050" in result.stdout
+    )
