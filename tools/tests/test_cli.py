@@ -805,6 +805,28 @@ def test_handle_registration_rejects_an_undecryptable_payload_and_leaks_nothing(
     assert out == ""
 
 
+def test_handle_registration_refuses_a_field_over_the_length_cap_honestly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 3, branch review: the survey twin's own fix (Important 3,
+    fix round 1) applied to registration -- a 201-character institution
+    decrypts cleanly and is refused by the length cap alone, so the
+    message must say "could not be read", never blame decryption for a
+    failure that did not happen."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD",
+        _registration_payload("mrg-042", public_pem, institution="A" * 201),
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert handle_registration() == 1
+    err = capsys.readouterr().err
+    assert "registration for event mrg-042 could not be read" in err
+    assert "decrypt" not in err.lower()
+
+
 def test_handle_registration_writes_the_record_and_prints_no_name_or_address(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -1286,6 +1308,25 @@ def test_send_confirmation_rejects_an_undecryptable_payload_and_leaks_nothing(
 
     out = _assert_no_leak(capsys)
     assert out == ""
+
+
+def test_send_confirmation_refuses_a_field_over_the_length_cap_honestly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 3, branch review: same fix as `test_handle_registration_
+    refuses_a_field_over_the_length_cap_honestly`, at the second of the
+    two call sites the review found the wrong wording at."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv(
+        "REGISTRATION_PAYLOAD",
+        _registration_payload("mrg-042", public_pem, institution="A" * 201),
+    )
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert send_confirmation() == 1
+    err = capsys.readouterr().err
+    assert "registration for event mrg-042 could not be read" in err
+    assert "decrypt" not in err.lower()
 
 
 # --- resend_confirmation() -------------------------------------------- #

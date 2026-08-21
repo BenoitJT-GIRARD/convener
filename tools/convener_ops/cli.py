@@ -696,9 +696,17 @@ def handle_registration() -> int:
 
     registration = to_registration(payload, private_pem)
     if registration is None:
-        print(
-            f"registration for event {event_id} could not be decrypted", file=sys.stderr
-        )
+        # Important 3 (branch review), the survey twin's own fix (Important
+        # 3, fix round 1) applied here: "could not be read", not "could not
+        # be decrypted". to_registration's own uniform None folds a missing
+        # field, a wrong type, an empty required field or a field over
+        # _MAX_FIELD_LENGTH into the same outcome as an undecryptable one --
+        # correct for the untrusted-input reason its own docstring gives --
+        # but this operator-facing line named only the narrowest,
+        # sometimes-wrong cause. A participant whose institution tripped
+        # the length cap deserves an honest "could not be read", not a
+        # claim about decryption that did not happen to fail.
+        print(f"registration for event {event_id} could not be read", file=sys.stderr)
         return 1
 
     root = repo_root()
@@ -764,9 +772,10 @@ def send_confirmation() -> int:
 
     registration = to_registration(payload, private_pem)
     if registration is None:
-        print(
-            f"registration for event {event_id} could not be decrypted", file=sys.stderr
-        )
+        # Important 3, branch review: see handle_registration's own
+        # identical comment above -- the same wrong claim, at the second
+        # of the two call sites the review found it at.
+        print(f"registration for event {event_id} could not be read", file=sys.stderr)
         return 1
 
     changed = tuple(
