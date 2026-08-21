@@ -283,14 +283,20 @@ export const PHASES: PhaseDef[] = [
         contentKey: 'toolkit/emails/reminder',
       },
       {
-        // "Registration" means the link the audience uses, which is what the
-        // handbook has always said here -- not the speaker's own sign-up,
-        // which is the T-14 line above and a different piece of work a week
-        // earlier. Two lines a week apart both reading "registration check"
-        // is how one of them gets ticked for the other.
+        // This line always meant the room link the audience joins by --
+        // never the speaker's own sign-up, which is the T-14 line above and
+        // a different piece of work a week earlier. It used to read
+        // "registration link checked", which was fine until phase 4 gave
+        // "registration" a second, unrelated meaning of its own: the
+        // participant-facing `#/signup/:eventId` page. Renamed (Critical 2,
+        // branch review) so this line cannot be misread as ticking that
+        // instead, or as a claim that the room link was published anywhere
+        // beyond the confirmation e-mail -- see
+        // `docs/toolkit/emails/registration-confirmed.md`'s own pinned claim
+        // that it is not.
         key: 'scheduled/T-1/final-reminder',
         form: 'checkbox',
-        label: 'Final reminder sent, registration link checked',
+        label: 'Final reminder sent, room link checked',
         window: 1,
       },
       // The recording sequence, on the day. Three steps and not one tick,

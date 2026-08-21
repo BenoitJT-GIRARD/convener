@@ -32,7 +32,14 @@ from typing import Any
 
 import pytest
 
-from convener_ops import certificate, confirmation, platform_fcc, signing, survey_invite
+from convener_ops import (
+    certificate,
+    confirmation,
+    platform_fcc,
+    registration,
+    signing,
+    survey_invite,
+)
 from convener_ops import cli as cli_module
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
@@ -207,6 +214,33 @@ def test_survey_base_targets_the_vitrine_app_subtree() -> None:
         f"survey_invite.SURVEY_BASE does not carry {EXPECTED_BASE_PATH!r} -- "
         "it would not match app/vite.config.ts's own base, and every "
         "survey invitation link would 404 once served"
+    )
+
+
+def test_app_route_matches_registration_signup_base() -> None:
+    """Critical 2 (branch review): the same D-14 pin
+    `test_app_route_matches_certificate_verification_base` already makes
+    for `/verify/:identifier`, applied to the oldest of the three public
+    routes -- `registration.SIGNUP_BASE` did not exist before this fix, and
+    nothing bound `/signup/:eventId` to anything at all."""
+    fragment = registration.SIGNUP_BASE.split("#", 1)[1]  # "/signup/"
+    expected_path = f"{fragment}:eventId"  # "/signup/:eventId"
+    app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
+    assert f'path="{expected_path}"' in app_tsx, (
+        f"{APP_TSX.as_posix()} does not declare a route at "
+        f"{expected_path!r} -- this must match registration.SIGNUP_BASE's "
+        "own fragment"
+    )
+
+
+def test_registration_signup_base_targets_the_vitrine_app_subtree() -> None:
+    """Same gap as `test_certificate_verification_base_targets_the_vitrine_
+    app_subtree` and `test_survey_base_targets_the_vitrine_app_subtree`,
+    applied to the third base."""
+    assert EXPECTED_BASE_PATH in registration.SIGNUP_BASE, (
+        f"registration.SIGNUP_BASE does not carry {EXPECTED_BASE_PATH!r} "
+        "-- it would not match app/vite.config.ts's own base, and every "
+        "published signup link would 404 once served"
     )
 
 

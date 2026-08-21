@@ -106,6 +106,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any, Final
+from urllib.parse import quote
 
 from . import eventkeys
 
@@ -113,6 +114,34 @@ from . import eventkeys
 #: `eventkeys.WIRE_VERSION`, in case the file's shape (not the envelope
 #: inside it) ever has to change.
 FILE_VERSION: Final = 1
+
+#: The base of the one address that reaches this whole feature (Critical 2,
+#: branch review): before this constant existed, nothing in the repository
+#: -- no document, no template, no other constant -- carried
+#: `#/signup/<event id>` at all, while the two public announcement
+#: templates (`docs/toolkit/forum-post-announce.md`,
+#: `docs/toolkit/linkedin-post.md`) published the meeting room link under
+#: the word "Registration" instead. That both contradicted
+#: `docs/toolkit/emails/registration-confirmed.md`'s own pinned claim that
+#: the room link "is not otherwise published", and meant nobody could ever
+#: reach the page `certificate.VERIFICATION_BASE` and `survey_invite.
+#: SURVEY_BASE` already treat as this project's third public address.
+#: Same `HashRouter` fragment convention as both (see `app/src/App.tsx`'s
+#: `path="/signup/:eventId"`, the oldest of the three routes, which the
+#: other two modules' own docstrings already cite by name) -- a fragment,
+#: not a server path, because GitHub Pages serves no server-side routing.
+#: `test_workflows.py` pins this against `EXPECTED_BASE_PATH` and against
+#: `App.tsx`'s own route literal, the same D-14 discipline it already
+#: applies to the other two bases.
+SIGNUP_BASE: Final = "https://example-instance.github.io/example-showcase/app/#/signup/"
+
+
+def signup_url(event_id: str) -> str:
+    """The address to publish for `event_id`'s own registration page --
+    `certificate.verification_url` and `survey_invite.survey_url`'s own
+    sibling, for the one public address this module did not yet mint
+    itself."""
+    return f"{SIGNUP_BASE}{quote(event_id, safe='')}"
 
 
 @dataclass(frozen=True)

@@ -46,7 +46,7 @@ coming along.
 
 ### T-1 day
 
-- [ ] Final reminder sent, registration link checked
+- [ ] Final reminder sent, room link checked
 
 ### On the day
 

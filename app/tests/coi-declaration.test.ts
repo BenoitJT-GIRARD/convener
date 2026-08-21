@@ -271,7 +271,7 @@ describe('two registration checks, a week apart, that cannot be read for each ot
   const FINAL_REMINDER = 'scheduled/T-1/final-reminder';
 
   it('says what the T-1 line is about: the link the audience uses', () => {
-    expect(itemByKey(FINAL_REMINDER)!.label).toBe('Final reminder sent, registration link checked');
+    expect(itemByKey(FINAL_REMINDER)!.label).toBe('Final reminder sent, room link checked');
   });
 
   it('says what the T-14 line is about: the speaker being signed up', () => {
@@ -284,10 +284,16 @@ describe('two registration checks, a week apart, that cannot be read for each ot
     const week = itemByKey(SPEAKER_REGISTERED)!.label;
     const day = itemByKey(FINAL_REMINDER)!.label;
     expect(week).not.toBe(day);
-    // The bare phrase "registration check" belonged to both. It now belongs to
-    // neither: one names the link, the other names the speaker.
-    for (const label of [week, day]) expect(label).not.toContain('registration check');
-    expect(day).toContain('registration link');
+    // The bare phrase "registration check" belonged to both, and so, once
+    // phase 4 gave the app's own signup page the same name, did "registration
+    // link". Critical 2 (branch review) renamed the T-1 line to "room link" --
+    // neither line now carries the word "registration" at all, so no wording
+    // either could be mistaken for the other survives.
+    for (const label of [week, day]) {
+      expect(label).not.toContain('registration check');
+      expect(label).not.toContain('registration link');
+    }
+    expect(day).toContain('room link');
     expect(week).toContain('Speaker registered');
   });
 

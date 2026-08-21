@@ -7,6 +7,7 @@ from typing import Any, ClassVar
 
 import pytest
 
+from convener_ops import registration
 from convener_ops.confirmation import (
     CONTACT_EMAIL,
     FIELD_LABELS,
@@ -634,3 +635,48 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     eventkeys = _days(eventkeys_source)
 
     assert code == docs == signup == eventkeys == "90"
+
+
+# ------------------------------------------------------------------ #
+# Critical 2 (branch review): this page's own pinned claim -- "the room
+# is a permanent account, its link is not otherwise published" -- is only
+# checkable if something actually checks the "otherwise" against every
+# public template, not merely against this one page's own prose. Before
+# the fix, both `forum-post-announce.md` and `linkedin-post.md` published
+# `{{ speaker.zoom_link }}` under the word "Registration", contradicting
+# the claim below. Pinned here, beside the claim itself, so the
+# contradiction cannot come back through either template without a test
+# failing on this exact page.
+# ------------------------------------------------------------------ #
+
+_ROOM_LINK_CLAIM = "The room link only ever reaches a participant here"
+_TOOLKIT_DIR = Path(__file__).resolve().parents[2] / "docs" / "toolkit"
+_PUBLIC_ANNOUNCEMENT_TEMPLATES = (
+    _TOOLKIT_DIR / "forum-post-announce.md",
+    _TOOLKIT_DIR / "linkedin-post.md",
+)
+
+
+def test_the_room_link_claim_is_still_on_the_page() -> None:
+    """The claim this whole section pins the templates against -- if this
+    sentence is ever reworded away, the tests below are pinning nothing."""
+    assert _ROOM_LINK_CLAIM in _normalised_docs_template()
+
+
+def test_no_public_announcement_template_publishes_the_room_link() -> None:
+    for path in _PUBLIC_ANNOUNCEMENT_TEMPLATES:
+        text = path.read_text(encoding="utf-8")
+        assert "zoom_link" not in text, (
+            f"{path.name} publishes {{{{ speaker.zoom_link }}}} -- the room "
+            "link -- contradicting registration-confirmed.md's own pinned "
+            "claim that it 'is not otherwise published'"
+        )
+
+
+def test_every_public_announcement_template_publishes_the_signup_link_instead() -> None:
+    for path in _PUBLIC_ANNOUNCEMENT_TEMPLATES:
+        text = path.read_text(encoding="utf-8")
+        assert registration.SIGNUP_BASE in text, (
+            f"{path.name} does not publish registration.SIGNUP_BASE -- "
+            "nothing on this page tells a participant where to register"
+        )

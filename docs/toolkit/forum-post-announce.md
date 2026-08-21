@@ -17,7 +17,7 @@ In our next session we host **{{ speaker.name }}** ({{ speaker.affiliation }}), 
 - **When:** {{ speaker.date }}
 - **Time:** {{ speaker.time }} CET
 - **Where:** online — registration needed
-- **Registration:** {{ speaker.zoom_link }}
+- **Registration:** `https://example-instance.github.io/example-showcase/app/#/signup/<event id>` — fill in the event id before posting; this is not the room link, which is never published anywhere but the confirmation e-mail (see [Registration confirmed](emails/registration-confirmed.md))
 
 **Abstract**
 
