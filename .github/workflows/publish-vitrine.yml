@@ -120,6 +120,34 @@ jobs:
             "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
           SITE_OUTPUT="$GITHUB_WORKSPACE/site/_site"
 
+          # D-25 (fix round 1): "a control that cannot fail loudly is not a
+          # control." Eleventy exits 0 on "Wrote 0 files" -- a wrong
+          # dir.input, a template error that skips every page, or any config
+          # change that makes the build emit nothing all "succeed" as far as
+          # the step above is concerned. Without this guard, the wipe below
+          # would then remove the published site and commit an empty
+          # publication over a working one. Checked once, before the wipe
+          # ever starts touching /tmp/vit -- a build that cannot replace what
+          # it would remove must never be allowed to begin removing it.
+          if [ ! -f "$SITE_OUTPUT/index.html" ]; then
+            echo "::error::$SITE_OUTPUT/index.html is missing -- refusing to publish; the vitrine's published root was left untouched"
+            exit 1
+          fi
+          # A file-count floor beside the index.html check: passthrough
+          # copies (fonts, style.css, .nojekyll) can survive a build that
+          # broke template rendering in a way that still writes an
+          # index.html left over from a previous run in a re-used
+          # workspace -- unlikely on a fresh runner, but this floor is the
+          # cheap second check that does not rely on that being true. Five,
+          # not the current count of eight: low enough that adding a page
+          # (task 5, task 8) never needs this number touched, high enough
+          # that a build producing only one or two files still trips it.
+          site_file_count=$(find "$SITE_OUTPUT" -type f | wc -l)
+          if [ "$site_file_count" -lt 5 ]; then
+            echo "::error::$SITE_OUTPUT only holds $site_file_count file(s) -- refusing to publish; the vitrine's published root was left untouched"
+            exit 1
+          fi
+
           # Wipe everything this job owns at the vitrine's root -- every
           # entry except .git and app/, Deploy app's own disjoint subtree --
           # then lay the fresh build over it whole. A wipe-then-copy, not a

@@ -641,6 +641,40 @@ def test_publish_vitrine_push_step_only_touches_the_root_site_files() -> None:
     )
 
 
+def test_publish_vitrine_push_step_refuses_to_publish_an_empty_build() -> None:
+    """D-25 (fix round 1): Eleventy exits 0 on 'Wrote 0 files' -- a wrong
+    dir.input, a template error that skips every page, or any config change
+    that makes the build emit nothing all 'succeed' as far as the 'Build
+    site' step is concerned. Without a guard, the wipe below would then
+    remove the published site and commit an empty publication over a
+    working one -- D-25's own "a control that cannot fail loudly is not a
+    control", except here the silent success is destructive rather than
+    merely useless."""
+    script = _publish_vitrine_push_script()
+    guard_at = script.find('if [ ! -f "$SITE_OUTPUT/index.html" ]')
+    count_at = script.find("site_file_count=")
+    wipe_at = script.find("find /tmp/vit")
+    assert guard_at != -1, (
+        "no guard checks that $SITE_OUTPUT/index.html exists -- a build "
+        "that silently wrote nothing would still be published"
+    )
+    assert count_at != -1, (
+        "no file-count floor beside the index.html check -- a build that "
+        "wrote only one or two files (also wrong, once tasks 5 and 8 add "
+        "pages) would still be published"
+    )
+    assert -1 < guard_at < wipe_at and -1 < count_at < wipe_at, (
+        "both emptiness guards must run before the wipe starts -- checked "
+        "after, the wipe has already begun removing what a failed check "
+        "could no longer replace"
+    )
+    guard_block = script[guard_at : script.find("fi", guard_at)]
+    assert "exit 1" in guard_block, (
+        "the index.html guard does not exit 1 -- a missing index.html "
+        "must fail the step, not merely be noticed"
+    )
+
+
 def test_publish_vitrine_push_step_clears_stale_files_before_copying() -> None:
     script = _publish_vitrine_push_script()
     wipe_at = script.find("find /tmp/vit")
