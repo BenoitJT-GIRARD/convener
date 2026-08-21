@@ -80,12 +80,22 @@ jobs:
         # converges under either behaviour, and is assertable offline
         # against a stubbed `gh` on `PATH`.
         #
+        # R-36: the listing itself can fail (an expired PAT mid-run, a
+        # 403, `gh` missing, an API blip) -- its exit status is captured
+        # and checked on its own, separately from what it printed. A
+        # failed listing is a failure for that event, never an absence:
+        # reading "the question could not be answered" as "the answer is
+        # no" recorded a destruction that had not happened, deleted the
+        # published `.pub` on the strength of it, and the sweep's own
+        # skip-if-already-recorded rule then made that permanent -- the
+        # exact inverse of what this job exists to guarantee.
+        #
         # One event's failure must not abandon the others (R-34): the
         # loop below `continue`s past a secret still present after the
         # attempt, rather than `break`ing the whole batch, and collects
-        # every id that *did* end up absent into `recorded_ids` --
-        # `destroyed_ids` and `destroyed_secrets` are parallel, same-order
-        # lists (both built from the same `due` list in
+        # every id that *did* end up confirmed absent into `recorded_ids`
+        # -- `destroyed_ids` and `destroyed_secrets` are parallel,
+        # same-order lists (both built from the same `due` list in
         # cli.py::retention_sweep) -- so a later, healthy event in the
         # same batch still gets recorded even if an earlier one failed.
         # The recording step below runs on `if: always()` and reads only
@@ -103,8 +113,21 @@ jobs:
             id="${ids[$i]}"
             echo "deleting $name"
             gh secret delete "$name" --repo "$GITHUB_REPOSITORY" || true
-            if gh secret list --repo "$GITHUB_REPOSITORY" --json name \
-                 --jq '.[].name' | grep -qx "$name"; then
+            listing="$(gh secret list --repo "$GITHUB_REPOSITORY" --json name --jq '.[].name')"
+            list_status=$?
+            if [ "$list_status" -ne 0 ]; then
+              # This phase has now hit the same shape three times -- a
+              # workflow that exited green having passed no secrets, a
+              # projection published to somewhere nothing serves, and
+              # now a question whose own failure was read as its answer.
+              # Absence of evidence is not evidence of absence: a failed
+              # listing settles nothing about whether the secret is gone,
+              # so it is recorded as a failure, never as an absence.
+              echo "::error::could not confirm whether $name was deleted for event $id (gh secret list failed)"
+              status=1
+              continue
+            fi
+            if printf '%s\n' "$listing" | grep -qx "$name"; then
               echo "::error::failed to delete $name for event $id"
               status=1
               continue

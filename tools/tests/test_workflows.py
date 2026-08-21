@@ -1484,18 +1484,30 @@ def test_erase_registration_workflow_has_a_concurrency_group() -> None:
 #: name is never present to begin with, reproducing "deleting an
 #: already-deleted secret is an error"). `secret list --json name --jq
 #: '.[].name'` prints the store's current contents, one per line, exactly
-#: the shape the real step's own `grep -qx` expects. `GH_STUB_ALWAYS_FAIL`
+#: the shape the real step's own listing expects. `GH_STUB_ALWAYS_FAIL`
 #: (comma-joined names) forces `secret delete` to fail *and* leaves the
 #: name in the store -- the genuine failure this stub can otherwise not
 #: produce, since an ordinary present name always deletes cleanly.
+#: `GH_STUB_FAKE_SUCCESS` (comma-joined names) makes `secret delete`
+#: report success (exit 0) while leaving the name in the store untouched
+#: -- an eventual-consistency lag the real API can plausibly produce, and
+#: R-36's own second shape: a successful-looking delete must not be
+#: trusted either, only what `secret list` confirms. `GH_STUB_LIST_FAIL`
+#: ("1") makes `secret list` itself fail (non-zero exit, nothing
+#: printed) -- R-36's own reproduction: a listing that cannot answer the
+#: question must never be read as "the answer is no".
 _GH_STUB = """#!/usr/bin/env bash
 set -e
 store="$GH_STUB_STORE"
 fail_list=",${GH_STUB_ALWAYS_FAIL:-},"
+fake_ok=",${GH_STUB_FAKE_SUCCESS:-},"
 if [ "$1" = "secret" ] && [ "$2" = "delete" ]; then
   name="$3"
   if [ "$fail_list" != ",," ] && printf '%s' "$fail_list" | grep -qF ",$name,"; then
     exit 1
+  fi
+  if [ "$fake_ok" != ",," ] && printf '%s' "$fake_ok" | grep -qF ",$name,"; then
+    exit 0
   fi
   if [ -f "$store" ] && grep -qxF "$name" "$store"; then
     grep -vxF "$name" "$store" > "$store.tmp" || true
@@ -1504,6 +1516,10 @@ if [ "$1" = "secret" ] && [ "$2" = "delete" ]; then
   fi
   exit 1
 elif [ "$1" = "secret" ] && [ "$2" = "list" ]; then
+  if [ "${GH_STUB_LIST_FAIL:-}" = "1" ]; then
+    echo "gh: HTTP 401: Bad credentials" >&2
+    exit 1
+  fi
   [ -f "$store" ] && cat "$store"
   exit 0
 fi
@@ -1528,6 +1544,8 @@ def _run_delete_step(
     destroyed_ids: str,
     destroyed_secrets: str,
     always_fail: list[str] | None = None,
+    fake_success: list[str] | None = None,
+    list_fail: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, str]]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -1545,6 +1563,8 @@ def _run_delete_step(
         "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
         "GH_STUB_STORE": str(store),
         "GH_STUB_ALWAYS_FAIL": ",".join(always_fail or []),
+        "GH_STUB_FAKE_SUCCESS": ",".join(fake_success or []),
+        "GH_STUB_LIST_FAIL": "1" if list_fail else "0",
         "GH_TOKEN": "stub-token",
         "GITHUB_REPOSITORY": "example/example-showcase",
         "DESTROYED_IDS": destroyed_ids,
@@ -1628,4 +1648,54 @@ def test_delete_step_does_not_abandon_a_later_event_after_an_earlier_failure(
     )
     assert result.returncode == 1
     assert outputs["recorded_ids"] == "mrg-050"
+    assert "CONVENER_EVENT_KEY_MRG_042" in result.stdout + result.stderr
+
+
+@pytest.mark.skipif(_BASH_MISSING, reason="bash is not on PATH")
+def test_delete_step_treats_a_fake_success_as_a_failure(tmp_path: Path) -> None:
+    """R-36's second shape: `gh secret delete` reporting success is not
+    itself the answer either -- an eventual-consistency lag between the
+    delete call and the list call is plausible on a real API, and this
+    step's own comment says the listing is "the one question that
+    actually matters". `GH_STUB_FAKE_SUCCESS` makes delete exit 0 while
+    leaving the secret in the store; the listing then (correctly) still
+    shows it present, so this must be recorded as a failure exactly like
+    an outright failed delete, not silently trusted because the delete
+    call itself looked clean."""
+    result, outputs = _run_delete_step(
+        tmp_path,
+        present_secrets=["CONVENER_EVENT_KEY_MRG_042"],
+        destroyed_ids="mrg-042",
+        destroyed_secrets="CONVENER_EVENT_KEY_MRG_042",
+        fake_success=["CONVENER_EVENT_KEY_MRG_042"],
+    )
+    assert result.returncode == 1
+    assert outputs.get("recorded_ids", "") == ""
+    assert "CONVENER_EVENT_KEY_MRG_042" in result.stdout + result.stderr
+
+
+@pytest.mark.skipif(_BASH_MISSING, reason="bash is not on PATH")
+def test_delete_step_fails_and_records_nothing_when_listing_fails(
+    tmp_path: Path,
+) -> None:
+    """R-36's own reproduction (Critical, round 2): the listing's exit
+    status was discarded and only the grep result was consulted, so a
+    failed listing (an expired PAT mid-run, a 403, gh missing from PATH)
+    printed nothing, grep found no match, and the id was recorded as
+    destroyed -- the exact inverse of what this job exists to guarantee,
+    since the secret is still live. `GH_STUB_LIST_FAIL` makes `gh secret
+    list` itself exit non-zero with nothing printed; the fix must record
+    nothing for this event and fail the job, never read a failed question
+    as a negative answer. A mutant that discards the listing's own exit
+    status again fails this: `recorded_ids` would be `mrg-042` and the
+    step would exit 0."""
+    result, outputs = _run_delete_step(
+        tmp_path,
+        present_secrets=["CONVENER_EVENT_KEY_MRG_042"],
+        destroyed_ids="mrg-042",
+        destroyed_secrets="CONVENER_EVENT_KEY_MRG_042",
+        list_fail=True,
+    )
+    assert result.returncode == 1
+    assert outputs.get("recorded_ids", "") == ""
     assert "CONVENER_EVENT_KEY_MRG_042" in result.stdout + result.stderr
