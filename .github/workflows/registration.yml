@@ -158,6 +158,14 @@ jobs:
           # by `convener-send-confirmation` itself -- see
           # `tools/convener_ops/confirmation.py`'s module docstring.
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          # Fix round 1, M1: `_send_confirmation` calls `platform_from_env`
+          # to resolve the room link (`confirmation.event_details`) --
+          # without this, an FCC-configured event silently falls back to
+          # the manual `zoom_link` for the confirmation's own room link
+          # even though the API-resolved room is available everywhere
+          # else. Absent here is ordinary D-13, same as everywhere else
+          # this token is read.
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
           CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}

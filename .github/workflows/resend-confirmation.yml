@@ -65,6 +65,11 @@ jobs:
           REGISTRATION_EMAIL: ${{ inputs.email }}
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          # Fix round 1, M1: same reasoning as registration.yml's own
+          # identical addition -- `resend_confirmation` calls
+          # `_send_confirmation`, which resolves the room link through
+          # `platform_from_env`. Absent here is ordinary D-13.
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
           CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
