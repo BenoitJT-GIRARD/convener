@@ -111,6 +111,7 @@ import smtplib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from email.message import EmailMessage
+from email.utils import formatdate
 from typing import Any, Final, Protocol
 
 from .platform import EventNotFoundError, Platform, Room, find_speaker
@@ -473,6 +474,13 @@ class _SmtpTransport:
         email["Subject"] = message.subject
         email["From"] = config.sender
         email["To"] = message.to
+        # Carried item 6 (fix wave 2): the same gap `delivery.py`'s own
+        # `_SmtpDeliveryTransport.send` was made to close (Minor 5, fix
+        # round 1) -- a real send time, not an omitted one. Spec S:9's
+        # own risk table names the spam folder explicitly, and a missing
+        # `Date` header is a real spam-scoring signal a resend deserves
+        # exactly as much protection from as the first send did.
+        email["Date"] = formatdate(localtime=True)
         # Explicit, not left to default to whatever `config.sender`
         # happens to be (review round 1, minor 5): `_RIGHTS_NOTICE` says
         # "reply to this message", and this is what makes that literally

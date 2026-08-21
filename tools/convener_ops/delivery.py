@@ -117,9 +117,10 @@ send did. This does not conflict with the replay guarantee above: a `Date`
 header changes the *message* on a retry, never the attachment or its
 signature, and nothing this module's own tests pin ever compares the
 envelope byte for byte -- only `_sent_attachment_html` and the token it
-carries. `confirmation.py`'s own transport has the identical gap
-(inherited, not introduced here) and is deliberately not touched by this
-round; it is carried to the phase's final fix wave instead.
+carries. `confirmation.py`'s own transport had the identical gap
+(inherited, not introduced here), deliberately not touched by this round
+-- carried item 6 closed it in the phase's final fix wave instead, the
+same fix, in the same place in that module's own `_SmtpTransport.send`.
 
 **That replayability is not unconditional forever, and this module does
 not claim it is.** `certificate.issue` needs the event's own decrypted

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import smtplib
 from pathlib import Path
@@ -509,6 +510,14 @@ def test_smtp_transport_uses_starttls_on_an_ordinary_port(
     # Review round 1, minor 5: "reply to this message" must be true
     # regardless of what `config.sender` (CONVENER_SMTP_FROM) happens to be.
     assert client.sent[0]["Reply-To"] == CONTACT_EMAIL
+    # Carried item 6 (fix wave 2): the same `Date` header
+    # `delivery.py::_SmtpDeliveryTransport.send` already carries (Minor 5,
+    # fix round 1) -- spec S:9's own risk table names the spam folder by
+    # name, and a missing `Date` is a real scoring signal. Present, and
+    # not empty -- not asserting an exact value, since the real transport
+    # uses the actual send time.
+    assert client.sent[0]["Date"] is not None
+    assert str(client.sent[0]["Date"]).strip() != ""
 
 
 def test_smtp_transport_uses_implicit_tls_on_port_465(
@@ -690,9 +699,54 @@ def test_no_public_announcement_template_publishes_the_room_link() -> None:
 
 
 def test_every_public_announcement_template_publishes_the_signup_link_instead() -> None:
+    """Fix wave 2 correction: wave 1 published `registration.SIGNUP_BASE`
+    itself as a literal, with the event id left for a volunteer to type in
+    by hand -- exactly the "depends on somebody remembering, and getting it
+    right" shape this project refuses everywhere else. Both templates now
+    carry `{{ speaker.signup_link }}`, a value `render.ts` computes from the
+    Speaker record's own `edition_code` per R-5, so nothing about the
+    address is ever hand-filled."""
     for path in _PUBLIC_ANNOUNCEMENT_TEMPLATES:
         text = path.read_text(encoding="utf-8")
-        assert registration.SIGNUP_BASE in text, (
-            f"{path.name} does not publish registration.SIGNUP_BASE -- "
+        assert "{{ speaker.signup_link }}" in text, (
+            f"{path.name} does not publish {{{{ speaker.signup_link }}}} -- "
             "nothing on this page tells a participant where to register"
         )
+        assert "event id" not in text.lower(), (
+            f"{path.name} still asks a volunteer to fill in the event id by "
+            "hand -- the link is computed now, not typed"
+        )
+
+
+# ------------------------------------------------------------------ #
+# Fix wave 2 correction: the R-5 mapping (event_id is edition_code,
+# lower-cased -- platform.py::find_speaker) does exist, contrary to wave
+# 1's stated reasoning. `registration.signup_url` and `render.ts`'s own
+# `signup_link` derivation must compute the identical address for the
+# identical Speaker record; bound here by the shared, worked fixture
+# (D-14) rather than by two constants trusted to agree. `edition_code` is
+# deliberately mixed-case in the fixture -- lower-casing IS the rule.
+# ------------------------------------------------------------------ #
+
+_SIGNUP_LINK_FIXTURE = Path(__file__).parent / "fixtures" / "signup-link.json"
+
+
+def _signup_link_cases() -> dict[str, Any]:
+    return json.loads(_SIGNUP_LINK_FIXTURE.read_text(encoding="utf-8"))
+
+
+def test_signup_base_matches_the_shared_fixture() -> None:
+    cases = _signup_link_cases()
+    assert cases["signup_base"] == registration.SIGNUP_BASE
+
+
+@pytest.mark.parametrize(
+    "case", _signup_link_cases()["cases"], ids=lambda c: c["edition_code"]
+)
+def test_signup_url_matches_the_shared_fixtures_worked_examples(
+    case: dict[str, str],
+) -> None:
+    # The fixture's own event_id pins R-5 itself: lower-casing edition_code
+    # IS the rule, not merely an assumption the case was built under.
+    assert case["event_id"] == case["edition_code"].lower()
+    assert registration.signup_url(case["event_id"]) == case["signup_url"]

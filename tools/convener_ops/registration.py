@@ -106,6 +106,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any, Final
+from urllib.parse import quote
 
 from . import eventkeys
 
@@ -132,18 +133,45 @@ FILE_VERSION: Final = 1
 #: `test_workflows.py` pins this against `EXPECTED_BASE_PATH` and against
 #: `App.tsx`'s own route literal, the same D-14 discipline it already
 #: applies to the other two bases.
-#: No `signup_url(event_id)` alongside this, unlike `certificate.
-#: verification_url` and `survey_invite.survey_url`: neither of those two
-#: is ever built from a Speaker record the way a signup link would need to
-#: be (no `event_id` field exists on one -- `eventkeys.py`'s own module
-#: docstring: "No `Identifier` type exists yet anywhere in this codebase
-#: ... event ids are new to phase 4"), so the two public announcement
-#: templates that publish this address publish `SIGNUP_BASE` itself, with
-#: the event id filled in by hand, the same way every other per-event fact
-#: on those templates already is (`{{ speaker.date }}`, `{{ speaker.time
-#: }}`, and the reason line neither template has ever auto-filled). A
-#: function nothing would call is not a smaller surface than none at all.
+#:
+#: **Correction (fix wave 2):** wave 1 reasoned there was "no established
+#: mapping from a Speaker record to the event id" and, on that basis,
+#: published `SIGNUP_BASE` in both public templates with a hand-filled
+#: `<event id>` placeholder. That was wrong. The mapping exists and is a
+#: decided rule of this project -- R-5, `platform.py::find_speaker`:
+#: "`event_id` is `edition_code`, lower-cased. Nothing else..." What
+#: `eventkeys.py`'s module docstring says ("no `Identifier` type exists
+#: yet") is a claim about a missing *type*, not about the mapping. A
+#: Speaker record's own `edition_code` is exactly what R-5 needs, and
+#: `signup_url` below computes the same address `verification_url` and
+#: `survey_url` already compute for their own bases. The two public
+#: announcement templates now publish `{{ speaker.signup_link }}`, a value
+#: `app/src/content/render.ts` derives the same way it already derives
+#: `speaker.first_name` -- lower-casing `edition_code` itself, per R-5,
+#: since `find_speaker` expects its `event_id` argument already lower-case
+#: and does not do that step for a caller. The rule crosses both
+#: languages, so `tools/tests/fixtures/signup-link.json` binds it with a
+#: shared, worked fixture -- deliberately holding a mixed-case
+#: `edition_code` (`MRG-4` lower-cases to `mrg-4`), the same D-14 discipline
+#: `certificate-verification.json` and `governance-cases.json` already
+#: apply, rather than two constants trusted to agree.
 SIGNUP_BASE: Final = "https://example-instance.github.io/example-showcase/app/#/signup/"
+
+
+def signup_url(event_id: str) -> str:
+    """The one link a participant follows to register for `event_id` --
+    mirrors `certificate.verification_url` and `survey_invite.survey_url`
+    exactly, and, like `survey_url`, expects `event_id` already lower-cased
+    per R-5 (`platform.py::find_speaker`); this function does not lower-case
+    it itself. No Python caller invokes this today -- a registration
+    confirmation email carries the room link a participant already reached,
+    not the signup link that got them there -- but `render.ts`'s own
+    `signup_link` derivation needs a Python-side value to be bound against,
+    the same way `test_survey_invite.py` and `test_certificate.py` bind
+    their own `_url` functions, so this exists to be that value rather than
+    to be called from `cli.py`.
+    """
+    return f"{SIGNUP_BASE}{quote(event_id, safe='')}"
 
 
 @dataclass(frozen=True)
