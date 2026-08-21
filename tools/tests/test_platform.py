@@ -701,19 +701,18 @@ def test_get_attendance_refuses_the_encrypted_export_without_a_private_key(
         _platform(tmp_path, private_pem=None).get_attendance("mrg-941")
 
 
-def test_get_attendance_returns_nothing_when_every_row_fails_to_decrypt(
+def test_get_attendance_refuses_when_every_row_fails_to_decrypt(
     tmp_path: Path,
 ) -> None:
-    """Fix round 1, R-45: with one independent envelope per row, a private
-    key that matches no row (the whole export was committed for a
-    different event's key by mistake) is not a whole-file failure any
-    more -- each row is skipped on its own, the same tolerance
-    `registration.py`'s own callers already give a stray undecryptable
-    entry in `registrations.enc`. This is parity, not a regression: a
-    wrong-event key against `registrations.enc` already produces exactly
-    this "quietly nothing" outward shape today (`to_registration` returns
-    `None` per entry, silently skipped by every `cli.py` loop) -- this
-    test pins the identical behaviour for its attendance-export twin."""
+    """R-46, fix round 2: with one independent envelope per row, a private
+    key that matches no row at all is not the same case as one damaged
+    row among good ones -- it is the wrong file (the export was committed
+    for a different event's key by mistake, one copied identifier away
+    from an operator's actual keyboard). Returning `[]` here used to read
+    downstream as "nobody attended", the one reading of that number that
+    is certainly false whenever the committed file is not itself empty --
+    this refuses instead, the same fail-closed shape `get_attendance`
+    already gives an absent `private_pem`."""
     _, public_pem = eventkeys.generate()
     other_private_pem, _ = eventkeys.generate()
     event_dir = tmp_path / "events" / "mrg-942"
@@ -724,9 +723,11 @@ def test_get_attendance_returns_nothing_when_every_row_fails_to_decrypt(
         "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
     )
 
-    rows = _platform(tmp_path, private_pem=other_private_pem).get_attendance("mrg-942")
-
-    assert rows == []
+    with pytest.raises(
+        AttendanceImportError,
+        match="committed attendance rows could be decrypted",
+    ):
+        _platform(tmp_path, private_pem=other_private_pem).get_attendance("mrg-942")
 
 
 def test_get_attendance_refuses_a_malformed_encrypted_file(tmp_path: Path) -> None:
@@ -813,6 +814,53 @@ def test_decrypt_attendance_rows_skips_one_row_that_fails_to_decrypt(
     rows = decrypt_attendance_rows(mixed, private_pem)
 
     assert rows == [good]
+
+
+def test_decrypt_attendance_rows_returns_the_good_two_of_three_when_one_is_foreign(
+    tmp_path: Path,
+) -> None:
+    """R-46's own worked example: *some* rows failing is a damaged file,
+    tolerable -- one foreign row among three still returns the other
+    two."""
+    private_pem, public_pem = eventkeys.generate()
+    _other_private_pem, other_public_pem = eventkeys.generate()
+    ada = AttendanceRow("Ada Lovelace", "ada@example.org", "a", "b", 60)
+    grace = AttendanceRow("Grace Hopper", "grace@example.org", "x", "y", 90)
+    stray = AttendanceRow("Marie Curie", "marie@example.org", "p", "q", 30)
+    good_file = load_attendance_export_file(
+        encrypt_attendance_rows(public_pem, [ada, grace])
+    )
+    stray_file = load_attendance_export_file(
+        encrypt_attendance_rows(other_public_pem, [stray])
+    )
+    mixed = AttendanceExportFile(entries=(*good_file.entries, *stray_file.entries))
+
+    rows = decrypt_attendance_rows(mixed, private_pem)
+
+    assert rows == [ada, grace]
+
+
+def test_decrypt_attendance_rows_refuses_when_every_row_is_foreign(
+    tmp_path: Path,
+) -> None:
+    """R-46, fix round 2: *all* rows failing is the wrong file, not a
+    damaged one -- an export encrypted entirely under a different event's
+    key. `[]` here would read downstream as "nobody attended", which is
+    certainly false for a non-empty committed file, so this refuses
+    instead of returning it."""
+    _other_private_pem, other_public_pem = eventkeys.generate()
+    private_pem, _public_pem = eventkeys.generate()
+    ada = AttendanceRow("Ada Lovelace", "ada@example.org", "a", "b", 60)
+    grace = AttendanceRow("Grace Hopper", "grace@example.org", "x", "y", 90)
+    foreign = load_attendance_export_file(
+        encrypt_attendance_rows(other_public_pem, [ada, grace])
+    )
+
+    with pytest.raises(
+        AttendanceImportError,
+        match="committed attendance rows could be decrypted",
+    ):
+        decrypt_attendance_rows(foreign, private_pem)
 
 
 def test_load_attendance_export_file_rejects_the_wrong_version(tmp_path: Path) -> None:

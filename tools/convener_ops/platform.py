@@ -599,9 +599,26 @@ def decrypt_attendance_rows(
     `private_pem` can actually read. A row whose envelope fails to decrypt
     (wrong key, corrupted ciphertext) or whose decrypted plaintext is not
     exactly this module's own row shape is skipped, never treated as
-    fatal -- the same tolerance `registration.py`'s own callers already
-    give a stray undecryptable entry in `registrations.enc`. One damaged
-    or foreign row costs one row, not the whole file."""
+    fatal on its own -- the same tolerance `registration.py`'s own callers
+    already give a stray undecryptable entry in `registrations.enc`. One
+    damaged or foreign row costs one row, not the whole file.
+
+    **R-46, fix round 2: zero rows out of a non-empty file is a refusal,
+    not an answer.** *Some* rows failing is a damaged file -- tolerable,
+    the case the paragraph above describes. *All* rows failing is the
+    wrong file -- an export encrypted under a different event's public
+    key, or a private key that does not match the one that produced it,
+    both one copied identifier away from an operator's actual keyboard.
+    Read as "0 rows" and carried into matching or issuance, that becomes
+    "nobody attended", the one reading of that number that is certainly
+    false whenever the committed file is not itself empty. So: any entry
+    at all in `file.entries`, and none of them survives decryption or
+    parsing, raises `AttendanceImportError` instead of returning `[]` --
+    the same fail-closed shape `get_attendance` already gives an absent
+    `private_pem`. An empty `file.entries` (nothing was ever committed)
+    is unaffected and still returns `[]`; that case is handled before
+    this function is ever reached, by `get_attendance`'s own "no
+    attendance export" refusal."""
     rows: list[AttendanceRow] = []
     for entry in file.entries:
         try:
@@ -611,6 +628,13 @@ def decrypt_attendance_rows(
         row = _row_from_plaintext(plaintext)
         if row is not None:
             rows.append(row)
+    if file.entries and not rows:
+        raise AttendanceImportError(
+            "none of this event's committed attendance rows could be "
+            "decrypted with this private key -- the export was likely "
+            "encrypted under a different event's public key, or this "
+            "private key does not match the one that produced it"
+        )
     return rows
 
 
@@ -756,10 +780,12 @@ class ManualPlatform:
                     f"not be read: {exc}"
                 ) from exc
             # Fix round 1, R-45: one independent envelope per row now, not
-            # one envelope for the whole file -- see
-            # `decrypt_attendance_rows`'s own docstring for why a row that
-            # fails to decrypt or fails to parse is skipped rather than
-            # failing this whole call.
+            # one envelope for the whole file. A row that fails to decrypt
+            # or fails to parse is skipped rather than failing this whole
+            # call -- unless fix round 2's R-46 finds that *every* row
+            # failed, which `decrypt_attendance_rows` itself refuses
+            # rather than silently returning "nobody attended". See that
+            # function's own docstring for both halves of the rule.
             return decrypt_attendance_rows(file, self.private_pem)
 
         if plain_path.exists():
