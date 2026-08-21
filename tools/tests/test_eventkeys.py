@@ -452,6 +452,27 @@ def test_secret_name_rejects_an_invalid_event_id() -> None:
         secret_name("../escape")
 
 
+def test_secret_name_accepts_an_event_id_at_the_length_cap() -> None:
+    """Minor 7, branch review: `_EVENT_ID_MAX_LENGTH` is 64, matching
+    `services/signup-relay/src/index.js::EVENT_ID_RE`'s own cap -- see
+    `_EVENT_ID_RE`'s own comment. Exactly at the boundary must still be
+    accepted; over it must not (below)."""
+    event_id = "a" * 64
+    assert secret_name(event_id) == "CONVENER_EVENT_KEY_" + "A" * 64
+
+
+def test_secret_name_rejects_an_event_id_over_the_length_cap() -> None:
+    """A 65-character id is exactly the shape
+    `services/signup-relay/src/index.js::EVENT_ID_RE` already refuses with
+    a bare 400 -- before this fix, `secret_name` accepted it, so an id
+    this long could be published as `keys/events/<id>.pub` and be
+    unusable at the one place a participant would ever submit against
+    it."""
+    event_id = "a" * 65
+    with pytest.raises(ValueError, match="event id"):
+        secret_name(event_id)
+
+
 # ------------------------------------------------------------------ #
 # key_status() and destroy(): pure, and the three states they must tell
 # apart.

@@ -249,7 +249,22 @@ _OAEP: Final = padding.OAEP(
 #: guarantee a legal environment variable suffix -- `_TOKEN` admits `.` and
 #: `-`, neither legal in a GitHub Actions secret name, which is why
 #: `secret_name` below exists as a separate step.
-_EVENT_ID_RE: Final = re.compile(rf"^{_TOKEN}$")
+#:
+#: **Length-capped at `_EVENT_ID_MAX_LENGTH` (Minor 7, branch review).**
+#: `services/signup-relay/src/index.js::EVENT_ID_RE` mirrors `_TOKEN`'s own
+#: charset (it cannot import this pattern -- the two languages share no
+#: regex object) but, unlike this pattern before this fix, also bounds the
+#: length to 64: "no event id in this project is remotely close to that,
+#: the cap exists only so a pathological input cannot inflate the GitHub
+#: API URL or the dispatch payload it participates in" (that module's own
+#: comment). Without a matching bound here, a >64-character id could pass
+#: every check in this module, get published as `keys/events/<id>.pub`,
+#: and be refused by the relay with a bare 400 on every registration
+#: attempt -- fail-closed, but confusingly, and only at signup time. The
+#: lookahead enforces the length without touching `_TOKEN` itself, which
+#: `commit_format.py`'s own decision-register tokens still use unbounded.
+_EVENT_ID_MAX_LENGTH: Final = 64
+_EVENT_ID_RE: Final = re.compile(rf"^(?=.{{1,{_EVENT_ID_MAX_LENGTH}}}$){_TOKEN}$")
 
 #: GitHub Actions secret names are restricted to `[A-Za-z_][A-Za-z0-9_]*`.
 #: `secret_name` folds the two characters `_EVENT_ID_RE` admits but that

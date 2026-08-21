@@ -225,6 +225,29 @@ def test_get_room_also_validates_the_event_id_first(tmp_path: Path) -> None:
         _platform(tmp_path).get_room("../secret")
 
 
+def test_an_event_id_at_the_length_cap_is_accepted(tmp_path: Path) -> None:
+    """Minor 7, branch review: `_EVENT_ID_MAX_LENGTH` is 64, matching
+    `services/signup-relay/src/index.js::EVENT_ID_RE`'s own cap. Exactly
+    at the boundary must still be accepted -- `AttendanceImportError`, not
+    `ValueError`, since a 64-character id is a legal *shape* that
+    validates cleanly and simply has no attendance export on disk here."""
+    with pytest.raises(AttendanceImportError):
+        _platform(tmp_path).get_attendance("a" * 64)
+
+
+def test_an_event_id_over_the_length_cap_is_refused_before_touching_the_filesystem(
+    tmp_path: Path,
+) -> None:
+    """A 65-character id is exactly the shape
+    `services/signup-relay/src/index.js::EVENT_ID_RE` already refuses with
+    a bare 400 -- before this fix, this module's own `_EVENT_ID_RE`
+    accepted it regardless."""
+    events_dir = tmp_path / "events"
+    with pytest.raises(ValueError):
+        _platform(tmp_path).get_attendance("a" * 65)
+    assert not events_dir.exists()
+
+
 # ------------------------------------------------------------------ #
 # get_attendance -- the email boundary is the point of this task
 # ------------------------------------------------------------------ #

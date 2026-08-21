@@ -88,7 +88,7 @@ file) nor locally (no key). `docs/superpowers/deferred-work.md` entry 10
 recorded this in full.
 
 **The fix is the same trick this design already plays twice for
-`registrations.enc` and `survey_responses.enc`: encrypt under the event's
+`registrations.enc` and `survey-responses.enc`: encrypt under the event's
 own *public* key, which needs no secret at all, and commit the ciphertext.**
 `get_attendance` below looks first for
 `data/events/<event id>/attendance-import.csv.enc`, produced locally by a
@@ -109,7 +109,7 @@ a real drop", a real, automated proof.
 **One independent envelope per row, not one envelope for the whole file
 (fix round 1, R-45 / Important 4).** The first version of this wrapped the
 entire CSV text in a single `eventkeys.encrypt` call, unlike
-`registrations.enc` and `survey_responses.enc`, which are already one
+`registrations.enc` and `survey-responses.enc`, which are already one
 envelope per record -- a divergence that was not merely a style
 inconsistency: `registration.py`'s own module docstring gives the real
 reason ("The file shape, and why it is not one envelope for the whole
@@ -239,7 +239,13 @@ _REQUIRED_ATTENDANCE_COLUMNS: Final = frozenset(
 #: leading-character rule (`[A-Za-z0-9]`, never `.`) already refuses `..`
 #: and any id starting with a dot, and the charset admits no `/`, so a
 #: validated id cannot walk out of `events_dir`.
-_EVENT_ID_RE: Final = re.compile(rf"^{_TOKEN}$")
+#:
+#: Length-capped the same way, and for the same reason, `eventkeys.py`'s
+#: own copy of this pattern now is (Minor 7, branch review) -- see that
+#: module's own comment on `_EVENT_ID_MAX_LENGTH` for the full reasoning
+#: against `services/signup-relay/src/index.js::EVENT_ID_RE`'s own 64.
+_EVENT_ID_MAX_LENGTH: Final = 64
+_EVENT_ID_RE: Final = re.compile(rf"^(?=.{{1,{_EVENT_ID_MAX_LENGTH}}}$){_TOKEN}$")
 
 
 def _validate_event_id(event_id: str) -> None:
@@ -306,7 +312,7 @@ class Platform(Protocol):
 #: independent `eventkeys` envelope per attendance row (fix round 1, R-45 /
 #: Important 4 -- see the module docstring's "one independent envelope per
 #: row" section for why this is not one envelope for the whole file), the
-#: same per-record shape `registrations.enc` and `survey_responses.enc`
+#: same per-record shape `registrations.enc` and `survey-responses.enc`
 #: already use. Produced by `convener-encrypt-attendance-export` and checked in
 #: like those two. Read in preference to the plaintext filename below.
 ENCRYPTED_ATTENDANCE_FILENAME: Final = "attendance-import.csv.enc"
