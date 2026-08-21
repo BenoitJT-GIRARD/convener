@@ -73,6 +73,61 @@ describe('the two extractors that read registry.ts as text agree with the real m
   });
 });
 
+describe('the extraction reads each export\'s own literal, not the whole file -- fix round 1', () => {
+  // The reviewer proved by execution that the first version of these two
+  // functions ran `/\bfile:\s*'([^']+)'/g` over the *entire* source text:
+  // an ordinary explanatory comment mentioning `file: 'reference/operations.md'`
+  // anywhere in registry.ts -- inside the object literal, outside it,
+  // anywhere -- would have been read back out as a path to publish. These
+  // fixtures put that exact decoy in three places a real edit to
+  // registry.ts might one day put it, and pin that none of them survive.
+
+  it('ignores a decoy comment inside CONTENT_REGISTRY\'s own object literal', () => {
+    const source = `
+// file: 'reference/operations.md' -- decoy, before the block entirely
+export const CONTENT_REGISTRY = {
+  'a': {
+    // file: 'reference/operations.md' -- decoy, inside one entry
+    file: 'a.md',
+    anchor: null,
+  },
+};
+export const PUBLIC_ASSETS = [
+  'assets/x.svg',
+];
+`;
+    expect(parseContentFiles(source)).toEqual(['a.md']);
+  });
+
+  it('ignores a decoy comment inside PUBLIC_ASSETS\'s own array literal', () => {
+    const source = `
+export const CONTENT_REGISTRY = {
+  'a': { file: 'a.md', anchor: null },
+};
+export const PUBLIC_ASSETS = [
+  // 'reference/operations.md' -- decoy, inside the array
+  'assets/x.svg',
+];
+`;
+    expect(parsePublicAssets(source)).toEqual(['assets/x.svg']);
+  });
+
+  it('ignores a decoy string outside both blocks entirely', () => {
+    const source = `
+/* a block comment mentioning file: 'reference/operations.md', above everything */
+export const CONTENT_REGISTRY = {
+  'a': { file: 'a.md', anchor: null },
+};
+export const PUBLIC_ASSETS = [
+  'assets/x.svg',
+];
+// a trailing comment mentioning file: 'reference/operations.md' and 'assets/y.png'
+`;
+    expect(parseContentFiles(source)).toEqual(['a.md']);
+    expect(parsePublicAssets(source)).toEqual(['assets/x.svg']);
+  });
+});
+
 describe('a real run against the real docs/ tree', () => {
   let dst: string;
 

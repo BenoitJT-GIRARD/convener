@@ -11,22 +11,84 @@
  * beyond two regular expressions over a file whose format is exactly as
  * regular as an object literal of string properties.
  *
- * That is a real gap between "what this file extracts" and "what registry.ts
- * actually exports" for anyone who reformats it by hand -- which is exactly
- * why `app/tests/copy-handbook.test.ts` pins both extractors against the
- * real `CONTENT_REGISTRY` and `PUBLIC_ASSETS`, imported natively by the test
- * runner, on every run. A drift here fails that test; it does not ship
- * silently.
+ * That leaves a narrower, real gap: whatever these two functions capture
+ * from that text must actually be the object and array literals
+ * `registry.ts` declares, not any string that merely appears somewhere in
+ * the file. Fix round 1 found the first version of this file did not make
+ * that distinction -- `/\bfile:\s*'([^']+)'/g` ran over the *entire* source,
+ * so an ordinary explanatory comment mentioning `file: 'reference/operations.md'`
+ * anywhere in `registry.ts` -- even one written to warn against exactly
+ * that path -- would have been read back out as a published file, silently
+ * reopening the leak this task exists to close. `extractDeclaration` below
+ * locates each export's own literal by its opening and closing delimiter
+ * (`{`…`};` for `CONTENT_REGISTRY`, `[`…`];` for `PUBLIC_ASSETS`) and
+ * `stripComments` removes `//` and `/* *\/` comments from *that slice only*,
+ * string literals left untouched -- so a comment inside the literal cannot
+ * contribute a path either. Both are still text-based, not a real
+ * TypeScript parse: `app/tests/copy-handbook.test.ts` pins the result
+ * against the real `CONTENT_REGISTRY` and `PUBLIC_ASSETS`, imported
+ * natively by the test runner, on every run, and separately proves a decoy
+ * comment inside either literal is ignored. A drift here fails that test;
+ * it does not ship silently.
  */
 import { cp, mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
 
-/** Every `file: '...'` value in `registry.ts`'s source text -- one per
- *  `CONTENT_REGISTRY` entry, several entries sharing a file (a page and the
- *  fragments transcluded from it) collapsed to one. */
+/** Removes `//line` and `/* block *\/` comments from `text`, leaving
+ *  single-quoted string contents untouched (so a string that happened to
+ *  contain `//` would survive intact -- none of `registry.ts`'s file paths
+ *  do, but this does not rely on that). Not a general JS/TS tokeniser: it
+ *  only has to be correct for the narrow slice of source it is given here,
+ *  a flat object or array literal of string properties. */
+export function stripComments(text) {
+  let out = '';
+  for (let i = 0; i < text.length; ) {
+    const two = text.slice(i, i + 2);
+    if (two === '//') {
+      const nl = text.indexOf('\n', i);
+      i = nl === -1 ? text.length : nl;
+    } else if (two === '/*') {
+      const end = text.indexOf('*/', i + 2);
+      i = end === -1 ? text.length : end + 2;
+    } else if (text[i] === "'") {
+      let j = i + 1;
+      while (j < text.length && text[j] !== "'") {
+        if (text[j] === '\\') j++;
+        j++;
+      }
+      out += text.slice(i, j + 1);
+      i = j + 1;
+    } else {
+      out += text[i];
+      i++;
+    }
+  }
+  return out;
+}
+
+/** The text strictly between `startMarker`'s first occurrence and the next
+ *  occurrence of `endMarker` after it -- `''` if either is missing. Used to
+ *  isolate one export's own literal, so a decoy string elsewhere in the
+ *  file (in a different export, or in a comment above or below this one)
+ *  is never even looked at, let alone matched. */
+function extractDeclaration(source, startMarker, endMarker) {
+  const start = source.indexOf(startMarker);
+  if (start === -1) return '';
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  if (end === -1) return '';
+  return source.slice(start + startMarker.length, end);
+}
+
+/** Every `file: '...'` value inside `CONTENT_REGISTRY`'s own object literal
+ *  -- one per entry, several entries sharing a file (a page and the
+ *  fragments transcluded from it) collapsed to one. Comments inside the
+ *  literal, and anything outside it, are never considered. */
 export function parseContentFiles(source) {
+  const block = stripComments(
+    extractDeclaration(source, 'export const CONTENT_REGISTRY', '\n};'),
+  );
   const files = new Set();
-  for (const m of source.matchAll(/\bfile:\s*'([^']+)'/g)) files.add(m[1]);
+  for (const m of block.matchAll(/\bfile:\s*'([^']+)'/g)) files.add(m[1]);
   return [...files].sort();
 }
 
@@ -35,10 +97,11 @@ export function parseContentFiles(source) {
  *  probing a hand-built fixture in a test, never for the real
  *  `registry.ts`, which `copy-handbook.test.ts` checks always defines it. */
 export function parsePublicAssets(source) {
-  const block = /PUBLIC_ASSETS[^=]*=\s*\[([\s\S]*?)\]/.exec(source);
-  if (!block) return [];
+  const block = stripComments(
+    extractDeclaration(source, 'export const PUBLIC_ASSETS', '\n];'),
+  );
   const files = new Set();
-  for (const m of block[1].matchAll(/'([^']+)'/g)) files.add(m[1]);
+  for (const m of block.matchAll(/'([^']+)'/g)) files.add(m[1]);
   return [...files].sort();
 }
 
