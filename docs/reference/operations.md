@@ -1066,7 +1066,7 @@ full, including what to do instead if this secret ever leaks.
 **To verify:** run `cd tools && uv run convener-check-config`; *Registration
 matching salt* moves from `absent` to `production`.
 
-## Encrypting the manual attendance export (task 17)
+## Encrypting the manual attendance export
 
 For an event using the manual implementation (no `CONVENER_MEETING_API_TOKEN`
 configured), the host's own attendance export never reaches continuous
@@ -1083,9 +1083,16 @@ closes that gap:
    EVENT_ID=<event id> uv run convener-encrypt-attendance-export`. This reads
    only the event's already-published public key
    (`keys/events/<event id>.pub`) and the plaintext file above, and writes
-   `data/events/<event id>/attendance-import.csv.enc` -- one `eventkeys`
-   envelope, safe to commit: the public key that produced it cannot
-   decrypt it back.
+   `data/events/<event id>/attendance-import.csv.enc` -- one independent
+   `eventkeys` envelope per attendance row (fix round 1, R-45; the same
+   per-record shape `registrations.enc` and `survey_responses.enc` already
+   use, not one envelope for the whole file), safe to commit: the public
+   key that produced it cannot decrypt any of it back. Running this again
+   against a changed local export overwrites the committed file with
+   whatever the plaintext currently says -- printing "replacing the
+   already-committed ..." when it does, since there is no date or content
+   comparison behind that write, so re-run it deliberately, not out of
+   habit.
 3. Commit and push `attendance-import.csv.enc`. `convener-match-attendance` and
    `convener-issue-certificates`, run in CI, decrypt it with
    `EVENT_PRIVATE_KEY` -- the same secret they already read to decrypt
@@ -1096,6 +1103,16 @@ among the environment variables this command reads at all. If both the
 encrypted and the plaintext export happen to sit on disk at once (a stray
 leftover from local testing), the encrypted one is read and the plaintext
 one is ignored.
+
+**This is a journey step, not only a command.** Fix round 1 (Important 2)
+gave it a line on the event's own runbook -- "Attendance export encrypted
+and committed" (`app/src/state/phases.ts`, `delivered/attendance-export-
+encrypted`), right beside "Recording retrieved and archived somewhere
+durable" -- and a matching checklist line in
+[Phase 4 -- After the webinar](../workflow/4-after.md), so an operator
+meets this step without needing to already know this command exists.
+Issuing certificates re-reads whatever is committed here, so nothing
+downstream can proceed until this step is done.
 
 ## Matching attendance
 
@@ -1164,6 +1181,15 @@ id>/certificates.yml` with the same re-derive-rather-than-rebase retry
 *Handling a registration* uses for `registrations.enc` -- see that section
 above for why a rejected push is never resolved with `git pull --rebase`
 here either.
+
+**The register is written here, at issuance, not after delivery** --
+spec §8's own prose names generating the certificate, delivering it and
+writing the register as three steps in that order; in the code it is two
+steps, because idempotence requires it. `convener-deliver-certificates` (below)
+re-signs the identical token on every run without ever writing to the
+register again, which is what lets a failed delivery be retried without
+regenerating anything -- see `tools/tests/test_event_chain.py`'s own module
+docstring for the fuller reasoning.
 
 **No workflow input is ever an address.** A `workflow_dispatch` input is
 rendered on its own run's page and retained for as long as that run's

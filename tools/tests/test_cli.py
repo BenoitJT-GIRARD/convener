@@ -50,8 +50,14 @@ from convener_ops.cli import (
     validate,
 )
 from convener_ops.governance import paris_today
-from convener_ops.platform import AttendanceRow, EventNotFoundError, parse_attendance_csv
-from convener_ops.platform import encrypt_attendance_export as _platform_encrypt_attendance
+from convener_ops.platform import (
+    AttendanceRow,
+    EventNotFoundError,
+    decrypt_attendance_rows,
+    encrypt_attendance_rows,
+    load_attendance_export_file,
+    parse_attendance_csv,
+)
 from convener_ops.platform_fcc import RETRIEVED_TICK, FCCRequestError, PlatformFCC
 from convener_ops.registration import (
     Registration,
@@ -1807,17 +1813,20 @@ def _write_attendance_csv(tmp_path: Path, event_id: str, *rows: str) -> None:
 def _write_attendance_csv_encrypted(
     tmp_path: Path, event_id: str, public_pem: str, *rows: str
 ) -> None:
-    """The committed shape task 17 adds:
-    `data/events/<id>/attendance-import.csv.enc`, one `eventkeys` envelope
-    wrapping the whole CSV text -- built through the real
-    `platform.encrypt_attendance_export`, never a hand-rolled stand-in for
-    it, the same discipline `_write_registrations` already holds for
-    `registrations.enc`."""
-    csv_bytes = ("\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n").encode("utf-8")
-    envelope = _platform_encrypt_attendance(public_pem, csv_bytes)
+    """The committed shape fix round 1 (R-45) gives:
+    `data/events/<id>/attendance-import.csv.enc`, one independent
+    `eventkeys` envelope per row -- built through the real
+    `parse_attendance_csv` + `platform.encrypt_attendance_rows`, never a
+    hand-rolled stand-in for either, the same discipline
+    `_write_registrations` already holds for `registrations.enc`."""
+    text = "\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n"
+    parsed_rows, issues = parse_attendance_csv(text)
+    assert issues == []
     path = tmp_path / "data" / "events" / event_id / "attendance-import.csv.enc"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(envelope + "\n", encoding="utf-8", newline="")
+    path.write_text(
+        encrypt_attendance_rows(public_pem, parsed_rows), encoding="utf-8", newline=""
+    )
 
 
 def test_encrypt_attendance_export_with_no_event_id_returns_1(
@@ -1885,10 +1894,41 @@ def test_encrypt_attendance_export_writes_a_decryptable_committed_file(
     assert envelope_text.endswith("\n")
     assert not envelope_text.endswith("\n\n")
 
-    plaintext = eventkeys.decrypt(private_pem, envelope_text)
-    rows, issues = parse_attendance_csv(plaintext.decode("utf-8"))
-    assert issues == []
+    file = load_attendance_export_file(envelope_text)
+    assert len(file.entries) == 1
+    rows = decrypt_attendance_rows(file, private_pem)
     assert [row.display_name for row in rows] == ["Ada Lovelace"]
+
+
+def test_encrypt_attendance_export_warns_when_replacing_an_already_committed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Minor 8, fix round 1: this command has no date or content to
+    compare against -- it always encrypts whatever the local plaintext
+    currently says -- so a stray or stale local export would otherwise
+    replace a good committed file with a worse one with no visible
+    signal. A first run names no replacement; a second run over a
+    changed plaintext does."""
+    _publish_event_key(tmp_path)
+    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir.mkdir(parents=True)
+    plain_path = events_dir / "attendance-import.csv"
+    plain_path.write_text(
+        _ATTENDANCE_CSV_HEADER + "\nAda,ada@example.org,x,y,60\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+
+    assert encrypt_attendance_export() == 0
+    assert "replacing" not in capsys.readouterr().out
+
+    plain_path.write_text(
+        _ATTENDANCE_CSV_HEADER + "\nGrace,grace@example.org,x,y,90\n", encoding="utf-8"
+    )
+    assert encrypt_attendance_export() == 0
+    out = capsys.readouterr().out
+    assert "replacing the already-committed" in out
+    assert "attendance-import.csv.enc" in out
 
 
 def test_encrypt_attendance_export_never_reads_the_private_key(
@@ -1897,9 +1937,13 @@ def test_encrypt_attendance_export_never_reads_the_private_key(
     """Never touches `EVENT_PRIVATE_KEY` -- the whole reason this command
     can run on a host's own laptop with no CI job and no secret at all
     (spec S:7: the private half `n'est utilisee qu'en integration
-    continue`). Asserted by monkeypatching `os.environ.get` itself and
-    failing the moment this name is ever asked for, not merely by leaving
-    it unset (which a bug reading it with `or ''` would pass silently)."""
+    continue`). Asserted by monkeypatching `os.environ.get` and failing
+    the moment this name is asked for through it, not merely by leaving
+    it unset (which a bug reading it with `or ''` would pass silently).
+    Minor 7, fix round 1: this guards the one way `convener_ops` actually reads
+    an environment variable today (verified by grep -- nothing in the
+    package reads one by subscript or through `os.getenv`); it would not
+    by itself catch a future read added through either of those."""
     _publish_event_key(tmp_path)
     events_dir = tmp_path / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)

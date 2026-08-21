@@ -9,6 +9,7 @@ import pytest
 from convener_ops import eventkeys
 from convener_ops.platform import (
     ENCRYPTED_ATTENDANCE_FILENAME,
+    AttendanceExportFile,
     AttendanceImportError,
     AttendanceIssue,
     AttendanceRow,
@@ -16,8 +17,11 @@ from convener_ops.platform import (
     ManualPlatform,
     Platform,
     Recording,
-    encrypt_attendance_export,
+    decrypt_attendance_rows,
+    encrypt_attendance_rows,
+    erase_attendance_rows,
     find_speaker,
+    load_attendance_export_file,
     parse_attendance_csv,
 )
 
@@ -28,13 +32,24 @@ def _write_csv(path: Path, *rows: str) -> None:
     path.write_text("\n".join((CSV_HEADER, *rows)) + "\n", encoding="utf-8")
 
 
+def _rows_from_csv_lines(*rows: str) -> list[AttendanceRow]:
+    """The same rows `_write_csv` would have written, already parsed --
+    the input `encrypt_attendance_rows` takes (fix round 1, R-45: one
+    envelope per row, not one for the whole CSV)."""
+    parsed, issues = parse_attendance_csv("\n".join((CSV_HEADER, *rows)) + "\n")
+    assert issues == []
+    return parsed
+
+
 def _write_encrypted_csv(path: Path, public_pem: str, *rows: str) -> None:
-    """The committed shape (task 17): the same CSV bytes `_write_csv` would
-    have written, hybrid-encrypted under `public_pem` via
-    `encrypt_attendance_export` -- the real function this module ships,
+    """The committed shape (fix round 1): one independent `eventkeys`
+    envelope per row, hybrid-encrypted under `public_pem` via
+    `encrypt_attendance_rows` -- the real function this module ships,
     never a hand-rolled stand-in for it."""
-    csv_bytes = ("\n".join((CSV_HEADER, *rows)) + "\n").encode("utf-8")
-    path.write_text(encrypt_attendance_export(public_pem, csv_bytes), encoding="utf-8")
+    path.write_text(
+        encrypt_attendance_rows(public_pem, _rows_from_csv_lines(*rows)),
+        encoding="utf-8",
+    )
 
 
 def _speaker(**overrides: Any) -> dict[str, Any]:
@@ -364,11 +379,29 @@ def test_duplicate_column_names_are_refused_not_silently_collapsed() -> None:
     plain `set(fieldnames)` would collapse the duplicate before the
     missing-column check ever saw it -- checked explicitly, named like a
     missing column would be."""
-    with pytest.raises(AttendanceImportError, match="email"):
+    with pytest.raises(AttendanceImportError, match="1 duplicate column"):
         parse_attendance_csv(
             "display_name,email,email,joined_at,left_at,duration_seconds\n"
             "Ada Lovelace,ada@example.org,ada@example.org,t1,t2,3600\n"
         )
+
+
+def test_duplicate_column_message_names_the_count_and_position_never_the_text(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Important 5, fix round 1: this branch used to echo the duplicated
+    column's own *name* -- the file's own header text, written by
+    whatever export tool produced it -- and task 17 is what made this
+    branch reachable from a CI job log at all (the manual path previously
+    had no file to read there). The message must still be enough to find
+    and fix the file: the count, and the 1-based header position(s)."""
+    with pytest.raises(AttendanceImportError) as excinfo:
+        parse_attendance_csv(
+            "ada@example.org,ada@example.org,joined_at,left_at,duration_seconds\n"
+        )
+    message = str(excinfo.value)
+    assert "ada@example.org" not in message
+    assert "1 duplicate column name(s), at header position(s): 1, 2" in message
 
 
 def test_a_malformed_row_is_reported_and_dropped_the_rest_still_read(
@@ -668,13 +701,19 @@ def test_get_attendance_refuses_the_encrypted_export_without_a_private_key(
         _platform(tmp_path, private_pem=None).get_attendance("mrg-941")
 
 
-def test_get_attendance_refuses_an_encrypted_export_under_the_wrong_key(
+def test_get_attendance_returns_nothing_when_every_row_fails_to_decrypt(
     tmp_path: Path,
 ) -> None:
-    """A private key that does not match the committed export's own public
-    half must fail loudly, the same `eventkeys.DecryptionError` -> refusal
-    every other reader of an event-keyed file in this codebase already
-    gives -- never silently read as empty."""
+    """Fix round 1, R-45: with one independent envelope per row, a private
+    key that matches no row (the whole export was committed for a
+    different event's key by mistake) is not a whole-file failure any
+    more -- each row is skipped on its own, the same tolerance
+    `registration.py`'s own callers already give a stray undecryptable
+    entry in `registrations.enc`. This is parity, not a regression: a
+    wrong-event key against `registrations.enc` already produces exactly
+    this "quietly nothing" outward shape today (`to_registration` returns
+    `None` per entry, silently skipped by every `cli.py` loop) -- this
+    test pins the identical behaviour for its attendance-export twin."""
     _, public_pem = eventkeys.generate()
     other_private_pem, _ = eventkeys.generate()
     event_dir = tmp_path / "events" / "mrg-942"
@@ -685,46 +724,200 @@ def test_get_attendance_refuses_an_encrypted_export_under_the_wrong_key(
         "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
     )
 
-    with pytest.raises(AttendanceImportError, match="could not be decrypted"):
-        _platform(tmp_path, private_pem=other_private_pem).get_attendance("mrg-942")
+    rows = _platform(tmp_path, private_pem=other_private_pem).get_attendance("mrg-942")
+
+    assert rows == []
 
 
-def test_get_attendance_encrypted_export_handles_a_utf8_bom_the_same_way(
-    tmp_path: Path,
-) -> None:
-    """The BOM-handling guarantee `test_get_attendance_reads_a_file_with_a_
-    utf8_bom` already gives the plaintext path must survive encryption too:
-    a host's export tool writes a BOM whether or not the file is encrypted
-    afterwards."""
-    private_pem, public_pem = eventkeys.generate()
-    event_dir = tmp_path / "events" / "mrg-943"
+def test_get_attendance_refuses_a_malformed_encrypted_file(tmp_path: Path) -> None:
+    """A committed `.enc` file that is not this module's own file shape at
+    all (not the right format version, not a list of entries, an entry
+    that is not exactly ciphertext) is a whole-file failure -- unlike a
+    row that merely fails to decrypt, this is not "personal data with the
+    wrong key", it is not personal data in the expected shape at all, and
+    papering over it would be exactly the kind of malformed-file
+    tolerance `registration.load_registration_file` already refuses."""
+    private_pem, _public_pem = eventkeys.generate()
+    event_dir = tmp_path / "events" / "mrg-944"
     event_dir.mkdir(parents=True)
-    content = (
-        CSV_HEADER + "\n"
-        "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,"
-        "2026-08-20T19:30:00Z,5400\n"
+    (event_dir / ENCRYPTED_ATTENDANCE_FILENAME).write_text(
+        "not json at all", encoding="utf-8"
     )
-    csv_bytes = b"\xef\xbb\xbf" + content.encode("utf-8")
-    envelope = encrypt_attendance_export(public_pem, csv_bytes)
-    (event_dir / ENCRYPTED_ATTENDANCE_FILENAME).write_text(envelope, encoding="utf-8")
 
-    rows = _platform(tmp_path, private_pem=private_pem).get_attendance("mrg-943")
-
-    assert rows[0].display_name == "Ada Lovelace"
+    with pytest.raises(AttendanceImportError, match="could not be read"):
+        _platform(tmp_path, private_pem=private_pem).get_attendance("mrg-944")
 
 
-def test_encrypt_attendance_export_round_trips_through_eventkeys(
+def test_encrypt_attendance_rows_and_decrypt_attendance_rows_round_trip(
     tmp_path: Path,
 ) -> None:
-    """`encrypt_attendance_export` is a thin wrapper over `eventkeys.encrypt`
-    -- pinned directly, independent of `ManualPlatform`, so a future change
-    to either side shows up here first."""
+    """The real pair `ManualPlatform.get_attendance` and
+    `convener-encrypt-attendance-export` both build on -- pinned directly,
+    independent of either, so a future change to either side shows up
+    here first. Two rows, including a telephone joiner (`email=None`),
+    to prove the round trip preserves the one field this whole task
+    exists to get right."""
     private_pem, public_pem = eventkeys.generate()
-    csv_bytes = (CSV_HEADER + "\nAda,ada@example.org,x,y,60\n").encode("utf-8")
+    rows = [
+        AttendanceRow(
+            display_name="Ada Lovelace",
+            email="ada@example.org",
+            joined_at="2026-08-20T18:00:00Z",
+            left_at="2026-08-20T19:30:00Z",
+            duration_seconds=5400,
+        ),
+        AttendanceRow(
+            display_name="+1 555 0100",
+            email=None,
+            joined_at="2026-08-20T18:00:00Z",
+            left_at="2026-08-20T18:10:00Z",
+            duration_seconds=600,
+        ),
+    ]
 
-    envelope = encrypt_attendance_export(public_pem, csv_bytes)
+    envelope_text = encrypt_attendance_rows(public_pem, rows)
+    file = load_attendance_export_file(envelope_text)
 
-    assert eventkeys.decrypt(private_pem, envelope) == csv_bytes
+    assert len(file.entries) == 2
+    assert decrypt_attendance_rows(file, private_pem) == rows
+
+
+def test_decrypt_attendance_rows_skips_one_row_that_fails_to_decrypt(
+    tmp_path: Path,
+) -> None:
+    """One damaged or foreign row costs one row, not the whole file --
+    the same tolerance `registration.py`'s own callers already give a
+    stray undecryptable entry."""
+    private_pem, public_pem = eventkeys.generate()
+    _other_private_pem, other_public_pem = eventkeys.generate()
+    good = AttendanceRow(
+        display_name="Ada Lovelace",
+        email="ada@example.org",
+        joined_at="x",
+        left_at="y",
+        duration_seconds=60,
+    )
+    stray = AttendanceRow(
+        display_name="Grace Hopper",
+        email="grace@example.org",
+        joined_at="x",
+        left_at="y",
+        duration_seconds=60,
+    )
+    good_file = load_attendance_export_file(encrypt_attendance_rows(public_pem, [good]))
+    stray_file = load_attendance_export_file(
+        encrypt_attendance_rows(other_public_pem, [stray])
+    )
+    mixed = AttendanceExportFile(entries=(*good_file.entries, *stray_file.entries))
+
+    rows = decrypt_attendance_rows(mixed, private_pem)
+
+    assert rows == [good]
+
+
+def test_load_attendance_export_file_rejects_the_wrong_version(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="not a supported format version"):
+        load_attendance_export_file('{"v": 999, "rows": []}')
+
+
+def test_load_attendance_export_file_rejects_an_entry_that_is_not_ciphertext(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="not exactly ciphertext"):
+        load_attendance_export_file('{"v": 1, "rows": [{"name": "not an envelope"}]}')
+
+
+def test_load_attendance_export_file_starts_empty_when_text_is_none() -> None:
+    assert load_attendance_export_file(None) == AttendanceExportFile()
+
+
+# ------------------------------------------------------------------ #
+# erase_attendance_rows -- fix round 1, R-45 / Critical 1: an early
+# erasure request has to remove a person's rows from the committed
+# attendance export too, or the request is not actually satisfied.
+# ------------------------------------------------------------------ #
+
+
+def test_erase_attendance_rows_removes_the_target_and_leaves_neighbours_byte_identical(
+    tmp_path: Path,
+) -> None:
+    """Task 15's existing shape for `registrations.enc`, applied unchanged:
+    erasing one row must not so much as re-serialise another. Compares
+    the two surviving envelopes verbatim, not merely "still decrypts to
+    the same row" -- the guarantee is that nothing else moved at all."""
+    private_pem, public_pem = eventkeys.generate()
+    ada = AttendanceRow("Ada Lovelace", "ada@example.org", "x", "y", 60)
+    grace = AttendanceRow("Grace Hopper", "grace@example.org", "x", "y", 90)
+    marie = AttendanceRow("Marie Curie", "marie@example.org", "x", "y", 120)
+    original = load_attendance_export_file(
+        encrypt_attendance_rows(public_pem, [ada, grace, marie])
+    )
+
+    updated, removed = erase_attendance_rows(original, "ada@example.org", private_pem)
+
+    assert removed == 1
+    assert len(updated.entries) == 2
+    assert updated.entries == (original.entries[1], original.entries[2])
+    assert decrypt_attendance_rows(updated, private_pem) == [grace, marie]
+
+
+def test_erase_attendance_rows_removes_every_row_for_a_reconnection(
+    tmp_path: Path,
+) -> None:
+    """One person can carry several rows (a reconnection) -- erasure must
+    remove all of theirs, not just the first found."""
+    private_pem, public_pem = eventkeys.generate()
+    first_connection = AttendanceRow("Marie Curie", "marie@example.org", "a", "b", 60)
+    second_connection = AttendanceRow("marie curie", "marie@example.org", "c", "d", 90)
+    grace = AttendanceRow("Grace Hopper", "grace@example.org", "x", "y", 30)
+    original = load_attendance_export_file(
+        encrypt_attendance_rows(
+            public_pem, [first_connection, second_connection, grace]
+        )
+    )
+
+    updated, removed = erase_attendance_rows(original, "marie@example.org", private_pem)
+
+    assert removed == 2
+    assert decrypt_attendance_rows(updated, private_pem) == [grace]
+
+
+def test_erase_attendance_rows_never_matches_a_telephone_joiner(
+    tmp_path: Path,
+) -> None:
+    """`email=None` can never equal a normalised target address -- the
+    same boundary the module docstring names for matching in general,
+    applied here so an erasure request can never accidentally claim a
+    phone joiner's row by matching on nothing."""
+    private_pem, public_pem = eventkeys.generate()
+    phone = AttendanceRow("+1 555 0100", None, "x", "y", 60)
+    original = load_attendance_export_file(encrypt_attendance_rows(public_pem, [phone]))
+
+    updated, removed = erase_attendance_rows(
+        original, "someone@example.org", private_pem
+    )
+
+    assert removed == 0
+    assert updated.entries == original.entries
+
+
+def test_erase_attendance_rows_keeps_an_undecryptable_row_untouched(
+    tmp_path: Path,
+) -> None:
+    """A row this key cannot even read is kept exactly as found and never
+    treated as a match -- the same defensive handling
+    `registration.erase` already gives an undecryptable entry."""
+    private_pem, _public_pem = eventkeys.generate()
+    _other_private, other_public = eventkeys.generate()
+    ada = AttendanceRow("Ada Lovelace", "ada@example.org", "x", "y", 60)
+    stray_file = load_attendance_export_file(
+        encrypt_attendance_rows(other_public, [ada])
+    )
+
+    updated, removed = erase_attendance_rows(stray_file, "ada@example.org", private_pem)
+
+    assert removed == 0
+    assert updated.entries == stray_file.entries
 
 
 # ------------------------------------------------------------------ #

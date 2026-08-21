@@ -93,7 +93,12 @@ from convener_ops.cli import (
     revoke_certificate,
 )
 from convener_ops.governance import paris_today
-from convener_ops.platform import encrypt_attendance_export as platform_encrypt_attendance
+from convener_ops.platform import (
+    decrypt_attendance_rows,
+    encrypt_attendance_rows,
+    load_attendance_export_file,
+)
+from convener_ops.platform import parse_attendance_csv as _parse_attendance_csv
 from convener_ops.registration import Registration, dump_registration_file
 from convener_ops.registration import load_registration_file as _load_registration_file
 from convener_ops.registration import upsert as _upsert_registration
@@ -132,17 +137,21 @@ def _write_encrypted_attendance_directly(
     tmp_path: Path, event_id: str, public_pem: str, *rows: str
 ) -> None:
     """`data/events/<id>/attendance-import.csv.enc`, built through
-    `platform.encrypt_attendance_export` alone -- never through
-    `convener-encrypt-attendance-export` itself, so a test of a *later* step
-    (matching, issuance) can never accidentally depend on that earlier
-    command having just run in this same process. The dedicated
-    `convener-encrypt-attendance-export` command gets its own test below,
-    replayed from nothing but a plaintext drop."""
-    csv_bytes = ("\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n").encode("utf-8")
-    envelope = platform_encrypt_attendance(public_pem, csv_bytes)
+    `parse_attendance_csv` + `platform.encrypt_attendance_rows` alone --
+    never through `convener-encrypt-attendance-export` itself, so a test of a
+    *later* step (matching, issuance) can never accidentally depend on
+    that earlier command having just run in this same process. The
+    dedicated `convener-encrypt-attendance-export` command gets its own test
+    below, replayed from nothing but a plaintext drop. One independent
+    envelope per row (fix round 1, R-45), not one for the whole file."""
+    text = "\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n"
+    parsed_rows, issues = _parse_attendance_csv(text)
+    assert issues == []
     path = tmp_path / "data" / "events" / event_id / "attendance-import.csv.enc"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(envelope + "\n", encoding="utf-8", newline="")
+    path.write_text(
+        encrypt_attendance_rows(public_pem, parsed_rows), encoding="utf-8", newline=""
+    )
 
 
 def _write_speakers_and_config(
@@ -241,7 +250,11 @@ def test_encrypt_attendance_export_replays_from_a_plaintext_drop_alone(
         encoding="utf-8"
     )
     assert envelope_text != plain_text
-    assert eventkeys.decrypt(private_pem, envelope_text).decode("utf-8") == plain_text
+    file = load_attendance_export_file(envelope_text)
+    assert len(file.entries) == 1
+    [row] = decrypt_attendance_rows(file, private_pem)
+    assert row.display_name == "Ada Lovelace"
+    assert row.email == "ada@example.org"
 
 
 # ------------------------------------------------------------------ #
@@ -456,11 +469,30 @@ def test_deliver_certificate_replays_from_an_issued_undelivered_entry_alone(
     ):
         monkeypatch.delenv(smtp_var, raising=False)
 
+    register_path = tmp_path / "data" / "events" / "mrg-042" / "certificates.yml"
+    before = yaml.safe_load(register_path.read_text(encoding="utf-8"))
+
+    # Important 1, fix round 1: `deliver_certificate` returns 0 on every
+    # outcome once the attendee is resolved -- delivered, not delivered,
+    # and (via cli.py's own broad `except Exception`) blown up entirely.
+    # The exit code alone proved nothing here; inserting `raise
+    # RuntimeError` immediately before `sign_for` used to leave this test
+    # green. Asserting the printed outcome and that nothing was
+    # regenerated is what actually demonstrates spec S:8's "une remise
+    # echouee se rejoue sans regenerer" this module docstring cites this
+    # test for.
     assert deliver_certificate() == 0
+    out = capsys.readouterr().out
+    assert f"certificate {first.entry.identifier} not delivered for event mrg-042" in out
+
+    after = yaml.safe_load(register_path.read_text(encoding="utf-8"))
+    assert {row["identifier"] for row in after["certificates"]} == {
+        row["identifier"] for row in before["certificates"]
+    }
 
 
 def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, public_pem = _publish_event_key(tmp_path)
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
@@ -517,7 +549,23 @@ def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
     ):
         monkeypatch.delenv(smtp_var, raising=False)
 
+    register_path = tmp_path / "data" / "events" / "mrg-042" / "certificates.yml"
+    before = yaml.safe_load(register_path.read_text(encoding="utf-8"))
+
+    # Important 1, fix round 1: making the delivery loop `continue`
+    # immediately -- nobody delivered at all -- used to leave this test
+    # green too. Asserting the printed counts and that the register's own
+    # identifier set is unchanged is what actually demonstrates "sans
+    # regenerer" for the batch path.
     assert deliver_certificates() == 0
+    out = capsys.readouterr().out
+    assert "0 sent, 2 not sent" in out
+    assert "(2 eligible)" in out
+
+    after = yaml.safe_load(register_path.read_text(encoding="utf-8"))
+    assert {row["identifier"] for row in after["certificates"]} == {
+        row["identifier"] for row in before["certificates"]
+    }
 
 
 # ------------------------------------------------------------------ #

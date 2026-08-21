@@ -42,6 +42,12 @@ from convener_ops.certificate import CertificateEntry, register_from_data, regis
 from convener_ops.cli import erase_registration, record_destructions, retention_sweep
 from convener_ops.eventkeys import DecryptionError, decrypt, encrypt, generate
 from convener_ops.paths import repo_root
+from convener_ops.platform import (
+    AttendanceRow,
+    decrypt_attendance_rows,
+    encrypt_attendance_rows,
+    load_attendance_export_file,
+)
 from convener_ops.registration import (
     AmbiguousMatchingCodeError,
     Registration,
@@ -1156,6 +1162,102 @@ def test_erase_registration_removes_only_the_named_entry_by_address(
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 1
     assert to_registration(json.dumps(remaining.entries[0]), private_pem) == grace
+
+
+def test_erase_registration_also_removes_the_persons_attendance_rows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Fix round 1, R-45 (Critical 1): R-44 made the attendance export a
+    committed file carrying names and addresses, and an early erasure
+    request has to reach it too, or "erased" is no longer true --
+    an early erasure exists precisely to beat the +90-day key
+    destruction. One person can carry several rows (a reconnection);
+    both of Ada's are removed, and Grace's own row is untouched."""
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
+
+    ada_first = AttendanceRow("Ada Lovelace", "ada@example.org", "a", "b", 60)
+    ada_second = AttendanceRow("ada lovelace", "ada@example.org", "c", "d", 90)
+    grace_row = AttendanceRow("Grace Hopper", "grace@example.org", "x", "y", 30)
+    attendance_path = (
+        tmp_path / "data" / "events" / "mrg-042" / "attendance-import.csv.enc"
+    )
+    attendance_path.write_text(
+        encrypt_attendance_rows(public_pem, [ada_first, ada_second, grace_row]),
+        encoding="utf-8",
+        newline="",
+    )
+
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("MATCHING_CODE", raising=False)
+
+    assert erase_registration() == 0
+    out = capsys.readouterr().out
+    assert "erased" in out
+    assert "2 attendance row(s) also removed" in out
+
+    file = load_attendance_export_file(attendance_path.read_text(encoding="utf-8"))
+    remaining_rows = decrypt_attendance_rows(file, private_pem)
+    assert remaining_rows == [grace_row]
+
+
+def test_erase_registration_with_no_attendance_export_still_erases(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """No committed attendance export at all is the ordinary case (an
+    FCC-configured event, or one whose attendance was never encrypted) --
+    the registration is still erased, and the message names no
+    attendance rows because there were none to name."""
+    private_pem, _public_pem = _publish_event_key(tmp_path, "mrg-042")
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("MATCHING_CODE", raising=False)
+
+    assert erase_registration() == 0
+    out = capsys.readouterr().out
+    assert "erased" in out
+    assert "attendance row" not in out
+
+
+def test_erase_registration_refuses_on_a_malformed_attendance_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A command that says "erased" must have done the erasure in full --
+    a malformed attendance export must refuse the whole request rather
+    than reporting success while unable to actually complete it, and
+    `registrations.enc` must be left exactly as it was: no partial
+    erasure, ever."""
+    private_pem, _public_pem = _publish_event_key(tmp_path, "mrg-042")
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    attendance_path = (
+        tmp_path / "data" / "events" / "mrg-042" / "attendance-import.csv.enc"
+    )
+    attendance_path.write_text("not json at all", encoding="utf-8")
+    original_registrations = (
+        tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    ).read_text(encoding="utf-8")
+
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("MATCHING_CODE", raising=False)
+
+    assert erase_registration() == 1
+    assert "attendance-import.csv.enc" in capsys.readouterr().err
+    assert (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").read_text(
+        encoding="utf-8"
+    ) == original_registrations
 
 
 def test_erase_registration_prefers_the_matching_code_over_the_address(

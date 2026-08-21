@@ -50,12 +50,17 @@ from convener_ops.integrations import ABSENT, Integration, load_declaration, res
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
 from convener_ops.platform import (
+    ENCRYPTED_ATTENDANCE_FILENAME,
     AttendanceImportError,
     EventNotFoundError,
     Room,
+    dump_attendance_export_file,
+    encrypt_attendance_rows,
+    erase_attendance_rows,
     find_speaker,
+    load_attendance_export_file,
+    parse_attendance_csv,
 )
-from convener_ops.platform import encrypt_attendance_export as _encrypt_attendance_export
 from convener_ops.platform_fcc import (
     FCCRequestError,
     PlatformFCC,
@@ -1415,8 +1420,52 @@ def erase_registration() -> int:
         print(f"no registration found for event {event_id}", file=sys.stderr)
         return 1
 
+    # Fix round 1, R-45 (Critical 1): this early erasure request has to
+    # remove the same person's rows from the committed attendance export
+    # too, or "erased" is no longer true -- an early erasure exists
+    # precisely to beat the +90-day key destruction, and before this fix
+    # the export's own copy would have survived it untouched. Read
+    # (before either file is written) so a malformed attendance file
+    # refuses the whole request rather than reporting success over a
+    # write it could not actually make -- the same "say it only once it
+    # is true" discipline this fix exists to restore.
+    attendance_path = (
+        root / "data" / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
+    )
+    attendance_rows_removed = 0
+    updated_attendance_file = None
+    if attendance_path.exists():
+        try:
+            attendance_file = load_attendance_export_file(
+                attendance_path.read_text(encoding="utf-8")
+            )
+        except ValueError as exc:
+            print(
+                f"{attendance_path.relative_to(root).as_posix()}: {exc}",
+                file=sys.stderr,
+            )
+            return 1
+        updated_attendance_file, attendance_rows_removed = erase_attendance_rows(
+            attendance_file, target.email, private_pem
+        )
+
     enc_path.write_text(dump_registration_file(updated), encoding="utf-8", newline="")
-    print(f"erased a registration for event {event_id} ({len(updated.entries)} remain)")
+    if attendance_rows_removed and updated_attendance_file is not None:
+        attendance_path.write_text(
+            dump_attendance_export_file(updated_attendance_file),
+            encoding="utf-8",
+            newline="",
+        )
+
+    attendance_note = (
+        f"; {attendance_rows_removed} attendance row(s) also removed"
+        if attendance_rows_removed
+        else ""
+    )
+    print(
+        f"erased a registration for event {event_id} ({len(updated.entries)} "
+        f"remain){attendance_note}"
+    )
     return 0
 
 
@@ -1444,7 +1493,9 @@ def encrypt_attendance_export() -> int:
     """`convener-encrypt-attendance-export`: turn a host's raw, never-committed
     `data/events/<id>/attendance-import.csv` into a committable,
     encrypted `data/events/<id>/attendance-import.csv.enc` (task 17,
-    closing `docs/superpowers/deferred-work.md` entry 10).
+    closing `docs/superpowers/deferred-work.md` entry 10; the file's own
+    per-row shape is fix round 1, R-45 -- see `platform.py`'s module
+    docstring, "one independent envelope per row").
 
     Runs entirely outside continuous integration, on a host's own
     machine, against the plaintext export they just downloaded off the
@@ -1465,18 +1516,26 @@ def encrypt_attendance_export() -> int:
     operator has to create the event's key pair, per
     `docs/reference/operations.md`'s "Event registration keys" section,
     before anyone can register for it at all, so this is never the first
-    command run against a fresh event), or when there is no plaintext
-    export to encrypt at the expected path.
+    command run against a fresh event), when there is no plaintext export
+    to encrypt at the expected path, or when the CSV itself is malformed
+    (a missing or duplicated required column -- `parse_attendance_csv`'s
+    own whole-file failures, surfaced here on the host's own screen
+    rather than reaching a CI job log at all, which is the strongest
+    answer Important 5's own finding could have).
 
-    Writes the encrypted envelope -- one line of JSON, one trailing
-    newline, the same "content plus one trailing newline" shape every
-    other committed file in this package already uses -- and prints
-    where it landed and what to do next: commit it, then run
+    Parses the plaintext locally and prints one line per malformed row,
+    the same as `ManualPlatform.get_attendance` already does for the
+    never-encrypted path -- a host sees exactly what would be dropped
+    before anything is committed, not after. Writes the encrypted file --
+    one independent envelope per valid row, two-space indent, one
+    trailing newline, the same shape `registrations.enc` already uses --
+    and prints where it landed and what to do next: commit it, then run
     `convener-match-attendance` (or `convener-issue-certificates`, which re-derives
     the same join internally) from a CI job holding this event's private
-    key. Never reads, prints, or otherwise touches anything about the
-    CSV's own rows -- see `platform.encrypt_attendance_export` for the one
-    line of real work this function wraps.
+    key. Never reads, prints, or otherwise touches any row's own fields
+    beyond the malformed-row count above -- see
+    `platform.encrypt_attendance_rows` for the real work this function
+    wraps.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
     try:
@@ -1501,16 +1560,39 @@ def encrypt_attendance_export() -> int:
         )
         return 1
 
+    #: Not "utf-8" -- the same BOM tolerance `ManualPlatform.get_attendance`
+    #: already gives the never-encrypted path; a host's own export tool is
+    #: exactly as likely to write one here.
+    plain_text = plain_path.read_text(encoding="utf-8-sig")
+    try:
+        rows, issues = parse_attendance_csv(plain_text)
+    except AttendanceImportError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    for parse_issue in issues:
+        print(
+            f"attendance-import.csv line {parse_issue.line_number}: "
+            f"{parse_issue.reason}"
+        )
+
     public_pem = public_path.read_text(encoding="utf-8")
-    envelope = _encrypt_attendance_export(public_pem, plain_path.read_bytes())
+    envelope_file = encrypt_attendance_rows(public_pem, rows)
 
     enc_path = plain_path.parent / f"{plain_path.name}.enc"
-    enc_path.write_text(envelope + "\n", encoding="utf-8", newline="")
     rel_enc = Path("data") / "events" / event_id / enc_path.name
+    # Minor 8, fix round 1: this has no date or content to compare against
+    # -- it always encrypts whatever the local plaintext currently says --
+    # so a stray or stale local export would otherwise replace a good
+    # committed file with a worse one and the only signal would be an
+    # unreadable blob's own git diff. Naming that this is a replacement,
+    # not a first write, costs one line and is the whole fix.
+    if enc_path.exists():
+        print(f"replacing the already-committed {rel_enc.as_posix()}")
+    enc_path.write_text(envelope_file, encoding="utf-8", newline="")
     print(
-        f"encrypted attendance export written to {rel_enc.as_posix()} -- "
-        "commit it, then run convener-match-attendance or convener-issue-certificates "
-        "from a job holding this event's private key"
+        f"encrypted attendance export written to {rel_enc.as_posix()} "
+        f"({len(rows)} row(s)) -- commit it, then run convener-match-attendance "
+        "or convener-issue-certificates from a job holding this event's private key"
     )
     return 0
 

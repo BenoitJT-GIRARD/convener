@@ -91,28 +91,59 @@ recorded this in full.
 `registrations.enc` and `survey_responses.enc`: encrypt under the event's
 own *public* key, which needs no secret at all, and commit the ciphertext.**
 `get_attendance` below looks first for
-`data/events/<event id>/attendance-import.csv.enc` -- one `eventkeys`
-envelope (see that module's own wire-format docs) wrapping the whole CSV
-text, produced locally by a host running `convener-encrypt-attendance-export`
-against the plaintext export and the event's already-published
-`keys/events/<id>.pub`, then committed like any other file under `data/`.
-A CI job holds the matching private half already (`EVENT_PRIVATE_KEY`, the
-same secret every other command in this event's chain reads to decrypt
-`registrations.enc`), so it can decrypt this file the moment it is
-checked out -- no plaintext ever has to reach a CI runner, and no key ever
-has to leave one. This is what makes AC8 genuinely true for the manual
-implementation: `tools/tests/test_event_chain.py` drives the real
+`data/events/<event id>/attendance-import.csv.enc`, produced locally by a
+host running `convener-encrypt-attendance-export` against the plaintext export
+and the event's already-published `keys/events/<id>.pub`, then committed
+like any other file under `data/`. A CI job holds the matching private
+half already (`EVENT_PRIVATE_KEY`, the same secret every other command in
+this event's chain reads to decrypt `registrations.enc`), so it can
+decrypt this file the moment it is checked out -- no plaintext ever has to
+reach a CI runner, and no key ever has to leave one. This is what makes
+AC8 genuinely true for the manual implementation:
+`tools/tests/test_event_chain.py` drives the real
 `convener-encrypt-attendance-export` and `convener-match-attendance` /
 `convener-issue-certificates` commands against nothing but committed,
 encrypted fixtures and asserts the chain completes -- not "by hand against
 a real drop", a real, automated proof.
+
+**One independent envelope per row, not one envelope for the whole file
+(fix round 1, R-45 / Important 4).** The first version of this wrapped the
+entire CSV text in a single `eventkeys.encrypt` call, unlike
+`registrations.enc` and `survey_responses.enc`, which are already one
+envelope per record -- a divergence that was not merely a style
+inconsistency: `registration.py`'s own module docstring gives the real
+reason ("The file shape, and why it is not one envelope for the whole
+event") and it applies here word for word. A single blob means a bit
+flipped anywhere costs the whole event's attendance rather than one row,
+and -- the concrete failure this round closes -- there is no way to
+remove one person's rows from it without decrypting and re-encrypting
+everyone else's. `ATTENDANCE_FILE_VERSION`, `AttendanceExportFile`,
+`load_attendance_export_file` and `dump_attendance_export_file` below
+mirror `registration.py`'s `RegistrationFile` shape exactly: each entry is
+its own `eventkeys.encrypt` call over one row's fields, decoded back to a
+`dict` rather than kept as a nested JSON string, for the identical reason
+`registration.py` gives. `encrypt_attendance_rows` and
+`decrypt_attendance_rows` are the encode/decode halves;
+`erase_attendance_rows` is what `convener-erase-registration` now calls
+alongside `registration.erase` (spec S4's early-erasure wording, "le
+fichier chiffre est reecrit sans l'enregistrement concerne, et rien
+d'autre ne bouge" -- with a blob, everything moved; with one envelope per
+row, nothing else does, and task 15's own "compare the neighbours" test
+shape applies unchanged). One person can hold several rows (a
+reconnection); `erase_attendance_rows` removes all of theirs, the same
+"erasure removes every row" rule a reconnection already gets from
+`attendance.py`'s own summing.
 
 Reading the encrypted export requires `private_pem` (below); its absence,
 with the encrypted file present, is not D-13's ordinary state -- it is the
 same "guards personal data, fails closed" exception `eventkeys.py` already
 carves out for `registrations.enc`, so `get_attendance` refuses outright
 rather than silently reporting "no attendance" for an event that plainly
-has some, committed and waiting.
+has some, committed and waiting. A row whose own envelope fails to decrypt
+(wrong key, corrupted ciphertext) is skipped rather than treated as fatal
+-- the same tolerance `registration.py::to_registration`'s callers already
+give a stray undecryptable entry -- so one damaged row costs one row, not
+the whole file.
 
 The plaintext path (`attendance-import.csv`, no `.enc`) is kept, unchanged,
 as a second, lower-priority source: a host or a test working entirely
@@ -178,6 +209,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -187,6 +219,7 @@ from typing import Any, Final, Protocol, runtime_checkable
 from . import eventkeys
 from .commit_format import _TOKEN
 from .paths import repo_root
+from .registration import normalize_email
 
 #: The five columns `attendance-import.csv` must carry, by name. Extra
 #: columns an export tool adds are harmless and ignored; only a column
@@ -269,12 +302,19 @@ class Platform(Protocol):
     def delete_recording(self, event_id: str) -> None: ...
 
 
-#: The committed, encrypted attendance export -- one `eventkeys` envelope
-#: (see that module's wire format) wrapping the whole plaintext CSV,
-#: produced by `convener-encrypt-attendance-export` and checked in like
-#: `registrations.enc`. Read in preference to the plaintext filename
-#: below; see the module docstring's "the encrypted export" section.
+#: The committed, encrypted attendance export -- one JSON file holding one
+#: independent `eventkeys` envelope per attendance row (fix round 1, R-45 /
+#: Important 4 -- see the module docstring's "one independent envelope per
+#: row" section for why this is not one envelope for the whole file), the
+#: same per-record shape `registrations.enc` and `survey_responses.enc`
+#: already use. Produced by `convener-encrypt-attendance-export` and checked in
+#: like those two. Read in preference to the plaintext filename below.
 ENCRYPTED_ATTENDANCE_FILENAME: Final = "attendance-import.csv.enc"
+
+#: `attendance-import.csv.enc`'s own format version -- the file-level
+#: analogue of `eventkeys.WIRE_VERSION` and `registration.FILE_VERSION`, in
+#: case the file's shape (not the envelope inside it) ever has to change.
+ATTENDANCE_FILE_VERSION: Final = 1
 
 #: The never-committed raw export -- `.gitignore`d, see the module
 #: docstring.
@@ -379,9 +419,24 @@ def parse_attendance_csv(
         {name for name in fieldnames if fieldnames.count(name) > 1}
     )
     if duplicate_columns:
+        # Important 5, fix round 1: this used to echo the duplicated
+        # column *names* -- the file's own header text, written by
+        # whatever export tool produced it -- into the exception message,
+        # which every caller in `cli.py` prints straight to a job log.
+        # Task 17 is what makes this branch reachable from CI at all (the
+        # manual path previously had no file to read there); once it is,
+        # the same "never echo the file's own content" rule `_parse_row`
+        # already holds itself to for a malformed cell applies here too.
+        # The count and the 1-based header positions are always enough
+        # for a volunteer to find and fix the file; the column text
+        # never has to leave their own screen to do it.
+        positions = sorted(
+            i + 1 for i, name in enumerate(fieldnames) if fieldnames.count(name) > 1
+        )
         raise AttendanceImportError(
-            "attendance-import.csv has duplicate column(s): "
-            + ", ".join(duplicate_columns)
+            f"attendance-import.csv has {len(duplicate_columns)} duplicate "
+            "column name(s), at header position(s): "
+            + ", ".join(str(p) for p in positions)
         )
 
     missing_columns = _REQUIRED_ATTENDANCE_COLUMNS - set(fieldnames)
@@ -399,6 +454,207 @@ def parse_attendance_csv(
         except _RowError as exc:
             issues.append(AttendanceIssue(line_number=line_number, reason=str(exc)))
     return rows, issues
+
+
+#: The exact field set one attendance row's plaintext carries -- the
+#: per-row analogue of `registration._FIELDS`. `to_registration`'s own
+#: "closed shape" discipline applies here too: an entry whose decrypted
+#: plaintext does not match this set exactly is treated as malformed,
+#: never partially trusted.
+_ATTENDANCE_ROW_FIELDS: Final = frozenset(
+    {"display_name", "email", "joined_at", "left_at", "duration_seconds"}
+)
+
+
+def _row_to_plaintext(row: AttendanceRow) -> bytes:
+    """The inverse of `_row_from_plaintext` -- the JSON
+    `encrypt_attendance_rows` encrypts fresh for one row. Field order does
+    not have to match anything on the other side; only the same five keys
+    have to round trip, the same discipline
+    `registration._to_plaintext`/`to_registration` already follow."""
+    return json.dumps(
+        {
+            "display_name": row.display_name,
+            "email": row.email,
+            "joined_at": row.joined_at,
+            "left_at": row.left_at,
+            "duration_seconds": row.duration_seconds,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def _row_from_plaintext(plaintext: bytes) -> AttendanceRow | None:
+    """Decode one row's decrypted plaintext back into an `AttendanceRow`,
+    or `None` for anything that is not exactly this module's own shape --
+    not JSON, not an object, a field missing or extra, or a field of the
+    wrong type. Mirrors `registration.to_registration`'s own "every cause
+    becomes the same `None`" discipline: a row that fails to parse this
+    way is a malformed or foreign entry, not a bug worth raising on, and
+    `decrypt_attendance_rows` below skips it exactly the way it already
+    skips a row whose envelope fails to decrypt at all."""
+    try:
+        data: Any = json.loads(plaintext)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        # See `registration.to_registration`'s identical catch for why
+        # `UnicodeDecodeError` joins `JSONDecodeError` here, and why
+        # neither exception's own `.object` may ever be logged.
+        return None
+    if not isinstance(data, dict) or set(data) != _ATTENDANCE_ROW_FIELDS:
+        return None
+    display_name, email, joined_at, left_at, duration_seconds = (
+        data["display_name"],
+        data["email"],
+        data["joined_at"],
+        data["left_at"],
+        data["duration_seconds"],
+    )
+    if not isinstance(display_name, str) or not display_name:
+        return None
+    if email is not None and not isinstance(email, str):
+        return None
+    if not isinstance(joined_at, str) or not isinstance(left_at, str):
+        return None
+    #: `bool` is a `int` subclass in Python -- excluded explicitly, the
+    #: same guard `registration.to_registration` applies to
+    #: `membership_opt_in` in the other direction.
+    if not isinstance(duration_seconds, int) or isinstance(duration_seconds, bool):
+        return None
+    return AttendanceRow(
+        display_name=display_name,
+        email=email,
+        joined_at=joined_at,
+        left_at=left_at,
+        duration_seconds=duration_seconds,
+    )
+
+
+@dataclass(frozen=True)
+class AttendanceExportFile:
+    """`attendance-import.csv.enc`'s in-memory shape: a version and the
+    entries -- the per-row analogue of `registration.RegistrationFile`.
+    Every entry is a `dict` carrying exactly `eventkeys`'s wire-format keys
+    (`v`, `encrypted_key`, `iv`, `ciphertext`), never a bespoke class, for
+    the identical reason `RegistrationFile`'s own docstring gives."""
+
+    entries: tuple[Mapping[str, Any], ...] = ()
+
+
+def load_attendance_export_file(text: str | None) -> AttendanceExportFile:
+    """Parse `attendance-import.csv.enc`, or start empty when `text` is
+    `None`. Mirrors `registration.load_registration_file` field for field:
+    raises `ValueError` on anything committed that is not this exact
+    format -- unlike a missing file, a malformed one is not a normal state
+    to paper over -- including the same structural guard against a
+    "helpful" extra field sitting in plain sight beside the ciphertext it
+    was meant to replace."""
+    if text is None:
+        return AttendanceExportFile()
+    data: Any = json.loads(text)
+    if not isinstance(data, dict) or data.get("v") != ATTENDANCE_FILE_VERSION:
+        raise ValueError("attendance-import.csv.enc is not a supported format version")
+    entries = data.get("rows")
+    if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
+        raise ValueError("attendance-import.csv.enc is malformed")
+    if not all(set(e) == eventkeys.ENVELOPE_FIELDS for e in entries):
+        raise ValueError(
+            "attendance-import.csv.enc holds an entry that is not exactly ciphertext"
+        )
+    return AttendanceExportFile(entries=tuple(entries))
+
+
+def dump_attendance_export_file(file: AttendanceExportFile) -> str:
+    """The bytes `attendance-import.csv.enc` is written as: stable
+    structure, two-space indent, one trailing newline -- the same shape
+    `registration.dump_registration_file` already uses, for the same
+    "readable in a diff" reason."""
+    return json.dumps(
+        {"v": ATTENDANCE_FILE_VERSION, "rows": list(file.entries)}, indent=2
+    ) + chr(10)
+
+
+def encrypt_attendance_rows(public_pem: str, rows: Sequence[AttendanceRow]) -> str:
+    """Encrypt every row in `rows` under an event's own published public
+    key, one independent `eventkeys.encrypt` call each, and return the
+    whole committable `attendance-import.csv.enc` text (fix round 1, R-45
+    -- see the module docstring's "one independent envelope per row"
+    section for why this replaced a single whole-file envelope).
+
+    Takes `public_pem`, never a private key or a secret -- see
+    `eventkeys.py`'s own module docstring, "the public half is a file, not
+    a secret" -- so the host running this, on their own laptop, needs
+    nothing this project keeps in CI.
+    """
+    entries = tuple(
+        json.loads(eventkeys.encrypt(public_pem, _row_to_plaintext(row)))
+        for row in rows
+    )
+    return dump_attendance_export_file(AttendanceExportFile(entries=entries))
+
+
+def decrypt_attendance_rows(
+    file: AttendanceExportFile, private_pem: str
+) -> list[AttendanceRow]:
+    """The inverse of `encrypt_attendance_rows`: every row this
+    `private_pem` can actually read. A row whose envelope fails to decrypt
+    (wrong key, corrupted ciphertext) or whose decrypted plaintext is not
+    exactly this module's own row shape is skipped, never treated as
+    fatal -- the same tolerance `registration.py`'s own callers already
+    give a stray undecryptable entry in `registrations.enc`. One damaged
+    or foreign row costs one row, not the whole file."""
+    rows: list[AttendanceRow] = []
+    for entry in file.entries:
+        try:
+            plaintext = eventkeys.decrypt(private_pem, json.dumps(entry))
+        except eventkeys.DecryptionError:
+            continue
+        row = _row_from_plaintext(plaintext)
+        if row is not None:
+            rows.append(row)
+    return rows
+
+
+def erase_attendance_rows(
+    file: AttendanceExportFile, email: str, private_pem: str
+) -> tuple[AttendanceExportFile, int]:
+    """Remove every row addressed to `email` from `file` -- the attendance
+    half of an early erasure request (fix round 1, R-45), called by
+    `cli.py::erase_registration` alongside `registration.erase` so the two
+    stores stay in step. Spec S4's own words for early erasure --
+    "le fichier chiffre est reecrit sans l'enregistrement concerne, et
+    rien d'autre ne bouge" -- hold here exactly as they do for
+    `registrations.enc`, because the shape is now the same: every entry
+    kept is returned byte for byte as found, never re-serialised, the same
+    property `registration.erase`'s own docstring explains in full.
+
+    Returns the updated file and how many rows were removed -- `0` is not
+    an error, it means this address joined nothing this event recorded
+    (or joined only by telephone, `email=None`, never matched by address
+    at all). One person can carry several rows (a reconnection); every
+    one of theirs is removed, not just the first found.
+
+    A row that fails to decrypt under `private_pem` is kept exactly as
+    found and never treated as a match -- the same defensive handling
+    `registration.erase` already gives an undecryptable entry."""
+    target = normalize_email(email)
+    kept: list[Mapping[str, Any]] = []
+    removed = 0
+    for entry in file.entries:
+        try:
+            plaintext = eventkeys.decrypt(private_pem, json.dumps(entry))
+        except eventkeys.DecryptionError:
+            kept.append(entry)
+            continue
+        row = _row_from_plaintext(plaintext)
+        if (
+            row is not None
+            and row.email is not None
+            and normalize_email(row.email) == target
+        ):
+            removed += 1
+            continue
+        kept.append(entry)
+    return AttendanceExportFile(entries=tuple(kept)), removed
 
 
 def _matches_event(record: Mapping[str, Any], event_id: str) -> bool:
@@ -491,43 +747,43 @@ class ManualPlatform:
                     f"export for event {event_id!r}"
                 )
             try:
-                plaintext = eventkeys.decrypt(
-                    self.private_pem, encrypted_path.read_text(encoding="utf-8")
+                file = load_attendance_export_file(
+                    encrypted_path.read_text(encoding="utf-8")
                 )
-            except eventkeys.DecryptionError as exc:
+            except ValueError as exc:
                 raise AttendanceImportError(
                     f"the attendance export for event {event_id!r} could "
-                    "not be decrypted"
+                    f"not be read: {exc}"
                 ) from exc
-            #: Not "utf-8" -- see the module docstring's note on the BOM a
-            #: Windows or Excel-adjacent export tool commonly writes; a
-            #: `bytes.decode` accepts the same codec name as `Path.read_text`.
-            text = plaintext.decode("utf-8-sig")
-        elif plain_path.exists():
-            text = plain_path.read_text(encoding="utf-8-sig")
-        else:
-            # Small item 2, fix round 3: named relative to the repository,
-            # never as the absolute `path` this class actually checked --
-            # that would carry CONVENER_REPO_ROOT (a CI runner's own filesystem
-            # layout, or a test's tmp_path) into a job's log for no reason,
-            # the same leak minor 5 of fix round 1 already closed for
-            # `cli.py`'s own register-path messages. `_validate_event_id`
-            # inside `_event_dir` above has already accepted `event_id` by
-            # this point, so it is safe to reuse verbatim in a relative,
-            # hand-built path rather than in either path above.
-            relative = (
-                Path("data") / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
-            )
-            raise AttendanceImportError(
-                f"no attendance export for event {event_id!r}: expected "
-                f"{relative.as_posix()} (or its never-committed plaintext "
-                f"equivalent, {PLAINTEXT_ATTENDANCE_FILENAME})"
-            )
+            # Fix round 1, R-45: one independent envelope per row now, not
+            # one envelope for the whole file -- see
+            # `decrypt_attendance_rows`'s own docstring for why a row that
+            # fails to decrypt or fails to parse is skipped rather than
+            # failing this whole call.
+            return decrypt_attendance_rows(file, self.private_pem)
 
-        rows, issues = parse_attendance_csv(text)
-        for issue in issues:
-            print(f"attendance-import.csv line {issue.line_number}: {issue.reason}")
-        return rows
+        if plain_path.exists():
+            text = plain_path.read_text(encoding="utf-8-sig")
+            rows, issues = parse_attendance_csv(text)
+            for issue in issues:
+                print(f"attendance-import.csv line {issue.line_number}: {issue.reason}")
+            return rows
+
+        # Small item 2, fix round 3: named relative to the repository,
+        # never as the absolute `path` this class actually checked --
+        # that would carry CONVENER_REPO_ROOT (a CI runner's own filesystem
+        # layout, or a test's tmp_path) into a job's log for no reason,
+        # the same leak minor 5 of fix round 1 already closed for
+        # `cli.py`'s own register-path messages. `_validate_event_id`
+        # inside `_event_dir` above has already accepted `event_id` by
+        # this point, so it is safe to reuse verbatim in a relative,
+        # hand-built path rather than in either path above.
+        relative = Path("data") / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
+        raise AttendanceImportError(
+            f"no attendance export for event {event_id!r}: expected "
+            f"{relative.as_posix()} (or its never-committed plaintext "
+            f"equivalent, {PLAINTEXT_ATTENDANCE_FILENAME})"
+        )
 
     def get_recording(self, event_id: str) -> Recording:
         record = find_speaker(self.speakers, event_id)
@@ -545,30 +801,3 @@ class ManualPlatform:
         named a real event directory."""
         _validate_event_id(event_id)
         return None
-
-
-def encrypt_attendance_export(public_pem: str, csv_bytes: bytes) -> str:
-    """Encrypt a raw attendance export (`csv_bytes`, exactly the bytes an
-    operator downloaded off the meeting platform) under an event's own
-    published public key, ready to be committed as
-    `ENCRYPTED_ATTENDANCE_FILENAME` -- see the module docstring's "the
-    encrypted export" section for why this exists at all (task 17,
-    closing `docs/superpowers/deferred-work.md` entry 10).
-
-    A thin, one-line wrapper over `eventkeys.encrypt` -- kept here, in the
-    module that owns the concept of "an attendance export", rather than
-    inlined at `cli.py`'s one call site, so a test can exercise the
-    encrypt/decrypt round trip directly against `ManualPlatform.get_attendance`
-    without going through the CLI layer at all.
-
-    Takes `public_pem`, never a private key or a secret: `keys/events/
-    <id>.pub` is committed, public, non-confidential data (`eventkeys.py`'s
-    own module docstring, "the public half is a file, not a secret"), so
-    this function -- and the host running it, on their own laptop, with no
-    account and no network call -- needs nothing this project keeps in CI.
-    `csv_bytes` is arbitrary length (not the short RSA-OAEP block alone):
-    `eventkeys.encrypt`'s hybrid construction (a fresh AES-256-GCM key,
-    itself RSA-OAEP-wrapped) is exactly why a whole CSV, not just a short
-    registration, can go through this same wire format.
-    """
-    return eventkeys.encrypt(public_pem, csv_bytes)
