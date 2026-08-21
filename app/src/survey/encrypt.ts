@@ -72,6 +72,31 @@ const WIRE_VERSION = 1;
 const AES_KEY_BYTES = 32;
 /** Mirrors `eventkeys.GCM_NONCE_BYTES`. */
 const GCM_NONCE_BYTES = 12;
+/** Mirrors `survey.py::_PLAINTEXT_PAD_BYTES` -- see that constant's own
+ *  docstring (R-39, fix round 1) for why every plaintext is padded to this
+ *  one fixed size before AES-GCM: unpadded, the ciphertext's length is a
+ *  deterministic function of `feedback`'s length, which is a real
+ *  quasi-identifier against the organiser, the only party who can ever
+ *  decrypt these at all. Padding removes that channel. */
+const PLAINTEXT_PAD_BYTES = 8192;
+
+/**
+ * Pads `bytes` to exactly `PLAINTEXT_PAD_BYTES` with trailing zero bytes --
+ * the browser-side mirror of `survey.py::_pad`. `new Uint8Array(n)` is
+ * already zero-filled by the platform, so only the real content needs to
+ * be written in; the rest is padding by construction, not by an explicit
+ * fill. Throws if `bytes` is already at or past the target -- see
+ * `_pad`'s own docstring for why this should be unreachable in practice
+ * (the caller enforces the feedback length cap before this ever runs).
+ */
+function padPlaintext(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  if (bytes.length >= PLAINTEXT_PAD_BYTES) {
+    throw new Error('answer is too long to encrypt');
+  }
+  const padded = new Uint8Array(PLAINTEXT_PAD_BYTES);
+  padded.set(bytes);
+  return padded;
+}
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -132,7 +157,7 @@ export async function encryptSurveyResponse(
   const aesKey = await crypto.subtle.importKey('raw', aesKeyBytes, { name: 'AES-GCM' }, false, [
     'encrypt',
   ]);
-  const plaintext = new TextEncoder().encode(JSON.stringify(fields));
+  const plaintext = padPlaintext(new TextEncoder().encode(JSON.stringify(fields)));
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, plaintext);
 
   const envelope: Envelope = {

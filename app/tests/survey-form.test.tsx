@@ -51,7 +51,14 @@ async function decryptEnvelopeFields(
     aesKey,
     base64ToBytes(envelope.ciphertext),
   );
-  return JSON.parse(new TextDecoder().decode(plaintext));
+  // R-39: the plaintext is padded with trailing zero bytes to a fixed
+  // size before encryption (see encrypt.ts::padPlaintext) -- everything
+  // up to the first 0x00 is the real JSON, the same unpad
+  // `survey-encrypt.test.ts::unpadPlaintext` performs.
+  const bytes = new Uint8Array(plaintext);
+  const end = bytes.indexOf(0);
+  const unpadded = end === -1 ? bytes : bytes.slice(0, end);
+  return JSON.parse(new TextDecoder().decode(unpadded));
 }
 
 function renderSurvey(eventId = 'mrg-042') {
@@ -64,12 +71,20 @@ function renderSurvey(eventId = 'mrg-042') {
   );
 }
 
-function stubKeyFetchOk() {
+/** Stubs both fetches `SurveyForm` makes before it can render a form: the
+ *  event's public key, and R-37's own `survey-status.json` membership
+ *  check. `enabledIds` defaults to `['mrg-042']`, matching `renderSurvey`'s
+ *  own default event id -- pass a different (or empty) list to exercise
+ *  the 'closed' state. */
+function stubFetchReady(enabledIds: string[] = ['mrg-042']) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
       if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
         return { ok: true, text: async () => VALID_PEM } as Response;
+      }
+      if (String(url).endsWith('/survey-status.json')) {
+        return { ok: true, json: async () => enabledIds } as Response;
       }
       throw new Error(`unexpected fetch in test: ${url}`);
     }),
@@ -83,7 +98,7 @@ beforeEach(() => {
 
 describe('SurveyForm -- the notice', () => {
   it('shows the data-protection notice before any field, not after', async () => {
-    stubKeyFetchOk();
+    stubFetchReady();
     renderSurvey();
 
     await screen.findByRole('group', { name: /rate this session overall/i });
@@ -102,7 +117,7 @@ describe('SurveyForm -- the notice', () => {
   });
 
   it('states only people recorded present receive this, same-key encryption, the 90-day retention and a real contact address', async () => {
-    stubKeyFetchOk();
+    stubFetchReady();
     renderSurvey();
     await screen.findByRole('group', { name: /rate this session overall/i });
 
@@ -112,11 +127,37 @@ describe('SurveyForm -- the notice', () => {
     expect(text).toMatch(/90 days/);
     expect(text).toContain('reading-group@example.test');
   });
+
+  it('R-38: states the answers are anonymous, and why nothing can be individually shown, corrected or erased', async () => {
+    // Critical 1 (fix round 1): the notice used to promise access,
+    // correction and erasure "before that date" -- structurally false for
+    // an anonymous response. It must now say the opposite, and say why.
+    stubFetchReady();
+    renderSurvey();
+    await screen.findByRole('group', { name: /rate this session overall/i });
+
+    const text = document.body.textContent ?? '';
+    expect(text).toMatch(/anonymous/i);
+    expect(text).toMatch(/cannot find your own answers/i);
+    expect(text).not.toMatch(/access, correct or erase your data/i);
+  });
+
+  it('R-38: warns against writing identifying content into the free-text box, both in the notice and beside the field itself', async () => {
+    stubFetchReady();
+    renderSurvey();
+    await screen.findByRole('group', { name: /rate this session overall/i });
+
+    const text = document.body.textContent ?? '';
+    // Twice: once in the notice, once right beside the textarea -- the
+    // second occurrence is the one Critical 1 named as missing entirely.
+    const matches = text.match(/do not (write|include) your name/gi) ?? [];
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe('SurveyForm -- what it asks, and nothing else', () => {
   it('asks a five-point rating, a yes/no recommendation, and optional free-text feedback', async () => {
-    stubKeyFetchOk();
+    stubFetchReady();
     renderSurvey();
 
     const ratingGroup = await screen.findByRole('group', { name: /rate this session overall/i });
@@ -133,17 +174,27 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
   });
 
   it('fetches the event public key from the event-scoped, same-origin path -- the same key registration uses', async () => {
-    stubKeyFetchOk();
+    stubFetchReady();
 
     renderSurvey('mrg-042');
     await screen.findByRole('group', { name: /rate this session overall/i });
 
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(/\/keys\/events\/mrg-042\.pub$/);
+    const calls = vi.mocked(fetch).mock.calls.map(c => String(c[0]));
+    expect(calls.some(u => /\/keys\/events\/mrg-042\.pub$/.test(u))).toBe(true);
+  });
+
+  it('fetches survey-status.json before rendering the form -- R-37', async () => {
+    stubFetchReady();
+
+    renderSurvey('mrg-042');
+    await screen.findByRole('group', { name: /rate this session overall/i });
+
+    const calls = vi.mocked(fetch).mock.calls.map(c => String(c[0]));
+    expect(calls.some(u => u.endsWith('/survey-status.json'))).toBe(true);
   });
 
   it('the submit button starts disabled until both required questions are answered', async () => {
-    stubKeyFetchOk();
+    stubFetchReady();
     renderSurvey();
     const ratingGroup = await screen.findByRole('group', { name: /rate this session overall/i });
     const submit = screen.getByRole('button', { name: /submit/i });
@@ -156,6 +207,27 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
     fireEvent.click(within(recommendGroup).getByRole('radio', { name: 'Yes' }));
     expect(submit).not.toBeDisabled();
   });
+
+  it('Important 3: the free-text box refuses more than 2000 characters, with a visible counter', async () => {
+    stubFetchReady();
+    renderSurvey();
+    await screen.findByRole('group', { name: /rate this session overall/i });
+
+    const textarea = screen.getByLabelText(
+      /anything else you would like to tell us/i,
+    ) as HTMLTextAreaElement;
+    expect(textarea.maxLength).toBe(2000);
+
+    fireEvent.change(textarea, { target: { value: 'x'.repeat(2500) } });
+    // A real browser enforces `maxLength` at the DOM level on user typing;
+    // `fireEvent.change` bypasses that and sets the value directly, so
+    // this asserts the *attribute* is correct (what actually stops a real
+    // participant) rather than re-deriving jsdom's own enforcement.
+    expect(textarea.maxLength).toBe(2000);
+
+    fireEvent.change(textarea, { target: { value: 'a short answer' } });
+    expect(screen.getByText('14 / 2000')).toBeInTheDocument();
+  });
 });
 
 describe('SurveyForm -- the public key cannot be fetched', () => {
@@ -167,7 +239,67 @@ describe('SurveyForm -- the public key cannot be fetched', () => {
 
     expect(screen.queryByRole('group', { name: /rate this session overall/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /submit/i })).not.toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SurveyForm -- R-37: the survey switch, checked at the page layer', () => {
+  it('renders a closed message, never the form, when the event is not in survey-status.json', async () => {
+    stubFetchReady([]); // key is fine; nothing is enabled
+    renderSurvey('mrg-042');
+
+    await screen.findByText(/this survey is not open/i);
+    expect(screen.queryByRole('group', { name: /rate this session overall/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /submit/i })).not.toBeInTheDocument();
+  });
+
+  it('renders a closed message when survey-status.json fetch fails outright -- fail closed, not open', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
+          return { ok: true, text: async () => VALID_PEM } as Response;
+        }
+        if (String(url).endsWith('/survey-status.json')) {
+          return { ok: false, status: 500 } as Response;
+        }
+        throw new Error(`unexpected fetch in test: ${url}`);
+      }),
+    );
+    renderSurvey('mrg-042');
+
+    await screen.findByText(/this survey is not open/i);
+  });
+
+  it('renders a closed message when survey-status.json is not a JSON array -- fail closed, not open', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
+          return { ok: true, text: async () => VALID_PEM } as Response;
+        }
+        if (String(url).endsWith('/survey-status.json')) {
+          return { ok: true, json: async () => ({ 'mrg-042': true }) } as Response;
+        }
+        throw new Error(`unexpected fetch in test: ${url}`);
+      }),
+    );
+    renderSurvey('mrg-042');
+
+    await screen.findByText(/this survey is not open/i);
+  });
+
+  it('renders the form when the event is in survey-status.json', async () => {
+    stubFetchReady(['mrg-041', 'mrg-042', 'mrg-043']);
+    renderSurvey('mrg-042');
+
+    await screen.findByRole('group', { name: /rate this session overall/i });
+  });
+
+  it('a different event\'s presence in survey-status.json does not enable this one', async () => {
+    stubFetchReady(['mrg-999']);
+    renderSurvey('mrg-042');
+
+    await screen.findByText(/this survey is not open/i);
   });
 });
 
@@ -190,6 +322,9 @@ describe('SurveyForm -- sending', () => {
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
           return { ok: true, text: async () => VALID_PEM } as Response;
+        }
+        if (String(url).endsWith('/survey-status.json')) {
+          return { ok: true, json: async () => ['mrg-042'] } as Response;
         }
         calls.push({ url: String(url), body: String(opts?.body ?? '') });
         return { ok: true } as Response;
@@ -218,6 +353,9 @@ describe('SurveyForm -- sending', () => {
       vi.fn(async (url: string, opts?: RequestInit) => {
         if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
           return { ok: true, text: async () => VALID_PEM } as Response;
+        }
+        if (String(url).endsWith('/survey-status.json')) {
+          return { ok: true, json: async () => ['mrg-042'] } as Response;
         }
         if (String(url) === 'https://signup-relay.example/survey') {
           calls.push({ url: String(url), body: String(opts?.body ?? '') });
@@ -265,6 +403,9 @@ describe('SurveyForm -- sending', () => {
         if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
           return { ok: true, text: async () => VALID_PEM } as Response;
         }
+        if (String(url).endsWith('/survey-status.json')) {
+          return { ok: true, json: async () => ['mrg-042'] } as Response;
+        }
         if (String(url) === 'https://signup-relay.example/survey') {
           calls.push({ body: String(opts?.body ?? '') });
           return { ok: true } as Response;
@@ -288,14 +429,16 @@ describe('SurveyForm -- sending', () => {
     expect(recovered).toEqual({ overall_rating: 2, recommend: false, feedback: '' });
   });
 
-  it('when the relay is not configured, says the survey is not open yet and sends nothing', async () => {
-    stubKeyFetchOk();
+  it('when the relay is not configured, says submitting is not available yet -- distinct wording from the closed-survey message', async () => {
+    stubFetchReady();
     renderSurvey('mrg-042');
     await answer();
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
-    await screen.findByText(/this survey is not open yet/i);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    await screen.findByText(/submitting answers is not available yet/i);
+    // Minor 7: must not read the same as the 'closed' state's own message,
+    // which would tell a participant whose survey *is* open to give up.
+    expect(screen.queryByText(/this survey is not open$/i)).not.toBeInTheDocument();
   });
 
   it('reports a relay error without pretending the answers were sent, and keeps what was answered', async () => {
@@ -305,6 +448,9 @@ describe('SurveyForm -- sending', () => {
       vi.fn(async (url: string) => {
         if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
           return { ok: true, text: async () => VALID_PEM } as Response;
+        }
+        if (String(url).endsWith('/survey-status.json')) {
+          return { ok: true, json: async () => ['mrg-042'] } as Response;
         }
         return { ok: false, status: 502 } as Response;
       }),
@@ -337,7 +483,7 @@ describe('SurveyForm -- reachable with no eventId at all', () => {
 
 describe('SurveyForm -- needs no organiser account', () => {
   it('renders without AuthProvider or DataProvider in the tree', async () => {
-    stubKeyFetchOk();
+    stubFetchReady();
     renderSurvey();
     await screen.findByRole('group', { name: /rate this session overall/i });
     expect(within(document.body).queryByText(/sign in/i)).not.toBeInTheDocument();
@@ -358,7 +504,7 @@ describe('App -- the survey route in production, not standalone', () => {
   });
 
   it('reaches SurveyForm with no sign-in screen', async () => {
-    stubKeyFetchOk();
+    stubFetchReady();
     window.location.hash = '#/survey/mrg-042';
     render(<App />);
 
@@ -375,6 +521,9 @@ describe('App -- the survey route in production, not standalone', () => {
         const u = String(url);
         if (u.endsWith('/keys/events/mrg-042.pub') || u.endsWith('/keys/events/mrg-043.pub')) {
           return { ok: true, text: async () => VALID_PEM } as Response;
+        }
+        if (u.endsWith('/survey-status.json')) {
+          return { ok: true, json: async () => ['mrg-042', 'mrg-043'] } as Response;
         }
         throw new Error(`unexpected fetch in test: ${u}`);
       }),

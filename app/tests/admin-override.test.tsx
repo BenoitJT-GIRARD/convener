@@ -239,6 +239,33 @@ describe('AdminOverride EditFields', () => {
     expect(backend.current()[0].metrics.youtube_views_30d).toBe(250);
   });
 
+  it('Minor 9 (fix round 1, task 16): flips survey_enabled through its own checkbox and persists it', async () => {
+    const original = speaker({ survey_enabled: false });
+    const backend = makeSpeakersBackend([original]);
+    vi.stubGlobal('fetch', backend.fetchMock);
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <DataProvider>
+            <AdminOverride speaker={original} />
+          </DataProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByDisplayValue('Original Name');
+    const surveyCheckbox = screen.getByLabelText('Post-event survey') as HTMLInputElement;
+    expect(surveyCheckbox.checked).toBe(false);
+
+    fireEvent.click(surveyCheckbox);
+    expect(surveyCheckbox.checked).toBe(true);
+    fireEvent.click(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(screen.getByText('✓ saved')).toBeInTheDocument());
+    expect(backend.current()[0].survey_enabled).toBe(true);
+  });
+
   it('does not show "saved" when the write fails', async () => {
     const original = speaker();
     const backend = makeAlwaysConflictingBackend([original]);

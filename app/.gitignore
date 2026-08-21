@@ -5,3 +5,4 @@ coverage
 public/handbook
 public/keys
 public/certificates.json
+public/survey-status.json

@@ -23,10 +23,16 @@ function surveyRelayUrl(): string | undefined {
 
 const CONTACT_EMAIL = 'reading-group@example.test';
 
-type KeyState =
+// R-37 (fix round 1): the page-level layer of the switch enforcement.
+// `'closed'` means the key loaded fine but this event's survey is not
+// enabled -- distinct from `'unavailable'`, a technical failure to fetch
+// or validate the public key itself. Both refuse to render the form; they
+// are told apart only so the message can be honest about which is true.
+type PageState =
   | { status: 'loading' }
-  | { status: 'ready'; publicKeyPem: string }
-  | { status: 'unavailable' };
+  | { status: 'unavailable' }
+  | { status: 'closed' }
+  | { status: 'ready'; publicKeyPem: string };
 
 type SubmitState = 'idle' | 'sending' | 'sent' | 'error';
 
@@ -37,6 +43,17 @@ type SubmitState = 'idle' | 'sending' | 'sent' | 'error';
  *  `SignupForm.tsx` gives. */
 function eventPublicKeyUrl(eventId: string): string {
   return `${BASE}/keys/events/${encodeURIComponent(eventId)}.pub`;
+}
+
+/** `scripts/copy-survey-status.mjs`'s own destination -- see that script's
+ *  and `survey-status-projection.mjs`'s docstrings for the whole
+ *  publish-and-fetch pipeline this closes (R-37): a bare JSON array of
+ *  the event ids currently open for the survey, derived from
+ *  `data/speakers.yml`'s `survey_enabled` field and published outside the
+ *  consent gate entirely, because it is an operational fact rather than
+ *  programme data. */
+function surveyStatusUrl(): string {
+  return `${BASE}/survey-status.json`;
 }
 
 // Same reasoning, same values, as `SignupForm.tsx`'s own two timeouts: a
@@ -60,6 +77,30 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
   }
 }
 
+/**
+ * Whether `eventId` currently has the survey switch on, read from the
+ * published, build-time-derived `survey-status.json` (R-37).
+ *
+ * Fails closed on every ambiguity, the same direction
+ * `tools/convener_ops/cli.py::_survey_enabled`'s own docstring commits to on
+ * the server side: an unreachable file, a non-2xx response, unparsable
+ * JSON, or JSON that is not an array all read as "not enabled" here, never
+ * as "we could not tell, so allow it". This is a page-level convenience,
+ * not the authoritative check -- the relay and the handler both check
+ * again, because a client-side check is bypassable by anyone who skips
+ * this page entirely and posts to the relay directly.
+ */
+async function fetchSurveyEnabled(eventId: string, signal: AbortSignal): Promise<boolean> {
+  try {
+    const response = await fetch(surveyStatusUrl(), { signal });
+    if (!response.ok) return false;
+    const data: unknown = await response.json();
+    return Array.isArray(data) && data.includes(eventId);
+  } catch {
+    return false;
+  }
+}
+
 function Notice() {
   return (
     <div className="border-2 border-primary/30 bg-primary/5 px-5 py-4 mb-8 text-sm space-y-2">
@@ -74,12 +115,20 @@ function Notice() {
         <strong>Your browser encrypts your answers before they are sent</strong>, using
         this event&apos;s own key -- the same key, and the same protection, as your
         registration. Nobody -- including us -- can read your answers until a workshop
-        organiser decrypts them as part of running the event. They are permanently
-        destroyed 90 days after the event, at the same time and by the same means as
-        your registration.
+        organiser decrypts them as part of running the event.
       </p>
       <p>
-        To access, correct or erase your data before that date, write to{' '}
+        <strong>Your answers are anonymous.</strong> Nothing here -- no name, no address,
+        no matching code -- is sent alongside them, and that is deliberate. Because of
+        that, we cannot find your own answers to show them to you, correct them or erase
+        them individually once sent: there is nothing on file that says which answers are
+        yours. Please do not write your name, your email address, or anything else that
+        could identify you or anyone else, in the free-text box below.
+      </p>
+      <p>
+        All answers for this event, like your registration, are permanently destroyed
+        together with the event&apos;s key 90 days after the event. Questions about this
+        survey can be sent to{' '}
         <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
           {CONTACT_EMAIL}
         </a>
@@ -94,9 +143,18 @@ function Notice() {
 // range `tools/convener_ops/survey.py::_RATING_MIN`/`_RATING_MAX` accepts.
 const RATING_VALUES = [1, 2, 3, 4, 5] as const;
 
+// Mirrors `tools/convener_ops/survey.py::_MAX_FEEDBACK_LENGTH` (Important 3,
+// fix round 1). Bound here too, not only server-side: before this, a
+// 2000-plus-character answer was accepted by this form and by the relay,
+// dispatched, and only then discarded by the handler as "could not be
+// read" -- a participant who wrote a long, careful answer deserves to see
+// the limit before typing past it, not after submitting into a silent
+// discard.
+const MAX_FEEDBACK_LENGTH = 2000;
+
 export function SurveyForm() {
   const { eventId } = useParams<{ eventId: string }>();
-  const [keyState, setKeyState] = useState<KeyState>({ status: 'loading' });
+  const [pageState, setPageState] = useState<PageState>({ status: 'loading' });
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const sentPanelRef = useRef<HTMLDivElement>(null);
@@ -106,17 +164,34 @@ export function SurveyForm() {
   const [feedback, setFeedback] = useState('');
 
   useEffect(() => {
+    // Nothing to fetch without an event id -- `effectivePageState` below
+    // already reports this as 'unavailable' without an extra render.
     if (!eventId) return;
     let cancelled = false;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), KEY_FETCH_TIMEOUT_MS);
-    fetchEventPublicKey(eventId, controller.signal)
-      .then(pem => {
+    // The key and the switch are fetched together, under one shared
+    // timeout: whichever answer arrives, the other must too before this
+    // page can decide anything, so there is no benefit to serialising them.
+    Promise.all([
+      fetchEventPublicKey(eventId, controller.signal),
+      fetchSurveyEnabled(eventId, controller.signal),
+    ])
+      .then(([pem, enabled]) => {
         if (cancelled) return;
-        setKeyState(pem ? { status: 'ready', publicKeyPem: pem } : { status: 'unavailable' });
+        if (!pem) {
+          setPageState({ status: 'unavailable' });
+        } else if (!enabled) {
+          setPageState({ status: 'closed' });
+        } else {
+          setPageState({ status: 'ready', publicKeyPem: pem });
+        }
       })
+      // Both fetch helpers already catch everything and resolve rather
+      // than reject -- defence in depth, the same idiom `SignupForm.tsx`
+      // uses for its own single fetch.
       .catch(() => {
-        if (!cancelled) setKeyState({ status: 'unavailable' });
+        if (!cancelled) setPageState({ status: 'unavailable' });
       })
       .finally(() => clearTimeout(timeout));
     return () => {
@@ -126,8 +201,12 @@ export function SurveyForm() {
     };
   }, [eventId]);
 
-  const effectiveKeyState: KeyState = eventId ? keyState : { status: 'unavailable' };
+  const effectivePageState: PageState = eventId ? pageState : { status: 'unavailable' };
 
+  // The success panel replaces the form, which held focus a moment
+  // earlier -- see `SignupForm.tsx`'s identical comment for why this
+  // moves focus onto the panel rather than letting it fall back to
+  // `<body>`.
   useEffect(() => {
     if (submitState === 'sent') sentPanelRef.current?.focus();
   }, [submitState]);
@@ -137,7 +216,7 @@ export function SurveyForm() {
     // Defence in depth, not the only guard -- see `SignupForm.tsx::submit`'s
     // identical comment for why this should be unreachable but is checked
     // anyway.
-    if (effectiveKeyState.status !== 'ready' || !eventId || rating === '' || recommend === '') {
+    if (effectivePageState.status !== 'ready' || !eventId || rating === '' || recommend === '') {
       return;
     }
 
@@ -150,11 +229,17 @@ export function SurveyForm() {
     };
 
     try {
-      const envelopeJson = await encryptSurveyResponse(effectiveKeyState.publicKeyPem, fields);
+      const envelopeJson = await encryptSurveyResponse(effectivePageState.publicKeyPem, fields);
       const url = surveyRelayUrl();
       if (!url) {
+        // Minor 7 (fix round 1): distinct wording from the 'closed' state
+        // above -- this is D-13's ordinary "the relay is not deployed
+        // yet" absence, not the survey switch, and a participant whose
+        // survey genuinely *is* open must not read this as "try a
+        // different event" the way the 'closed' page's own message would
+        // otherwise imply.
         setSubmitState('error');
-        setSubmitError('This survey is not open yet. Please try again later.');
+        setSubmitError('Submitting answers is not available yet. Please try again later.');
         return;
       }
       const envelope: unknown = JSON.parse(envelopeJson);
@@ -200,19 +285,19 @@ export function SurveyForm() {
 
         <Notice />
 
-        {effectiveKeyState.status === 'loading' && (
+        {effectivePageState.status === 'loading' && (
           <p className="text-ink-muted text-sm">Checking that the survey is available…</p>
         )}
 
-        {effectiveKeyState.status === 'unavailable' && (
+        {effectivePageState.status === 'unavailable' && (
           <div className="border-2 border-danger/40 bg-danger/5 px-5 py-4 text-sm">
             <p className="font-display font-bold uppercase tracking-wider text-xs text-danger mb-1">
               This survey is not available right now
             </p>
             <p>
-              We could not retrieve the encryption key this event needs before anything can
-              be sent. We never send answers unencrypted, so nothing has been sent. Please
-              try again later, or contact{' '}
+              We could not retrieve what this event needs before anything can be sent. We
+              never send answers unencrypted, so nothing has been sent. Please try again
+              later, or contact{' '}
               <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
                 {CONTACT_EMAIL}
               </a>
@@ -221,7 +306,18 @@ export function SurveyForm() {
           </div>
         )}
 
-        {effectiveKeyState.status === 'ready' && submitState !== 'sent' && (
+        {effectivePageState.status === 'closed' && (
+          <div className="border-2 border-ink-muted/40 bg-ink-muted/5 px-5 py-4 text-sm">
+            <p className="font-display font-bold uppercase tracking-wider text-xs text-ink-muted mb-1">
+              This survey is not open
+            </p>
+            <p>There is no survey currently open for this event.</p>
+          </div>
+        )}
+
+        {effectivePageState.status === 'ready' && submitState !== 'sent' && (
+          // `method="post"`, on a page that would otherwise default to GET --
+          // the same reasoning `SignupForm.tsx`'s identical attribute gives.
           <form method="post" onSubmit={submit} className="space-y-6">
             <fieldset className="space-y-2">
               <legend className="text-xs uppercase tracking-wider text-ink-muted">
@@ -277,12 +373,24 @@ export function SurveyForm() {
               <span className="text-xs uppercase tracking-wider text-ink-muted">
                 Anything else you would like to tell us? (optional)
               </span>
+              {/* Critical 1 (fix round 1): a warning right where someone is
+                  about to type, not only in the notice above the form --
+                  the free-text box is the one input that could turn an
+                  anonymous store into one that is not. */}
+              <p className="text-xs text-ink-muted mt-1 mb-1">
+                Please do not include your name, email address, or anything else that
+                could identify you or anyone else.
+              </p>
               <textarea
                 value={feedback}
                 onChange={e => setFeedback(e.target.value)}
                 rows={4}
+                maxLength={MAX_FEEDBACK_LENGTH}
                 className="w-full px-3 py-2 text-sm mt-1"
               />
+              <span className="block text-right text-xs text-ink-muted mt-1">
+                {feedback.length} / {MAX_FEEDBACK_LENGTH}
+              </span>
             </label>
 
             <button
@@ -294,6 +402,10 @@ export function SurveyForm() {
             </button>
 
             {submitState === 'error' && submitError && (
+              // `role="alert"` (an implicit assertive live region): the
+              // message appears purely in response to interaction, after
+              // the button that triggered it, and without this a screen
+              // reader user is never told it happened at all.
               <p role="alert" className="text-danger text-sm">
                 {submitError}
               </p>

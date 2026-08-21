@@ -34,6 +34,18 @@ function base64ByteLength(b64: string): number {
   return atob(b64).length;
 }
 
+const PLAINTEXT_PAD_BYTES = 8192;
+
+/** The test's own inverse of `padPlaintext` (not exported from `encrypt.ts`
+ *  on purpose -- see that module's docstring, "What this file deliberately
+ *  does not do"): everything up to the first `0x00` byte, mirroring
+ *  `survey.py::_unpad`'s identical reasoning about JSON's grammar
+ *  forbidding a literal NUL in valid output. */
+function unpadPlaintext(bytes: Uint8Array): Uint8Array {
+  const end = bytes.indexOf(0);
+  return end === -1 ? bytes : bytes.slice(0, end);
+}
+
 function toPem(der: ArrayBuffer, label: string): string {
   const b64 = bytesToBase64(new Uint8Array(der));
   const lines = b64.match(/.{1,64}/g) ?? [b64];
@@ -121,7 +133,9 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
       base64ToBytes(envelope.ciphertext),
     );
 
-    expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual(FIELDS);
+    expect(new Uint8Array(plaintext).length).toBe(PLAINTEXT_PAD_BYTES);
+    const unpadded = unpadPlaintext(new Uint8Array(plaintext));
+    expect(JSON.parse(new TextDecoder().decode(unpadded))).toEqual(FIELDS);
   });
 
   it('handles a false recommend and blank feedback without special-casing them', async () => {
@@ -142,7 +156,39 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
       aesKey,
       base64ToBytes(envelope.ciphertext),
     );
-    expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual(fields);
+    const unpadded = unpadPlaintext(new Uint8Array(plaintext));
+    expect(JSON.parse(new TextDecoder().decode(unpadded))).toEqual(fields);
+  });
+
+  it('R-39: the ciphertext length is the same regardless of how much feedback was written', async () => {
+    // Measured before this fix: an empty `feedback` produced a
+    // 92-character base64 ciphertext and a 2000-character one produced
+    // 2756 -- the exact quasi-identifier the review named. Padding every
+    // plaintext to PLAINTEXT_PAD_BYTES before AES-GCM removes it: the
+    // ciphertext length is now a function of the pad target alone.
+    const { publicPem } = await generateEventKeyPair();
+    const short = { overall_rating: 1, recommend: false, feedback: '' };
+    const long = { overall_rating: 5, recommend: true, feedback: 'x'.repeat(2000) };
+
+    const shortEnvelope = JSON.parse(await encryptSurveyResponse(publicPem, short));
+    const longEnvelope = JSON.parse(await encryptSurveyResponse(publicPem, long));
+
+    expect(base64ByteLength(shortEnvelope.ciphertext)).toBe(
+      base64ByteLength(longEnvelope.ciphertext),
+    );
+    // Sanity: the shared length is exactly the padded plaintext plus the
+    // 16-byte GCM tag, not merely "the same as each other" by coincidence.
+    expect(base64ByteLength(shortEnvelope.ciphertext)).toBe(PLAINTEXT_PAD_BYTES + 16);
+  });
+
+  it('rejects an answer too long to pad, rather than silently truncating it', async () => {
+    const { publicPem } = await generateEventKeyPair();
+    // Comfortably past PLAINTEXT_PAD_BYTES once JSON-encoded -- the shape
+    // `to_survey_response`'s own length cap should already refuse well
+    // before this, but padPlaintext must not silently truncate if it were
+    // ever reached anyway.
+    const tooLong = { overall_rating: 1, recommend: true, feedback: 'x'.repeat(9000) };
+    await expect(encryptSurveyResponse(publicPem, tooLong)).rejects.toThrow();
   });
 });
 
