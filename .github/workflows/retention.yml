@@ -1,0 +1,134 @@
+name: Retention sweep
+
+# Task 15: the job that makes the phase 4 spec's central promise true.
+# S:4's cycle-of-life table ends "destruction de la cle -- les donnees de
+# l'evenement deviennent definitivement illisibles" 90 days after the
+# event (tools/convener_ops/eventkeys.py::is_due_for_destruction); acceptance
+# criterion 6 requires this to actually run, not merely be documented.
+# Scheduled (R-33 -- a retention job that only runs when somebody
+# remembers is the failure this task exists to prevent), with
+# workflow_dispatch for an operator to run it by hand.
+#
+# R-28: CONVENER_RETENTION_TOKEN is deliberately not GITHUB_TOKEN. Deleting a
+# repository secret needs a credential GITHUB_TOKEN does not carry, no
+# matter what this job's own `permissions:` grants -- a fine-grained
+# personal access token, scoped to this repository, with the 'Secrets'
+# permission set to read and write and nothing else. See
+# docs/reference/operations.md, 'Retention and early erasure', for how to
+# create one. Without it, the "Compute what is due" step below fails this
+# job outright, on every run, whether or not anything is actually due for
+# destruction today -- see tools/convener_ops/cli.py::retention_sweep's own
+# docstring for why that is deliberate, not a bug: a green run that
+# destroyed nothing must never look the same, from the Actions tab, as a
+# green run that had nothing to destroy.
+on:
+  schedule:
+    - cron: '11 6 * * *'
+  workflow_dispatch:
+
+# Serialises this workflow's own runs against each other (a scheduled run
+# and a manual dispatch overlapping, in particular) -- the certificate
+# workflows key theirs on the one event id an operator names; there is no
+# such scope here, since one run can sweep every event at once.
+concurrency:
+  group: retention-sweep
+  cancel-in-progress: false
+
+jobs:
+  retention:
+    runs-on: ubuntu-latest
+    # Checkout, `uv sync`, a glob over keys/events/*.pub against
+    # data/speakers.yml and the destruction registry -- no decrypt, no
+    # network call from Python at all (see cli.py::retention_sweep's own
+    # docstring: it computes only, and never touches the GitHub API
+    # itself).
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      - name: Compute what is due for destruction
+        id: sweep
+        working-directory: tools
+        env:
+          CONVENER_RETENTION_TOKEN: ${{ secrets.CONVENER_RETENTION_TOKEN }}
+        run: uv run convener-retention-sweep
+      - name: Delete the destroyed event keys from repository secrets
+        id: delete
+        if: steps.sweep.outputs.destroyed_secrets != ''
+        env:
+          GH_TOKEN: ${{ secrets.CONVENER_RETENTION_TOKEN }}
+          DESTROYED_IDS: ${{ steps.sweep.outputs.destroyed_ids }}
+          DESTROYED_SECRETS: ${{ steps.sweep.outputs.destroyed_secrets }}
+        # Deliberately not inside the commit-and-push retry loop below:
+        # deleting an already-deleted secret is an error, not a no-op, so
+        # each secret is deleted at most once. `destroyed_ids` and
+        # `destroyed_secrets` are parallel, same-order lists (both built
+        # from the same `due` list in cli.py::retention_sweep), so this
+        # tracks which events actually had their secret removed
+        # (`recorded_ids`) and hands only that subset to the recording
+        # step below -- which runs on `if: always()`, so a failure partway
+        # through a multi-event batch still gets every secret that *did*
+        # come off recorded. The registry must never claim a destruction
+        # that did not happen (R-30); it also must never fail to record
+        # one that did.
+        run: |
+          IFS=',' read -r -a names <<< "$DESTROYED_SECRETS"
+          IFS=',' read -r -a ids <<< "$DESTROYED_IDS"
+          recorded=""
+          status=0
+          for i in "${!names[@]}"; do
+            name="${names[$i]}"
+            id="${ids[$i]}"
+            echo "deleting $name"
+            if gh secret delete "$name" --repo "$GITHUB_REPOSITORY"; then
+              recorded="${recorded:+$recorded,}$id"
+            else
+              echo "::error::failed to delete $name for event $id"
+              status=1
+              break
+            fi
+          done
+          echo "recorded_ids=$recorded" >> "$GITHUB_OUTPUT"
+          exit $status
+      - name: Record the destructions and commit the registry
+        if: always() && steps.delete.outputs.recorded_ids != ''
+        env:
+          DESTROYED_IDS: ${{ steps.delete.outputs.recorded_ids }}
+          DESTROYED_ON: ${{ steps.sweep.outputs.destroyed_on }}
+        # `convener-record-destructions` re-run inside the retry loop, the same
+        # shape registration.yml's own handling step already uses: a
+        # rejected push resets the working tree back to origin, so
+        # re-running the command recomputes the identical registry rather
+        # than trying to re-push a commit `git reset --hard` just
+        # discarded. Safe to re-run because `record_destructions` is
+        # idempotent by construction -- see its own docstring.
+        run: |
+          set -e
+          git config user.name "convener-retention"
+          git config user.email "convener-retention@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-record-destructions)
+            git add data/event-key-destructions.yml
+            if git diff --staged --quiet; then
+              echo "::warning::convener-retention-sweep found events due for destruction, but the registry already recorded them -- see this run's own log above"
+              exit 0
+            fi
+            git commit -m "data: record the destruction of an event registration key"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+          done
+          echo "::error::push failed after 3 attempts -- the event key(s) were already destroyed, but the record was not saved; rerun this workflow to record it, or write data/event-key-destructions.yml by hand"
+          exit 1

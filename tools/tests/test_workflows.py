@@ -1343,3 +1343,110 @@ def test_issue_certificates_workflow_has_a_resend_all_input_defaulting_false() -
     assert inputs["resend_all"]["type"] == "boolean"
     assert inputs["resend_all"]["default"] is False
     assert inputs["resend_all"]["required"] is False
+
+
+# ------------------------------------------------------------------ #
+# Task 15: retention.yml and erase-registration.yml. Same derived-
+# environment idiom as the certificate trio above -- the whole reason it
+# exists (this section's own header comment) is a workflow that forwards
+# three of nine environment variables its own command reads while its
+# test suite stays green; a hand-typed list here would reproduce exactly
+# that gap rather than catch it.
+# ------------------------------------------------------------------ #
+
+RETENTION_WORKFLOW = Path(".github/workflows/retention.yml")
+ERASE_REGISTRATION_WORKFLOW = Path(".github/workflows/erase-registration.yml")
+
+
+def test_retention_sweep_step_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "retention_sweep")
+    assert expected == {"CONVENER_RETENTION_TOKEN"}, (
+        "the derivation itself found an unexpected set -- either "
+        "retention_sweep changed what it reads, or this AST walk no "
+        "longer sees it correctly; investigate before trusting the "
+        "carried-forward check below"
+    )
+    carried = _workflow_step_env_keys(
+        RETENTION_WORKFLOW, "retention", "convener-retention-sweep"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"retention.yml does not forward {missing} to the step that runs "
+        "convener-retention-sweep, which reads it directly -- R-28's own "
+        "failure mode would go unenforced in production"
+    )
+
+
+def test_record_destructions_step_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "record_destructions")
+    assert expected == {"DESTROYED_IDS", "DESTROYED_ON"}
+    carried = _workflow_step_env_keys(
+        RETENTION_WORKFLOW, "retention", "convener-record-destructions"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"retention.yml does not forward {missing} to the step that runs "
+        "convener-record-destructions, which reads it directly"
+    )
+
+
+def test_erase_registration_step_carries_every_env_var_the_command_reads() -> None:
+    expected = _env_vars_read(CLI_MODULE_PATH, "erase_registration")
+    assert expected == {
+        "EVENT_ID",
+        "MATCHING_CODE",
+        "REGISTRATION_EMAIL",
+        "EVENT_PRIVATE_KEY",
+        "CONVENER_MATCHING_SALT",
+    }
+    carried = _workflow_step_env_keys(
+        ERASE_REGISTRATION_WORKFLOW, "erase", "convener-erase-registration"
+    )
+    missing = expected - carried
+    assert not missing, (
+        f"erase-registration.yml does not forward {missing} to the step "
+        "that runs convener-erase-registration, which reads it directly"
+    )
+
+
+def test_retention_workflow_is_both_scheduled_and_dispatchable() -> None:
+    """R-33: a retention job that only runs when somebody remembers is
+    the failure this task exists to prevent -- scheduled, with
+    workflow_dispatch for a manual run, the same pairing sweep.yml already
+    uses for its own daily job."""
+    text = (ROOT / RETENTION_WORKFLOW).read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    assert "schedule:" in trigger
+    assert "cron:" in trigger
+    assert "workflow_dispatch:" in trigger
+
+
+def test_erase_registration_workflow_is_dispatchable_by_hand() -> None:
+    """The same check `test_deliver_certificate_workflow_is_dispatchable_
+    by_hand` already makes for task 14's own resend path: a command
+    nothing invokes is not delivered work."""
+    text = (ROOT / ERASE_REGISTRATION_WORKFLOW).read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    assert "workflow_dispatch:" in trigger
+
+
+def test_retention_workflow_job_has_write_permission_and_a_timeout() -> None:
+    loaded = safe_load((ROOT / RETENTION_WORKFLOW).read_text(encoding="utf-8"))
+    job = loaded["jobs"]["retention"]
+    assert job.get("permissions") == {"contents": "write"}
+    assert isinstance(job.get("timeout-minutes"), int)
+
+
+def test_erase_registration_workflow_job_has_write_permission_and_a_timeout() -> None:
+    loaded = safe_load((ROOT / ERASE_REGISTRATION_WORKFLOW).read_text(encoding="utf-8"))
+    job = loaded["jobs"]["erase"]
+    assert job.get("permissions") == {"contents": "write"}
+    assert isinstance(job.get("timeout-minutes"), int)
+
+
+def test_retention_workflow_has_its_own_concurrency_group() -> None:
+    loaded = safe_load((ROOT / RETENTION_WORKFLOW).read_text(encoding="utf-8"))
+    concurrency = loaded.get("concurrency")
+    assert isinstance(concurrency, dict)
+    assert concurrency.get("group") == "retention-sweep"
+    assert concurrency.get("cancel-in-progress") is False
