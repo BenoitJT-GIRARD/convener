@@ -17,6 +17,17 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'governance/board-rules': { file: 'governance/board-rules.md', anchor: null },
   'governance/conflict-of-interest': { file: 'governance/conflict-of-interest.md', anchor: null },
   'governance/decisions': { file: 'governance/decisions.md', anchor: null },
+  // Fix round 1: linked from `governance/decisions.md` and
+  // `reference/the-workspace.md` with a plain relative link, but never
+  // itself registered -- so it shipped by accident under the old
+  // wholesale copy, and would have 404ed under the registry-derived
+  // allowlist once that accident stopped. Registered instead of
+  // delinked: it is a git-derived, no-free-text audit trail of board
+  // decisions (day, identifier, closed vocabulary only -- see the file's
+  // own header), the same kind of governance transparency
+  // `governance/decisions` already carries, not internal operational
+  // detail like `reference/operations.md`.
+  'governance/register': { file: 'governance/register.md', anchor: null },
   // The processing record spec §4 names (task 18): data, purpose, legal
   // basis, recipients, duration and measures for the registration,
   // attendance and certificate pipeline. Filename kept as the task brief

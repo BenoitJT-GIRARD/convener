@@ -10,8 +10,8 @@ So both dependencies were removed rather than documented better. What used to be
 
 | It used to be | It is now |
 |---|---|
-| Asking a contact at another institute to open the meeting room and start the recording | A meeting platform the organisation holds itself, with a manual fallback for the day nothing else works — [Operations](operations.md#meeting-platform) |
-| Sending the recording to someone else's channel to be uploaded | A video channel on the organisation's own account, which is also what makes the Board's publication gate real — [Operations](operations.md#video-channel) |
+| Asking a contact at another institute to open the meeting room and start the recording | A meeting platform the organisation holds itself, with a manual fallback for the day nothing else works — [Operations](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#meeting-platform) |
+| Sending the recording to someone else's channel to be uploaded | A video channel on the organisation's own account, which is also what makes the Board's publication gate real — [Operations](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#video-channel) |
 
 Neither of those pages names a person, and that is the point: they name a credential the Board can hand on. If you find a page that still tells you to email somebody outside the team, that page is out of date — fix it, and say so in the thread.
 
@@ -22,7 +22,7 @@ There is no Board mailbox to write to, and that is a choice rather than an omiss
 - **For anything about one speaker or one session** — say it on that record, in the workspace. It is where whoever picks the question up will already be looking.
 - **For anything else** — open an issue here, or comment on the standing *Board notifications* thread, and mention the editorial-board team. GitHub sends the email; that is the whole mechanism, and it is the same path the nightly digest takes.
 
-A team is mentioned rather than a person, always. The channel has to keep working on the day any one volunteer stops reading their notifications, and a message addressed to a name does not. Which thread and which team handle are set up once, per repository, and written down in [Operations — Board notifications](operations.md#board-notifications).
+A team is mentioned rather than a person, always. The channel has to keep working on the day any one volunteer stops reading their notifications, and a message addressed to a name does not. Which thread and which team handle are set up once, per repository, and written down in [Operations — Board notifications](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#board-notifications).
 
 If you are not on GitHub, ask any volunteer to open it for you. Nothing here requires that the person with the question is the person who types it.
 

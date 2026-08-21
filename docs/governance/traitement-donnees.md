@@ -160,5 +160,5 @@ address the confirmation email and the event page's own notice both name.
 
 *See also: the event page's own notice, `app/src/signup/SignupForm.tsx`, for
 what a participant reads before registering, and
-[Operations](../reference/operations.md) for the full procedures behind
+[Operations](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md) for the full procedures behind
 every measure named above.*
