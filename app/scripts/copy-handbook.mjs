@@ -4,18 +4,24 @@
  * over the visual kit from a same-origin static path (no GitHub API call
  * needed, works in demo mode). Runs before `vite dev` and `vite build`.
  *
- * This used to copy every file under `docs/` that had a recognised
- * extension and was not in a skipped directory -- no allowlist, only an
- * extension filter and a directory skip-list, so a page added under
- * `docs/reference/` or a new top-level directory such as
- * `docs/superpowers/` shipped into this same public bundle the moment it
- * existed, whether or not it was meant for a reader outside this
- * application. `docs/reference/operations.md` did exactly that. The
- * allowlist that decides what the app renders already existed --
- * `CONTENT_REGISTRY` -- it just was not the thing deciding what this script
- * copied. It is now: see `handbook-registry.mjs::publishedPaths`, and the
- * sweep in `app/tests/copy-handbook.test.ts` that fails if a file absent
- * from that allowlist ever reaches `public/handbook/` again.
+ * This used to copy every file under `docs/` with a recognised extension
+ * (`.md`, `.svg`, `.png` -- an extension allowlist) that did not sit in one
+ * of three skipped directories (`superpowers`, `stylesheets`, `app` -- a
+ * directory denylist). Both existed; neither was the allowlist
+ * `public_data.py` describes. The denylist named three directories and
+ * never `docs/reference/`, so any `.md` page added there shipped, whichever
+ * it was -- `docs/reference/operations.md`, which names every secret and
+ * every procedure, did exactly that, verified by a real build before this
+ * change. The extension allowlist covered `.png`, and `docs/assets/` was
+ * never skipped, so a `.png` dropped there shipped too -- verified the same
+ * way, and one such file was a past speaker's own photograph and name (see
+ * `PUBLIC_ASSETS`'s own comment on `docs/assets/flyer-example.png`, fix
+ * round 1 of this task). The allowlist that decides what the app *renders*
+ * already existed -- `CONTENT_REGISTRY` -- it just was not the thing
+ * deciding what this script *copied*. It is now: see
+ * `handbook-registry.mjs::publishedPaths`, and the sweep in
+ * `app/tests/copy-handbook.test.ts` that fails if a file absent from that
+ * allowlist ever reaches `public/handbook/` again.
  */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
