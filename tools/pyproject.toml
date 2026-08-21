@@ -55,6 +55,9 @@ convener-reissue-certificate = "convener_ops.cli:reissue_certificate"
 convener-revoke-certificate = "convener_ops.cli:revoke_certificate"
 convener-deliver-certificates = "convener_ops.cli:deliver_certificates"
 convener-deliver-certificate = "convener_ops.cli:deliver_certificate"
+convener-retention-sweep = "convener_ops.cli:retention_sweep"
+convener-record-destructions = "convener_ops.cli:record_destructions"
+convener-erase-registration = "convener_ops.cli:erase_registration"
 
 [build-system]
 requires = ["hatchling"]

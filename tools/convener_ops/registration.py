@@ -405,6 +405,89 @@ def find_by_email(
     return None
 
 
+def erase(
+    file: RegistrationFile, email: str, private_pem: str
+) -> tuple[RegistrationFile, bool]:
+    """Remove the one entry addressed to `email` from `file` -- the early
+    erasure spec S4 asks for ("reecriture du fichier chiffre sans
+    l'enregistrement concerne"), task 15's own procedure.
+
+    Returns the updated file and whether an entry was actually removed
+    (`True`) as opposed to nothing matching (`False`) -- `cli.py` reports
+    the second case as "no registration found", the same shape
+    `find_by_email` already has no match for.
+
+    This is `upsert`'s own replace loop with the matched entry dropped
+    instead of swapped in: it walks `file.entries` once, decrypts each one
+    with `private_pem` to find the single entry whose address normalises
+    to `email` (the same "the same registrant" rule `upsert` and
+    `find_by_email` already use), and keeps every other entry exactly as
+    found -- not re-serialised, not touched. That is the property the
+    module docstring's own reasoning for one envelope per registration
+    exists to buy (see "The file shape, and why it is not one envelope for
+    the whole event"): erasing Grace must not so much as re-encrypt Ada's
+    or Marie's entry, the same guarantee `upsert` already gives an update,
+    now given to a removal. Stops decrypting further entries once the
+    target is found, the same early exit `upsert`'s own loop already
+    performs, since only one entry can ever match one address.
+
+    An entry this function cannot decrypt under `private_pem` (a stray
+    entry from another event's key, in practice unreachable, or genuinely
+    corrupt data) is kept exactly as found and never treated as a match --
+    the same defensive handling `upsert` and `find_by_email` already give
+    an undecryptable entry."""
+    target = normalize_email(email)
+    kept: list[Mapping[str, Any]] = []
+    removed = False
+    for entry in file.entries:
+        existing = None if removed else to_registration(json.dumps(entry), private_pem)
+        if (
+            not removed
+            and existing is not None
+            and normalize_email(existing.email) == target
+        ):
+            removed = True
+            continue
+        kept.append(entry)
+    return RegistrationFile(entries=tuple(kept)), removed
+
+
+def find_by_matching_code(
+    file: RegistrationFile, event_id: str, code: str, salt: str | None, private_pem: str
+) -> Registration | None:
+    """The entry whose own `matching_code(event_id, entry.email, salt)`
+    equals `code`, or `None` -- the preferred way to identify one
+    registration for an early erasure request (R-32): the code is already
+    in the participant's own confirmation e-mail (task 7), never stored
+    anywhere on our side, and naming it does not require the requester to
+    retype an address into an operator-facing form.
+
+    `code` is compared case-insensitively, stripped of surrounding
+    whitespace first -- `matching_code` itself always renders uppercase,
+    but a participant forwarding it by hand may not preserve that.
+    `None` immediately when `salt` is falsy: with no salt, `matching_code`
+    itself returns `None` for every entry, so nothing here could ever
+    match, and there is no reason to decrypt the whole file to learn that
+    (the same ordinary D-13 absence `matching_code`'s own docstring
+    describes -- an early erasure by code simply cannot be resolved
+    without it; `cli.py` falls back to the address instead, R-32's own
+    documented exception).
+
+    Decrypts entries in order and stops at the first match, the same
+    early-exit `find_by_email` already performs; an entry that fails to
+    decrypt under `private_pem` is skipped rather than treated as a match."""
+    if not salt:
+        return None
+    wanted = code.strip().upper()
+    for entry in file.entries:
+        existing = to_registration(json.dumps(entry), private_pem)
+        if existing is None:
+            continue
+        if matching_code(event_id, existing.email, salt) == wanted:
+            return existing
+    return None
+
+
 #: The alphabet a matching code is drawn from: digits 2-9 and every
 #: uppercase letter except I, L, O and U -- the first three are the pairs a
 #: spoken or handwritten code is classically confused on (0/O, 1/I/l); U

@@ -13,7 +13,7 @@ import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Final
 
@@ -73,8 +73,10 @@ from convener_ops.register import (
 from convener_ops.registration import (
     Registration,
     dump_registration_file,
+    erase,
     event_id_from_payload,
     find_by_email,
+    find_by_matching_code,
     load_registration_file,
     matching_code,
     to_registration,
@@ -100,6 +102,12 @@ CONFIG_HEADER = "# Repo-wide config for the Convener app\n"
 #: directory, untouched.
 CERTIFICATES_HEADER = (
     "# Certificate register -- no name, no address; see tools/convener_ops/certificate.py\n"
+)
+#: The destruction registry (task 15) holds only an event id and a date --
+#: see tools/convener_ops/eventkeys.py's module docstring, "the destruction
+#: registry lives in one file".
+DESTRUCTIONS_HEADER = (
+    "# Event key destruction registry; see tools/convener_ops/eventkeys.py\n"
 )
 
 
@@ -792,6 +800,317 @@ def resend_confirmation() -> int:
         return 1
 
     _send_confirmation(event_id, registration, ())
+    return 0
+
+
+def _load_destruction_registry(root: Path) -> tuple[dict[str, date], str | None]:
+    """`(registry, None)` on success, `({}, message)` on a malformed
+    committed file -- never raises, so both `retention_sweep` and
+    `erase_registration` can print one line and return 1 the same way
+    every other "closed shape" loader in this module already does. A
+    *missing* file is not an error: no event has ever been destroyed yet,
+    the ordinary state before the first retention sweep finds anything
+    due (`eventkeys.registry_from_data(None)`)."""
+    registry_path = eventkeys.destructions_path(root)
+    if not registry_path.exists():
+        return {}, None
+    try:
+        data = yaml_safe_load(registry_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return {}, f"{eventkeys.DESTRUCTIONS_PATH.as_posix()}: invalid YAML - {exc}"
+    try:
+        return eventkeys.registry_from_data(data), None
+    except ValueError as exc:
+        return {}, f"{eventkeys.DESTRUCTIONS_PATH.as_posix()}: {exc}"
+
+
+def retention_sweep() -> int:
+    """`convener-retention-sweep`: the job that makes spec S4's central promise
+    true. Finds the id of every event whose retention window has elapsed
+    (`eventkeys.is_due_for_destruction`: event date + 90 days, measured
+    against `paris_today`) and whose key is not already on record as
+    destroyed.
+
+    **Computes only -- it does not write the registry and does not delete
+    anything.** Writes `$GITHUB_OUTPUT`: `destroyed_ids` (comma-joined
+    event ids), `destroyed_secrets` (the matching `CONVENER_EVENT_KEY_<ID>`
+    names, `eventkeys.secret_name`), and `destroyed_on` (today's Paris
+    date, ISO -- every event this run finds due shares one day). Three
+    later, separate steps in `.github/workflows/retention.yml` read these:
+    deleting the named secrets (`gh secret delete`), recording the
+    destructions (`record_destructions`, below), and committing that
+    record -- split out precisely so a *push* that has to retry after a
+    rejected fast-forward re-runs only the pure, idempotent recording
+    step, never `gh secret delete` a second time against a secret an
+    earlier attempt already removed.
+
+    **R-28: `CONVENER_RETENTION_TOKEN` absent fails this job outright, on
+    every scheduled run, whether or not any event happens to be due for
+    destruction today.** Every other secret in this codebase degrades to
+    an ordinary D-13 absence -- a feature that does not run this time,
+    reported and nothing more. This one does not: a retention job that
+    exits green having destroyed nothing looks identical, from the
+    Actions tab, to a retention job that genuinely had nothing to do --
+    and the two must never be confused for a promise with legal weight.
+    So this is checked, and fails, before anything else -- including
+    before reading `data/speakers.yml`, so a malformed data file is never
+    what an operator sees first when the real problem is a missing
+    credential. This function does not itself call the GitHub API with
+    the token -- `retention.yml`'s own `gh secret delete` step does -- but
+    its *presence* is checked here regardless, so the job fails at the
+    first step rather than after computing a set of secrets nothing can
+    then delete.
+
+    A speaker record that cannot be found, or carries no usable `date`,
+    for an event whose public key is still published is reported (one
+    line, the event id only -- already public) and skipped rather than
+    failing the whole run: one mis-recorded event must not block every
+    other event's own, unrelated retention deadline from being honoured.
+    """
+    token = os.environ.get("CONVENER_RETENTION_TOKEN", "")
+    if not token:
+        print(
+            "CONVENER_RETENTION_TOKEN is not configured -- destroying an event "
+            "key requires a fine-grained personal access token, scoped to "
+            "this repository, with the 'Secrets' permission set to "
+            "read and write and nothing else (the default GITHUB_TOKEN "
+            "cannot delete a repository secret). Without it this job "
+            "cannot carry out the destruction the retention window "
+            "promises, so it fails rather than exiting clean having "
+            "destroyed nothing -- see docs/reference/operations.md, "
+            "'Retention and early erasure'",
+            file=sys.stderr,
+        )
+        return 1
+
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+    speaker_list = speakers if isinstance(speakers, list) else []
+
+    registry, registry_error = _load_destruction_registry(root)
+    if registry_error:
+        print(registry_error, file=sys.stderr)
+        return 1
+
+    today = paris_today(datetime.now(UTC))
+
+    keys_dir = root / eventkeys.KEYS_DIR
+    due: list[str] = []
+    if keys_dir.is_dir():
+        for pub_path in sorted(keys_dir.glob("*.pub")):
+            event_id = pub_path.stem
+            if event_id in registry:
+                continue
+            try:
+                speaker_record = find_speaker(speaker_list, event_id)
+            except EventNotFoundError:
+                print(
+                    f"no speaker record for event {event_id} -- its "
+                    "retention deadline cannot be determined; skipped "
+                    "this run",
+                    file=sys.stderr,
+                )
+                continue
+            try:
+                event_date = date.fromisoformat(
+                    str(speaker_record.get("date", "") or "")
+                )
+            except ValueError:
+                print(
+                    f"event {event_id} has no usable date -- its "
+                    "retention deadline cannot be determined; skipped "
+                    "this run",
+                    file=sys.stderr,
+                )
+                continue
+            if eventkeys.is_due_for_destruction(event_date, today):
+                due.append(event_id)
+
+    if not due:
+        print("nothing due for destruction today")
+        _write_github_output(
+            f"destroyed_ids=\ndestroyed_secrets=\ndestroyed_on={today.isoformat()}\n"
+        )
+        return 0
+
+    secret_names = [eventkeys.secret_name(event_id) for event_id in due]
+    print(f"due for destruction: {', '.join(due)}")
+    _write_github_output(
+        f"destroyed_ids={','.join(due)}\n"
+        f"destroyed_secrets={','.join(secret_names)}\n"
+        f"destroyed_on={today.isoformat()}\n"
+    )
+    return 0
+
+
+def record_destructions() -> int:
+    """`convener-record-destructions`: write `data/event-key-destructions.yml`
+    with every id in `DESTROYED_IDS` (comma-joined, `retention_sweep`'s
+    own `$GITHUB_OUTPUT`) recorded as destroyed on `DESTROYED_ON` (that
+    same step's own output -- an ISO date; every event one sweep finds due
+    shares one Paris day) -- factored out of `retention_sweep` itself so
+    `retention.yml`'s commit-and-push retry loop can re-run *this* step
+    alone after a rejected push resets the working tree, without ever
+    repeating `gh secret delete` for a secret an earlier attempt already
+    removed. Pure with respect to the outside world in the sense that
+    matters here: it never calls the GitHub API, and calling it twice for
+    the same ids -- on the same day or a later one, as a genuine retry
+    would -- writes the identical file, by the same rule
+    `eventkeys.destroy` itself follows (see its own docstring): an id
+    already in the registry keeps its existing date (`dict.setdefault`),
+    never overwritten by whatever day the retry happens to run on. This
+    does not call `eventkeys.destroy` itself -- there is no
+    `key_was_published` to check here, since every id in `DESTROYED_IDS`
+    already named a published key by the time `retention_sweep` put it
+    there -- but it reproduces the one guarantee that matters from this
+    step's own vantage point.
+
+    A missing or malformed `DESTROYED_ON`, or a `data/event-key-
+    destructions.yml` that failed to parse, is reported and the run exits
+    1 -- both mean this step cannot answer the one question it exists to
+    answer (what day did this destruction happen), so it must not guess.
+    An empty `DESTROYED_IDS` is not an error: `retention_sweep` writes it
+    empty on an ordinary day nothing was due, and this step has nothing to
+    record.
+    """
+    ids = [
+        event_id
+        for event_id in os.environ.get("DESTROYED_IDS", "").split(",")
+        if event_id
+    ]
+    if not ids:
+        print("no destroyed event ids to record")
+        return 0
+
+    destroyed_on_raw = os.environ.get("DESTROYED_ON", "").strip()
+    try:
+        destroyed_on = date.fromisoformat(destroyed_on_raw)
+    except ValueError:
+        print(
+            f"DESTROYED_ON is not a valid date: {destroyed_on_raw!r}", file=sys.stderr
+        )
+        return 1
+
+    root = repo_root()
+    registry, registry_error = _load_destruction_registry(root)
+    if registry_error:
+        print(registry_error, file=sys.stderr)
+        return 1
+
+    for event_id in ids:
+        registry.setdefault(event_id, destroyed_on)
+
+    registry_path = eventkeys.destructions_path(root)
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(
+        DESTRUCTIONS_HEADER + _dump(eventkeys.registry_to_data(registry)),
+        encoding="utf-8",
+        newline="",
+    )
+    print(f"recorded {len(ids)} destruction(s): {', '.join(ids)}")
+    return 0
+
+
+def erase_registration() -> int:
+    """`convener-erase-registration`: rewrite `registrations.enc` without the
+    one entry an early erasure request names -- spec S4's "effacement
+    avant echeance" ("reecriture du fichier chiffre sans l'enregistrement
+    concerne, procedure documentee et testee").
+
+    **Identifies the registration by `MATCHING_CODE` in preference to
+    `REGISTRATION_EMAIL` (R-32).** The code is already in the
+    participant's own confirmation e-mail (task 7) and is recomputed and
+    compared against every stored entry
+    (`registration.find_by_matching_code`), never reversed out of
+    anything stored -- nothing here stores it. `REGISTRATION_EMAIL` is
+    accepted as a fallback for a participant who no longer has that
+    e-mail: the same **deliberate, documented exception**
+    `resend_confirmation` above already makes for the identical reason
+    (an address in a `workflow_dispatch` input is rendered and retained on
+    the run page -- review round 1, Important 4 -- accepted anyway because
+    refusing the request would be worse than the exposure). Both may be
+    supplied; the code is tried first.
+
+    **Checked before anything else touches disk: has this event's key
+    already been destroyed?** `data/event-key-destructions.yml` is read
+    first, and if it already names `event_id`, this prints the destruction
+    date on record and returns 0 -- spec S4's "et c'est demontrable",
+    proved from the committed registry rather than merely asserted, and
+    the request is already satisfied (there is nothing left that could be
+    erased). An event id that is not known to this repository at all (no
+    `keys/events/<id>.pub`, and no destruction on record either) is
+    refused instead -- that is not "already erased", it names nothing this
+    repository ever registered.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    root = repo_root()
+    registry, error = _load_destruction_registry(root)
+    if error:
+        print(error, file=sys.stderr)
+        return 1
+
+    destroyed_on = registry.get(event_id)
+    if destroyed_on is not None:
+        print(
+            f"nothing to erase for event {event_id}: its key was destroyed "
+            f"on {destroyed_on.isoformat()}, and every registration for "
+            "this event has been permanently unreadable since"
+        )
+        return 0
+
+    if not eventkeys.public_key_path(event_id).exists():
+        print(f"event {event_id} is not known to this repository", file=sys.stderr)
+        return 1
+
+    code = os.environ.get("MATCHING_CODE", "").strip()
+    email = os.environ.get("REGISTRATION_EMAIL", "").strip()
+    if not code and not email:
+        print("no matching code or e-mail address supplied", file=sys.stderr)
+        return 1
+
+    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
+    if not private_pem:
+        print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    enc_path = root / rel_path
+    if not enc_path.exists():
+        print(f"no registrations recorded for event {event_id}", file=sys.stderr)
+        return 1
+    try:
+        current = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return 1
+
+    target: Registration | None = None
+    if code:
+        salt = os.environ.get("CONVENER_MATCHING_SALT")
+        target = find_by_matching_code(current, event_id, code, salt, private_pem)
+    if target is None and email:
+        target = find_by_email(current, email, private_pem)
+    if target is None:
+        print(f"no registration found for event {event_id}", file=sys.stderr)
+        return 1
+
+    updated, removed = erase(current, target.email, private_pem)
+    if not removed:
+        print(f"no registration found for event {event_id}", file=sys.stderr)
+        return 1
+
+    enc_path.write_text(dump_registration_file(updated), encoding="utf-8", newline="")
+    print(f"erased a registration for event {event_id} ({len(updated.entries)} remain)")
     return 0
 
 

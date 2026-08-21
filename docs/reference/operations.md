@@ -590,10 +590,82 @@ to happen to the repository itself. Record the destruction
 (`convener_ops.eventkeys.destroy`) so the register can tell "destroyed on purpose" apart
 from "this event never had a key" two years from now — the two look
 identical from the repository alone, and only the register carries the
-difference. A scheduled retention workflow (see phase 4) is meant to wire
-this up so removing the secret and recording the destruction happen
-together; done by hand, it is these two steps, always together, in that
-order.
+difference. This happens automatically now — see *Retention and early
+erasure*, below, for the scheduled workflow that removes the secret and
+records the destruction together; done by hand instead, it is these two
+steps, always together, in that order.
+
+## Retention and early erasure
+
+Task 15's own job: the phase 4 spec's central promise (§4) — a key
+destroyed 90 days after its event, making that event's registrations
+permanently unreadable — carried out automatically, on a schedule, and
+proved by a test (`tools/tests/test_retention.py`,
+`test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever`).
+
+**`.github/workflows/retention.yml`** runs daily and on demand
+(`workflow_dispatch`, no inputs). Each run: computes which events'
+90-day windows have elapsed (`convener_ops.eventkeys.is_due_for_destruction`,
+measured against `convener_ops.governance.paris_today` — never a raw clock
+read); deletes each one's `CONVENER_EVENT_KEY_<EVENT ID>` secret (`gh secret
+delete`); and records every destruction it actually carried out in
+`data/event-key-destructions.yml`, the registry `convener_ops.eventkeys.key_status`
+reads to tell "destroyed on purpose" apart from "this event never had a
+key". A day nothing is due is an ordinary, green run that changes
+nothing.
+
+**`CONVENER_RETENTION_TOKEN` — the one credential this whole job depends on,
+and its absence is deliberately not an ordinary D-13 state (R-28).**
+Deleting a repository secret needs a credential `GITHUB_TOKEN` does not
+carry, no matter what `permissions:` a workflow grants it — so this is a
+**fine-grained personal access token, scoped to this repository, with
+the "Secrets" repository permission set to Read and write, and nothing
+else** (the same "one narrow scope, nothing more" shape
+`VITRINE_DEPLOY_TOKEN` already uses for a different repository — see *CI-only
+secrets*, below — except this one *is* declared in
+`config/integrations.yml`, because its absence is not ordinary noise:
+`convener-check-config` reports it, exactly like `CONVENER_EVENT_KEY_<ID>`, marked
+"not a normal absence"). Free — a personal access token costs nothing —
+so the zero-cost constraint holds.
+
+**Without it, `convener-retention-sweep` fails the job outright, on every
+scheduled run, whether or not any event is actually due for destruction
+that day.** This is deliberate, and the strongest exception to D-13 in
+this project: every other missing integration degrades to "a feature is
+quietly unavailable"; this one does not, because a retention job that
+exits green having destroyed nothing looks, from the Actions tab,
+identical to one that genuinely had nothing to do — and the two must
+never be confused for a promise with legal weight. A red job every day
+until the token is set is the correct pressure. **To create one:** on
+GitHub, Settings → Developer settings → Personal access tokens →
+Fine-grained tokens → generate one scoped only to this repository, with
+only the Secrets permission, set to read and write; paste the value into
+this repository's own `CONVENER_RETENTION_TOKEN` secret.
+
+**Early erasure**, spec §4's other right (erasure before the retention
+deadline): a participant's own registration removed from
+`registrations.enc` before
+the retention window ends, without touching any other registrant's own
+entry (R-31; `convener_ops.registration.erase`). Run
+**`.github/workflows/erase-registration.yml`** by hand
+(`workflow_dispatch`) with the event id and, **preferred**, the matching
+code from the participant's own confirmation e-mail (`convener_ops.registration
+.find_by_matching_code` recomputes and compares it — nothing on our side
+ever stores it). The e-mail address is accepted as a **documented,
+deliberate fallback** for someone who no longer has that e-mail (R-32) —
+the same exception *Outbound email*'s own "Manual resend" section above
+already makes for `convener-resend-confirmation`'s `email` input: rendered and
+retained on the run page for as long as the run's history exists,
+accepted anyway because refusing the request would be worse than the
+exposure, and `workflow_dispatch` is restricted to collaborators with
+repository write access regardless.
+
+**Once an event's key is destroyed, there is nothing left to erase, and
+this is provable rather than merely asserted (spec §4).**
+`convener-erase-registration` checks `data/event-key-destructions.yml` first —
+before asking for a private key at all — and, if the event is already on
+record as destroyed, prints the destruction date and exits cleanly: the
+request is already satisfied.
 
 ## Certificate signing key
 

@@ -124,6 +124,55 @@ for the same event returns the existing record rather than raising or
 minting a second one: a retention job that reruns after a partial failure
 must be able to repeat the call safely, and the record's date is the day it
 was first destroyed, never the day of the retry.
+
+The deadline is computed, never read off a form (task 15)
+------------------------------------------------------------
+`is_due_for_destruction` is the whole of "date de l'evenement + 90 jours"
+(phase 4 spec S4): `event_date + RETENTION_DAYS` days, compared against
+`governance.paris_today(now)` -- the same clock discipline every other
+deadline in this repository already uses (`sweep.py`'s own vote-window
+expiry), never a raw `datetime.now()` a caller might read on the wrong
+side of midnight UTC. Inclusive at the boundary: an event is due starting
+on day 90 itself, not day 91 -- unlike `sweep.expire_votes`'s own one-day
+grace for a board vote window, there is no benefit of the doubt to extend
+here. The retention job (`cli.py::retention_sweep`) calls this once per
+event whose key is still `ACTIVE`, and destroys exactly the ones it
+returns `True` for.
+
+The destruction registry lives in one file, not one per event (task 15)
+-------------------------------------------------------------------------
+`destroy` and `key_status` above take `registry: Mapping[str, date]`
+already assembled; `registry_from_data` and `registry_to_data` are its
+parse and serialise halves, reading and writing
+`data/event-key-destructions.yml` (`destructions_path`) the same way
+`certificate.register_from_data`/`register_to_data` read and write
+`certificates.yml` -- pure, no filesystem access, `cli.py` is still the
+only module that opens the path. One file for every event, not a marker
+dropped into each event's own `data/events/<id>/` directory: a scheduled
+sweep spanning many events writes one small file and one commit, not one
+commit per event, and an operator who wants "which events has this ever
+destroyed" reads one page rather than globbing a tree.
+
+Only `event_id` and `destroyed_on` -- nothing else survives here either,
+the same discipline `certificate.py`'s own register holds itself to. This
+file is never personal data and never becomes unreadable: unlike
+`registrations.enc`, there is no key it depends on and no reason it would
+ever need destroying itself.
+
+The file is not deleted, and here is why (R-30)
+--------------------------------------------------
+Destroying a key does **not** delete `data/events/<id>/registrations.enc`
+from the working tree. Deleting the file would not, on its own, make
+anything more unreadable than destroying the key already has -- git
+history still holds every byte of the ciphertext, deletion or not -- and
+it would invite a future reader to believe the *file's absence* is what
+protects the data, which is backwards: the key is the only thing that
+ever made the ciphertext readable, and once it is gone, an intact,
+committed, permanently unreadable blob is exactly what "les donnees
+deviennent definitivement illisibles" (spec S4) describes -- unreadable,
+not absent. Leaving it in place is also cheaper and safer than rewriting
+history to remove it, which spec S4 rules out by name ("sans reecriture
+d'historique").
 """
 
 from __future__ import annotations
@@ -133,7 +182,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Final
@@ -459,3 +508,112 @@ def destroy(
             f"cannot destroy a key that was never created for event {event_id!r}"
         )
     return DestructionRecord(event_id=event_id, destroyed_on=paris_today(now))
+
+
+#: The phase 4 spec's own number (S4: "date de l'evenement + 90 jours").
+#: A module constant, not a `data/config.yml` value: retention is a legal
+#: commitment stated once in the spec and in the confirmation e-mail
+#: (`confirmation.py::_DATA_PROTECTION`), never something an operator
+#: tunes per event.
+RETENTION_DAYS: Final = 90
+
+
+def is_due_for_destruction(event_date: date, today: date) -> bool:
+    """Whether an event whose talk was held on `event_date` has reached the
+    end of its retention window, as of `today` -- see the module
+    docstring's "the deadline is computed" section for the boundary rule
+    (inclusive: due starting on day 90 itself) and why `today` must always
+    be `governance.paris_today(now)`, never a raw clock read.
+    """
+    return today >= event_date + timedelta(days=RETENTION_DAYS)
+
+
+#: Where the destruction registry lives, relative to a repository root --
+#: see the module docstring's "the destruction registry lives in one
+#: file" section for why this is a single file rather than one per event.
+DESTRUCTIONS_PATH: Final = Path("data") / "event-key-destructions.yml"
+
+#: `data/event-key-destructions.yml`'s own format version -- the file-level
+#: analogue of `WIRE_VERSION` and `registration.FILE_VERSION`.
+DESTRUCTIONS_FILE_VERSION: Final = 1
+
+#: A destruction registry entry's exact field set. See `registry_from_data`.
+_DESTRUCTION_FIELDS: Final = frozenset({"event_id", "destroyed_on"})
+
+
+def destructions_path(root: Path) -> Path:
+    """`data/event-key-destructions.yml`, relative to `root` -- the one
+    function that names where the destruction registry lives on disk, the
+    same role `certificate.certificates_path` plays for that register.
+    Pure path computation: reads nothing, touches nothing; `cli.py` is
+    still the only module that ever opens the path this returns."""
+    return root / DESTRUCTIONS_PATH
+
+
+def registry_from_data(data: Any) -> dict[str, date]:
+    """Parse an already YAML-loaded `data/event-key-destructions.yml` into
+    the `Mapping[str, date]` `key_status` and `destroy` expect, or start
+    empty when `data` is `None` -- no event has ever been destroyed yet,
+    the ordinary state before the first retention sweep that finds
+    anything due.
+
+    Raises `ValueError` on anything committed that is not this exact
+    format -- unlike a missing file, a malformed one is not a normal state
+    to paper over, the same "closed shape" discipline
+    `registration.load_registration_file` and
+    `certificate.register_from_data` already hold themselves to. Also
+    refuses a duplicate `event_id`: two rows for one event would leave
+    `destroy`'s own idempotence (the day of the *first* destruction) unable
+    to answer which of the two is authoritative.
+    """
+    if data is None:
+        return {}
+    if not isinstance(data, dict) or data.get("v") != DESTRUCTIONS_FILE_VERSION:
+        raise ValueError(
+            "data/event-key-destructions.yml is not a supported format version"
+        )
+    raw_entries = data.get("destructions")
+    if not isinstance(raw_entries, list):
+        raise ValueError("data/event-key-destructions.yml is malformed")
+
+    registry: dict[str, date] = {}
+    for raw in raw_entries:
+        if not isinstance(raw, dict) or set(raw) != _DESTRUCTION_FIELDS:
+            raise ValueError(
+                "data/event-key-destructions.yml holds an entry that is not "
+                "exactly an event id and a destruction date"
+            )
+        event_id, destroyed_on_raw = raw["event_id"], raw["destroyed_on"]
+        if not isinstance(event_id, str) or not isinstance(destroyed_on_raw, str):
+            raise ValueError(
+                "data/event-key-destructions.yml holds a field of the wrong type"
+            )
+        _validate_event_id(event_id)
+        if event_id in registry:
+            raise ValueError(
+                "data/event-key-destructions.yml holds event id "
+                f"{event_id!r} more than once"
+            )
+        try:
+            registry[event_id] = date.fromisoformat(destroyed_on_raw)
+        except ValueError as exc:
+            raise ValueError(
+                "data/event-key-destructions.yml holds an invalid "
+                f"destroyed_on date for event {event_id!r}"
+            ) from exc
+    return registry
+
+
+def registry_to_data(registry: Mapping[str, date]) -> dict[str, Any]:
+    """The inverse of `registry_from_data`: a plain, YAML-safe structure
+    `cli.py` hands to its own YAML writer. Sorted by event id -- like
+    `certificate.register_to_data`'s own field ordering -- so a diff on
+    `data/event-key-destructions.yml` shows only what a sweep actually
+    added, never a reordering."""
+    return {
+        "v": DESTRUCTIONS_FILE_VERSION,
+        "destructions": [
+            {"event_id": event_id, "destroyed_on": registry[event_id].isoformat()}
+            for event_id in sorted(registry)
+        ],
+    }

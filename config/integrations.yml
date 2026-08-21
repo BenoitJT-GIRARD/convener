@@ -153,6 +153,28 @@ integrations:
       writing personal data to disk unencrypted. See
       tools/convener_ops/eventkeys.py for the reasoning.
 
+  - name: retention_token
+    label: Retention sweep credential
+    secrets:
+      - CONVENER_RETENTION_TOKEN
+    absent_is_normal: false
+    absent_behaviour: >-
+      Task 15's second exception to D-13, and the strongest one in this
+      project. Destroying an event's key means deleting a repository
+      secret, which the default GITHUB_TOKEN cannot do no matter what
+      permissions: a workflow grants it -- this needs a fine-grained
+      personal access token, scoped to this repository, with the
+      Secrets permission set to read and write and nothing else. Unlike
+      every other row here, and unlike CONVENER_EVENT_KEY_<ID> above, this
+      absence is loud on every single scheduled run, whether or not any
+      event is actually due for destruction that day: a retention job
+      that exits 0 having destroyed nothing must never look, from the
+      Actions tab, identical to one that genuinely had nothing to do --
+      a promise with legal weight deserves a red job every day until the
+      credential is set, not a quiet skip. See
+      tools/convener_ops/cli.py::retention_sweep and
+      docs/reference/operations.md, 'Retention and early erasure'.
+
   - name: signing_key
     label: Certificate signing key
     secrets:
