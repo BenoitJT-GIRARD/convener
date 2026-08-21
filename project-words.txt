@@ -43,3 +43,6 @@ STARTTLS
 WXYZ
 replayable
 bypassable
+Referer
+traitement
+donnees

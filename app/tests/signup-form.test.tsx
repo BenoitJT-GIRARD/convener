@@ -164,6 +164,50 @@ describe('SignupForm -- the notice', () => {
   });
 });
 
+// Spec S:5's two matching boundaries -- "present without having registered"
+// and "joined by telephone" -- named on the event page itself, not only in
+// docs/reference/operations.md. A test here, rather than trusting the JSX
+// to keep saying it, is what makes removing this notice a red build instead
+// of a silent regression.
+describe('SignupForm -- the two matching boundaries', () => {
+  it('shows both boundaries before any field, not after', async () => {
+    stubKeyFetchOk();
+    renderSignup();
+    await screen.findByLabelText(/first name/i);
+
+    const text = document.body.textContent ?? '';
+    const boundariesAt = text.indexOf('About your certificate');
+    const firstFieldAt = text.indexOf('First name');
+    expect(boundariesAt).toBeGreaterThanOrEqual(0);
+    expect(firstFieldAt).toBeGreaterThan(boundariesAt);
+  });
+
+  it('states that turning up without registering is not eligible', async () => {
+    stubKeyFetchOk();
+    renderSignup();
+    await screen.findByLabelText(/first name/i);
+
+    const text = document.body.textContent ?? '';
+    expect(text).toMatch(/turning up without registering does not make you eligible/i);
+  });
+
+  it('states that a telephone joiner cannot be matched, and why', async () => {
+    stubKeyFetchOk();
+    renderSignup();
+    await screen.findByLabelText(/first name/i);
+
+    const text = document.body.textContent ?? '';
+    expect(text).toMatch(/joining by telephone cannot be matched/i);
+    expect(text).toMatch(/no address and no display name for a phone connection/i);
+  });
+
+  it('shows both boundaries even while the key is still loading or unavailable', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 }) as Response));
+    renderSignup();
+    expect(screen.getByText('About your certificate')).toBeInTheDocument();
+  });
+});
+
 describe('SignupForm -- what it collects, and nothing else', () => {
   it('collects first name, surname, email, an optional institution, and an unticked opt-in', async () => {
     stubKeyFetchOk();

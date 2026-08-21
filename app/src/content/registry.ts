@@ -17,6 +17,14 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'governance/board-rules': { file: 'governance/board-rules.md', anchor: null },
   'governance/conflict-of-interest': { file: 'governance/conflict-of-interest.md', anchor: null },
   'governance/decisions': { file: 'governance/decisions.md', anchor: null },
+  // The processing record spec §4 names (task 18): data, purpose, legal
+  // basis, recipients, duration and measures for the registration,
+  // attendance and certificate pipeline. Filename kept as the task brief
+  // named it; every other file in this directory is named in English.
+  'governance/data-protection-record': {
+    file: 'governance/traitement-donnees.md',
+    anchor: null,
+  },
 
   // toolkit — emails
   'toolkit/emails/invitation': { file: 'toolkit/emails/invitation.md', anchor: null },

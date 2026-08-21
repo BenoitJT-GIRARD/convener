@@ -22,6 +22,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | What the Board is, and its yearly meeting | `docs/governance/editorial-board.md` |
 | Selection criteria | `docs/governance/selection-criteria.md` |
 | Conflict-of-interest policy | `docs/governance/conflict-of-interest.md` |
+| Data protection record (registration & certification) | `docs/governance/traitement-donnees.md` |
 | Pipeline statuses | `app/src/data/types.ts` (described in handbook workflow pages) |
 | T-minus runbook steps | `app/src/state/phases.ts` |
 | Templates | `docs/toolkit/` |

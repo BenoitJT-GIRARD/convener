@@ -110,6 +110,33 @@ function Notice() {
   );
 }
 
+// Two boundaries `tools/convener_ops/attendance.py` draws and spec S:5 asks to be
+// written "on the event page, in the same place as 'present without having
+// registered'" -- not only in `docs/reference/operations.md`, which a
+// participant never reads. Neither is a matching weakness to keep
+// improving; both are stated here exactly as the matching cascade actually
+// behaves, not softened into "we will do our best".
+function AttendanceBoundaries() {
+  return (
+    <div className="border-2 border-primary/30 bg-primary/5 px-5 py-4 mb-8 text-sm space-y-2">
+      <p className="font-display font-bold uppercase tracking-wider text-xs text-primary-hover mb-1">
+        About your certificate
+      </p>
+      <p>
+        <strong>Turning up without registering does not make you eligible.</strong> We only
+        recognise people we can match to a registration -- register first if you want a
+        certificate.
+      </p>
+      <p>
+        <strong>Joining by telephone cannot be matched.</strong> The meeting platform gives
+        us no address and no display name for a phone connection, so we cannot match you by
+        your email address or by your name that way. If you want a certificate, join with
+        the room link instead and put your matching code in your display name.
+      </p>
+    </div>
+  );
+}
+
 export function SignupForm() {
   const { eventId } = useParams<{ eventId: string }>();
   const [keyState, setKeyState] = useState<KeyState>({ status: 'loading' });
@@ -251,6 +278,7 @@ export function SignupForm() {
         {/* The notice comes before the form, not after: a notice below a
             submit button informs nobody. */}
         <Notice />
+        <AttendanceBoundaries />
 
         {effectiveKeyState.status === 'loading' && (
           <p className="text-ink-muted text-sm">Checking that registration is available…</p>
