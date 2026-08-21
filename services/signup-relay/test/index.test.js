@@ -38,9 +38,22 @@ const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cock
 const CONTENTS_URL = (id) =>
   `https://api.github.com/repos/example-instance/example-cockpit/contents/keys/events/${id}.pub`;
 
-// Mirrors services/signup-relay/wrangler.toml's SURVEY_STATUS_URL (R-37,
-// fix round 1).
-const SURVEY_STATUS_URL = 'https://example-instance.github.io/example-showcase/app/survey-status.json';
+// R-41 (fix round 2): the survey switch is read through the same Contents
+// API `CONTENTS_URL` above already exercises, just a different path in
+// this repository -- not a second, deployed URL any more (that was
+// SURVEY_STATUS_URL, fix round 1, removed along with wrangler.toml's own
+// var of the same name; see that file's comment for why).
+const SURVEY_STATUS_CONTENTS_URL =
+  'https://api.github.com/repos/example-instance/example-cockpit/contents/public-data/survey-status.json';
+
+/** Base64-encodes the way `Buffer` does -- this test file's own stand-in
+ *  for what GitHub's Contents API returns in a response's `content`
+ *  field, mirroring `src/index.js::base64DecodeContentsApi`'s expectation
+ *  that whitespace (GitHub line-wraps at 60 characters) is stripped
+ *  before decoding, not that there is never any. */
+function contentsApiBase64(text) {
+  return Buffer.from(text, 'utf-8').toString('base64');
+}
 
 function post(body, headers = {}) {
   return new Request('https://relay.example/', {
@@ -88,35 +101,54 @@ function env(overrides = {}) {
     SIGNUP_RELAY_KV: makeKv(),
     SIGNUP_RATE_LIMITER: makeRateLimiter(),
     ALLOWED_ORIGIN,
-    SURVEY_STATUS_URL,
     ...overrides,
   };
 }
 
-/** Routes the mocked fetch by URL: the existence check answers `known`
- *  (default true), the dispatch answers 204, and (R-37, fix round 1) a GET
- *  to SURVEY_STATUS_URL answers the array `surveyStatus` names (default:
- *  just EVENT_ID, so a survey test that never overrides this gets an
- *  enabled event for free) unless `surveyStatusStatus` overrides the HTTP
- *  status, or `surveyStatusBody` overrides the response body directly. */
+/** Routes the mocked fetch by URL: the `.pub` existence check answers
+ *  `known` (default true), the dispatch answers 204, and (R-37, fix round
+ *  1; reworked for R-41, fix round 2) a GET to
+ *  SURVEY_STATUS_CONTENTS_URL -- the Contents API, not a deployed URL --
+ *  answers a Contents-API-shaped `{content: <base64>}` body encoding the
+ *  array `surveyStatus` names (default: just EVENT_ID, so a survey test
+ *  that never overrides this gets an enabled event for free), unless one
+ *  of the three overrides below replaces some part of that response:
+ *  `surveyStatusHttpStatus` replaces the HTTP status, `surveyStatusContent`
+ *  replaces the base64 `content` field directly (to test malformed base64
+ *  or base64 that decodes to non-JSON), or `surveyStatusRawBody` replaces
+ *  the entire HTTP response body, bypassing the `{content: ...}` shape
+ *  altogether (to test a response that is not valid JSON at all). The
+ *  order these are checked in matters: a more specific override always
+ *  wins over a less specific one. */
 function stubFetch({
   known = true,
   dispatchStatus = 204,
   surveyStatus = [EVENT_ID],
-  surveyStatusStatus = 200,
-  surveyStatusBody,
+  surveyStatusHttpStatus = 200,
+  surveyStatusContent,
+  surveyStatusRawBody,
 } = {}) {
   return vi.fn(async (url) => {
     const u = String(url);
+    // Checked before the generic contents/ prefix below, which would
+    // otherwise also match this URL.
+    if (u === SURVEY_STATUS_CONTENTS_URL) {
+      if (surveyStatusRawBody !== undefined) {
+        return new Response(surveyStatusRawBody, { status: surveyStatusHttpStatus });
+      }
+      const content =
+        surveyStatusContent !== undefined
+          ? surveyStatusContent
+          : contentsApiBase64(JSON.stringify(surveyStatus));
+      return new Response(JSON.stringify({ content, encoding: 'base64' }), {
+        status: surveyStatusHttpStatus,
+      });
+    }
     if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
       return new Response(null, { status: known ? 200 : 404 });
     }
     if (u === DISPATCH_URL) {
       return new Response(null, { status: dispatchStatus });
-    }
-    if (u === SURVEY_STATUS_URL) {
-      const body = surveyStatusBody !== undefined ? surveyStatusBody : JSON.stringify(surveyStatus);
-      return new Response(body, { status: surveyStatusStatus });
     }
     throw new Error(`unexpected fetch in test: ${u}`);
   });
@@ -541,10 +573,16 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     expect(res.status).toBe(204);
 
     // Three calls, not two: the known-event check, R-37's own
-    // survey-status check, and the dispatch itself.
+    // survey-status check (R-41, fix round 2: now the Contents API, not a
+    // deployed URL), and the dispatch itself.
     const calls = globalThis.fetch.mock.calls;
     expect(calls).toHaveLength(3);
-    expect(String(calls[1][0])).toBe(SURVEY_STATUS_URL);
+    expect(String(calls[1][0])).toBe(SURVEY_STATUS_CONTENTS_URL);
+    // R-41: the same credential eventKeyExists already sends, not a
+    // second, token-free read -- committing survey-status.json (rather
+    // than serving it from a public URL) is what makes reading it require
+    // one in the first place.
+    expect(calls[1][1].headers.Authorization).toBe('Bearer ghp_test-token');
     const [, dispatchInit] = calls[2];
     const sent = JSON.parse(dispatchInit.body);
     expect(sent.event_type).toBe('survey-response-submitted');
@@ -553,6 +591,13 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     // A distinct counter key from registration's own, so the two never
     // share -- or corrupt -- one budget.
     expect(kv.put).toHaveBeenCalledWith('count:survey:mrg-042', '1');
+
+    // Minor 6 (fix round 2): exact, not a range -- R-39/R-40's fixed-size
+    // padding makes every stored-and-transmitted ciphertext the same
+    // length regardless of content (8192 bytes of padded plaintext plus
+    // the 16-byte GCM tag), so the fixture's own envelope is a fact this
+    // suite can pin exactly rather than merely bound.
+    expect(atob(SURVEY_ENVELOPE.ciphertext).length).toBe(8208);
   });
 
   it('forwards every pinned survey case from the shared fixture', async () => {
@@ -589,7 +634,7 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     expect(res.status).toBe(404);
   });
 
-  describe('R-37 (fix round 1): the relay checks the survey switch itself, not only the page', () => {
+  describe('R-37 (fix round 1, reworked for R-41 fix round 2): the relay checks the survey switch itself, not only the page', () => {
     it('refuses with 404 when the event is not in survey-status.json', async () => {
       globalThis.fetch = stubFetch({ surveyStatus: [] });
       const res = await handle(postSurvey(SURVEY_BODY), env());
@@ -600,26 +645,50 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
       expect(calls.every(([url]) => url !== DISPATCH_URL)).toBe(true);
     });
 
+    it('refuses with 404 when survey-status.json does not exist yet in this repository', async () => {
+      // R-41's own edge case: before deploy.yml's "Commit survey status"
+      // step has ever landed a commit, the file is simply absent -- a
+      // clean 404 from the Contents API, not an error. Reads exactly like
+      // "no event is open", the same as an empty array would.
+      globalThis.fetch = stubFetch({ surveyStatusHttpStatus: 404 });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(404);
+    });
+
     it("a different event's presence in survey-status.json does not enable this one", async () => {
       globalThis.fetch = stubFetch({ surveyStatus: ['mrg-999'] });
       const res = await handle(postSurvey(SURVEY_BODY), env());
       expect(res.status).toBe(404);
     });
 
-    it('fails closed (502) when survey-status.json cannot be fetched at all', async () => {
-      globalThis.fetch = stubFetch({ surveyStatusStatus: 500 });
+    it('fails closed (502) when survey-status.json cannot be fetched at all (a non-200/404 status)', async () => {
+      globalThis.fetch = stubFetch({ surveyStatusHttpStatus: 500 });
       const res = await handle(postSurvey(SURVEY_BODY), env());
       expect(res.status).toBe(502);
     });
 
-    it('fails closed (502) when survey-status.json is not valid JSON', async () => {
-      globalThis.fetch = stubFetch({ surveyStatusBody: 'not json at all' });
+    it('fails closed (502) when the Contents API response itself is not valid JSON', async () => {
+      globalThis.fetch = stubFetch({ surveyStatusRawBody: 'not json at all' });
       const res = await handle(postSurvey(SURVEY_BODY), env());
       expect(res.status).toBe(502);
     });
 
-    it('fails closed (502) when survey-status.json is valid JSON but not an array', async () => {
-      globalThis.fetch = stubFetch({ surveyStatusBody: JSON.stringify({ 'mrg-042': true }) });
+    it('fails closed (502) when the content field is not valid base64', async () => {
+      globalThis.fetch = stubFetch({ surveyStatusContent: '***not base64***' });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(502);
+    });
+
+    it('fails closed (502) when the decoded content is not valid JSON', async () => {
+      globalThis.fetch = stubFetch({ surveyStatusContent: contentsApiBase64('not json either') });
+      const res = await handle(postSurvey(SURVEY_BODY), env());
+      expect(res.status).toBe(502);
+    });
+
+    it('fails closed (502) when the decoded content is valid JSON but not an array', async () => {
+      globalThis.fetch = stubFetch({
+        surveyStatusContent: contentsApiBase64(JSON.stringify({ 'mrg-042': true })),
+      });
       const res = await handle(postSurvey(SURVEY_BODY), env());
       expect(res.status).toBe(502);
     });
@@ -627,11 +696,11 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     it('fails closed (502) when the fetch itself throws (a real network failure)', async () => {
       globalThis.fetch = vi.fn(async (url) => {
         const u = String(url);
+        if (u === SURVEY_STATUS_CONTENTS_URL) {
+          throw new TypeError('fetch failed');
+        }
         if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
           return new Response(null, { status: 200 });
-        }
-        if (u === SURVEY_STATUS_URL) {
-          throw new TypeError('fetch failed');
         }
         throw new Error(`unexpected fetch in test: ${u}`);
       });
@@ -639,11 +708,11 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
       expect(res.status).toBe(502);
     });
 
-    it('is never checked on the bare registration route -- SURVEY_STATUS_URL is never fetched for /', async () => {
+    it('is never checked on the bare registration route -- the Contents API is never asked for survey-status.json on /', async () => {
       const res = await handle(post(VALID_BODY), env());
       expect(res.status).toBe(204);
       const calls = globalThis.fetch.mock.calls;
-      expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_URL)).toBe(true);
+      expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_CONTENTS_URL)).toBe(true);
     });
 
     it('is checked only after the event is confirmed to exist, so an unknown event never reaches it', async () => {
@@ -651,7 +720,14 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
       globalThis.fetch = fetchSpy;
       await handle(postSurvey(SURVEY_BODY), env());
       const calls = fetchSpy.mock.calls;
-      expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_URL)).toBe(true);
+      expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_CONTENTS_URL)).toBe(true);
+    });
+
+    it('never depends on any deployed example-showcase or github.io URL -- R-41 removed that dependency entirely', async () => {
+      await handle(postSurvey(SURVEY_BODY), env());
+      const calls = globalThis.fetch.mock.calls;
+      expect(calls.every(([url]) => !String(url).includes('example-showcase'))).toBe(true);
+      expect(calls.every(([url]) => !String(url).includes('.github.io'))).toBe(true);
     });
   });
 

@@ -173,14 +173,28 @@ the same `VITE_SIGNUP_RELAY_URL`, with `/survey` appended by
 `SurveyForm.tsx` itself.
 
 **Since fix round 1 (R-37), `/survey` also checks the survey switch
-itself**, fetching `SURVEY_STATUS_URL` (a `wrangler.toml` var, not a
-secret — see that file's own comment) and refusing an event that is not
-in the array it serves. That file is `public-data/survey-status.json`,
-built by `convener-survey-status-public-data` (`deploy.yml`'s own "Build survey
-status" step, alongside "Build public data") and baked into the app's own
-built output by `app/scripts/copy-survey-status.mjs`, the same two-step
-shape `certificates.json` already uses. This is one of three layers now
-(the page, the relay, and the CI handler each check independently); see
+itself.** Fix round 1 had it fetch `SURVEY_STATUS_URL`, a plain deployed
+example-showcase page; fix round 2 (R-41) replaced that with a read of this
+repository's own `public-data/survey-status.json` through the GitHub
+Contents API — the same `CONVENER_DISPATCH_TOKEN` credential and the same call
+shape the relay already spends one read of for `keys/events/<id>.pub` —
+because the deployed URL pointed at a site that had never actually been
+built, and made the relay's own answer lag the handler's by a build cycle
+it had no reason to inherit on top of the handler's own. There is no
+`wrangler.toml` var for this any more: the repository and the token cover
+both reads.
+
+`public-data/survey-status.json` is still built by
+`convener-survey-status-public-data` (`deploy.yml`'s own "Build survey status"
+step, alongside "Build public data") and still baked into the app's own
+built output by `app/scripts/copy-survey-status.mjs` for the *page* to
+fetch (a static page has no token and cannot read the Contents API any
+other way) — but as of fix round 2 it is also committed back to this
+repository by `deploy.yml`'s own "Commit survey status" step, which is
+what makes the relay's own Contents-API read possible at all. This is one
+of three layers now (the page, the relay, and the CI handler each check
+independently, the relay now reading this repository's own committed
+copy rather than a deployed one); see
 `tools/convener_ops/cli.py::handle_survey_response`'s own docstring for why one
 alone was not enough.
 
@@ -988,13 +1002,25 @@ there is nothing here for R-9's "one step, gated `if: success()`" split to
 apply to.
 
 **To verify:** with an event's `survey_enabled` set to `true` in
-`data/speakers.yml`, submit the survey form (`#/survey/<event id>`);
-*Handle survey response* runs, and
+`data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
+(`AdminOverride.tsx`, fix round 1's minor 9) — submit the survey form
+(`#/survey/<event id>`); *Handle survey response* runs, and
 `data/events/<event id>/survey_responses.enc` gains one entry. Submitting
 again adds a second, independent entry — this is by design, not a defect;
 see `survey.py`'s own docstring. With `survey_enabled` left `false` (the
 default for every event, task 16 ruling 1), the same submission is refused
 and no file is written at all.
+
+**Toggling that checkbox is not immediately live for a participant** (fix
+round 2, minor 5): `data/speakers.yml` is the authoritative record
+`convener-handle-survey-response` reads, but `SurveyForm.tsx` and the signup
+relay both read `survey-status.json` instead (see *Signup relay* above),
+which only reflects a new checkbox state once *Deploy app* next builds and
+commits it. A board member who ticks the box expecting the survey page to
+open immediately will see it stay closed until that build finishes — the
+handler itself would already refuse the response either way, so this is a
+UX lag, not a security gap, but it is worth saying to whoever flips the
+switch expecting it to take effect at once.
 
 ## Registration matching salt
 

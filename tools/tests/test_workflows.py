@@ -184,11 +184,20 @@ def test_deploy_workflow_concurrency_is_not_shared_with_publish_vitrine() -> Non
     )
 
 
-def test_deploy_workflow_build_job_permissions_are_read_only() -> None:
-    assert _build_job()["permissions"] == {"contents": "read"}, (
-        "the build job pushes to example-showcase over a PAT in DEPLOY_TOKEN, "
-        "not over the checkout's own GITHUB_TOKEN, so it never needs more "
-        "than read access to this repo"
+def test_deploy_workflow_build_job_permissions_allow_committing_survey_status() -> None:
+    """R-41, fix round 2: `permissions.contents` moved from `read` to
+    `write` when the "Commit survey status" step was added -- unlike the
+    push to example-showcase (a separate repository, authenticated over a PAT
+    in `DEPLOY_TOKEN`, never the checkout's own token), that step commits
+    `public-data/survey-status.json` back to *this* repository using the
+    checkout's own `GITHUB_TOKEN`, which needs write access to push at
+    all. `write` is still the minimum this job needs -- nothing here asks
+    for `pull-requests`, `issues`, or any other scope."""
+    assert _build_job()["permissions"] == {"contents": "write"}, (
+        "the build job's own 'Commit survey status' step pushes to this "
+        "repository over the checkout's GITHUB_TOKEN, which needs "
+        "contents: write -- read alone would make that push fail, not "
+        "silently skip it"
     )
 
 
@@ -472,13 +481,40 @@ _USER_NAME_RE = re.compile(r'user\.name\s+"([^"]+)"')
 _ALLOWED_EMAIL_DOMAIN = "users.noreply.github.com"
 
 
+def _workflow_files_in(directory: Path) -> list[Path]:
+    """`.yml` and `.yaml` both, sorted together -- GitHub Actions runs
+    either extension under `.github/workflows/` (every file in this
+    repository today happens to be `.yml`, but nothing about that is
+    enforced anywhere, and a sweep that only globbed `.yml` would have
+    silently had nothing at all to say about a `.yaml` file someone added
+    -- sweep evasion 3, fix round 2, minor 1). A plain `list` directory
+    argument, not `ROOT / WORKFLOWS_DIR` baked in, so a probe test below
+    can exercise this exact glob against a temporary directory instead of
+    the real repository."""
+    return sorted((*directory.glob("*.yml"), *directory.glob("*.yaml")))
+
+
 def _workflow_files() -> list[Path]:
-    paths = sorted((ROOT / WORKFLOWS_DIR).glob("*.yml"))
+    paths = _workflow_files_in(ROOT / WORKFLOWS_DIR)
     assert paths, (
-        f"no *.yml files found under {WORKFLOWS_DIR.as_posix()} -- "
+        f"no *.yml or *.yaml files found under {WORKFLOWS_DIR.as_posix()} -- "
         "the glob itself is wrong, which would silently empty this scan"
     )
     return paths
+
+
+def test_the_workflow_sweep_globs_yaml_files_too_not_only_yml(tmp_path: Path) -> None:
+    """Sweep evasion 3 (fix round 2, minor 1), proven with a probe
+    directory rather than trusting the real repository to never grow a
+    `.yaml` file: before `_workflow_files_in` existed, `_workflow_files`
+    globbed `*.yml` only, so a `.yaml` workflow -- which GitHub runs
+    identically -- was invisible to every sweep in this module, including
+    the SHA-pinning and timeout checks just below."""
+    (tmp_path / "a.yml").write_text("jobs: {}\n", encoding="utf-8")
+    (tmp_path / "b.yaml").write_text("jobs: {}\n", encoding="utf-8")
+    (tmp_path / "not-a-workflow.txt").write_text("jobs: {}\n", encoding="utf-8")
+    found = _workflow_files_in(tmp_path)
+    assert sorted(p.name for p in found) == ["a.yml", "b.yaml"]
 
 
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
@@ -559,26 +595,98 @@ def test_every_action_reference_is_pinned_to_a_full_commit_sha(workflow: Path) -
         )
 
 
+def _job_has_own_timeout(job: Any) -> bool:
+    """Whether `job` (one value from a workflow's `jobs:` mapping) carries
+    its *own* `timeout-minutes:` key -- deliberately just `job.get(...)`,
+    never anything that also looks inside `job["steps"]`: a step-level
+    `timeout-minutes:` bounds only that one step, not the job as a whole,
+    so it must never count as satisfying this. Shared by the real sweep
+    below and by the two probe tests that pin its exact behaviour against
+    both evasions the fix round 1 version of this check missed."""
+    return isinstance(job, dict) and isinstance(job.get("timeout-minutes"), int)
+
+
+def test_a_job_level_timeout_satisfies_the_requirement() -> None:
+    """Positive control for `_job_has_own_timeout`, so the two probe tests
+    below prove an *absence* is detected, not merely that everything
+    trivially returns `False`."""
+    probe = safe_load(
+        "jobs:\n"
+        "  build:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    timeout-minutes: 10\n"
+        "    steps:\n"
+        "      - run: echo hi\n"
+    )
+    assert _job_has_own_timeout(probe["jobs"]["build"]) is True
+
+
+def test_a_step_level_timeout_does_not_satisfy_the_job_level_requirement() -> None:
+    """Sweep evasion 2 (fix round 2, minor 1), proven with a probe
+    workflow: the fix round 1 version of this check counted every
+    `timeout-minutes:\\s*\\d+` occurrence anywhere in the file against a
+    count of `runs-on:` lines, so a job with *no* job-level timeout but
+    one step carrying its own `timeout-minutes:` still passed -- the
+    counts matched, even though the job as a whole remained unbounded at
+    GitHub's own six-hour default."""
+    probe = safe_load(
+        "jobs:\n"
+        "  build:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    steps:\n"
+        "      - name: something slow\n"
+        "        timeout-minutes: 5\n"
+        "        run: echo hi\n"
+    )
+    assert _job_has_own_timeout(probe["jobs"]["build"]) is False
+
+
+def test_a_commented_out_timeout_does_not_satisfy_the_job_level_requirement() -> None:
+    """Sweep evasion 1 (fix round 2, minor 1), proven with a probe
+    workflow: the fix round 1 version of this check matched
+    `timeout-minutes:\\s*\\d+` as plain text anywhere in the file,
+    including inside a `#` comment -- a job with no real
+    `timeout-minutes:` key at all still passed if someone had merely
+    written the phrase in prose. Parsing the YAML structurally, as this
+    version does, makes a comment invisible by construction: `safe_load`
+    never sees it at all."""
+    probe = safe_load(
+        "jobs:\n"
+        "  build:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    # timeout-minutes: 10 would be nice here\n"
+        "    steps:\n"
+        "      - run: echo hi\n"
+    )
+    assert _job_has_own_timeout(probe["jobs"]["build"]) is False
+
+
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
 def test_every_job_declares_a_timeout(workflow: Path) -> None:
-    """Every job (one `runs-on:` line each) has its own `timeout-minutes:`
-    -- a job with none defaults to GitHub's own six-hour ceiling, which
-    means a hung step is discovered by a human noticing, not by CI. Counts
-    `runs-on:` against `timeout-minutes:` rather than pairing each job by
-    name: every job in this repository declares exactly one of each today,
-    and a workflow whose job *gains* a second `runs-on:` without a second
-    `timeout-minutes:` fails this the same way one missing from the first
-    job would."""
-    text = workflow.read_text(encoding="utf-8")
-    jobs = len(re.findall(r"^\s*runs-on:", text, re.MULTILINE))
-    timeouts = len(re.findall(r"timeout-minutes:\s*\d+", text))
-    assert jobs > 0, (
-        f"{workflow.name} has no runs-on: line at all -- the regex itself may be wrong"
+    """Every job in `jobs:` has its own `timeout-minutes:` key -- a job
+    with none defaults to GitHub's own six-hour ceiling, which means a
+    hung step is discovered by a human noticing, not by CI.
+
+    Fix round 2, minor 1: rewritten from a text-scanned line count (which
+    a step-level `timeout-minutes:` or a `#`-commented one could both
+    satisfy without the job itself being bounded at all -- see the two
+    probe tests just above) to parsing the real YAML and checking each
+    job's own key via `_job_has_own_timeout`, the same structural
+    discipline `test_every_action_reference_is_pinned_to_a_full_commit_sha`
+    could not use (that one has to see the trailing `# v7`-style comment
+    `safe_load` would discard) but this one can."""
+    data = safe_load(workflow.read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    jobs = data.get("jobs")
+    assert isinstance(jobs, dict) and jobs, (
+        f"{workflow.name} has no jobs: mapping at all -- the parse itself may be wrong"
     )
-    assert timeouts == jobs, (
-        f"{workflow.name} has {jobs} job(s) (by runs-on:) but only "
-        f"{timeouts} timeout-minutes: declaration(s)"
-    )
+    for job_id, job in jobs.items():
+        assert _job_has_own_timeout(job), (
+            f"{workflow.name}::{job_id} has no job-level timeout-minutes "
+            "(a step-level timeout-minutes does not count -- it bounds "
+            "only that one step, not the whole job)"
+        )
 
 
 # ------------------------------------------------------------------ #

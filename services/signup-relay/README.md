@@ -41,18 +41,37 @@ exist — whether that event's survey switch is actually on. Before this,
 the switch was enforced in exactly one of four layers (the CI handler,
 last), which meant a participant answering a closed survey was thanked and
 had the answer discarded with no one told. `surveyEnabled` (`src/index.js`)
-fetches `env.SURVEY_STATUS_URL`, a plain public HTTPS URL — not a GitHub
-Contents API read, because this fact is published to the public vitrine
-site precisely so it costs no token and no GitHub API budget to check —
-and refuses (`404`, the same bucket "no such event" already falls into)
-when the event is not in the array it serves. This is the relay's own
-layer, not the only one: `app/src/survey/SurveyForm.tsx` checks the
-identical file before ever rendering a form, and
-`convener-handle-survey-response` checks the authoritative
-`data/speakers.yml` again regardless — three layers, because a page check
-is bypassable by posting straight to this worker, and a relay check reads
-a build-time-baked, possibly momentarily stale file rather than the
-source of truth itself.
+reads `public-data/survey-status.json` through the same GitHub Contents API
+call shape — the same credential, `CONVENER_DISPATCH_TOKEN`, and the same
+`https://api.github.com/repos/.../contents/<path>` request — `eventKeyExists`
+already spends one read of for `keys/events/<id>.pub`, just a different
+path, and refuses (`404`, the same bucket "no such event" already falls
+into) when the event is not in the array it decodes.
+
+Fix round 1 originally read that file from a plain public HTTPS URL
+instead (a deployed example-showcase page, no token, no GitHub API budget). Fix
+round 2 (R-41) removed that: the URL pointed at a deployment this project
+had never actually wired up, so the relay's own answer depended on a site
+that did not exist; it also carried a build-to-live latency the handler's
+own read of `data/speakers.yml` does not have, on top of which the relay
+added a second one. Reading this repository's own committed copy instead
+makes the relay's answer agree with the handler's by construction, not by
+build timing — at the cost of one more Contents-API read on a route
+already spending one and already ceiling-capped per event.
+`public-data/survey-status.json` is committed for exactly this reason (see
+the root `.gitignore`'s own comment): a bare, sorted list of event ids, no
+personal data, refreshed by `deploy.yml`'s "Commit survey status" step
+every time it changes.
+
+This is the relay's own layer, not the only one: `app/src/survey/
+SurveyForm.tsx` still fetches the deployed `survey-status.json` from
+example-showcase — a static page has no token and cannot read the Contents API
+any other way — and `convener-handle-survey-response` checks the authoritative
+`data/speakers.yml` again regardless. Three layers still, for the same
+reason as before: a page check is bypassable by posting straight to this
+worker, and a relay check — even one now reading this repository's own
+tip rather than a deployed artefact — is a courtesy that saves a wasted
+workflow run, never the authority.
 
 What genuinely is separate is the abuse ceiling. `/survey` is keyed by its
 own KV counter (`count:survey:<event_id>`, distinct from `/`'s own
@@ -328,13 +347,15 @@ The caller only ever sees one of these seven:
 - `502` — this worker could not complete the request: a missing secret or
   storage/limiter binding (see "Fail closed" above), the known-event check
   failed for a reason other than "no such event," the dispatch to GitHub
-  itself failed, or — on `/survey` only — the survey-status check failed
-  for a reason other than "not enabled" (an unreachable
-  `SURVEY_STATUS_URL`, a non-2xx response, or a body that is not a JSON
-  array). Never GitHub's own status or body — a caller has no need to see
-  GitHub's error detail, and passing it through would blur this worker's
-  taxonomy with GitHub's, the same reasoning `services/form-relay/README.md`
-  gives for its own `502`.
+  itself failed, or — on `/survey` only — the survey-status Contents-API
+  read failed for a reason other than "not enabled" or "file does not
+  exist yet" (a status other than `200`/`404`, a response that is not
+  valid JSON, a `content` field that will not base64-decode, decoded
+  content that is not valid JSON, or JSON that is not an array). Never
+  GitHub's own status or body — a caller has no need to see GitHub's error
+  detail, and passing it through would blur this worker's taxonomy with
+  GitHub's, the same reasoning `services/form-relay/README.md` gives for
+  its own `502`.
 
 There is no `401`: unlike the form relay, there is no shared secret here
 for a caller to get wrong.

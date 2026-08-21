@@ -10,22 +10,21 @@ compatibility_date = "2026-01-01"
 [vars]
 ALLOWED_ORIGIN = "https://example-instance.github.io"
 
-# R-37 (fix round 1, task 16): the survey switch, published as an
-# operational fact by `tools/convener_ops/cli.py::survey_status_public_data`
-# and baked into the app's own built output by
-# `app/scripts/copy-survey-status.mjs` -- see that script's docstring for
-# the whole pipeline. This is a plain public HTTPS URL, not a GitHub
-# Contents API path: unlike keys/events/<id>.pub, which lives in the
-# private cockpit repo this worker already holds a token for,
-# survey-status.json is served from the public vitrine site once
-# deploy.yml publishes it, so no token and no extra GitHub API budget are
-# spent reading it -- only one more `fetch()`, same as the CORS-exempt
-# server-to-server reads this worker already makes to api.github.com.
-# ALLOWED_ORIGIN plus the app's own base path (app/vite.config.ts::base) --
-# not derived from ALLOWED_ORIGIN itself, because that var only ever needs
-# to be an origin (no path), and concatenating a path onto it here would
-# tie the two together for no reason.
-SURVEY_STATUS_URL = "https://example-instance.github.io/example-showcase/app/survey-status.json"
+# R-37 (fix round 1, task 16) checked the survey switch against a plain
+# public HTTPS URL here (SURVEY_STATUS_URL), because it seemed like the
+# cheaper read: no token, no GitHub API budget. R-41 (fix round 2) removed
+# it: that URL pointed at a example-showcase deployment this project had never
+# actually wired up, so the check depended on a site that did not exist,
+# carried a build-to-live latency the relay had no reason to inherit on
+# top of the handler's, and was a hardcoded cross-origin literal nothing
+# derived. `surveyEnabled` in src/index.js now reads
+# `public-data/survey-status.json` through the same GitHub Contents API
+# credential (CONVENER_DISPATCH_TOKEN, below) this worker already spends one
+# read of for `keys/events/<id>.pub` -- one more read on an already
+# ceiling-capped route, in exchange for an answer that agrees with the
+# handler's by construction rather than by build timing. There is no var
+# to bind here any more: the repository (`REPO`, a source constant) and
+# the token cover both reads.
 
 # CONVENER_DISPATCH_TOKEN is a Wrangler secret, set with
 # `npx wrangler secret put CONVENER_DISPATCH_TOKEN` -- never here. See README.md.
