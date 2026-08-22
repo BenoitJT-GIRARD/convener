@@ -1,0 +1,346 @@
+name: Preview
+
+# Task 13 (phase 5): spec S:7 -- "a preview mode on a pull request, to
+# reread an event page before publication". Zero cost, by construction: no
+# third-party preview host, no account, GitHub's own build-artefact storage
+# only (D-13). A reviewer downloads this run's own artefact from the run
+# summary page; nothing here publishes anywhere, and nothing links to what
+# it produces.
+#
+# `pull_request` (never `pull_request_target`): a PR opened from a fork
+# must be able to produce this preview too, and GitHub already withholds
+# repository secrets from a `pull_request` run against fork code. This job
+# needs none anyway -- see the no-secret note on the "Build app" step below
+# -- so a fork PR gets the identical preview a same-repo PR does, never a
+# silently degraded one (D-13's own discipline: an absent integration
+# degrades visibly, or here, does not need to exist at all).
+#
+# What is built, and why both halves
+# -----------------------------------
+# `site/` is built from its own committed fixture
+# (`site/src/_data/events.json`, see site/README.md) -- never from real,
+# private event data, which this job has no access to and does not need:
+# reviewing a template or layout change is exactly what a fixture build is
+# for. The two islands (the registration form, the certificate-verification
+# panel) are P-2's own reason the phase exists at all, and a preview that
+# left them out would show an event page with an empty box where the form
+# belongs -- exactly the failure this task's own brief warns against, and
+# worse than showing nothing: a reviewer would have to guess whether the
+# box is broken. So `app/` is built too, using the same throw-away-event-key
+# recipe `a11y.yml` already established (a fresh key pair per fixture
+# event, generated here, never committed, discarded with the runner), so
+# the registration island reaches its real `ready` state and renders its
+# actual `<input>`/`<label>` markup, not the "not available" fallback a
+# missing key would force it into -- a fallback that reads exactly like a
+# production error, which is not what this preview should show for a
+# preview-specific reason. See "Assemble the preview" below for the one
+# consequence this has for what a reviewer sees if they press submit.
+#
+# D-26: served at the address it will actually be served at
+# -------------------------------------------------------------
+# GitHub Pages serves this project under `/example-showcase/`, never a bare
+# domain root (no CNAME, no custom domain) -- `site/.eleventy.js`'s own
+# `PATH_PREFIX` is the one place that address is written down, and every
+# template's `| url` filter call, plus all three `base:` literals in
+# `app/vite.config.ts`, resolve against it. D-26 exists because phase 5's
+# own seven earlier screenshot rounds were all taken at a bare `localhost`
+# root and all green, on a site where the stylesheet, the fonts, internal
+# navigation and both islands would have 404'd once actually published.
+# "Assemble the preview" below reads that same prefix from its one source
+# (never retypes it) and nests the built tree one level under a directory
+# of that name, so a reviewer who serves the *parent* of that directory
+# with any static file server and opens it at that prefix sees the exact
+# topology GitHub Pages will -- the identical trick
+# `site/scripts/check-a11y.mjs`'s own `assembleTree`/`publishRoot` already
+# uses to check this same build, written to a real directory here instead
+# of an ephemeral scratch one. `preview/README.txt`, written by that same
+# step, says so in the artefact itself, since it is not the obvious way to
+# open a downloaded zip.
+#
+# D-25: guarded, twice, before it is ever uploaded
+# ---------------------------------------------------
+# Eleventy exits 0 on "wrote 0 files"; a broken build could similarly copy
+# nothing while every step still reports success. Uploading whatever came
+# out regardless would be worse than uploading nothing: a reviewer
+# downloads what looks like the real artefact, sees a blank page or an
+# empty box, and reports the *page* as broken. "Refuse to package a preview
+# that is not a site" checks the assembled tree for exactly that -- an
+# `index.html`, a file-count floor on the site's own files (never counting
+# `app/`, which would otherwise mask an empty site build behind a
+# perfectly normal app one), and both island bundles present and
+# non-empty -- and fails the job loudly before "Refuse to package a preview
+# that leaks a room link" and the upload step ever run. Both refusals were
+# proved by hand against a deliberately broken build; see this task's own
+# report.
+#
+# No room link, the same guard applied to what this job publishes
+# --------------------------------------------------------------------
+# `site/src/_data/events.json` carries a deliberately poisoned
+# `registration_link` (`SHOULD-NEVER-APPEAR-IN-BUILT-HTML`) to keep this
+# guard exercised on every build that uses the fixture -- this job builds
+# from that exact fixture, so the same sweep `publish-vitrine.yml` runs
+# against the real data applies here too, against the assembled preview
+# rather than a checkout of a second repository.
+on:
+  pull_request:
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    # Site build, app build (tsc -b plus three vite builds), one throw-away
+    # key pair per fixture event, and a handful of shell guards -- the same
+    # scope quality.yml's own `site` job already budgets 12 minutes for.
+    timeout-minutes: 12
+    permissions:
+      # Read-only: this job never pushes, commits, or writes back to the
+      # repository -- it only builds, packages, and uploads a build
+      # artefact, which needs no elevated scope (`match-attendance.yml`'s
+      # own upload-artifact step runs under the identical permission).
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      # The registration island only renders its real <input>/<label>
+      # markup once it reaches its own 'ready' key state
+      # (`app/src/islands/signup/SignupForm.tsx`) -- see this workflow's
+      # own header comment for why that state, not the "not available"
+      # fallback, is the one this preview should show. Identical recipe to
+      # `a11y.yml`'s own "Generate throw-away event keys" step: a fresh
+      # RSA key pair per fixture event, generated fresh on every run and
+      # never committed (this job never pushes anything) -- real enough
+      # for the browser's own WebCrypto import to accept, and provably not
+      # a key this project ever ships (`eventkeys.py`'s own module
+      # docstring already establishes the private half never touches disk
+      # outside a CI job either, and this one is discarded with the runner
+      # at the end of the job).
+      - name: Generate throw-away event keys for the preview
+        run: |
+          uv run --project tools python -c '
+          import json
+
+          from convener_ops import eventkeys
+          from convener_ops.paths import repo_root
+
+          root = repo_root()
+          events = json.loads(
+              (root / "site" / "src" / "_data" / "events.json").read_text(encoding="utf-8")
+          )
+          keys_dir = root / "keys" / "events"
+          keys_dir.mkdir(parents=True, exist_ok=True)
+          for event in events:
+              event_id = str(event["id"]).lower()
+              _, public_pem = eventkeys.generate()
+              (keys_dir / f"{event_id}.pub").write_text(public_pem, encoding="utf-8")
+          print(f"generated {len(events)} throw-away event key(s) for the preview")
+          '
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            site/package-lock.json
+            app/package-lock.json
+      # `site/src/_data/events.json` is committed as a build fixture (see
+      # site/README.md); this job never regenerates it from private data,
+      # unlike `publish-vitrine.yml`'s own "Refresh site data" step -- a
+      # pull request from a fork has no access to that data and does not
+      # need it: this preview exists to reread a template or layout
+      # change, not this week's real programme.
+      - name: Install site
+        working-directory: site
+        run: npm ci
+      - name: Build site
+        working-directory: site
+        run: npm run build
+      # No secret is set for this build: `VITE_SIGNUP_RELAY_URL`
+      # (app/.env.example) is left unset, exactly the state a plain
+      # checkout with no `.env` file already produces. That is not a
+      # workaround -- it is the actual, safe D-13 state this build ships:
+      # the registration island still reaches 'ready' (the throw-away key
+      # above) and still renders real fields, but `SignupForm.tsx`'s own
+      # `submit` reads `relayUrl()` before it ever calls `fetch`, so
+      # pressing "submit" in this preview cannot reach any relay, real or
+      # otherwise -- it reports "Registration is not open for this event
+      # yet." and nothing leaves the browser. Confirmed by reading that
+      # function, not assumed; see this task's own report.
+      - name: Install app
+        working-directory: app
+        run: npm ci
+      - name: Build app
+        working-directory: app
+        run: npm run build
+      # D-26: nests the two builds one level under a directory named after
+      # `site/.eleventy.js`'s own PATH_PREFIX, so a reviewer who serves
+      # *this step's own output directory* (never the nested one) with any
+      # static file server, at that same prefix, sees the exact topology
+      # GitHub Pages will -- the identical shape
+      # `site/scripts/check-a11y.mjs`'s own `assembleTree`/`publishRoot`
+      # already builds to check this build, written to disk here instead
+      # of an ephemeral scratch directory. The prefix is read out of its
+      # one source with the same regex `check-a11y.mjs`'s own
+      # `configuredPathPrefix` uses, never retyped, so this step fails
+      # loudly instead of assembling a preview at a guessed address if
+      # that source ever stops defining it.
+      - name: Assemble the preview at its published address
+        run: |
+          set -e
+          prefix=$(grep -oP "PATH_PREFIX\s*=\s*'\K[^']+" site/.eleventy.js)
+          if [ -z "$prefix" ]; then
+            echo "::error::could not read PATH_PREFIX out of site/.eleventy.js -- refusing to assemble a preview at a guessed address"
+            exit 1
+          fi
+          segment="${prefix#/}"
+          segment="${segment%/}"
+          if [ -z "$segment" ]; then
+            echo "::error::PATH_PREFIX ($prefix) resolved to an empty path segment -- refusing to assemble a preview at a guessed address"
+            exit 1
+          fi
+
+          mkdir -p "preview/$segment/app"
+          cp -r site/_site/. "preview/$segment/"
+          cp -r app/dist/. "preview/$segment/app/"
+
+          cat > preview/README.txt <<EOF
+          Convener showcase -- pull request preview
+          =====================================
+
+          This is a build of the public showcase (example-showcase), assembled from
+          this pull request's branch. It is not published anywhere -- download
+          it from this workflow run and serve it locally to review it before
+          merging.
+
+          HOW TO OPEN IT
+          ---------------
+
+          GitHub Pages serves the real site under the address prefix $prefix,
+          never at a bare domain root, and every internal link in this build
+          -- the stylesheet, the fonts, internal navigation, and the two
+          interactive panels below -- is written against that address. Opening
+          $segment/index.html directly in a browser, or serving the $segment/
+          folder itself as a server root, breaks every one of those links.
+          Serve *this* directory instead -- the one this file is in -- for
+          example:
+
+              npx --yes http-server -p 8080 .
+              (or: python3 -m http.server 8080)
+
+          then open:
+
+              http://localhost:8080$prefix
+
+          WHAT YOU ARE LOOKING AT
+          -------------------------
+
+          * The event data is fixture data (site/src/_data/events.json),
+            committed to the repository for exactly this purpose. The
+            titles, dates and speaker names shown here are not the real,
+            current programme -- do not read a name on this preview as a
+            real, upcoming guest.
+
+          * The registration form (on an upcoming event's page) and the
+            certificate-verification panel (${prefix}verify/) are the real,
+            built islands from app/, not placeholders -- what you see is
+            what a visitor would see. The registration form is wired to a
+            throw-away encryption key generated fresh for this run only,
+            never a real one, and this build carries no registration-relay
+            address, so pressing "submit" cannot send anything anywhere: it
+            reports "Registration is not open for this event yet.", the
+            same message a visitor would see before the relay is deployed.
+            That message is expected here, not a defect in this preview.
+
+          * The certificate register bundled with this preview is empty --
+            no certificate has ever been issued from this project.
+            Checking any identifier reports it as not found; that is the
+            correct behaviour of an empty register, not a broken checker.
+
+          * This artefact is a snapshot of this pull request's branch. It
+            is never published anywhere, and nothing links to it.
+          EOF
+
+          echo "assembled preview under preview/$segment/ (PATH_PREFIX=$prefix)"
+      # D-25: "a control that cannot fail loudly is not a control" --
+      # applied to the empty-build case Eleventy's own exit code cannot
+      # rule out (see this workflow's own header comment), and to the
+      # island-specific failure mode a plain file-count floor would miss
+      # entirely: a build that produced a real site plus a real, but
+      # empty, island bundle would still pass a bare "did anything get
+      # written" check while still showing a reviewer an empty box.
+      - name: Refuse to package a preview that is not a site
+        run: |
+          set -e
+          prefix=$(grep -oP "PATH_PREFIX\s*=\s*'\K[^']+" site/.eleventy.js)
+          segment="${prefix#/}"
+          segment="${segment%/}"
+          root="preview/$segment"
+
+          if [ ! -f "$root/index.html" ]; then
+            echo "::error::$root/index.html is missing -- refusing to package an empty preview"
+            exit 1
+          fi
+          # Never counts app/: a real app build merged on top of an empty
+          # site build would otherwise inflate this count and hide exactly
+          # the failure this floor exists to catch. Five, the same floor
+          # publish-vitrine.yml's own identical guard uses for this same
+          # site build -- low enough that a future page never needs this
+          # number touched, high enough that a build producing one or two
+          # files still trips it.
+          site_file_count=$(find "$root" -type f -not -path "$root/app/*" | wc -l)
+          if [ "$site_file_count" -lt 5 ]; then
+            echo "::error::$root holds only $site_file_count non-app file(s) -- refusing to package a preview this thin"
+            exit 1
+          fi
+          for bundle in "$root/app/islands/signup/signup.js" "$root/app/islands/verify/verify.js"; do
+            if [ ! -s "$bundle" ]; then
+              echo "::error::$bundle is missing or empty -- this preview would show an empty box where the registration form or the verification panel belongs, see this workflow's own header comment"
+              exit 1
+            fi
+          done
+          echo "preview looks like a site: $site_file_count file(s) under $root (excluding app/), both islands present"
+      # The same guard publish-vitrine.yml runs against the real,
+      # currently-private room links, applied here to the fixture's own
+      # deliberately poisoned one instead (site/src/_data/events.json's
+      # own registration_link, kept exactly for this) -- swept across the
+      # assembled preview, the thing this job is about to publish, not
+      # only the site's own build output.
+      - name: Refuse to package a preview that leaks a room link
+        run: |
+          set -e
+          links=$(uv run --project tools python -c '
+          import json
+
+          with open("site/src/_data/events.json", encoding="utf-8") as fh:
+              events = json.load(fh)
+          for event in events:
+              link = event.get("registration_link")
+              if link:
+                  print(link)
+          ')
+          if [ -z "$links" ]; then
+            echo "no event in the fixture carries a registration_link -- nothing to check"
+            exit 0
+          fi
+          leaked=0
+          while IFS= read -r link; do
+            [ -z "$link" ] && continue
+            hits=$(grep -rlF -- "$link" preview || true)
+            if [ -n "$hits" ]; then
+              echo "::error::room link leaked into: $hits"
+              leaked=1
+            fi
+          done <<< "$links"
+          if [ "$leaked" -ne 0 ]; then
+            echo "::error::refusing to package the preview -- a room link reached the built pages"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: event-page-preview-pr-${{ github.event.pull_request.number }}
+          path: preview
+          # Belt and suspenders beside the two guards above: if a step
+          # were ever reordered so nothing survived into `preview/`, this
+          # fails the run instead of silently uploading an empty artefact
+          # (D-25).
+          if-no-files-found: error
+          retention-days: 14
