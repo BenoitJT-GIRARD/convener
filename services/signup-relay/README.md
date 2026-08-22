@@ -1,6 +1,6 @@
 # Signup relay
 
-The point of entry for a registration. `app/src/signup/SignupForm.tsx`
+The point of entry for a registration. `app/src/islands/signup/SignupForm.tsx`
 encrypts a participant's first name, surname, email address and optional
 institution in the browser (`app/src/signup/encrypt.ts`), under the target
 event's published public key, and POSTs the result here. This worker never
