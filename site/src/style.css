@@ -787,7 +787,19 @@ a.btn--ghost:hover { border-color: var(--purple); }
   transition: background .15s, color .15s;
 }
 .archive__action:hover {
-  background: var(--turquoise);
+  /* Task 11: carried since task 4 as a known defect (that task's own
+   * report flagged it rather than fixing it out of scope) -- a solid
+   * turquoise fill under white text measures 1.61 (data/brand.json's
+   * `_forbidden`), badly below the 4.5 floor for normal text; a browser's
+   * own rendering measured it at 2.54. Purple, not turquoise, for the
+   * identical reason `.btn--primary` already fills with purple rather
+   * than the page's own turquoise ground (see that rule's comment): white
+   * on purple is 12.74 (`data/brand.json`'s `white_on_purple`, already
+   * measured -- no new pairing to add). `.archive__action--alt:hover`
+   * already used this same fill; this now matches it rather than
+   * disagreeing on hover while differing on the resting state above.
+   */
+  background: var(--purple);
   color: var(--white);
   border-bottom: 0;
 }

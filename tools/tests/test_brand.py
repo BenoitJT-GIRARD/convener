@@ -188,8 +188,10 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
     # Every entry data/brand.json currently carries -- a change to that
     # section without a matching change here would otherwise pass silently.
     # 9 through task 4, plus 2 task 7 added for the verify page's own
-    # panel (turquoise_text_on_cream, ink_muted_on_cream).
-    assert checked == 11
+    # panel (turquoise_text_on_cream, ink_muted_on_cream), plus 1 task 11
+    # added (turquoise_on_purple) once the accessibility sweep found the
+    # pairing had gone unnamed since task 4.
+    assert checked == 12
 
 
 def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
@@ -244,6 +246,13 @@ def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> No
     `_forbidden` note). Each of these selectors was moved to a colour that
     clears AA on whichever ground it can now appear on; this pins that each
     one stays off the value that would fail there again.
+
+    `.archive__action:hover` joined this dict at task 11: task 4 found it
+    (a solid turquoise fill under white text, 1.61 -- measured at 2.54 by
+    a real browser) and deliberately left it, out of its own scope, for
+    the accessibility task to fix. That task moved it to the same purple
+    fill `.archive__action--alt:hover` already used; this is the guard
+    that keeps it from reverting.
     """
     css = (ROOT / SITE_CSS_PATH).read_text(encoding="utf-8")
     risky: dict[str, str] = {
@@ -253,6 +262,7 @@ def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> No
         ".archive__date": "var(--ink-faint)",
         ".archive__action--disabled": "var(--ink-faint)",
         ".btn--primary": "var(--turquoise)",
+        ".archive__action:hover": "var(--turquoise)",
     }
     for selector, bad_value in risky.items():
         block = _rule_block(css, selector)
