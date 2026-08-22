@@ -303,14 +303,47 @@ async function runAxe(page, axeSource) {
  *  forever, would be exactly the wholesale suppression this task's own
  *  brief refuses: "if a tool reports something you judge to be a false
  *  positive, say so with the measurement, and suppress it named and
- *  justified, never wholesale." So only these two specific, reviewed
- *  `color-contrast` heuristics are ever waved through; anything else axe
+ *  justified, never wholesale." So only these specific, reviewed
+ *  `color-contrast` *nodes* are ever waved through; anything else axe
  *  reports as incomplete fails the build like a real violation, because
  *  nobody has looked at it yet.
  *
- *  Both were found and measured during this task, by rendering the real
- *  built pages and reading axe's own explanation for each flagged node
- *  (`node.any[].data.messageKey`), not assumed from the rule's name:
+ *  Each entry names one hand-measured node by **both** its `messageKey`
+ *  (axe's own reason it gave up resolving the pairing statically) **and**
+ *  the CSS selector axe's target resolution produced for it. The reason
+ *  alone is not an identity: `pseudoContent`/`elmPartiallyObscuring`/
+ *  `imgNode` each name a whole *shape* of node axe cannot statically
+ *  resolve -- any `::before`-painted band or any decorative element that
+ *  grazes text produces one of these three, regardless of what the
+ *  actual rendered contrast is. A build with only the `messageKey` on
+ *  this list (the shape this project shipped, and closed here) waves
+ *  through a newly-added, never-measured node that happens to share the
+ *  shape -- reproduced by hand for this fix: a `::before`-painted
+ *  ~1.07:1 white-on-yellow pairing reports `pseudoContent`, identical to
+ *  the legitimate ones, and was silently accepted before this change.
+ *  Selector included, it is rejected, correctly, as unreviewed.
+ *
+ *  Selectors are recorded literally, exactly as axe emits them --
+ *  including any `:nth-child` axe adds to disambiguate a class repeated
+ *  on one page (`.section` appears twice on `/` and `/data/`, so
+ *  `.section__num` there resolves as `.section:nth-child(2) > … >
+ *  .section__num`, `.section:nth-child(3) > …`, etc., while every page
+ *  with a single `.section` reports the bare class -- both forms
+ *  captured below, from a real build). This is a deliberate trade: a
+ *  markup change that shifts which `nth-child` index an already-reviewed
+ *  node falls under (adding a third `.section` to a page that only had
+ *  two, say) makes this list stop matching, and the build fails, noisily,
+ *  on a pairing that is probably still fine visually, and has to be
+ *  re-added by name. That is the correct failure direction (D-25): a
+ *  list that tolerates "close enough" selectors degrades back into the
+ *  shape-only suppression this fix exists to close. Re-adding an entry
+ *  after a legitimate refactor costs one line and a rebuild; a silent
+ *  false pass costs nobody ever noticing.
+ *
+ *  All ten were found and measured during task 11 or this review, by
+ *  rendering the real built pages and reading axe's own explanation for
+ *  each flagged node (`node.any[].data.messageKey`), not assumed from the
+ *  rule's name:
  *
  *  - `pseudoContent` -- `.section__head`'s cream band is painted by a
  *    `::before` pseudo-element (`site/src/style.css`), not a `background`
@@ -319,30 +352,53 @@ async function runAxe(page, axeSource) {
  *    cream, `data/brand.json`'s `purple_on_cream`, 11.26), `.section__label`
  *    (ink on cream, `ink_on_cream`, 10.12) and `.section__count` (ink-faint
  *    on cream, `ink_faint_on_cream`, 4.99) -- all three already measured,
- *    all AA or better.
- *  - `elmPartiallyObscuring` / `imgNode` -- the ribbon motif (D-16's "one
- *    continuous meandering stroke"; `.masthead__loops` on every page,
- *    `.hero__loops` on several, `.coda__loops` on the homepage) is
- *    `aria-hidden` and deliberately positioned to run into a page's own
- *    text -- and at some widths its thin stroke visually grazes real
- *    text: `.masthead__brand-mark` at 390px (confirmed by rendering and
+ *    all AA or better, on every page they appear on (bare class where
+ *    `.section` is unique on the page, `:nth-child`-qualified on `/` and
+ *    `/data/`, which each render more than one `.section`).
+ *  - `imgNode` -- the ribbon motif (D-16's "one continuous meandering
+ *    stroke"; `.masthead__loops` on every page, `.hero__loops` on
+ *    several, `.coda__loops` on the homepage) is `aria-hidden` and
+ *    deliberately positioned to run into a page's own text -- and at some
+ *    widths its thin stroke visually grazes real text:
+ *    `.masthead__brand-mark` at 390px (confirmed by rendering and
  *    screenshotting the actual pixels, not assumed -- a purple line a few
  *    screen pixels wide crossing part of a glyph, the rest of the word
- *    untouched) and, on the homepage, `.coda__text`, where `.coda__loops`
- *    sits in a lower stacking position than `.coda__inner` (`z-index: 1`).
- *    Neither is a real reduction in legibility -- the text's own colour
- *    against its *designed* background clears AA with room to spare
- *    either way: purple on cream (`purple_on_cream`, 11.26) for the
- *    masthead; white on purple (`white_on_purple`, 12.74) and, for
- *    `.coda__text em`, turquoise on purple (`turquoise_on_purple`, 7.93 --
- *    added to `data/brand.json` by this same review, since the pairing
- *    had existed, unmeasured by name, since task 4) for the coda.
+ *    untouched) and, on the homepage, `.coda__text > em`. Neither is a
+ *    real reduction in legibility -- the text's own colour against its
+ *    *designed* background clears AA with room to spare either way:
+ *    purple on cream (`purple_on_cream`, 11.26) for the masthead;
+ *    turquoise on purple (`turquoise_on_purple`, 7.93 -- added to
+ *    `data/brand.json` by task 11's own review, since the pairing had
+ *    existed, unmeasured by name, since task 4) for `.coda__text em`.
+ *  - `elmPartiallyObscuring` -- `.coda__text` itself (the element `em`
+ *    sits inside, not the `em` alone), where `.coda__loops` sits in a
+ *    lower stacking position than `.coda__inner` (`z-index: 1`): white on
+ *    purple (`white_on_purple`, 12.74).
  */
-const REVIEWED_INCOMPLETE_MESSAGE_KEYS = new Set([
-  'pseudoContent',
-  'elmPartiallyObscuring',
-  'imgNode',
-]);
+const REVIEWED_INCOMPLETE_NODES = [
+  { messageKey: 'pseudoContent', selector: '.section__num' },
+  { messageKey: 'pseudoContent', selector: '.section__label' },
+  { messageKey: 'pseudoContent', selector: '.section__count' },
+  {
+    messageKey: 'pseudoContent',
+    selector: '.section:nth-child(2) > .section__head > .section__num',
+  },
+  {
+    messageKey: 'pseudoContent',
+    selector: '.section:nth-child(2) > .section__head > .section__label',
+  },
+  {
+    messageKey: 'pseudoContent',
+    selector: '.section:nth-child(3) > .section__head > .section__num',
+  },
+  {
+    messageKey: 'pseudoContent',
+    selector: '.section:nth-child(3) > .section__head > .section__label',
+  },
+  { messageKey: 'imgNode', selector: '.masthead__brand-mark' },
+  { messageKey: 'elmPartiallyObscuring', selector: '.coda__text' },
+  { messageKey: 'imgNode', selector: '.coda__text > em' },
+];
 
 /** The `color-contrast` check's own `messageKey` for one axe `incomplete`
  *  node, or `null` when the node's shape does not match what this project
@@ -353,15 +409,28 @@ function messageKeyFor(node) {
   return check?.data?.messageKey ?? null;
 }
 
+/** Whether this specific node -- `messageKey` *and* the selector axe
+ *  resolved it to, both -- is one this project has actually measured (see
+ *  `REVIEWED_INCOMPLETE_NODES`'s own comment). A node sharing only the
+ *  `messageKey` with a reviewed entry, at a selector nobody has looked
+ *  at, is not reviewed: that gap is exactly what this function closes. */
+function isReviewedIncomplete(messageKey, node) {
+  if (!messageKey) return false;
+  const selector = node.target.join(' ');
+  return REVIEWED_INCOMPLETE_NODES.some(
+    (entry) => entry.messageKey === messageKey && entry.selector === selector
+  );
+}
+
 /** Splits one axe `incomplete` item into nodes this project has already
- *  reviewed and named (see `REVIEWED_INCOMPLETE_MESSAGE_KEYS`'s own
- *  comment) and nodes it has not -- the latter must fail the build. */
+ *  reviewed and named (see `REVIEWED_INCOMPLETE_NODES`'s own comment) and
+ *  nodes it has not -- the latter must fail the build. */
 function classifyIncomplete(item) {
   const reviewed = [];
   const unreviewed = [];
   for (const node of item.nodes) {
     const key = messageKeyFor(node);
-    if (item.id === 'color-contrast' && key && REVIEWED_INCOMPLETE_MESSAGE_KEYS.has(key)) {
+    if (item.id === 'color-contrast' && isReviewedIncomplete(key, node)) {
       reviewed.push({ node, key });
     } else {
       unreviewed.push({ node, key });
@@ -478,7 +547,7 @@ async function main() {
   if (reviewedIncompleteByPage.length > 0) {
     console.log(
       '::notice::axe flagged colour-contrast as "incomplete" on nodes already reviewed and ' +
-        'measured by hand (see check-a11y.mjs\'s own REVIEWED_INCOMPLETE_MESSAGE_KEYS comment):'
+        'measured by hand (see check-a11y.mjs\'s own REVIEWED_INCOMPLETE_NODES comment):'
     );
     for (const { url, viewport, item, nodes } of reviewedIncompleteByPage) {
       const targets = nodes.map((n) => n.node.target.join(' ')).join(' | ');
@@ -490,7 +559,7 @@ async function main() {
     console.log(
       '::error::axe reported an "incomplete" result this project has not reviewed -- ' +
         'treated as a failure until a human looks at it and either fixes it or adds it, ' +
-        'named and justified, to REVIEWED_INCOMPLETE_MESSAGE_KEYS:'
+        'named and justified, to REVIEWED_INCOMPLETE_NODES:'
     );
     for (const { url, viewport, item, nodes } of unreviewedIncompleteByPage) {
       for (const { node, key } of nodes) {

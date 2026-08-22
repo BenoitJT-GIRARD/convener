@@ -115,14 +115,40 @@ def test_incomplete_results_are_reviewed_by_name_never_suppressed_wholesale() ->
     """ "If a tool reports something you judge to be a false positive, say
     so with the measurement, and suppress it named and justified, never
     wholesale." This checker keeps a named allow-list of specific,
-    reviewed axe `messageKey`s (`REVIEWED_INCOMPLETE_MESSAGE_KEYS`) rather
-    than treating every `incomplete` result as a mere warning -- an
-    unfamiliar incomplete result must still fail the build.
+    reviewed axe nodes (`REVIEWED_INCOMPLETE_NODES`) rather than treating
+    every `incomplete` result as a mere warning -- an unfamiliar
+    incomplete result must still fail the build.
     """
-    assert "REVIEWED_INCOMPLETE_MESSAGE_KEYS" in _CHECKER
+    assert "REVIEWED_INCOMPLETE_NODES" in _CHECKER
     assert "unreviewedIncompleteByPage.length > 0" in _CHECKER
     exit_decision = _CHECKER.split("process.exitCode = 1")[0][-400:]
     assert "unreviewedIncompleteByPage.length > 0" in exit_decision
+
+
+def test_the_reviewed_allow_list_is_scoped_by_element_not_only_by_message_key() -> None:
+    """A branch review found that `REVIEWED_INCOMPLETE_NODES`'s predecessor
+    (`REVIEWED_INCOMPLETE_MESSAGE_KEYS`) matched on axe's `messageKey`
+    alone -- the generic *reason* color-contrast gave up on a node, never
+    the node itself. Reproduced by hand: a deliberately broken,
+    never-measured `::before`-painted pairing (~1.07:1) reports the
+    identical `messageKey` (`pseudoContent`) as the three legitimately
+    reviewed pairings, and the old allow-list waved it through, silently,
+    forever. This pins the fix -- matching must require the CSS selector
+    axe resolved the node to as well, so a new element sharing only the
+    *shape* of a reviewed one still fails until a human measures it.
+    """
+    assert "REVIEWED_INCOMPLETE_MESSAGE_KEYS" not in _CHECKER, (
+        "the selector-blind allow-list must not come back under its old name"
+    )
+    assert "function isReviewedIncomplete(" in _CHECKER
+    body = _CHECKER.split("function isReviewedIncomplete(", 1)[1].split(
+        "\nfunction ", 1
+    )[0]
+    # The match must read the node's own selector, not just its
+    # messageKey -- the exact gap the review found.
+    assert "node.target" in body
+    assert "entry.selector" in body
+    assert "entry.messageKey" in body
 
 
 def test_heading_order_is_opted_in_by_rule_not_by_the_whole_best_practice_tag() -> None:
