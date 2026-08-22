@@ -55,11 +55,16 @@ layout: layout.njk
         {% if e.abstract %}
         <p class="feature__abstract">{{ e.abstract }}</p>
         {% endif %}
-        {% if e.registration_link %}
+        {#
+          The event page, never `e.registration_link` -- that field carries
+          the room link (D-19, acceptance criterion 2: no room link on any
+          public page). The event page is the edition's own address and
+          the one place a form will ever sit (task 6); this CTA always
+          points there, whether or not a room link has been set yet.
+        #}
         <div class="feature__action">
-          <a class="btn btn--primary" href="{{ e.registration_link }}">Register free &rarr;</a>
+          <a class="btn btn--primary" href="/events/{{ e.id | lower }}/">Register free &rarr;</a>
         </div>
-        {% endif %}
       </div>
     </article>
     {% endfor %}
@@ -83,7 +88,7 @@ layout: layout.njk
     <li class="archive__row">
       <span class="archive__num">{{ e.id }}</span>
       <div class="archive__main">
-        <p class="archive__title">{{ e.title }}</p>
+        <p class="archive__title"><a class="unstyled" href="/events/{{ e.id | lower }}/">{{ e.title }}</a></p>
         <div class="archive__meta">
           <strong>{{ e.speaker_name }}</strong>
           {% if e.speaker_affiliation %}<span>&middot; {{ e.speaker_affiliation }}</span>{% endif %}

@@ -57,6 +57,8 @@ lede
 mdash
 affil
 rarr
+larr
 rsquo
 noopener
 Bézier
+driftable
