@@ -23,10 +23,11 @@ import json
 import re
 import shutil
 import subprocess
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -35,6 +36,14 @@ from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.paths import repo_root
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
 from convener_ops.registration import SIGNUP_BASE
+
+#: Fix round 1: the same zone `tools/convener_ops/governance.py::PARIS` already
+#: anchors this project's Python side on -- `zoneinfo`, the standard
+#: library's own IANA tzdata, rather than `site/.eleventy.js`'s `Intl`
+#: reimplemented here, so this test suite proves the build against an
+#: independent computation of the real Europe/Paris offset, not a second
+#: copy of the same arithmetic that could carry the same mistake.
+_PARIS = ZoneInfo("Europe/Paris")
 
 #: Strips CSS/JS block comments (`/* ... */`), Nunjucks comments (`{# ... #}`)
 #: and HTML comments (`<!-- ... -->`), in that order, DOTALL so a comment
@@ -1352,6 +1361,62 @@ def test_an_event_pages_structured_data_names_the_event_type_and_its_real_date(
     assert data["location"]["url"] == _absolute(f"/events/{event_id}/")
 
 
+def test_the_paris_offset_and_label_agree_across_every_edition_and_the_dst_boundary(
+    built_site: Path,
+) -> None:
+    """Fix round 1: `startDate`'s UTC offset must be the one Europe/Paris
+    actually observes on the edition's own date, not a fixed `+01:00` --
+    silently wrong by an hour for any edition in daylight-saving time,
+    which three of this project's own five fixture editions are. And the
+    page's own visible "12:30 CET"/"12:30 CEST" text must state the same
+    season the structured data does (D-26): a page whose text and whose
+    machine-readable data disagree about the start time is worse than
+    either being wrong alone. The homepage's own "Up next" card is
+    checked too -- `index.njk` prints this same label from the same
+    filter, independently of `event.njk`.
+
+    Checked against every edition in the committed fixture, not a single
+    hand-picked one: a test that only ever exercised a winter date would
+    have passed against the bug this fixes, since a hard-typed `+01:00`
+    agrees with a CET edition by construction. The assertion below that
+    both abbreviations actually occur in the fixture guards against that
+    exact blind spot surviving a future edit to `events.json`.
+    """
+    events = _events_fixture()
+    seen_abbreviations = set()
+    for event in events:
+        event_id = str(event["id"]).lower()
+        page = (built_site / "events" / event_id / "index.html").read_text(
+            encoding="utf-8"
+        )
+        data = _json_ld(page)
+        offset, abbreviation = _expected_paris_start(str(event["date"]))
+        seen_abbreviations.add(abbreviation)
+        assert data["startDate"] == f"{event['date']}T12:30:00{offset}", (
+            f"{event_id}'s startDate is {data['startDate']!r}, expected an "
+            f"offset of {offset!r} for {event['date']} in Europe/Paris"
+        )
+        assert f"12:30 {abbreviation}" in page, (
+            f"{event_id}'s page does not visibly state '12:30 {abbreviation}', "
+            f"even though its structured data's startDate carries offset {offset}"
+        )
+    assert seen_abbreviations == {"CET", "CEST"}, (
+        f"{_EVENTS_FIXTURE.as_posix()}'s editions all fall in the same "
+        f"Europe/Paris season ({seen_abbreviations}) -- this test needs at "
+        "least one edition on each side of the DST boundary to prove "
+        "anything about it"
+    )
+
+    upcoming_id = _the_one_scheduled_event_id()
+    upcoming = next(e for e in events if str(e["id"]).lower() == upcoming_id)
+    _, upcoming_abbreviation = _expected_paris_start(str(upcoming["date"]))
+    home_page = (built_site / "index.html").read_text(encoding="utf-8")
+    assert f"12:30 {upcoming_abbreviation}" in home_page, (
+        "the homepage's own 'Up next' card does not visibly state "
+        f"'12:30 {upcoming_abbreviation}' for {upcoming_id}"
+    )
+
+
 def test_an_upcoming_events_structured_data_offers_registration_a_past_ones_does_not(
     built_site: Path,
 ) -> None:
@@ -1631,12 +1696,38 @@ _ENGLISH_MONTHS = (
 )
 
 
+def _expected_paris_start(iso_date: str) -> tuple[str, str]:
+    """The real Europe/Paris UTC offset and CET/CEST abbreviation for the
+    series' standing 12:30 local start time on `iso_date` -- computed
+    independently via `zoneinfo`'s own IANA tzdata rather than by
+    re-implementing `site/.eleventy.js::parisStandingStart`'s `Intl`
+    arithmetic. `datetime.tzname()` on a `zoneinfo`-aware value is exactly
+    'CET'/'CEST' for this zone; unambiguous at 12:30, since Europe/Paris's
+    DST transitions all happen in the small hours.
+
+    Fix round 1: this replaces a fixed `timezone(timedelta(hours=1))` that
+    silently assumed CET year-round -- wrong for any edition falling in
+    daylight-saving time, which three of this project's own five fixture
+    editions do.
+    """
+    year, month, day = (int(part) for part in iso_date.split("-"))
+    local = datetime(year, month, day, 12, 30, 0, tzinfo=_PARIS)
+    offset = local.utcoffset()
+    assert offset is not None, f"{iso_date} resolved no UTC offset in Europe/Paris"
+    total_minutes = int(offset.total_seconds() // 60)
+    sign = "+" if total_minutes >= 0 else "-"
+    hours, minutes = divmod(abs(total_minutes), 60)
+    abbreviation = local.tzname()
+    assert abbreviation, f"{iso_date} resolved no timezone abbreviation in Europe/Paris"
+    return f"{sign}{hours:02d}:{minutes:02d}", abbreviation
+
+
 def _expected_rfc822(iso_date: str) -> str:
     """The RFC-822/1123 `pubDate` `site/.eleventy.js`'s own `rfc822` filter
     should produce for `iso_date`, computed independently in Python rather
-    than by re-implementing that filter's own `Date` arithmetic: fixed
-    12:30 CET (+01:00, the same fixed assumption `event.njk`'s own rail
-    already prints as plain text), converted to UTC/GMT -- exactly what
+    than by re-implementing that filter's own `Date` arithmetic: the
+    series' standing 12:30 Europe/Paris local start time
+    (`_expected_paris_start`), converted to UTC/GMT -- exactly what
     JavaScript's `Date.prototype.toUTCString()` emits. Day and month names
     are a fixed, English lookup table rather than `strftime('%a'/'%b')`:
     those are locale-dependent in Python, and this project has already
@@ -1645,7 +1736,7 @@ def _expected_rfc822(iso_date: str) -> str:
     locale would be exactly that kind of hidden disagreement again.
     """
     year, month, day = (int(part) for part in iso_date.split("-"))
-    local = datetime(year, month, day, 12, 30, 0, tzinfo=timezone(timedelta(hours=1)))
+    local = datetime(year, month, day, 12, 30, 0, tzinfo=_PARIS)
     utc = local.astimezone(UTC)
     weekday = _ENGLISH_WEEKDAYS[utc.weekday()]
     month_name = _ENGLISH_MONTHS[utc.month - 1]

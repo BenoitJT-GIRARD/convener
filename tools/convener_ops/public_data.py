@@ -123,6 +123,17 @@ NEVER_PUBLISHED = frozenset(
 #: carries. `links` is a list where every other column is a string and no
 #: consumer of the feed asks for it, so it is permitted and unpublished.
 #:
+#: `time` is the same shape of absence, found by the vitrine's fix round 1
+#: (structured event data): nothing here maps any column to it, so no
+#: edition's `time` ever reaches `events-public.json` even though it is
+#: classified `PUBLISHABLE_ALWAYS` -- confirmed by regenerating that file
+#: from `data/speakers.yml` and inspecting the output. The site's own
+#: templates (`site/.eleventy.js::parisStandingStart`) read no field for
+#: it either, and say so at the point that would otherwise be silent about
+#: overriding it. Wiring `time` through both sides is a real feature this
+#: project has not built (a per-edition start time other than the series'
+#: standing 12:30), not a bug in this mapping today.
+#:
 #: `zoom_link` is the same shape of absence for a sharper reason. This
 #: mapping used to carry `"registration_link": "zoom_link"` -- publishing
 #: the room address under a name that, once the event page carried its own

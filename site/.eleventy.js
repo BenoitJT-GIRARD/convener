@@ -42,6 +42,86 @@ const PATH_PREFIX = '/example-showcase/';
 // Change all three together.
 const SITE_ORIGIN = 'https://example-instance.github.io';
 
+// Fix round 1: the series' one standing start time, Europe/Paris *local*
+// -- what a recurring seminar series means by "the seminar starts at
+// 12:30" is 12:30 in Paris, not a fixed UTC offset that happens to be
+// right for half the year. `data/speakers.yml` carries a `time` field
+// per record, and `public_data.py::PUBLISHABLE_ALWAYS` classifies it as
+// publishable -- but `PUBLIC_FIELD_SOURCES`, the mapping that actually
+// decides what a built row carries, has no entry pointing any column at
+// it, so `time` never reaches `events-public.json` (confirmed by
+// regenerating that file from the real `data/speakers.yml` and
+// inspecting the output, not merely by reading the two files side by
+// side) and so never reaches this project's own `events.json` either.
+// With nothing to read per edition, this stays one constant rather than
+// a per-edition value with a fallback the other side can never populate
+// -- "do not build a path to data that cannot arrive", a rule this
+// project has already paid for five times. The day `time` is wired
+// through `PUBLIC_FIELD_SOURCES`, this is the one constant to replace
+// with `event.time || STANDING_START_LOCAL`, in `parisStandingStart`
+// below.
+const STANDING_START_LOCAL = '12:30';
+
+// Fix round 1: Europe/Paris's own UTC offset and abbreviation for the
+// *edition's own date*, at the standing local time above -- +01:00/CET
+// from late October to late March, +02:00/CEST the rest of the year.
+// This used to be a hand-typed `+01:00`/`CET` regardless of season,
+// silently wrong by one hour for any edition in daylight-saving time --
+// three of this project's own five fixture editions -- in both the
+// machine-readable JSON-LD `startDate` and the feed's `pubDate`, and
+// mislabelled on the page's own visible text besides: a calendar import
+// or a search engine reading `+01:00` in June books the wrong hour, and
+// nobody reading the page's own text can tell it is wrong.
+//
+// Derived from `Intl`, built into Node -- no dependency, no network --
+// rather than a hand-rolled DST calendar, the same instrument
+// `app/src/state/derived.ts::parisWallTimeToEpoch` already uses for this
+// project's identical zone (duplicated rather than imported: a
+// `.eleventy.js` cannot import from `app/`'s own build, and D-14 already
+// settles that a fixture binds two independent implementations across a
+// language boundary rather than moving the decision to one side -- there
+// is nothing to bind here, since neither side reads the other's answer,
+// but the technique is the same one already vetted on the Python/
+// JavaScript boundary elsewhere in this file).
+//
+// Probed at midday UTC on the edition's own date, not at the standing
+// local time itself (computing that would need the offset already known
+// to convert it to UTC first): Europe/Paris's DST transitions always
+// happen in the small hours (01:00 UTC), well before midday on the
+// transition day itself, so a midday-UTC probe always resolves the
+// offset actually in effect at 12:30 Paris local time on that same
+// calendar date -- transition days included.
+function parisStandingStart(isoDate) {
+  const probe = new Date(`${isoDate}T12:00:00Z`);
+  // `timeZoneName: 'shortOffset'` is stable across locales ('GMT+1',
+  // 'GMT+2'); the CET/CEST *abbreviation* is not -- `en-US`'s own ICU
+  // data renders it as this same 'GMT+1'/'GMT+2' string, not the letters,
+  // while `en-GB`'s does (confirmed by probing both locally). Rather than
+  // pin this project's output to whichever one locale's data happens to
+  // spell it out, the offset is the only thing asked of `Intl` here.
+  const offsetPart = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    timeZoneName: 'shortOffset',
+  })
+    .formatToParts(probe)
+    .find((part) => part.type === 'timeZoneName').value; // 'GMT+1' or 'GMT+2'
+  const match = /^GMT([+-])(\d{1,2})$/.exec(offsetPart);
+  if (!match) {
+    throw new Error(`unexpected Europe/Paris UTC offset from Intl: ${offsetPart}`);
+  }
+  const [, sign, hours] = match;
+  const offset = `${sign}${hours.padStart(2, '0')}:00`;
+  // Europe/Paris observes exactly two offsets, and this project has only
+  // ever named them CET and CEST (never "GMT+1"): naming the offset this
+  // zone is already in is a fixed convention, not a second DST calendar
+  // to keep in step with the one `Intl` resolved above.
+  const abbreviation = offset === '+02:00' ? 'CEST' : 'CET';
+  return {
+    startDate: `${isoDate}T${STANDING_START_LOCAL}:00${offset}`,
+    label: `${STANDING_START_LOCAL} ${abbreviation}`,
+  };
+}
+
 module.exports = function (cfg) {
   cfg.addPassthroughCopy('src/style.css');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
@@ -92,17 +172,27 @@ module.exports = function (cfg) {
     });
   });
 
+  // `event.date | parisStandingStart` for both the JSON-LD `startDate`
+  // (event.njk) and the visible "12:30 CET"/"12:30 CEST" label
+  // (event.njk, index.njk) -- one Paris-DST computation feeding every
+  // place this project states the edition's start time, so they cannot
+  // state three different answers about the same date. See
+  // `parisStandingStart`'s own comment above for the derivation and for
+  // why `time` (the field that would otherwise let a per-edition value
+  // override the standing 12:30) does not reach this data yet.
+  cfg.addFilter('parisStandingStart', parisStandingStart);
+
   // A feed item needs a machine-readable publication timestamp (RSS 2.0's
   // `pubDate`, RFC-822/1123) -- built from the *edition's own* `date`, never
   // from `new Date()` read with no argument at build time, which would make
   // every rebuild churn the feed for a reason that has nothing to do with
   // its actual content (the same failure `parisToday()`/`paris_today`
   // exists to rule out on the Python side of this project). `isoDate` is
-  // always `YYYY-MM-DD` (`events.json`'s own shape); the fixed 12:30 CET is
-  // the same advertised start time `event.njk`'s own rail already prints
-  // as plain text, kept here rather than a second, disagreeing assumption.
+  // always `YYYY-MM-DD` (`events.json`'s own shape); `parisStandingStart`
+  // above resolves the real Europe/Paris offset for that date rather than
+  // a fixed `+01:00` -- see its own comment for why that fix matters here.
   cfg.addFilter('rfc822', function (isoDate) {
-    return new Date(`${isoDate}T12:30:00+01:00`).toUTCString();
+    return new Date(parisStandingStart(isoDate).startDate).toUTCString();
   });
 
   return {

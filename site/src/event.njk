@@ -59,6 +59,19 @@ eleventyComputed:
   by mistake.
 #}
 {% set eventUrl = page.url | absoluteUrl %}
+{#
+  Fix round 1: the series' standing start time is 12:30 *Europe/Paris
+  local time*, not a fixed UTC offset -- `+01:00` (CET) roughly late
+  October to late March, `+02:00` (CEST) the rest of the year.
+  `parisStandingStart` (site/.eleventy.js) derives both the JSON-LD
+  `startDate` and the visible "12:30 CET"/"12:30 CEST" label below from
+  the edition's own date, once, so the two cannot disagree the way a
+  hard-typed `+01:00` used to (silently wrong on three of this project's
+  five fixture editions). See that filter's own comment for why `time` --
+  the field that would let a per-edition value override this standing
+  one -- does not reach this data yet.
+#}
+{% set parisTime = event.date | parisStandingStart %}
 
 {% set eventDescription = event.abstract %}
 {% if not eventDescription %}
@@ -93,7 +106,7 @@ eleventyComputed:
   "@type": "Event",
   "name": event.title,
   "url": eventUrl,
-  "startDate": event.date ~ "T12:30:00+01:00",
+  "startDate": parisTime.startDate,
   "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
   "eventStatus": "https://schema.org/EventScheduled",
   "description": eventDescription,
@@ -116,7 +129,7 @@ eleventyComputed:
         <p class="feature__code">{{ event.id }}</p>
         <p class="feature__date">
           <strong>{{ event.date }}</strong><br>
-          12:30 CET
+          {{ parisTime.label }}
         </p>
       </aside>
       <div class="feature__body">
