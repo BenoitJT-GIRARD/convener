@@ -1,20 +1,26 @@
 # The Example Collective — Monthly Reading Group
 
-The operational workspace for our community webinar series: a single React
-SPA that drives the entire workflow, from finding speakers to wrapping up
-events. Everything a volunteer needs sits inside the app.
+The operational workspace for our community webinar series, from finding a
+speaker to certifying attendance — and the source of the public showcase
+those webinars are announced and registered on. See
+[`docs/architecture.md`](docs/architecture.md) for the full picture: how
+the two applications and the public showcase fit together, why the
+structural choices were made, where a participant's personal data goes
+and when it stops being readable, and how to take this project over.
 
 ## What is here
 
 | Folder | What it holds |
 |---|---|
-| `app/` | The React app (Vite + TypeScript). Built here and published to the separate `example-showcase` repository — see *Publishing the application (GitHub Pages)* in `docs/reference/operations.md`. |
-| `data/` | `speakers.yml` (unified entity), `config.yml` (board, threshold, season). |
-| `docs/` | Handbook content as Markdown — rendered *inside* the app at the point of action and in the Handbook tab. Not a separate site. |
-| `tools/` | The `convener-ops` package: data validation, integration status, the sweep, the public-data filter, and the form-proposal handler. |
+| `app/` | The cockpit (Vite + TypeScript + React), gated by GitHub sign-in — plus the public *islands* (registration, certificate verification) built alongside it and mounted on the showcase's static pages. Built here and published to the separate `example-showcase` repository — see *Publishing the showcase and the application* in `docs/reference/operations.md`. |
+| `site/` | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, the data notice. Generated into `example-showcase` the same way `app/` is — nothing there is hand-edited. |
+| `data/` | `speakers.yml` (unified entity), `config.yml` (board, threshold, season), and, per event, an encrypted registration and survey-response file. |
+| `docs/` | Handbook content as Markdown — rendered *inside* the cockpit at the point of action and in the Handbook tab — plus reference material such as [`architecture.md`](docs/architecture.md). Not a separate site. |
+| `tools/` | The `convener-ops` package: data validation, integration status, the sweep, the public-data filter, certificate issuance and revocation, the retention sweep. |
 | `services/auth-proxy/` | The Cloudflare Worker that relays the GitHub device-flow sign-in. |
 | `services/form-relay/` | The Cloudflare Worker that verifies a Tally webhook and relays it into a GitHub `repository_dispatch`. Holds a GitHub token. |
-| `.github/` | CI: data validation, Tally proposal handler, public-data filter, vitrine sync, quality and security gates. |
+| `services/signup-relay/` | The Cloudflare Worker a registration or survey response passes through on its way in — forwards ciphertext it cannot read, and holds a GitHub token. |
+| `.github/` | CI: data validation, the public-data filter, certificate issuance and revocation, the retention sweep, publishing the showcase and the cockpit, quality and security gates. |
 
 ## How to work on it
 
@@ -34,6 +40,14 @@ Build + tests:
 cd app
 npm test -- --run
 npm run build
+```
+
+The public showcase is a separate, static project — no sign-in, no secret:
+
+```bash
+cd site
+npm install
+npm start             # http://localhost:8080
 ```
 
 Validate data:
@@ -68,11 +82,20 @@ authority.
 - **State machine.** Status changes are a consequence of explicit gestures (vote, send invitation, log reply, lock date). The free-form status field is gone (except a board-only admin override).
 - **Two personas.** Active organizer and board member, served at parity. The inbox adapts to the role.
 - **Handbook content rendered inline.** Each runbook step links to the relevant Markdown chunk (template email, instructions) which renders next to the action. No back-and-forth with a separate doc site.
-- **Vitrine separate.** [`example-showcase`](https://github.com/example-instance/example-showcase) is the public marketing site, fed by the filtered public-data sync.
+- **The showcase is generated, not hand-built.** [`example-showcase`](https://github.com/example-instance/example-showcase) holds no source of its own — continuous integration here builds `site/` and `app/` and pushes the output to its root.
 
-See `docs/superpowers/specs/2026-05-23-convener-app-refonte-design.md` for the
-full design and `docs/superpowers/plans/2026-05-23-convener-app-refonte.md`
-for the implementation plan.
+See [`docs/architecture.md`](docs/architecture.md) for how these pieces
+fit together, why the structural choices were made, the diagram of where
+personal data goes, and the handover procedure. The cockpit's own original
+design is `docs/superpowers/specs/2026-05-23-convener-app-refonte-design.md`.
+
+## Contributing
+
+A pull request is expected to leave every gate green — the same
+formatting, linting, British-English spelling, type-checking and test
+commands continuous integration runs on every push; see
+[`docs/architecture.md`](docs/architecture.md#contributing) for the
+per-directory commands. None of it needs an account or a secret to run.
 
 ## Spot a mistake?
 
