@@ -419,6 +419,13 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   margin-top: .85rem;
 }
 
+/* Fix round 2: the "Discuss" pill an upcoming edition carries once
+ * `forum_thread` is set -- reuses `.archive__action--alt`, the same pill
+ * the past section below and the homepage archive already render, just
+ * spaced clear of the registration island above it (event.njk's own
+ * comment explains why it is attached here rather than a new band). */
+.event__discuss { margin-top: 1.75rem; }
+
 /* ── Buttons ──────────────────────────────────────────────── */
 .btn {
   font-family: var(--ff-display);

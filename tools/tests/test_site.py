@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -355,6 +356,130 @@ def test_a_past_event_page_still_leads_with_the_recording_section(
     band_at = page.rindex('<span class="section__num">01</span>', 0, recording_at)
     assert band_at < recording_at, (
         "band 01 no longer immediately precedes Recording & discussion"
+    )
+
+
+# -------------------------------------------------------------------------- #
+# Fix round 2: `forum_thread` carries no status gate at all
+# (`public_data.py::PUBLISHABLE_ALWAYS`, no companion to
+# `RECORDING_STATUSES`), unlike `youtube_url` -- an operator can open a
+# discussion thread ahead of the seminar, and round 1 dropped the only
+# place an upcoming page could ever show it. The committed fixture's one
+# `scheduled` event carries no `forum_thread` (that gap is exactly why the
+# regression shipped), so the "with a thread" case below builds from a
+# scratch copy of `site/src` with that field filled in, rather than from
+# `built_site` -- the committed fixture is left untouched.
+# -------------------------------------------------------------------------- #
+
+#: Not a real forum: only ever read back out of the scratch build below.
+_FIXTURE_ONLY_THREAD_URL = (
+    "https://forum.example.test/t/mrg-05-fixture-only-thread/999"
+)
+
+
+@pytest.fixture(scope="module")
+def built_site_with_upcoming_forum_thread(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Path:
+    """The same build `built_site` produces, from a copied `src/` tree with
+    the one `scheduled` event's `forum_thread` filled in -- proves the
+    "upcoming edition, real thread" case without committing that
+    combination to `_EVENTS_FIXTURE`, which today has no upcoming edition
+    carrying one at all.
+
+    Copies `site/src` wholesale (small: two templates, one include, one
+    stylesheet, `_data/`, `.nojekyll`) rather than pointing Eleventy at the
+    real one with an in-memory patch: `--input` accepts any directory, and
+    a scratch copy is the only way to change what `_data/events.json`
+    carries without writing through the committed file. `cwd` stays
+    `ROOT / "site"` so `.eleventy.js`'s own passthrough-copy paths
+    ('src/style.css', '../fonts') keep resolving against the real
+    project, exactly as they do for `built_site`.
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    scratch_src = tmp_path_factory.mktemp("site-src-with-thread") / "src"
+    shutil.copytree(SITE_SRC, scratch_src)
+    events_path = scratch_src / "_data" / "events.json"
+    events = json.loads(events_path.read_text(encoding="utf-8"))
+    patched = False
+    for event in events:
+        if event.get("status") == "scheduled":
+            event["forum_thread"] = _FIXTURE_ONLY_THREAD_URL
+            patched = True
+    assert patched, (
+        f"{_EVENTS_FIXTURE.as_posix()} carries no 'scheduled' event to patch "
+        "-- nothing for this fixture to prove the 'real thread' case against"
+    )
+    events_path.write_text(json.dumps(events), encoding="utf-8")
+    out = tmp_path_factory.mktemp("site-build-with-thread")
+    try:
+        subprocess.run(
+            [
+                "node",
+                str(_ELEVENTY_CMD),
+                f"--input={scratch_src.as_posix()}",
+                f"--output={out.as_posix()}",
+            ],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+def test_an_upcoming_event_page_shows_no_discuss_link_without_a_thread(
+    built_site: Path,
+) -> None:
+    """The committed fixture's one `scheduled` event carries no
+    `forum_thread` -- nothing should render for it: no live link, and, by
+    fix round 1's own rule against a returning "No thread yet", no
+    empty-state placeholder in its place either."""
+    event_id = _the_one_scheduled_event_id()
+    page = (built_site / "events" / event_id / "index.html").read_text(encoding="utf-8")
+    assert ">Discuss<" not in page, (
+        "a discuss link rendered on an upcoming page with no forum_thread set"
+    )
+    assert "No thread yet" not in page, (
+        "the empty-state placeholder this fix must not bring back is back"
+    )
+
+
+def test_an_upcoming_event_page_shows_the_discuss_link_when_a_thread_is_set(
+    built_site_with_upcoming_forum_thread: Path,
+) -> None:
+    """The other half: once `forum_thread` is set on a `scheduled` event
+    (`built_site_with_upcoming_forum_thread`, since the committed fixture
+    never carries this combination), the link must actually appear --
+    attached to the registration section, after it rather than ahead of
+    it, and without resurrecting the recording section round 1 dropped.
+    """
+    event_id = _the_one_scheduled_event_id()
+    page = (
+        built_site_with_upcoming_forum_thread / "events" / event_id / "index.html"
+    ).read_text(encoding="utf-8")
+    assert f'href="{_FIXTURE_ONLY_THREAD_URL}"' in page, (
+        "the thread link never rendered on an upcoming page that has one"
+    )
+    register_at = page.index('<span class="section__label">Register</span>')
+    discuss_at = page.index(">Discuss<")
+    assert register_at < discuss_at, (
+        "the discuss link renders ahead of registration -- registration is "
+        "what a visitor to an upcoming page came for and must stay first"
+    )
+    assert "Recording &amp; discussion" not in page, (
+        "a real thread resurrected the recording section on an upcoming page"
     )
 
 

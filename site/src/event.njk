@@ -50,12 +50,23 @@ permalink: "/events/{{ event.id | lower }}/"
 
   Upcoming -- a visitor came here to register, so that is section 01, ahead
   of everything else, not buried beneath two empty states nobody asked
-  about. The recording section is dropped entirely rather than kept as a
-  second, later band: `youtube_url` is only ever published once an edition
-  reaches `archived` (`public_data.py::RECORDING_STATUSES`), so an upcoming
-  page showing "No recording yet" is not withholding a recording that could
-  exist yet -- it is stating a certainty ("this has not happened") as if it
-  were news, which "Upcoming" in the rail above already said better.
+  about. The recording half of that old section is dropped entirely rather
+  than kept as a second, later band: `youtube_url` is only ever published
+  once an edition reaches `archived` (`public_data.py::RECORDING_STATUSES`),
+  so an upcoming page showing "No recording yet" is not withholding a
+  recording that could exist yet -- it is stating a certainty ("this has
+  not happened") as if it were news, which "Upcoming" in the rail above
+  already said better.
+
+  Fix round 2 -- `forum_thread` is not the same claim. Nothing gates it by
+  status the way `RECORDING_STATUSES` gates a recording
+  (`public_data.py::PUBLISHABLE_ALWAYS`): an operator can open a
+  discussion thread ahead of the seminar, and the field is published
+  exactly as it would be once the edition is past. So it is attached to
+  this same section, if and only if it is set -- never a "No thread yet"
+  placeholder returning, and never a second numbered band spent on one
+  link. Registration is still what a visitor to an upcoming page came for,
+  so it stays first within the section, not above it.
 
   Past -- there is no form, and the recording (or its absence) is the one
   thing a visitor came for, so it stays section 01, unchanged from before
@@ -136,6 +147,21 @@ permalink: "/events/{{ event.id | lower }}/"
     </p>
   </noscript>
   <script type="module" src="/app/islands/signup/signup.js"></script>
+
+  {#
+    Fix round 2: `forum_thread` carries no status gate at all
+    (`public_data.py::PUBLISHABLE_ALWAYS`), so an operator can open this
+    thread before the seminar happens -- the same "Discuss" pill the past
+    section below already renders, attached here instead of a new band,
+    and only when there is a thread to link. No disabled placeholder: an
+    upcoming edition with no thread yet is not news, the same reasoning
+    that dropped the recording half of this section in round 1.
+  #}
+  {% if event.forum_thread %}
+  <div class="event__discuss">
+    <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+  </div>
+  {% endif %}
 </section>
 {% else %}
 <section class="section container">
