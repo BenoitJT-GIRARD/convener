@@ -142,6 +142,36 @@ jobs:
       - name: Install
         working-directory: app
         run: npm ci
+      # Fix round 1 (task 12 follow-up): task 12 wired `npm audit` into the
+      # `site` job only -- `app/`'s own tree (React, Vite, the whole
+      # application toolchain) had never been audited at all, and it is the
+      # larger surface: `react-router`/`react-router-dom` and `js-yaml` are
+      # `dependencies`, not `devDependencies`, so they ship in the built
+      # `dist/assets/index-*.js` the operators' cockpit serves at
+      # `/example-showcase/app/` behind its login screen (App.tsx's `Login`/
+      # `useAuth` gate) -- bounded (never reached by a visitor who only
+      # loads a public showcase page or one of the two islands, both of
+      # which import neither package), but real. `--omit=dev` is the gate:
+      # it fails on exactly that shipped surface, and only that surface.
+      - name: Dependency audit (production)
+        working-directory: app
+        run: npm audit --omit=dev
+      # The other 19 findings `npm audit` (no flag) reports today are all
+      # in `devDependencies` -- eslint, typescript-eslint, @babel/core,
+      # autoprefixer's own postcss/tailwindcss chain -- tooling that runs
+      # only on a CI runner or a maintainer's machine, over this
+      # repository's own first-party source, and ships in no built output
+      # at all. Blocking on those would fail this job on a class of finding
+      # that cannot reach the surface this task is actually protecting;
+      # never checking them would hide the day one of them stops being
+      # theoretical. `continue-on-error` prints the finding and marks the
+      # step visibly (D-25: a check that cannot fail is not a check, and
+      # the mirror is just as true -- a finding nothing ever surfaces is
+      # not reported either) without failing the job or blocking a merge.
+      - name: Dependency audit (development tooling, informational)
+        working-directory: app
+        continue-on-error: true
+        run: npm audit
       - name: Lint
         working-directory: app
         run: npm run lint
@@ -258,6 +288,19 @@ jobs:
       - name: Install
         working-directory: services/auth-proxy
         run: npm ci
+      # Fix round 1 (task 12 follow-up): this relay declares no
+      # `dependencies` at all -- `src/` imports nothing from `node_modules`,
+      # only the Worker runtime's own standard `fetch` API -- so nothing
+      # `npm audit` could find here ever reaches the deployed Worker.
+      # `wrangler` (which bundles and deploys it) and `vitest` are its
+      # entire dependency tree, exactly `site/`'s own shape (an all-tooling
+      # package.json): no flag, never `--omit=dev`, which would exempt
+      # every dependency this package declares and pass regardless of what
+      # it found (D-25, and `test_the_workflow_audits_site_dependencies`'s
+      # own reasoning for `site/`, applied here for the same cause).
+      - name: Dependency audit
+        working-directory: services/auth-proxy
+        run: npm audit
       - name: Lint
         working-directory: services/auth-proxy
         run: npx --yes eslint@9 src test
@@ -282,6 +325,12 @@ jobs:
       - name: Install
         working-directory: services/form-relay
         run: npm ci
+      # Fix round 1 (task 12 follow-up): same shape as services/auth-proxy's
+      # own step above -- no `dependencies`, `wrangler`/`vitest` are the
+      # whole tree, no flag, never `--omit=dev` (D-25).
+      - name: Dependency audit
+        working-directory: services/form-relay
+        run: npm audit
       - name: Lint
         working-directory: services/form-relay
         run: npx --yes eslint@9 src test
@@ -306,6 +355,12 @@ jobs:
       - name: Install
         working-directory: services/signup-relay
         run: npm ci
+      # Fix round 1 (task 12 follow-up): same shape as services/auth-proxy's
+      # own step above -- no `dependencies`, `wrangler`/`vitest` are the
+      # whole tree, no flag, never `--omit=dev` (D-25).
+      - name: Dependency audit
+        working-directory: services/signup-relay
+        run: npm audit
       - name: Lint
         working-directory: services/signup-relay
         run: npx --yes eslint@9 src test
