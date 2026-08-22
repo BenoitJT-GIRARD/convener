@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { SignupForm } from '../src/islands/signup/SignupForm';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 
@@ -579,7 +579,15 @@ describe('SignupForm -- focus after a failed submission', () => {
       // touched: a fix that focused the wrong element (the alert's own
       // text, say, via a stray tabIndex) would satisfy "some ref got
       // focus()'d" without satisfying this.
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: /register/i }));
+      // `waitFor`, not a bare `expect`: `findByText` above resolves as soon
+      // as the error *text* commits, and focus is restored by an effect that
+      // can run after that commit -- a race that made this test fail about
+      // once in a hundred full-suite runs. Polling keeps the assertion's
+      // whole bite (it still fails if focus never reaches this button) while
+      // losing the dependence on which of the two lands first.
+      await waitFor(() =>
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: /register/i })),
+      );
       expect(document.activeElement).not.toBe(document.body);
     } finally {
       stopSimulating();
@@ -607,7 +615,15 @@ describe('SignupForm -- focus after a failed submission', () => {
       fireEvent.click(button);
       await screen.findByText(/could not be sent/i);
 
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: /register/i }));
+      // `waitFor`, not a bare `expect`: `findByText` above resolves as soon
+      // as the error *text* commits, and focus is restored by an effect that
+      // can run after that commit -- a race that made this test fail about
+      // once in a hundred full-suite runs. Polling keeps the assertion's
+      // whole bite (it still fails if focus never reaches this button) while
+      // losing the dependence on which of the two lands first.
+      await waitFor(() =>
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: /register/i })),
+      );
       expect(document.activeElement).not.toBe(document.body);
     } finally {
       stopSimulating();
