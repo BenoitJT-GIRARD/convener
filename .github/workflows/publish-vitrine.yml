@@ -105,6 +105,40 @@ jobs:
       - name: Build site
         working-directory: site
         run: npm run build
+      # Phase 5, task 5: acceptance criterion 2 is absolute -- no room
+      # link on any public page, ever; it is delivered only by the
+      # confirmation e-mail, and the event page this task adds is what
+      # replaces it in every announcement instead.
+      # `tools/tests/test_site.py` already proves the templates keep
+      # `registration_link` off a build made from the committed fixture,
+      # on every push; this is the same check, run once more here against
+      # the *real* data this job is seconds away from publishing, the
+      # same "prove it against what is actually about to ship, not only
+      # a fixture" argument the D-25 empty-build guard further down this
+      # file already makes for a different failure mode. A field can be
+      # non-empty in production and still be empty in every fixture a
+      # test happens to carry.
+      - name: Refuse to publish a page that leaks the room link
+        run: |
+          set -e
+          links=$(jq -r '[.[] | .registration_link // empty] | .[]' public-data/events-public.json)
+          if [ -z "$links" ]; then
+            echo "no event in this run carries a room link -- nothing to check"
+            exit 0
+          fi
+          leaked=0
+          while IFS= read -r link; do
+            [ -z "$link" ] && continue
+            hits=$(grep -rlF -- "$link" site/_site || true)
+            if [ -n "$hits" ]; then
+              echo "::error::room link leaked into: $hits"
+              leaked=1
+            fi
+          done <<< "$links"
+          if [ "$leaked" -ne 0 ]; then
+            echo "::error::refusing to publish -- a room link reached the built site"
+            exit 1
+          fi
       - name: Push to example-showcase
         env:
           DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}
