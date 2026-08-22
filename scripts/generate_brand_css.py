@@ -204,7 +204,11 @@ def _splice(current: str, inner: str) -> str:
 #: values by hand -- plus `--white`/`--white-rgb`, added here because
 #: `#fff` was hand-typed more than a dozen times below the block for plain
 #: white text and borders, and a value `data/brand.json` carries cannot be
-#: one this stylesheet retypes either.
+#: one this stylesheet retypes either. `--danger`/`--info` joined in a later
+#: fix round: the certificate-verification page needed them and got them
+#: hand-typed outside this block instead, the same duplication `--white`
+#: was added here to avoid -- so they generate from `_DANGER`/`_INFO` below,
+#: same as `app/src/design/tokens.css`'s own two, rather than being retyped.
 _SITE_ROOT_TEMPLATE: Final = """\
   /* Grounds: turquoise is the field, cream runs across it in bands, white
    * appears only inside photographic frames. */
@@ -227,6 +231,13 @@ _SITE_ROOT_TEMPLATE: Final = """\
   --purple:       {purple};
   --purple-d:     {purple_hover};
   --purple-l:     {purple_tint};
+
+  /* No data/brand.json equivalent: no original Anonymous drew ever needed a
+   * rejection colour or a soft informational one. Measured against this
+   * file's own --surface (cream), the certificate-verification panel's
+   * ground: see data/brand.json's contrast._comment for both numbers. */
+  --danger:       {danger};
+  --info:         {info};
 
   /* Rules and borders only -- never text. */
   --rule:         {rule};
@@ -256,6 +267,8 @@ def render_site_root_block(brand: dict[str, Any]) -> str:
         purple=colours["purple"],
         purple_hover=colours["purple_hover"],
         purple_tint=colours["purple_tint"],
+        danger=_DANGER,
+        info=_INFO,
         rule=colours["rule"],
         rule_strong=colours["rule_strong"],
         select=rgba(colours["turquoise"], _SITE_SELECT_ALPHA),
