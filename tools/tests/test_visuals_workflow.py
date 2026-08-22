@@ -80,13 +80,75 @@ def test_workflow_is_path_filtered_on_both_triggers() -> None:
     download (or at best a cache restore) on every push to any part of
     this repository, for a check that cannot possibly have anything to
     say about most of them. Both `push` and `pull_request` must filter,
-    not just one -- a PR run is exactly where this check matters most."""
+    not just one -- a PR run is exactly where this check matters most.
+
+    Fix round 1: this file used to bind the two lists with a YAML anchor
+    and alias (`&visual_paths`/`*visual_paths`); GitHub Actions' own
+    workflow parser does not support either (a documented limitation, not
+    a version question), so both are now hand-written copies instead. This
+    assertion, via the parsed document, only shows the two happen to
+    resolve to equal lists today -- exactly what an unnoticed anchor would
+    also show, since PyYAML expands one without complaint. The guarantee
+    that actually catches drift (or a reintroduced anchor) is
+    `test_the_two_path_filters_are_identical_lists`, below, which reads the
+    raw file text instead."""
     assert _TRIGGERS["push"]["branches"] == ["main"]
     assert _TRIGGERS["push"]["paths"], "push trigger carries no path filter"
-    # The anchor/alias means these are the *same* list object once parsed
-    # -- this also guards against a future edit that replaces the alias
-    # with a second, independently-typed list that could drift from it.
     assert _TRIGGERS["pull_request"]["paths"] == _TRIGGERS["push"]["paths"]
+
+
+#: A literal `- '...'` sequence item, the shape every path filter entry in
+#: this file takes. Matched line by line so an alias line (`paths:
+#: *visual_paths`, carrying no `- '...'` items of its own) yields an empty
+#: list rather than silently reusing the other trigger's items -- which is
+#: exactly the failure mode this test exists to catch if this file is ever
+#: "simplified" back into an anchor.
+_PATH_ITEM_RE = re.compile(r"^\s*-\s*'([^']+)'\s*$", re.MULTILINE)
+
+
+def _paths_block(text: str, start_marker: str, end_marker: str) -> list[str]:
+    """The `- '...'` items between two markers in the *raw* workflow text.
+
+    Read this way, not through `yaml.safe_load`: a YAML anchor/alias
+    resolves into an identical list either way, which would hide the one
+    thing this test exists to catch (see its own docstring). `end_marker`
+    is searched for strictly after `start_marker`, so two calls can each be
+    pointed at their own slice of the file.
+    """
+    start = text.index(start_marker) + len(start_marker)
+    end = text.index(end_marker, start)
+    return _PATH_ITEM_RE.findall(text[start:end])
+
+
+def test_the_two_path_filters_are_identical_lists() -> None:
+    """Fix round 1: GitHub Actions' own workflow parser does not support
+    YAML anchors (`&name`) or aliases (`*name`) -- a long-standing,
+    documented limitation of that parser, not a version question. This
+    file used to bind `push.paths` and `pull_request.paths` with exactly
+    that (`&visual_paths`/`*visual_paths`); PyYAML expands them without
+    complaint, which is exactly why the earlier version parsed clean in
+    every check this suite already ran and would still have failed to
+    *trigger* on the very first real push -- no workflow in this
+    repository has ever executed (confirmed, task 5's own report).
+
+    The fix is two hand-written copies, each carrying a comment naming
+    this parser limitation so a future edit is not tempted to "simplify"
+    it back into an anchor. This test is what holds the two copies
+    together instead of that comment alone: read from the raw file text,
+    never through `yaml.safe_load` (used everywhere else in this module),
+    because a resolved anchor/alias would compare as "equal" precisely
+    when it should not -- see `_paths_block`'s own docstring.
+    """
+    push_paths = _paths_block(_WORKFLOW, "push:", "pull_request:")
+    pull_request_paths = _paths_block(_WORKFLOW, "pull_request:", "\njobs:")
+    assert push_paths, (
+        "no `- '...'` path items found under push: -- the markers this "
+        "test slices the file on may have moved"
+    )
+    assert pull_request_paths == push_paths, (
+        "push.paths and pull_request.paths have drifted apart: push has "
+        f"{push_paths!r}, pull_request has {pull_request_paths!r}"
+    )
 
 
 def test_the_path_filter_names_every_module_the_composition_reads() -> None:

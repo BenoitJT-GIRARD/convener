@@ -2852,3 +2852,150 @@ def test_delete_step_still_records_an_earlier_event_when_a_later_listing_fails(
         "::error::could not confirm whether CONVENER_EVENT_KEY_MRG_050 was deleted "
         "for event mrg-050" in result.stdout
     )
+
+
+# ------------------------------------------------------------------ #
+# Fix round 1 (visuals.yml, phase 6 task 5): GitHub Actions' own workflow
+# parser does not support YAML anchors (`&name`) or aliases (`*name`) -- a
+# long-standing, documented limitation of that parser, not a version
+# question. `visuals.yml` used to bind `push.paths` and `pull_request.
+# paths` with exactly that (`&visual_paths`/`*visual_paths`); PyYAML
+# expands them without complaint (every `safe_load`/`yaml.safe_load` call
+# in this project's own test suite would have too), which is exactly why
+# that version parsed clean in every local check and would still have
+# failed to *trigger* the very first time this workflow ran for real -- no
+# workflow in this repository has ever executed (confirmed, task 5's own
+# report). visuals.yml's own fix is two hand-written copies, bound by
+# tools/tests/test_visuals_workflow.py::
+# test_the_two_path_filters_are_identical_lists. The sweep below closes
+# the class, not just that one instance: an anchor anywhere in
+# `.github/workflows/` has the identical consequence, and this file
+# already has the sweep infrastructure (`_workflow_files()`) other
+# repo-wide checks above use.
+#
+# Read as raw text, never through `safe_load`/`yaml.safe_load`: an anchor
+# or alias is invisible once a YAML loader has resolved it, which is
+# precisely the trap that let visuals.yml's own pair through undetected.
+# ------------------------------------------------------------------ #
+
+
+def _strip_yaml_line_comment(line: str) -> str:
+    """`line` with everything from an unquoted `#` onward removed.
+
+    Quote-aware -- a `#` inside `'...'` or `"..."` does not start a
+    comment -- so a real value (a hex colour, a shell string) is never
+    truncated by mistake. This is a plain line-scanner, not a YAML parse:
+    the whole point of this sweep is to see the anchor/alias syntax
+    itself, which a real parse would already have resolved away.
+    """
+    result: list[str] = []
+    in_single = False
+    in_double = False
+    for char in line:
+        if char == "'" and not in_double:
+            in_single = not in_single
+            result.append(char)
+        elif char == '"' and not in_single:
+            in_double = not in_double
+            result.append(char)
+        elif char == "#" and not in_single and not in_double:
+            break
+        else:
+            result.append(char)
+    return "".join(result)
+
+
+#: A `&name` anchor or `*name` alias in real YAML node position:
+#: immediately after a mapping colon or a sequence dash, separated only by
+#: inline spaces/tabs -- never a newline, so a dash-terminated line
+#: followed by a blank line and then an unrelated line starting with `*`
+#: can never bridge into a false match. Deliberately *not* "any `&`/`*`
+#: anywhere": this project's own workflow comments already write
+#: `*emphasis*` in prose, a heredoc'd `run:` script can contain a markdown
+#: bullet list (see preview.yml's own README.txt heredoc), a bare `&&` is
+#: ordinary shell, and `**`/`*.yml`/`* * * * *` are ordinary glob and cron
+#: syntax -- none of those has an identifier character immediately after a
+#: single `&` or `*` in real node position, so none of them matches this.
+_YAML_NODE_RE = re.compile(r"(?::|-)[ \t]+([&*])([A-Za-z0-9_][A-Za-z0-9_-]*)")
+
+
+def _yaml_anchors_and_aliases(text: str) -> list[tuple[int, str, str]]:
+    """`(line number, '&' or '*', name)` for every anchor/alias `text`
+    declares in real YAML node position. Scanned line by line -- both to
+    keep `_YAML_NODE_RE` from spanning a line break, and so a match can be
+    reported with the line number a human would look at."""
+    hits: list[tuple[int, str, str]] = []
+    for lineno, raw_line in enumerate(text.splitlines(), start=1):
+        line = _strip_yaml_line_comment(raw_line)
+        for match in _YAML_NODE_RE.finditer(line):
+            hits.append((lineno, match.group(1), match.group(2)))
+    return hits
+
+
+def test_yaml_node_detector_finds_a_real_anchor_and_alias() -> None:
+    """Positive control: proves `_yaml_anchors_and_aliases` actually
+    detects the shape it exists to catch -- visuals.yml's own former
+    `&visual_paths`/`*visual_paths` pair, reduced to a minimal probe --
+    before the sweep below is trusted to report an absence of it across
+    every real workflow file."""
+    probe = "paths: &visual_paths\n  - 'a'\nother:\n  paths: *visual_paths\n"
+    hits = _yaml_anchors_and_aliases(probe)
+    assert (1, "&", "visual_paths") in hits
+    assert (4, "*", "visual_paths") in hits
+
+
+#: Each probe is a real shape already present somewhere in this
+#: repository's own workflow comments or scripts (see `_YAML_NODE_RE`'s
+#: own docstring) -- the sweep below is only useful if it can tell a real
+#: anchor/alias apart from every one of these.
+_ORDINARY_YAML_PROBES: list[tuple[str, str]] = [
+    (
+        "run: |\n  echo *this* is emphasis, not YAML\n",
+        "markdown emphasis inside a run: script",
+    ),
+    ("run: |\n  cmd1 && cmd2\n", "a shell && inside a run: script"),
+    ("paths:\n  - 'fonts/**'\n  - 'visuals/**'\n", "double-star glob path filters"),
+    ("schedule:\n  - cron: '0 6 * * *'\n", "a cron schedule"),
+    (
+        "run: |\n  cat <<EOF\n  * bullet one\n  * bullet two\n  EOF\n",
+        "a heredoc'd markdown bullet list",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("probe", "description"),
+    _ORDINARY_YAML_PROBES,
+    ids=[description for _, description in _ORDINARY_YAML_PROBES],
+)
+def test_yaml_node_detector_does_not_flag_ordinary_syntax(
+    probe: str, description: str
+) -> None:
+    assert _yaml_anchors_and_aliases(probe) == [], (
+        f"{description!r} was misread as a YAML anchor or alias: {probe!r}"
+    )
+
+
+@pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
+def test_no_workflow_uses_a_yaml_anchor_or_alias(workflow: Path) -> None:
+    """GitHub Actions' own workflow parser does not support YAML anchors or
+    aliases -- a documented, long-standing limitation of that parser, not
+    a version question. `yaml.safe_load`/`safe_load` (used everywhere else
+    in this module) expand them without complaint, which is exactly why
+    visuals.yml's own former `&visual_paths`/`*visual_paths` passed every
+    check that reads the parsed document and would still have failed to
+    *trigger* on the first real push (no workflow in this repository has
+    ever executed). See `.github/workflows/visuals.yml`'s own
+    `push.paths`/`pull_request.paths` comments for what replaced it, and
+    `tools/tests/test_visuals_workflow.py::
+    test_the_two_path_filters_are_identical_lists` for what keeps those
+    two hand-written copies from drifting apart."""
+    text = workflow.read_text(encoding="utf-8")
+    hits = _yaml_anchors_and_aliases(text)
+    assert hits == [], (
+        f"{workflow.name} uses a YAML anchor or alias GitHub Actions' own "
+        f"parser cannot read: {hits} -- write the value out in full at "
+        "each place it is needed instead, bound by a test if more than "
+        "one copy must stay in sync (see visuals.yml's own path filter "
+        "for the pattern)"
+    )

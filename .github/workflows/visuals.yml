@@ -71,12 +71,24 @@ name: Visuals
 on:
   push:
     branches: [main]
-    # A YAML anchor, not a repeated list: `pull_request` below reuses the
-    # exact same paths through `*visual_paths` rather than a second,
-    # hand-typed copy that could silently drift from this one -- the same
-    # "one source, never two hand-typed copies" discipline this project
-    # already applies everywhere else (D-14).
-    paths: &visual_paths
+    # Written out again for `pull_request` below, not shared through a
+    # YAML anchor and alias: GitHub Actions' own workflow parser does not
+    # support them -- a long-standing, documented limitation of that
+    # parser, not a version question. PyYAML expands `&anchor`/`*alias`
+    # without complaint (every test in this repository that reads a
+    # workflow's YAML goes through PyYAML), which is exactly why an
+    # earlier version of this file, bound with `&visual_paths`/
+    # `*visual_paths`, parsed clean in every local check and would still
+    # have failed to *trigger* the very first time this workflow ran for
+    # real -- no workflow in this repository has ever executed. The two
+    # copies below are bound instead by
+    # tools/tests/test_visuals_workflow.py::
+    # test_the_two_path_filters_are_identical_lists, which fails the
+    # moment they drift apart -- if you are tempted to "simplify" this
+    # back into an anchor, read that test first, and see
+    # tools/tests/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias
+    # for the sweep that refuses one anywhere else in this repository too.
+    paths:
       - 'tools/convener_ops/visual.py'
       - 'tools/convener_ops/ribbon.py'
       - 'tools/convener_ops/registration_code.py'
@@ -89,7 +101,23 @@ on:
       - 'visuals/**'
       - '.github/workflows/visuals.yml'
   pull_request:
-    paths: *visual_paths
+    # Kept identical to push's own list above, by hand: GitHub Actions'
+    # parser cannot resolve the anchor/alias that used to bind these (see
+    # that list's own comment for the full reasoning). A mismatch here
+    # fails test_the_two_path_filters_are_identical_lists in
+    # tools/tests/test_visuals_workflow.py.
+    paths:
+      - 'tools/convener_ops/visual.py'
+      - 'tools/convener_ops/ribbon.py'
+      - 'tools/convener_ops/registration_code.py'
+      - 'tools/convener_ops/formats.py'
+      - 'tools/convener_ops/governance.py'
+      - 'tools/convener_ops/cli.py'
+      - 'data/brand.json'
+      - 'fonts/**'
+      - 'tools/uv.lock'
+      - 'visuals/**'
+      - '.github/workflows/visuals.yml'
 
 jobs:
   visuals:
