@@ -1,0 +1,63 @@
+{#
+  Task 8: one row-rendering macro shared by every archive page -- the full
+  listing, each year page, and the two field-presence pages ("with a
+  recording", "with a discussion") -- so the row markup (title, speaker,
+  date, Watch/Discuss pills) is written once. `index.njk`'s own inline
+  archive loop (task 2) is left exactly as it stood rather than rewritten
+  onto this macro: it is a different, already-reviewed page, and
+  duplicating a dozen lines of markup here costs less than the regression
+  risk of touching a page this task does not need to change.
+#}
+{% macro archiveRow(e) %}
+<li class="archive__row">
+  <span class="archive__num">{{ e.id }}</span>
+  <div class="archive__main">
+    <p class="archive__title"><a class="unstyled" href="/events/{{ e.id | lower }}/">{{ e.title }}</a></p>
+    <div class="archive__meta">
+      <strong>{{ e.speaker_name }}</strong>
+      {% if e.speaker_affiliation %}<span>&middot; {{ e.speaker_affiliation }}</span>{% endif %}
+      <span class="archive__date">{{ e.date | replace("-", " / ") }}</span>
+    </div>
+  </div>
+  <div class="archive__actions">
+    {% if e.youtube_url %}
+      <a class="archive__action unstyled" href="{{ e.youtube_url }}" target="_blank" rel="noopener">Watch</a>
+    {% else %}
+      <span class="archive__action--disabled">No recording</span>
+    {% endif %}
+    {% if e.forum_thread %}
+      <a class="archive__action archive__action--alt unstyled" href="{{ e.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+    {% else %}
+      <span class="archive__action--disabled">No thread</span>
+    {% endif %}
+  </div>
+</li>
+{% endmacro %}
+
+{#
+  `emptyMessage` is worded per page rather than shared as one generic
+  string: the base archive's own empty state ("no edition delivered yet")
+  is not the same claim as a filter matching nothing ("no edition has a
+  recording published yet") -- D-13's own rule that an absent thing
+  degrades with a stated reason, not a generic placeholder, applies here
+  exactly as it does to a missing room link or a missing recording on
+  event.njk. No `<ol>` is rendered at all in this branch, on purpose: an
+  empty `<ol class="archive">` and a real empty-state message are not the
+  same claim to a screen-reader user, who would otherwise hear "list, no
+  items" instead of being told why.
+#}
+{% macro archiveList(entries, emptyMessage) %}
+{% if entries.length > 0 %}
+<ol class="archive">
+  {% for e in entries %}{{ archiveRow(e) }}{% endfor %}
+</ol>
+{% else %}
+{# `| safe`: every caller passes a literal string written in this
+   repository's own templates (never visitor input), the same trust
+   `layout.njk`'s own `{{ content | safe }}` already extends to a whole
+   page body -- without it, Eleventy's default autoescaping would turn
+   the `&mdash;` entities these messages carry into visible `&amp;mdash;`
+   text instead of rendering them. #}
+<p class="archive-empty">{{ emptyMessage | safe }}</p>
+{% endif %}
+{% endmacro %}

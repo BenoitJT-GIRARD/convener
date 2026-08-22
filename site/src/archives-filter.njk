@@ -1,0 +1,55 @@
+---
+layout: layout.njk
+# The two field-presence filters, generated from this fixed list rather
+# than derived from the data: unlike a year (archives-year.njk), which
+# only exists as an option once an edition falls in it, "with a
+# recording" and "with a discussion" are always real questions to ask,
+# even on a day nothing answers them yet -- so both pages are always
+# generated, and this is the one place in the archive this task's
+# "matches nothing" state is actually reachable by a real, standing link.
+pagination:
+  data: facets
+  size: 1
+  alias: facet
+permalink: "/archives/{{ facet.slug }}/"
+facets:
+  - slug: recordings
+    label: "With a recording"
+    lede: "Past editions you can watch today."
+    empty: "No past edition has a recording published yet."
+  - slug: discussions
+    label: "With a discussion thread"
+    lede: "Past editions with an open discussion thread."
+    empty: "No past edition has an open discussion thread yet."
+---
+{% from "archive-list.njk" import archiveList %}
+{% from "archive-filters.njk" import archiveFilters %}
+
+{% set entries = [] %}
+{% for e in archive.past %}
+  {% if facet.slug == "recordings" and e.youtube_url %}
+    {% set entries = (entries.push(e), entries) %}
+  {% elif facet.slug == "discussions" and e.forum_thread %}
+    {% set entries = (entries.push(e), entries) %}
+  {% endif %}
+{% endfor %}
+
+<section class="hero">
+  <div class="container hero__inner">
+    <p class="hero__eyebrow">Archive &middot; {{ facet.label }}</p>
+    <h1 class="hero__title">{{ facet.label }}.</h1>
+    <p class="hero__lede">{{ facet.lede }}</p>
+  </div>
+</section>
+
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">{{ facet.label }}</span>
+    <span class="section__count">{{ entries.length }} {% if entries.length == 1 %}entry{% else %}entries{% endif %}</span>
+  </header>
+
+  {{ archiveFilters(archive.years, facet.slug) }}
+
+  {{ archiveList(entries, facet.empty) }}
+</section>

@@ -30,6 +30,7 @@ import pytest
 
 from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.paths import repo_root
+from convener_ops.registration import SIGNUP_BASE
 
 #: Strips CSS/JS block comments (`/* ... */`), Nunjucks comments (`{# ... #}`)
 #: and HTML comments (`<!-- ... -->`), in that order, DOTALL so a comment
@@ -493,3 +494,545 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
     match = re.search(r"mailto:([^\"]+)", source)
     assert match is not None, "event.njk no longer names a contact address"
     assert match.group(1) == CONTACT_EMAIL
+
+
+# -------------------------------------------------------------------------- #
+# Task 8: archives, the speaker-proposal entry point, and the data page.
+#
+# Archives are filterable entirely without JavaScript: every option the
+# filter bar offers (a year, "with a recording", "with a discussion") is a
+# real, statically generated page reached by a plain link, never a script
+# deciding what to show. `_ARCHIVE_TEMPLATES` and the tests below prove
+# both directions of that claim -- that a filter genuinely narrows what is
+# shown, and that no page it can reach carries a `<script>` tag at all.
+#
+# The speaker-proposal page is the public entry point to the pipeline
+# `tools/convener_ops/proposal.py` already implements (a Tally form, its
+# webhook verified and turned into a candidate lead) -- not a new
+# mechanism, so this section proves the page links to the one already
+# configured (`site.json`'s own `applyForm`), and that the home page's own
+# two CTAs now go through it rather than around it.
+#
+# The data page cites phase 4's own data-protection record rather than
+# restating it -- in particular it never repeats a retention figure, on
+# purpose (two documents stating the same number independently disagree
+# the day one changes and the other does not). What is pinned hard here,
+# per the task brief, is that its link to that record actually resolves
+# to something the app publishes: built from the same two constants that
+# decide where the record lands (`registry.ts`'s own file path,
+# `vite.config.ts`'s own published base) rather than a literal URL nothing
+# would catch drifting, and proved once more by a real copy-handbook run
+# against a scratch destination.
+# -------------------------------------------------------------------------- #
+
+_SITE_JSON = SITE_SRC / "_data" / "site.json"
+_LAYOUT_TEMPLATE = SITE_SRC / "_includes" / "layout.njk"
+_DONNEES_TEMPLATE = SITE_SRC / "donnees.njk"
+_REGISTRY_TS = ROOT / "app" / "src" / "content" / "registry.ts"
+_VITE_CONFIG = ROOT / "app" / "vite.config.ts"
+_DOCS_DIR = ROOT / "docs"
+_HANDBOOK_REGISTRY_MJS = ROOT / "app" / "scripts" / "handbook-registry.mjs"
+
+
+def _site_config() -> dict[str, Any]:
+    return json.loads(_SITE_JSON.read_text(encoding="utf-8"))
+
+
+def _past_events() -> list[dict[str, Any]]:
+    return [
+        e for e in _events_fixture() if e.get("status") in ("delivered", "archived")
+    ]
+
+
+def _year_of(event: dict[str, Any]) -> str:
+    return str(event["date"])[:4]
+
+
+def _first_event_id_and_year() -> tuple[str, str]:
+    """The event `built_site_one_bare_past_edition` below patches -- always
+    the fixture's own first entry, the same "first matching item" idiom
+    `_a_past_event_id`/`_the_one_scheduled_event_id` already use above, so
+    fixture and test read the one committed file rather than a literal
+    copied into this function."""
+    first = _events_fixture()[0]
+    return str(first["id"]), _year_of(first)
+
+
+def test_layout_links_to_every_page_this_task_added() -> None:
+    """A page nobody can navigate to is not shipped: `layout.njk` is the
+    one piece of chrome every public page shares, so a link here reaches
+    every page from anywhere on the site, including the home page."""
+    layout = _LAYOUT_TEMPLATE.read_text(encoding="utf-8")
+    for href in ("/archives/", "/propose/", "/data/"):
+        assert f'href="{href}"' in layout, f"layout.njk never links to {href}"
+
+
+def test_home_pages_proposal_ctas_go_through_the_entry_page_not_around_it() -> None:
+    """Task 8 brief: "build the entry point to that, not to something you
+    invent" -- both "Propose a speaker" buttons on the home page point at
+    `/propose/` now, not at the external form directly, so there is
+    exactly one place the live form's address needs to change."""
+    index_source = (SITE_SRC / "index.njk").read_text(encoding="utf-8")
+    assert index_source.count('href="/propose/"') == 2
+    assert "site.applyForm" not in index_source
+
+
+# ---- Archives: filterable without JavaScript ----------------------------
+
+
+def test_archives_page_lists_every_past_edition_and_no_upcoming_one(
+    built_site: Path,
+) -> None:
+    past = _past_events()
+    upcoming = [e for e in _events_fixture() if e.get("status") == "scheduled"]
+    assert past and upcoming, (
+        f"{_EVENTS_FIXTURE.as_posix()} needs at least one past and one "
+        "upcoming event for this test to prove anything"
+    )
+    page = (built_site / "archives" / "index.html").read_text(encoding="utf-8")
+    assert page.count('class="archive__row"') == len(past)
+    for event in past:
+        assert event["id"] in page, f"{event['id']} missing from /archives/"
+    for event in upcoming:
+        assert event["id"] not in page, (
+            f"{event['id']} (not yet delivered) appears on /archives/"
+        )
+
+
+def test_archive_filter_bar_marks_the_all_page_current_without_linking_to_it(
+    built_site: Path,
+) -> None:
+    page = (built_site / "archives" / "index.html").read_text(encoding="utf-8")
+    assert (
+        '<span class="archive-filters__current" aria-current="page">All</span>' in page
+    )
+    assert '<a href="/archives/">All</a>' not in page
+
+
+def test_year_pages_exist_for_every_year_with_a_past_edition_and_no_other(
+    built_site: Path,
+) -> None:
+    years = {_year_of(e) for e in _past_events()}
+    assert len(years) >= 2, (
+        f"{_EVENTS_FIXTURE.as_posix()} carries past editions from fewer "
+        "than two distinct years -- too weak to prove a year page excludes "
+        "another year's entries"
+    )
+    actual = {
+        p.name
+        for p in (built_site / "archives").iterdir()
+        if p.is_dir() and p.name not in ("recordings", "discussions")
+    }
+    assert actual == years
+
+
+def test_a_year_page_lists_only_that_years_editions(built_site: Path) -> None:
+    by_year: dict[str, list[dict[str, Any]]] = {}
+    for event in _past_events():
+        by_year.setdefault(_year_of(event), []).append(event)
+    for year, events in by_year.items():
+        page = (built_site / "archives" / year / "index.html").read_text(
+            encoding="utf-8"
+        )
+        assert f'aria-current="page">{year}' in page
+        assert f'<a href="/archives/{year}/">' not in page
+        for event in events:
+            assert event["id"] in page
+        for other_year, other_events in by_year.items():
+            if other_year == year:
+                continue
+            for event in other_events:
+                assert event["id"] not in page, (
+                    f"{event['id']} ({other_year}) leaked onto the {year} page"
+                )
+
+
+def test_recordings_filter_includes_only_editions_with_a_recording(
+    built_site: Path,
+) -> None:
+    past = _past_events()
+    with_recording = [e for e in past if e.get("youtube_url")]
+    without = [e for e in past if not e.get("youtube_url")]
+    assert with_recording and without, (
+        f"{_EVENTS_FIXTURE.as_posix()} needs at least one past edition with "
+        "a recording and one without for this test to prove the filter "
+        "excludes anything"
+    )
+    page = (built_site / "archives" / "recordings" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    for event in with_recording:
+        assert event["id"] in page
+    for event in without:
+        assert event["id"] not in page
+
+
+def test_discussions_filter_includes_only_editions_with_a_thread(
+    built_site: Path,
+) -> None:
+    past = _past_events()
+    with_thread = [e for e in past if e.get("forum_thread")]
+    without = [e for e in past if not e.get("forum_thread")]
+    assert with_thread and without, (
+        f"{_EVENTS_FIXTURE.as_posix()} needs at least one past edition with "
+        "a thread and one without for this test to prove the filter "
+        "excludes anything"
+    )
+    page = (built_site / "archives" / "discussions" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    for event in with_thread:
+        assert event["id"] in page
+    for event in without:
+        assert event["id"] not in page
+
+
+def test_archive_pages_carry_no_script_tag_at_all(built_site: Path) -> None:
+    """The design decision this task's own brief asks to be pinned hard:
+    filtering the archive never needs JavaScript. Every page the filter
+    bar can possibly link to -- the full listing, each year, and both
+    field-presence filters -- is swept, not only the base page, since a
+    script added to any one of them would just as surely gate real
+    content behind it."""
+    pages = [
+        Path("archives") / "index.html",
+        Path("archives") / "recordings" / "index.html",
+        Path("archives") / "discussions" / "index.html",
+    ] + [
+        Path("archives") / year / "index.html"
+        for year in {_year_of(e) for e in _past_events()}
+    ]
+    for rel in pages:
+        path = built_site / rel
+        assert path.is_file(), f"{rel.as_posix()} was not built"
+        text = path.read_text(encoding="utf-8")
+        assert "<script" not in text.lower(), (
+            f"{rel.as_posix()} carries a <script> tag -- the archive must "
+            "stay usable with JavaScript disabled"
+        )
+
+
+@pytest.fixture(scope="module")
+def built_site_no_past_editions(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Every event pushed to `scheduled` -- the archive's own empty state
+    ("your states include an empty archive", task 8 brief), which the
+    committed fixture can never exercise on its own since it always
+    carries past editions. Same scratch-copy technique
+    `built_site_with_upcoming_forum_thread` above already uses, for the
+    same reason: the committed fixture stays untouched.
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    scratch_src = tmp_path_factory.mktemp("site-src-no-past") / "src"
+    shutil.copytree(SITE_SRC, scratch_src)
+    events_path = scratch_src / "_data" / "events.json"
+    events = json.loads(events_path.read_text(encoding="utf-8"))
+    for event in events:
+        event["status"] = "scheduled"
+    events_path.write_text(json.dumps(events), encoding="utf-8")
+    out = tmp_path_factory.mktemp("site-build-no-past")
+    try:
+        subprocess.run(
+            [
+                "node",
+                str(_ELEVENTY_CMD),
+                f"--input={scratch_src.as_posix()}",
+                f"--output={out.as_posix()}",
+            ],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+def test_the_empty_archive_states_a_reason_instead_of_an_empty_list(
+    built_site_no_past_editions: Path,
+) -> None:
+    page = (built_site_no_past_editions / "archives" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    assert "0 entries" in page
+    assert '<ol class="archive">' not in page
+    assert "No edition has been delivered yet" in page
+
+
+def test_an_empty_archive_generates_no_year_pages(
+    built_site_no_past_editions: Path,
+) -> None:
+    """`archive.years` (`site/src/_data/archive.js`) is empty when nothing
+    is past, so `archives-year.njk`'s own pagination produces zero
+    `/archives/<year>/` pages -- proof the year filter is genuinely
+    data-driven rather than a fixed list that would otherwise dangle."""
+    archives_dir = built_site_no_past_editions / "archives"
+    year_dirs = [
+        p
+        for p in archives_dir.iterdir()
+        if p.is_dir() and p.name not in ("recordings", "discussions")
+    ]
+    assert year_dirs == []
+
+
+def test_the_two_field_filters_still_exist_on_a_wholly_empty_archive(
+    built_site_no_past_editions: Path,
+) -> None:
+    """Unlike a year page, "with a recording" and "with a discussion" are
+    always real questions to ask (`archives-filter.njk`'s own front matter
+    names them directly, never derived from the data) -- both pages stay
+    reachable even when nothing at all is past, each with the reason
+    worded for that specific filter."""
+    recordings = (
+        built_site_no_past_editions / "archives" / "recordings" / "index.html"
+    ).read_text(encoding="utf-8")
+    discussions = (
+        built_site_no_past_editions / "archives" / "discussions" / "index.html"
+    ).read_text(encoding="utf-8")
+    assert "No past edition has a recording published yet." in recordings
+    assert "No past edition has an open discussion thread yet." in discussions
+
+
+@pytest.fixture(scope="module")
+def built_site_one_bare_past_edition(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Exactly one past edition, with neither a recording nor a thread --
+    task 8's own "an archive with one entry" state, and, in the same
+    build, the two field-presence filters' "matches nothing" state on an
+    archive that is *not* itself empty. Distinct from
+    `built_site_no_past_editions` above, which can only prove "no
+    editions"; this proves "editions exist, none of them qualify",
+    a different branch of the same two `{% if %}` guards.
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    scratch_src = tmp_path_factory.mktemp("site-src-one-bare") / "src"
+    shutil.copytree(SITE_SRC, scratch_src)
+    events_path = scratch_src / "_data" / "events.json"
+    events = json.loads(events_path.read_text(encoding="utf-8"))
+    assert events, f"{_EVENTS_FIXTURE.as_posix()} is empty"
+    events[0]["status"] = "delivered"
+    events[0]["youtube_url"] = ""
+    events[0]["forum_thread"] = ""
+    for event in events[1:]:
+        event["status"] = "scheduled"
+    events_path.write_text(json.dumps(events), encoding="utf-8")
+    out = tmp_path_factory.mktemp("site-build-one-bare")
+    try:
+        subprocess.run(
+            [
+                "node",
+                str(_ELEVENTY_CMD),
+                f"--input={scratch_src.as_posix()}",
+                f"--output={out.as_posix()}",
+            ],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+def test_a_lone_past_edition_is_the_only_row_and_counted_in_the_singular(
+    built_site_one_bare_past_edition: Path,
+) -> None:
+    event_id, _year = _first_event_id_and_year()
+    page = (built_site_one_bare_past_edition / "archives" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    assert "1 entry" in page
+    assert "entries" not in page
+    assert page.count('class="archive__row"') == 1
+    assert event_id in page
+
+
+def test_a_lone_past_editions_year_page_shows_it_disabled_both_ways(
+    built_site_one_bare_past_edition: Path,
+) -> None:
+    event_id, year = _first_event_id_and_year()
+    page = (
+        built_site_one_bare_past_edition / "archives" / year / "index.html"
+    ).read_text(encoding="utf-8")
+    assert event_id in page
+    assert "No recording" in page
+    assert "No thread" in page
+
+
+def test_both_field_filters_show_their_own_empty_state_though_the_archive_is_not(
+    built_site_one_bare_past_edition: Path,
+) -> None:
+    recordings = (
+        built_site_one_bare_past_edition / "archives" / "recordings" / "index.html"
+    ).read_text(encoding="utf-8")
+    discussions = (
+        built_site_one_bare_past_edition / "archives" / "discussions" / "index.html"
+    ).read_text(encoding="utf-8")
+    assert "No past edition has a recording published yet." in recordings
+    assert "No past edition has an open discussion thread yet." in discussions
+    assert "0 entries" in recordings
+    assert "0 entries" in discussions
+
+
+# ---- Proposing a speaker: the public entry point -------------------------
+
+
+def test_propose_page_links_to_the_configured_proposal_form(built_site: Path) -> None:
+    apply_form = _site_config()["applyForm"]
+    page = (built_site / "propose" / "index.html").read_text(encoding="utf-8")
+    assert f'href="{apply_form}"' in page
+
+
+def test_propose_page_names_the_shared_contact_address(built_site: Path) -> None:
+    page = (built_site / "propose" / "index.html").read_text(encoding="utf-8")
+    assert f"mailto:{CONTACT_EMAIL}" in page
+
+
+# ---- Information and data -------------------------------------------------
+
+
+def test_the_data_pages_contact_address_matches_confirmations_own_constant() -> None:
+    """The same D-14-style binding held above for `event.njk` -- one
+    address, never a second, driftable copy typed by hand a third place."""
+    source = _DONNEES_TEMPLATE.read_text(encoding="utf-8")
+    matches = re.findall(r"mailto:([^\"]+)", source)
+    assert matches, "donnees.njk no longer names a contact address"
+    assert all(m == CONTACT_EMAIL for m in matches)
+
+
+def test_the_data_page_never_restates_the_retention_figure() -> None:
+    """The task brief's own reasoning, checked: this page cites the
+    governance record rather than restating it, and in particular never
+    repeats the "90 days" retention figure that record gives -- a second
+    copy of that number here is precisely the drift risk the brief warns
+    against, whether or not it agrees with the record today."""
+    source = _DONNEES_TEMPLATE.read_text(encoding="utf-8")
+    assert "90" not in source
+
+
+def _governance_record_file() -> str:
+    """The `file` `CONTENT_REGISTRY['governance/data-protection-record']`
+    names, read as text. Independent of `handbook-registry.mjs`'s own
+    identical-in-spirit extraction (task 1): this test must fail if either
+    side of the pairing it checks -- this constant, or `donnees.njk`'s own
+    link -- changes without the other, not share a helper with the thing
+    it verifies.
+    """
+    text = _REGISTRY_TS.read_text(encoding="utf-8")
+    match = re.search(
+        r"'governance/data-protection-record':\s*\{\s*file:\s*'([^']+)'", text
+    )
+    assert match is not None, (
+        "registry.ts no longer registers 'governance/data-protection-record' "
+        "-- donnees.njk links to a page this app may no longer publish"
+    )
+    return match.group(1)
+
+
+def _published_app_base() -> str:
+    """`vite.config.ts`'s own production `base` -- the `/example-showcase/app/`
+    every published asset URL is resolved against, distinct from the two
+    islands' own `/app/` (see that file's own comment on why they
+    differ). Matched by its distinguishing `/example-showcase/` prefix rather
+    than by position, so it stays the right one of the three `base:`
+    literals in that file even if they are reordered.
+    """
+    text = _VITE_CONFIG.read_text(encoding="utf-8")
+    match = re.search(r"base:\s*'(/example-showcase/[^']*)'", text)
+    assert match is not None, (
+        "vite.config.ts no longer sets a '/example-showcase/...' base -- "
+        "donnees.njk's link to the governance record assumes this exact prefix"
+    )
+    return match.group(1)
+
+
+def test_donnees_page_links_to_the_published_governance_record() -> None:
+    """One of the two things the task brief asks to be pinned hard: the
+    data page's link to the governance record resolves to something
+    published. Built from the same two constants that decide where the
+    record actually lands, rather than against a literal URL nothing
+    would catch drifting out from under it.
+    """
+    donnees = _DONNEES_TEMPLATE.read_text(encoding="utf-8")
+    host = "https://example-instance.github.io"
+    assert SIGNUP_BASE.startswith(f"{host}/example-showcase/"), (
+        "registration.SIGNUP_BASE no longer shares this page's own "
+        "assumed host -- update both together"
+    )
+    expected = f"{host}{_published_app_base()}handbook/{_governance_record_file()}"
+    assert expected in donnees, (
+        f"donnees.njk does not link to {expected!r} -- either the link "
+        "drifted, or registry.ts/vite.config.ts changed under it"
+    )
+
+
+@pytest.fixture(scope="module")
+def published_handbook(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A real run of `copyHandbook` (task 1's own allowlist filter,
+    `app/scripts/handbook-registry.mjs`) against the real `docs/` tree,
+    into a scratch destination -- proof that the file `donnees.njk` links
+    to is actually among what the app publishes, not merely named
+    correctly by the regex check above. `app/tests/copy-handbook.test.ts`
+    already proves this exhaustively from the TypeScript side; this is
+    the one file this task's own page depends on, checked once more from
+    the Python side that owns `donnees.njk`, by a real copy rather than a
+    second reading of the same registry text.
+    """
+    dst = tmp_path_factory.mktemp("handbook-out")
+    probe = tmp_path_factory.mktemp("probe") / "probe.mjs"
+    registry_path = json.dumps(str(_REGISTRY_TS))
+    probe.write_text(
+        "import { readFileSync } from 'node:fs';\n"
+        f"import {{ copyHandbook }} from '{_HANDBOOK_REGISTRY_MJS.as_uri()}';\n"
+        f"const registrySource = readFileSync({registry_path}, 'utf-8');\n"
+        "const { files } = await copyHandbook({\n"
+        f"  docsDir: {json.dumps(str(_DOCS_DIR))},\n"
+        "  registrySource,\n"
+        f"  dst: {json.dumps(str(dst))},\n"
+        "});\n"
+        "console.log(JSON.stringify(files));\n",
+        encoding="utf-8",
+    )
+    try:
+        subprocess.run(
+            ["node", str(probe)],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot run the real copy-handbook step")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"copyHandbook failed: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return dst
+
+
+def test_the_governance_record_is_actually_among_what_the_app_publishes(
+    published_handbook: Path,
+) -> None:
+    target = published_handbook / Path(_governance_record_file())
+    assert target.is_file(), (
+        f"{target} does not exist after a real copy-handbook run -- "
+        "donnees.njk's link would 404 even though its shape looks right"
+    )

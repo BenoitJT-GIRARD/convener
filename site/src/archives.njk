@@ -1,0 +1,31 @@
+---
+layout: layout.njk
+permalink: "/archives/"
+---
+{% from "archive-list.njk" import archiveList %}
+{% from "archive-filters.njk" import archiveFilters %}
+
+<section class="hero">
+  <div class="container hero__inner">
+    <p class="hero__eyebrow">Archive</p>
+    <h1 class="hero__title">Past editions.</h1>
+    <p class="hero__lede">
+      Every seminar The Example Collective has hosted, with its recording and
+      discussion thread where one exists. Browse by year, or jump to what
+      you can watch or join today &mdash; every option below is a plain
+      page, so this works with JavaScript off.
+    </p>
+  </div>
+</section>
+
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">All editions</span>
+    <span class="section__count">{{ archive.past.length }} {% if archive.past.length == 1 %}entry{% else %}entries{% endif %}</span>
+  </header>
+
+  {{ archiveFilters(archive.years, "all") }}
+
+  {{ archiveList(archive.past, "No edition has been delivered yet &mdash; check back after the next seminar.") }}
+</section>

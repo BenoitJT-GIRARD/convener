@@ -811,6 +811,65 @@ a.btn--ghost:hover { border-color: var(--purple); }
   .archive__actions { grid-column: 2 / -1; margin-top: .4rem; }
 }
 
+/* ── Archive filters (task 8) ─────────────────────────────── */
+/* Every option here is a link to a statically generated page (D-18's
+ * "static pages, interactivity in islands", extended to a listing rather
+ * than a form) -- no script decides what is shown, so the archive stays
+ * filterable with JavaScript disabled. `.archive-filters__current` marks
+ * the page already open: not a link to itself, `aria-current="page"`
+ * instead -- see `_includes/archive-filters.njk`'s own comment. */
+.archive-filters {
+  margin-bottom: 1.75rem;
+}
+.archive-filters__list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.archive-filters a,
+.archive-filters__current {
+  display: inline-block;
+  font-family: var(--ff-display);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: .4rem .8rem;
+  border: 1px solid var(--rule-strong);
+}
+.archive-filters a {
+  /* ink-mute on turquoise (the field this bar sits on, same as
+   * .archive__date and .archive__action--disabled) measures 4.62 --
+   * clears AA. Purple fill on hover/current is white_on_purple, 12.74. */
+  color: var(--ink-mute);
+}
+.archive-filters a:hover {
+  color: var(--white);
+  background: var(--purple);
+  border-color: var(--purple);
+}
+.archive-filters__current {
+  color: var(--white);
+  background: var(--purple);
+  border-color: var(--purple);
+  cursor: default;
+}
+
+/* The empty state a filter, or a not-yet-populated archive, shows -- the
+ * same tone `.feature--empty p` gives an empty "up next" section, but
+ * this component never sits inside `.feature`'s own two-column grid, so
+ * it needs no compound selector to escape it (see that rule's own
+ * comment for the bug that made one necessary there). */
+.archive-empty {
+  font-family: var(--ff-display);
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: var(--ink-mute);
+  max-width: 52ch;
+  padding: .5rem 0 1.5rem;
+}
+
 /* ── Coda ─────────────────────────────────────────────────── */
 .coda {
   margin-top: 5rem;
@@ -897,6 +956,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
 .colophon__credit em { color: var(--ink-faint); font-style: italic; }
 .colophon__nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.5rem;
 }
 .colophon__nav a {
