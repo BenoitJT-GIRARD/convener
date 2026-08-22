@@ -2,7 +2,10 @@ import {
   publishedAlwaysWording,
   publishedOnConsentWording,
   spokenRecordingNotice,
+  toPublicFields,
+  type PublicSpeakerFields,
 } from '../state/consent';
+import { dateLine } from '../state/derived';
 import type { Speaker } from '../data/types';
 
 export interface SubstitutionContext {
@@ -62,6 +65,13 @@ interface Resolved {
     spoken_recording: string;
   };
   speaker?: Record<string, string>;
+  /** The gated projection (`state/consent.ts::toPublicFields`), for a
+   *  template that drafts something meant to leave the team -- see that
+   *  function's own docstring. Never built from `speaker` directly: every
+   *  field here has already passed the publication gate, so a template
+   *  reading `{{ public.… }}` cannot quote a withheld biography or link an
+   *  unconsented profile whatever it asks for. */
+  public?: PublicSpeakerFields & { signup_link: string; when: string };
   host_1?: { name: string };
   host_2?: { name: string };
   proposed_by?: { name: string };
@@ -100,6 +110,14 @@ function buildContext(ctx: SubstitutionContext): Resolved {
       youtube_url: s.youtube_url,
       forum_thread: s.forum_thread,
       signup_link: signupLink(s.edition_code),
+      // "Thursday, 12 March 2026 at 12:30 CET" -- the real Europe/Paris
+      // offset for this edition's own date, computed rather than a hand-typed
+      // zone label (`state/derived.ts::dateLine`'s own docstring). Every
+      // template stating a date and time together reads this rather than
+      // pasting `{{ speaker.date }}` beside a literal "CET": the reference
+      // poster's own defect, hard-typing the zone regardless of season, was
+      // wrong for three of this project's own five fixture editions.
+      when: dateLine(s.date),
       // The one wrap-up number a message quotes back to the speaker. It is
       // recorded on the delivered checklist above the thank-you that reads
       // it, so an empty one is a line not yet filled in rather than a value
@@ -110,6 +128,7 @@ function buildContext(ctx: SubstitutionContext): Resolved {
     r.host_1 = { name: s.host_1 };
     r.host_2 = { name: s.host_2 };
     r.proposed_by = { name: s.proposed_by };
+    r.public = { ...toPublicFields(s), signup_link: signupLink(s.edition_code), when: dateLine(s.date) };
   }
   if (ctx.today) r.today = ctx.today;
   return r;

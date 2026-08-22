@@ -151,6 +151,7 @@ describe('the journey the volunteers actually keep', () => {
       'scheduled/T-30/visuals',
       'scheduled/T-21/promotion-starting',
       'scheduled/T-21/linkedin',
+      'scheduled/T-21/mailing-list',
       'scheduled/T-14/zoom-link',
       'scheduled/T-14/access-setup',
       'scheduled/T-14/speaker_registered',

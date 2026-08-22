@@ -21,6 +21,7 @@ from typing import Any, Final
 import yaml
 
 from convener_ops import (
+    announce,
     confirmation,
     delivery,
     eventkeys,
@@ -4238,6 +4239,103 @@ def render_visuals() -> int:
         f"wrote {len(manifest)} production visual page(s) for "
         f"{len(announcements)} scheduled edition(s) to {out}"
     )
+    return 0
+
+
+def render_announcements() -> int:
+    """`convener-render-announcements OUTPUT_DIR`: task 7's own disk-writing
+    seam for the ready-to-publish texts (D-09) -- the forum announcement,
+    the professional-network post, the mailing-list message, and the
+    recording announcement, one plain-text file each.
+
+    The app (`app/`, D-15's "cockpit") already offers an authenticated
+    operator the same four texts, filled in live from the record they have
+    open -- see `docs/toolkit/mailing-list-announce.md` and
+    `docs/toolkit/recording-announce.md`, rendered through
+    `app/src/content/render.ts`'s gated `{{ public.… }}` vocabulary
+    (`app/src/state/consent.ts::toPublicFields`). This command is the
+    second, independent route to the identical four texts that needs no
+    browser and no authenticated session -- `uv run --project tools
+    convener-render-announcements OUTPUT_DIR` renders the current, real state of
+    `data/speakers.yml` on demand, from a plain checkout, exactly the same
+    "manual command, independent of any workflow" property
+    `render_visuals`'s own docstring states for the visuals. Nothing here
+    wires it into a workflow: this task's own brief lists no
+    `.github/workflows/` file to touch, and D-09 asks for a text an
+    operator reads before it goes anywhere -- a scheduled job would be one
+    more standing mechanism nobody exercises, the exact hazard D-25 warns
+    against, for a text that would sit unread until somebody opened it
+    anyway.
+
+    Routed through `public_data.to_public` before either module of task 7
+    ever sees a row (`announce.py`'s own module docstring) -- never a
+    second, looser read of the raw record. A `scheduled` row gets its
+    three promotional texts; an `archived` row gets a recording
+    announcement only when `announce.recording_announcement` finds a
+    `youtube_url` to announce, which is the ordinary, common state (D-13)
+    until the speaker agrees and the board's own gate opens.
+
+    Zero renderable editions is a normal state, printed plainly, exit 0 --
+    the same "empty is normal" discipline `render_visuals` already
+    applies. A malformed date on a record that claims to be scheduled or
+    archived is not, and fails loudly instead (D-25).
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-announcements OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
+
+    rows = to_public(speakers or [])
+
+    out.mkdir(parents=True, exist_ok=True)
+    for stale_text in out.glob("*.txt"):
+        stale_text.unlink()
+    manifest_path = out / "manifest.json"
+    if manifest_path.exists():
+        manifest_path.unlink()
+
+    manifest: list[dict[str, Any]] = []
+    try:
+        for row in rows:
+            event_id = str(row.get("id", "")).lower()
+            if not event_id:
+                continue
+            status = row.get("status")
+            texts: dict[str, str] = {}
+            if status == "scheduled":
+                texts["forum"] = announce.forum_announcement(row)
+                texts["network"] = announce.network_post(row)
+                texts["mailing-list"] = announce.mailing_list_message(row)
+            elif status == "archived":
+                recording = announce.recording_announcement(row)
+                if recording is not None:
+                    texts["recording"] = recording
+            for channel, text in texts.items():
+                filename = f"{event_id}-{channel}.txt"
+                (out / filename).write_text(text, encoding="utf-8")
+                manifest.append(
+                    {"event_id": event_id, "channel": channel, "file": filename}
+                )
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    if not manifest:
+        print(
+            "no scheduled or announceable archived edition in "
+            "data/speakers.yml -- nothing to render (normal until a date "
+            "is locked or a recording is published)"
+        )
+        return 0
+    print(f"wrote {len(manifest)} announcement text(s) to {out}")
     return 0
 
 

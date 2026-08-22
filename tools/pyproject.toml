@@ -66,6 +66,7 @@ convener-invite-survey = "convener_ops.cli:invite_survey"
 convener-record-survey-invitation = "convener_ops.cli:record_survey_invitation"
 convener-render-visual-fixtures = "convener_ops.cli:render_visual_fixtures"
 convener-render-visuals = "convener_ops.cli:render_visuals"
+convener-render-announcements = "convener_ops.cli:render_announcements"
 
 [build-system]
 requires = ["hatchling"]

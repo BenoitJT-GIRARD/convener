@@ -20,6 +20,8 @@ const TEMPLATES = [
   { key: 'toolkit/forum-post-announce', label: 'Forum: announcement' },
   { key: 'toolkit/forum-post-summary', label: 'Forum: summary' },
   { key: 'toolkit/linkedin-post', label: 'LinkedIn post' },
+  { key: 'toolkit/mailing-list-announce', label: 'Mailing list / newsletter' },
+  { key: 'toolkit/recording-announce', label: 'Recording announcement' },
   { key: 'toolkit/intro-scripts', label: 'Intro scripts' },
   { key: 'toolkit/run-of-show', label: 'Run of show' },
   { key: 'toolkit/slides/presentation-template', label: 'Slide template' },

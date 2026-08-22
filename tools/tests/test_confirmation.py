@@ -711,7 +711,21 @@ _TOOLKIT_DIR = Path(__file__).resolve().parents[2] / "docs" / "toolkit"
 _PUBLIC_ANNOUNCEMENT_TEMPLATES = (
     _TOOLKIT_DIR / "forum-post-announce.md",
     _TOOLKIT_DIR / "linkedin-post.md",
+    # Task 7's own mailing-list message: the same "announces something
+    # upcoming, points at the event page" shape as the two above, so it
+    # carries the same signup-link claim and is checked against the same
+    # room-link literal. `recording-announce.md`, task 7's fourth text,
+    # is not here -- it announces something already delivered and has no
+    # registration to send anyone to, so it is checked on its own below.
+    _TOOLKIT_DIR / "mailing-list-announce.md",
 )
+
+#: Task 7's recording announcement, checked for the room-link leak this
+#: whole section exists to catch, but not folded into
+#: `_PUBLIC_ANNOUNCEMENT_TEMPLATES`: that tuple's second test requires
+#: every member to publish `{{ speaker.signup_link }}`, and this page
+#: never registers anyone -- the talk it announces has already happened.
+_RECORDING_ANNOUNCEMENT_TEMPLATE = _TOOLKIT_DIR / "recording-announce.md"
 
 
 def test_the_room_link_claim_is_still_on_the_page() -> None:
@@ -728,6 +742,16 @@ def test_no_public_announcement_template_publishes_the_room_link() -> None:
             "link -- contradicting registration-confirmed.md's own pinned "
             "claim that it 'is not otherwise published'"
         )
+
+
+def test_the_recording_announcement_never_publishes_the_room_link_either() -> None:
+    text = _RECORDING_ANNOUNCEMENT_TEMPLATE.read_text(encoding="utf-8")
+    assert "zoom_link" not in text, (
+        f"{_RECORDING_ANNOUNCEMENT_TEMPLATE.name} publishes "
+        "{{ speaker.zoom_link }} -- the room link -- contradicting "
+        "registration-confirmed.md's own pinned claim that it 'is not "
+        "otherwise published'"
+    )
 
 
 def test_every_public_announcement_template_publishes_the_signup_link_instead() -> None:

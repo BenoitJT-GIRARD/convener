@@ -95,6 +95,11 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'toolkit/forum-post-announce': { file: 'toolkit/forum-post-announce.md', anchor: null },
   'toolkit/forum-post-summary': { file: 'toolkit/forum-post-summary.md', anchor: null },
   'toolkit/linkedin-post': { file: 'toolkit/linkedin-post.md', anchor: null },
+  'toolkit/mailing-list-announce': {
+    file: 'toolkit/mailing-list-announce.md',
+    anchor: null,
+  },
+  'toolkit/recording-announce': { file: 'toolkit/recording-announce.md', anchor: null },
   'toolkit/intro-scripts': { file: 'toolkit/intro-scripts.md', anchor: null },
   'toolkit/run-of-show': { file: 'toolkit/run-of-show.md', anchor: null },
   'toolkit/slides/presentation-template': {

@@ -14,7 +14,7 @@ We are hosting **{{ speaker.name }}** ({{ speaker.affiliation }}) for a talk on:
 
 **{{ speaker.title }}**
 
-🗓 {{ speaker.date }} · 🕧 {{ speaker.time }} CET · 💻 Online, free — registration required
+🗓 {{ speaker.when }} · 💻 Online, free — registration required
 
 [One line, in your own words, on why this talk matters. Written by hand — the record holds no such sentence.]
 
