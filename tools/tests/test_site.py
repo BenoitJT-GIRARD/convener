@@ -212,7 +212,7 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
 
 _EVENT_TEMPLATE = SITE_SRC / "event.njk"
 _EVENTS_FIXTURE = SITE_SRC / "_data" / "events.json"
-_ELEVENTY_CMD = ROOT / "site" / "node_modules" / "@11ty" / "eleventy" / "cmd.js"
+_ELEVENTY_CMD = ROOT / "site" / "node_modules" / "@11ty" / "eleventy" / "cmd.cjs"
 
 
 def _events_fixture() -> list[dict[str, Any]]:
@@ -232,7 +232,7 @@ def built_site(tmp_path_factory: pytest.TempPathFactory) -> Path:
     may already have open in a browser.
 
     Invokes the already-installed Eleventy CLI directly by its own entry
-    script (`node cmd.js`), never `npm run build` or `npx`: no shell, no
+    script (`node cmd.cjs`), never `npm run build` or `npx`: no shell, no
     `.cmd` wrapper to resolve (the same reason `deliver`'s own transport
     never shells out), and no network access of any kind -- `site/`'s own
     `node_modules` must already exist (`npm ci`, the same install every
