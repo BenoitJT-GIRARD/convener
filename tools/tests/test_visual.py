@@ -928,3 +928,205 @@ def test_the_register_row_never_shrinks_in_the_wide_grid() -> None:
     assert '"wordmark wordmark"' in poster_wide_rule
     assert '"heading  frame"' in poster_wide_rule
     assert '"register frame"' in poster_wide_rule
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1: the banner's own title band was a cream band in name only --
+# flush at the left edge, stopping short of the right (the "heading" grid
+# area is only `.wide-heading`'s own column, beside the frame's own
+# column), reading as a rendering accident rather than the "cream bands run
+# the full width" rule `data/brand.json`'s own `layout._bands` states
+# outright. The square and the print poster never had this defect
+# (`.band--talk-title` is a plain flex child of `.poster`'s own flex
+# column there, stretched to the canvas's own full width by the same
+# default every other band already relies on) -- only the banner's own
+# two-column grid confined it.
+#
+# The fix is two boxes, not one: `.band--talk-title__backdrop` (wide-only
+# markup, a sibling of `.band--talk-title` inside the new `.wide-title-row`
+# wrapper) breaks out to the canvas's own full width and paints the cream;
+# `.band--talk-title` itself keeps exactly the width it always had, so the
+# talk title's own text never reaches the frame's own column. The first
+# attempt at this fix widened `.band--talk-title` itself instead, and the
+# real fixture's own longest title (MRG-04) then wrapped a word directly
+# under the frame -- caught by rendering, not by any test below, which is
+# why `test_the_banner_title_text_itself_never_widens_into_the_frames_
+# column` exists: a property the render-and-look step cannot substitute
+# for on every future change.
+# ---------------------------------------------------------------------------
+
+
+def test_the_talk_title_band_runs_the_full_canvas_width_in_every_format() -> None:
+    """Pins the property directly, at all three named formats -- would
+    fail against the pre-fix banner, which carried no backdrop at all
+    (`'<div class="band--talk-title__backdrop"' in doc` is false there).
+    Checked by hand: reverting the backdrop rule's own `width: 100vw` to
+    `width: 50vw` reproduces exactly that failure -- see this task's own
+    fix-round report for the full mutation record."""
+    for fmt in FORMATS:
+        doc = render_announcement(
+            _announcement(), width=fmt.width, height=fmt.height, root=ROOT
+        )
+        if fmt is BANNER:
+            assert '<div class="band--talk-title__backdrop"' in doc, fmt.name
+            backdrop_rule = _rule_block(
+                doc, ".poster--wide .wide-title-row .band--talk-title__backdrop"
+            )
+            assert "width: 100vw" in backdrop_rule, fmt.name
+            assert "left: 0" in backdrop_rule, fmt.name
+            assert "top: 0" in backdrop_rule, fmt.name
+            assert "background: var(--surface)" in backdrop_rule, fmt.name
+        else:
+            # The square and print formats need no backdrop at all --
+            # `.band--talk-title` is already full width by the plain flex
+            # default (see `test_the_talk_title_band_can_wrap_and_grow_
+            # rather_than_clip`'s own `band_rule` check that `.band` sets
+            # no `height`; the same rule sets no `width` either). The CSS
+            # rule and its comment are shared, unconditional text (present
+            # in every format's `<style>` block, same as `.poster--wide`
+            # itself), so what must be absent is the *element* -- the div
+            # `render_announcement`'s wide branch alone ever emits.
+            assert '<div class="band--talk-title__backdrop"' not in doc, fmt.name
+            assert "width" not in _rule_block(doc, ".band"), fmt.name
+
+
+def test_the_banner_title_text_itself_never_widens_into_the_frames_column() -> None:
+    """The property the fix's own first (reverted) attempt violated:
+    `.band--talk-title` -- the element the talk title's own text actually
+    sits inside -- carries no `width` of its own in any format, wide
+    included. Only `.band--talk-title__backdrop`, a sibling, breaks out to
+    100vw; the text stays exactly as wide as `.wide-title-row`'s own
+    (column-confined, unset-width) flex default already makes it, clear of
+    the frame's own column at any title length. `_rule_block` retrieves
+    the one, shared, unscoped `.band--talk-title` rule (it appears earlier
+    in the stylesheet than anything under `.poster--wide`), so this holds
+    regardless of format."""
+    for fmt in FORMATS:
+        doc = render_announcement(
+            _announcement(), width=fmt.width, height=fmt.height, root=ROOT
+        )
+        assert "width" not in _rule_block(doc, ".band--talk-title"), fmt.name
+
+
+def test_a_long_real_title_never_wraps_under_the_banners_frame() -> None:
+    """The exact regression the fix's own first attempt introduced and
+    fix round 1's own rendering step caught: the real fixture's own
+    longest title (MRG-04) wrapping a word ("across") directly underneath
+    the speaker's frame once `.band--talk-title` itself was widened to
+    100mrg. `assert title in doc` alone (already checked by task 4's own
+    `test_a_long_real_title_composes_without_clipping_in_every_format`)
+    cannot catch this -- the full text is still *in* the document even
+    when a word renders visually under an opaque photo, which is exactly
+    why that defect shipped past this suite the first time and was only
+    found by looking at the actual render. Pinned here as the CSS property
+    that structurally rules it out (see the test above) rather than
+    re-asserted as a second, weaker string check."""
+    title = _real_long_title()
+    doc = render_announcement(
+        _announcement(title=title), width=BANNER.width, height=BANNER.height, root=ROOT
+    )
+    assert title in doc
+    assert "width" not in _rule_block(doc, ".band--talk-title")
+
+
+def test_the_frame_still_paints_over_the_banner_backdrop_not_the_reverse() -> None:
+    """`.band--talk-title__backdrop` sits at `z-index: -1`, but *within*
+    `.wide-title-row`'s own local stacking context (`position: relative;
+    z-index: 0`) -- not the page's, which would risk it sinking behind
+    unrelated ancestors instead of merely behind its own sibling text.
+    `.frame-wrap` carries no stacking context of its own and is later in
+    this page's own DOM order, so it paints over whatever part of the
+    backdrop its own column overlaps regardless -- checked here as the
+    DOM-order property and the two z-indexes it depends on, not a
+    rendered pixel."""
+    doc = render_announcement(
+        _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
+    )
+    backdrop_start = doc.index('<div class="band--talk-title__backdrop"')
+    frame_wrap_start = doc.index('<div class="frame-wrap">')
+    assert backdrop_start < frame_wrap_start
+
+    wide_title_row_rule = _rule_block(doc, ".poster--wide .wide-title-row")
+    assert "position: relative" in wide_title_row_rule
+    assert "z-index: 0" in wide_title_row_rule
+    backdrop_rule = _rule_block(
+        doc, ".poster--wide .wide-title-row .band--talk-title__backdrop"
+    )
+    assert "position: absolute" in backdrop_rule
+    assert "z-index: -1" in backdrop_rule
+
+
+def test_the_talk_title_still_shrinks_and_clips_rather_than_spills_when_wide() -> None:
+    """Task 3's own vertical backstop (`.band--talk-title`'s `flex: 0 1
+    auto; min-height: 0; overflow: hidden`) still has a real flex
+    container to shrink within now that it sits one level deeper, inside
+    `.wide-title-row` rather than directly inside `.wide-heading`:
+    `.wide-title-row` is itself `display: flex; flex-direction: column`
+    with `flex: 0 1 auto; min-height: 0` at the *outer* level (wide-
+    heading's own flex column), re-establishing, one level further out,
+    exactly the shrink-then-clip chain that already existed before this
+    fix. Without this, `.band--talk-title`'s own `flex: 0 1 auto` would be
+    inert (a flex-only property has no effect on an element that is not
+    itself a flex item), and a squeezed banner could spill text past
+    `.wide-title-row`'s own visible-overflow box -- necessary, because
+    that box cannot also be `overflow: hidden` without clipping the
+    backdrop's own horizontal breakout."""
+    doc = render_announcement(
+        _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
+    )
+    wide_title_row_rule = _rule_block(doc, ".poster--wide .wide-title-row")
+    assert "display: flex" in wide_title_row_rule
+    assert "flex-direction: column" in wide_title_row_rule
+    assert re.search(r"flex:\s*0\s+1\s+auto", wide_title_row_rule)
+    assert "min-height: 0" in wide_title_row_rule
+    # `.band--talk-title` itself keeps its own unconditional backstop,
+    # shared with the square and print formats, unchanged by this fix.
+    title_band_rule = _rule_block(doc, ".band--talk-title")
+    assert "overflow: hidden" in title_band_rule
+    assert "min-height: 0" in title_band_rule
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1, second finding: the banner's own affiliation caption was
+# illegible at the size a share preview is actually displayed at (the
+# banner's own 630px-tall canvas puts `_AFFILIATION_FONT_MAX_VMIN`,
+# 1.7vmin, at ~10.7px before a preview surface then scales the whole image
+# down further). Dropped outright on the banner alone -- the same
+# treatment, and the same reasoning, this derivation already gives the
+# series hero and the "what to expect" copy.
+# ---------------------------------------------------------------------------
+
+
+def test_the_banner_drops_the_affiliation_the_square_and_print_keep_it() -> None:
+    banner_doc = render_announcement(
+        _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
+    )
+    assert '<span class="frame__affiliation"' not in banner_doc
+    assert "Analytical Engines Institute" not in banner_doc
+    # The name alone survives -- the one fact the affiliation's absence
+    # does not cost the reader.
+    assert '<span class="frame__name"' in banner_doc
+    assert "Ada Lovelace" in banner_doc
+
+    for fmt in (SQUARE, PRINT):
+        doc = render_announcement(
+            _announcement(), width=fmt.width, height=fmt.height, root=ROOT
+        )
+        assert '<span class="frame__affiliation"' in doc, fmt.name
+        assert "Analytical Engines Institute" in doc, fmt.name
+
+
+def test_an_affiliation_less_speaker_is_unaffected_by_the_banners_own_drop() -> None:
+    """The banner's own affiliation drop reuses `_frame_html`'s existing
+    empty-affiliation path (`speaker_affiliation=""`) rather than a new
+    branch -- so a speaker who already has no affiliation to show renders
+    identically on the banner as on the square: this is not a new code
+    path with its own, unchecked failure mode."""
+    doc = render_announcement(
+        _announcement(speaker_affiliation=""),
+        width=BANNER.width,
+        height=BANNER.height,
+        root=ROOT,
+    )
+    assert '<span class="frame__affiliation"' not in doc
+    assert '<span class="frame__name"' in doc

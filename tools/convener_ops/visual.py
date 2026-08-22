@@ -949,10 +949,28 @@ def render_announcement(
         if announcement.title
         else "Read together"
     )
+    wide = is_wide(width, height)
     frame = _frame_html(
         portrait_data_uri=announcement.portrait_data_uri,
         speaker_name=announcement.speaker_name,
-        speaker_affiliation=announcement.speaker_affiliation,
+        # Fix round 1: dropped on the banner alone, never hidden with CSS.
+        # `_AFFILIATION_FONT_MAX_VMIN` is 1.7vmin; at the banner's own
+        # 630px-tall canvas (`vmin` reads the *shorter* side, and height is
+        # shorter than width on every wide render) that is ~10.7px before a
+        # share-preview surface then scales the whole 1200x630 image down
+        # further to display it -- illegible, not merely small. The title
+        # and the date already carry what a glanced-at preview needs; an
+        # affiliation nobody can read earns its place even less than the
+        # series hero or the "what to expect" copy this same derivation
+        # already drops for exactly that reason (see "The wide derivation"
+        # section below). `_frame_html` already has the mechanism this
+        # reuses: an empty string omits the caption's second line entirely,
+        # the same path a speaker with no affiliation to show takes on
+        # every format, so this needs no new branch of its own. The name
+        # alone survives at 2.7vmin (~17px) -- still small, but legible,
+        # and it is *who*, the one fact the affiliation's absence does not
+        # cost the reader.
+        speaker_affiliation=("" if wide else announcement.speaker_affiliation),
     )
     ribbon_svg = _ribbon_overlay_svg(width, height, root)
     registration_slot = _registration_slot_html(
@@ -961,7 +979,6 @@ def render_announcement(
     safe_left_vw, safe_right_vw = _ribbon_safe_margins(width, height, root)
     safe_content_right_vw = _ribbon_content_right_margin(width, height, root)
 
-    wide = is_wide(width, height)
     poster_class = "poster poster--wide" if wide else "poster"
     title_band = f"""\
     <div class="band band--talk-title">
@@ -981,10 +998,22 @@ def render_announcement(
         # > .wide-heading` rule's own comment for why one flex column,
         # centred as a pair, reads better than two separate grid rows that
         # `.frame-wrap`'s own spanning height can pull apart.
+        #
+        # Fix round 1: `title_band` (shared with the square and print
+        # branch below, unchanged) is wrapped in one extra element here,
+        # `.wide-title-row` -- wide-only, never emitted outside this
+        # branch. `.band--talk-title__backdrop`, the first child, is what
+        # actually paints the band's cream full-width -- see
+        # `.poster--wide .wide-title-row`'s own CSS comment for the full
+        # mechanism and why it lives on a sibling rather than on
+        # `.band--talk-title` itself.
         body = f"""\
     {_WORDMARK_HTML}
     <div class="wide-heading">
+      <div class="wide-title-row">
+        <div class="band--talk-title__backdrop" aria-hidden="true"></div>
 {title_band}
+      </div>
     <p class="date-line">{when}</p>
     </div>
     <div class="frame-wrap">{frame}</div>
@@ -1230,7 +1259,14 @@ def render_announcement(
      derivation" section for why this exists and what it drops. Dead
      weight when `wide` is false: no element ever carries
      `poster--wide` on a square or print render, so nothing below ever
-     matches. */
+     matches.
+
+     Fix round 1: the grid's own two columns (`heading`'s "1fr" beside
+     `frame`'s own "auto" width) are exactly the shape `.band--talk-title`
+     needs to *not* have -- a cream band confined to one column reads as a
+     truncated accident, not the "cream bands run full width" rule
+     `data/brand.json`'s own `layout._bands` states outright. See
+     `.poster--wide .wide-title-row`'s own comment below for the fix. */
   .poster--wide {{
     display: grid;
     grid-template-columns: 1fr auto;
@@ -1258,6 +1294,75 @@ def render_announcement(
     flex-direction: column;
     gap: 0.8vmin;
     min-height: 0;
+  }}
+  /* Fix round 1: `.wide-title-row` (wide-only markup, wrapping the shared
+     `title_band` -- see `render_announcement`'s own wide branch) is what
+     lets the band's cream *background* run the full canvas width while
+     its *text* stays exactly where it was, clear of the frame's own
+     column -- two different boxes doing two different jobs, rather than
+     one box trying to be both.
+
+     `.band--talk-title` itself keeps its unconditional `flex: 0 1 auto;
+     min-height: 0; overflow: hidden` (shared with the square and print
+     formats -- the vertical "shrink and clip rather than spill" backstop
+     task 3 already relies on) unchanged; giving `.wide-title-row` the
+     same `display: flex; flex-direction: column` re-establishes it one
+     level further out, so `.band--talk-title` is still a real flex child
+     that can be forced to shrink -- and still clips its own overflow when
+     it is -- exactly as before this fix. `.wide-title-row`'s own width is
+     never set explicitly, so it stretches to `.wide-heading`'s own
+     (column-confined) width by the same flex default that sized
+     `.band--talk-title` directly before this fix -- the *text* never
+     moves.
+
+     `.band--talk-title__backdrop` is the one element that actually
+     breaks out: `position: absolute` removes it from the flow entirely
+     (unlike the plain `width: 100vw` this fix round tried first and
+     reverted -- that fed back into the grid's own "1fr" column-sizing,
+     and, worse, widened the *text's* own box too, running it straight
+     under the frame -- checked by rendering, not assumed). `top: 0; left:
+     0` anchor it to `.wide-title-row`'s own padding box, whose top-left
+     corner already sits flush with the canvas's own left edge (column 1
+     starts at the grid's own edge, no leading gap) -- so `width: 100vw`
+     alone extends it to the canvas's own right edge with no left offset
+     needed, and it never reaches `.poster`'s own `overflow: hidden`
+     (both are exactly 100vw). `height: 100%` matches `.wide-title-row`'s
+     own height exactly, whether that is `.band--talk-title`'s natural
+     height or a squeezed one -- `.wide-title-row` has no content of its
+     own besides `.band--talk-title`, so the two always match.
+
+     Paint order: an absolutely positioned box with `z-index: auto` paints
+     *after* its stacking context's own ordinary in-flow content --
+     backwards from what "behind the text" needs -- which is exactly why
+     `.wide-title-row` itself gets `position: relative; z-index: 0`,
+     giving the backdrop's own `z-index: -1` a *local* stacking context to
+     be negative *within*, ahead of `.band--talk-title`'s own text rather
+     than beneath some unrelated ancestor's background. `.frame-wrap`
+     (below, later in this page's own DOM order, outside this stacking
+     context entirely) still paints over whatever part of the backdrop
+     its own column overlaps -- white border and drop shadow on top of
+     cream, read as layered rather than colliding, exactly like the
+     wordmark band above it (whose "wordmark wordmark" grid area already
+     spans both columns) and like this same band on the square and print
+     formats (there, a plain flex child stretched to `.poster`'s own full
+     width by default -- no backdrop needed, because nothing beside it
+     ever shares its row). */
+  .poster--wide .wide-title-row {{
+    position: relative;
+    z-index: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+  }}
+  .poster--wide .wide-title-row .band--talk-title__backdrop {{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100%;
+    z-index: -1;
+    background: var(--surface);
   }}
   .poster--wide .wide-heading .date-line {{ margin: 0 var(--safe-r) 0 var(--safe-l); }}
   .poster--wide > .frame-wrap {{
