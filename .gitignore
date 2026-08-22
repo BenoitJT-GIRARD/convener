@@ -77,3 +77,11 @@ keys/signing/*
 # matching private key can read it even though the plaintext this rule
 # excludes can never reach a checkout at all.
 data/events/*/attendance-import.csv
+
+# Anonymous's own source material for the visual identity -- the .pptx the brand
+# values were extracted from, and her rendered examples. Reference only, never
+# published and never committed: several of these carry a real person's
+# photograph, which is exactly the defect deferred-work entry 9 records for
+# docs/assets/flyer-example.png, already in this history. Kept out of git so a
+# stray `git add` cannot repeat it. Read them from the Drive working copy.
+docs/assets/example_and_template_initial_assets/
