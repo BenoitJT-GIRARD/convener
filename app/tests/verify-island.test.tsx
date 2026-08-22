@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { VerifyPage } from '../src/verify/VerifyPage';
+import { VerifyPage } from '../src/islands/verify/VerifyPage';
 import cases from '../../tools/tests/fixtures/certificate-verification.json';
 
 /**
- * End-to-end tests of the whole route: real fixture tokens, real RSA
+ * End-to-end tests of the whole page: real fixture tokens, real RSA
  * verification via `crypto.subtle` (never a stubbed `verify()`), a stubbed
  * `fetch` standing in for the two same-origin static files this page reads
  * (`keys/signing/index.json`, `certificates.json`). This is what a unit
@@ -13,6 +12,15 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
  * a genuine signature failure to the "not verifiable" panel, and a genuine
  * register-unavailable to "state unknown" -- not merely that the pure
  * functions are correct in isolation.
+ *
+ * Task 7: this used to mount `VerifyPage` on a `MemoryRouter` path
+ * (`/verify/:identifier?token=…`), reading `identifier`/`token` through
+ * `useParams`/`useSearchParams` -- the extraction into an island dropped
+ * the router (see `VerifyPage.tsx`'s own module comment), so every case
+ * below renders the component directly with `identifier`/`token` props
+ * instead. `verify-island-mount.test.tsx` is what now proves the URL
+ * fragment itself is parsed into those same two props correctly --
+ * `main.tsx::parseVerificationFragment`, not this file, owns that half.
  */
 
 const SIGNED = cases.signed_example;
@@ -21,10 +29,6 @@ const SIGNED = cases.signed_example;
 // which read as the wire shape and was not; the fixture itself was
 // corrected.
 const REAL_PROJECTION = cases.projection_example;
-
-function pathFor(identifier: string, token?: string): string {
-  return token ? `/verify/${identifier}?token=${encodeURIComponent(token)}` : `/verify/${identifier}`;
-}
 
 function stubFetch(options: {
   keys?: string[] | 'fail';
@@ -48,14 +52,8 @@ function stubFetch(options: {
   );
 }
 
-function renderVerify(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/verify/:identifier" element={<VerifyPage />} />
-      </Routes>
-    </MemoryRouter>,
-  );
+function renderVerify(identifier?: string, token?: string) {
+  return render(<VerifyPage identifier={identifier} token={token} />);
 }
 
 // Minor 1 (fix round 1) needs a genuinely-signed payload with no
@@ -97,21 +95,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('the route shape matches what certificate.verification_url actually produces', () => {
-  it('the path this test builds for the signed fixture equals the fragment of the fixture\'s own verification_url', () => {
-    // certificate.VERIFICATION_BASE ends "#/verify/" -- everything after
-    // "#" is what a HashRouter (and this test's MemoryRouter, standing in
-    // for it) treats as the path. If this ever drifts from what
-    // certificate.py actually builds, this is what would catch it.
-    const fragment = SIGNED.verification_url.split('#')[1];
-    expect(pathFor(SIGNED.identifier, SIGNED.token)).toBe(fragment);
-  });
-});
-
 describe('VerifyPage -- with a token', () => {
   it('valid: genuine signature, register says issued', async () => {
     stubFetch({});
-    renderVerify(pathFor(SIGNED.identifier, SIGNED.token));
+    renderVerify(SIGNED.identifier, SIGNED.token);
 
     await screen.findByText('Certificate verified');
     expect(screen.getByText(SIGNED.payload_decoded.name)).toBeInTheDocument();
@@ -122,7 +109,7 @@ describe('VerifyPage -- with a token', () => {
 
   it('revoked: genuine signature, register says revoked', async () => {
     stubFetch({ projection: [{ identifier: SIGNED.identifier, state: 'revoked' }] });
-    renderVerify(pathFor(SIGNED.identifier, SIGNED.token));
+    renderVerify(SIGNED.identifier, SIGNED.token);
 
     await screen.findByText('Certificate revoked');
     // Genuine and revoked is not an accusation: the name still shows,
@@ -136,7 +123,7 @@ describe('VerifyPage -- with a token', () => {
     const truncated = cases.verification_rejects.find(c => c.name === 'truncated');
     if (!truncated) throw new Error('fixture case not found');
     stubFetch({});
-    renderVerify(pathFor(SIGNED.identifier, truncated.token));
+    renderVerify(SIGNED.identifier, truncated.token);
 
     await screen.findByText('We cannot confirm this certificate');
     expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
@@ -150,7 +137,7 @@ describe('VerifyPage -- with a token', () => {
     const differentKey = cases.verification_rejects.find(c => c.name === 'signed by a different key');
     if (!differentKey) throw new Error('fixture case not found');
     stubFetch({});
-    renderVerify(pathFor(SIGNED.identifier, differentKey.token));
+    renderVerify(SIGNED.identifier, differentKey.token);
 
     await screen.findByText('We cannot confirm this certificate');
     const text = document.body.textContent ?? '';
@@ -159,7 +146,7 @@ describe('VerifyPage -- with a token', () => {
 
   it('state unknown: genuine signature, register fetch fails (mutation 2 -- must never render "invalid")', async () => {
     stubFetch({ projection: 'fail' });
-    renderVerify(pathFor(SIGNED.identifier, SIGNED.token));
+    renderVerify(SIGNED.identifier, SIGNED.token);
 
     await screen.findByText('We cannot confirm the current state');
     // The signature was genuine, so the name is still shown -- this is
@@ -172,7 +159,7 @@ describe('VerifyPage -- with a token', () => {
 
   it('not yet in the register: genuine signature, register read successfully but does not mention this identifier (Important 1a -- must not read as "could not reach our register")', async () => {
     stubFetch({ projection: [] });
-    renderVerify(pathFor(SIGNED.identifier, SIGNED.token));
+    renderVerify(SIGNED.identifier, SIGNED.token);
 
     await screen.findByText('Not yet reflected in our register');
     // A decisive fact from a register we *did* read successfully --
@@ -188,7 +175,7 @@ describe('VerifyPage -- with a token', () => {
     const truncated = cases.verification_rejects.find(c => c.name === 'truncated');
     if (!truncated) throw new Error('fixture case not found');
     stubFetch({});
-    renderVerify(pathFor(SIGNED.identifier, truncated.token));
+    renderVerify(SIGNED.identifier, truncated.token);
 
     await screen.findByText('We cannot confirm this certificate');
     const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
@@ -202,9 +189,10 @@ describe('VerifyPage -- a signature-confirmed payload with no identifier field (
     const payload = { event: 'A workshop', name: 'Someone', date: '2026-01-01', duration_hours: 1.5 };
     const token = await signRawBytes(privateKey, new TextEncoder().encode(JSON.stringify(payload)));
     stubFetch({ keys: [publicPem] });
-    // The route identifier is unused by VerifyWithToken -- it always
-    // reads the token's own confirmed payload, never the URL segment.
-    renderVerify(pathFor('00000000000000000000000000000000', token));
+    // The given identifier is unused by VerifyWithToken -- it always
+    // reads the token's own confirmed payload, never the prop it was
+    // given.
+    renderVerify('00000000000000000000000000000000', token);
 
     await screen.findByText('We cannot confirm the current state');
     expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
@@ -217,7 +205,7 @@ describe('VerifyPage -- a signature-confirmed payload with no identifier field (
 describe('VerifyPage -- no token (the printed-page flow, ruling 5)', () => {
   it('never runs any cryptography and never renders a name -- there is no payload in scope', async () => {
     stubFetch({});
-    renderVerify(pathFor(SIGNED.identifier));
+    renderVerify(SIGNED.identifier);
 
     await screen.findByText('Recorded as issued');
     expect(screen.queryByText(SIGNED.payload_decoded.name)).not.toBeInTheDocument();
@@ -229,7 +217,7 @@ describe('VerifyPage -- no token (the printed-page flow, ruling 5)', () => {
 
   it('recorded as issued: says it confirmed a record, not a document', async () => {
     stubFetch({});
-    renderVerify(pathFor(SIGNED.identifier));
+    renderVerify(SIGNED.identifier);
 
     await screen.findByText('Recorded as issued');
     const text = document.body.textContent ?? '';
@@ -241,29 +229,29 @@ describe('VerifyPage -- no token (the printed-page flow, ruling 5)', () => {
     const revokedRow = REAL_PROJECTION.find(row => row.state === 'revoked');
     if (!revokedRow) throw new Error('fixture missing a revoked row');
     stubFetch({});
-    renderVerify(pathFor(revokedRow.identifier));
+    renderVerify(revokedRow.identifier);
 
     await screen.findByText('Recorded as revoked');
   });
 
   it('not recorded: a decisive fact, distinct from "we do not know"', async () => {
     stubFetch({});
-    renderVerify(pathFor('00000000000000000000000000000000'));
+    renderVerify('00000000000000000000000000000000');
 
     await screen.findByText('Not found in our register');
   });
 
   it('state unknown: the register could not be read at all', async () => {
     stubFetch({ projection: 'fail' });
-    renderVerify(pathFor(SIGNED.identifier));
+    renderVerify(SIGNED.identifier);
 
     await screen.findByText('We cannot confirm this right now');
     expect(screen.queryByText('Not found in our register')).not.toBeInTheDocument();
   });
 
-  it('refuses a URL identifier not shaped like one of ours, without ever asking the register (Minor 3)', async () => {
+  it('refuses an identifier not shaped like one of ours, without ever asking the register (Minor 3)', async () => {
     stubFetch({});
-    renderVerify(pathFor('not-a-real-identifier'));
+    renderVerify('not-a-real-identifier');
 
     await screen.findByText('Not a certificate identifier');
     const calls = vi.mocked(fetch).mock.calls.map(call => String(call[0]));
@@ -271,15 +259,9 @@ describe('VerifyPage -- no token (the printed-page flow, ruling 5)', () => {
   });
 });
 
-describe('VerifyPage -- a route with no identifier at all', () => {
+describe('VerifyPage -- no identifier at all', () => {
   it('shows a plain refusal rather than crashing', () => {
-    render(
-      <MemoryRouter initialEntries={['/verify-nothing']}>
-        <Routes>
-          <Route path="/verify-nothing" element={<VerifyPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    render(<VerifyPage />);
     expect(screen.getByText('No certificate identifier')).toBeInTheDocument();
   });
 });
@@ -287,7 +269,7 @@ describe('VerifyPage -- a route with no identifier at all', () => {
 describe('VerifyPage -- the keys fetch itself failing must not read as "no key confirms this" (Important 1b, mutation 3)', () => {
   it('a network error fetching the signing keys renders "cannot check right now", never "not verifiable"', async () => {
     stubFetch({ keys: 'fail' });
-    renderVerify(pathFor(SIGNED.identifier, SIGNED.token));
+    renderVerify(SIGNED.identifier, SIGNED.token);
 
     await screen.findByText('We cannot check this certificate right now');
     // The exact regression this guards: a failure to load our own key
@@ -308,11 +290,51 @@ describe('VerifyPage -- a tampered signature must never verify (mutation 1, rest
     const flipped = cases.verification_rejects.find(c => c.name === 'one byte flipped in the signature');
     if (!flipped) throw new Error('fixture case not found');
     stubFetch({});
-    renderVerify(pathFor(SIGNED.identifier, flipped.token));
+    renderVerify(SIGNED.identifier, flipped.token);
 
     await screen.findByText('We cannot confirm this certificate');
     await waitFor(() => {
       expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('VerifyPage -- the four answers are genuinely distinct (not a shared fallback)', () => {
+  // Same identifier and same register contents throughout; only the
+  // *token* changes between cases. If any two of these collapsed onto the
+  // same panel -- e.g. "not verifiable" quietly becoming "state unknown"
+  // -- this is what would catch it, because the assertions below are
+  // mutually exclusive on the same fixed inputs otherwise held constant.
+  it('valid, revoked, not verifiable and state-unknown never share a heading', async () => {
+    const truncated = cases.verification_rejects.find(c => c.name === 'truncated');
+    if (!truncated) throw new Error('fixture case not found');
+
+    stubFetch({});
+    const valid = renderVerify(SIGNED.identifier, SIGNED.token);
+    await screen.findByText('Certificate verified');
+    valid.unmount();
+
+    stubFetch({ projection: [{ identifier: SIGNED.identifier, state: 'revoked' }] });
+    const revoked = renderVerify(SIGNED.identifier, SIGNED.token);
+    await screen.findByText('Certificate revoked');
+    revoked.unmount();
+
+    stubFetch({});
+    const notVerifiable = renderVerify(SIGNED.identifier, truncated.token);
+    await screen.findByText('We cannot confirm this certificate');
+    notVerifiable.unmount();
+
+    stubFetch({ projection: 'fail' });
+    const stateUnknown = renderVerify(SIGNED.identifier, SIGNED.token);
+    await screen.findByText('We cannot confirm the current state');
+    stateUnknown.unmount();
+
+    const headings = [
+      'Certificate verified',
+      'Certificate revoked',
+      'We cannot confirm this certificate',
+      'We cannot confirm the current state',
+    ];
+    expect(new Set(headings).size).toBe(4);
   });
 });

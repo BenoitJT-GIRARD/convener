@@ -1,0 +1,301 @@
+---
+layout: layout.njk
+pagination:
+  data: events
+  size: 1
+  alias: event
+  # Task 10: without this, Eleventy adds only the *first* page a paginated
+  # template generates to `collections.all` -- so `sitemap.njk`'s own loop
+  # over that collection would have listed just one edition, not five. The
+  # same flag is added to archives-year.njk and archives-filter.njk below,
+  # for the identical reason.
+  addAllPagesToCollections: true
+# D-19: `event_id` IS `edition_code`, lower-cased -- nothing else names an
+# event. `events.json`'s own `id` column carries `edition_code` verbatim,
+# not lower-cased (`tools/convener_ops/public_data.py::PUBLIC_FIELD_SOURCES`),
+# so the lower-casing happens here, once, the same rule `platform.find_speaker`
+# and `registration.signup_url` already apply on the Python side. This is
+# the *whole* address: never derived from the title, which changes when a
+# speaker's talk is retitled and would move the page a QR code or a shared
+# link already points at.
+permalink: "/events/{{ event.id | lower }}/"
+# Task 10: `pageTitle`/`pageDescription` feed layout.njk's `<title>`, Open
+# Graph and Twitter Card metadata (acceptance criterion 6). `eleventyComputed`
+# rather than a plain front-matter string: this template is paginated
+# (`pagination.alias: event` above), so these values only exist once Eleventy
+# has resolved *which* event a given generated page is for -- a plain string
+# here would render before that happens and could not read `event` at all.
+eleventyComputed:
+  pageTitle: "{{ event.title }}"
+  # Fix wave (branch review, minor 2): this used to restate the fallback
+  # inline; it now calls the one shared rule (site/.eleventy.js::
+  # eventDescriptionFallback) the body below and feed.njk both call too.
+  pageDescription: "{{ event | eventDescription }}"
+---
+
+{% set isUpcoming = event.status == "scheduled" %}
+
+{#
+  Task 10: structured event data (schema.org Event, JSON-LD), so a search
+  engine shows this edition's date correctly rather than reading this page
+  as an ordinary article. Built as a plain object and serialised with the
+  `jsonLd` filter (site/.eleventy.js), which drops any key set to `null` at
+  any nesting depth -- the mechanism every state-dependent field below
+  relies on, rather than a second, fully separate object literal per state:
+
+  - `potentialAction` (RegisterAction) only on an upcoming edition -- a past
+    seminar is not still accepting registrations.
+  - `subjectOf` (VideoObject) only once a recording is actually published
+    (`event.youtube_url`, gated the same way the visible section below
+    already gates it -- `public_data.py::RECORDING_STATUSES`).
+  - `performer.affiliation`, and its nested country, only when the speaker
+    record actually carries one -- the same `{% if %}` the visible page
+    already guards this field with, further down.
+
+  `performer` carries exactly the three fields `public_data.py`'s own
+  `PUBLISHABLE_ALWAYS` publishes about a speaker by name -- name,
+  affiliation, country -- and nothing a consent gate would still be
+  withholding (`photo_url`, `bio`, `linkedin`): this object must never grow
+  a fourth key. And no `zoom_link`/`registration_link` field is read here at
+  all -- the room link never reaches this template in the first place
+  (acceptance criterion 2), so there is nothing this block could leak even
+  by mistake.
+#}
+{% set eventUrl = page.url | absoluteUrl %}
+{#
+  Fix round 1: the series' standing start time is 12:30 *Europe/Paris
+  local time*, not a fixed UTC offset -- `+01:00` (CET) roughly late
+  October to late March, `+02:00` (CEST) the rest of the year.
+  `parisStandingStart` (site/.eleventy.js) derives both the JSON-LD
+  `startDate` and the visible "12:30 CET"/"12:30 CEST" label below from
+  the edition's own date, once, so the two cannot disagree the way a
+  hard-typed `+01:00` used to (silently wrong on three of this project's
+  five fixture editions). See that filter's own comment for why `time` --
+  the field that would let a per-edition value override this standing
+  one -- does not reach this data yet.
+#}
+{% set parisTime = event.date | parisStandingStart %}
+
+{#
+  Fix wave (branch review, minor 2): this same fallback -- abstract, else
+  speaker name plus optional affiliation plus the closing sentence -- also
+  feeds `pageDescription` above (Open Graph/Twitter Card) and feed.njk's
+  per-item `<description>`. One shared filter (site/.eleventy.js::
+  eventDescriptionFallback), not three hand-typed copies that could (and
+  once did) state it differently for the same edition.
+#}
+{% set eventDescription = event | eventDescription %}
+
+{% set speakerAffiliation = null %}
+{% if event.speaker_affiliation %}
+  {% set affiliationAddress = null %}
+  {% if event.speaker_country %}
+    {% set affiliationAddress = { "@type": "PostalAddress", "addressCountry": event.speaker_country } %}
+  {% endif %}
+  {% set speakerAffiliation = { "@type": "Organization", "name": event.speaker_affiliation, "address": affiliationAddress } %}
+{% endif %}
+
+{% set recording = null %}
+{% if event.youtube_url %}
+  {% set recording = { "@type": "VideoObject", "name": event.title ~ " — recording", "url": event.youtube_url, "description": eventDescription } %}
+{% endif %}
+
+{% set registerAction = null %}
+{% if isUpcoming %}
+  {% set registerAction = { "@type": "RegisterAction", "target": eventUrl, "name": "Register" } %}
+{% endif %}
+
+{% set structuredData = {
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": event.title,
+  "url": eventUrl,
+  "startDate": parisTime.startDate,
+  "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+  "eventStatus": "https://schema.org/EventScheduled",
+  "description": eventDescription,
+  "location": { "@type": "VirtualLocation", "url": eventUrl },
+  "organizer": { "@type": "Organization", "name": "The Example Collective", "url": site.forum },
+  "performer": { "@type": "Person", "name": event.speaker_name, "affiliation": speakerAffiliation },
+  "potentialAction": registerAction,
+  "subjectOf": recording
+} %}
+<script type="application/ld+json">{{ structuredData | jsonLd | replace("</script", "<\\/script") | safe }}</script>
+
+<section class="hero event-lead">
+  <div class="container">
+    <p class="event-lead__back">
+      <a href="{{ '/' | url }}" class="unstyled">&larr; All editions</a>
+    </p>
+    <article class="feature">
+      <aside class="feature__rail">
+        <p class="feature__vol">{% if isUpcoming %}Upcoming{% else %}Past edition{% endif %}</p>
+        <p class="feature__code">{{ event.id }}</p>
+        <p class="feature__date">
+          <strong>{{ event.date }}</strong><br>
+          {{ parisTime.label }}
+        </p>
+      </aside>
+      <div class="feature__body">
+        <h1 class="feature__title">{{ event.title }}</h1>
+        <p class="feature__speaker">
+          {{ event.speaker_name }}{% if event.speaker_affiliation %}<span class="feature__affil"> &middot; {{ event.speaker_affiliation }}</span>{% endif %}
+        </p>
+        {% if event.abstract %}
+        <p class="feature__abstract">{{ event.abstract }}</p>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+</section>
+
+{#
+  Form follows function: what makes a page useful depends on the edition's
+  own state, and the band numbers below follow that, not a fixed layout.
+
+  Upcoming -- a visitor came here to register, so that is section 01, ahead
+  of everything else, not buried beneath two empty states nobody asked
+  about. The recording half of that old section is dropped entirely rather
+  than kept as a second, later band: `youtube_url` is only ever published
+  once an edition reaches `archived` (`public_data.py::RECORDING_STATUSES`),
+  so an upcoming page showing "No recording yet" is not withholding a
+  recording that could exist yet -- it is stating a certainty ("this has
+  not happened") as if it were news, which "Upcoming" in the rail above
+  already said better.
+
+  Fix round 2 -- `forum_thread` is not the same claim. Nothing gates it by
+  status the way `RECORDING_STATUSES` gates a recording
+  (`public_data.py::PUBLISHABLE_ALWAYS`): an operator can open a
+  discussion thread ahead of the seminar, and the field is published
+  exactly as it would be once the edition is past. So it is attached to
+  this same section, if and only if it is set -- never a "No thread yet"
+  placeholder returning, and never a second numbered band spent on one
+  link. Registration is still what a visitor to an upcoming page came for,
+  so it stays first within the section, not above it.
+
+  Past -- there is no form, and the recording (or its absence) is the one
+  thing a visitor came for, so it stays section 01, unchanged from before
+  this fix.
+#}
+{% if isUpcoming %}
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">Register</span>
+  </header>
+
+  {#
+    Phase 4 spec section 4 ("Formalities"): a one-screen notice on the
+    event page, before the form. The wording below is the one phase 4
+    already settled and shipped, originally at `app/src/signup/
+    SignupForm.tsx`'s own `Notice()` component (quoted here at task 5,
+    rather than redrafted). Task 6 removed that component's own copy once
+    it mounted the registration island beneath this notice: D-18 keeps
+    text that needs no interactivity as plain static HTML, so this block
+    is now the *only* copy, not a second one kept in step with a first --
+    see `app/src/islands/signup/SignupForm.tsx`'s own module comment.
+    `tools/tests/test_confirmation.py` still pins the retention figure
+    ("90 days") across this page, `confirmation.py` and the docs copy, and
+    `tools/tests/test_site.py` pins the contact address below against
+    `confirmation.CONTACT_EMAIL` -- so neither the wording nor the address
+    can quietly drift from those.
+  #}
+  <div class="notice">
+    <p class="notice__eyebrow">Before you register</p>
+    <p>
+      We collect your first name, surname and email address to register you for
+      this event and to issue your attendance certificate afterwards. Institution
+      is optional. Nothing else is asked for.
+    </p>
+    <p>
+      <strong>Your browser encrypts this information before it is sent</strong>,
+      using this event&rsquo;s own key. Nobody &mdash; including us &mdash; can
+      read it until an organiser decrypts it as part of running the event. The
+      event&rsquo;s data, encrypted form included, is permanently destroyed
+      90 days after the event by destroying the key that could ever read it
+      again.
+    </p>
+    <p>
+      To access, correct or erase your data before that date, write to
+      <a href="mailto:reading-group@example.test">reading-group@example.test</a>.
+      Read the full
+      {# Fix round 4: this used to link example-cockpit directly -- the
+         *private* source repository (D-15), which returns GitHub's own
+         404 to a public visitor. `donnees.njk` already links the same
+         record at its published handbook address; this now matches it
+         exactly, rather than stating a second, disagreeing answer to the
+         same question. `tools/tests/test_site.py::
+         test_the_governance_record_link_agrees_on_every_page_that_makes_
+         it` reads both templates and pins them equal, built from the same
+         two constants `donnees.njk`'s own link is, so this cannot drift
+         back to a private-repo address unnoticed. #}
+      <a href="https://example-instance.github.io/example-showcase/app/handbook/governance/traitement-donnees.md">data-protection record</a>
+      for what we hold, why, and for how long.
+    </p>
+  </div>
+
+  {#
+    Task 6: the registration island itself, mounted here, beneath this
+    notice -- extracted from the operators' application into its own
+    small, self-contained bundle, so a visitor who wants to register never
+    downloads the cockpit (D-18's own argument). Nothing renders
+    `event.registration_link` anywhere on this page, or anywhere else in
+    this site: the room link is delivered only by the confirmation
+    e-mail, never published (acceptance criterion 2).
+
+    `#registration-form` is `app/src/islands/signup/main.tsx`'s own mount
+    point -- kept as the exact id task 5 already reserved and
+    `tools/tests/test_site.py::test_the_notice_precedes_the_reserved_
+    place_for_the_registration_form` already pins, so that test needed no
+    change here. `data-event-id` is how the island learns which event
+    it is on: one static page per event (D-19), not a route param this
+    script re-parses. The element starts empty; `signup.js` fills it in,
+    which is exactly why the `<noscript>` fallback beside it exists --
+    without JavaScript, nothing here would ever render at all.
+  #}
+  <div id="registration-form" data-event-id="{{ event.id | lower }}"></div>
+  <noscript>
+    <p class="notice">
+      Registering needs JavaScript enabled. If you cannot enable it, write to
+      <a href="mailto:reading-group@example.test">reading-group@example.test</a>
+      and we will register you by hand.
+    </p>
+  </noscript>
+  <script type="module" src="{{ '/app/islands/signup/signup.js' | url }}"></script>
+
+  {#
+    Fix round 2: `forum_thread` carries no status gate at all
+    (`public_data.py::PUBLISHABLE_ALWAYS`), so an operator can open this
+    thread before the seminar happens -- the same "Discuss" pill the past
+    section below already renders, attached here instead of a new band,
+    and only when there is a thread to link. No disabled placeholder: an
+    upcoming edition with no thread yet is not news, the same reasoning
+    that dropped the recording half of this section in round 1.
+  #}
+  {% if event.forum_thread %}
+  <div class="event__discuss">
+    <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+  </div>
+  {% endif %}
+</section>
+{% else %}
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">Recording &amp; discussion</span>
+  </header>
+
+  <div class="archive__actions event__links">
+    {% if event.youtube_url %}
+      <a class="archive__action unstyled" href="{{ event.youtube_url }}" target="_blank" rel="noopener">Watch</a>
+    {% else %}
+      <span class="archive__action--disabled">No recording yet</span>
+    {% endif %}
+    {% if event.forum_thread %}
+      <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+    {% else %}
+      <span class="archive__action--disabled">No thread yet</span>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

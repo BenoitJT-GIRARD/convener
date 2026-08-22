@@ -18,11 +18,20 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  * `tools/convener_ops/registration.SIGNUP_BASE` -- pinned by
  * `tools/tests/fixtures/signup-link.json`'s own `signup_base`, the D-14
  * discipline `certificate-verification.json` and `governance-cases.json`
- * already use. A `HashRouter` fragment (`App.tsx`'s `path="/signup/:eventId"`),
- * the same convention `certificate.VERIFICATION_BASE` and
- * `survey_invite.SURVEY_BASE` use for their own addresses.
+ * already use.
+ *
+ * Task 6: this used to be a `HashRouter` fragment
+ * (`App.tsx`'s `path="/signup/:eventId"`, the convention
+ * `survey_invite.SURVEY_BASE` still uses for its own address --
+ * `certificate.VERIFICATION_BASE` used to as well, until task 7 moved
+ * certificate verification onto its own island too, keeping the fragment
+ * for a reason this address does not share: see that constant's own
+ * comment) -- registration left that route for an island mounted on the
+ * public event page, so this now points at that page's own address
+ * instead: `site/src/event.njk`'s permalink, `/events/<event id>/`
+ * (D-19).
  */
-const SIGNUP_BASE = 'https://example-instance.github.io/example-showcase/app/#/signup/';
+const SIGNUP_BASE = 'https://example-instance.github.io/example-showcase/events/';
 
 /**
  * The R-5 rule (`tools/convener_ops/platform.py::find_speaker`) computed here
@@ -31,14 +40,14 @@ const SIGNUP_BASE = 'https://example-instance.github.io/example-showcase/app/#/s
  * *public* announcement is exactly the shape this project refuses
  * everywhere else -- it depends on somebody remembering, and getting it
  * right -- and getting it wrong publishes a dead registration link under
- * the organisation's name. `''` (never a URL with nothing after the
- * fragment) when `editionCode` is blank, so an incomplete Speaker record
- * still renders the `«missing: speaker.signup_link»` marker, the same as
- * every other derived field on this record.
+ * the organisation's name. `''` (never a URL with nothing after the base)
+ * when `editionCode` is blank, so an incomplete Speaker record still
+ * renders the `«missing: speaker.signup_link»` marker, the same as every
+ * other derived field on this record.
  */
 function signupLink(editionCode: string): string {
   if (!editionCode) return '';
-  return `${SIGNUP_BASE}${encodeURIComponent(editionCode.toLowerCase())}`;
+  return `${SIGNUP_BASE}${encodeURIComponent(editionCode.toLowerCase())}/`;
 }
 
 interface Resolved {

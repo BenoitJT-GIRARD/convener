@@ -1,0 +1,54 @@
+---
+layout: layout.njk
+# One page per year at least one past edition falls in (`archive.years`,
+# `site/src/_data/archive.js`) -- a year with no past edition is never
+# generated at all, so this template's own "matches nothing" case is
+# covered by the two field-presence pages instead (archives-filter.njk),
+# never by this one: a link to a year page only ever exists because that
+# year already has at least one entry.
+pagination:
+  data: "archive.years"
+  size: 1
+  alias: yearInfo
+  # Task 10: without this, only the first year page would join
+  # `collections.all` -- see event.njk's own comment on this same key.
+  addAllPagesToCollections: true
+permalink: "/archives/{{ yearInfo.year }}/"
+# Task 10: see event.njk's own front-matter comment for why this is
+# `eleventyComputed` rather than a plain string -- this template is
+# paginated over `archive.years`, so `yearInfo` only exists once Eleventy
+# has resolved which year a given generated page is for.
+eleventyComputed:
+  pageTitle: "{{ yearInfo.year }} editions"
+  pageDescription: "Every seminar delivered in {{ yearInfo.year }}, with its recording and discussion thread where one exists."
+---
+{% from "archive-list.njk" import archiveList %}
+{% from "archive-filters.njk" import archiveFilters %}
+
+{% set entries = [] %}
+{% for e in archive.past %}
+  {% if e.year == yearInfo.year %}{% set entries = (entries.push(e), entries) %}{% endif %}
+{% endfor %}
+
+<section class="hero">
+  <div class="container hero__inner">
+    <p class="hero__eyebrow">Archive &middot; {{ yearInfo.year }}</p>
+    <h1 class="hero__title">{{ yearInfo.year }} editions.</h1>
+    <p class="hero__lede">
+      Every seminar delivered in {{ yearInfo.year }}, with its recording
+      and discussion thread where one exists.
+    </p>
+  </div>
+</section>
+
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">{{ yearInfo.year }}</span>
+    <span class="section__count">{{ yearInfo.count }} {% if yearInfo.count == 1 %}entry{% else %}entries{% endif %}</span>
+  </header>
+
+  {{ archiveFilters(archive.years, yearInfo.year) }}
+
+  {{ archiveList(entries, "No edition from " ~ yearInfo.year ~ " is listed.") }}
+</section>

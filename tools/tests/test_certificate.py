@@ -1087,16 +1087,18 @@ def test_verification_url_percent_encodes_a_token_with_reserved_characters() -> 
 
 def test_verification_url_carries_the_token_after_the_fragment_not_before_it() -> None:
     """The reviewer's own finding, pinned (fix round 1): `VERIFICATION_BASE`
-    ends in `#/verify/`, so the `?token=` this function appends -- which
+    ends in `#/`, so the `?token=` this function appends -- which
     carries the holder's name -- sits inside the URL *fragment*. A
     fragment is never sent in an HTTP request and is stripped from
     `Referer` before a browser navigates away, so the name never reaches
     GitHub's servers or a third party's request log. That property holds
-    only as long as the token appears *after* the first `#`; switching
-    this application from `HashRouter` to `BrowserRouter` one day -- a
-    change nothing else in this repository would object to -- would
-    silently move the token before the `#` and start leaking names in
-    every verification. This test is what would catch that."""
+    only as long as the token appears *after* the first `#`; task 7 moved
+    this address off `App.tsx`'s `HashRouter` route onto a static page's
+    own island, which reads `location.hash` itself -- serving that page
+    from a bare path instead, the way task 6 moved `registration.
+    SIGNUP_BASE`, would silently move the token before the `#` and start
+    leaking names in every verification. This test is what would catch
+    that."""
     url = verification_url("abc123", '{"v":1,"payload":"eyJuYW1lIjoiQWRhIn0="}')
     fragment_start = url.index("#")
     token_start = url.index("token=")

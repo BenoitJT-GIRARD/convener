@@ -1,0 +1,80 @@
+---
+layout: layout.njk
+permalink: "/data/"
+pageTitle: "Information and data"
+pageDescription: "What personal data this series holds, why, for how long, and how to exercise your rights."
+---
+{#
+  Filename kept in French, exactly as the task brief named it -- the same
+  precedent `docs/governance/traitement-donnees.md` already set, registered
+  in `app/src/content/registry.ts` under the English key
+  `governance/data-protection-record` ("filename kept as the task brief
+  named it; every other file in this directory is named in English"). This
+  page's own address follows the site's own English convention the same
+  way that registry key does: /data/, not /donnees/.
+
+  This page cites the phase 4 data-protection record rather than restating
+  it -- in particular, it never repeats the retention figure that record
+  gives, on purpose: two documents stating the same number independently
+  will disagree the day one of them is updated and the other is not.
+  `tools/tests/test_site.py`'s Task 8 section pins the link below against
+  the same two constants that decide where the record actually lands
+  (`app/src/content/registry.ts`'s own file path, `app/vite.config.ts`'s
+  own published base), rather than against a literal URL nothing would
+  catch drifting.
+#}
+<section class="hero">
+  <div class="container hero__inner">
+    <p class="hero__eyebrow">Information and data</p>
+    <h1 class="hero__title">What we hold, <em>and for how long.</em></h1>
+    <p class="hero__lede">
+      Registering for a seminar, being recognised in the room, and
+      receiving a certificate afterwards all involve a small amount of
+      personal data. This page says what it is for and how to reach us
+      about it; the full record it is drawn from is linked below, so this
+      page never states a figure that record could later disagree with.
+    </p>
+  </div>
+</section>
+
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">The record</span>
+  </header>
+
+  <div class="notice">
+    <p class="notice__eyebrow">Registration, attendance and certificates</p>
+    <p>
+      What is collected, on what basis, who can reach it, for how long,
+      and what protects it is set out in full in our data-protection
+      record.
+    </p>
+    <p>
+      <a href="https://example-instance.github.io/example-showcase/app/handbook/governance/traitement-donnees.md">Read the data-protection record</a>.
+    </p>
+  </div>
+</section>
+
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">02</span>
+    <span class="section__label">Your rights</span>
+  </header>
+
+  <div class="notice">
+    <p class="notice__eyebrow">Access, correction, erasure</p>
+    <p>
+      You can ask to see, correct, withdraw consent for, or erase what is
+      held about you, before the retention deadline the record above sets
+      out. Write to
+      <a href="mailto:reading-group@example.test">reading-group@example.test</a>
+      for any of this.
+    </p>
+    <p>
+      Proposing a speaker is a separate process, with its own data
+      &mdash; see <a href="{{ '/propose/' | url }}">Propose a speaker</a>. The same
+      address above reaches us about that too.
+    </p>
+  </div>
+</section>

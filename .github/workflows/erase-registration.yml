@@ -1,7 +1,7 @@
 name: Erase a registration early
 
-# Task 15: the operator-facing side of spec S:4's "Effacement avant
-# echeance" -- a participant's registration removed from
+# Task 15: the operator-facing side of spec S:4's "Erasure before the
+# deadline" -- a participant's registration removed from
 # registrations.enc before the retention window ends, without touching
 # any other registrant's own entry (R-31; tools/convener_ops/registration.py::
 # erase). Acceptance criterion 7 requires this procedure to be both

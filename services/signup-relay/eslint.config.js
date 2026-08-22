@@ -20,12 +20,25 @@ export default [
         globalThis: 'writable',
         AbortSignal: 'readonly',
         TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
       },
     },
     rules: {
       'no-unused-vars': 'error',
       'no-undef': 'error',
       eqeqeq: 'error',
+    },
+  },
+  {
+    // `Buffer` is a Node global, and the tests run under Node -- but the
+    // Worker runtime this service actually deploys to has no `Buffer` at
+    // all. Granting it in the block above would let `src/` reference it and
+    // still lint clean, failing only once deployed. Scoped here instead.
+    files: ['test/**'],
+    languageOptions: {
+      globals: {
+        Buffer: 'readonly',
+      },
     },
   },
 ];

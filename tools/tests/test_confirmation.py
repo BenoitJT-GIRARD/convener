@@ -596,8 +596,18 @@ def test_the_update_warning_matches_the_documentation_copy() -> None:
 # Pinned the same D-14 way, across a third file this time.
 # ------------------------------------------------------------------ #
 
+#: Task 6: the form itself moved from `app/src/signup/SignupForm.tsx`
+#: (the operators' application) to `app/src/islands/signup/SignupForm.tsx`
+#: (the island mounted on the public event page) -- see git history for
+#: the file this replaced. `encrypt.ts`, which these tests never read,
+#: stayed exactly where it was: shared, not moved, not forked (P-2).
 _SIGNUP_FORM = (
-    Path(__file__).resolve().parents[2] / "app" / "src" / "signup" / "SignupForm.tsx"
+    Path(__file__).resolve().parents[2]
+    / "app"
+    / "src"
+    / "islands"
+    / "signup"
+    / "SignupForm.tsx"
 )
 
 
@@ -614,20 +624,32 @@ def test_the_contact_email_matches_the_signup_pages_own_notice() -> None:
 
 def test_the_retention_window_is_the_same_number_everywhere() -> None:
     """The paragraph with legal weight (review round 1): "90 days" is
-    restated in `confirmation.py`, the docs copy, and `SignupForm.tsx`
-    (which a participant reads *before* registering) -- and all three must
-    match `eventkeys.py`'s own citation of the same number
-    (`RSA_KEY_BITS`'s docstring: "this project's retention window (90
-    days, see the phase 4 spec)"). Nothing here reads a shared constant --
-    none exists yet, since the retention job itself is a later task -- so
-    this test is what keeps the three prose copies from drifting apart
-    until one does.
+    restated in `confirmation.py`, the docs copy, and `eventkeys.py`'s own
+    citation of the same number (`RSA_KEY_BITS`'s docstring: "this
+    project's retention window (90 days, see the phase 4 spec)"). Nothing
+    here reads a shared constant -- none exists yet, since the retention
+    job itself is a later task -- so this test is what keeps the prose
+    copies from drifting apart until one does.
+
+    Phase 5 task 5 added a fourth restatement, `site/src/event.njk`'s own
+    notice -- at the time, quoted from `SignupForm.tsx`'s own copy as a
+    stopgap (that template's own comment said so), because task 6 had not
+    mounted the registration island yet. Task 6 removed that in-component
+    copy once it did: the notice is not interactive, so D-18 keeps it as
+    plain static HTML on the event page and the island renders none of it
+    itself -- rendering it from both places would put two copies of the
+    same legal notice on one page. `event.njk` is therefore the *only*
+    place this window is restated in either front end; `SignupForm.tsx` no
+    longer carries "90 days" at all, so it is dropped from this binding
+    rather than kept and left permanently unable to match.
     """
     from convener_ops.confirmation import _DATA_PROTECTION
 
-    signup_source = _SIGNUP_FORM.read_text(encoding="utf-8")
     eventkeys_source = (
         Path(__file__).resolve().parents[2] / "tools" / "convener_ops" / "eventkeys.py"
+    ).read_text(encoding="utf-8")
+    event_page_source = (
+        Path(__file__).resolve().parents[2] / "site" / "src" / "event.njk"
     ).read_text(encoding="utf-8")
 
     def _days(text: str) -> str:
@@ -637,10 +659,20 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
 
     code = _days(_DATA_PROTECTION)
     docs = _days(_normalised_docs_template())
-    signup = _days(signup_source)
     eventkeys = _days(eventkeys_source)
+    event_page = _days(event_page_source)
 
-    assert code == docs == signup == eventkeys == "90"
+    assert code == docs == eventkeys == event_page == "90"
+
+    # Belt and braces for the removal itself: a regression that pasted the
+    # notice back into the island would put two copies on one built page,
+    # exactly the defect this restructuring exists to prevent.
+    signup_source = _SIGNUP_FORM.read_text(encoding="utf-8")
+    assert "90 days" not in signup_source, (
+        "SignupForm.tsx restates the retention window again -- that text "
+        "now lives only on site/src/event.njk; rendering it from the "
+        "island too would show it twice on the built event page"
+    )
 
 
 def test_signup_form_max_field_length_matches_the_python_constant() -> None:

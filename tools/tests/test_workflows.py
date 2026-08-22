@@ -163,46 +163,103 @@ def test_vite_config_base_no_longer_points_at_the_private_repo() -> None:
     )
 
 
-def test_app_route_matches_certificate_verification_base() -> None:
-    """Important 3 (fix round 1, task 13): App.tsx declares
-    `<Route path="/verify/:identifier" element={<VerifyRoute />} />` --
-    mutating that path left the full app suite at 1097 passed, 0 failures,
-    and the consequence is not a 404: App.tsx's own `<Route path="/*"
-    element={<Shell />} />` catches everything else, so every already-
-    printed QR code would silently start landing a stranger on the
-    authenticated cockpit's login screen. No test in app/ reads the
-    application's route table at all -- every case in verify.test.tsx
-    mounts VerifyPage directly on a MemoryRouter path of its own choosing.
-
-    Same idiom as test_vite_config_base_path_targets_the_vitrine_app_subtree,
-    just above: read the source file as text, pinned against the one thing
-    that has to agree with it -- certificate.VERIFICATION_BASE, which the
-    shared fixture also carries as `verification_base` (D-14: a rule
-    written on both sides of the language boundary, bound by one fixture
-    read from both, not two hand-typed literals that could drift)."""
-    fragment = certificate.VERIFICATION_BASE.split("#", 1)[1]  # "/verify/"
-    expected_path = f"{fragment}:identifier"  # "/verify/:identifier"
-    app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
-    assert f'path="{expected_path}"' in app_tsx, (
-        f"{APP_TSX.as_posix()} does not declare a route at "
-        f"{expected_path!r} -- this must match "
-        "certificate.VERIFICATION_BASE's own fragment, or every printed "
-        "QR code lands a stranger on the authenticated Shell instead of "
-        "the public verification page"
+def test_both_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
+    """Fix round 4 (the path-prefix defect): `islandSignupConfig` and
+    `islandVerifyConfig` used to set `base: '/app/'`, deliberately distinct
+    from the main config's own `base: '/example-showcase/app/'`
+    (`EXPECTED_BASE_PATH`, above), on the reasoning that the *site* pages
+    hosting these islands already addressed
+    the app's assets root-relative to the site's own root. That reasoning
+    assumed the site's own root-relative links already landed at wherever
+    GitHub Pages resolves this project's published root to -- they did not
+    (no CNAME, no custom domain), which is the identical gap
+    `tools/tests/test_site.py::
+    test_no_built_page_emits_a_root_relative_link_without_the_prefix` now
+    closes on the site's own side. Both islands publish into, and are
+    addressed from, the exact same `example-showcase` `app/` subtree the main
+    app does (`deploy.yml`'s single "Push to example-showcase" step carries all
+    three), so all three configs must now read the identical value -- a
+    stray `'/app/'` reappearing on either island is exactly the regression
+    this guards.
+    """
+    config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
+    # Block comments stripped first: this file's own explanatory comments
+    # quote `base: '/example-showcase/app/'` by way of describing the fix, which
+    # would otherwise inflate this count without a fourth real config.
+    code_only = re.sub(r"/\*.*?\*/", "", config, flags=re.DOTALL)
+    base_literals = re.findall(r"base:\s*'([^']*)'", code_only)
+    assert len(base_literals) == 3, (
+        f"expected exactly 3 `base:` literals in {VITE_CONFIG.as_posix()} "
+        f"(main app, island-signup, island-verify), found {base_literals!r}"
+    )
+    assert set(base_literals) == {EXPECTED_BASE_PATH}, (
+        f"{VITE_CONFIG.as_posix()}'s three `base:` literals are "
+        f"{base_literals!r}, not all {EXPECTED_BASE_PATH!r} -- an island "
+        "publishing under a different base than the main app 404s its own "
+        "fetches (event keys, the certificate register, signing keys) once "
+        "served from the vitrine's real, single app/ subtree"
     )
 
 
-def test_certificate_verification_base_targets_the_vitrine_app_subtree() -> None:
-    """M4, fix round 1 (task 16b's review): the D-14 pin just above binds
-    `#/verify/` to `App.tsx`'s route literal, but nothing bound the host
-    and path *before* that fragment -- `/example-showcase/app/` -- to
-    `vite.config.ts`'s own `base`. Changing that base would make every
-    printed QR code 404 with the route pin still green, because the pin
-    only ever looks at what comes after `#`."""
-    assert EXPECTED_BASE_PATH in certificate.VERIFICATION_BASE, (
-        f"certificate.VERIFICATION_BASE does not carry {EXPECTED_BASE_PATH!r} "
-        f"-- it would not match app/vite.config.ts's own base, and every "
-        "printed QR code would 404 once served"
+def test_app_no_longer_declares_a_verify_route() -> None:
+    """Task 7 moved certificate verification off `App.tsx`'s own
+    `<Route path="/verify/:identifier" .../>` onto a static page's own
+    island (`site/src/verify.njk`, `app/src/islands/verify/`), the same
+    move task 6 made for registration's own `/signup/:eventId` (see git
+    history for the route this replaced). A route left behind here would
+    still technically work -- `App.tsx`'s own `<Route path="/*"
+    element={<Shell />} />` catches everything else, so a stray route is
+    dead code, not dead code with a live consumer -- but every certificate
+    printed from now on carries `VERIFICATION_BASE`'s *new* address, and
+    this pin is what would catch the old route quietly reappearing."""
+    app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
+    assert '"/verify/:identifier"' not in app_tsx, (
+        f"{APP_TSX.as_posix()} still declares a route at "
+        '"/verify/:identifier" -- task 7 moved certificate verification '
+        "onto the static verify page's own island instead"
+    )
+
+
+#: `site/src/verify.njk`'s own permalink -- a fixed, static page (unlike
+#: `event.njk`'s per-edition pagination), because a certificate names no
+#: event this page could key a per-page address off.
+VERIFY_TEMPLATE = Path("site/src/verify.njk")
+VERIFY_PERMALINK = "/verify/"
+
+
+def test_certificate_verification_base_matches_the_verify_page_permalink() -> None:
+    """Task 7 correction of the D-14 pin `test_app_route_matches_
+    certificate_verification_base` used to make (see git history): `App.tsx`
+    no longer declares this route at all, so the host-and-path portion of
+    `VERIFICATION_BASE` -- everything *before* the `#` -- must now match
+    the static verify page's own address instead. The fragment *after* the
+    `#` is a separate, and more important, property -- see
+    `test_verification_url_carries_the_token_after_the_fragment_not_before_it`
+    in `test_certificate.py` for that half, unchanged by this move."""
+    verify_njk = (ROOT / VERIFY_TEMPLATE).read_text(encoding="utf-8")
+    assert f'permalink: "{VERIFY_PERMALINK}"' in verify_njk, (
+        f"{VERIFY_TEMPLATE.as_posix()} does not declare the permalink "
+        f"{VERIFY_PERMALINK!r} this pin assumes -- update both together"
+    )
+    host_and_path = certificate.VERIFICATION_BASE.split("#", 1)[0]
+    assert host_and_path.endswith(VERIFY_PERMALINK), (
+        f"certificate.VERIFICATION_BASE ({certificate.VERIFICATION_BASE!r}) "
+        f"does not carry the verify page's own address ({VERIFY_PERMALINK!r}) "
+        "before its fragment -- every printed QR code would 404 once served"
+    )
+
+
+def test_certificate_verification_base_no_longer_targets_the_app_subtree() -> None:
+    """Same gap `test_registration_signup_base_no_longer_targets_the_app_
+    subtree` guards for `SIGNUP_BASE`, applied here: task 7 moved
+    verification off the app's own route onto the static verify page
+    above, so a published certificate's address should no longer carry the
+    app's own asset subtree."""
+    assert EXPECTED_BASE_PATH not in certificate.VERIFICATION_BASE, (
+        f"certificate.VERIFICATION_BASE still carries {EXPECTED_BASE_PATH!r} "
+        "-- task 7 moved verification off the app's own route onto the "
+        "verify page; every printed certificate should target that page "
+        "instead"
     )
 
 
@@ -217,30 +274,50 @@ def test_survey_base_targets_the_vitrine_app_subtree() -> None:
     )
 
 
-def test_app_route_matches_registration_signup_base() -> None:
-    """Critical 2 (branch review): the same D-14 pin
-    `test_app_route_matches_certificate_verification_base` already makes
-    for `/verify/:identifier`, applied to the oldest of the three public
-    routes -- `registration.SIGNUP_BASE` did not exist before this fix, and
-    nothing bound `/signup/:eventId` to anything at all."""
-    fragment = registration.SIGNUP_BASE.split("#", 1)[1]  # "/signup/"
-    expected_path = f"{fragment}:eventId"  # "/signup/:eventId"
-    app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
-    assert f'path="{expected_path}"' in app_tsx, (
-        f"{APP_TSX.as_posix()} does not declare a route at "
-        f"{expected_path!r} -- this must match registration.SIGNUP_BASE's "
-        "own fragment"
+#: `site/src/event.njk`'s own permalink expression -- D-19, `event_id` IS
+#: `edition_code` lower-cased, nothing else names an event. Read from the
+#: template's own front matter rather than restated as a second literal,
+#: so a future change to that permalink fails this pin instead of quietly
+#: leaving `registration.SIGNUP_BASE` pointing at an address the site no
+#: longer serves.
+EVENT_TEMPLATE = Path("site/src/event.njk")
+EVENT_PERMALINK = "/events/{{ event.id | lower }}/"
+
+
+def test_registration_signup_base_matches_the_event_page_permalink() -> None:
+    """Task 6 correction of Critical 2 (branch review): `registration.
+    SIGNUP_BASE` used to be a `HashRouter` fragment pinned against
+    `App.tsx`'s own `path="/signup/:eventId"` route
+    (`test_app_route_matches_certificate_verification_base` still makes
+    that same pin for `/verify/:identifier`). Registration left that route
+    entirely for an island mounted on the public event page (D-18), so the
+    address it must now match is that page's own -- `event.njk`'s
+    permalink -- not a route in an application it no longer lives in."""
+    event_njk = (ROOT / EVENT_TEMPLATE).read_text(encoding="utf-8")
+    assert f'permalink: "{EVENT_PERMALINK}"' in event_njk, (
+        f"{EVENT_TEMPLATE.as_posix()} does not declare the permalink "
+        f"{EVENT_PERMALINK!r} this pin assumes -- update both together"
     )
+    prefix = EVENT_PERMALINK.split("{{", 1)[0]  # "/events/"
+    assert registration.SIGNUP_BASE.endswith(prefix), (
+        f"registration.SIGNUP_BASE ({registration.SIGNUP_BASE!r}) does not "
+        f"end with the event page's own address prefix ({prefix!r})"
+    )
+    assert registration.signup_url("mrg-042") == f"{registration.SIGNUP_BASE}mrg-042/"
 
 
-def test_registration_signup_base_targets_the_vitrine_app_subtree() -> None:
-    """Same gap as `test_certificate_verification_base_targets_the_vitrine_
-    app_subtree` and `test_survey_base_targets_the_vitrine_app_subtree`,
-    applied to the third base."""
-    assert EXPECTED_BASE_PATH in registration.SIGNUP_BASE, (
-        f"registration.SIGNUP_BASE does not carry {EXPECTED_BASE_PATH!r} "
-        "-- it would not match app/vite.config.ts's own base, and every "
-        "published signup link would 404 once served"
+def test_registration_signup_base_no_longer_targets_the_app_subtree() -> None:
+    """Same gap `test_certificate_verification_base_targets_the_vitrine_
+    app_subtree` and `test_survey_base_targets_the_vitrine_app_subtree`
+    guard for their own bases, inverted for this one: unlike verification
+    and the survey, which still live on `App.tsx` routes, a published
+    signup link that still carried `EXPECTED_BASE_PATH` after task 6 would
+    point at the now-deleted `/signup/:eventId` route's own asset
+    subtree, not at the event page that replaced it."""
+    assert EXPECTED_BASE_PATH not in registration.SIGNUP_BASE, (
+        f"registration.SIGNUP_BASE still carries {EXPECTED_BASE_PATH!r} -- "
+        "task 6 moved registration off the app's own route onto the event "
+        "page; every published signup link should target that page instead"
     )
 
 
@@ -352,9 +429,9 @@ def test_deploy_workflow_push_step_only_touches_the_app_subtree() -> None:
     script = _push_step_script()
     assert "git add --force app" in script, (
         "the push step must stage only the target repo's app/ subtree, the "
-        "same discipline publish-vitrine.yml uses for src/_data/ -- and "
-        "with --force, since `git add` still honours the target "
-        "repository's own .gitignore"
+        "same discipline publish-vitrine.yml uses for the site's own "
+        "root-level files -- and with --force, since `git add` still "
+        "honours the target repository's own .gitignore"
     )
     assert "git add ." not in script and "git add -A" not in script
 
@@ -566,14 +643,171 @@ def test_publish_vitrine_push_step_no_longer_copies_certificates_data() -> None:
         "publish-vitrine.yml's push step still mentions certificates.json "
         "-- the dead write this test exists to keep gone"
     )
-    assert "git add src/_data/events.json" in script, (
-        "the events feed itself must still be staged and pushed"
-    )
 
 
 def test_publish_vitrine_workflow_permissions_are_read_only() -> None:
     job = _publish_vitrine_workflow()["jobs"]["publish"]
     assert job["permissions"] == {"contents": "read"}
+
+
+# ------------------------------------------------------------------ #
+# publish-vitrine.yml, task 2 (phase 5): the showcase's own templates
+# moved from `example-showcase` into this repository's `site/` (D-15). This job
+# now builds the whole site and pushes the built output to the vitrine's
+# root, rather than copying one generated data file into a checkout of a
+# separate Eleventy project living there.
+# ------------------------------------------------------------------ #
+
+
+def test_publish_vitrine_paths_trigger_includes_the_site_templates() -> None:
+    """A change under `site/` has no effect on `events-public.json`, so
+    without this the old `paths:` trigger (data + `tools/**`) would never
+    rebuild or republish the site at all -- the same gap R-19 closed for
+    `certificates.yml`, above."""
+    text = (ROOT / PUBLISH_VITRINE_WORKFLOW).read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    assert "'site/**'" in trigger
+
+
+def test_publish_vitrine_refreshes_site_data_before_building() -> None:
+    """`site/src/_data/events.json` is committed only as a build fixture
+    (see site/README.md); this step overwrites it from the file 'Build
+    public data' just generated, so the build that follows always reflects
+    current private data, not whatever a contributor last committed."""
+    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    names = [step.get("name") for step in job["steps"]]
+    assert "Refresh site data" in names
+    assert names.index("Refresh site data") > names.index("Build public data"), (
+        "the site data must be refreshed after the public data projection "
+        "runs, or it copies last run's file"
+    )
+    for step in job["steps"]:
+        if step.get("name") == "Refresh site data":
+            assert "public-data/events-public.json" in step["run"]
+            assert "site/src/_data/events.json" in step["run"]
+
+
+def test_publish_vitrine_builds_the_site_before_pushing() -> None:
+    job = _publish_vitrine_workflow()["jobs"]["publish"]
+    names = [step.get("name") for step in job["steps"]]
+    assert "Install site" in names and "Build site" in names
+    assert names.index("Refresh site data") < names.index("Build site"), (
+        "the site must build from the refreshed data, not the committed fixture"
+    )
+    assert names.index("Build site") < names.index("Push to example-showcase"), (
+        "the build must run before the push step, or it publishes "
+        "whatever site/_site last held"
+    )
+
+
+def test_publish_vitrine_push_step_only_touches_the_root_site_files() -> None:
+    """The disjoint-subtree argument the retry loop relies on: this step
+    must never remove or restage `app/`, deploy.yml's own subtree of the
+    same repository."""
+    script = _publish_vitrine_push_script()
+    assert "! -name 'app'" in script, (
+        "the push step's wipe must exclude app/ -- deploy.yml's own "
+        "disjoint subtree -- or a site publish would delete the deployed "
+        "application"
+    )
+    assert "rm -rf /tmp/vit/app" not in script
+    assert "git add --force -A" in script, (
+        "the built site is a whole-tree replacement (task 5 and later add "
+        "pages without editing this step), staged in full, not one named "
+        "file"
+    )
+
+
+def test_publish_vitrine_push_step_refuses_to_publish_an_empty_build() -> None:
+    """D-25 (fix round 1): Eleventy exits 0 on 'Wrote 0 files' -- a wrong
+    dir.input, a template error that skips every page, or any config change
+    that makes the build emit nothing all 'succeed' as far as the 'Build
+    site' step is concerned. Without a guard, the wipe below would then
+    remove the published site and commit an empty publication over a
+    working one -- D-25's own "a control that cannot fail loudly is not a
+    control", except here the silent success is destructive rather than
+    merely useless."""
+    script = _publish_vitrine_push_script()
+    guard_at = script.find('if [ ! -f "$SITE_OUTPUT/index.html" ]')
+    count_at = script.find("site_file_count=")
+    wipe_at = script.find("find /tmp/vit")
+    assert guard_at != -1, (
+        "no guard checks that $SITE_OUTPUT/index.html exists -- a build "
+        "that silently wrote nothing would still be published"
+    )
+    assert count_at != -1, (
+        "no file-count floor beside the index.html check -- a build that "
+        "wrote only one or two files (also wrong, once tasks 5 and 8 add "
+        "pages) would still be published"
+    )
+    assert -1 < guard_at < wipe_at and -1 < count_at < wipe_at, (
+        "both emptiness guards must run before the wipe starts -- checked "
+        "after, the wipe has already begun removing what a failed check "
+        "could no longer replace"
+    )
+    guard_block = script[guard_at : script.find("fi", guard_at)]
+    assert "exit 1" in guard_block, (
+        "the index.html guard does not exit 1 -- a missing index.html "
+        "must fail the step, not merely be noticed"
+    )
+
+
+def test_publish_vitrine_push_step_clears_stale_files_before_copying() -> None:
+    script = _publish_vitrine_push_script()
+    wipe_at = script.find("find /tmp/vit")
+    copy_at = script.find("cp -r")
+    assert wipe_at != -1 and copy_at != -1 and wipe_at < copy_at, (
+        "a page removed from site/ must disappear from the publication "
+        "too -- the wipe has to happen before the fresh build is copied in"
+    )
+
+
+def test_publish_vitrine_push_step_retry_re_derives_rather_than_rebases() -> None:
+    """The same defence deploy.yml's own 'Commit survey status' step uses
+    (test_deploy_workflow_survey_status_retry_re_derives_rather_than_
+    rebases, above), for the identical reason: this commit is a wholesale
+    rewrite of generated files -- built HTML, a stylesheet, binary fonts --
+    not an append. Replaying a rebase's diff over a full-file rewrite is
+    exactly where it conflicts instead of applying; re-deriving discards
+    the local commit and reproduces the identical output against whatever
+    landed on main in the meantime."""
+    script = _publish_vitrine_push_script()
+    commands = [
+        line for line in script.splitlines() if not line.strip().startswith("#")
+    ]
+    assert not any("git rebase" in line for line in commands)
+    assert not any("git pull" in line for line in commands)
+    assert "git fetch origin main" in script
+    assert "git reset --hard origin/main" in script
+    retry_block = script.split("for attempt in 1 2 3; do", 1)[-1]
+    assert "refresh_published_site" in retry_block, (
+        "the retry must re-copy the already-built site over the freshly "
+        "reset tree on every attempt, not only stage whatever survived "
+        "the reset"
+    )
+    assert "git commit" in retry_block
+
+
+def test_publish_vitrine_site_ships_nojekyll() -> None:
+    """P-4's consequence: the vitrine's root is now a full site
+    (`index.html`, `style.css`, `fonts/`, `app/`), exactly what its
+    already-active GitHub Pages setting ('branch main, folder root')
+    serves -- but GitHub's default Jekyll processing swallows anything at
+    that root it does not recognise, which is what served the README
+    instead of the site until now. `.nojekyll` stops that. Sourced from
+    `site/src/.nojekyll` and passed through by `site/.eleventy.js`, not
+    `touch`-ed by this workflow, so the published site stays reproducible
+    from `site/` alone."""
+    assert (ROOT / "site/src/.nojekyll").exists(), (
+        "site/src/.nojekyll is missing -- the published root would carry "
+        "no .nojekyll marker, and GitHub's default Jekyll processing "
+        "would swallow the site"
+    )
+    eleventy_config = (ROOT / "site/.eleventy.js").read_text(encoding="utf-8")
+    assert "addPassthroughCopy('src/.nojekyll')" in eleventy_config, (
+        "site/.eleventy.js no longer passes .nojekyll through to _site/ -- "
+        "a build would silently drop it from the publication"
+    )
 
 
 # ------------------------------------------------------------------ #

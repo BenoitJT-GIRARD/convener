@@ -1,0 +1,55 @@
+{#
+  Task 8: the one filter bar every archive page shares -- the full listing,
+  each year page, and the two field-presence pages. Built entirely from
+  plain links to statically generated pages: D-18 puts interactivity in
+  islands only where a page genuinely needs script (a form, a signature
+  check); a filter over a small, build-time-known set of facets needs
+  none, so this macro emits no script at all, and the archive stays fully
+  filterable with JavaScript disabled. See `site/README.md` and
+  `tools/tests/test_site.py`'s Task 8 section for the fuller reasoning and
+  the tests that pin it.
+
+  `active` is one of "all", a four-digit year string, "recordings" or
+  "discussions". The current page never links to itself: it renders as
+  plain text carrying `aria-current="page"` instead, the ARIA Authoring
+  Practices pattern for a set of equivalent views (the same convention a
+  pagination control's own current page uses) -- not a link, so a
+  keyboard user tabbing through the bar is never asked to "follow" the
+  page already open.
+#}
+{% macro archiveFilters(years, active) %}
+<nav class="archive-filters" aria-label="Filter archive">
+  <ul class="archive-filters__list">
+    <li>
+      {% if active == "all" %}
+      <span class="archive-filters__current" aria-current="page">All</span>
+      {% else %}
+      <a href="{{ '/archives/' | url }}">All</a>
+      {% endif %}
+    </li>
+    {% for y in years %}
+    <li>
+      {% if active == y.year %}
+      <span class="archive-filters__current" aria-current="page">{{ y.year }} ({{ y.count }})</span>
+      {% else %}
+      <a href="{{ ('/archives/' ~ y.year ~ '/') | url }}">{{ y.year }} ({{ y.count }})</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+    <li>
+      {% if active == "recordings" %}
+      <span class="archive-filters__current" aria-current="page">With a recording</span>
+      {% else %}
+      <a href="{{ '/archives/recordings/' | url }}">With a recording</a>
+      {% endif %}
+    </li>
+    <li>
+      {% if active == "discussions" %}
+      <span class="archive-filters__current" aria-current="page">With a discussion</span>
+      {% else %}
+      <a href="{{ '/archives/discussions/' | url }}">With a discussion</a>
+      {% endif %}
+    </li>
+  </ul>
+</nav>
+{% endmacro %}

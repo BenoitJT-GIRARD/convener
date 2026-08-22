@@ -1,14 +1,67 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { encryptRegistration, importEventPublicKey } from './encrypt';
-import type { Registration } from './encrypt';
+import { encryptRegistration, importEventPublicKey } from '../../signup/encrypt';
+import type { Registration } from '../../signup/encrypt';
 
-// Same idiom as `content/fetch.ts`: the base the app itself is served from,
-// so a fetch resolves against the deployed route rather than wherever the
-// browser happens to be. `public/keys/events/<id>.pub` is populated at
-// build time by `scripts/copy-event-keys.mjs` from the repository's own
-// `keys/events/` -- see that script for why a missing file here is a
-// normal state, not a build failure.
+/**
+ * Task 6: extracted from the operators' application package
+ * (`app/src/signup/SignupForm.tsx`, now deleted -- see git history) into
+ * an island mounted on the public event page (`site/src/event.njk`), per
+ * D-18 ("static pages, interactivity in islands") and P-2 ("islands are
+ * built in the cockpit"). Before this, a visitor who wanted to register
+ * downloaded the whole operators' cockpit -- its routing, its
+ * authentication, every screen -- to fill in four fields.
+ *
+ * Everything phase 4 established about this form holds unchanged: the
+ * public key comes from the same origin the island itself is served from,
+ * encryption happens in the browser under `encrypt.ts` -- shared, never
+ * reimplemented (the rule this whole file exists to honour) -- there are
+ * abort timeouts on both requests, and the component remounts on a
+ * changed event id (`main.tsx`'s own `key={eventId}`, the exact discipline
+ * `App.tsx`'s `SignupRoute` used to give it).
+ *
+ * What changed in the extraction, and why
+ * -----------------------------------------
+ * - `eventId` is a prop, not a route param: this island has no router --
+ *   one static page per event (D-19), not a fragment this script
+ *   re-parses. `main.tsx` reads it off the mount element's own
+ *   `data-event-id` attribute.
+ * - The data-protection notice (`Notice()`, phase 4 spec §4) is gone from
+ *   this file. `site/src/event.njk` now renders that text itself, as
+ *   plain static HTML, ahead of this island's own mount point -- D-18's
+ *   own logic applied literally: text that needs no interactivity stays
+ *   static, so it reads even with JavaScript disabled and never depends
+ *   on this bundle loading at all. Rendering it a second time from here
+ *   would put two copies of the same legal notice on one page. See
+ *   `tools/tests/test_site.py::test_the_notice_precedes_the_reserved_
+ *   place_for_the_registration_form`, already checking the static copy.
+ * - `AttendanceBoundaries()` (spec S:5's two matching boundaries) stays:
+ *   `event.njk` never carries that text, so nothing is duplicated by
+ *   keeping it here.
+ * - Class names are plain, semantic strings (`signup-form__field`, ...)
+ *   styled by `site/src/style.css`, not Tailwind utility classes: this
+ *   island renders inside a page that already loads that stylesheet, and
+ *   pulling in Tailwind's own reset (`@tailwind base`) would apply
+ *   site-wide to elements this form does not own -- headings, the
+ *   masthead -- not merely inside this component's own subtree.
+ */
+
+// `public/keys/events/<id>.pub` is still populated at build time by
+// `app/scripts/copy-event-keys.mjs` from this repository's own
+// `keys/events/`, and still ships inside the app's own build output --
+// see that script's own comment for why a missing file here is a normal
+// state, not a build failure. `base` for this island's own Vite build
+// (`app/vite.config.ts`, `mode === 'island-signup'`) is
+// `/example-showcase/app/`, the same value the main app build uses -- Fix round
+// 4 correction: this used to read `/app/`, deliberately distinct, on the
+// reasoning that this bundle runs on a page served by the *site*, whose
+// own templates already addressed the app's assets root-relative to the
+// site's own root. That reasoning assumed the site's own root-relative
+// links already landed at wherever GitHub Pages resolves this project's
+// published root to; they did not, since there is no CNAME and no custom
+// domain, so that root is one path segment (`/example-showcase/`) below the
+// domain root a bare `/foo` actually addresses -- see
+// `app/vite.config.ts`'s own comment on `islandSignupConfig` for the fix
+// this island shares with every template in `site/`.
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
 // A missing relay is a normal state (D-13), the same idiom `auth/strategy.ts`
@@ -94,47 +147,17 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
   }
 }
 
-function Notice() {
-  return (
-    <div className="border-2 border-primary/30 bg-primary/5 px-5 py-4 mb-8 text-sm space-y-2">
-      <p className="font-display font-bold uppercase tracking-wider text-xs text-primary-hover mb-1">
-        Before you register
-      </p>
-      <p>
-        We collect your first name, surname and email address to register you for this
-        event and to issue your attendance certificate afterwards. Institution is optional.
-        Nothing else is asked for.
-      </p>
-      <p>
-        <strong>Your browser encrypts this information before it is sent</strong>, using
-        this event&apos;s own key. Nobody -- including us -- can read it until a workshop
-        organiser decrypts it as part of running the event. The event&apos;s data,
-        encrypted form included, is permanently destroyed 90 days after the event by
-        destroying the key that could ever read it again.
-      </p>
-      <p>
-        To access, correct or erase your data before that date, write to{' '}
-        <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-          {CONTACT_EMAIL}
-        </a>
-        .
-      </p>
-    </div>
-  );
-}
-
 // Two boundaries `tools/convener_ops/attendance.py` draws and spec S:5 asks to be
 // written "on the event page, in the same place as 'present without having
 // registered'" -- not only in `docs/reference/operations.md`, which a
 // participant never reads. Neither is a matching weakness to keep
 // improving; both are stated here exactly as the matching cascade actually
-// behaves, not softened into "we will do our best".
+// behaves, not softened into "we will do our best". `event.njk` carries no
+// copy of this text, so keeping it here duplicates nothing.
 function AttendanceBoundaries() {
   return (
-    <div className="border-2 border-primary/30 bg-primary/5 px-5 py-4 mb-8 text-sm space-y-2">
-      <p className="font-display font-bold uppercase tracking-wider text-xs text-primary-hover mb-1">
-        About your certificate
-      </p>
+    <div className="notice signup-form__boundaries">
+      <p className="notice__eyebrow">About your certificate</p>
       <p>
         <strong>Turning up without registering does not make you eligible.</strong> We only
         recognise people we can match to a registration -- register first if you want a
@@ -150,12 +173,12 @@ function AttendanceBoundaries() {
   );
 }
 
-export function SignupForm() {
-  const { eventId } = useParams<{ eventId: string }>();
+export function SignupForm({ eventId }: { eventId?: string }) {
   const [keyState, setKeyState] = useState<KeyState>({ status: 'loading' });
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const sentPanelRef = useRef<HTMLDivElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
 
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
@@ -206,6 +229,35 @@ export function SignupForm() {
   // sentence that just replaced what they were looking at.
   useEffect(() => {
     if (submitState === 'sent') sentPanelRef.current?.focus();
+  }, [submitState]);
+
+  // Fix round 1 (task 11's manual pass, "how error messages are
+  // announced" -- flagged, not fixed, there; fixed here). Setting
+  // `submitState` to `'sending'` disables the button that still held
+  // focus a moment earlier -- a disabled element cannot hold focus, so
+  // the browser drops it to `<body>` immediately, before this component
+  // ever gets to render anything about what happened (confirmed against
+  // real Chrome in task 11's report). The `role="alert"` below already
+  // gets a screen-reader user this sentence read aloud the instant it is
+  // inserted, live-region delivery needs no focus to move at all -- but a
+  // keyboard user with no screen reader is left at `<body>` with no
+  // signal anything happened, and Tab restarts the whole page from the
+  // top to find out.
+  //
+  // Restoring focus to the button itself, not to the alert, on purpose:
+  // the button is the control the participant was actually operating,
+  // its own accessible name has not changed ("Register" again, once
+  // re-enabled), and it sits immediately before the alert in reading
+  // order, so a Tab press from here reaches it next. Moving focus onto
+  // the alert instead, the way the success panel moves onto itself,
+  // would very likely read twice to a screen-reader user: once from the
+  // live region firing as the paragraph is inserted, a second time from
+  // the browser's own "now focused: <accessible name>" announcement on
+  // arrival -- the success panel has no such double-announcement risk,
+  // because nothing there is also a live region competing with the
+  // focus-change announcement.
+  useEffect(() => {
+    if (submitState === 'error') submitButtonRef.current?.focus();
   }, [submitState]);
 
   async function submit(e: React.FormEvent) {
@@ -282,156 +334,123 @@ export function SignupForm() {
   const canSubmit = Boolean(firstName.trim() && surname.trim() && email.trim());
 
   return (
-    <div className="max-w-content mx-auto px-6 py-12">
-      <div className="max-w-xl">
-        <h1 className="font-serif text-3xl mb-6">
-          Register{eventId ? ` for ${eventId}` : ''}
-        </h1>
+    <div className="signup-form">
+      <AttendanceBoundaries />
 
-        {/* The notice comes before the form, not after: a notice below a
-            submit button informs nobody. */}
-        <Notice />
-        <AttendanceBoundaries />
+      {effectiveKeyState.status === 'loading' && (
+        <p className="signup-form__status">Checking that registration is available…</p>
+      )}
 
-        {effectiveKeyState.status === 'loading' && (
-          <p className="text-ink-muted text-sm">Checking that registration is available…</p>
-        )}
+      {effectiveKeyState.status === 'unavailable' && (
+        <div className="notice signup-form__unavailable">
+          <p className="notice__eyebrow">Registration is not available right now</p>
+          <p>
+            We could not retrieve the encryption key this event needs before anything can
+            be sent. We never send registration details unencrypted, so nothing has been
+            sent. Please try again later, or contact{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          </p>
+        </div>
+      )}
 
-        {effectiveKeyState.status === 'unavailable' && (
-          <div className="border-2 border-danger/40 bg-danger/5 px-5 py-4 text-sm">
-            <p className="font-display font-bold uppercase tracking-wider text-xs text-danger mb-1">
-              Registration is not available right now
-            </p>
-            <p>
-              We could not retrieve the encryption key this event needs before anything can
-              be sent. We never send registration details unencrypted, so nothing has been
-              sent. Please try again later, or contact{' '}
-              <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-                {CONTACT_EMAIL}
-              </a>
-              .
-            </p>
-          </div>
-        )}
-
-        {effectiveKeyState.status === 'ready' && submitState !== 'sent' && (
-          // `method="post"`, on a page that would otherwise default to GET:
-          // not reachable through React's own delegated submit handler, but
-          // if that handler ever failed to attach, a native submit would put
-          // a name and an email address into the URL, the browser history
-          // and the `Referer` header of whatever loads next -- the one page
-          // on this site where that failure mode is worth closing outright.
-          <form method="post" onSubmit={submit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  First name *
-                </span>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  required
-                  maxLength={MAX_FIELD_LENGTH}
-                  className="w-full px-3 py-2 text-sm mt-1"
-                  autoComplete="given-name"
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs uppercase tracking-wider text-ink-muted">
-                  Surname *
-                </span>
-                <input
-                  type="text"
-                  value={surname}
-                  onChange={e => setSurname(e.target.value)}
-                  required
-                  maxLength={MAX_FIELD_LENGTH}
-                  className="w-full px-3 py-2 text-sm mt-1"
-                  autoComplete="family-name"
-                />
-              </label>
-            </div>
-
-            <label className="block">
-              <span className="text-xs uppercase tracking-wider text-ink-muted">
-                Email address *
-              </span>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                maxLength={MAX_FIELD_LENGTH}
-                className="w-full px-3 py-2 text-sm mt-1"
-                autoComplete="email"
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-xs uppercase tracking-wider text-ink-muted">
-                Institution (optional)
-              </span>
+      {effectiveKeyState.status === 'ready' && submitState !== 'sent' && (
+        // `method="post"`, on a page that would otherwise default to GET:
+        // not reachable through React's own delegated submit handler, but
+        // if that handler ever failed to attach, a native submit would put
+        // a name and an email address into the URL, the browser history
+        // and the `Referer` header of whatever loads next -- the one page
+        // on this site where that failure mode is worth closing outright.
+        <form method="post" onSubmit={submit} className="signup-form__fields">
+          <div className="signup-form__row">
+            <label className="signup-form__field">
+              <span>First name *</span>
               <input
                 type="text"
-                value={institution}
-                onChange={e => setInstitution(e.target.value)}
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                required
                 maxLength={MAX_FIELD_LENGTH}
-                className="w-full px-3 py-2 text-sm mt-1"
-                autoComplete="organization"
+                autoComplete="given-name"
               />
             </label>
-
-            <label className="flex items-start gap-2 text-sm">
+            <label className="signup-form__field">
+              <span>Surname *</span>
               <input
-                type="checkbox"
-                checked={membershipOptIn}
-                onChange={e => setMembershipOptIn(e.target.checked)}
-                className="mt-1"
+                type="text"
+                value={surname}
+                onChange={e => setSurname(e.target.value)}
+                required
+                maxLength={MAX_FIELD_LENGTH}
+                autoComplete="family-name"
               />
-              <span>
-                Also subscribe me to the announce list for future events. I can unsubscribe
-                with one click from any email, and I will be asked to reconfirm every year.
-              </span>
             </label>
-
-            <button
-              type="submit"
-              disabled={!canSubmit || submitState === 'sending'}
-              className="px-4 py-2 bg-primary text-white border-2 border-primary hover:bg-primary-hover disabled:opacity-50 font-display font-bold tracking-widest uppercase text-sm"
-            >
-              {submitState === 'sending' ? 'Sending…' : 'Register'}
-            </button>
-
-            {submitState === 'error' && submitError && (
-              // `role="alert"` (an implicit assertive live region): the
-              // message appears purely in response to interaction, after
-              // the button that triggered it, and without this a screen
-              // reader user is never told it happened at all.
-              <p role="alert" className="text-danger text-sm">
-                {submitError}
-              </p>
-            )}
-          </form>
-        )}
-
-        {submitState === 'sent' && (
-          <div
-            ref={sentPanelRef}
-            role="alert"
-            tabIndex={-1}
-            className="border-2 border-primary/40 bg-primary/5 px-5 py-4 text-sm outline-none"
-          >
-            <p className="font-display font-bold uppercase tracking-wider text-xs text-primary-hover mb-1">
-              Registration sent
-            </p>
-            <p>
-              A confirmation email carrying the room link and your matching code is on its
-              way.
-            </p>
           </div>
-        )}
-      </div>
+
+          <label className="signup-form__field">
+            <span>Email address *</span>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              maxLength={MAX_FIELD_LENGTH}
+              autoComplete="email"
+            />
+          </label>
+
+          <label className="signup-form__field">
+            <span>Institution (optional)</span>
+            <input
+              type="text"
+              value={institution}
+              onChange={e => setInstitution(e.target.value)}
+              maxLength={MAX_FIELD_LENGTH}
+              autoComplete="organization"
+            />
+          </label>
+
+          <label className="signup-form__checkbox">
+            <input
+              type="checkbox"
+              checked={membershipOptIn}
+              onChange={e => setMembershipOptIn(e.target.checked)}
+            />
+            <span>
+              Also subscribe me to the announce list for future events. I can unsubscribe
+              with one click from any email, and I will be asked to reconfirm every year.
+            </span>
+          </label>
+
+          <button
+            ref={submitButtonRef}
+            type="submit"
+            disabled={!canSubmit || submitState === 'sending'}
+            className="btn btn--primary"
+          >
+            {submitState === 'sending' ? 'Sending…' : 'Register'}
+          </button>
+
+          {submitState === 'error' && submitError && (
+            // `role="alert"` (an implicit assertive live region): the
+            // message appears purely in response to interaction, after
+            // the button that triggered it, and without this a screen
+            // reader user is never told it happened at all.
+            <p role="alert" className="signup-form__error">
+              {submitError}
+            </p>
+          )}
+        </form>
+      )}
+
+      {submitState === 'sent' && (
+        <div ref={sentPanelRef} role="alert" tabIndex={-1} className="notice signup-form__sent">
+          <p className="notice__eyebrow">Registration sent</p>
+          <p>
+            A confirmation email carrying the room link and your matching code is on its
+            way.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

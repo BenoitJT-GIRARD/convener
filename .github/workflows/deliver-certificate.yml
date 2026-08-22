@@ -1,7 +1,7 @@
 name: Deliver a certificate
 
 # Task 14, ruling 4: a manual resend for the one document spec S:9's own
-# risk table names ("un certificat dans les indesirables n'existe pas"),
+# risk table names ("a certificate sitting in spam does not exist"),
 # for the one document R-22 forbids ever accepting an address to redeliver.
 #
 # The input is CERTIFICATE_ID, never an address -- exactly the same

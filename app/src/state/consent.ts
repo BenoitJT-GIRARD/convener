@@ -48,8 +48,8 @@ import type { PublicationConsent, Speaker } from '../data/types';
  * capacity as its speaker. `edition_code` is the seminar's number and is what
  * the feed publishes as its `id`; `title` and `abstract` are the text written
  * for the audience; `date` and `time` are when it is held; `status` is whether
- * it is announced, held or archived; `zoom_link` is how the public joins the
- * announced session and `forum_thread` where the public discussion happens.
+ * it is announced, held or archived; `forum_thread` is where the public
+ * discussion happens.
  *
  * `name`, `affiliation` and `country` sit here for the same reason and not
  * because they are harmless: a seminar whose speaker is not named is not an
@@ -58,10 +58,16 @@ import type { PublicationConsent, Speaker } from '../data/types';
  * to give a public talk, and that is settled before the record reaches this
  * gate -- not by silently emitting an anonymous programme.
  *
- * "Always" is about the *permission*, not about the timing: `zoom_link` is
- * published only whilst the seminar is scheduled, because a joining link for a
- * past event is noise. That condition lives in `to_public`, where the feed is
- * shaped; nothing about it depends on consent.
+ * `zoom_link` sits here too, on the same footing: joining a video call is not
+ * a personal disclosure needing the speaker's own consent. It used to be
+ * published, whilst the seminar was scheduled, as `registration_link` -- a
+ * name that read as exactly the opposite of what it carried once the event
+ * page (phase 5, task 5) gained its own registration form. Nothing reads it
+ * any more: registration happens on the event page's own address, and the
+ * room link now reaches a participant only through the confirmation e-mail.
+ * `tools/convener_ops/public_data.py::PUBLIC_FIELD_SOURCES` maps no column to it,
+ * the same "permitted but unpublished" shape that mapping's own comment
+ * already gives `links`.
  */
 export const PUBLISHABLE_ALWAYS = [
   'edition_code',

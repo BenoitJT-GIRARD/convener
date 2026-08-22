@@ -126,13 +126,6 @@ FILE_VERSION: Final = 1
 #: the room link "is not otherwise published", and meant nobody could ever
 #: reach the page `certificate.VERIFICATION_BASE` and `survey_invite.
 #: SURVEY_BASE` already treat as this project's third public address.
-#: Same `HashRouter` fragment convention as both (see `app/src/App.tsx`'s
-#: `path="/signup/:eventId"`, the oldest of the three routes, which the
-#: other two modules' own docstrings already cite by name) -- a fragment,
-#: not a server path, because GitHub Pages serves no server-side routing.
-#: `test_workflows.py` pins this against `EXPECTED_BASE_PATH` and against
-#: `App.tsx`'s own route literal, the same D-14 discipline it already
-#: applies to the other two bases.
 #:
 #: **Correction (fix wave 2):** wave 1 reasoned there was "no established
 #: mapping from a Speaker record to the event id" and, on that basis,
@@ -155,23 +148,42 @@ FILE_VERSION: Final = 1
 #: `edition_code` (`MRG-4` lower-cases to `mrg-4`), the same D-14 discipline
 #: `certificate-verification.json` and `governance-cases.json` already
 #: apply, rather than two constants trusted to agree.
-SIGNUP_BASE: Final = "https://example-instance.github.io/example-showcase/app/#/signup/"
+#:
+#: **Correction (task 6):** this used to end `app/#/signup/`, a
+#: `HashRouter` fragment matching `app/src/App.tsx`'s own
+#: `path="/signup/:eventId"` -- the same convention `survey_invite.
+#: SURVEY_BASE` still uses for its own address (`certificate.
+#: VERIFICATION_BASE` used to as well, until task 7 -- see that constant's
+#: own comment for why its own move looked different from this one). Task 6
+#: moved registration out of that application entirely, onto an island
+#: mounted on the public event page (D-18); this now targets that page's
+#: own, real address instead -- `site/src/event.njk`'s permalink,
+#: `/events/<event id>/` (D-19) -- a server path this time, not a
+#: fragment, since the site itself is what GitHub Pages serves at that
+#: path. `test_workflows.py` pins the shape against `event.njk`'s own
+#: permalink expression. Unlike `certificate.VERIFICATION_BASE`, dropping
+#: the fragment here is safe: `signup_url` carries only an event id, never
+#: a name.
+SIGNUP_BASE: Final = "https://example-instance.github.io/example-showcase/events/"
 
 
 def signup_url(event_id: str) -> str:
     """The one link a participant follows to register for `event_id` --
-    mirrors `certificate.verification_url` and `survey_invite.survey_url`
-    exactly, and, like `survey_url`, expects `event_id` already lower-cased
-    per R-5 (`platform.py::find_speaker`); this function does not lower-case
-    it itself. No Python caller invokes this today -- a registration
-    confirmation email carries the room link a participant already reached,
-    not the signup link that got them there -- but `render.ts`'s own
-    `signup_link` derivation needs a Python-side value to be bound against,
-    the same way `test_survey_invite.py` and `test_certificate.py` bind
-    their own `_url` functions, so this exists to be that value rather than
-    to be called from `cli.py`.
+    the address of that event's own public page
+    (`site/src/event.njk`'s permalink, D-19), which carries this
+    registration island since task 6. Expects `event_id` already
+    lower-cased per R-5 (`platform.py::find_speaker`), the same contract
+    `certificate.verification_url` and `survey_invite.survey_url` hold for
+    their own bases; this function does not lower-case it itself. No
+    Python caller invokes this today -- a registration confirmation email
+    carries the room link a participant already reached, not the signup
+    link that got them there -- but `render.ts`'s own `signup_link`
+    derivation needs a Python-side value to be bound against, the same way
+    `test_survey_invite.py` and `test_certificate.py` bind their own
+    `_url` functions, so this exists to be that value rather than to be
+    called from `cli.py`.
     """
-    return f"{SIGNUP_BASE}{quote(event_id, safe='')}"
+    return f"{SIGNUP_BASE}{quote(event_id, safe='')}/"
 
 
 @dataclass(frozen=True)

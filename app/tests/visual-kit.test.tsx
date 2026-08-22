@@ -23,17 +23,26 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { InlineContent } from '../src/content/InlineContent';
 import { invalidateContent } from '../src/content/fetch';
-import { CONTENT_REGISTRY } from '../src/content/registry';
+import { CONTENT_REGISTRY, PUBLIC_ASSETS } from '../src/content/registry';
 import { handbookUrl } from '../src/content/fetch';
 import { substitute } from '../src/content/render';
 import { speaker as double } from './data-doubles';
-// The rule the build actually applies, asserted rather than restated.
+// The generic doc-tree rule (extension + skip-dir), unrelated to the
+// registry-derived allowlist below: still what decides whether a random
+// file under docs/ could ever be servable at all.
 import { walk, isServed } from '../scripts/handbook-files.mjs';
 
 const KIT_KEY = 'toolkit/visual-kit';
 const DOCS = resolve(__dirname, '../../docs');
 const TEMPLATES = ['assets/announcement-template.svg', 'assets/flyer-template.svg'];
 const BACKGROUND = 'assets/zoom-background.png';
+// Fix round 1: this used to be a fourth published asset. It was a real
+// speaker's own photograph and name, kept without a later, separate
+// consent to use them as a sample -- see `PUBLIC_ASSETS`'s own comment.
+// Named here so the tests below assert its absence rather than simply
+// omitting it -- an omission a later change could not tell apart from an
+// oversight.
+const WITHDRAWN_EXAMPLE = 'assets/flyer-example.png';
 
 function kit(): string {
   return readFileSync(resolve(DOCS, CONTENT_REGISTRY[KIT_KEY].file), 'utf-8');
@@ -77,8 +86,27 @@ describe('the kit is reachable', () => {
 });
 
 describe('the build serves what the kit links to', () => {
-  it.each([...TEMPLATES, BACKGROUND])('copies %s into the handbook', file => {
-    expect(served).toContain(file);
+  // `PUBLIC_ASSETS` is the actual allowlist `copy-handbook.mjs` publishes
+  // from now on (see `handbook-registry.mjs`) -- unlike `walk(DOCS)` above,
+  // asserting against it is asserting against what the build really does,
+  // not against a rule the build no longer uses to decide this.
+  it('names exactly the kit\'s two templates and its background -- no finished example', () => {
+    expect([...PUBLIC_ASSETS].sort()).toEqual([...TEMPLATES, BACKGROUND].sort());
+  });
+
+  it.each([...TEMPLATES, BACKGROUND])('%s is in the allowlist the build publishes', file => {
+    expect(PUBLIC_ASSETS).toContain(file);
+  });
+
+  it('never republishes the withdrawn example -- a real speaker\'s photograph, not a synthetic one', () => {
+    expect(PUBLIC_ASSETS).not.toContain(WITHDRAWN_EXAMPLE);
+    // Nor does the page still point at it: the row was rewritten to say
+    // plainly that the slot is empty, not filled with a substitute. (Not
+    // asserted here: that the page's text no longer names the speaker --
+    // that would put her real name in the clear in this test file to
+    // check for it, which the fix this test is guarding is not allowed to
+    // do either.)
+    expect(localLinks()).not.toContain(`../${WITHDRAWN_EXAMPLE}`);
   });
 
   it('turns a link written for the repository into one the app can fetch', () => {
@@ -87,8 +115,8 @@ describe('the build serves what the kit links to', () => {
     const url = handbookUrl(KIT_KEY, '../assets/flyer-template.svg');
     expect(url.endsWith('/handbook/assets/flyer-template.svg'), url).toBe(true);
     expect(url).not.toContain('..');
-    // And the served path is exactly where the copy step puts the file.
-    expect(served).toContain('assets/flyer-template.svg');
+    // And the published path is exactly where the copy step puts the file.
+    expect(PUBLIC_ASSETS).toContain('assets/flyer-template.svg');
   });
 
   it('leaves external links alone and drops unsafe schemes', () => {
@@ -96,9 +124,13 @@ describe('the build serves what the kit links to', () => {
     expect(handbookUrl(KIT_KEY, 'javascript:alert(1)')).toBe('');
   });
 
-  it('still refuses everything that is not content', () => {
-    // The copy step is not a file drop: widening it to `docs/` wholesale would
-    // ship the specs, the plans and whatever else lands there.
+  it('still refuses everything that is not content, under the generic doc-tree rule', () => {
+    // Orthogonal to the allowlist above: this is the extension/skip-dir
+    // rule that decides whether a random file under docs/ could ever be
+    // servable at all, regardless of the registry. Widening it to `docs/`
+    // wholesale would let the specs, the plans and whatever else lands
+    // there back into scope for that rule -- the registry-derived
+    // allowlist above is what actually keeps them out of the build.
     expect(isServed('notes.txt')).toBe(false);
     expect(isServed('archive.zip')).toBe(false);
     expect(served.some(p => p.startsWith('superpowers/'))).toBe(false);

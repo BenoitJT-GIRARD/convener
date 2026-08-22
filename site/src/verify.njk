@@ -1,0 +1,61 @@
+---
+layout: layout.njk
+# A single, fixed address for every certificate ever issued -- unlike
+# `event.njk`'s own per-edition permalink (D-19), a certificate names no
+# event this page could key a per-page address off. `tools/convener_ops/
+# certificate.py`'s own `VERIFICATION_BASE` is pinned against this literal
+# by `tools/tests/test_workflows.py::
+# test_certificate_verification_base_matches_the_verify_page_permalink` --
+# change both together.
+permalink: "/verify/"
+pageTitle: "Verify a certificate"
+pageDescription: "Confirm a The Example Collective attendance certificate using the identifier printed on it -- no account needed."
+---
+
+<section class="hero">
+  <svg class="hero__loops" viewBox="0 0 400 400" fill="none" stroke-width="9" stroke-linecap="round" aria-hidden="true">
+    <path d="M 320 60 C 380 60 400 130 340 150 C 280 170 270 90 330 90 C 380 90 370 180 300 200" opacity=".85"/>
+    <path d="M 250 230 C 320 220 360 290 290 310 C 230 326 220 250 280 250 C 340 250 330 350 250 350" opacity=".9"/>
+  </svg>
+
+  <div class="container hero__inner">
+    <p class="hero__eyebrow">Certificate of attendance</p>
+    <h1 class="hero__title">Check a certificate.</h1>
+    <p class="hero__lede">
+      Follow the link or scan the code printed on a The Example Collective certificate to confirm
+      it here &mdash; entirely offline, with no account, and without sending us anything but
+      the identifier already printed on it.
+    </p>
+  </div>
+</section>
+
+<section class="section container">
+  {#
+    Task 7: the verification island itself, mounted here -- extracted from
+    the operators' application into its own small, self-contained bundle,
+    the same move task 6 made for registration (`event.njk`'s own
+    `#registration-form`). A visitor checking a certificate never
+    downloads the operators' cockpit to read four lines back.
+
+    `#verify-app` is `app/src/islands/verify/main.tsx`'s own `MOUNT_ID`.
+    Unlike `#registration-form`, this element carries no `data-*`
+    attribute: one static page serves every certificate ever issued, and
+    what varies between visits is the URL's own fragment (the identifier
+    and, when present, the token `certificate.verification_url` appends
+    after `#/`) -- `main.tsx` reads that directly from `location.hash`,
+    never from this markup. The element starts empty; `verify.js` fills it
+    in, which is exactly why the `<noscript>` fallback beside it exists --
+    without JavaScript, nothing here would ever render at all, and this
+    page has no static text worth showing in its place (the answer
+    genuinely depends on the fragment JavaScript alone can read).
+  #}
+  <div id="verify-app" class="verify"></div>
+  <noscript>
+    <p class="notice">
+      Checking a certificate needs JavaScript enabled. If you cannot enable it, write to
+      <a href="mailto:reading-group@example.test">reading-group@example.test</a> with the
+      certificate identifier and we will check it by hand.
+    </p>
+  </noscript>
+  <script type="module" src="{{ '/app/islands/verify/verify.js' | url }}"></script>
+</section>

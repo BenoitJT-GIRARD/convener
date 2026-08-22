@@ -17,7 +17,7 @@ wait for.
 | [Announcement image](../assets/announcement-template.svg) | SVG, 1200 × 1200 | Square image for the forum post and the LinkedIn post |
 | [Flyer](../assets/flyer-template.svg) | SVG, A4 portrait | For printing, and for attaching to an invitation email |
 | [Video-call background](../assets/zoom-background.png) | PNG, 1920 × 1080 | What the hosts put behind them during the session — see [Hosting](../workflow/3-hosting.md) |
-| [Finished example](../assets/flyer-example.png) | PNG | A past event's announcement, so you can see what a filled-in template looks like |
+| Finished example | — | No example is published here. The one that used to fill this row was a past speaker's own photograph and name, kept without a separate, later consent to use them as a sample — so it has been withdrawn from this kit rather than shipped on the strength of the original invitation alone. Fill in a template yourself and delete this row once you have made one you are happy to show. |
 
 SVG and PNG only. Both open in free software, on any machine, with no account
 and no licence — which is the whole point: a template you can only edit inside

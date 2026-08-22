@@ -1,0 +1,55 @@
+---
+eleventyExcludeFromCollections: true
+permalink: "/sitemap.xml"
+---
+<?xml version="1.0" encoding="UTF-8"?>
+{#
+  The `<?xml ...?>` declaration above must be the very first thing this
+  file writes -- XML requires it at byte zero, before even a comment, and
+  the front-matter/body boundary above already supplies the one newline
+  that has to follow it. Every explanatory comment therefore lives here,
+  after the declaration, rather than before it (an earlier draft put a
+  comment first and produced a leading blank line ahead of `<?xml ...?>`,
+  which every XML parser -- `xml.etree.ElementTree` included -- rejects).
+
+  Task 10: a plain, hand-written sitemap -- no new dependency (no
+  `@11ty/eleventy-plugin-sitemap`), because `collections.all` plus one
+  exclusion flag already says everything a sitemap needs to here.
+
+  Every generated page appears below except the two field-presence archive
+  filters (`archives-filter.njk`'s own `/archives/recordings/` and
+  `/archives/discussions/`, marked `sitemap: false` in that template's own
+  front matter -- see its comment for the full reasoning): each shows
+  exactly the same past editions already listed, in full, on `/archives/`
+  and on each year page under `/archives/<year>/`, and every one of those
+  editions also has its own canonical page besides. A crawler gains
+  nothing from a second and third ordering of a list it has already
+  indexed once. The filters stay fully reachable for a visitor regardless
+  -- the archive's own filter bar links to both (D-18, "filterable without
+  JavaScript") -- this only decides what a crawler is pointed at, never
+  what exists.
+
+  Year pages (`archives-year.njk`) are kept in, unlike the two filters
+  above: a year is a real search intent ("The Example Collective talks 2025")
+  that the full archive and the filters do not answer as directly, the
+  same way a blog's own year/month archive commonly stays in its sitemap
+  while a sort-order or in-stock filter does not.
+
+  `p.url` is Eleventy's own unprefixed page address (e.g. `/events/mrg-05/`)
+  -- `absoluteUrl` (site/.eleventy.js) turns it into this project's real
+  published address in one step. Never `p.url | url | absoluteUrl` here:
+  chaining the two would double the prefix.
+
+  No `<lastmod>`: nothing in `events.json` records when a page's *content*
+  was last edited (only when the edition happens), and inventing one from
+  the clock at build time would make this file churn on every rebuild for
+  a reason that has nothing to do with what changed -- the sitemap
+  specification does not require it.
+#}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{%- for p in collections.all %}
+{%- if p.data.sitemap != false %}
+  <url><loc>{{ p.url | absoluteUrl }}</loc></url>
+{%- endif %}
+{%- endfor %}
+</urlset>

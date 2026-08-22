@@ -1,0 +1,133 @@
+---
+layout: layout.njk
+---
+
+{% set upcoming = [] %}
+{% set past = [] %}
+{% for e in events %}
+  {% if e.status == "scheduled" %}{% set upcoming = (upcoming.push(e), upcoming) %}{% endif %}
+  {% if e.status == "delivered" or e.status == "archived" %}{% set past = (past.push(e), past) %}{% endif %}
+{% endfor %}
+
+<section class="hero">
+  <svg class="hero__loops" viewBox="0 0 400 400" fill="none" stroke-width="9" stroke-linecap="round" aria-hidden="true">
+    <path d="M 320 60 C 380 60 400 130 340 150 C 280 170 270 90 330 90 C 380 90 370 180 300 200" opacity=".85"/>
+    <path d="M 250 230 C 320 220 360 290 290 310 C 230 326 220 250 280 250 C 340 250 330 350 250 350" opacity=".9"/>
+    <path d="M 70 270 C 30 290 50 360 110 350 C 160 342 160 280 120 280 C 80 280 60 340 120 360" opacity=".75"/>
+  </svg>
+
+  <div class="container hero__inner">
+    <p class="hero__eyebrow">Behavioural neuroscience &middot; Online seminar series</p>
+    <h1 class="hero__title">Behaviour <em>up close.</em></h1>
+    <p class="hero__lede">
+      A community-run series of free online seminars on behavioural neuroscience &mdash;
+      from rodent ethology to decision dynamics, hosted by researchers, open to all.
+    </p>
+    <div class="hero__actions">
+      <a class="btn btn--primary" href="{{ '/propose/' | url }}">Propose a speaker</a>
+      <a class="btn btn--ghost" href="{{ site.forum }}">Visit the forum</a>
+    </div>
+  </div>
+</section>
+
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">Up next</span>
+  </header>
+
+  {% if upcoming.length > 0 %}
+    {% for e in upcoming %}
+    <article class="feature">
+      <aside class="feature__rail">
+        <p class="feature__vol">Upcoming</p>
+        <p class="feature__code">{{ e.id }}</p>
+        {#
+          Fix round 1: the same `parisStandingStart` derivation event.njk
+          uses for its own rail, so this card cannot state a different
+          season's offset for the same edition -- see that template's
+          own comment.
+        #}
+        <p class="feature__date">
+          <strong>{{ e.date }}</strong><br>
+          {{ (e.date | parisStandingStart).label }}
+        </p>
+      </aside>
+      <div class="feature__body">
+        <h2 class="feature__title">{{ e.title }}</h2>
+        <p class="feature__speaker">
+          {{ e.speaker_name }}{% if e.speaker_affiliation %}<span class="feature__affil"> &middot; {{ e.speaker_affiliation }}</span>{% endif %}
+        </p>
+        {% if e.abstract %}
+        <p class="feature__abstract">{{ e.abstract }}</p>
+        {% endif %}
+        {#
+          The event page, never `e.registration_link` -- that field carries
+          the room link (D-19, acceptance criterion 2: no room link on any
+          public page). The event page is the edition's own address and
+          the one place a form will ever sit (task 6); this CTA always
+          points there, whether or not a room link has been set yet.
+        #}
+        <div class="feature__action">
+          <a class="btn btn--primary" href="{{ ('/events/' ~ (e.id | lower) ~ '/') | url }}">Register free &rarr;</a>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  {% else %}
+    <div class="feature feature--empty">
+      <p>No seminar scheduled at the moment &mdash; the next one will be announced when it&rsquo;s set.</p>
+    </div>
+  {% endif %}
+</section>
+
+{% if past.length > 0 %}
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">02</span>
+    <span class="section__label">Archive</span>
+    <span class="section__count">{{ past.length }} {% if past.length == 1 %}entry{% else %}entries{% endif %}</span>
+  </header>
+
+  <ol class="archive">
+    {% for e in past %}
+    <li class="archive__row">
+      <span class="archive__num">{{ e.id }}</span>
+      <div class="archive__main">
+        <p class="archive__title"><a class="unstyled" href="{{ ('/events/' ~ (e.id | lower) ~ '/') | url }}">{{ e.title }}</a></p>
+        <div class="archive__meta">
+          <strong>{{ e.speaker_name }}</strong>
+          {% if e.speaker_affiliation %}<span>&middot; {{ e.speaker_affiliation }}</span>{% endif %}
+          <span class="archive__date">{{ e.date | replace("-", " / ") }}</span>
+        </div>
+      </div>
+      <div class="archive__actions">
+        {% if e.youtube_url %}
+          <a class="archive__action unstyled" href="{{ e.youtube_url }}" target="_blank" rel="noopener">Watch</a>
+        {% else %}
+          <span class="archive__action--disabled">No recording</span>
+        {% endif %}
+        {% if e.forum_thread %}
+          <a class="archive__action archive__action--alt unstyled" href="{{ e.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+        {% else %}
+          <span class="archive__action--disabled">No thread</span>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
+
+<section class="coda">
+  <svg class="coda__loops" viewBox="0 0 400 400" fill="none" stroke-width="9" stroke-linecap="round" aria-hidden="true">
+    <path d="M 60 80 C 130 70 170 150 100 170 C 40 186 30 100 90 100 C 150 100 150 200 70 200" opacity=".7"/>
+    <path d="M 130 250 C 200 240 240 320 170 340 C 110 356 100 280 160 280 C 220 280 220 360 140 360" opacity=".75"/>
+  </svg>
+  <div class="container coda__inner">
+    <p class="coda__text">
+      Know someone whose work would <em>inspire</em> this community?
+    </p>
+    <a class="btn btn--ghost" href="{{ '/propose/' | url }}">Propose a speaker</a>
+  </div>
+</section>

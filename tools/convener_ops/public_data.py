@@ -36,9 +36,13 @@ RECORDING_STATUSES = frozenset({"archived"})
 #: invitation to speak. Naming them, with the institution they speak for and
 #: the country the talk is billed from, is what an announcement *is*; the
 #: title and abstract are the text they wrote for that audience; the date,
-#: time and status are when it happens; `zoom_link` is how the public joins
-#: and `forum_thread` where the public discussion sits. Withholding any of
-#: these would not protect the speaker, it would cancel the announcement.
+#: time and status are when it happens; `forum_thread` is where the public
+#: discussion sits. `zoom_link` sits in this set too, on the same footing --
+#: joining a video call is not a personal disclosure needing the speaker's
+#: own consent -- but it is not one of the columns `PUBLIC_FIELD_SOURCES`
+#: actually emits: see that mapping's own comment for why the room address
+#: leaves this repository under no name at all. Withholding the rest of
+#: this set would not protect the speaker, it would cancel the announcement.
 #: See `app/src/state/consent.ts` for the argument in full -- it is stated
 #: once, on the side a reader is likelier to open first.
 PUBLISHABLE_ALWAYS = frozenset(
@@ -117,10 +121,34 @@ NEVER_PUBLISHED = frozenset(
 #: Not every publishable field is here, and that is not an oversight: the
 #: three sets say what *may* leave, this mapping says what the feed actually
 #: carries. `links` is a list where every other column is a string and no
-#: consumer of the feed asks for it, so it is permitted and unpublished. The
-#: asymmetry only ever runs this way -- a column can be absent from the feed
-#: whilst permitted, never present whilst forbidden, because `PUBLIC_FIELDS`
-#: is filtered through the classification below.
+#: consumer of the feed asks for it, so it is permitted and unpublished.
+#:
+#: `time` is the same shape of absence, found by the vitrine's fix round 1
+#: (structured event data): nothing here maps any column to it, so no
+#: edition's `time` ever reaches `events-public.json` even though it is
+#: classified `PUBLISHABLE_ALWAYS` -- confirmed by regenerating that file
+#: from `data/speakers.yml` and inspecting the output. The site's own
+#: templates (`site/.eleventy.js::parisStandingStart`) read no field for
+#: it either, and say so at the point that would otherwise be silent about
+#: overriding it. Wiring `time` through both sides is a real feature this
+#: project has not built (a per-edition start time other than the series'
+#: standing 12:30), not a bug in this mapping today.
+#:
+#: `zoom_link` is the same shape of absence for a sharper reason. This
+#: mapping used to carry `"registration_link": "zoom_link"` -- publishing
+#: the room address under a name that, once the event page carried its own
+#: registration form (phase 5, task 5), read as exactly the wrong thing: a
+#: column called "registration link" that actually opened the room, and a
+#: careful reader nearly rendered it believing it was the one to register
+#: at. Nothing reads it any more -- registration happens on the event
+#: page's own address (`registration.SIGNUP_BASE`), and the room link now
+#: reaches a participant only through the confirmation e-mail -- and the
+#: mapping is removed rather than renamed: a name this easy to misread as
+#: the opposite of what it carries is worth losing outright, not relabelling.
+#:
+#: The asymmetry only ever runs this way -- a column can be absent from the
+#: feed whilst permitted, never present whilst forbidden, because
+#: `PUBLIC_FIELDS` is filtered through the classification below.
 PUBLIC_FIELD_SOURCES = {
     "id": "edition_code",
     "title": "title",
@@ -132,7 +160,6 @@ PUBLIC_FIELD_SOURCES = {
     "linkedin": "linkedin",
     "seed_questions": "seed_questions",
     "youtube_url": "youtube_url",
-    "registration_link": "zoom_link",
     "forum_thread": "forum_thread",
     "speaker_name": "name",
     "speaker_affiliation": "affiliation",
@@ -289,16 +316,13 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if source in PUBLISHABLE_ON_CONSENT and not personal_ok:
                 value = ""
             row[column] = value
-        # Two columns carry a further condition that has nothing to do with
-        # consent, and it is deliberately not expressed in the sets: a
-        # recording is linked only at the status the gate itself writes, and
-        # a joining link only whilst the seminar is still ahead.
+        # One column carries a further condition that has nothing to do
+        # with consent, and it is deliberately not expressed in the sets:
+        # a recording is linked only at the status the gate itself writes.
         if "youtube_url" in row and (
             status not in RECORDING_STATUSES or recording_withheld(entry)
         ):
             row["youtube_url"] = ""
-        if "registration_link" in row and status != "scheduled":
-            row["registration_link"] = ""
         out.append(row)
     out.sort(key=lambda row: row.get("date", ""), reverse=True)
     return out

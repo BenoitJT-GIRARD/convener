@@ -1,8 +1,8 @@
 name: Invite the post-event survey
 
-# Task 16b, phase 4 spec S:6: "Facultatif, activable par evenement. Court.
-# Envoye apres coup aux seules personnes reconnues presentes." An
-# invitation is an outbound message to real people -- exactly the same
+# Task 16b, phase 4 spec S:6: "Optional, enabled per event. Short. Sent
+# afterwards, only to people recognised as present." An invitation is an
+# outbound message to real people -- exactly the same
 # reason issue-certificates.yml is workflow_dispatch only -- so this is
 # never scheduled and never fires on a push. Run match-attendance.yml
 # first to review the join before inviting from it
