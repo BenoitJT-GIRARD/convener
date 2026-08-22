@@ -44,30 +44,27 @@ permalink: "/events/{{ event.id | lower }}/"
   </div>
 </section>
 
-<section class="section container">
-  <header class="section__head">
-    <span class="section__num">01</span>
-    <span class="section__label">Recording &amp; discussion</span>
-  </header>
+{#
+  Form follows function: what makes a page useful depends on the edition's
+  own state, and the band numbers below follow that, not a fixed layout.
 
-  <div class="archive__actions event__links">
-    {% if event.youtube_url %}
-      <a class="archive__action unstyled" href="{{ event.youtube_url }}" target="_blank" rel="noopener">Watch</a>
-    {% else %}
-      <span class="archive__action--disabled">No recording yet</span>
-    {% endif %}
-    {% if event.forum_thread %}
-      <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
-    {% else %}
-      <span class="archive__action--disabled">No thread yet</span>
-    {% endif %}
-  </div>
-</section>
+  Upcoming -- a visitor came here to register, so that is section 01, ahead
+  of everything else, not buried beneath two empty states nobody asked
+  about. The recording section is dropped entirely rather than kept as a
+  second, later band: `youtube_url` is only ever published once an edition
+  reaches `archived` (`public_data.py::RECORDING_STATUSES`), so an upcoming
+  page showing "No recording yet" is not withholding a recording that could
+  exist yet -- it is stating a certainty ("this has not happened") as if it
+  were news, which "Upcoming" in the rail above already said better.
 
+  Past -- there is no form, and the recording (or its absence) is the one
+  thing a visitor came for, so it stays section 01, unchanged from before
+  this fix.
+#}
 {% if isUpcoming %}
 <section class="section container">
   <header class="section__head">
-    <span class="section__num">02</span>
+    <span class="section__num">01</span>
     <span class="section__label">Register</span>
   </header>
 
@@ -139,5 +136,25 @@ permalink: "/events/{{ event.id | lower }}/"
     </p>
   </noscript>
   <script type="module" src="/app/islands/signup/signup.js"></script>
+</section>
+{% else %}
+<section class="section container">
+  <header class="section__head">
+    <span class="section__num">01</span>
+    <span class="section__label">Recording &amp; discussion</span>
+  </header>
+
+  <div class="archive__actions event__links">
+    {% if event.youtube_url %}
+      <a class="archive__action unstyled" href="{{ event.youtube_url }}" target="_blank" rel="noopener">Watch</a>
+    {% else %}
+      <span class="archive__action--disabled">No recording yet</span>
+    {% endif %}
+    {% if event.forum_thread %}
+      <a class="archive__action archive__action--alt unstyled" href="{{ event.forum_thread }}" target="_blank" rel="noopener">Discuss</a>
+    {% else %}
+      <span class="archive__action--disabled">No thread yet</span>
+    {% endif %}
+  </div>
 </section>
 {% endif %}

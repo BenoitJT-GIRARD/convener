@@ -299,6 +299,65 @@ def test_the_notice_precedes_the_reserved_place_for_the_registration_form(
     assert notice_at < placeholder_at
 
 
+def _a_past_event_id() -> str:
+    past = [e for e in _events_fixture() if e.get("status") != "scheduled"]
+    assert past, (
+        f"{_EVENTS_FIXTURE.as_posix()} carries no past event -- nothing for "
+        "the section-ordering test below to check"
+    )
+    return str(past[0]["id"]).lower()
+
+
+def test_an_upcoming_event_page_leads_with_registration_and_drops_the_recording_section(
+    built_site: Path,
+) -> None:
+    """Fix round 1: a visitor to an upcoming edition's page came to
+    register, not to be told twice (once by "Upcoming" in the rail, once
+    by "No recording yet"/"No thread yet" here) that the seminar has not
+    happened. Registration is band 01, and the recording section -- which
+    can carry nothing real yet, since `youtube_url` is only ever published
+    once an edition reaches `archived`
+    (`public_data.py::RECORDING_STATUSES`) -- is dropped rather than kept
+    as a later, empty band. Mutating `event.njk` to render the recording
+    section unconditionally, ahead of registration, the way it read before
+    this fix, fails this test on the `"Recording &amp; discussion"` and
+    `section__num` assertions below.
+    """
+    event_id = _the_one_scheduled_event_id()
+    page = (built_site / "events" / event_id / "index.html").read_text(encoding="utf-8")
+    assert "Recording &amp; discussion" not in page, (
+        "an upcoming edition's page still carries the recording section -- "
+        "it should be dropped entirely, not just reordered"
+    )
+    assert "No recording yet" not in page
+    assert "No thread yet" not in page
+    register_at = page.index('<span class="section__label">Register</span>')
+    band_at = page.rindex('<span class="section__num">01</span>', 0, register_at)
+    assert band_at < register_at, "band 01 no longer immediately precedes Register"
+
+
+def test_a_past_event_page_still_leads_with_the_recording_section(
+    built_site: Path,
+) -> None:
+    """The other half of the same fix: a past edition has no form, and the
+    recording (or its absence) is the one thing a visitor came for -- this
+    pins that this ordering is unchanged (band 01, and no "Register"
+    section appears at all on a page with nothing to register for)."""
+    event_id = _a_past_event_id()
+    page = (built_site / "events" / event_id / "index.html").read_text(encoding="utf-8")
+    assert "Register" not in page, (
+        "a past edition's page carries a Register section -- there is no "
+        "form to register for once an edition has happened"
+    )
+    recording_at = page.index(
+        '<span class="section__label">Recording &amp; discussion</span>'
+    )
+    band_at = page.rindex('<span class="section__num">01</span>', 0, recording_at)
+    assert band_at < recording_at, (
+        "band 01 no longer immediately precedes Recording & discussion"
+    )
+
+
 def test_the_event_pages_contact_address_matches_confirmations_own_constant() -> None:
     """The same D-14 binding `test_confirmation.py::test_the_contact_
     email_matches_the_signup_pages_own_notice` already holds against
