@@ -47,7 +47,7 @@ The public showcase is a separate, static project — no sign-in, no secret:
 ```bash
 cd site
 npm install
-npm start             # http://localhost:8080
+npm start             # http://localhost:8080/example-showcase/
 ```
 
 Validate data:

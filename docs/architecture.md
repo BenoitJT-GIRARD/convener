@@ -171,7 +171,7 @@ working, for every integration this system has, is documented in
 
 ```bash
 cd app && npm install && npm run dev     # http://localhost:5173/example-showcase/app/
-cd site && npm install && npm start      # http://localhost:8080
+cd site && npm install && npm start      # http://localhost:8080/example-showcase/
 cd tools && uv sync
 ```
 
