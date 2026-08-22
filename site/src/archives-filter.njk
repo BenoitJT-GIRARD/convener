@@ -11,7 +11,28 @@ pagination:
   data: facets
   size: 1
   alias: facet
+  # Task 10: without this, Eleventy would add only the first facet page to
+  # `collections.all` -- which would make both facets look excluded from
+  # the sitemap below whether or not `sitemap: false` (this front matter's
+  # own next key) were even present. Set explicitly, alongside that flag,
+  # so the exclusion is the one thing deciding it, not an accident of
+  # pagination's own default.
+  addAllPagesToCollections: true
 permalink: "/archives/{{ facet.slug }}/"
+# Task 10: excluded from the sitemap (site/sitemap.njk) -- see that
+# template's own comment for why. Both facets restate a subset of what
+# `/archives/` and each year page already list in full, and every edition
+# in either one also has its own canonical page -- a crawler gains nothing
+# from a second and third ordering of a list it has already indexed once.
+# Still fully reachable: the archive's own filter bar links to both (D-18,
+# "filterable without JavaScript"); this flag decides only what a crawler
+# is pointed at, never what exists or what a visitor can reach.
+sitemap: false
+# See event.njk's own front-matter comment for why this is
+# `eleventyComputed` rather than a plain string -- paginated over `facets`.
+eleventyComputed:
+  pageTitle: "{{ facet.label }}"
+  pageDescription: "{{ facet.lede }}"
 facets:
   - slug: recordings
     label: "With a recording"

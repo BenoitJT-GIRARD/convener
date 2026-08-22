@@ -23,14 +23,17 @@ import json
 import re
 import shutil
 import subprocess
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree as ET
 
 import pytest
 
 from convener_ops.certificate import VERIFICATION_BASE
 from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.paths import repo_root
+from convener_ops.public_data import PUBLISHABLE_ALWAYS
 from convener_ops.registration import SIGNUP_BASE
 
 #: Strips CSS/JS block comments (`/* ... */`), Nunjucks comments (`{# ... #}`)
@@ -80,6 +83,32 @@ def _pfx(path: str) -> str:
     assumes."""
     assert path.startswith("/"), f"{path!r} is not root-relative"
     return _configured_path_prefix().rstrip("/") + path
+
+
+def _configured_site_origin() -> str:
+    """`site/.eleventy.js`'s own `SITE_ORIGIN` -- task 10's absolute-URL
+    counterpart to `_configured_path_prefix` above, for the identical
+    reason: read from the source this project's structured data, share
+    metadata, sitemap and feed are actually built from, rather than
+    hand-typed a second time in this test file.
+    """
+    text = _ELEVENTY_CONFIG.read_text(encoding="utf-8")
+    match = re.search(r"SITE_ORIGIN\s*=\s*'([^']+)'", text)
+    assert match is not None, (
+        f"{_ELEVENTY_CONFIG.as_posix()} no longer defines SITE_ORIGIN -- "
+        "every assertion in this module that expects an absolute URL would "
+        "otherwise silently check against the wrong host"
+    )
+    return match.group(1)
+
+
+def _absolute(path: str) -> str:
+    """`path`, made absolute exactly the way `site/.eleventy.js`'s own
+    `absoluteUrl` filter makes it: this project's real published host, plus
+    the same prefixing `_pfx` above already performs. `path` must itself
+    start with `/`, the same contract `absoluteUrl`'s own template call
+    sites assume."""
+    return f"{_configured_site_origin()}{_pfx(path)}"
 
 
 #: Every text file a page actually ships: templates and the stylesheet. Fonts
@@ -1219,3 +1248,507 @@ def test_the_path_prefix_agrees_with_the_addresses_python_already_pins() -> None
         "the app and the site would publish to, and be addressed from, "
         "different places"
     )
+
+
+def test_absolute_urls_share_the_one_origin_this_project_already_pins() -> None:
+    """D-14/D-26: task 10 introduces this project's first *absolute* URLs
+    (structured data, share metadata, the sitemap, the feed) and therefore
+    its first need for a full origin, not just the path prefix
+    `test_the_path_prefix_agrees_with_the_addresses_python_already_pins`
+    above already binds. `site/.eleventy.js`'s `SITE_ORIGIN` is that
+    origin, bound here to the two addresses Python already pins it
+    against, rather than left free to drift into a fourth, independent
+    literal.
+    """
+    base = f"{_configured_site_origin()}{_configured_path_prefix()}"
+    assert SIGNUP_BASE.startswith(base), (
+        f"registration.SIGNUP_BASE ({SIGNUP_BASE!r}) does not start with "
+        f"{base!r} -- site/.eleventy.js's SITE_ORIGIN has drifted from the "
+        "host this project actually publishes to"
+    )
+    assert VERIFICATION_BASE.startswith(base), (
+        f"certificate.VERIFICATION_BASE ({VERIFICATION_BASE!r}) does not "
+        f"start with {base!r} -- site/.eleventy.js's SITE_ORIGIN has drifted"
+    )
+
+
+# -------------------------------------------------------------------------- #
+# Task 10: structured event data, share metadata, a sitemap and a feed.
+#
+# Every URL this section checks is *absolute* (`_absolute`, above) -- this
+# is the one part of the site where a merely-prefixed root-relative link
+# (`/example-showcase/events/mrg-05/`) is still wrong: structured data, Open
+# Graph/Twitter Card metadata, the sitemap and the feed are all read by a
+# consumer with no document of its own to resolve a relative link against
+# (a search engine's crawler, a link-preview bot, an RSS reader), so they
+# need the real host too, not only the path Eleventy's `pathPrefix`
+# supplies. `_built_file_for_absolute_url`, below, is the inverse
+# operation: given one of these absolute URLs, the file `built_site`
+# should already contain for it -- the check the task brief calls out
+# specifically ("confirm every URL in the sitemap and the feed resolves
+# against the served tree").
+# -------------------------------------------------------------------------- #
+
+_JSON_LD_RE = re.compile(
+    r'<script type="application/ld\+json">(.*?)</script>', re.DOTALL
+)
+
+
+def _json_ld(page_text: str) -> dict[str, Any]:
+    match = _JSON_LD_RE.search(page_text)
+    assert match is not None, "page carries no application/ld+json script"
+    data = json.loads(match.group(1))
+    assert isinstance(data, dict)
+    return data
+
+
+def _built_file_for_absolute_url(url: str, built_site: Path) -> Path:
+    """The file `built_site` should already contain for `url`, an absolute
+    address this project's own `absoluteUrl` filter produced -- the
+    inverse of `_absolute`: strip the host and the path prefix, then
+    resolve what remains exactly the way a static file server would (a
+    path ending in `/`, including the bare root, serves `index.html`).
+    """
+    base = f"{_configured_site_origin()}{_configured_path_prefix()}"
+    assert url.startswith(base), f"{url!r} does not start with {base!r}"
+    remainder = url[len(base) :]
+    if remainder == "" or remainder.endswith("/"):
+        remainder += "index.html"
+    return built_site / remainder
+
+
+def _an_archived_event_with_recording_id() -> str:
+    candidates = [
+        e
+        for e in _events_fixture()
+        if e.get("status") == "archived" and e.get("youtube_url")
+    ]
+    assert candidates, (
+        f"{_EVENTS_FIXTURE.as_posix()} carries no archived edition with a "
+        "youtube_url -- nothing for the recording-state structured-data "
+        "test below to check"
+    )
+    return str(candidates[0]["id"]).lower()
+
+
+# ---- Structured event data -------------------------------------------------
+
+
+def test_an_event_pages_structured_data_names_the_event_type_and_its_real_date(
+    built_site: Path,
+) -> None:
+    """Task 10, step 1: structured event data on every event page, so a
+    search engine shows date and place correctly rather than reading the
+    page as an ordinary article."""
+    event_id = _the_one_scheduled_event_id()
+    event = next(e for e in _events_fixture() if str(e["id"]).lower() == event_id)
+    page = (built_site / "events" / event_id / "index.html").read_text(encoding="utf-8")
+    data = _json_ld(page)
+    assert data["@context"] == "https://schema.org"
+    assert data["@type"] == "Event"
+    assert data["name"] == event["title"]
+    assert data["startDate"].startswith(str(event["date"]))
+    assert data["url"] == _absolute(f"/events/{event_id}/")
+    assert data["location"]["url"] == _absolute(f"/events/{event_id}/")
+
+
+def test_an_upcoming_events_structured_data_offers_registration_a_past_ones_does_not(
+    built_site: Path,
+) -> None:
+    """The state the task brief names explicitly: a past seminar is not
+    still accepting registrations. `potentialAction` (schema.org
+    RegisterAction) appears on an upcoming edition's structured data and
+    on no other -- mutate event.njk to emit it unconditionally, ahead of
+    `isUpcoming`, and this is the test that objects.
+    """
+    upcoming_id = _the_one_scheduled_event_id()
+    past_id = _a_past_event_id()
+    upcoming = _json_ld(
+        (built_site / "events" / upcoming_id / "index.html").read_text(encoding="utf-8")
+    )
+    past = _json_ld(
+        (built_site / "events" / past_id / "index.html").read_text(encoding="utf-8")
+    )
+    assert upcoming["potentialAction"]["@type"] == "RegisterAction"
+    assert upcoming["potentialAction"]["target"] == _absolute(f"/events/{upcoming_id}/")
+    assert "potentialAction" not in past, (
+        f"{past_id}'s structured data still offers registration for an "
+        "edition that has already happened"
+    )
+
+
+def test_a_recordings_structured_data_names_it_a_recordingless_editions_does_not(
+    built_site: Path,
+) -> None:
+    """The other state the task brief names explicitly: an edition with a
+    recording and one without must not read the same in structured data.
+    """
+    with_recording_id = _an_archived_event_with_recording_id()
+    without_recording_id = _a_past_event_id()
+    events = _events_fixture()
+    assert not any(
+        str(e["id"]).lower() == without_recording_id and e.get("youtube_url")
+        for e in events
+    ), (
+        f"{without_recording_id} carries a youtube_url after all -- not the "
+        "recording-less fixture this test needs"
+    )
+    with_recording = next(
+        e for e in events if str(e["id"]).lower() == with_recording_id
+    )
+
+    with_page = _json_ld(
+        (built_site / "events" / with_recording_id / "index.html").read_text(
+            encoding="utf-8"
+        )
+    )
+    without_page = _json_ld(
+        (built_site / "events" / without_recording_id / "index.html").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert with_page["subjectOf"]["@type"] == "VideoObject"
+    assert with_page["subjectOf"]["url"] == with_recording["youtube_url"]
+    assert "subjectOf" not in without_page, (
+        f"{without_recording_id}'s structured data names a recording it does not have"
+    )
+
+
+def test_structured_datas_performer_never_exceeds_the_speakers_public_fields(
+    built_site: Path,
+) -> None:
+    """No personal data beyond what is already public: `performer` (a
+    schema.org Person) may carry only what `public_data.py`'s own
+    `PUBLISHABLE_ALWAYS` already publishes about a speaker by name -- name,
+    affiliation, country -- never a consent-gated field such as a photo or
+    a biography, which this JSON-LD block does not even read. Checked
+    against every built event page, not one sample: a fourth key could
+    reach the page's data by a route this fixture's own speakers never
+    exercise.
+    """
+    assert {"name", "affiliation", "country"} <= PUBLISHABLE_ALWAYS
+    for path in sorted((built_site / "events").glob("*/index.html")):
+        data = _json_ld(path.read_text(encoding="utf-8"))
+        performer = data["performer"]
+        assert performer["@type"] == "Person"
+        assert set(performer.keys()) <= {"@type", "name", "affiliation"}, (
+            f"{path.relative_to(built_site).as_posix()}'s performer carries "
+            f"an unexpected key: {sorted(performer.keys())}"
+        )
+        if "affiliation" in performer:
+            affiliation = performer["affiliation"]
+            assert set(affiliation.keys()) <= {"@type", "name", "address"}, (
+                f"{path.relative_to(built_site).as_posix()}'s affiliation "
+                f"carries an unexpected key: {sorted(affiliation.keys())}"
+            )
+            if "address" in affiliation:
+                assert set(affiliation["address"].keys()) <= {
+                    "@type",
+                    "addressCountry",
+                }
+
+
+# ---- Share metadata ---------------------------------------------------------
+
+_OG_IMAGE_RE = re.compile(r'<meta property="og:image" content="([^"]*)"')
+
+
+def test_every_page_carries_a_canonical_link_and_matching_open_graph_metadata(
+    built_site: Path,
+) -> None:
+    """Acceptance criterion 6: a shared page shows a correct preview.
+    Checked on the home page, an event page, and one of every other kind
+    of page this project generates -- `og:url`/the canonical link must be
+    this project's real, absolute address, and title/description must be
+    non-empty."""
+    samples = {
+        "/": built_site / "index.html",
+        "/archives/": built_site / "archives" / "index.html",
+        "/propose/": built_site / "propose" / "index.html",
+        "/data/": built_site / "data" / "index.html",
+        "/verify/": built_site / "verify" / "index.html",
+        f"/events/{_the_one_scheduled_event_id()}/": built_site
+        / "events"
+        / _the_one_scheduled_event_id()
+        / "index.html",
+    }
+    for route, path in samples.items():
+        page = path.read_text(encoding="utf-8")
+        expected_url = _absolute(route)
+        canonical = re.search(r'<link rel="canonical" href="([^"]*)"', page)
+        og_url = re.search(r'<meta property="og:url" content="([^"]*)"', page)
+        og_title = re.search(r'<meta property="og:title" content="([^"]*)"', page)
+        og_description = re.search(
+            r'<meta property="og:description" content="([^"]*)"', page
+        )
+        assert canonical is not None and canonical.group(1) == expected_url, path
+        assert og_url is not None and og_url.group(1) == expected_url, path
+        assert og_title is not None and og_title.group(1).strip() != "", path
+        assert og_description is not None and og_description.group(1).strip() != "", (
+            path
+        )
+
+
+def test_no_page_ever_references_an_og_image_that_would_be_a_dangling_link(
+    built_site: Path,
+) -> None:
+    """The other half of acceptance criterion 6: the per-event social image
+    is phase 6's own deliverable (spec §6); until then, `layout.njk` emits
+    no `og:image`/`twitter:image` at all rather than one pointing at a file
+    that does not exist yet -- "a fallback that is not broken" read
+    literally: a link-preview bot renders a correct text-only card, never
+    a broken image. Written to survive phase 6 landing a real image, not
+    merely to prove today's absence: whichever this repository does,
+    a referenced image must resolve to a file the build actually wrote.
+    """
+    checked_absence = 0
+    for path in built_site.rglob("*.html"):
+        text = path.read_text(encoding="utf-8")
+        match = _OG_IMAGE_RE.search(text)
+        if match is None:
+            checked_absence += 1
+            continue
+        target = _built_file_for_absolute_url(match.group(1), built_site)
+        assert target.is_file(), (
+            f"{path.relative_to(built_site).as_posix()}'s og:image "
+            f"({match.group(1)!r}) does not resolve to a file the build "
+            "wrote -- a broken preview image, not a correct one"
+        )
+    assert checked_absence > 0, (
+        "no built page was found to check the image-absence case against"
+    )
+
+
+# ---- Sitemap and feed -------------------------------------------------------
+
+
+def test_every_addressable_page_is_in_the_sitemap_and_the_two_archive_filters_are_not(
+    built_site: Path,
+) -> None:
+    """Task 10, step 3, and the task brief's own worked mutation: remove a
+    page from the sitemap and this is the test that notices. Every page
+    this project's committed fixture actually generates is expected, by
+    name, except the two archive facets (`archives-filter.njk`'s own
+    `sitemap: false`) -- see `sitemap.njk`'s own comment for why those two,
+    and not the year pages, are the deliberate exclusion.
+    """
+    events = _events_fixture()
+    past_years = sorted(
+        {
+            str(e["date"])[:4]
+            for e in events
+            if e.get("status") in ("delivered", "archived")
+        }
+    )
+    expected = {_absolute("/")}
+    expected |= {_absolute(f"/events/{str(e['id']).lower()}/") for e in events}
+    expected.add(_absolute("/archives/"))
+    expected |= {_absolute(f"/archives/{year}/") for year in past_years}
+    expected.add(_absolute("/propose/"))
+    expected.add(_absolute("/data/"))
+    expected.add(_absolute("/verify/"))
+
+    ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    tree = ET.parse(built_site / "sitemap.xml")
+    actual = {loc.text for loc in tree.findall(".//s:url/s:loc", ns)}
+
+    assert actual == expected
+    assert _absolute("/archives/recordings/") not in actual
+    assert _absolute("/archives/discussions/") not in actual
+
+
+def test_every_sitemap_and_feed_url_resolves_to_a_file_the_build_actually_wrote(
+    built_site: Path,
+) -> None:
+    """The check the task brief calls out specifically: confirm every URL
+    in the sitemap and the feed resolves against the served tree. Also the
+    worked mutation "break one absolute URL so it loses its prefix": strip
+    `SITE_ORIGIN` (or `PATH_PREFIX`) out of `site/.eleventy.js`'s
+    `absoluteUrl` filter and every assertion below fails, since none of
+    these URLs would start with this project's real published address any
+    more.
+    """
+    base = f"{_configured_site_origin()}{_configured_path_prefix()}"
+
+    ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    sitemap_tree = ET.parse(built_site / "sitemap.xml")
+    sitemap_urls = [loc.text for loc in sitemap_tree.findall(".//s:url/s:loc", ns)]
+    assert sitemap_urls, "sitemap.xml carries no <url> at all"
+
+    feed_tree = ET.parse(built_site / "feed.xml")
+    feed_urls = [el.text for el in feed_tree.findall(".//link")]
+    feed_urls += [el.text for el in feed_tree.findall(".//guid")]
+    assert feed_urls, "feed.xml carries no <link>/<guid> at all"
+
+    for url in sitemap_urls + feed_urls:
+        assert url is not None and url.startswith(base), (
+            f"{url!r} is not an absolute URL under this project's own "
+            f"published address ({base!r})"
+        )
+        target = _built_file_for_absolute_url(url, built_site)
+        assert target.is_file(), (
+            f"{url!r} resolves to {target}, which the build did not write"
+        )
+    # Belt and braces: the exact double-prefix shape a mistaken
+    # `x | url | absoluteUrl` chain would produce.
+    doubled = f"{_configured_path_prefix()}{_configured_path_prefix().lstrip('/')}"
+    assert not any(doubled in url for url in sitemap_urls + feed_urls if url)
+
+
+def test_the_feed_lists_every_edition_newest_first_and_nothing_else(
+    built_site: Path,
+) -> None:
+    """The feed's item universe is editions, full stop -- upcoming and past
+    alike, and nothing from the archive index, its year or filter pages,
+    or any of the three other static pages, none of which is an edition.
+    Newest first, since that is what a subscriber to a feed of editions
+    wants to see first, including an edition not yet delivered.
+    """
+    events = _events_fixture()
+    expected = [
+        _absolute(f"/events/{str(e['id']).lower()}/")
+        for e in sorted(events, key=lambda e: str(e["date"]), reverse=True)
+    ]
+    tree = ET.parse(built_site / "feed.xml")
+    actual = [el.text for el in tree.findall(".//item/link")]
+    assert actual == expected
+
+
+_ENGLISH_WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_ENGLISH_MONTHS = (
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+)
+
+
+def _expected_rfc822(iso_date: str) -> str:
+    """The RFC-822/1123 `pubDate` `site/.eleventy.js`'s own `rfc822` filter
+    should produce for `iso_date`, computed independently in Python rather
+    than by re-implementing that filter's own `Date` arithmetic: fixed
+    12:30 CET (+01:00, the same fixed assumption `event.njk`'s own rail
+    already prints as plain text), converted to UTC/GMT -- exactly what
+    JavaScript's `Date.prototype.toUTCString()` emits. Day and month names
+    are a fixed, English lookup table rather than `strftime('%a'/'%b')`:
+    those are locale-dependent in Python, and this project has already
+    found one Python/JavaScript date-formatting mismatch it did not expect
+    (D-20) -- a test that could pass or fail depending on the runner's own
+    locale would be exactly that kind of hidden disagreement again.
+    """
+    year, month, day = (int(part) for part in iso_date.split("-"))
+    local = datetime(year, month, day, 12, 30, 0, tzinfo=timezone(timedelta(hours=1)))
+    utc = local.astimezone(UTC)
+    weekday = _ENGLISH_WEEKDAYS[utc.weekday()]
+    month_name = _ENGLISH_MONTHS[utc.month - 1]
+    return (
+        f"{weekday}, {utc.day:02d} {month_name} {utc.year} "
+        f"{utc.hour:02d}:{utc.minute:02d}:{utc.second:02d} GMT"
+    )
+
+
+def test_feed_publication_dates_come_from_the_editions_own_date_never_the_clock(
+    built_site: Path,
+) -> None:
+    """Never `new Date().toISOString().slice(0, 10)` (or any other read of
+    the wall clock): a feed needs timestamps, and this proves they come
+    from the data -- computed independently here from each edition's own
+    `date`, not merely asserted present, so a regression to `new Date()`
+    with no argument would fail this test on every rebuild rather than
+    only on days it happens to disagree with `_expected_rfc822`.
+    """
+    events = _events_fixture()
+    tree = ET.parse(built_site / "feed.xml")
+    by_link = {
+        item.find("link").text: item.find("pubDate").text
+        for item in tree.findall(".//item")
+    }
+    assert by_link, "feed.xml carries no <item> to check pubDate on"
+    for event in events:
+        url = _absolute(f"/events/{str(event['id']).lower()}/")
+        assert by_link[url] == _expected_rfc822(str(event["date"]))
+
+
+@pytest.fixture(scope="module")
+def built_site_no_events(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A wholly empty `events.json` -- the "empty feed" state the task
+    brief names explicitly, distinct from `built_site_no_past_editions`
+    above (every event `scheduled`, i.e. zero *past* editions): this
+    fixture has no editions at all, upcoming or past, which the committed
+    fixture (never empty) can never exercise on its own. Same scratch-copy
+    technique that fixture already uses.
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    scratch_src = tmp_path_factory.mktemp("site-src-no-events") / "src"
+    shutil.copytree(SITE_SRC, scratch_src)
+    (scratch_src / "_data" / "events.json").write_text("[]", encoding="utf-8")
+    out = tmp_path_factory.mktemp("site-build-no-events")
+    try:
+        subprocess.run(
+            [
+                "node",
+                str(_ELEVENTY_CMD),
+                f"--input={scratch_src.as_posix()}",
+                f"--output={out.as_posix()}",
+            ],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+def test_the_feed_still_renders_valid_and_empty_with_no_editions_at_all(
+    built_site_no_events: Path,
+) -> None:
+    """The empty-feed state the task brief names explicitly: zero editions
+    at all still produces a valid, well-formed RSS document with a channel
+    and no items -- not a build error, and not malformed XML from an empty
+    `{% for %}` loop.
+    """
+    tree = ET.parse(built_site_no_events / "feed.xml")
+    channel = tree.find("./channel")
+    assert channel is not None
+    assert channel.find("title") is not None
+    assert channel.find("link") is not None
+    assert channel.find("description") is not None
+    assert tree.findall(".//item") == []
+
+
+def test_the_sitemap_still_lists_the_static_pages_with_no_editions_at_all(
+    built_site_no_events: Path,
+) -> None:
+    """With zero editions there is also no year page (`archive.years` is
+    empty) and no event page -- the sitemap should list exactly the pages
+    that do not depend on there being any edition at all.
+    """
+    ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    tree = ET.parse(built_site_no_events / "sitemap.xml")
+    actual = {loc.text for loc in tree.findall(".//s:url/s:loc", ns)}
+    assert actual == {
+        _absolute("/"),
+        _absolute("/archives/"),
+        _absolute("/propose/"),
+        _absolute("/data/"),
+        _absolute("/verify/"),
+    }

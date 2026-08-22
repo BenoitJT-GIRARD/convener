@@ -4,6 +4,12 @@ pagination:
   data: events
   size: 1
   alias: event
+  # Task 10: without this, Eleventy adds only the *first* page a paginated
+  # template generates to `collections.all` -- so `sitemap.njk`'s own loop
+  # over that collection would have listed just one edition, not five. The
+  # same flag is added to archives-year.njk and archives-filter.njk below,
+  # for the identical reason.
+  addAllPagesToCollections: true
 # D-19: `event_id` IS `edition_code`, lower-cased -- nothing else names an
 # event. `events.json`'s own `id` column carries `edition_code` verbatim,
 # not lower-cased (`tools/convener_ops/public_data.py::PUBLIC_FIELD_SOURCES`),
@@ -13,9 +19,91 @@ pagination:
 # speaker's talk is retitled and would move the page a QR code or a shared
 # link already points at.
 permalink: "/events/{{ event.id | lower }}/"
+# Task 10: `pageTitle`/`pageDescription` feed layout.njk's `<title>`, Open
+# Graph and Twitter Card metadata (acceptance criterion 6). `eleventyComputed`
+# rather than a plain front-matter string: this template is paginated
+# (`pagination.alias: event` above), so these values only exist once Eleventy
+# has resolved *which* event a given generated page is for -- a plain string
+# here would render before that happens and could not read `event` at all.
+eleventyComputed:
+  pageTitle: "{{ event.title }}"
+  pageDescription: "{% if event.abstract %}{{ event.abstract }}{% else %}{{ event.speaker_name }}{% if event.speaker_affiliation %}, {{ event.speaker_affiliation }}{% endif %} — a The Example Collective virtual seminar.{% endif %}"
 ---
 
 {% set isUpcoming = event.status == "scheduled" %}
+
+{#
+  Task 10: structured event data (schema.org Event, JSON-LD), so a search
+  engine shows this edition's date correctly rather than reading this page
+  as an ordinary article. Built as a plain object and serialised with the
+  `jsonLd` filter (site/.eleventy.js), which drops any key set to `null` at
+  any nesting depth -- the mechanism every state-dependent field below
+  relies on, rather than a second, fully separate object literal per state:
+
+  - `potentialAction` (RegisterAction) only on an upcoming edition -- a past
+    seminar is not still accepting registrations.
+  - `subjectOf` (VideoObject) only once a recording is actually published
+    (`event.youtube_url`, gated the same way the visible section below
+    already gates it -- `public_data.py::RECORDING_STATUSES`).
+  - `performer.affiliation`, and its nested country, only when the speaker
+    record actually carries one -- the same `{% if %}` the visible page
+    already guards this field with, further down.
+
+  `performer` carries exactly the three fields `public_data.py`'s own
+  `PUBLISHABLE_ALWAYS` publishes about a speaker by name -- name,
+  affiliation, country -- and nothing a consent gate would still be
+  withholding (`photo_url`, `bio`, `linkedin`): this object must never grow
+  a fourth key. And no `zoom_link`/`registration_link` field is read here at
+  all -- the room link never reaches this template in the first place
+  (acceptance criterion 2), so there is nothing this block could leak even
+  by mistake.
+#}
+{% set eventUrl = page.url | absoluteUrl %}
+
+{% set eventDescription = event.abstract %}
+{% if not eventDescription %}
+  {% set eventDescription = event.speaker_name %}
+  {% if event.speaker_affiliation %}
+    {% set eventDescription = eventDescription ~ ", " ~ event.speaker_affiliation %}
+  {% endif %}
+  {% set eventDescription = eventDescription ~ " — a The Example Collective virtual seminar." %}
+{% endif %}
+
+{% set speakerAffiliation = null %}
+{% if event.speaker_affiliation %}
+  {% set affiliationAddress = null %}
+  {% if event.speaker_country %}
+    {% set affiliationAddress = { "@type": "PostalAddress", "addressCountry": event.speaker_country } %}
+  {% endif %}
+  {% set speakerAffiliation = { "@type": "Organization", "name": event.speaker_affiliation, "address": affiliationAddress } %}
+{% endif %}
+
+{% set recording = null %}
+{% if event.youtube_url %}
+  {% set recording = { "@type": "VideoObject", "name": event.title ~ " — recording", "url": event.youtube_url, "description": eventDescription } %}
+{% endif %}
+
+{% set registerAction = null %}
+{% if isUpcoming %}
+  {% set registerAction = { "@type": "RegisterAction", "target": eventUrl, "name": "Register" } %}
+{% endif %}
+
+{% set structuredData = {
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": event.title,
+  "url": eventUrl,
+  "startDate": event.date ~ "T12:30:00+01:00",
+  "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+  "eventStatus": "https://schema.org/EventScheduled",
+  "description": eventDescription,
+  "location": { "@type": "VirtualLocation", "url": eventUrl },
+  "organizer": { "@type": "Organization", "name": "The Example Collective", "url": site.forum },
+  "performer": { "@type": "Person", "name": event.speaker_name, "affiliation": speakerAffiliation },
+  "potentialAction": registerAction,
+  "subjectOf": recording
+} %}
+<script type="application/ld+json">{{ structuredData | jsonLd | replace("</script", "<\\/script") | safe }}</script>
 
 <section class="hero event-lead">
   <div class="container">

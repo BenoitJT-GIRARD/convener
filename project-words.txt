@@ -65,3 +65,6 @@ noopener
 Bézier
 driftable
 noscript
+etree
+lastmod
+urlset

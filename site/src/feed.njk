@@ -1,0 +1,60 @@
+---
+eleventyExcludeFromCollections: true
+permalink: "/feed.xml"
+---
+<?xml version="1.0" encoding="UTF-8"?>
+{#
+  The `<?xml ...?>` declaration above must be the very first thing this
+  file writes -- see sitemap.njk's own comment on this same point.
+
+  Task 10: a syndication feed of the editions -- not of every page this
+  site generates. Its item universe is `events` (site/src/_data/
+  events.json) directly, so the archive index, its year and filter pages,
+  and the three other static pages are excluded by construction: none of
+  them is an edition, so none of them was ever a candidate. Unlike the
+  sitemap above, which makes an explicit, commented decision to leave two
+  archive pages out, this file makes no such decision -- the question
+  never arises here.
+
+  Every edition is listed, upcoming and past alike, newest first
+  (`sort(true, false, 'date')` -- `events.json`'s own dates are always
+  `YYYY-MM-DD`, so a lexicographic sort is already a chronological one,
+  not because the fixture happens to be pre-sorted): an upcoming edition
+  is exactly the kind of thing a subscriber to this feed wants to learn
+  about first. Zero events (a wholly empty `events.json`) renders a
+  channel with no `<item>` at all -- a valid, empty feed, not an error.
+
+  `pubDate` comes from the edition's own `date` (the `rfc822` filter,
+  site/.eleventy.js) -- never `new Date()` read at build time, which would
+  make every rebuild churn this feed for a reason that has nothing to do
+  with its actual content, exactly the failure `parisToday()`/
+  `paris_today` exists to rule out on the Python side of this project.
+
+  An edition with no `abstract` yet falls back to naming its speaker, the
+  same fallback event.njk's own structured-data block uses, so the two
+  never state the description of the same edition two different ways.
+#}
+<rss version="2.0">
+<channel>
+<title>{{ site.title }}</title>
+<link>{{ '/' | absoluteUrl }}</link>
+<description>{{ site.tagline }}</description>
+{%- for e in events | sort(true, false, 'date') %}
+{%- set itemUrl = ('/events/' ~ (e.id | lower) ~ '/') | absoluteUrl %}
+{%- set itemDescription = e.abstract %}
+{%- if not itemDescription %}
+  {%- set itemDescription = e.speaker_name %}
+  {%- if e.speaker_affiliation %}
+    {%- set itemDescription = itemDescription ~ ", " ~ e.speaker_affiliation %}
+  {%- endif %}
+{%- endif %}
+<item>
+<title>{{ e.title }}</title>
+<link>{{ itemUrl }}</link>
+<guid isPermaLink="true">{{ itemUrl }}</guid>
+<pubDate>{{ e.date | rfc822 }}</pubDate>
+<description>{{ itemDescription }}</description>
+</item>
+{%- endfor %}
+</channel>
+</rss>
