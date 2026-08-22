@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
+import { HashRouter, Route, Routes, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { Login } from './auth/Login';
 import { Layout } from './components/Layout';
@@ -15,7 +15,6 @@ import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
 import { NewSpeaker } from './screens/NewSpeaker';
 import { SurveyForm } from './survey/SurveyForm';
-import { VerifyPage } from './verify/VerifyPage';
 
 /**
  * Everything the organiser cockpit needs: gated on `useAuth` before
@@ -61,24 +60,6 @@ function SurveyRoute() {
   return <SurveyForm key={eventId} />;
 }
 
-/**
- * The same remount discipline `SurveyRoute` applies to `eventId`, applied
- * here to `identifier` *and* `token` together: editing either in the
- * address bar (or clicking a second verification link without a full page
- * load, which `HashRouter` makes reachable) must not leave `VerifyPage`'s
- * own effects mid-flight against a token or identifier that no longer
- * matches the URL -- a stale `sig`/`lookup` state briefly describing the
- * *previous* certificate while the new check is still running. Keying by
- * both, joined, forces a full remount -- and a fresh "Checking…" -- on any
- * change to either.
- */
-function VerifyRoute() {
-  const { identifier } = useParams<{ identifier: string }>();
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-  return <VerifyPage key={`${identifier ?? ''}::${token ?? ''}`} />;
-}
-
 export function App() {
   return (
     <AuthProvider>
@@ -100,16 +81,24 @@ export function App() {
               (`app/src/islands/signup/`), per D-18 ("static pages,
               interactivity in islands"): a visitor who wants to register no
               longer downloads this whole application to do it. See git
-              history for the route this replaced. */}
+              history for the route this replaced.
+
+              Certificate verification used to be a public route here too
+              (`/verify/:identifier`, reading `?token=` off the URL) --
+              task 7 extracted it into an island mounted on its own static
+              page instead (`site/src/verify.njk`,
+              `app/src/islands/verify/`), the identical move for the
+              identical D-18 reason. That extraction did *not* also move
+              onto a real, bare path the way registration's did:
+              `certificate.VERIFICATION_BASE` still ends `#/`, because the
+              token it carries names a person (`signing.PAYLOAD_FIELDS`'s
+              `name` field), and a browser never sends a URL fragment in a
+              request or a `Referer` header -- see that constant's own
+              comment, and `app/src/islands/verify/VerifyPage.tsx`'s own
+              module comment, for why losing the router when this route
+              left did not lose that property. See git history for the
+              route this replaced. */}
           <Route path="/survey/:eventId" element={<SurveyRoute />} />
-          {/* Public, by construction, the same way `/survey/:eventId` is
-              above: a stranger checking a certificate has no account
-              either, and this route never reaches `Shell`'s auth gate.
-              `certificate.VERIFICATION_BASE` ends `#/verify/`, matching
-              this path exactly -- see `VerifyPage.tsx`'s own module
-              comment for why the fragment is load-bearing for privacy,
-              not only for GitHub Pages routing. */}
-          <Route path="/verify/:identifier" element={<VerifyRoute />} />
           <Route path="/*" element={<Shell />} />
         </Routes>
       </HashRouter>

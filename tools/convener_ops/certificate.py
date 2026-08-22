@@ -293,36 +293,47 @@ it would be asking us to hand a stranger a name on request, exactly the
 kind of on-demand disclosure this whole design exists to avoid. The
 identifier is redundant with the payload's own `identifier` field once the
 token has been verified (`signing.PAYLOAD_FIELDS` includes it) -- but it
-is what lets task 13's route match one certificate to one address *before*
-verification has run at all, so the page can be a plain, bookmarkable link
-rather than requiring the visitor to paste a token in by hand. Route shape
-matches `app/src/App.tsx`'s existing `/survey/:eventId` -- a `HashRouter`
-fragment segment, not a server path, because GitHub Pages serves no
-server-side routing and a bare path would 404 on a fresh load. (Task 6
-moved registration itself off a fragment like this one, onto a real
-address -- `site/src/event.njk`'s own permalink -- see
-`registration.SIGNUP_BASE`'s own comment; this page's own route is task
-7's, not yet moved.)
-`VERIFICATION_BASE` and the whole address are pinned into this module's
-shared fixture (`tools/tests/fixtures/certificate-verification.json`, see
-below) so task 13 is bound to the exact shape rather than trusted to
-reconstruct it from this docstring.
+is what lets a verifier's route match one certificate to one address
+*before* verification has run at all, so the page can be a plain,
+bookmarkable link rather than requiring the visitor to paste a token in by
+hand.
 
-That routing choice is not only a deployment convenience -- it is a second
-privacy property, and the more important half. `VERIFICATION_BASE` ends in
-`#/verify/`, so the `?token=` `verification_url` appends sits *inside the
+**Task 7 moved this page off the operators' application entirely, onto its
+own static page mounted as an island** (`site/src/verify.njk`,
+`app/src/islands/verify/`) -- the same move task 6 made for registration
+(`site/src/event.njk`, `app/src/islands/signup/`), so a stranger checking
+a certificate no longer downloads the whole operators' cockpit -- its
+routing, its authentication, every screen -- to read four lines back.
+Registration's own move is not the template for the *address*, though:
+`registration.SIGNUP_BASE` moved onto a real, bare path
+(`site/src/event.njk`'s own permalink) because `signup_url` only ever
+carries an event id, nothing a server log could turn into a person.
+`verification_url` carries a **name**, so `VERIFICATION_BASE` keeps
+routing through a URL fragment even though it no longer routes through
+`App.tsx` -- see the next paragraph for why that half could not move with
+the rest. `VERIFICATION_BASE` and the whole address are pinned into this
+module's shared fixture (`tools/tests/fixtures/certificate-verification.json`,
+see below) so the island is bound to the exact shape rather than trusted
+to reconstruct it from this docstring.
+
+The fragment is not a routing detail -- it is the second, more important
+privacy property, and it is why the move above kept it. `VERIFICATION_BASE`
+ends in `#/`, so the `?token=` `verification_url` appends sits *inside the
 URL fragment*, everything after `#`. A fragment is never sent in an HTTP
 request (a browser resolves it locally and never transmits it to the
 server) and is stripped from `Referer` before a page navigates away. The
 token carries the holder's **name** (`signing.PAYLOAD_FIELDS`'s own
-`name` field) -- so switching this application from `HashRouter` to
-`BrowserRouter` one day, a change nothing else in this repository would
-object to, would silently start sending every verified participant's name
-to GitHub's servers in a query string, and to whatever site a link is
-clicked from after, through `Referer`.
+`name` field) -- so serving this page from a bare path instead, the way
+`SIGNUP_BASE` was moved, would silently start sending every verified
+participant's name to GitHub's servers in a query string, and to whatever
+site a link is clicked from after, through `Referer`. The static page at
+`VERIFICATION_BASE`'s own host and path reads `location.hash` itself,
+exactly as well as `App.tsx`'s old `HashRouter` route did -- a router is
+not what made the fragment safe, and losing the router when task 7 moved
+this page off `App.tsx` does not lose the property either.
 `test_verification_url_carries_the_token_after_the_fragment_not_before_it`
-below is what would catch that change; the property is pinned as a test,
-not left as a paragraph a future editor might not read.
+below is what would catch a future edit losing it anyway; the property is
+pinned as a test, not left as a paragraph a future editor might not read.
 
 The shared fixture (D-14) -- what stops task 13 verifying nothing
 ------------------------------------------------------------------------
@@ -402,19 +413,19 @@ ORGANISER: Final = "The Example Collective"
 
 #: The base of every certificate's verification address -- see the module
 #: docstring's "verification address" section for the full route shape and
-#: why it carries the token, not only the identifier. `HashRouter` (see
-#: `app/src/App.tsx`), the same fragment convention `/survey/:eventId`
-#: uses, and the same base URL `docs/reference/operations.md`
-#: names for the deployed application. Ending in `#/` is load-bearing
-#: beyond routing: it puts `verification_url`'s `?token=` -- which carries
-#: a participant's name -- inside the URL *fragment*, which browsers never
-#: send in a request and always strip from `Referer`. Switching to
-#: `BrowserRouter` would silently lose that property; see the module
-#: docstring's "verification address" section and
+#: why it carries the token, not only the identifier. Task 7 moved this
+#: off `app/src/App.tsx`'s own `HashRouter` route onto its own static page
+#: (`site/src/verify.njk`'s permalink, `/verify/`), mounted as an island
+#: (`app/src/islands/verify/`) -- but the host and path still end `#/`,
+#: unchanged in kind though not in host: that is load-bearing beyond
+#: routing, not a routing detail at all. It puts `verification_url`'s
+#: `?token=` -- which carries a participant's name -- inside the URL
+#: *fragment*, which browsers never send in a request and always strip
+#: from `Referer`. Serving this page from a bare path instead, the way
+#: task 6 moved `registration.SIGNUP_BASE`, would silently lose that
+#: property; see the module docstring's "verification address" section and
 #: `test_verification_url_carries_the_token_after_the_fragment_not_before_it`.
-VERIFICATION_BASE: Final = (
-    "https://example-instance.github.io/example-showcase/app/#/verify/"
-)
+VERIFICATION_BASE: Final = "https://example-instance.github.io/example-showcase/verify/#/"
 
 #: `certificates.yml`'s own format version -- the file-level analogue of
 #: `registration.FILE_VERSION`.

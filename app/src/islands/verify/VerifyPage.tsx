@@ -1,18 +1,17 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { verify } from './verify';
-import type { VerifyResult } from './verify';
-import { asDisplayCertificate } from './format';
-import type { DisplayCertificate } from './format';
-import { loadSigningPublicKeys } from './publicKeys';
+import { verify } from '../../verify/verify';
+import type { VerifyResult } from '../../verify/verify';
+import { asDisplayCertificate } from '../../verify/format';
+import type { DisplayCertificate } from '../../verify/format';
+import { loadSigningPublicKeys } from '../../verify/publicKeys';
 import {
   isValidIdentifierShape,
   lookupCertificateState,
   STATE_ISSUED,
   STATE_REVOKED,
-} from './register';
-import type { LookupResult } from './register';
+} from '../../verify/register';
+import type { LookupResult } from '../../verify/register';
 
 /**
  * Spec S:7's "vérification sans divulgation", made into a page: someone
@@ -21,19 +20,48 @@ import type { LookupResult } from './register';
  * page -- see `VerifyTokenless` below) -- no account, no request to us for
  * the payload.
  *
- * `#/verify/:identifier?token=…`, not `/verify/…`
- * -------------------------------------------------
+ * Task 7: extracted from the operators' application package
+ * (`app/src/verify/VerifyPage.tsx`, now deleted -- see git history) into
+ * an island mounted on its own static page (`site/src/verify.njk`), the
+ * identical move task 6 made for registration. Everything phase 4
+ * established about verification holds unchanged: `verify.ts`,
+ * `register.ts`, `publicKeys.ts` and `format.ts` stay exactly where they
+ * were, in `app/src/verify/`, imported here rather than reimplemented
+ * (P-2) -- this file changed, the crypto and the register lookup did not.
+ *
+ * What changed in the extraction, and why
+ * -----------------------------------------
+ * - `identifier` and `token` are props, not route params read via
+ *   `useParams`/`useSearchParams`: this island has no router at all.
+ *   `main.tsx` reads both off `location.hash` itself -- see that file's
+ *   own comment for the parsing this replaces `react-router-dom`'s
+ *   `HashRouter` with, and for why a `hashchange` listener there gives
+ *   this component the same remount discipline `App.tsx`'s old
+ *   `VerifyRoute` gave it by keying on a route match.
+ * - Class names are plain, semantic strings (`verify__panel`, ...),
+ *   reusing `.notice`'s own box shape -- the same reasoning
+ *   `SignupForm.tsx`'s own module comment gives for its own conversion
+ *   away from Tailwind utilities: this island renders inside a page that
+ *   already loads `site/src/style.css`, and pulling in the app's own
+ *   Tailwind build here would leak site-wide, not stay scoped to this
+ *   component's own subtree.
+ *
+ * `#/<identifier>?token=…`, not `/verify/<identifier>?token=…`
+ * -----------------------------------------------------------------------
  * The fragment is load-bearing for privacy, not only for GitHub Pages
- * routing: everything after `#` is resolved by the browser locally, never
- * sent in an HTTP request, and stripped from `Referer` before this page
- * ever navigates away. `?token=` carries the holder's own **name**
- * (`signing.PAYLOAD_FIELDS`), so switching this application from
- * `HashRouter` to `BrowserRouter` -- a change nothing else in this
- * repository would object to -- would silently start sending every
- * verified participant's name to GitHub's servers in a query string, and
- * to whatever site a link is clicked from after, through `Referer`. See
- * `tools/convener_ops/certificate.py`'s own docstring ("the verification
- * address") and its
+ * routing, and it is the one thing this extraction did *not* change:
+ * everything after `#` is resolved by the browser locally, never sent in
+ * an HTTP request, and stripped from `Referer` before this page ever
+ * navigates away. `?token=` carries the holder's own **name**
+ * (`signing.PAYLOAD_FIELDS`), so serving this page from a bare path
+ * instead -- the way task 6 moved registration's own address -- would
+ * silently start sending every verified participant's name to GitHub's
+ * servers in a query string, and to whatever site a link is clicked from
+ * after, through `Referer`. A router is not what made that safe: a static
+ * page reads `location.hash` exactly as well as a `HashRouter` did, which
+ * is why this extraction could drop the router and keep the property. See
+ * `tools/convener_ops/certificate.py`'s own module docstring ("the
+ * verification address") and its
  * `test_verification_url_carries_the_token_after_the_fragment_not_before_it`
  * for the Python-side half of this same guarantee.
  *
@@ -103,63 +131,61 @@ const CONTACT_EMAIL = 'reading-group@example.test';
 
 type Tone = 'primary' | 'accent' | 'danger' | 'info';
 
-/** Every Tailwind class used below appears here as a complete, literal
- *  string -- Tailwind's build-time scan cannot see a class name assembled
- *  from a template literal (`` `border-${tone}/40` `` would simply never
- *  be generated), so tone is selected by looking up a whole class list,
- *  never by interpolating one. */
+/** `site/src/style.css`'s own class names for the one panel shape every
+ *  answer this page gives shares (reusing `.notice`), coloured per tone --
+ *  the same lookup-by-tone shape the Tailwind version of this component
+ *  used, kept because it is still the right way to pick a whole class list
+ *  rather than interpolate one. */
 const TONE_CLASSES: Record<Tone, { panel: string; title: string }> = {
-  primary: { panel: 'border-2 border-primary/40 bg-primary/5', title: 'text-primary-hover' },
-  accent: { panel: 'border-2 border-accent/40 bg-accent/5', title: 'text-accent-hover' },
-  danger: { panel: 'border-2 border-danger/40 bg-danger/5', title: 'text-danger' },
-  info: { panel: 'border-2 border-info/40 bg-info/5', title: 'text-info' },
+  primary: { panel: 'notice verify__panel verify__panel--primary', title: 'verify__eyebrow verify__eyebrow--primary' },
+  accent: { panel: 'notice verify__panel verify__panel--accent', title: 'verify__eyebrow verify__eyebrow--accent' },
+  danger: { panel: 'notice verify__panel verify__panel--danger', title: 'verify__eyebrow verify__eyebrow--danger' },
+  info: { panel: 'notice verify__panel verify__panel--info', title: 'verify__eyebrow verify__eyebrow--info' },
 };
 
 function Panel({ tone, title, children }: { tone: Tone; title: string; children: ReactNode }) {
   const classes = TONE_CLASSES[tone];
   return (
-    <div role="alert" className={`${classes.panel} px-5 py-4 text-sm space-y-2`}>
-      <p className={`font-display font-bold uppercase tracking-wider text-xs ${classes.title} mb-1`}>
-        {title}
-      </p>
+    <div role="alert" className={classes.panel}>
+      <p className={classes.title}>{title}</p>
       {children}
     </div>
   );
 }
 
 function Checking() {
-  return <p className="text-ink-muted text-sm">Checking…</p>;
+  return <p className="verify__checking">Checking…</p>;
 }
 
 function IdentifierText({ id }: { id: string }) {
-  return <span className="font-mono text-xs">{id}</span>;
+  return <span className="verify__id">{id}</span>;
 }
 
 function CertificateDetails({ cert }: { cert: DisplayCertificate }) {
   return (
-    <dl className="mt-2 space-y-1">
+    <dl className="verify__details">
       <div>
-        <dt className="inline text-ink-muted">Name: </dt>
-        <dd className="inline">{cert.name}</dd>
+        <dt>Name: </dt>
+        <dd>{cert.name}</dd>
       </div>
       <div>
-        <dt className="inline text-ink-muted">Event: </dt>
-        <dd className="inline">{cert.event}</dd>
+        <dt>Event: </dt>
+        <dd>{cert.event}</dd>
       </div>
       <div>
-        <dt className="inline text-ink-muted">Date: </dt>
-        <dd className="inline">{cert.date}</dd>
+        <dt>Date: </dt>
+        <dd>{cert.date}</dd>
       </div>
       <div>
-        <dt className="inline text-ink-muted">Duration: </dt>
-        <dd className="inline">{cert.durationHours} hours</dd>
+        <dt>Duration: </dt>
+        <dd>{cert.durationHours} hours</dd>
       </div>
       <div>
-        <dt className="inline text-ink-muted">Organiser: </dt>
-        <dd className="inline">The Example Collective</dd>
+        <dt>Organiser: </dt>
+        <dd>The Example Collective</dd>
       </div>
       <div>
-        <dt className="inline text-ink-muted">Certificate identifier: </dt>
+        <dt>Certificate identifier: </dt>
         {/* Not <IdentifierText> here: that component wraps its text in a
             <span>, and a <dd> with nothing else in it would carry the
             identical textContent as that span -- ambiguous for a test
@@ -168,7 +194,7 @@ function CertificateDetails({ cert }: { cert: DisplayCertificate }) {
             where it always sits inside a longer sentence, so the
             surrounding element's textContent is never just the
             identifier alone. */}
-        <dd className="inline font-mono text-xs">{cert.identifier}</dd>
+        <dd className="verify__id">{cert.identifier}</dd>
       </div>
     </dl>
   );
@@ -210,10 +236,7 @@ function NotVerifiable() {
       </p>
       <p>
         If you believe this certificate is genuine, contact{' '}
-        <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-          {CONTACT_EMAIL}
-        </a>
-        .
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
       </p>
     </Panel>
   );
@@ -234,10 +257,7 @@ function CannotCheckSignature() {
         We could not load the signing keys we publish, so we could not check whether this
         certificate&apos;s signature is genuine. This is not a sign that anything is wrong
         with it -- please try again shortly, or contact{' '}
-        <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-          {CONTACT_EMAIL}
-        </a>{' '}
-        if this persists.
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> if this persists.
       </p>
     </Panel>
   );
@@ -268,11 +288,7 @@ function StateUnknown({
           ? 'We could not reach our register just now to confirm whether it is still current or has since been revoked.'
           : "This certificate does not carry an identifier we can look up, so we cannot confirm whether it is still current or has since been revoked."}{' '}
         This is not a sign that the certificate is invalid -- please try again shortly, or
-        contact{' '}
-        <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-          {CONTACT_EMAIL}
-        </a>
-        .
+        contact <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
       </p>
       <CertificateDetails cert={cert} />
     </Panel>
@@ -295,10 +311,7 @@ function NotInRegister({ cert }: { cert: DisplayCertificate }) {
         below. We read our register successfully, but it does not currently list this
         certificate&apos;s identifier. This can happen briefly right after issuance and is not
         a sign that anything is wrong -- if it persists, contact{' '}
-        <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>
-          {CONTACT_EMAIL}
-        </a>
-        .
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
       </p>
       <CertificateDetails cert={cert} />
     </Panel>
@@ -374,14 +387,15 @@ function RecordUnknown({ identifier }: { identifier: string }) {
 }
 
 /**
- * Minor 3: the token-less flow's only input is the raw `:identifier` URL
- * segment, never confirmed by any signature -- unlike `VerifyWithToken`,
- * below, which always uses the token's own cryptographically-confirmed
- * `identifier` field instead of the URL segment when both are available.
- * Applying `certificate._CERTIFICATE_ID_RE`'s own shape here closes the
- * one gap that leaves: a URL that never named one of our certificates at
- * all no longer reads as "not found" (which implies a real, absent
- * identifier) or gets echoed verbatim under this page's own heading.
+ * Minor 3: the token-less flow's only input is the raw identifier this
+ * page was given, never confirmed by any signature -- unlike
+ * `VerifyWithToken`, below, which always uses the token's own
+ * cryptographically-confirmed `identifier` field instead of the given one
+ * when both are available. Applying `certificate._CERTIFICATE_ID_RE`'s own
+ * shape here closes the one gap that leaves: an identifier that never
+ * named one of our certificates at all no longer reads as "not found"
+ * (which implies a real, absent identifier) or gets echoed verbatim under
+ * this page's own heading.
  */
 function InvalidIdentifierShape({ identifier }: { identifier: string }) {
   return (
@@ -497,25 +511,18 @@ function VerifyTokenless({ identifier }: { identifier: string }) {
   return <RecordUnknown identifier={identifier} />;
 }
 
-export function VerifyPage() {
-  const { identifier } = useParams<{ identifier: string }>();
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-
+export function VerifyPage({ identifier, token }: { identifier?: string; token?: string }) {
   return (
-    <div className="max-w-content mx-auto px-6 py-12">
-      <div className="max-w-xl">
-        <h1 className="font-serif text-3xl mb-6">Certificate verification</h1>
-        {!identifier ? (
-          <Panel tone="danger" title="No certificate identifier">
-            <p>This link does not name a certificate to check.</p>
-          </Panel>
-        ) : token ? (
-          <VerifyWithToken token={token} />
-        ) : (
-          <VerifyTokenless identifier={identifier} />
-        )}
-      </div>
+    <div className="verify">
+      {!identifier ? (
+        <Panel tone="danger" title="No certificate identifier">
+          <p>This link does not name a certificate to check.</p>
+        </Panel>
+      ) : token ? (
+        <VerifyWithToken token={token} />
+      ) : (
+        <VerifyTokenless identifier={identifier} />
+      )}
     </div>
   );
 }

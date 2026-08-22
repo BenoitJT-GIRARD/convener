@@ -151,15 +151,19 @@ FILE_VERSION: Final = 1
 #:
 #: **Correction (task 6):** this used to end `app/#/signup/`, a
 #: `HashRouter` fragment matching `app/src/App.tsx`'s own
-#: `path="/signup/:eventId"` -- the same convention `certificate.
-#: VERIFICATION_BASE` and `survey_invite.SURVEY_BASE` still use for their
-#: own addresses. Task 6 moved registration out of that application
-#: entirely, onto an island mounted on the public event page (D-18); this
-#: now targets that page's own, real address instead --
-#: `site/src/event.njk`'s permalink, `/events/<event id>/` (D-19) -- a
-#: server path this time, not a fragment, since the site itself is what
-#: GitHub Pages serves at that path. `test_workflows.py` pins the shape
-#: against `event.njk`'s own permalink expression.
+#: `path="/signup/:eventId"` -- the same convention `survey_invite.
+#: SURVEY_BASE` still uses for its own address (`certificate.
+#: VERIFICATION_BASE` used to as well, until task 7 -- see that constant's
+#: own comment for why its own move looked different from this one). Task 6
+#: moved registration out of that application entirely, onto an island
+#: mounted on the public event page (D-18); this now targets that page's
+#: own, real address instead -- `site/src/event.njk`'s permalink,
+#: `/events/<event id>/` (D-19) -- a server path this time, not a
+#: fragment, since the site itself is what GitHub Pages serves at that
+#: path. `test_workflows.py` pins the shape against `event.njk`'s own
+#: permalink expression. Unlike `certificate.VERIFICATION_BASE`, dropping
+#: the fragment here is safe: `signup_url` carries only an event id, never
+#: a name.
 SIGNUP_BASE: Final = "https://example-instance.github.io/example-showcase/events/"
 
 

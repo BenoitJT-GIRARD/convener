@@ -163,46 +163,65 @@ def test_vite_config_base_no_longer_points_at_the_private_repo() -> None:
     )
 
 
-def test_app_route_matches_certificate_verification_base() -> None:
-    """Important 3 (fix round 1, task 13): App.tsx declares
-    `<Route path="/verify/:identifier" element={<VerifyRoute />} />` --
-    mutating that path left the full app suite at 1097 passed, 0 failures,
-    and the consequence is not a 404: App.tsx's own `<Route path="/*"
-    element={<Shell />} />` catches everything else, so every already-
-    printed QR code would silently start landing a stranger on the
-    authenticated cockpit's login screen. No test in app/ reads the
-    application's route table at all -- every case in verify.test.tsx
-    mounts VerifyPage directly on a MemoryRouter path of its own choosing.
-
-    Same idiom as test_vite_config_base_path_targets_the_vitrine_app_subtree,
-    just above: read the source file as text, pinned against the one thing
-    that has to agree with it -- certificate.VERIFICATION_BASE, which the
-    shared fixture also carries as `verification_base` (D-14: a rule
-    written on both sides of the language boundary, bound by one fixture
-    read from both, not two hand-typed literals that could drift)."""
-    fragment = certificate.VERIFICATION_BASE.split("#", 1)[1]  # "/verify/"
-    expected_path = f"{fragment}:identifier"  # "/verify/:identifier"
+def test_app_no_longer_declares_a_verify_route() -> None:
+    """Task 7 moved certificate verification off `App.tsx`'s own
+    `<Route path="/verify/:identifier" .../>` onto a static page's own
+    island (`site/src/verify.njk`, `app/src/islands/verify/`), the same
+    move task 6 made for registration's own `/signup/:eventId` (see git
+    history for the route this replaced). A route left behind here would
+    still technically work -- `App.tsx`'s own `<Route path="/*"
+    element={<Shell />} />` catches everything else, so a stray route is
+    dead code, not dead code with a live consumer -- but every certificate
+    printed from now on carries `VERIFICATION_BASE`'s *new* address, and
+    this pin is what would catch the old route quietly reappearing."""
     app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
-    assert f'path="{expected_path}"' in app_tsx, (
-        f"{APP_TSX.as_posix()} does not declare a route at "
-        f"{expected_path!r} -- this must match "
-        "certificate.VERIFICATION_BASE's own fragment, or every printed "
-        "QR code lands a stranger on the authenticated Shell instead of "
-        "the public verification page"
+    assert '"/verify/:identifier"' not in app_tsx, (
+        f"{APP_TSX.as_posix()} still declares a route at "
+        '"/verify/:identifier" -- task 7 moved certificate verification '
+        "onto the static verify page's own island instead"
     )
 
 
-def test_certificate_verification_base_targets_the_vitrine_app_subtree() -> None:
-    """M4, fix round 1 (task 16b's review): the D-14 pin just above binds
-    `#/verify/` to `App.tsx`'s route literal, but nothing bound the host
-    and path *before* that fragment -- `/example-showcase/app/` -- to
-    `vite.config.ts`'s own `base`. Changing that base would make every
-    printed QR code 404 with the route pin still green, because the pin
-    only ever looks at what comes after `#`."""
-    assert EXPECTED_BASE_PATH in certificate.VERIFICATION_BASE, (
-        f"certificate.VERIFICATION_BASE does not carry {EXPECTED_BASE_PATH!r} "
-        f"-- it would not match app/vite.config.ts's own base, and every "
-        "printed QR code would 404 once served"
+#: `site/src/verify.njk`'s own permalink -- a fixed, static page (unlike
+#: `event.njk`'s per-edition pagination), because a certificate names no
+#: event this page could key a per-page address off.
+VERIFY_TEMPLATE = Path("site/src/verify.njk")
+VERIFY_PERMALINK = "/verify/"
+
+
+def test_certificate_verification_base_matches_the_verify_page_permalink() -> None:
+    """Task 7 correction of the D-14 pin `test_app_route_matches_
+    certificate_verification_base` used to make (see git history): `App.tsx`
+    no longer declares this route at all, so the host-and-path portion of
+    `VERIFICATION_BASE` -- everything *before* the `#` -- must now match
+    the static verify page's own address instead. The fragment *after* the
+    `#` is a separate, and more important, property -- see
+    `test_verification_url_carries_the_token_after_the_fragment_not_before_it`
+    in `test_certificate.py` for that half, unchanged by this move."""
+    verify_njk = (ROOT / VERIFY_TEMPLATE).read_text(encoding="utf-8")
+    assert f'permalink: "{VERIFY_PERMALINK}"' in verify_njk, (
+        f"{VERIFY_TEMPLATE.as_posix()} does not declare the permalink "
+        f"{VERIFY_PERMALINK!r} this pin assumes -- update both together"
+    )
+    host_and_path = certificate.VERIFICATION_BASE.split("#", 1)[0]
+    assert host_and_path.endswith(VERIFY_PERMALINK), (
+        f"certificate.VERIFICATION_BASE ({certificate.VERIFICATION_BASE!r}) "
+        f"does not carry the verify page's own address ({VERIFY_PERMALINK!r}) "
+        "before its fragment -- every printed QR code would 404 once served"
+    )
+
+
+def test_certificate_verification_base_no_longer_targets_the_app_subtree() -> None:
+    """Same gap `test_registration_signup_base_no_longer_targets_the_app_
+    subtree` guards for `SIGNUP_BASE`, applied here: task 7 moved
+    verification off the app's own route onto the static verify page
+    above, so a published certificate's address should no longer carry the
+    app's own asset subtree."""
+    assert EXPECTED_BASE_PATH not in certificate.VERIFICATION_BASE, (
+        f"certificate.VERIFICATION_BASE still carries {EXPECTED_BASE_PATH!r} "
+        "-- task 7 moved verification off the app's own route onto the "
+        "verify page; every printed certificate should target that page "
+        "instead"
     )
 
 

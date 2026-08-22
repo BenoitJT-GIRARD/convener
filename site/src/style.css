@@ -99,6 +99,18 @@
   --white-rgb:    255, 255, 255;
 /* END GENERATED TOKENS -- edit data/brand.json, not this block */
 
+  /* Task 7: the same deliberate exception `app/src/design/tokens.css`
+   * documents at its own `--danger`/`--info` -- no original Anonymous drew
+   * ever needed a rejection colour or a soft informational one, so
+   * `data/brand.json` does not carry either and this file does not
+   * pretend it does. Same values as that file's own two, so the
+   * certificate-verification page's four answers read as one visual
+   * language whether reached through the operators' app or this site.
+   * Measured on this file's own `--surface` (cream), the ground every
+   * `.verify__panel` sits on: danger 7.0, info 5.02, both AA (>= 4.5). */
+  --danger:       #9b2226;
+  --info:         #4a6c75;
+
   --gutter:       clamp(1.25rem, 4vw, 2.5rem);
   --content-w:    1100px;
 
@@ -418,6 +430,53 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-weight: 700;
   margin-top: .85rem;
 }
+
+/* ── Certificate verification island (task 7) ────────────────
+ * `app/src/islands/verify/VerifyPage.tsx`'s own class names -- plain,
+ * semantic strings, the same reasoning `.signup-form`'s own comment gives:
+ * this component renders inside a page that already loads this
+ * stylesheet, and pulling in the app's own Tailwind build here would leak
+ * site-wide. `.notice` (above) is reused as the one panel shape for every
+ * answer this page gives -- valid, revoked, not verifiable, state
+ * unknown, and the token-less register-only answers -- one cream box
+ * against the turquoise field, four accent colours, not five separate
+ * panel styles invented per state. */
+.verify { max-width: 42rem; }
+.verify__panel { border-left-width: 6px; }
+.verify__panel--primary { border-left-color: var(--turquoise-d); }
+.verify__panel--accent  { border-left-color: var(--purple); }
+.verify__panel--danger  { border-left-color: var(--danger); }
+.verify__panel--info    { border-left-color: var(--info); }
+.verify__eyebrow {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: .85rem;
+}
+/* `--purple` on `--surface` is `purple_on_cream`, already measured at
+ * 11.26 (data/brand.json). `--turquoise-d` on `--surface` is a new
+ * pairing this task introduces -- turquoise_text_on_cream, 5.41, recorded
+ * in data/brand.json alongside the rest of that table (task 4's own
+ * rule: every text-on-ground pairing introduced is measured, and the
+ * table updated). `--danger`/`--info` are measured in this file's own
+ * :root comment, above, since neither is a data/brand.json colour. */
+.verify__eyebrow--primary { color: var(--turquoise-d); }
+.verify__eyebrow--accent  { color: var(--purple); }
+.verify__eyebrow--danger  { color: var(--danger); }
+.verify__eyebrow--info    { color: var(--info); }
+.verify__panel p { margin-top: 0; }
+.verify__panel p + p { margin-top: .85rem; }
+.verify__id { font-family: var(--ff-mono); font-size: .82rem; }
+.verify__details { margin-top: 1rem; }
+.verify__details div + div { margin-top: .3rem; }
+.verify__details dt {
+  display: inline;
+  color: var(--ink-mute);
+}
+.verify__details dd { display: inline; margin: 0; }
+.verify__checking { color: var(--ink-mute); }
 
 /* Fix round 2: the "Discuss" pill an upcoming edition carries once
  * `forum_thread` is set -- reuses `.archive__action--alt`, the same pill

@@ -64,8 +64,49 @@ function islandSignupConfig() {
   };
 }
 
+/**
+ * Task 7: `mode === 'island-verify'` builds the certificate-verification
+ * island the same way `islandSignupConfig` above builds the registration
+ * one -- its own, separate artefact (P-2), picked apart at the command
+ * line by `npm run build`'s third `vite build` call. Everything
+ * `islandSignupConfig`'s own comment explains about fixed output names,
+ * `base: '/app/'`, and skipping `copyPublicDir` applies identically here:
+ * the consumer is `site/src/verify.njk`, a foreign toolchain with no
+ * manifest to read hashed names from, and this bundle runs on a page the
+ * *site* serves, whose own templates already address the app's published
+ * assets root-relative to the site's own root.
+ *
+ * No CSS import from this entry either, for the identical reason
+ * `islandSignupConfig`'s own comment gives: the island's class names are
+ * plain, semantic strings (`verify__panel`, ...) styled by
+ * `site/src/style.css`, which the verify page already loads -- see
+ * `VerifyPage.tsx`'s own module comment.
+ */
+function islandVerifyConfig() {
+  return {
+    plugins: [react()],
+    base: '/app/',
+    build: {
+      outDir: 'dist/islands/verify',
+      emptyOutDir: true,
+      copyPublicDir: false,
+      cssCodeSplit: false,
+      rollupOptions: {
+        input: fileURLToPath(new URL('./src/islands/verify/main.tsx', import.meta.url)),
+        output: {
+          format: 'es' as const,
+          entryFileNames: 'verify.js',
+          chunkFileNames: 'verify-[name].js',
+          assetFileNames: 'verify.[ext]',
+        },
+      },
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   if (mode === 'island-signup') return islandSignupConfig();
+  if (mode === 'island-verify') return islandVerifyConfig();
 
   return {
     plugins: [react()],
@@ -85,8 +126,9 @@ export default defineConfig(({ mode }) => {
         // crypto the phase 4 promise rests on (task 16's own survey intake is
         // the same promise, made a second time for a second page), while
         // `islands/signup/SignupForm.tsx` and `SurveyForm.tsx` are UI like
-        // every other screen. `verify/VerifyPage.tsx` is excluded for the
-        // same reason; the rest of `verify/` is pure logic (crypto
+        // every other screen. `islands/verify/VerifyPage.tsx` (moved here
+        // from `verify/VerifyPage.tsx` by task 7) is excluded for the same
+        // reason; the rest of `verify/` is pure logic (crypto
         // verification, register lookup, published-key loading, display
         // formatting) the phase 4 certificate promise rests on just as
         // directly as `encrypt.ts` does.

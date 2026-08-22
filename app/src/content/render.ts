@@ -22,11 +22,14 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  *
  * Task 6: this used to be a `HashRouter` fragment
  * (`App.tsx`'s `path="/signup/:eventId"`, the convention
- * `certificate.VERIFICATION_BASE` and `survey_invite.SURVEY_BASE` still
- * use for their own addresses) -- registration left that route for an
- * island mounted on the public event page, so this now points at that
- * page's own address instead: `site/src/event.njk`'s permalink,
- * `/events/<event id>/` (D-19).
+ * `survey_invite.SURVEY_BASE` still uses for its own address --
+ * `certificate.VERIFICATION_BASE` used to as well, until task 7 moved
+ * certificate verification onto its own island too, keeping the fragment
+ * for a reason this address does not share: see that constant's own
+ * comment) -- registration left that route for an island mounted on the
+ * public event page, so this now points at that page's own address
+ * instead: `site/src/event.njk`'s permalink, `/events/<event id>/`
+ * (D-19).
  */
 const SIGNUP_BASE = 'https://example-instance.github.io/example-showcase/events/';
 

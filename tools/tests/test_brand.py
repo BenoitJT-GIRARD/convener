@@ -187,7 +187,9 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
         checked += 1
     # Every entry data/brand.json currently carries -- a change to that
     # section without a matching change here would otherwise pass silently.
-    assert checked == 9
+    # 9 through task 4, plus 2 task 7 added for the verify page's own
+    # panel (turquoise_text_on_cream, ink_muted_on_cream).
+    assert checked == 11
 
 
 def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
