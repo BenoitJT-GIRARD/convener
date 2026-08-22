@@ -69,7 +69,7 @@ import segno
 
 from .registration import signup_url
 
-__all__ = ["QR_BORDER", "registration_code_svg"]
+__all__ = ["QR_BORDER", "registration_code_modules", "registration_code_svg"]
 
 #: Roughly 15% error correction -- the same choice `delivery.py` makes for
 #: the certificate's own QR code, for the same reason: comfortable
@@ -114,3 +114,22 @@ def registration_code_svg(event_id: str, *, dark: str) -> str:
         lineclass="registration-qr__line",
         title=url,
     )
+
+
+def registration_code_modules(event_id: str) -> int:
+    """The registration QR's own width, in modules, quiet zone included --
+    the one number task 4's print derivation needs to work out the code's
+    physical size once printed (`formats.qr_module_size_mm`), and the one
+    this function computes the same way `registration_code_svg` itself
+    does (same URL, same error level, same `QR_BORDER`) rather than a
+    second, independent guess at segno's own version choice: a real event
+    id makes a short URL (version 4, 33 data modules) today, but nothing
+    stops a longer one bumping the version and, with it, the module count
+    a fixed physical slot has to divide the paper's own size by -- see that
+    function's own docstring for why this matters at print resolution and
+    not on a screen.
+    """
+    url = signup_url(event_id)
+    qr = segno.make(url, error=_QR_ERROR_LEVEL)
+    modules_across, _ = qr.symbol_size(border=QR_BORDER)
+    return int(modules_across)

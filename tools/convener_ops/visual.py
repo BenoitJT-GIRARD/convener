@@ -228,8 +228,12 @@ from .ribbon import (
 )
 
 __all__ = [
+    "REGISTRATION_SLOT_PADDING_VMIN",
+    "REGISTRATION_SLOT_VMIN",
+    "WIDE_ASPECT_THRESHOLD",
     "Announcement",
     "date_line",
+    "is_wide",
     "paris_standing_start",
     "render_announcement",
 ]
@@ -805,6 +809,78 @@ def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
+# The wide derivation (task 4): a banner is not a squashed poster
+# ---------------------------------------------------------------------------
+#
+# `formats.SQUARE` and `formats.PRINT` both render the composition above
+# unchanged -- a taller canvas only ever gives every band *more* room. Only
+# `formats.BANNER` (1200x630) is short enough that the square's full
+# vertical rhythm (wordmark, hero, talk title, date, "what to expect" plus
+# photo, register) cannot all fit without clipping, overlapping, or
+# shrinking text below a legible size -- three outcomes this task's own
+# brief forbids equally. Something has to give; two things do, chosen for
+# being the *least* essential to a share-preview thumbnail glimpsed in a
+# feed, never studied the way a poster on an institute wall is:
+#
+# - `_SERIES_HTML` ("READ TOGETHER" plus the two-line invitation)
+#   restates, at length, exactly what the wordmark band immediately above
+#   it already names -- the one line of brand identity a share preview
+#   needs, not a second, larger repetition of it.
+# - `_EXPECT_HTML` (the three "before/D-Day/after" rows) explains a process
+#   to someone who has decided to attend and is reading for a minute, not
+#   someone deciding whether to click through a link preview.
+#
+# Both are dropped entirely -- not hidden with CSS while still present in
+# the document, so nothing about them can be mistaken for a fallback that
+# almost renders. What remains is rearranged into two columns rather than
+# stacked, because a banner's own width is the resource the square does not
+# have and the wide shape is what makes a two-column layout make sense: the
+# talk title, the date and the registration code down the left, the
+# speaker's frame on the right -- see the `.poster--wide` rule for the
+# mechanism, and `render_announcement`'s own docstring for why the register
+# band's row can never be the one that gives.
+#
+# `is_wide` is a plain function of the two numbers `render_announcement`
+# already receives, not a CSS media query the browser evaluates at its own
+# viewport: every one of this project's three named formats is rendered
+# once, to one screenshot, at one already-known size (task 5's own pinned
+# engine, never resized after the fact), so there is nothing for a media
+# query to answer that this function does not already know when it builds
+# the page -- and a plain Python conditional is what every other
+# size-dependent choice in this module already is (`_scaled_font_size`,
+# `_ribbon_safe_margins`), not a second mechanism next to them.
+WIDE_ASPECT_THRESHOLD: Final = 1.5
+
+
+def is_wide(width: float, height: float) -> bool:
+    """Whether a canvas this shape renders the banner derivation rather
+    than the square/print one.
+
+    Comfortably below the banner's own 1200x630 (1.905) and comfortably
+    above both the square's 1:1 and the print poster's own portrait A4
+    ratio (~0.71) -- see `formats.py` for the three named sizes this
+    threshold has to tell apart, and the section above for what "wide"
+    changes about the composition.
+    """
+    if width <= 0 or height <= 0:
+        raise ValueError("width and height must both be positive")
+    return width / height >= WIDE_ASPECT_THRESHOLD
+
+
+#: The registration slot's own footprint and inner padding, in vmin --
+#: named constants rather than literals inside the CSS block below, because
+#: `formats.qr_module_size_mm` needs these same two numbers to work out the
+#: registration QR's physical module size at print resolution (F-03's
+#: seventh channel: a poster actually pinned to a wall, where "physical
+#: module size" is a real, measurable thing, not a figure of speech). A
+#: hand-copied second reading of "12.5" and "0.5" over there could silently
+#: drift from what this page actually renders; one is threaded through
+#: instead.
+REGISTRATION_SLOT_VMIN: Final = 12.5
+REGISTRATION_SLOT_PADDING_VMIN: Final = 0.5
+
+
+# ---------------------------------------------------------------------------
 # The composition itself
 # ---------------------------------------------------------------------------
 
@@ -884,6 +960,50 @@ def render_announcement(
     )
     safe_left_vw, safe_right_vw = _ribbon_safe_margins(width, height, root)
     safe_content_right_vw = _ribbon_content_right_margin(width, height, root)
+
+    wide = is_wide(width, height)
+    poster_class = "poster poster--wide" if wide else "poster"
+    title_band = f"""\
+    <div class="band band--talk-title">
+      <p style="font-size: {title_size}vw">{safe_title}</p>
+    </div>"""
+    register_band = f"""\
+    <div class="register">
+      <p>Register<br>here</p>
+      {registration_slot}
+    </div>"""
+    if wide:
+        # See the module's own "The wide derivation" section: the series
+        # hero and the "what to expect" copy are dropped outright, not
+        # merely hidden, and the frame stands alone rather than sharing
+        # `.content` with the copy that no longer exists. Title and date
+        # are wrapped together in `.wide-heading` -- see the `.poster--wide
+        # > .wide-heading` rule's own comment for why one flex column,
+        # centred as a pair, reads better than two separate grid rows that
+        # `.frame-wrap`'s own spanning height can pull apart.
+        body = f"""\
+    {_WORDMARK_HTML}
+    <div class="wide-heading">
+{title_band}
+    <p class="date-line">{when}</p>
+    </div>
+    <div class="frame-wrap">{frame}</div>
+{register_band}
+    {ribbon_svg}"""
+    else:
+        body = f"""\
+    {_WORDMARK_HTML}
+    {_SERIES_HTML}
+{title_band}
+    <p class="date-line">{when}</p>
+    <div class="content">
+      <div class="expect-col">
+        {_EXPECT_HTML}
+      </div>
+      <div class="frame-wrap">{frame}</div>
+    </div>
+{register_band}
+    {ribbon_svg}"""
 
     return f"""<!doctype html>
 <html lang="en">
@@ -1084,9 +1204,9 @@ def render_announcement(
   }}
   .registration-code-slot {{
     flex: 0 0 auto;
-    width: 12.5vmin;
-    height: 12.5vmin;
-    padding: 0.5vmin;
+    width: {_num(REGISTRATION_SLOT_VMIN)}vmin;
+    height: {_num(REGISTRATION_SLOT_VMIN)}vmin;
+    padding: {_num(REGISTRATION_SLOT_PADDING_VMIN)}vmin;
     background: var(--white);
     display: flex;
     align-items: center;
@@ -1105,27 +1225,53 @@ def render_announcement(
     height: 100%;
     pointer-events: none;
   }}
+
+  /* The wide (banner) derivation -- see the module's own "The wide
+     derivation" section for why this exists and what it drops. Dead
+     weight when `wide` is false: no element ever carries
+     `poster--wide` on a square or print render, so nothing below ever
+     matches. */
+  .poster--wide {{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "wordmark wordmark"
+      "heading  frame"
+      "register frame";
+    column-gap: 2vmin;
+    row-gap: 0.6vmin;
+  }}
+  .poster--wide > .band--wordmark {{ grid-area: wordmark; }}
+  /* Title and date are wrapped in one flex column (`.wide-heading`,
+     `render_announcement`'s own markup) rather than placed as two
+     separate grid rows: `frame`'s own natural height, spanning both this
+     area and `register`'s, can exceed what the title and date need
+     together, and a single row that size just leaves the two of them
+     stranded apart -- one flex column centred as a unit collects any
+     slack above and below the *pair* instead, which reads as deliberate
+     spacing rather than a gap. */
+  .poster--wide > .wide-heading {{
+    grid-area: heading;
+    align-self: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vmin;
+    min-height: 0;
+  }}
+  .poster--wide .wide-heading .date-line {{ margin: 0 var(--safe-r) 0 var(--safe-l); }}
+  .poster--wide > .frame-wrap {{
+    grid-area: frame;
+    align-self: center;
+    justify-self: end;
+    padding: 0 var(--safe-r-content) 0 0;
+  }}
+  .poster--wide > .register {{ grid-area: register; }}
 </style>
 </head>
 <body>
-  <div class="poster">
-    {_WORDMARK_HTML}
-    {_SERIES_HTML}
-    <div class="band band--talk-title">
-      <p style="font-size: {title_size}vw">{safe_title}</p>
-    </div>
-    <p class="date-line">{when}</p>
-    <div class="content">
-      <div class="expect-col">
-        {_EXPECT_HTML}
-      </div>
-      <div class="frame-wrap">{frame}</div>
-    </div>
-    <div class="register">
-      <p>Register<br>here</p>
-      {registration_slot}
-    </div>
-    {ribbon_svg}
+  <div class="{poster_class}">
+{body}
   </div>
 </body>
 </html>

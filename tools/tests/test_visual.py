@@ -27,6 +27,7 @@ import pytest
 from conftest import speaker
 
 import convener_ops.visual as visual
+from convener_ops.formats import BANNER, FORMATS, PRINT, SQUARE
 from convener_ops.paths import repo_root
 from convener_ops.public_data import to_public
 from convener_ops.ribbon import waypoints
@@ -45,6 +46,7 @@ from convener_ops.visual import (
     _ribbon_safe_margins,
     _title_font_size,
     date_line,
+    is_wide,
     paris_standing_start,
     render_announcement,
 )
@@ -725,3 +727,204 @@ def test_the_series_title_is_centred_like_the_talk_title_and_date() -> None:
     corrects the one heading that had been left flush left."""
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
     assert "text-align: center" in _rule_block(doc, ".hero h1")
+
+
+# ---------------------------------------------------------------------------
+# Task 4: three formats, one template (`formats.py` names the three real
+# sizes). Every property established above for the square is re-checked
+# here at the banner's and the print poster's own real dimensions, not
+# assumed to carry over -- the banner is exactly where this task's own
+# brief says the known defect lived ("the banner overflows at the bottom"),
+# and a test that only ever renders the square proves nothing about it.
+# ---------------------------------------------------------------------------
+
+
+def _real_long_title() -> str:
+    """The real fixture's own longest title (`site/src/_data/events.json`,
+    MRG-04) -- read directly rather than retyped, so a future edit to that
+    title could not silently desync this suite's own "does the real long
+    title still compose" check from what the fixture actually contains."""
+    events = json.loads(
+        (ROOT / "site" / "src" / "_data" / "events.json").read_text(encoding="utf-8")
+    )
+    entry = next(e for e in events if e["id"] == "MRG-04")
+    return str(entry["title"])
+
+
+# --- `is_wide`: the plain function that chooses a canvas's derivation. ---
+
+
+def test_is_wide_classifies_the_three_named_formats_correctly() -> None:
+    assert is_wide(SQUARE.width, SQUARE.height) is False
+    assert is_wide(BANNER.width, BANNER.height) is True
+    assert is_wide(PRINT.width, PRINT.height) is False
+
+
+def test_is_wide_reads_the_shape_not_the_pixel_count() -> None:
+    # Scaling both sides up together must not flip the classification.
+    assert is_wide(2400.0, 1260.0) is True  # the banner's own shape, doubled
+    assert is_wide(2400.0, 2400.0) is False  # the square's own shape, doubled
+
+
+def test_is_wide_rejects_a_non_positive_canvas() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        is_wide(0, 100)
+    with pytest.raises(ValueError, match="positive"):
+        is_wide(100, -1)
+
+
+# --- The banner derivation drops the hero and "what to expect" copy; the
+# square and the print poster keep both. ---
+
+
+def test_the_banner_drops_the_hero_and_expect_the_square_and_print_keep_both() -> None:
+    banner_doc = render_announcement(
+        _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
+    )
+    assert '<div class="poster poster--wide">' in banner_doc
+    assert '<section class="hero">' not in banner_doc
+    assert "What to expect?" not in banner_doc
+    assert '<div class="expect-col">' not in banner_doc
+
+    for fmt in (SQUARE, PRINT):
+        doc = render_announcement(
+            _announcement(), width=fmt.width, height=fmt.height, root=ROOT
+        )
+        assert '<div class="poster">' in doc, fmt.name
+        assert "poster--wide" not in doc.split("</style>")[1], fmt.name
+        assert '<section class="hero">' in doc, fmt.name
+        assert "What to expect?" in doc, fmt.name
+
+
+def test_the_banner_still_shows_title_date_frame_and_register() -> None:
+    """Fewer elements, not fewer of the ones that matter: the talk title,
+    the date, the speaker's own frame and the registration code all
+    survive the banner's own reduction -- only the series hero and the
+    process explanation are dropped (see the test above)."""
+    doc = render_announcement(
+        _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
+    )
+    assert "On analytical engines" in doc
+    assert date_line(date(2026, 3, 12)) in doc
+    assert '<figure class="frame">' in doc
+    assert doc.count("data-registration-code-slot") == 1
+
+
+def test_a_long_real_title_composes_without_clipping_in_every_format() -> None:
+    """The real fixture's own longest title (MRG-04) -- the exact case this
+    task's own brief names ("a title that already needed four lines in the
+    square") -- reaches the page whole in every one of the three named
+    formats: never truncated, never ellipsised, and never at the cost of
+    the registration code."""
+    title = _real_long_title()
+    for fmt in FORMATS:
+        doc = render_announcement(
+            _announcement(title=title), width=fmt.width, height=fmt.height, root=ROOT
+        )
+        assert title in doc, fmt.name
+        assert "…" not in doc, fmt.name
+        assert "text-overflow" not in _rule_block(doc, ".band--talk-title p"), fmt.name
+        assert doc.count("data-registration-code-slot") == 1, fmt.name
+
+
+# --- Properties already pinned for the square, re-pinned at the three
+# named formats rather than assumed to transfer. ---
+
+
+def test_the_safe_area_clears_every_ribbon_waypoint_at_each_named_format() -> None:
+    """The same property `test_the_safe_area_clears_every_ribbon_waypoint`
+    already pins at three generic aspect ratios, re-checked here at the
+    three real, named sizes this task settles on (`formats.py`) -- pinning
+    the actual numbers a caller really renders at, not only placeholders
+    that happen to share their shape."""
+    for fmt in FORMATS:
+        left_vw, right_vw = _ribbon_safe_margins(fmt.width, fmt.height, ROOT)
+        left_px = left_vw / 100.0 * fmt.width
+        right_px = right_vw / 100.0 * fmt.width
+
+        w = waypoints(fmt.width, fmt.height)
+        left_points = (
+            w.left_top_entry,
+            w.left_top_exit,
+            *w.left_loop_arc,
+            w.left_tail_bulge,
+            w.left_bottom_exit,
+        )
+        right_points = (
+            *w.right_loop_arc,
+            w.right_loop_out,
+            w.right_tail_start,
+            w.right_tail_bulge,
+            w.right_tail_exit,
+        )
+        deepest_left = max(x for x, _y in left_points)
+        deepest_right = fmt.width - min(x for x, _y in right_points)
+
+        assert deepest_left <= left_px, fmt.name
+        assert deepest_right <= right_px, fmt.name
+
+
+def test_no_portrait_is_ever_rendered_without_consent_in_any_format() -> None:
+    for fmt in FORMATS:
+        doc = render_announcement(
+            _announcement(portrait_data_uri=None),
+            width=fmt.width,
+            height=fmt.height,
+            root=ROOT,
+        )
+        assert "<img" not in doc, fmt.name
+        assert '<div class="frame__placeholder"' in doc, fmt.name
+
+
+def test_no_brand_colour_hand_typed_outside_root_or_stroke_in_any_format() -> None:
+    """The same guard already run once at the square, re-run at all three
+    formats: the banner's own extra `.poster--wide` rules are new CSS this
+    task wrote, and nothing already checked them for a hand-typed colour."""
+    brand = _brand()
+    colours = {value for value in brand["colour"].values() if isinstance(value, str)}
+    colours |= {value for value in brand["derived"].values() if isinstance(value, str)}
+
+    for fmt in FORMATS:
+        doc = render_announcement(
+            _announcement(), width=fmt.width, height=fmt.height, root=ROOT
+        )
+        root_block = _root_block_text(doc)
+        rest = doc.replace(root_block, "")
+        rest = re.sub(r'stroke="#[0-9a-fA-F]{6}"', 'stroke="EXCLUDED"', rest)
+        pattern = re.compile("|".join(re.escape(c) for c in colours), re.IGNORECASE)
+        match = pattern.search(rest)
+        assert match is None, (fmt.name, match.group(0) if match else "")
+
+
+# --- The register row in the wide grid can never be the one that shrinks
+# -- the banner's own version of
+# `test_the_register_band_is_never_squeezed_by_flexible_content`. ---
+
+
+def test_the_register_row_never_shrinks_in_the_wide_grid() -> None:
+    """`.poster--wide`'s `wordmark` and `register` rows are both `auto` --
+    a track CSS Grid never sizes below its own item's natural size, exactly
+    the guarantee `flex: 0 0 auto` gives the square's own `.register` band
+    (see that test's own docstring). Only the `heading` row (title and date,
+    wrapped together in `.wide-heading`) is `minmax(0, 1fr)`, the one
+    allowed to give first when the banner's own 630px runs short.
+
+    Checked as a CSS property, not a rendered pixel. This test alone does
+    not catch the banner being forced back to the square's own vertical
+    rhythm (`is_wide` hard-coded to always return `False`): the
+    `.poster--wide` *rule* is always present in the stylesheet, wide render
+    or not (see that rule's own comment), so `_rule_block` still finds it
+    either way. `test_the_banner_drops_the_hero_and_expect_the_square_and_
+    print_keep_both` is the one that actually bites -- it checks whether the
+    rendered `<div>` at banner dimensions *carries* the `poster--wide`
+    class, which the mutation above removes; four tests fail against that
+    mutation in total (checked by hand, not committed; see this task's own
+    report for the full list)."""
+    doc = render_announcement(
+        _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
+    )
+    poster_wide_rule = _rule_block(doc, ".poster--wide")
+    assert re.search(r"auto\s+minmax\(0,\s*1fr\)\s+auto", poster_wide_rule)
+    assert '"wordmark wordmark"' in poster_wide_rule
+    assert '"heading  frame"' in poster_wide_rule
+    assert '"register frame"' in poster_wide_rule
