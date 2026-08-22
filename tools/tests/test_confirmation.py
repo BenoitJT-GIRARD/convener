@@ -622,12 +622,21 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     none exists yet, since the retention job itself is a later task -- so
     this test is what keeps the three prose copies from drifting apart
     until one does.
+
+    Phase 5 task 5 adds a fourth restatement, `site/src/event.njk`'s own
+    notice -- the same one-screen text `SignupForm.tsx` already carries,
+    quoted rather than redrafted (that template's own comment says so).
+    Folded into this same binding, not a second one, so the whole set
+    is pinned by one assertion and cannot drift pair by pair.
     """
     from convener_ops.confirmation import _DATA_PROTECTION
 
     signup_source = _SIGNUP_FORM.read_text(encoding="utf-8")
     eventkeys_source = (
         Path(__file__).resolve().parents[2] / "tools" / "convener_ops" / "eventkeys.py"
+    ).read_text(encoding="utf-8")
+    event_page_source = (
+        Path(__file__).resolve().parents[2] / "site" / "src" / "event.njk"
     ).read_text(encoding="utf-8")
 
     def _days(text: str) -> str:
@@ -639,8 +648,9 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     docs = _days(_normalised_docs_template())
     signup = _days(signup_source)
     eventkeys = _days(eventkeys_source)
+    event_page = _days(event_page_source)
 
-    assert code == docs == signup == eventkeys == "90"
+    assert code == docs == signup == eventkeys == event_page == "90"
 
 
 def test_signup_form_max_field_length_matches_the_python_constant() -> None:
