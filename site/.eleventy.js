@@ -122,6 +122,29 @@ function parisStandingStart(isoDate) {
   };
 }
 
+// Fix wave (branch review, minor 2): the fallback description for an
+// edition that carries no `abstract` yet -- the speaker's name, optionally
+// `, affiliation`, then " — a The Example Collective virtual seminar." -- has to
+// read the same way in three places about the same edition: event.njk's
+// own `<meta name="description">`/Open Graph/Twitter Card metadata
+// (`eleventyComputed.pageDescription`), its JSON-LD `description`, and
+// feed.njk's `<description>`. Those three used to be three separately
+// hand-typed copies; feed.njk's own comment claimed they "never state the
+// description of the same edition two different ways" while actually
+// missing the closing sentence -- the exact drift `parisStandingStart`
+// above already exists to rule out for the start time, one call site short
+// of applying here too. One function, called from all three places, so
+// there is exactly one rule to get right rather than three that happen to
+// agree today.
+function eventDescriptionFallback(event) {
+  if (event.abstract) return event.abstract;
+  let description = event.speaker_name;
+  if (event.speaker_affiliation) {
+    description = `${description}, ${event.speaker_affiliation}`;
+  }
+  return `${description} — a The Example Collective virtual seminar.`;
+}
+
 module.exports = function (cfg) {
   cfg.addPassthroughCopy('src/style.css');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
@@ -181,6 +204,13 @@ module.exports = function (cfg) {
   // why `time` (the field that would otherwise let a per-edition value
   // override the standing 12:30) does not reach this data yet.
   cfg.addFilter('parisStandingStart', parisStandingStart);
+
+  // `event | eventDescription` for event.njk's `pageDescription` (its
+  // <meta>/Open Graph/Twitter Card tags) and its own JSON-LD
+  // `description`, and for feed.njk's per-item `<description>` -- see
+  // `eventDescriptionFallback`'s own comment above for why this must be
+  // one computation, not three hand-typed copies.
+  cfg.addFilter('eventDescription', eventDescriptionFallback);
 
   // A feed item needs a machine-readable publication timestamp (RSS 2.0's
   // `pubDate`, RFC-822/1123) -- built from the *edition's own* `date`, never

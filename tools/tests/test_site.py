@@ -1679,6 +1679,56 @@ def test_the_feed_lists_every_edition_newest_first_and_nothing_else(
     assert actual == expected
 
 
+def test_the_feed_description_agrees_with_the_event_pages_own_description(
+    built_site: Path,
+) -> None:
+    """Branch review (fix wave), minor 2: `feed.njk`'s fallback description
+    for an edition with no `abstract` had drifted from `event.njk`'s
+    identical rule -- missing the closing " — a The Example Collective virtual
+    seminar." sentence -- while `feed.njk`'s own comment claimed the two
+    "never state the description of the same edition two different ways".
+    Confirmed on the real built output for MRG-04 before this fix: the
+    feed's `<description>` lacked the sentence its own `og:description`
+    and JSON-LD `description` carried. Both templates now call the one
+    shared filter (`site/.eleventy.js::eventDescriptionFallback`); this
+    pins that the feed's `<description>` for every abstract-less edition
+    matches that same edition's own page `og:description` (which the
+    share-metadata tests above already require to be non-empty), so a
+    future hand-edit to either template's copy of the rule is caught here
+    rather than only found by inspection.
+    """
+    abstractless = [e for e in _events_fixture() if not e.get("abstract")]
+    assert abstractless, (
+        f"{_EVENTS_FIXTURE.as_posix()} carries no abstract-less edition -- "
+        "nothing for this test to check the fallback against"
+    )
+
+    tree = ET.parse(built_site / "feed.xml")
+    feed_description_by_link = {
+        link.text: description.text
+        for link, description in zip(
+            tree.findall(".//item/link"),
+            tree.findall(".//item/description"),
+            strict=True,
+        )
+    }
+
+    for event in abstractless:
+        event_id = str(event["id"]).lower()
+        url = _absolute(f"/events/{event_id}/")
+        page = (built_site / "events" / event_id / "index.html").read_text(
+            encoding="utf-8"
+        )
+        og_description = re.search(
+            r'<meta property="og:description" content="([^"]*)"', page
+        )
+        assert og_description is not None, page
+        assert feed_description_by_link.get(url) == og_description.group(1), (
+            f"feed.xml's <description> for {event_id} disagrees with that "
+            "edition's own og:description"
+        )
+
+
 _ENGLISH_WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 _ENGLISH_MONTHS = (
     "Jan",

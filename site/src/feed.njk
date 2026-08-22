@@ -30,9 +30,12 @@ permalink: "/feed.xml"
   with its actual content, exactly the failure `parisToday()`/
   `paris_today` exists to rule out on the Python side of this project.
 
-  An edition with no `abstract` yet falls back to naming its speaker, the
-  same fallback event.njk's own structured-data block uses, so the two
-  never state the description of the same edition two different ways.
+  An edition with no `abstract` yet falls back to naming its speaker --
+  `event | eventDescription` (site/.eleventy.js), the one rule event.njk's
+  own `pageDescription` and structured-data block call too, so the two
+  cannot state the description of the same edition two different ways
+  (fix wave, branch review minor 2: they once did -- this filter is what
+  closes that).
 #}
 <rss version="2.0">
 <channel>
@@ -41,13 +44,7 @@ permalink: "/feed.xml"
 <description>{{ site.tagline }}</description>
 {%- for e in events | sort(true, false, 'date') %}
 {%- set itemUrl = ('/events/' ~ (e.id | lower) ~ '/') | absoluteUrl %}
-{%- set itemDescription = e.abstract %}
-{%- if not itemDescription %}
-  {%- set itemDescription = e.speaker_name %}
-  {%- if e.speaker_affiliation %}
-    {%- set itemDescription = itemDescription ~ ", " ~ e.speaker_affiliation %}
-  {%- endif %}
-{%- endif %}
+{%- set itemDescription = e | eventDescription %}
 <item>
 <title>{{ e.title }}</title>
 <link>{{ itemUrl }}</link>

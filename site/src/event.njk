@@ -27,7 +27,10 @@ permalink: "/events/{{ event.id | lower }}/"
 # here would render before that happens and could not read `event` at all.
 eleventyComputed:
   pageTitle: "{{ event.title }}"
-  pageDescription: "{% if event.abstract %}{{ event.abstract }}{% else %}{{ event.speaker_name }}{% if event.speaker_affiliation %}, {{ event.speaker_affiliation }}{% endif %} — a The Example Collective virtual seminar.{% endif %}"
+  # Fix wave (branch review, minor 2): this used to restate the fallback
+  # inline; it now calls the one shared rule (site/.eleventy.js::
+  # eventDescriptionFallback) the body below and feed.njk both call too.
+  pageDescription: "{{ event | eventDescription }}"
 ---
 
 {% set isUpcoming = event.status == "scheduled" %}
@@ -73,14 +76,15 @@ eleventyComputed:
 #}
 {% set parisTime = event.date | parisStandingStart %}
 
-{% set eventDescription = event.abstract %}
-{% if not eventDescription %}
-  {% set eventDescription = event.speaker_name %}
-  {% if event.speaker_affiliation %}
-    {% set eventDescription = eventDescription ~ ", " ~ event.speaker_affiliation %}
-  {% endif %}
-  {% set eventDescription = eventDescription ~ " — a The Example Collective virtual seminar." %}
-{% endif %}
+{#
+  Fix wave (branch review, minor 2): this same fallback -- abstract, else
+  speaker name plus optional affiliation plus the closing sentence -- also
+  feeds `pageDescription` above (Open Graph/Twitter Card) and feed.njk's
+  per-item `<description>`. One shared filter (site/.eleventy.js::
+  eventDescriptionFallback), not three hand-typed copies that could (and
+  once did) state it differently for the same edition.
+#}
+{% set eventDescription = event | eventDescription %}
 
 {% set speakerAffiliation = null %}
 {% if event.speaker_affiliation %}
