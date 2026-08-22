@@ -74,16 +74,18 @@ permalink: "/events/{{ event.id | lower }}/"
   {#
     Phase 4 spec section 4 ("Formalities"): a one-screen notice on the
     event page, before the form. The wording below is the one phase 4
-    already settled and shipped, at `app/src/signup/SignupForm.tsx`'s own
-    `Notice()` component -- quoted here rather than redrafted, because a
-    second hand-written version of a data-protection notice is exactly
-    the kind of copy that drifts unnoticed. `tools/tests/test_confirmation.py`
-    pins the retention figure ("90 days") across that component, this
-    page, `confirmation.py` and the docs copy, and
+    already settled and shipped, originally at `app/src/signup/
+    SignupForm.tsx`'s own `Notice()` component (quoted here at task 5,
+    rather than redrafted). Task 6 removed that component's own copy once
+    it mounted the registration island beneath this notice: D-18 keeps
+    text that needs no interactivity as plain static HTML, so this block
+    is now the *only* copy, not a second one kept in step with a first --
+    see `app/src/islands/signup/SignupForm.tsx`'s own module comment.
+    `tools/tests/test_confirmation.py` still pins the retention figure
+    ("90 days") across this page, `confirmation.py` and the docs copy, and
     `tools/tests/test_site.py` pins the contact address below against
-    `confirmation.CONTACT_EMAIL` the same way that suite already pins
-    `SignupForm.tsx`'s own copy -- so neither the wording nor the address
-    ever becomes a second copy that could quietly drift from the first.
+    `confirmation.CONTACT_EMAIL` -- so neither the wording nor the address
+    can quietly drift from those.
   #}
   <div class="notice">
     <p class="notice__eyebrow">Before you register</p>
@@ -110,16 +112,32 @@ permalink: "/events/{{ event.id | lower }}/"
   </div>
 
   {#
-    Task 6 mounts the registration form island exactly here, beneath this
+    Task 6: the registration island itself, mounted here, beneath this
     notice -- extracted from the operators' application into its own
-    bundle, so a visitor who wants to register never downloads the
-    cockpit (D-18's own argument). Nothing renders
+    small, self-contained bundle, so a visitor who wants to register never
+    downloads the cockpit (D-18's own argument). Nothing renders
     `event.registration_link` anywhere on this page, or anywhere else in
     this site: the room link is delivered only by the confirmation
     e-mail, never published (acceptance criterion 2).
+
+    `#registration-form` is `app/src/islands/signup/main.tsx`'s own mount
+    point -- kept as the exact id task 5 already reserved and
+    `tools/tests/test_site.py::test_the_notice_precedes_the_reserved_
+    place_for_the_registration_form` already pins, so that test needed no
+    change here. `data-event-id` is how the island learns which event
+    it is on: one static page per event (D-19), not a route param this
+    script re-parses. The element starts empty; `signup.js` fills it in,
+    which is exactly why the `<noscript>` fallback beside it exists --
+    without JavaScript, nothing here would ever render at all.
   #}
-  <p class="event__form-placeholder" id="registration-form">
-    The registration form will open here shortly.
-  </p>
+  <div id="registration-form" data-event-id="{{ event.id | lower }}"></div>
+  <noscript>
+    <p class="notice">
+      Registering needs JavaScript enabled. If you cannot enable it, write to
+      <a href="mailto:reading-group@example.test">reading-group@example.test</a>
+      and we will register you by hand.
+    </p>
+  </noscript>
+  <script type="module" src="/app/islands/signup/signup.js"></script>
 </section>
 {% endif %}

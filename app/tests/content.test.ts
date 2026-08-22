@@ -142,7 +142,7 @@ describe('substitute v2 context', () => {
 describe('speaker.signup_link matches the shared D-14 fixture', () => {
   it('carries the same signup_base as the fixture', () => {
     expect(signupLinkFixture.signup_base).toBe(
-      'https://example-instance.github.io/example-showcase/app/#/signup/',
+      'https://example-instance.github.io/example-showcase/events/',
     );
   });
 

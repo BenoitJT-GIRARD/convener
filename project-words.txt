@@ -62,3 +62,4 @@ rsquo
 noopener
 Bézier
 driftable
+noscript

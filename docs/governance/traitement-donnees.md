@@ -158,9 +158,9 @@ address the confirmation email and the event page's own notice both name.
 
 ---
 
-*See also: the event page's own notice, `site/src/event.njk` (with the
-registration form itself, still `app/src/signup/SignupForm.tsx` until phase
-5 task 6 mounts it there as an island), for what a participant reads before
+*See also: the event page's own notice, `site/src/event.njk`, carrying the
+registration form itself as a mounted island
+(`app/src/islands/signup/SignupForm.tsx`), for what a participant reads before
 registering, and
 [Operations](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md) for the full procedures behind
 every measure named above.*

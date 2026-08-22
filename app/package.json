@@ -7,7 +7,7 @@
     "prebuild": "node scripts/copy-fonts.mjs && node scripts/copy-handbook.mjs && node scripts/copy-event-keys.mjs && node scripts/copy-signing-keys.mjs && node scripts/copy-certificates.mjs && node scripts/copy-survey-status.mjs",
     "predev": "node scripts/copy-fonts.mjs && node scripts/copy-handbook.mjs && node scripts/copy-event-keys.mjs && node scripts/copy-signing-keys.mjs && node scripts/copy-certificates.mjs && node scripts/copy-survey-status.mjs",
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --mode island-signup",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",

@@ -546,8 +546,12 @@ describe('SurveyForm -- needs no organiser account', () => {
 
 // The block above proves `SurveyForm` does not *need* an account; this
 // proves the production *route* actually reaches it without one either --
-// the same "route order, not component design" property
-// `signup-form.test.tsx`'s own identical block asserts for `/signup`.
+// a property of route order in `App.tsx`, not of `SurveyForm`'s own
+// design, so it has to be checked through `App` itself. (Registration
+// used to have the identical block, in the now-deleted
+// `signup-form.test.tsx` -- task 6 moved it out of this application
+// entirely, onto an island mounted on a static page, which has no route
+// order left to prove.)
 describe('App -- the survey route in production, not standalone', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -567,7 +571,7 @@ describe('App -- the survey route in production, not standalone', () => {
     expect(screen.queryByText(/^sign in$/i)).not.toBeInTheDocument();
   });
 
-  it('editing the event id in the address bar forces a full remount, the same discipline SignupRoute uses', async () => {
+  it('editing the event id in the address bar forces a full remount, the same discipline the registration island now uses', async () => {
     vi.stubEnv('VITE_SIGNUP_RELAY_URL', 'https://signup-relay.example');
     vi.stubGlobal(
       'fetch',

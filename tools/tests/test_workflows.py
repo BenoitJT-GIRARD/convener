@@ -217,30 +217,50 @@ def test_survey_base_targets_the_vitrine_app_subtree() -> None:
     )
 
 
-def test_app_route_matches_registration_signup_base() -> None:
-    """Critical 2 (branch review): the same D-14 pin
-    `test_app_route_matches_certificate_verification_base` already makes
-    for `/verify/:identifier`, applied to the oldest of the three public
-    routes -- `registration.SIGNUP_BASE` did not exist before this fix, and
-    nothing bound `/signup/:eventId` to anything at all."""
-    fragment = registration.SIGNUP_BASE.split("#", 1)[1]  # "/signup/"
-    expected_path = f"{fragment}:eventId"  # "/signup/:eventId"
-    app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
-    assert f'path="{expected_path}"' in app_tsx, (
-        f"{APP_TSX.as_posix()} does not declare a route at "
-        f"{expected_path!r} -- this must match registration.SIGNUP_BASE's "
-        "own fragment"
+#: `site/src/event.njk`'s own permalink expression -- D-19, `event_id` IS
+#: `edition_code` lower-cased, nothing else names an event. Read from the
+#: template's own front matter rather than restated as a second literal,
+#: so a future change to that permalink fails this pin instead of quietly
+#: leaving `registration.SIGNUP_BASE` pointing at an address the site no
+#: longer serves.
+EVENT_TEMPLATE = Path("site/src/event.njk")
+EVENT_PERMALINK = "/events/{{ event.id | lower }}/"
+
+
+def test_registration_signup_base_matches_the_event_page_permalink() -> None:
+    """Task 6 correction of Critical 2 (branch review): `registration.
+    SIGNUP_BASE` used to be a `HashRouter` fragment pinned against
+    `App.tsx`'s own `path="/signup/:eventId"` route
+    (`test_app_route_matches_certificate_verification_base` still makes
+    that same pin for `/verify/:identifier`). Registration left that route
+    entirely for an island mounted on the public event page (D-18), so the
+    address it must now match is that page's own -- `event.njk`'s
+    permalink -- not a route in an application it no longer lives in."""
+    event_njk = (ROOT / EVENT_TEMPLATE).read_text(encoding="utf-8")
+    assert f'permalink: "{EVENT_PERMALINK}"' in event_njk, (
+        f"{EVENT_TEMPLATE.as_posix()} does not declare the permalink "
+        f"{EVENT_PERMALINK!r} this pin assumes -- update both together"
     )
+    prefix = EVENT_PERMALINK.split("{{", 1)[0]  # "/events/"
+    assert registration.SIGNUP_BASE.endswith(prefix), (
+        f"registration.SIGNUP_BASE ({registration.SIGNUP_BASE!r}) does not "
+        f"end with the event page's own address prefix ({prefix!r})"
+    )
+    assert registration.signup_url("mrg-042") == f"{registration.SIGNUP_BASE}mrg-042/"
 
 
-def test_registration_signup_base_targets_the_vitrine_app_subtree() -> None:
-    """Same gap as `test_certificate_verification_base_targets_the_vitrine_
-    app_subtree` and `test_survey_base_targets_the_vitrine_app_subtree`,
-    applied to the third base."""
-    assert EXPECTED_BASE_PATH in registration.SIGNUP_BASE, (
-        f"registration.SIGNUP_BASE does not carry {EXPECTED_BASE_PATH!r} "
-        "-- it would not match app/vite.config.ts's own base, and every "
-        "published signup link would 404 once served"
+def test_registration_signup_base_no_longer_targets_the_app_subtree() -> None:
+    """Same gap `test_certificate_verification_base_targets_the_vitrine_
+    app_subtree` and `test_survey_base_targets_the_vitrine_app_subtree`
+    guard for their own bases, inverted for this one: unlike verification
+    and the survey, which still live on `App.tsx` routes, a published
+    signup link that still carried `EXPECTED_BASE_PATH` after task 6 would
+    point at the now-deleted `/signup/:eventId` route's own asset
+    subtree, not at the event page that replaced it."""
+    assert EXPECTED_BASE_PATH not in registration.SIGNUP_BASE, (
+        f"registration.SIGNUP_BASE still carries {EXPECTED_BASE_PATH!r} -- "
+        "task 6 moved registration off the app's own route onto the event "
+        "page; every published signup link should target that page instead"
     )
 
 

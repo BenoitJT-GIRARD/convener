@@ -1,21 +1,27 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { SignupForm } from '../src/signup/SignupForm';
-import { App } from '../src/App';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { SignupForm } from '../src/islands/signup/SignupForm';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 
-// The fixture (D-14) carries a real RSA-2048 key pair generated once for
-// cross-language tests: `public_pem` here, `private_pem` used below to
-// decrypt what the form actually sent, and by the sibling Python test
-// (`tools/tests/test_eventkeys.py`) to decrypt what `encrypt.ts` itself
-// produces. Using the same key here as the crypto suite's own fixture --
-// rather than a second, unrelated one hardcoded in this file -- is what
-// makes decrypting the captured wire body possible at all.
+// Task 6: this suite replaces `signup-form.test.tsx`, which tested
+// `app/src/signup/SignupForm.tsx` (the operators' application's own
+// `/signup/:eventId` route -- see git history). The form is now
+// `app/src/islands/signup/SignupForm.tsx`, an island with no router of its
+// own: `eventId` is a plain prop here, not a `useParams` read, so every
+// test below renders the component directly rather than through a
+// `MemoryRouter`. Remount-by-event-id discipline moved to its own file,
+// `signup-island-mount.test.tsx`, which exercises `main.tsx::
+// mountSignupIsland` -- the thing that actually applies `key={eventId}`
+// now that `App.tsx`'s `SignupRoute` no longer exists to do it.
+//
+// The data-protection notice suite (`SignupForm -- the notice`, in the
+// old file) is gone too, not merely moved: that text no longer renders
+// from this component at all (see `SignupForm.tsx`'s own module comment)
+// -- `tools/tests/test_site.py` already covers the static copy
+// `site/src/event.njk` carries instead.
+
 const FIXTURE = cases.event_registration_encryption;
 const VALID_PEM = FIXTURE.public_pem;
-
-const RSA_KEY_BITS = 2048;
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -82,32 +88,8 @@ async function decryptEnvelopeFields(
   return JSON.parse(new TextDecoder().decode(plaintext));
 }
 
-/** A second, independent event key pair -- for the cross-event test, which
- *  needs two events with two different keys to prove a registration is
- *  never encrypted under the wrong one. */
-async function generateEventKeyPair(): Promise<{ publicPem: string; privateKey: CryptoKey }> {
-  const { publicKey, privateKey } = await crypto.subtle.generateKey(
-    {
-      name: 'RSA-OAEP',
-      modulusLength: RSA_KEY_BITS,
-      publicExponent: new Uint8Array([1, 0, 1]),
-      hash: 'SHA-256',
-    },
-    true,
-    ['encrypt', 'decrypt'],
-  );
-  const der = await crypto.subtle.exportKey('spki', publicKey);
-  return { publicPem: toPem(der, 'PUBLIC KEY'), privateKey };
-}
-
-function renderSignup(eventId = 'mrg-042') {
-  return render(
-    <MemoryRouter initialEntries={[`/signup/${eventId}`]}>
-      <Routes>
-        <Route path="/signup/:eventId" element={<SignupForm />} />
-      </Routes>
-    </MemoryRouter>,
-  );
+function renderSignup(eventId: string | undefined = 'mrg-042') {
+  return render(<SignupForm eventId={eventId} />);
 }
 
 function stubKeyFetchOk() {
@@ -127,48 +109,13 @@ beforeEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('SignupForm -- the notice', () => {
-  it('shows the data-protection notice before any field, not after', async () => {
-    stubKeyFetchOk();
-    renderSignup();
-
-    await screen.findByLabelText(/first name/i);
-
-    const text = document.body.textContent ?? '';
-    const noticeAt = text.indexOf('Before you register');
-    const firstFieldAt = text.indexOf('First name');
-    expect(noticeAt).toBeGreaterThanOrEqual(0);
-    expect(firstFieldAt).toBeGreaterThan(noticeAt);
-  });
-
-  it('shows the notice even while the key is still loading or unavailable', () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 }) as Response));
-    renderSignup();
-    expect(screen.getByText('Before you register')).toBeInTheDocument();
-  });
-
-  it('states browser-side encryption, the 90-day retention and key destruction, and a real contact address -- not just its own heading', async () => {
-    // A test asserting only that the heading precedes the first field label
-    // would still pass if every sentence underneath it were gutted -- and
-    // those sentences are the legal substance of requirement 1, not the
-    // heading.
-    stubKeyFetchOk();
-    renderSignup();
-    await screen.findByLabelText(/first name/i);
-
-    const text = document.body.textContent ?? '';
-    expect(text).toMatch(/encrypts this information before it is sent/i);
-    expect(text).toMatch(/90 days/);
-    expect(text).toMatch(/destroying the key/i);
-    expect(text).toContain('reading-group@example.test');
-  });
-});
-
-// Spec S:5's two matching boundaries -- "present without having registered"
-// and "joined by telephone" -- named on the event page itself, not only in
-// docs/reference/operations.md. A test here, rather than trusting the JSX
-// to keep saying it, is what makes removing this notice a red build instead
-// of a silent regression.
+// Spec S:5's two matching boundaries -- "present without having
+// registered" and "joined by telephone" -- named on the event page itself,
+// not only in docs/reference/operations.md. `event.njk` carries no copy of
+// this text (unlike the data-protection notice, which the njk template
+// now owns alone), so the island keeps rendering it -- a test here, rather
+// than trusting the JSX to keep saying it, is what makes removing it a red
+// build instead of a silent regression.
 describe('SignupForm -- the two matching boundaries', () => {
   it('shows both boundaries before any field, not after', async () => {
     stubKeyFetchOk();
@@ -208,6 +155,28 @@ describe('SignupForm -- the two matching boundaries', () => {
   });
 });
 
+// Regression guard for the extraction itself: `event.njk` now renders the
+// data-protection notice as static HTML ahead of this island's own mount
+// point (see SignupForm.tsx's module comment). If this component ever grew
+// that text back, a built event page would show it twice.
+describe('SignupForm -- does not duplicate the event page\'s own notice', () => {
+  it('renders no copy of the "before you register" data-protection notice', async () => {
+    stubKeyFetchOk();
+    renderSignup();
+    await screen.findByLabelText(/first name/i);
+
+    const text = document.body.textContent ?? '';
+    expect(text).not.toMatch(/before you register/i);
+    expect(text).not.toMatch(/90 days/);
+  });
+
+  it('renders no copy of the notice even while the key is loading or unavailable', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 }) as Response));
+    renderSignup();
+    expect(screen.queryByText(/before you register/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('SignupForm -- what it collects, and nothing else', () => {
   it('collects first name, surname, email, an optional institution, and an unticked opt-in', async () => {
     stubKeyFetchOk();
@@ -229,12 +198,6 @@ describe('SignupForm -- what it collects, and nothing else', () => {
   });
 
   it('caps every text field at the same length the relay and the handler enforce (Important 1, branch review)', async () => {
-    // Before this, a 201-character field was accepted here, encrypted,
-    // shown as sent, and only then dropped by `to_registration` as
-    // "could not be read" -- nothing on this page ever told the
-    // participant. `test_confirmation.py::test_signup_form_max_field_
-    // length_matches_the_python_constant` binds the number itself
-    // against `registration._MAX_FIELD_LENGTH`.
     stubKeyFetchOk();
     renderSignup();
 
@@ -255,7 +218,15 @@ describe('SignupForm -- what it collects, and nothing else', () => {
     await screen.findByLabelText(/first name/i);
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(/\/keys\/events\/mrg-042\.pub$/);
+    const url = String(vi.mocked(fetch).mock.calls[0][0]);
+    expect(url).toMatch(/\/keys\/events\/mrg-042\.pub$/);
+    // The path-suffix check above alone would also pass for
+    // `https://evil.example/keys/events/mrg-042.pub` -- same suffix,
+    // different origin entirely. A root-relative path (no scheme, no
+    // host) is what actually keeps this fetch same-origin: `fetch('/x')`
+    // resolves against the page's own origin by construction, which a
+    // hardcoded third-party absolute URL would not.
+    expect(url).not.toMatch(/^[a-z][a-z0-9+.-]*:\/\//i);
   });
 });
 
@@ -299,11 +270,6 @@ describe('SignupForm -- the public key cannot be fetched', () => {
   });
 
   it('refuses a PEM that is truncated but still carries a valid header and footer, before anyone can type into it', async () => {
-    // A `BEGIN PUBLIC KEY` substring sniff would have let this through: the
-    // label is intact, only the DER body underneath is broken. Left
-    // unvalidated, the participant would fill in the whole form and only
-    // learn it never worked at submit, with a message that can never be
-    // fixed by retrying.
     const truncated = VALID_PEM.replace(/\n[^\n]+\n-----END/, '\n-----END');
     vi.stubGlobal(
       'fetch',
@@ -348,9 +314,6 @@ describe('SignupForm -- a hung key fetch eventually refuses too', () => {
   it('times out and refuses rather than showing "Checking…" forever', async () => {
     vi.useFakeTimers();
     try {
-      // Never resolves on its own -- the only way out is the component's
-      // own timeout aborting it, exactly like a stalled connection would
-      // leave a real `fetch` pending indefinitely.
       vi.stubGlobal(
         'fetch',
         vi.fn((_url: string, opts?: RequestInit) => {
@@ -431,13 +394,6 @@ describe('SignupForm -- sending', () => {
       'v',
     ]);
 
-    // The decisive check, not a substring probe: decrypt the exact body
-    // that left the browser with the fixture's real private key and
-    // compare the whole recovered object. A mutation hard-coding
-    // `membership_opt_in: true`, swapping `first_name`/`surname`, or
-    // dropping a `.trim()` all fail this -- none of them are visible to a
-    // `not.toContain` check on base64 text, which also has a real chance of
-    // matching short names by coincidence.
     const privateKey = await importPrivateKeyPem(FIXTURE.private_pem);
     const recovered = await decryptEnvelopeFields(privateKey, sent);
     expect(recovered).toEqual({
@@ -448,20 +404,11 @@ describe('SignupForm -- sending', () => {
       membership_opt_in: true,
     });
 
-    // Nothing about this flow writes anywhere it does not have to: no
-    // console message and no storage write could carry the plaintext where
-    // this suite would not see it.
     for (const spy of consoleSpies) expect(spy).not.toHaveBeenCalled();
     expect(storageSpy).not.toHaveBeenCalled();
   });
 
   it('sends the announce-list opt-in as exactly what was left unticked -- not a hard-coded value', async () => {
-    // Deliberately the mirror of the test above: that one ticks the
-    // checkbox, so a mutation hard-coding `membership_opt_in: true` would
-    // coincidentally match its expectation and slip through. Leaving the
-    // box unticked here, and decrypting to confirm `false` actually
-    // travelled, is what closes that gap -- the reviewer's exact mutant
-    // only failed the cross-event test below for this same reason.
     vi.stubEnv('VITE_SIGNUP_RELAY_URL', 'https://signup-relay.example/');
     const calls: { body: string }[] = [];
     vi.stubGlobal(
@@ -480,7 +427,6 @@ describe('SignupForm -- sending', () => {
 
     renderSignup('mrg-042');
     await fillForm();
-    // The checkbox is left exactly as it defaults: unticked.
     fireEvent.click(screen.getByRole('button', { name: /register/i }));
     await screen.findByText(/registration sent/i);
 
@@ -503,8 +449,6 @@ describe('SignupForm -- sending', () => {
     fireEvent.click(screen.getByRole('button', { name: /register/i }));
 
     await screen.findByText(/registration is not open for this event yet/i);
-    // The key fetch, and nothing else: encryption may have happened
-    // in-memory, but no request carrying it was ever made.
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -526,20 +470,12 @@ describe('SignupForm -- sending', () => {
 
     await screen.findByText(/could not be sent/i);
     expect(screen.queryByText(/registration sent/i)).not.toBeInTheDocument();
-    // An error must not force retyping: only a successful send clears the
-    // fields (see SignupForm.tsx's `submit`).
     expect(screen.getByLabelText(/first name/i)).toHaveValue('Ada');
     expect(screen.getByLabelText(/surname/i)).toHaveValue('Lovelace');
     expect(screen.getByLabelText(/email address/i)).toHaveValue('ada@example.org');
   });
 
   it('a hung submit eventually refuses too, rather than saying "Sending…" forever', async () => {
-    // `AbortSignal.timeout`'s internal timer is not driven by the global
-    // `setTimeout` vitest's fake timers patch (confirmed directly: it never
-    // calls a monkey-patched `setTimeout`), so -- unlike the key-fetch
-    // timeout test above, which owns its own `AbortController` -- this
-    // stubs `AbortSignal.timeout` itself to hand back a controller this
-    // test drives, and fires it directly rather than waiting real time.
     const controller = new AbortController();
     const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
     try {
@@ -551,9 +487,6 @@ describe('SignupForm -- sending', () => {
             return { ok: true, text: async () => VALID_PEM } as Response;
           }
           if (String(url) === 'https://signup-relay.example/') {
-            // Never resolves on its own -- the only way out is the signal
-            // this test fires below, exactly like a stalled relay
-            // connection would leave a real `fetch` pending indefinitely.
             return new Promise<Response>((_resolve, reject) => {
               opts?.signal?.addEventListener('abort', () => {
                 reject(new DOMException('The operation was aborted.', 'TimeoutError'));
@@ -570,18 +503,10 @@ describe('SignupForm -- sending', () => {
 
       expect(await screen.findByRole('button', { name: /sending/i })).toBeDisabled();
 
-      // The fetch itself -- and the timeout signal passed to it -- only
-      // happens after the (async) encryption step above resolves, so this
-      // waits for it rather than asserting immediately after the click.
-      // Mirrors SignupForm's own SUBMIT_TIMEOUT_MS -- pins the actual
-      // duration wired in, not just that some timeout exists.
       await vi.waitFor(() => expect(timeoutSpy).toHaveBeenCalledWith(15_000));
 
       act(() => controller.abort());
 
-      // "Could not be sent", not "could not be encrypted": a network-layer
-      // timeout must not be blamed on the encryption half of `submit`,
-      // which never ran again after the fetch was already sent.
       await screen.findByText(/could not be sent/i);
       expect(screen.queryByText(/sending…/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/could not be encrypted/i)).not.toBeInTheDocument();
@@ -592,131 +517,20 @@ describe('SignupForm -- sending', () => {
 });
 
 describe('SignupForm -- reachable with no eventId at all', () => {
-  it('treats a route with no eventId as an unavailable key rather than crashing', async () => {
-    render(
-      <MemoryRouter initialEntries={['/signup/']}>
-        <Routes>
-          <Route path="/signup/:eventId?" element={<SignupForm />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+  it('treats a missing eventId prop as an unavailable key rather than crashing', async () => {
+    render(<SignupForm />);
     await screen.findByText(/registration is not available right now/i);
   });
 });
 
 // Sanity check that this component alone -- with no AuthProvider and no
 // DataProvider in the tree at all -- is the proof that it needs neither: a
-// screen requiring one would fail to render, not silently omit it. This
-// proves the component's own requirements, not the production route: see
-// the `App`-level block below for that.
+// screen requiring one would fail to render, not silently omit it.
 describe('SignupForm -- needs no organiser account', () => {
   it('renders without AuthProvider or DataProvider in the tree', async () => {
     stubKeyFetchOk();
     renderSignup();
     await screen.findByLabelText(/first name/i);
-    expect(within(document.body).queryByText(/sign in/i)).not.toBeInTheDocument();
-  });
-});
-
-// The block above proves `SignupForm` does not *need* an account; it does
-// not prove the *route* a participant actually reaches avoids one --
-// `App.tsx` still wraps its whole router in `<AuthProvider>`, and only
-// route-matching order keeps `/signup/:eventId` from ever falling through
-// to `Shell`'s gate. Rendering `App` itself, through `HashRouter`, is what
-// verifies that claim rather than assuming it from the route table.
-describe('App -- the signup route in production, not standalone', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    window.location.hash = '';
-  });
-
-  it('reaches SignupForm with no sign-in screen', async () => {
-    stubKeyFetchOk();
-    window.location.hash = '#/signup/mrg-042';
-    render(<App />);
-
-    await screen.findByLabelText(/first name/i);
-    expect(screen.queryByText(/for the team/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^sign in$/i)).not.toBeInTheDocument();
-  });
-
-  it('editing the event id in the address bar never mixes an old event\'s key into a new one\'s registration', async () => {
-    // Two distinct events, two distinct keys -- the only way to prove a
-    // registration was sealed under the *right* one rather than merely
-    // "a" one.
-    const eventA = await generateEventKeyPair();
-    const eventB = await generateEventKeyPair();
-    vi.stubEnv('VITE_SIGNUP_RELAY_URL', 'https://signup-relay.example/');
-    const calls: { body: string }[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string, opts?: RequestInit) => {
-        const u = String(url);
-        if (u.endsWith('/keys/events/mrg-042.pub')) {
-          return { ok: true, text: async () => eventA.publicPem } as Response;
-        }
-        if (u.endsWith('/keys/events/mrg-043.pub')) {
-          return { ok: true, text: async () => eventB.publicPem } as Response;
-        }
-        if (u === 'https://signup-relay.example/') {
-          calls.push({ body: String(opts?.body ?? '') });
-          return { ok: true } as Response;
-        }
-        throw new Error(`unexpected fetch in test: ${u}`);
-      }),
-    );
-
-    window.location.hash = '#/signup/mrg-042';
-    render(<App />);
-    fireEvent.change(await screen.findByLabelText(/first name/i), {
-      target: { value: 'stale text from the previous event' },
-    });
-
-    // `HashRouter` makes this reachable without a page load: editing the
-    // address bar from one event to another, mid-session. react-router's
-    // hash history listens for `popstate`, not `hashchange` (confirmed by
-    // reading `node_modules/react-router/dist/.../chunk-4N6VE7H7.mjs`), and
-    // jsdom does not dispatch either on its own from a plain assignment --
-    // so `popstate` is fired explicitly here, the event a real browser
-    // raises after a hash-only address bar edit.
-    act(() => {
-      window.location.hash = '#/signup/mrg-043';
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
-
-    // A fresh instance -- the earlier text must not have survived the
-    // switch, which is the remount actually taking effect, not merely the
-    // right key eventually being used.
-    const firstName = await screen.findByLabelText(/first name/i);
-    expect(firstName).toHaveValue('');
-
-    fireEvent.change(firstName, { target: { value: 'Ada' } });
-    fireEvent.change(screen.getByLabelText(/surname/i), { target: { value: 'Lovelace' } });
-    fireEvent.change(screen.getByLabelText(/email address/i), {
-      target: { value: 'ada@example.org' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /register/i }));
-
-    await screen.findByText(/registration sent/i);
-    expect(calls).toHaveLength(1);
-    const sent = JSON.parse(calls[0].body);
-    expect(sent.event_id).toBe('mrg-043');
-
-    // The decisive check: only mrg-043's own private key can recover this.
-    // If the stale mrg-042 public key had sealed this registration instead
-    // -- the bug this test targets -- decrypting with mrg-043's private key
-    // would throw, since RSA-OAEP cannot be decrypted under the wrong key,
-    // rather than silently recovering the wrong plaintext.
-    const recovered = await decryptEnvelopeFields(eventB.privateKey, sent);
-    expect(recovered).toEqual({
-      first_name: 'Ada',
-      surname: 'Lovelace',
-      email: 'ada@example.org',
-      institution: '',
-      membership_opt_in: false,
-    });
+    expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
   });
 });

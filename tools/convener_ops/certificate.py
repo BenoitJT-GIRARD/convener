@@ -296,9 +296,13 @@ token has been verified (`signing.PAYLOAD_FIELDS` includes it) -- but it
 is what lets task 13's route match one certificate to one address *before*
 verification has run at all, so the page can be a plain, bookmarkable link
 rather than requiring the visitor to paste a token in by hand. Route shape
-matches `app/src/App.tsx`'s existing `/signup/:eventId` -- a `HashRouter`
+matches `app/src/App.tsx`'s existing `/survey/:eventId` -- a `HashRouter`
 fragment segment, not a server path, because GitHub Pages serves no
-server-side routing and a bare path would 404 on a fresh load.
+server-side routing and a bare path would 404 on a fresh load. (Task 6
+moved registration itself off a fragment like this one, onto a real
+address -- `site/src/event.njk`'s own permalink -- see
+`registration.SIGNUP_BASE`'s own comment; this page's own route is task
+7's, not yet moved.)
 `VERIFICATION_BASE` and the whole address are pinned into this module's
 shared fixture (`tools/tests/fixtures/certificate-verification.json`, see
 below) so task 13 is bound to the exact shape rather than trusted to
@@ -399,8 +403,8 @@ ORGANISER: Final = "The Example Collective"
 #: The base of every certificate's verification address -- see the module
 #: docstring's "verification address" section for the full route shape and
 #: why it carries the token, not only the identifier. `HashRouter` (see
-#: `app/src/App.tsx`), the same fragment convention `/signup/:eventId`
-#: already uses, and the same base URL `docs/reference/operations.md`
+#: `app/src/App.tsx`), the same fragment convention `/survey/:eventId`
+#: uses, and the same base URL `docs/reference/operations.md`
 #: names for the deployed application. Ending in `#/` is load-bearing
 #: beyond routing: it puts `verification_url`'s `?token=` -- which carries
 #: a participant's name -- inside the URL *fragment*, which browsers never

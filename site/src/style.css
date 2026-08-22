@@ -345,12 +345,78 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 .notice p + p { margin-top: .85rem; }
 
-/* Task 6's own reserved spot -- no form lives here yet, so this reads as
- * plain, unstyled prose rather than something that looks broken. */
-.event__form-placeholder {
-  font-style: italic;
+/* ── Registration island (task 6) ────────────────────────────
+ * `app/src/islands/signup/SignupForm.tsx`'s own class names -- plain,
+ * semantic strings, not Tailwind utilities: this component renders inside
+ * a page that already loads this stylesheet, and pulling in the app's own
+ * Tailwind build here (complete with its `@tailwind base` reset) would
+ * apply site-wide, to elements this form does not own, rather than stay
+ * scoped to its own subtree. `.notice`/`.notice__eyebrow`, above, are
+ * reused as-is for the boundaries panel, the "not available" refusal and
+ * the "sent" confirmation -- one box style for every one-screen message
+ * on this page, not a second one invented per state. */
+.signup-form { max-width: 42rem; }
+.signup-form__status { color: var(--ink-mute); padding: .5rem 0 1rem; }
+
+.signup-form__fields { max-width: 32rem; }
+.signup-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 32rem) {
+  .signup-form__row { grid-template-columns: 1fr; }
+}
+.signup-form__field {
+  display: block;
+  margin-bottom: 1rem;
+}
+.signup-form__field > span {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
   color: var(--ink-mute);
-  padding: .5rem 0 1rem;
+  margin-bottom: .3rem;
+}
+.signup-form__field input {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: .6rem .75rem;
+  font: inherit;
+  color: var(--ink);
+}
+.signup-form__field input:focus {
+  outline: 0;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--turquoise-l);
+}
+.signup-form__checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  font-size: .92rem;
+  margin-bottom: 1.25rem;
+}
+.signup-form__checkbox input { margin-top: .2rem; }
+.signup-form__fields button[disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.signup-form__error {
+  /* `--purple`, not `--purple-d`: this text sits directly on the
+   * turquoise field, and `--purple` on turquoise is the pairing
+   * `data/brand.json` already measures (7.93, AAA) -- `--purple-d` is
+   * used elsewhere only as a background or a hover border, never as text
+   * on this ground, and introducing it here would be a new pairing no
+   * measurement covers yet (task 4's own rule). */
+  color: var(--purple);
+  font-weight: 700;
+  margin-top: .85rem;
 }
 
 /* ── Buttons ──────────────────────────────────────────────── */

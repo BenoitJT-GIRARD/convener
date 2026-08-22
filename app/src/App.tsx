@@ -14,7 +14,6 @@ import { Handbook } from './screens/Handbook';
 import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
 import { NewSpeaker } from './screens/NewSpeaker';
-import { SignupForm } from './signup/SignupForm';
 import { SurveyForm } from './survey/SurveyForm';
 import { VerifyPage } from './verify/VerifyPage';
 
@@ -50,28 +49,12 @@ function Shell() {
   );
 }
 
-/**
- * `useParams` only resolves inside a matched route's own element, so this
- * reads it and keys `SignupForm` by it, forcing a full remount whenever the
- * event id in the URL changes. `HashRouter` makes that reachable without a
- * page load -- editing `#/signup/mrg-042` to `#/signup/mrg-043` in the
- * address bar re-runs `SignupForm`'s effect on the same mounted component
- * otherwise, and nothing there resets `keyState` back to `'loading'`: the
- * previous event's fetched key would still answer while the new event id
- * is what gets sent, producing a registration encrypted under a key that
- * cannot decrypt it and destroyed on the wrong event's retention date.
- * Remounting resets every hook `SignupForm` holds from scratch, which
- * closes the whole class rather than threading an `eventId` comparison
- * through each place `KeyState` is read.
- */
-function SignupRoute() {
-  const { eventId } = useParams<{ eventId: string }>();
-  return <SignupForm key={eventId} />;
-}
-
-/** The same remount discipline as `SignupRoute`, applied to the survey page
- *  for the identical reason: editing the event id in the address bar must
- *  reset `SurveyForm`'s own `keyState` rather than let a previous event's
+/** The same remount discipline `app/src/islands/signup/main.tsx::
+ *  mountSignupIsland` gives the registration island (task 6 moved
+ *  registration out of this application entirely -- see git history for
+ *  the route this used to be), applied to the survey page for the
+ *  identical reason: editing the event id in the address bar must reset
+ *  `SurveyForm`'s own `keyState` rather than let a previous event's
  *  fetched key silently answer for a new one. */
 function SurveyRoute() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -79,7 +62,7 @@ function SurveyRoute() {
 }
 
 /**
- * The same remount discipline `SignupRoute` applies to `eventId`, applied
+ * The same remount discipline `SurveyRoute` applies to `eventId`, applied
  * here to `identifier` *and* `token` together: editing either in the
  * address bar (or clicking a second verification link without a full page
  * load, which `HashRouter` makes reachable) must not leave `VerifyPage`'s
@@ -101,22 +84,25 @@ export function App() {
     <AuthProvider>
       <HashRouter>
         <Routes>
-          {/* Public, by construction: a participant registering for an
-              event has no account, and nothing on this route ever reaches
-              `Shell`'s auth gate above -- matched first, and never falls
-              through to it. (`AuthProvider` still wraps the whole router,
-              including this route -- it only reads `localStorage` and, for
-              a legacy stored token, validates it; no participant data is
-              involved, and this route never reaches `Shell` or
-              `DataProvider`, which is the gate that actually matters here.) */}
-          <Route path="/signup/:eventId" element={<SignupRoute />} />
-          {/* Public, by construction, the same way `/signup/:eventId` is
-              above: the post-event survey (spec S:6) is reached from a
-              link in an e-mail, never from `Shell`'s own navigation, and a
-              participant answering it has no more of an account than one
-              registering does. */}
+          {/* Public, by construction: the post-event survey (spec S:6) is
+              reached from a link in an e-mail, never from `Shell`'s own
+              navigation, and a participant answering it has no account --
+              matched first, and never falls through to `Shell`'s auth gate
+              below. (`AuthProvider` still wraps the whole router, including
+              this route -- it only reads `localStorage` and, for a legacy
+              stored token, validates it; no participant data is involved,
+              and this route never reaches `Shell` or `DataProvider`, which
+              is the gate that actually matters here.)
+
+              Registration used to be a public route here too
+              (`/signup/:eventId`) -- task 6 extracted it into an island
+              mounted on `site/src/event.njk` instead
+              (`app/src/islands/signup/`), per D-18 ("static pages,
+              interactivity in islands"): a visitor who wants to register no
+              longer downloads this whole application to do it. See git
+              history for the route this replaced. */}
           <Route path="/survey/:eventId" element={<SurveyRoute />} />
-          {/* Public, by construction, the same way `/signup/:eventId` is
+          {/* Public, by construction, the same way `/survey/:eventId` is
               above: a stranger checking a certificate has no account
               either, and this route never reaches `Shell`'s auth gate.
               `certificate.VERIFICATION_BASE` ends `#/verify/`, matching
