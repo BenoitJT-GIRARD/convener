@@ -4080,6 +4080,167 @@ def render_visual_fixtures() -> int:
     return 0
 
 
+def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announcement]:
+    """`public_data.to_public`'s own output, turned into the
+    `visual.Announcement`s task 6's production render needs -- never a
+    second, looser read of the raw speaker record.
+
+    Filtered to `status == "scheduled"`: an edition still being announced,
+    the one state "a date locked" (the trigger's own language) describes.
+    Routing through `to_public` first is what withholds a portrait under
+    P-4 with no second check written here -- see `visual.py`'s own module
+    docstring, "Portrait", for why passing the gated projection through is
+    "enough on its own".
+
+    `photo_url` never becomes `portrait_data_uri` here, even on the rare
+    row where `to_public` leaves it non-empty. Today that is close to
+    unreachable for a *scheduled* row: `public_data.
+    personal_disclosure_withheld`'s own docstring records that its gate is
+    written to open only once a talk is archived and published, which is
+    after the point an announcement is useful -- so a real, ordinarily
+    written record never reaches this branch. But nothing stops a
+    hand-edited file from setting `publication.outcome: published` on a
+    still-`scheduled` row, and `docs/reference/schema.md` calls
+    `photo_url` "a link, not an upload": turning it into something
+    `render_announcement` can inline would mean this command reaching onto
+    the network for a URL a data file names, which this task does not take
+    on. A row that does carry a consented one prints a visible notice
+    instead of silently doing nothing about it (D-25) -- the alternative
+    is a gap that looks identical to the common, legitimate case of
+    "nothing to embed".
+    """
+    announcements: list[visual.Announcement] = []
+    for row in rows:
+        if row.get("status") != "scheduled":
+            continue
+        event_id = str(row.get("id", "")).lower()
+        raw_date = str(row.get("date") or "")
+        try:
+            talk_date = date.fromisoformat(raw_date)
+        except ValueError as exc:
+            raise ValueError(
+                f"{row.get('id')!r}: scheduled but its date {raw_date!r} is "
+                "not a valid YYYY-MM-DD -- data/speakers.yml disagrees "
+                "with its own validator"
+            ) from exc
+        if row.get("photo_url"):
+            print(
+                f"::notice::{event_id} has a consented photo_url but the "
+                "production renderer does not embed a portrait yet -- "
+                "rendering the no-portrait variant "
+                "(see _scheduled_announcements's own docstring)",
+                file=sys.stderr,
+            )
+        announcements.append(
+            visual.Announcement(
+                title=str(row.get("title", "")),
+                talk_date=talk_date,
+                speaker_name=str(row.get("speaker_name", "")),
+                speaker_affiliation=str(row.get("speaker_affiliation", "")),
+                event_id=event_id,
+                portrait_data_uri=None,
+            )
+        )
+    return announcements
+
+
+def render_visuals() -> int:
+    """`convener-render-visuals OUTPUT_DIR`: task 6's own disk-writing seam for
+    *production* visuals -- real, scheduled editions read from
+    `data/speakers.yml`, through the same public gate every other public
+    artefact in this project already goes through (`public_data.
+    to_public`), never a second, looser read of the raw record.
+
+    The opposite number of `render_visual_fixtures` above: that command
+    always renders the one fixed, fictional identity a regression check
+    needs and never touches `data/speakers.yml` at all; this one renders
+    *only* real, scheduled editions and touches nothing else. Zero
+    scheduled editions is a normal, expected state (D-13) -- printed
+    plainly, exit 0, an empty `manifest.json` -- not a failure; a
+    malformed date on a record that claims to be scheduled is not, and
+    fails loudly instead (D-25): `data/speakers.yml` disagreeing with its
+    own validator is a data defect this command must never render around
+    quietly.
+
+    This is also the "manual command" the trigger requires, independently
+    of any workflow: `uv run --project tools convener-render-visuals
+    OUTPUT_DIR` renders the current, real state of `data/speakers.yml` on
+    demand, from a plain checkout, no CI needed.
+
+    Only touches the target directory once a valid state has actually been
+    computed (mirrors `publish-vitrine.yml`'s own "a build that cannot
+    replace what it would remove must never be allowed to begin removing
+    it"), and then regenerates it whole rather than accumulating into it
+    (the same discipline `render_visual_fixtures`'s own `fonts/` handling
+    and `register()` already apply): an edition no longer scheduled must
+    not leave a stale page sitting next to a manifest that no longer lists
+    it.
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-visuals OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
+
+    try:
+        announcements = _scheduled_announcements(to_public(speakers or []))
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    out.mkdir(parents=True, exist_ok=True)
+    for stale_html in out.glob("*.html"):
+        stale_html.unlink()
+    manifest_path = out / "manifest.json"
+    if manifest_path.exists():
+        manifest_path.unlink()
+    fonts_dest = out / "fonts"
+    if fonts_dest.exists():
+        shutil.rmtree(fonts_dest)
+
+    manifest: list[dict[str, Any]] = []
+    if not announcements:
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        print(
+            "no scheduled edition in data/speakers.yml -- nothing to "
+            "render (normal until a date is locked)"
+        )
+        return 0
+
+    for announcement in announcements:
+        for fmt in formats.FORMATS:
+            html = visual.render_announcement(
+                announcement, width=fmt.width, height=fmt.height, root=root
+            )
+            filename = f"{announcement.event_id}-{fmt.name}.html"
+            (out / filename).write_text(html, encoding="utf-8")
+            manifest.append(
+                {
+                    "event_id": announcement.event_id,
+                    "name": fmt.name,
+                    "width": fmt.width,
+                    "height": fmt.height,
+                    "file": filename,
+                }
+            )
+
+    shutil.copytree(root / "fonts", fonts_dest)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"wrote {len(manifest)} production visual page(s) for "
+        f"{len(announcements)} scheduled edition(s) to {out}"
+    )
+    return 0
+
+
 if __name__ == "__main__":  # pragma: no cover
     # Unreachable under both ways this module is ever run: pytest imports
     # it as convener_ops.cli, never as __main__, and every console script in

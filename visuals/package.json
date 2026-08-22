@@ -1,10 +1,11 @@
 {
   "name": "convener-visuals",
   "private": true,
-  "description": "Task 5 (phase 6): the pinned render step and its image comparison -- puppeteer (full, bundled Chromium) is isolated to this package on purpose, so only this one CI job pays for the Chrome-for-Testing download; see .github/workflows/visuals.yml and render-and-compare.mjs's own module comment for the full reasoning (P-2).",
+  "description": "Task 5 (phase 6): the pinned render step and its image comparison, plus task 6's own production render (render-production.mjs) on the same pinned engine -- puppeteer (full, bundled Chromium) is isolated to this package on purpose, so only this package's own CI jobs pay for the Chrome-for-Testing download; see .github/workflows/visuals.yml, .github/workflows/visuals-production.yml and each script's own module comment for the full reasoning (P-2).",
   "scripts": {
     "check": "node render-and-compare.mjs",
-    "update-references": "node render-and-compare.mjs --update"
+    "update-references": "node render-and-compare.mjs --update",
+    "render": "node render-production.mjs"
   },
   "devDependencies": {
     "puppeteer": "25.8.0"
