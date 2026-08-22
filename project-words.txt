@@ -68,3 +68,15 @@ noscript
 etree
 lastmod
 urlset
+Deque
+nojekyll
+vars
+unretried
+isinstance
+passthrough
+pytest
+pyproject
+mypy
+autoprefixer
+assertable
+pipefail

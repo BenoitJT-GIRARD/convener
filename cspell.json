@@ -24,6 +24,7 @@
     "INFORMATION-ARCHITECTURE.md",
     "services/*/README.md",
     "site/**/*.njk",
-    "site/README.md"
+    "site/README.md",
+    ".github/workflows/**"
   ]
 }
