@@ -19,18 +19,32 @@ import react from '@vitejs/plugin-react';
  * a foreign page conventionally ships under a name that does not change
  * build to build.
  *
- * `base: '/app/'`, deliberately not the main app's own `/example-showcase/app/`
- * below: this bundle runs on a page the *site* serves, whose own templates
- * already address the app's published assets root-relative to the site's
- * own root (`layout.njk`'s `/style.css`, `/fonts/`), not to wherever
- * GitHub Pages ultimately resolves that root to
- * (docs/superpowers/deferred-work.md, entry 11 -- a maintainer's Pages
- * setting, out of scope here). `SignupForm.tsx`'s own key fetch reads this
- * value back through `import.meta.env.BASE_URL`, landing on
- * `/app/keys/events/<id>.pub` -- exactly where `copy-event-keys.mjs`
- * already publishes it inside the app's own `dist/`, unaffected by
- * whichever `base` the *main* app build below uses for its own asset
- * URLs.
+ * `base: '/example-showcase/app/'`, the *same* value the main app build below
+ * uses -- Fix round 4 correction: this used to read `'/app/'`, deliberately
+ * distinct from the main app's own base, on the reasoning that this bundle
+ * runs on a page the *site* serves, whose own templates already addressed
+ * the app's published assets root-relative to the site's own root
+ * (`layout.njk`'s `/style.css`, `/fonts/`). That reasoning assumed the
+ * site's own root-relative links already landed at wherever GitHub Pages
+ * resolves this project's published root to -- which they did not: there
+ * is no CNAME and no custom domain, so that root is
+ * `https://example-instance.github.io/example-showcase/`, one path segment
+ * below the domain root a bare `/foo` actually addresses. That gap is the
+ * whole of the defect `site/.eleventy.js`'s own `PATH_PREFIX` and every
+ * template's `| url` filter call now close -- it was not a fact particular
+ * to this island, just uncaught here for the identical reason it was
+ * uncaught everywhere else: every screenshot pass served the built site at
+ * a bare localhost root, where the gap does not exist to see.
+ *
+ * With the site now prefix-aware, both this island and the main app
+ * publish to, and are addressed from, the exact same place
+ * (`example-showcase`'s own `app/` subtree, `deploy.yml`'s "Push to example-showcase"
+ * step) -- so both now share the one value that actually describes it,
+ * rather than two that happened to agree only by not yet having been
+ * tested against a real deployment. `SignupForm.tsx`'s own key fetch reads
+ * this value back through `import.meta.env.BASE_URL`, landing on
+ * `/example-showcase/app/keys/events/<id>.pub` -- exactly where
+ * `copy-event-keys.mjs` already publishes it inside the app's own `dist/`.
  *
  * No CSS import from this entry (`main.tsx` imports no stylesheet): the
  * island's own class names are plain, semantic strings styled by
@@ -45,7 +59,7 @@ import react from '@vitejs/plugin-react';
 function islandSignupConfig() {
   return {
     plugins: [react()],
-    base: '/app/',
+    base: '/example-showcase/app/',
     build: {
       outDir: 'dist/islands/signup',
       emptyOutDir: true,
@@ -70,11 +84,15 @@ function islandSignupConfig() {
  * one -- its own, separate artefact (P-2), picked apart at the command
  * line by `npm run build`'s third `vite build` call. Everything
  * `islandSignupConfig`'s own comment explains about fixed output names,
- * `base: '/app/'`, and skipping `copyPublicDir` applies identically here:
- * the consumer is `site/src/verify.njk`, a foreign toolchain with no
- * manifest to read hashed names from, and this bundle runs on a page the
- * *site* serves, whose own templates already address the app's published
- * assets root-relative to the site's own root.
+ * `base: '/example-showcase/app/'`, and skipping `copyPublicDir` applies
+ * identically here: the consumer is `site/src/verify.njk`, a foreign
+ * toolchain with no manifest to read hashed names from, and this bundle
+ * runs on a page the *site* serves. `register.ts` and `publicKeys.ts`
+ * read this same `base` back through `import.meta.env.BASE_URL`, landing
+ * on `/example-showcase/app/certificates.json` and
+ * `/example-showcase/app/keys/signing/index.json` -- exactly where the main
+ * app build's own `scripts/copy-certificates.mjs` and
+ * `copy-signing-keys.mjs` publish them inside `dist/`.
  *
  * No CSS import from this entry either, for the identical reason
  * `islandSignupConfig`'s own comment gives: the island's class names are
@@ -85,7 +103,7 @@ function islandSignupConfig() {
 function islandVerifyConfig() {
   return {
     plugins: [react()],
-    base: '/app/',
+    base: '/example-showcase/app/',
     build: {
       outDir: 'dist/islands/verify',
       emptyOutDir: true,

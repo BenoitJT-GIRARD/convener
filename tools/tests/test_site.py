@@ -28,6 +28,7 @@ from typing import Any
 
 import pytest
 
+from convener_ops.certificate import VERIFICATION_BASE
 from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.paths import repo_root
 from convener_ops.registration import SIGNUP_BASE
@@ -47,6 +48,39 @@ def _without_comments(text: str) -> str:
 
 ROOT = repo_root()
 SITE_SRC = ROOT / "site" / "src"
+_ELEVENTY_CONFIG = ROOT / "site" / ".eleventy.js"
+
+
+def _configured_path_prefix() -> str:
+    """`site/.eleventy.js`'s own `PATH_PREFIX` -- the one place this
+    project's published address prefix (GitHub Pages serves this build's
+    output under `/example-showcase/`, not at a bare domain root: no CNAME, no
+    custom domain) is written down, feeding every template's `| url`
+    filter call. Read here rather than hand-typed a second time, so every
+    assertion below that expects a prefixed link fails immediately if this
+    source value ever changes without the assertion being updated to
+    match -- the same reason `_published_app_base` below reads
+    `vite.config.ts` rather than restating its own literal.
+    """
+    text = _ELEVENTY_CONFIG.read_text(encoding="utf-8")
+    match = re.search(r"PATH_PREFIX\s*=\s*'([^']+)'", text)
+    assert match is not None, (
+        f"{_ELEVENTY_CONFIG.as_posix()} no longer defines PATH_PREFIX -- "
+        "every assertion in this module that expects a prefixed link would "
+        "otherwise silently check against the wrong prefix"
+    )
+    return match.group(1)
+
+
+def _pfx(path: str) -> str:
+    """`path`, prefixed exactly the way Eleventy's own `url` filter prefixes
+    every root-relative link this project's templates emit -- see
+    `_configured_path_prefix`'s own docstring. `path` must itself start
+    with `/`, the same contract every template's own `| url` filter call
+    assumes."""
+    assert path.startswith("/"), f"{path!r} is not root-relative"
+    return _configured_path_prefix().rstrip("/") + path
+
 
 #: Every text file a page actually ships: templates and the stylesheet. Fonts
 #: (`.woff2`) are binary; licence files are third-party text nobody here
@@ -94,7 +128,11 @@ def test_layout_preloads_a_self_hosted_font() -> None:
     altogether just as readily as on one that self-hosts them properly --
     this is the positive half: the font actually served from `/fonts/`."""
     layout = (SITE_SRC / "_includes" / "layout.njk").read_text(encoding="utf-8")
-    assert 'href="/fonts/' in layout, (
+    # Fix round 4: `href="/fonts/..."` moved behind Eleventy's `| url`
+    # filter (`href="{{ '/fonts/...' | url }}"`) so the preload resolves
+    # under this project's real published prefix rather than a bare
+    # domain root -- see `_configured_path_prefix`'s own docstring.
+    assert "'/fonts/" in layout, (
         "layout.njk no longer preloads a font from /fonts/ -- either the "
         "self-hosting was dropped, or the page ships no display font at all"
     )
@@ -563,8 +601,14 @@ def test_layout_links_to_every_page_this_task_added() -> None:
     one piece of chrome every public page shares, so a link here reaches
     every page from anywhere on the site, including the home page."""
     layout = _LAYOUT_TEMPLATE.read_text(encoding="utf-8")
+    # Fix round 4: each `href="/foo/"` moved behind Eleventy's `| url`
+    # filter -- `href="{{ '/foo/' | url }}"` -- so a bare, unfiltered href
+    # here would fail this pin exactly as surely as a missing link would.
     for href in ("/archives/", "/propose/", "/data/"):
-        assert f'href="{href}"' in layout, f"layout.njk never links to {href}"
+        expected = "href=\"{{ '" + href + "' | url }}\""
+        assert expected in layout, (
+            f"layout.njk no longer links to {href} through the `url` filter"
+        )
 
 
 def test_home_pages_proposal_ctas_go_through_the_entry_page_not_around_it() -> None:
@@ -573,7 +617,8 @@ def test_home_pages_proposal_ctas_go_through_the_entry_page_not_around_it() -> N
     `/propose/` now, not at the external form directly, so there is
     exactly one place the live form's address needs to change."""
     index_source = (SITE_SRC / "index.njk").read_text(encoding="utf-8")
-    assert index_source.count('href="/propose/"') == 2
+    # Fix round 4: both CTAs now read `href="{{ '/propose/' | url }}"`.
+    assert index_source.count("'/propose/' | url") == 2
     assert "site.applyForm" not in index_source
 
 
@@ -606,7 +651,11 @@ def test_archive_filter_bar_marks_the_all_page_current_without_linking_to_it(
     assert (
         '<span class="archive-filters__current" aria-current="page">All</span>' in page
     )
-    assert '<a href="/archives/">All</a>' not in page
+    # Fix round 4: checked against the real, prefixed address this page
+    # would carry if it wrongly linked to itself -- checking the old,
+    # unprefixed literal would pass even if a `/example-showcase/archives/`
+    # link had reappeared here.
+    assert f'<a href="{_pfx("/archives/")}">All</a>' not in page
 
 
 def test_year_pages_exist_for_every_year_with_a_past_edition_and_no_other(
@@ -635,7 +684,9 @@ def test_a_year_page_lists_only_that_years_editions(built_site: Path) -> None:
             encoding="utf-8"
         )
         assert f'aria-current="page">{year}' in page
-        assert f'<a href="/archives/{year}/">' not in page
+        # Fix round 4: same reasoning as the "All" pin above -- checked
+        # against the real, prefixed address.
+        assert f'<a href="{_pfx(f"/archives/{year}/")}">' not in page
         for event in events:
             assert event["id"] in page
         for other_year, other_events in by_year.items():
@@ -949,11 +1000,14 @@ def _governance_record_file() -> str:
 
 def _published_app_base() -> str:
     """`vite.config.ts`'s own production `base` -- the `/example-showcase/app/`
-    every published asset URL is resolved against, distinct from the two
-    islands' own `/app/` (see that file's own comment on why they
-    differ). Matched by its distinguishing `/example-showcase/` prefix rather
-    than by position, so it stays the right one of the three `base:`
-    literals in that file even if they are reordered.
+    every published asset URL is resolved against, including (fix round 4)
+    the two islands' own, which used to read a different, undocumented-in-
+    production `/app/` and now match this exactly (see that file's own
+    comment for why they used to differ, and why that reasoning did not
+    hold once the site itself became prefix-aware). Matched by its
+    distinguishing `/example-showcase/` prefix rather than by position, so it
+    stays the right one of the three `base:` literals in that file even if
+    they are reordered.
     """
     text = _VITE_CONFIG.read_text(encoding="utf-8")
     match = re.search(r"base:\s*'(/example-showcase/[^']*)'", text)
@@ -964,24 +1018,48 @@ def _published_app_base() -> str:
     return match.group(1)
 
 
-def test_donnees_page_links_to_the_published_governance_record() -> None:
-    """One of the two things the task brief asks to be pinned hard: the
-    data page's link to the governance record resolves to something
-    published. Built from the same two constants that decide where the
-    record actually lands, rather than against a literal URL nothing
-    would catch drifting out from under it.
+#: Fix round 2 (the private-repository defect, D-15): `event.njk` used to
+#: link the same data-protection record straight at `example-cockpit` -- the
+#: *private* source repository -- which hands a public visitor GitHub's own
+#: 404. `donnees.njk` already linked the published handbook address; both
+#: templates are checked against the identical `expected` string below, so
+#: neither can quietly disagree with the other again.
+_GOVERNANCE_LINK_TEMPLATES = (_DONNEES_TEMPLATE, _EVENT_TEMPLATE)
+
+
+def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None:
+    """One of the two things the task brief asks to be pinned hard: every
+    page's link to the governance record resolves to something published,
+    not to the private repository it actually lives in the source of. Built
+    from the same two constants that decide where the record actually
+    lands, rather than against a literal URL nothing would catch drifting
+    out from under it -- and checked identically against every template
+    that carries this link, so `event.njk` and `donnees.njk` cannot state
+    two different answers to the same question again.
     """
-    donnees = _DONNEES_TEMPLATE.read_text(encoding="utf-8")
     host = "https://example-instance.github.io"
     assert SIGNUP_BASE.startswith(f"{host}/example-showcase/"), (
         "registration.SIGNUP_BASE no longer shares this page's own "
         "assumed host -- update both together"
     )
     expected = f"{host}{_published_app_base()}handbook/{_governance_record_file()}"
-    assert expected in donnees, (
-        f"donnees.njk does not link to {expected!r} -- either the link "
-        "drifted, or registry.ts/vite.config.ts changed under it"
-    )
+    for template in _GOVERNANCE_LINK_TEMPLATES:
+        source = template.read_text(encoding="utf-8")
+        assert expected in source, (
+            f"{template.relative_to(ROOT).as_posix()} does not link to "
+            f"{expected!r} -- either the link drifted, or "
+            "registry.ts/vite.config.ts changed under it"
+        )
+        # `_without_comments`: this fix's own explanatory comment names
+        # "example-cockpit" by way of saying what was removed -- the same
+        # reason `test_no_page_requests_a_third_party_font_host` strips
+        # comments before scanning, rather than flag the very comment
+        # explaining the fix as if it were the regression.
+        assert "example-cockpit" not in _without_comments(source), (
+            f"{template.relative_to(ROOT).as_posix()} links straight at the "
+            "private example-cockpit repository -- a public visitor gets "
+            "GitHub's own 404 (D-15: private source, public artefact)"
+        )
 
 
 @pytest.fixture(scope="module")
@@ -1035,4 +1113,104 @@ def test_the_governance_record_is_actually_among_what_the_app_publishes(
     assert target.is_file(), (
         f"{target} does not exist after a real copy-handbook run -- "
         "donnees.njk's link would 404 even though its shape looks right"
+    )
+
+
+# -------------------------------------------------------------------------- #
+# Fix round 4: the path-prefix defect. GitHub Pages serves this project's
+# build output at <https://example-instance.github.io/example-showcase/>, not at
+# a bare domain root -- there is no CNAME and no custom domain. Every
+# template used to write its internal links as a bare `/foo`, which
+# resolves one path segment short of where the site actually lives --
+# invisible on a developer's own `localhost` build (a root-relative path
+# resolves identically at any root), total once published: the stylesheet,
+# every self-hosted font, every internal link, and both island `<script>`
+# tags -- registration and certificate verification, the two things this
+# phase exists to deliver -- would all 404.
+#
+# The fix: `site/.eleventy.js` now sets `pathPrefix`, and every template's
+# internal `href`/`src` goes through Eleventy's own `url` filter, which
+# applies it; `style.css`'s own font `url()`s are relative instead, which
+# needs no prefix at all -- a relative URL inside a stylesheet resolves
+# against the stylesheet's own address, at any prefix; and both islands'
+# Vite `base` (`app/vite.config.ts`) now matches the main app's published
+# address rather than diverging from it. The two tests below are the
+# deliverable the task brief asks for: a built-output sweep that closes the
+# whole class of defect (not just the instances one review happened to
+# enumerate), and a cross-boundary pin that keeps the site's own prefix
+# from becoming a fourth, independent literal.
+# -------------------------------------------------------------------------- #
+
+_HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]*)"')
+
+
+def test_no_built_page_emits_a_root_relative_link_without_the_prefix(
+    built_site: Path,
+) -> None:
+    """Asserted over the real, built output -- every `.html` file the real
+    build actually wrote -- rather than the eleven paths one review
+    happened to enumerate: a twelfth root-relative link, on a page this
+    task does not know about, fails this test exactly the same way a
+    thirteenth or a hundredth would. `built_site` is the same fixture the
+    rest of this module already builds `site/` into (its own committed
+    fixture data), so this runs against every page template this project
+    ships: the home page, every event page, every archive view, `/propose/`
+    and `/data/`.
+
+    A link is "root-relative" here if it starts with a single `/` -- an
+    absolute URL (`https://...`), a `mailto:` link, and a protocol-relative
+    one (`//host/...`, excluded explicitly since it too starts with `/`)
+    are all left alone, because none of them is resolved against this
+    site's own published address at all.
+    """
+    prefix = _configured_path_prefix()
+    html_files = list(built_site.rglob("*.html"))
+    assert html_files, (
+        f"no .html file found under {built_site} -- the glob itself may be "
+        "wrong, which would silently pass this test on an empty scan"
+    )
+    offending: list[tuple[str, str]] = []
+    for path in html_files:
+        text = path.read_text(encoding="utf-8")
+        for value in _HREF_SRC_RE.findall(text):
+            if not value.startswith("/") or value.startswith("//"):
+                continue  # relative, a fragment, mailto:, or an absolute URL
+            if not value.startswith(prefix):
+                offending.append((path.relative_to(built_site).as_posix(), value))
+    assert offending == [], (
+        f"root-relative href/src missing the {prefix!r} prefix: {offending} "
+        "-- every internal link must go through Eleventy's `url` filter "
+        "(site/.eleventy.js's own PATH_PREFIX), or it 404s once served from "
+        "this project's real published address"
+    )
+
+
+def test_the_path_prefix_agrees_with_the_addresses_python_already_pins() -> None:
+    """D-14: this project's published path prefix must not become a
+    fourth, independent literal. `registration.SIGNUP_BASE` and
+    `certificate.VERIFICATION_BASE` already carry it (host and path both),
+    and `vite.config.ts`'s own production `base` already pins the app's own
+    half of it (`_published_app_base`, above) -- bound here to
+    `site/.eleventy.js`'s `PATH_PREFIX` by a test, the same discipline that
+    already binds those three literals to each other, rather than an
+    import across the Python/JavaScript boundary this project builds no
+    tooling to cross.
+    """
+    prefix = _configured_path_prefix()
+    host = "https://example-instance.github.io"
+    assert SIGNUP_BASE.startswith(f"{host}{prefix}"), (
+        f"registration.SIGNUP_BASE ({SIGNUP_BASE!r}) no longer starts with "
+        f"{host + prefix!r} -- update it and site/.eleventy.js's PATH_PREFIX "
+        "together"
+    )
+    assert VERIFICATION_BASE.startswith(f"{host}{prefix}"), (
+        f"certificate.VERIFICATION_BASE ({VERIFICATION_BASE!r}) no longer "
+        f"starts with {host + prefix!r} -- update it and "
+        "site/.eleventy.js's PATH_PREFIX together"
+    )
+    assert _published_app_base() == f"{prefix}app/", (
+        f"vite.config.ts's own published base ({_published_app_base()!r}) no "
+        f"longer agrees with site/.eleventy.js's PATH_PREFIX ({prefix!r}) -- "
+        "the app and the site would publish to, and be addressed from, "
+        "different places"
     )

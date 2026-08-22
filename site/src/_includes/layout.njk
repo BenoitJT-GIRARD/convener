@@ -10,8 +10,8 @@
    Google, which handed every visitor's address to a third party. The phase 5
    specification forbids exactly that, and this page also carries the data
    notice, so the contradiction was visible from the page itself. #}
-<link rel="preload" href="/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css">
+<link rel="preload" href="{{ '/fonts/archivo-latin-standard-normal.woff2' | url }}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ '/style.css' | url }}">
 </head>
 <body>
 
@@ -27,7 +27,7 @@
     <path d="M 70 270 C 30 290 50 360 110 350 C 160 342 160 280 120 280 C 80 280 60 340 120 360" opacity=".75"/>
   </svg>
   <div class="container masthead__inner">
-    <a href="/" class="masthead__brand unstyled">
+    <a href="{{ '/' | url }}" class="masthead__brand unstyled">
       <span class="masthead__brand-mark">No.</span>
       <span class="masthead__brand-name">The Example Collective</span>
       <span class="masthead__brand-sub">Monthly Reading Group</span>
@@ -44,9 +44,9 @@
       <em>Run by volunteers from</em> <a href="{{ site.forum }}">The Example Collective</a> <em>&middot; A community of behavioural-science researchers.</em>
     </p>
     <nav class="colophon__nav">
-      <a href="/archives/" class="unstyled">Archives</a>
-      <a href="/propose/" class="unstyled">Propose a speaker</a>
-      <a href="/data/" class="unstyled">Data &amp; privacy</a>
+      <a href="{{ '/archives/' | url }}" class="unstyled">Archives</a>
+      <a href="{{ '/propose/' | url }}" class="unstyled">Propose a speaker</a>
+      <a href="{{ '/data/' | url }}" class="unstyled">Data &amp; privacy</a>
       <a href="{{ site.forum }}" class="unstyled">Forum</a>
       <a href="{{ site.organizerApp }}" class="unstyled">Organizer access</a>
     </nav>

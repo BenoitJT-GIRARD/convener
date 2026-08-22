@@ -24,7 +24,7 @@
       {% if active == "all" %}
       <span class="archive-filters__current" aria-current="page">All</span>
       {% else %}
-      <a href="/archives/">All</a>
+      <a href="{{ '/archives/' | url }}">All</a>
       {% endif %}
     </li>
     {% for y in years %}
@@ -32,7 +32,7 @@
       {% if active == y.year %}
       <span class="archive-filters__current" aria-current="page">{{ y.year }} ({{ y.count }})</span>
       {% else %}
-      <a href="/archives/{{ y.year }}/">{{ y.year }} ({{ y.count }})</a>
+      <a href="{{ ('/archives/' ~ y.year ~ '/') | url }}">{{ y.year }} ({{ y.count }})</a>
       {% endif %}
     </li>
     {% endfor %}
@@ -40,14 +40,14 @@
       {% if active == "recordings" %}
       <span class="archive-filters__current" aria-current="page">With a recording</span>
       {% else %}
-      <a href="/archives/recordings/">With a recording</a>
+      <a href="{{ '/archives/recordings/' | url }}">With a recording</a>
       {% endif %}
     </li>
     <li>
       {% if active == "discussions" %}
       <span class="archive-filters__current" aria-current="page">With a discussion</span>
       {% else %}
-      <a href="/archives/discussions/">With a discussion</a>
+      <a href="{{ '/archives/discussions/' | url }}">With a discussion</a>
       {% endif %}
     </li>
   </ul>

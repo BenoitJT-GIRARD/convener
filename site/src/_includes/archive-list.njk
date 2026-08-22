@@ -12,7 +12,7 @@
 <li class="archive__row">
   <span class="archive__num">{{ e.id }}</span>
   <div class="archive__main">
-    <p class="archive__title"><a class="unstyled" href="/events/{{ e.id | lower }}/">{{ e.title }}</a></p>
+    <p class="archive__title"><a class="unstyled" href="{{ ('/events/' ~ (e.id | lower) ~ '/') | url }}">{{ e.title }}</a></p>
     <div class="archive__meta">
       <strong>{{ e.speaker_name }}</strong>
       {% if e.speaker_affiliation %}<span>&middot; {{ e.speaker_affiliation }}</span>{% endif %}

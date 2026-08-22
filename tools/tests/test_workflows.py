@@ -163,6 +163,44 @@ def test_vite_config_base_no_longer_points_at_the_private_repo() -> None:
     )
 
 
+def test_both_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
+    """Fix round 4 (the path-prefix defect): `islandSignupConfig` and
+    `islandVerifyConfig` used to set `base: '/app/'`, deliberately distinct
+    from the main config's own `base: '/example-showcase/app/'`
+    (`EXPECTED_BASE_PATH`, above), on the reasoning that the *site* pages
+    hosting these islands already addressed
+    the app's assets root-relative to the site's own root. That reasoning
+    assumed the site's own root-relative links already landed at wherever
+    GitHub Pages resolves this project's published root to -- they did not
+    (no CNAME, no custom domain), which is the identical gap
+    `tools/tests/test_site.py::
+    test_no_built_page_emits_a_root_relative_link_without_the_prefix` now
+    closes on the site's own side. Both islands publish into, and are
+    addressed from, the exact same `example-showcase` `app/` subtree the main
+    app does (`deploy.yml`'s single "Push to example-showcase" step carries all
+    three), so all three configs must now read the identical value -- a
+    stray `'/app/'` reappearing on either island is exactly the regression
+    this guards.
+    """
+    config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
+    # Block comments stripped first: this file's own explanatory comments
+    # quote `base: '/example-showcase/app/'` by way of describing the fix, which
+    # would otherwise inflate this count without a fourth real config.
+    code_only = re.sub(r"/\*.*?\*/", "", config, flags=re.DOTALL)
+    base_literals = re.findall(r"base:\s*'([^']*)'", code_only)
+    assert len(base_literals) == 3, (
+        f"expected exactly 3 `base:` literals in {VITE_CONFIG.as_posix()} "
+        f"(main app, island-signup, island-verify), found {base_literals!r}"
+    )
+    assert set(base_literals) == {EXPECTED_BASE_PATH}, (
+        f"{VITE_CONFIG.as_posix()}'s three `base:` literals are "
+        f"{base_literals!r}, not all {EXPECTED_BASE_PATH!r} -- an island "
+        "publishing under a different base than the main app 404s its own "
+        "fetches (event keys, the certificate register, signing keys) once "
+        "served from the vitrine's real, single app/ subtree"
+    )
+
+
 def test_app_no_longer_declares_a_verify_route() -> None:
     """Task 7 moved certificate verification off `App.tsx`'s own
     `<Route path="/verify/:identifier" .../>` onto a static page's own

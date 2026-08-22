@@ -50,14 +50,18 @@ import type { Registration } from '../../signup/encrypt';
 // `keys/events/`, and still ships inside the app's own build output --
 // see that script's own comment for why a missing file here is a normal
 // state, not a build failure. `base` for this island's own Vite build
-// (`app/vite.config.ts`, `mode === 'island-signup'`) is deliberately
-// `/app/`, not the main app's own `/example-showcase/app/`: this bundle runs on
-// a page served by the *site*, whose own templates already address the
-// app's assets root-relative to the site's own root (the same convention
-// `site/src/_includes/layout.njk` already uses for `/style.css` and
-// `/fonts/`), not to wherever GitHub Pages ultimately resolves that root
-// to (docs/superpowers/deferred-work.md, entry 11 -- a maintainer's Pages
-// setting, out of scope here).
+// (`app/vite.config.ts`, `mode === 'island-signup'`) is
+// `/example-showcase/app/`, the same value the main app build uses -- Fix round
+// 4 correction: this used to read `/app/`, deliberately distinct, on the
+// reasoning that this bundle runs on a page served by the *site*, whose
+// own templates already addressed the app's assets root-relative to the
+// site's own root. That reasoning assumed the site's own root-relative
+// links already landed at wherever GitHub Pages resolves this project's
+// published root to; they did not, since there is no CNAME and no custom
+// domain, so that root is one path segment (`/example-showcase/`) below the
+// domain root a bare `/foo` actually addresses -- see
+// `app/vite.config.ts`'s own comment on `islandSignupConfig` for the fix
+// this island shares with every template in `site/`.
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
 // A missing relay is a normal state (D-13), the same idiom `auth/strategy.ts`

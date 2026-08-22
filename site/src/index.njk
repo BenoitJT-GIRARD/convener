@@ -24,7 +24,7 @@ layout: layout.njk
       from rodent ethology to decision dynamics, hosted by researchers, open to all.
     </p>
     <div class="hero__actions">
-      <a class="btn btn--primary" href="/propose/">Propose a speaker</a>
+      <a class="btn btn--primary" href="{{ '/propose/' | url }}">Propose a speaker</a>
       <a class="btn btn--ghost" href="{{ site.forum }}">Visit the forum</a>
     </div>
   </div>
@@ -63,7 +63,7 @@ layout: layout.njk
           points there, whether or not a room link has been set yet.
         #}
         <div class="feature__action">
-          <a class="btn btn--primary" href="/events/{{ e.id | lower }}/">Register free &rarr;</a>
+          <a class="btn btn--primary" href="{{ ('/events/' ~ (e.id | lower) ~ '/') | url }}">Register free &rarr;</a>
         </div>
       </div>
     </article>
@@ -88,7 +88,7 @@ layout: layout.njk
     <li class="archive__row">
       <span class="archive__num">{{ e.id }}</span>
       <div class="archive__main">
-        <p class="archive__title"><a class="unstyled" href="/events/{{ e.id | lower }}/">{{ e.title }}</a></p>
+        <p class="archive__title"><a class="unstyled" href="{{ ('/events/' ~ (e.id | lower) ~ '/') | url }}">{{ e.title }}</a></p>
         <div class="archive__meta">
           <strong>{{ e.speaker_name }}</strong>
           {% if e.speaker_affiliation %}<span>&middot; {{ e.speaker_affiliation }}</span>{% endif %}
@@ -122,6 +122,6 @@ layout: layout.njk
     <p class="coda__text">
       Know someone whose work would <em>inspire</em> this community?
     </p>
-    <a class="btn btn--ghost" href="/propose/">Propose a speaker</a>
+    <a class="btn btn--ghost" href="{{ '/propose/' | url }}">Propose a speaker</a>
   </div>
 </section>
