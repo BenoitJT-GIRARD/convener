@@ -1,14 +1,19 @@
 """The design tokens, and the guards that keep them derived from one file.
 
 `data/brand.json` measured Anonymous's own colours. Before this module existed,
-three implementations each carried their own hand-typed copy of them --
-`site/src/style.css`, `app/src/design/tokens.css`, `app/src/design/tokens.ts`
--- and one of the three had drifted to a reconstruction's palette without
-anyone deciding that on purpose: purple on turquoise measured 4.44 there,
-below AA, where Anonymous's own value gives 7.93, AAA
-(`docs/superpowers/deferred-work.md`, entry 1). `scripts/generate_brand_css.py`
-derives all three from the brand file instead, and this module holds what
-makes that stick.
+two implementations each carried their own hand-typed copy of them --
+`site/src/style.css` and `app/src/design/tokens.css` -- and the application
+had drifted to a reconstruction's palette without anyone deciding that on
+purpose: purple on turquoise measured 4.44 there, below AA, where Anonymous's
+own value gives 7.93, AAA (`docs/superpowers/deferred-work.md`, entry 1).
+`scripts/generate_brand_css.py` derives both from the brand file instead,
+and this module holds what makes that stick.
+
+A third file, `app/src/design/tokens.ts`, used to be generated here too and
+was covered by this module's own tests. Fix round 1 retired it -- nothing
+under `app/src` ever imported it -- so it is guarded only by
+`test_the_reconstructions_palette_never_reappears` staying silent about it
+now, not by a generation test for a file that no longer exists.
 
 **The loop is proved, not assumed**, the same way `test_schema_doc.py` proves
 it for the handbook appendix: the tests below read the committed files off
@@ -48,7 +53,6 @@ from generate_brand_css import (
     _BEGIN,
     _END,
     APP_TOKENS_CSS_PATH,
-    APP_TOKENS_TS_PATH,
     BRAND_PATH,
     COMMAND,
     SITE_CSS_PATH,
@@ -58,7 +62,6 @@ from generate_brand_css import (
     main,
     relative_luminance,
     render_app_tokens_css,
-    render_app_tokens_ts,
     render_site_css,
     rgb_triplet,
     rgba,
@@ -82,7 +85,6 @@ _GUARDED_FILES = (
     Path("site") / "src" / "style.css",
     Path("site") / "src" / "index.njk",
     Path("app") / "src" / "design" / "tokens.css",
-    Path("app") / "src" / "design" / "tokens.ts",
     Path("app") / "src" / "auth" / "Login.tsx",
 )
 
@@ -125,29 +127,18 @@ def test_the_committed_app_tokens_css_is_what_brand_json_derives() -> None:
     )
 
 
-def test_the_committed_app_tokens_ts_is_what_brand_json_derives() -> None:
-    committed = (ROOT / APP_TOKENS_TS_PATH).read_text(encoding="utf-8")
-    assert committed == render_app_tokens_ts(ROOT), (
-        f"{APP_TOKENS_TS_PATH.as_posix()} is not what {BRAND_PATH.as_posix()}"
-        f" derives; run `{COMMAND}` from `tools/`."
-    )
-
-
 def test_the_rendering_is_a_function_of_brand_json_alone() -> None:
     """Byte-identical over two runs, which is what makes `--check` a fact."""
-    assert render_app_tokens_ts(ROOT) == render_app_tokens_ts(ROOT)
     assert render_site_css(ROOT) == render_site_css(ROOT)
+    assert render_app_tokens_css(ROOT) == render_app_tokens_css(ROOT)
 
 
-def test_the_generated_files_say_so_and_name_the_command() -> None:
+def test_the_generated_files_say_so() -> None:
     """A derived file that does not say so is one somebody will edit."""
     site_css = (ROOT / SITE_CSS_PATH).read_text(encoding="utf-8")
     assert "generate_brand_css.py" in site_css
     app_css = (ROOT / APP_TOKENS_CSS_PATH).read_text(encoding="utf-8")
     assert "generate_brand_css.py" in app_css
-    tokens_ts = (ROOT / APP_TOKENS_TS_PATH).read_text(encoding="utf-8")
-    assert "generate_brand_css.py" in tokens_ts
-    assert COMMAND in tokens_ts
 
 
 # --------------------------------------------------------------------------
@@ -255,8 +246,7 @@ def _marked_stub() -> str:
 @pytest.fixture
 def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A repository holding `data/brand.json` and marked-but-empty
-    stylesheets, with `tokens.ts` not yet written -- the state a fresh
-    checkout is in before the generator has ever run.
+    stylesheets for both generated targets.
     """
     (tmp_path / "data").mkdir(parents=True)
     (tmp_path / "data" / "brand.json").write_text(
@@ -266,22 +256,20 @@ def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         path = tmp_path / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(_marked_stub(), encoding="utf-8")
-    (tmp_path / APP_TOKENS_TS_PATH).parent.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     return tmp_path
 
 
-def test_check_fails_before_anything_has_been_written(
+def test_check_fails_when_a_target_file_does_not_exist_at_all(
     fake_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """`tokens.ts` does not exist yet in a fresh checkout. A guard around
-    something that does not exist has to fail loudly, and has to say what
-    to run.
+    """A guard around a file that does not exist has to fail loudly, and
+    has to say what to run, rather than crash uncaught or silently pass.
     """
+    (fake_repo / APP_TOKENS_CSS_PATH).unlink()
     assert main(["--check"]) == 1
-    assert not (fake_repo / APP_TOKENS_TS_PATH).exists()
     err = capsys.readouterr().err
-    assert APP_TOKENS_TS_PATH.as_posix() in err
+    assert APP_TOKENS_CSS_PATH.as_posix() in err
     assert COMMAND in err
 
 
@@ -310,10 +298,13 @@ def test_check_leaves_a_stale_file_exactly_as_it_found_it(
     that a file is wrong into a green tick.
     """
     assert main([]) == 0
-    ts_path = fake_repo / APP_TOKENS_TS_PATH
-    ts_path.write_text("stale\n", encoding="utf-8")
+    css_path = fake_repo / APP_TOKENS_CSS_PATH
+    original = css_path.read_text(encoding="utf-8")
+    stale = original.replace(_END, "STALE-MUTATION " + _END)
+    assert stale != original
+    css_path.write_text(stale, encoding="utf-8")
     assert main(["--check"]) == 1
-    assert ts_path.read_text(encoding="utf-8") == "stale\n"
+    assert css_path.read_text(encoding="utf-8") == stale
 
 
 def test_a_hand_edited_generated_token_makes_check_fail(

@@ -5,7 +5,49 @@
  * sharp rectangles, generous whitespace.
  */
 
-@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap");
+/* Self-hosted, and that is a requirement rather than a preference: this
+ * file used to @import these two faces from fonts.googleapis.com (with
+ * index.html preconnecting to fonts.googleapis.com and fonts.gstatic.com
+ * besides), which sends every visitor's address to Google -- on the exact
+ * pages that exist to keep personal data out of third-party hands (the
+ * signup form, the certificate verification page, the survey). Fix round
+ * 1 of task 3, found by grep after `site/`'s own equivalent request had
+ * already been removed. The files sit beside their licences in `../fonts/`
+ * at the repository root, shared with `site/`'s own copy of this same
+ * discipline (D-17); `app/scripts/copy-fonts.mjs` publishes them here at
+ * `/fonts/` before every `vite dev`/`vite build`. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/archivo-latin-standard-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  /* Latin Extended: speaker names carry ő, ș, ł and their neighbours, and an
+   * academic audience is international by construction. */
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/archivo-latin-ext-standard-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
 /* BEGIN GENERATED TOKENS -- scripts/generate_brand_css.py */
@@ -24,6 +66,8 @@
   --accent-soft:   #d8dde7;
   --border:        #d0bbc3;
   --border-strong: #b18f9b;
+  /* No data/brand.json equivalent: no original Anonymous drew ever needed a
+   * rejection colour or a soft informational one. */
   --danger:        #9b2226;
   --info:          #4a6c75;
   --select:        rgba(130, 219, 215, 0.25);

@@ -13,8 +13,10 @@ overwritten from `public-data/events-public.json` (`uv run convener-public-data`
 `src/_data/site.json` is genuine source: the showcase's own static configuration
 (title, tagline, external links).
 
-Fonts are self-hosted (`src/fonts/`) with their licences. No third-party request
-is made from a published page — D-17.
+Fonts are self-hosted, from `../fonts/` at the repository root -- shared with
+`app/`'s own copy step (`app/scripts/copy-fonts.mjs`) rather than a second,
+separately committed set that could drift apart from it. No third-party
+request is made from a published page — D-17.
 
 ## Local preview
 

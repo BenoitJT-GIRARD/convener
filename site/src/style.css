@@ -21,7 +21,9 @@
  * which sends every visitor's address to a third party — on a site that carries
  * a data-protection notice and whose specification opens with "sans y
  * introduire la moindre dépendance à un service tiers". The files sit beside
- * their licences in src/fonts/.
+ * their licences in ../fonts/ at the repository root -- shared with the
+ * application's own copy step (app/scripts/copy-fonts.mjs) rather than a
+ * second, separately committed set.
  *
  * Archivo stands in for Anonymous's Akzidenz-Grotesk and Neue Machina, both of
  * which are commercial licences and cannot ship on a zero-cost public site.

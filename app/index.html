@@ -5,9 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TEC · Workshop Series</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <!-- Fonts are self-hosted from /fonts/ -- see the @font-face block in
+         src/design/tokens.css. This head used to preconnect to Google's
+         font CDN and load a stylesheet from it, on pages that carry a
+         signup form and a certificate lookup -- exactly the surfaces this
+         project built a consent apparatus to keep third parties away from
+         (fix round 1, task 3; see tokens.css's own comment for the two
+         host names, and app/tests/no-third-party-fonts.test.ts for the
+         guard). -->
+    <link rel="preload" href="/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
   </head>
   <body>
     <div id="root"></div>
