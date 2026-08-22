@@ -16,6 +16,16 @@
 <body>
 
 <header class="masthead">
+  {# Same continuous, cubic-Bézier ribbon as .hero__loops in index.njk,
+     carried here because layout.njk is the one piece of chrome every
+     public page shares -- including the ones D-18 describes that do not
+     exist yet. No colour of its own: the stroke comes from .masthead__loops
+     in style.css, which takes it from the generated --purple token. #}
+  <svg class="masthead__loops" viewBox="0 0 400 400" fill="none" stroke-width="9" stroke-linecap="round" aria-hidden="true">
+    <path d="M 320 60 C 380 60 400 130 340 150 C 280 170 270 90 330 90 C 380 90 370 180 300 200" opacity=".85"/>
+    <path d="M 250 230 C 320 220 360 290 290 310 C 230 326 220 250 280 250 C 340 250 330 350 250 350" opacity=".9"/>
+    <path d="M 70 270 C 30 290 50 360 110 350 C 160 342 160 280 120 280 C 80 280 60 340 120 360" opacity=".75"/>
+  </svg>
   <div class="container masthead__inner">
     <a href="/" class="masthead__brand unstyled">
       <span class="masthead__brand-mark">No.</span>

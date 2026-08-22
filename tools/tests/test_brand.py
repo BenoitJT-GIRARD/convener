@@ -71,11 +71,14 @@ from convener_ops.paths import repo_root
 
 ROOT = repo_root()
 
-#: The two templates that draw the ribbon motif directly, outside any
-#: generated stylesheet. Neither may hand-type a colour `data/brand.json`
-#: carries; both must take it from a generated token instead.
+#: The templates that draw the ribbon motif directly, outside any generated
+#: stylesheet. None may hand-type a colour `data/brand.json` carries; each
+#: must take it from a generated token instead. `layout.njk` joined this list
+#: when the shared masthead grew its own loop, so every page built on it --
+#: not only the home page -- carries the motif (D-18).
 _RIBBON_TEMPLATES = (
     Path("site") / "src" / "index.njk",
+    Path("site") / "src" / "_includes" / "layout.njk",
     Path("app") / "src" / "auth" / "Login.tsx",
 )
 
@@ -92,6 +95,21 @@ _GUARDED_FILES = (
 #: application's deep-purple accent, its turquoise primary, and its
 #: cyan-tinted paper. See `docs/superpowers/deferred-work.md`, entry 1.
 _RECONSTRUCTION_VALUES = ("#3D2D7C", "#3FB1C2", "#f7fafa")
+
+
+def _rule_block(css: str, selector: str) -> str:
+    """The body of one flat CSS rule (no nested braces), found by its exact
+    selector at the start of a line -- `_rule_block(css, "a")` finds `a {
+    ... }` itself, not `a.btn {` or `a:hover {`, because the pattern
+    requires the selector to be followed only by optional whitespace and
+    then `{`.
+    """
+    pattern = re.compile(
+        r"(?:^|\n)" + re.escape(selector) + r"\s*\{([^}]*)\}", re.MULTILINE
+    )
+    match = pattern.search(css)
+    assert match, f"no rule found for selector {selector!r}"
+    return match.group(1)
 
 
 def _all_brand_colours(brand: dict[str, Any]) -> dict[str, str]:
@@ -169,7 +187,7 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
         checked += 1
     # Every entry data/brand.json currently carries -- a change to that
     # section without a matching change here would otherwise pass silently.
-    assert checked == 8
+    assert checked == 9
 
 
 def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
@@ -193,6 +211,53 @@ def test_hex_to_rgb_and_the_css_literals_built_from_it() -> None:
     assert hex_to_rgb("#fecac1") == (130, 219, 215)
     assert rgba("#fecac1", 0.35) == "rgba(130, 219, 215, 0.35)"
     assert rgb_triplet("#ffffff") == "255, 255, 255"
+
+
+# --------------------------------------------------------------------------
+# D-18: the page's own ground, and the pairings its flip put at risk
+# --------------------------------------------------------------------------
+
+
+def test_the_page_ground_is_turquoise_not_white() -> None:
+    """D-18: the showcase's ground is turquoise, crossed by cream bands --
+    the inverse of the white-ground/turquoise-accent design that stood
+    before this task. `body`'s own background is the one declaration that
+    carries it; a reversion to `--paper` would put the whole composition
+    back the wrong way round without any generated-token test noticing,
+    since that check only covers the `:root` block, not how the rest of
+    the stylesheet uses it.
+    """
+    css = (ROOT / SITE_CSS_PATH).read_text(encoding="utf-8")
+    block = _rule_block(css, "body")
+    assert "background: var(--turquoise);" in block
+    assert "var(--paper)" not in block
+
+
+def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> None:
+    """Turning the ground turquoise (D-18) made several selectors move off
+    the white/paper ground they were designed against, onto one where their
+    old colour fails AA: turquoise-d on turquoise measures 3.81, ink-faint
+    on turquoise measures 3.51, and white on a turquoise fill measures 1.61
+    -- all below the 4.5 floor for normal text (`data/brand.json`'s
+    `_forbidden` note). Each of these selectors was moved to a colour that
+    clears AA on whichever ground it can now appear on; this pins that each
+    one stays off the value that would fail there again.
+    """
+    css = (ROOT / SITE_CSS_PATH).read_text(encoding="utf-8")
+    risky: dict[str, str] = {
+        "a": "var(--turquoise-d)",
+        ".hero__title em": "var(--turquoise-d)",
+        ".feature__vol": "var(--turquoise-d)",
+        ".archive__date": "var(--ink-faint)",
+        ".archive__action--disabled": "var(--ink-faint)",
+        ".btn--primary": "var(--turquoise)",
+    }
+    for selector, bad_value in risky.items():
+        block = _rule_block(css, selector)
+        assert bad_value not in block, (
+            f"{selector} carries {bad_value}, which fails AA on the "
+            "turquoise field this task made the page's ground"
+        )
 
 
 # --------------------------------------------------------------------------

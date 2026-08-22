@@ -113,21 +113,30 @@
 html { -moz-osx-font-smoothing: grayscale; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 
 body {
-  background: var(--paper);
+  /* Turquoise is the field -- D-18. The cream bands (masthead,
+   * section__head, colophon) sit on top of it; overflow-x is clipped here
+   * because those bands bleed full-width off their own centred container
+   * with a box-shadow spread that runs to 100vmax on either side. */
+  background: var(--turquoise);
   color: var(--ink);
   font-family: var(--ff-body);
   font-size: 17px;
   line-height: 1.55;
   font-feature-settings: "kern", "liga";
+  overflow-x: hidden;
 }
 
 a {
-  color: var(--turquoise-d);
+  /* Purple, not turquoise-d: turquoise is a ground now, and a plain link
+   * can land directly on it (prose in a future page's notice or abstract),
+   * where turquoise-d measures 3.81 -- below AA. Purple clears both grounds
+   * it can appear on (7.93 on turquoise, 11.26 on cream). */
+  color: var(--purple);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
   transition: color .15s, border-color .15s;
 }
-a:hover { color: var(--purple); border-bottom-color: var(--purple); }
+a:hover { color: var(--ink); border-bottom-color: var(--ink); }
 a.unstyled, a.unstyled:hover { border-bottom: 0; }
 
 .container {
@@ -138,11 +147,37 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 
 /* ── Masthead ─────────────────────────────────────────────── */
+/* The identity band -- cream, full-bleed, the same role the logo band
+ * carries at the top of Anonymous's own composition. Everything below it is
+ * the turquoise field (D-18); this is the one place it is interrupted
+ * before the page even begins its content. */
 .masthead {
-  background: var(--turquoise);
+  position: relative;
+  background: var(--surface);
   border-bottom: 4px solid var(--purple);
 }
+.masthead__loops {
+  /* Same motif as .hero__loops / .coda__loops, extended to the one piece
+   * of chrome every page shares (D-18's "other pages" have no hero of
+   * their own yet). Deliberately allowed to run past the masthead's own
+   * bottom edge into the field below -- Anonymous's own loop crosses from
+   * the cream band into the turquoise the same way, and .masthead has no
+   * overflow:hidden of its own so it can. Kept to the left and low so it
+   * does not compete with .hero__loops, which already owns the top-right
+   * on this page. */
+  stroke: var(--purple);
+  position: absolute;
+  pointer-events: none;
+  left: -3rem;
+  top: -1.5rem;
+  width: min(150px, 32vw);
+  height: auto;
+  opacity: .5;
+  z-index: 0;
+}
 .masthead__inner {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -156,15 +191,14 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   align-items: baseline;
   gap: .65rem;
   border-bottom: 0;
-  color: var(--white);
+  color: var(--purple);
   text-transform: uppercase;
 }
-.masthead__brand:hover { color: var(--white); border-bottom: 0; }
+.masthead__brand:hover { color: var(--purple); border-bottom: 0; }
 .masthead__brand-mark {
   font-family: var(--ff-mono);
   text-transform: none;
-  color: var(--white);
-  opacity: .85;
+  color: var(--purple);
   font-size: .95rem;
 }
 .masthead__brand-name {
@@ -178,7 +212,6 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-weight: 500;
   font-size: .85rem;
   letter-spacing: .04em;
-  opacity: .9;
 }
 .masthead__access {
   font-family: var(--ff-display);
@@ -186,16 +219,16 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--white);
-  border: 1px solid rgba(var(--white-rgb), 0.45);
+  color: var(--purple);
+  border: 1px solid var(--purple);
   background: transparent;
   padding: .45rem .9rem;
-  transition: background .15s, border-color .15s;
+  transition: background .15s, border-color .15s, color .15s;
 }
 .masthead__access::after { content: " →"; margin-left: .25rem; }
 .masthead__access:hover {
-  background: rgba(var(--white-rgb), 0.18);
-  border-color: var(--white);
+  background: var(--purple);
+  border-color: var(--purple);
   color: var(--white);
 }
 
@@ -242,19 +275,25 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   width: 2.5rem;
 }
 .hero__title {
+  /* Purple, not ink: brand.json names purple for "headlines... the
+   * dominant colour, not an accent", and Anonymous's own headline is solid
+   * purple on the turquoise field -- matches purple_on_turquoise, 7.93. */
   font-family: var(--ff-display);
   font-weight: 900;
   font-size: clamp(2.8rem, 7vw, 5rem);
   line-height: .98;
   letter-spacing: -0.025em;
-  color: var(--ink);
+  color: var(--purple);
   max-width: 14ch;
   margin-bottom: 1.5rem;
   text-transform: uppercase;
 }
 .hero__title em {
+  /* No colour of its own any more: turquoise-d on the turquoise field it
+   * now sits on measures 3.81, below AA. The originals never split a
+   * headline's colour either -- it inherits the same purple as the rest
+   * of .hero__title. */
   font-style: normal;
-  color: var(--turquoise-d);
 }
 .hero__lede {
   font-family: var(--ff-body);
@@ -289,13 +328,17 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   text-transform: uppercase;
 }
 .btn--primary {
-  background: var(--turquoise);
+  /* Purple, not turquoise: the field itself is turquoise now (D-18), and a
+   * turquoise-filled button on a turquoise field has no visible edge at
+   * all -- never mind that white text on turquoise measures 1.61. White on
+   * purple measures 12.74 (data/brand.json). */
+  background: var(--purple);
   color: var(--white);
-  border-color: var(--turquoise);
+  border-color: var(--purple);
 }
 .btn--primary:hover {
-  background: var(--turquoise-d);
-  border-color: var(--turquoise-d);
+  background: var(--purple-d);
+  border-color: var(--purple-d);
   color: var(--white);
 }
 .btn--ghost {
@@ -309,8 +352,8 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 a.btn { border-bottom-style: solid; border-bottom-width: 2px; }
 a.btn:hover { border-bottom-width: 2px; }
-a.btn--primary { border-color: var(--turquoise); }
-a.btn--primary:hover { border-color: var(--turquoise-d); }
+a.btn--primary { border-color: var(--purple); }
+a.btn--primary:hover { border-color: var(--purple-d); }
 a.btn--ghost { border-color: var(--purple); }
 a.btn--ghost:hover { border-color: var(--purple); }
 
@@ -321,11 +364,34 @@ a.btn--ghost:hover { border-color: var(--purple); }
   position: relative;
 }
 .section__head {
+  /* A cream band, full-bleed, the same role Anonymous's own "title" band
+   * plays mid-composition -- a labelled divider crossing the turquoise
+   * field. `.section` is both the outer section and the width-limiting
+   * container on one element (merged in the markup), so there is no
+   * separate full-width wrapper to paint a band behind; ::before paints
+   * one instead, sized to the viewport and re-centred on it, without
+   * touching the markup. Constrained to top:0/bottom:0 so it fills only
+   * this element's own height -- a spread box-shadow was tried first and
+   * rejected, because a shadow spreads by its radius in every direction,
+   * flooding the whole page with cream rather than just this band. */
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: 1rem;
-  margin-bottom: 2.5rem;
   flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+  padding: 1.1rem 0;
+}
+.section__head::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  background: var(--surface);
+  z-index: -1;
 }
 .section__num {
   font-family: var(--ff-mono);
@@ -365,19 +431,24 @@ a.btn--ghost:hover { border-color: var(--purple); }
   }
 }
 .feature__rail {
+  /* Purple, not turquoise: this rail now sits directly on the turquoise
+   * field (D-18), where a turquoise rule is invisible against its own
+   * ground. */
   display: flex;
   flex-direction: column;
   gap: .35rem;
   padding-top: .35rem;
-  border-top: 3px solid var(--turquoise);
+  border-top: 3px solid var(--purple);
 }
 .feature__vol {
+  /* Purple, not turquoise-d: turquoise-d on the turquoise field it now
+   * sits on measures 3.81, below AA. */
   font-family: var(--ff-display);
   font-size: .72rem;
   font-weight: 800;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--turquoise-d);
+  color: var(--purple);
 }
 .feature__code {
   font-family: var(--ff-mono);
@@ -485,9 +556,13 @@ a.btn--ghost:hover { border-color: var(--purple); }
   color: var(--purple);
 }
 .archive__date {
+  /* ink-mute, not ink-faint: this row sits on the turquoise field by
+   * default (D-18), where ink-faint measures 3.51, below AA; ink-mute
+   * clears both grounds it can appear on -- 4.62 on turquoise, 6.56 on the
+   * cream .archive__row:hover reveals. */
   font-family: var(--ff-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
   letter-spacing: .03em;
   font-size: .82rem;
   margin-left: auto;
@@ -524,12 +599,14 @@ a.btn--ghost:hover { border-color: var(--purple); }
   color: var(--white);
 }
 .archive__action--disabled {
+  /* ink-mute, not ink-faint -- background is transparent, so this reads
+   * against the turquoise field by default; see .archive__date above. */
   font-family: var(--ff-display);
   font-size: .74rem;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-mute);
   cursor: default;
   padding: .35rem .6rem;
   border: 1px dashed var(--rule-strong);
@@ -645,7 +722,8 @@ a.btn--ghost:hover { border-color: var(--purple); }
 @media (max-width: 640px) {
   .hero { padding: 3.5rem 0 3rem; }
   .section { padding: 2.5rem 0 1.5rem; }
-  .feature__rail { border-top: 3px solid var(--turquoise); padding-top: .5rem; }
+  .feature__rail { border-top: 3px solid var(--purple); padding-top: .5rem; }
   .hero__loops { width: 60vw; right: -4rem; top: 50%; transform: translateY(-50%); }
+  .masthead__loops { width: 30vw; left: -2.5rem; }
   .coda { margin-top: 3.5rem; padding: 3rem 0; }
 }
