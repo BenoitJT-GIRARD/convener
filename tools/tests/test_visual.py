@@ -65,6 +65,7 @@ def _announcement(**overrides: Any) -> Announcement:
         "talk_date": date(2026, 3, 12),
         "speaker_name": "Ada Lovelace",
         "speaker_affiliation": "Analytical Engines Institute",
+        "event_id": "mrg-9",
         "portrait_data_uri": None,
     }
     base.update(overrides)
@@ -496,6 +497,7 @@ def test_announcement_defaults_portrait_to_none() -> None:
         talk_date=date(2026, 1, 1),
         speaker_name="n",
         speaker_affiliation="a",
+        event_id="mrg-1",
     )
     assert ann.portrait_data_uri is None
 
@@ -593,41 +595,85 @@ def test_every_text_bearing_rule_reads_the_derived_safe_area() -> None:
     its own -- every rule this task's fix-round brief named a collision in
     (the wordmark and talk-title bands share `.band`, the hero section, the
     date line) has to actually spend them, not fall back to a fixed `vw`
-    that happens to look similar. `.content` is the one rule that reads a
-    *narrower* right margin, `--safe-r-content` --
-    `_ribbon_content_right_margin`'s own docstring explains why -- but still
-    reads the full `--safe-l` on its own left."""
+    that happens to look similar. `.content` and `.register` (task 3's own
+    band, sibling to `.content` -- see that module's own "Why the code can
+    never be clipped" section) are the two rules that read a *narrower*
+    right margin, `--safe-r-content` -- `_ribbon_content_right_margin`'s own
+    docstring explains why -- but still read the full `--safe-l` on their
+    own left."""
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
     for selector in (".band", ".hero", ".date-line"):
         rule = _rule_block(doc, selector)
         assert "var(--safe-l)" in rule
         assert "var(--safe-r)" in rule
-    content_rule = _rule_block(doc, ".content")
-    assert "var(--safe-l)" in content_rule
-    assert "var(--safe-r-content)" in content_rule
-    assert "var(--safe-r)" not in content_rule
+    for selector in (".content", ".register"):
+        rule = _rule_block(doc, selector)
+        assert "var(--safe-l)" in rule
+        assert "var(--safe-r-content)" in rule
+        assert "var(--safe-r)" not in rule
 
 
-def test_the_register_label_is_nested_inside_content_not_pinned_to_the_viewport() -> (
-    None
-):
-    """The register label used to be `position: absolute`, pinned a fixed
-    distance from the *viewport's* own bottom -- independent of how tall
-    the content above it grew. A wider or taller-scripted title (narrowed
-    further by this fix's own safe area) wraps the talk-title band to more
-    lines, pushing `.content` down; an anchored-to-the-viewport register
-    label could then overlap it. Nesting the register block inside
-    `.content`'s own `.expect-col`, after the "what to expect" copy, means
-    it moves down in normal flow with that copy instead -- checked here by
-    DOM nesting (the register markup appears between `.expect-col`'s own
-    opening and `.content`'s own closing tag), not by a pixel."""
+def test_the_register_band_is_never_squeezed_by_flexible_content() -> None:
+    """Task 3's own carried defect: on the tallest content this page ever
+    composes (a long, heavily-wrapped non-Latin title), the registration
+    slot used to run off the bottom edge of the canvas -- see the module
+    docstring's "Why the code can never be clipped" section for the full
+    mechanism. `.register` used to be nested inside `.content`'s own
+    `.expect-col` (fix round 1's own fix for an earlier, different bug --
+    `position: absolute`, pinned to the viewport); once `.content` itself
+    became the flexible element absorbing whatever height the rigid bands
+    above it did not use, a squeezed `.content` spilled its own children,
+    the register block included, straight past the canvas edge.
+
+    The fix is structural, not a tuned size: `.register` is now a sibling
+    band, never a descendant of `.content`, with `flex: 0 0 auto` -- a
+    property flexbox never shrinks below the element's own natural size,
+    however tall the bands before it grow. `.content` and
+    `.band--talk-title` are the two elements now allowed to give up space
+    instead (`flex: 1 1 auto; min-height: 0; overflow: hidden`) -- checked
+    here by CSS properties and DOM position, the same kind of property test
+    `test_the_safe_area_clears_every_ribbon_waypoint` already uses for the
+    ribbon, not a rendered pixel (nothing in this module renders one --
+    see the module docstring).
+
+    Mutating each property back reproduces the original bug, and this test
+    catches it (checked by hand, not committed): dropping `.register`'s own
+    `flex: 0 0 auto` back to nothing lets it shrink again; removing
+    `.content`'s `overflow: hidden` lets an over-tall `.content` spill past
+    `.register` instead of clipping itself; nesting `.register` back inside
+    `.content` (as fix round 1 left it) reintroduces the exact squeeze this
+    test exists to catch."""
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
+
     content_start = doc.index('<div class="content">')
-    expect_col_start = doc.index('<div class="expect-col">')
+    content_end = doc.index("</div>", doc.index('<div class="frame-wrap">'))
     register_start = doc.index('<div class="register">')
-    frame_wrap_start = doc.index('<div class="frame-wrap">')
-    assert content_start < expect_col_start < register_start < frame_wrap_start
-    assert "position: absolute" not in _rule_block(doc, ".register")
+    ribbon_start = doc.index('<svg class="ribbon-overlay"')
+    # `.register` is a sibling AFTER `.content`, never between its opening
+    # and closing tags.
+    assert content_start < content_end < register_start < ribbon_start
+
+    register_rule = _rule_block(doc, ".register")
+    assert "flex: 0 0 auto" in register_rule
+    assert "position: absolute" not in register_rule
+
+    content_rule = _rule_block(doc, ".content")
+    assert "overflow: hidden" in content_rule
+    assert "min-height: 0" in content_rule
+
+    title_band_rule = _rule_block(doc, ".band--talk-title")
+    assert "overflow: hidden" in title_band_rule
+    assert "min-height: 0" in title_band_rule
+
+    # `.content`'s own flex-shrink factor must be the larger of the two --
+    # it is the element meant to give up space first, ordinary growth
+    # absorbed there alone; `.band--talk-title` only shrinks once
+    # `.content` is already exhausted (see the module docstring's "Why the
+    # code can never be clipped").
+    content_flex = re.search(r"flex:\s*[\d.]+\s+([\d.]+)\s+auto", content_rule)
+    title_flex = re.search(r"flex:\s*[\d.]+\s+([\d.]+)\s+auto", title_band_rule)
+    assert content_flex and title_flex
+    assert float(content_flex.group(1)) > float(title_flex.group(1))
 
 
 def test_the_safe_area_variables_match_the_derived_margins() -> None:

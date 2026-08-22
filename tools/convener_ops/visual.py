@@ -90,23 +90,67 @@ itself sits, so the full corridor's own right margin is not a number
 lose for nothing. `.content`'s own left padding still reads `--safe-l`
 unchanged -- the left tail's own fitted bulge sits deep inside `.content`'s
 own vertical range, not above it the way the right motif's reach is. The
-register label reads neither variable directly: it is nested inside
-`.content`'s own `.expect-col` (below the "what to expect" copy, the same
-column the reference groups it in, rather than the earlier, sibling
-`.register` this fix round replaced), so it inherits `.content`'s own
-`--safe-l` padding by sitting inside the box that padding shapes -- not by
-repeating the property itself. That nesting is also what fixed a second,
-independent bug this fix round found in the same render: `.register` used
-to be positioned `absolute`, pinned a fixed distance from the *viewport's*
-own bottom regardless of how tall the content above it grew -- exactly the
-kind of fixed assumption a page whose text can wrap to more lines must not
-make. A wider or a taller-scripted title, narrowed further still by this
-very fix's own safe area, wraps the talk-title band to more lines than a
-Latin one of the same length would, which pushes `.content` down; with
-`.register` anchored to the viewport instead of to the content above it,
-the two could overlap. Placing `.register` in normal flow after the
-"what to expect" copy, in the same column, means it now moves down with
-that copy instead of past it.
+register band (below `.content` -- see "Why the code can never be
+clipped" below for why it is a band of its own, not nested inside
+`.content` any more) reads `--safe-l` and `--safe-r-content` directly,
+the same two margins `.content` itself reads, rather than inheriting
+either through nesting the way it once did.
+
+That nesting -- `.register` used to sit inside `.content`'s own
+`.expect-col`, below the "what to expect" copy -- is also what fixed a
+different, independent bug fix round 1 found in the same render:
+`.register` used to be positioned `absolute`, pinned a fixed distance from
+the *viewport's* own bottom regardless of how tall the content above it
+grew -- exactly the kind of fixed assumption a page whose text can wrap to
+more lines must not make. Moving it into normal flow fixed that overlap.
+It introduced a second, subtler one in its place, task 3's own carried
+defect, which is why the band is no longer nested at all -- see below.
+
+Why the code can never be clipped, and why that took more than a QR image
+---------------------------------------------------------------------------
+Fix round 1 made `.content` the one flexible element in the page's own
+column of bands, `flex: 1 1 auto; min-height: 0`, absorbing whatever
+height the rigid bands above it (`wordmark`, `hero`, the talk-title band,
+the date line -- all `flex: 0 0 auto`) left over. That is fine exactly as
+long as `.content`'s own children fit inside whatever height it is handed.
+They do not always: a long, heavily-wrapped title (a non-Latin script
+often wraps to more lines than the same character count would in Latin,
+at the same font size -- there are fewer places to break a long word)
+grows the talk-title band enough that `.content` is squeezed below what
+its own children need, and a flex container squeezed below its children's
+natural height does not clip them -- with no `overflow` property of its
+own, it lets them spill past its own box edge, into `.poster`'s own hard
+`overflow: hidden` clip at the canvas edge. With the register block
+sitting last inside that squeezed column, it was the one that spilled off
+the bottom of the poster -- a `REGISTER HERE` label whose own code cannot
+be scanned is worse than no label at all.
+
+The fix is structural, not a tuned number that happens to hold today for
+six rendered states and might not tomorrow: `.register` is now its own
+band, a direct child of `.poster`, sibling to `.content` rather than
+nested inside it -- `flex: 0 0 auto`, exactly like the wordmark band, the
+hero section and the date line. Flexbox never shrinks a `flex: 0 0 auto`
+item below its own natural size; the only way to reclaim height when the
+page runs long is to take it from an item that is allowed to give some up,
+and `.content` (now holding only the "what to expect" copy and the photo)
+is that item -- `min-height: 0; overflow: hidden`, with a flex-shrink
+factor (20) large enough that ordinary content growth is absorbed there
+alone, invisibly, for every state this module's own tests and this task's
+own report render. `.band--talk-title` keeps its own flex-shrink too (1,
+twenty times less eager than `.content`'s), not because an everyday title
+is expected to need it -- `.content` shrinks first, and the six rendered
+states never drive it below what its own children need -- but because
+nothing bounds how long a title can be (unlike a speaker's name or
+institution, `registration._MAX_FIELD_LENGTH`'s own kind of limit),
+so a title long enough to exhaust `.content` down to nothing still has
+somewhere left to give before the registration code does. Only once both
+have given up everything they have could the register band itself be at
+risk, and even then it is title text that clips, never the code.
+`tests/test_visual.py::test_the_register_band_is_never_squeezed_by_flexible_content`
+pins the properties this rests on -- the same kind of property test
+`test_the_safe_area_clears_every_ribbon_waypoint` already uses for the
+ribbon rather than a rendered pixel -- and its own docstring records what
+reverting each property does to the suite.
 
 The variable parts, and how each is handled
 ------------------------------------------------
@@ -154,10 +198,14 @@ The variable parts, and how each is handled
   the affiliation onto the same caption, wrapping instead of an ellipsis,
   is this module's own extension for data the original was never asked to
   display (see `render_announcement`'s own docstring for the reasoning).
-- **Registration code** -- task 3's. `_registration_slot_html` reserves a
-  square footprint of a fixed, sensible size and marks it
-  `data-registration-code-slot`, exactly as phase 5's task 5 reserved the
-  registration form's own mount point before task 6 filled it.
+- **Registration code** -- `announcement.event_id`. `_registration_slot_html`
+  renders a QR code encoding `registration.signup_url(event_id)` (D-19)
+  into the fixed-size slot phase 6's task 2 reserved for it
+  (`registration_code.registration_code_svg`; see that module's own
+  docstring for the encoder, and for why its signature -- an id, never a
+  URL -- makes a room link structurally unreachable here). The wrapping
+  element keeps `data-registration-code-slot`, the same hook task 2 marked
+  it with, now around real content rather than an empty placeholder.
 """
 
 from __future__ import annotations
@@ -170,6 +218,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from .governance import PARIS
+from .registration_code import registration_code_svg
 from .ribbon import (
     ribbon_path,
     ribbon_stroke_colour,
@@ -556,16 +605,25 @@ _EXPECT_HTML: Final = """\
 """
 
 
-def _registration_slot_html() -> str:
-    """A reserved, correctly-sized square for task 3's registration code --
-    the same "reserve the mount point before the next task fills it"
-    pattern phase 5's task 5 used for the registration form. `aria-hidden`
-    and empty on purpose: there is nothing to announce about a placeholder,
-    and a real `<svg>` QR code takes this element's exact place (by class
-    and by the `data-registration-code-slot` hook) once task 3 exists."""
+def _registration_slot_html(event_id: str, *, dark: str) -> str:
+    """The registration QR code, filling the fixed-size slot phase 6's
+    task 2 reserved (the same `data-registration-code-slot` hook, the
+    same "reserve the mount point before the next task fills it" pattern
+    phase 5's task 5 used for the registration form). `registration_code_svg`
+    encodes `registration.signup_url(event_id)` and nothing else -- see that
+    function's own docstring for why its signature (an id, never a URL)
+    makes a room link structurally unreachable through this call.
+
+    No longer `aria-hidden`: task 2's placeholder had nothing to announce;
+    this element now carries the one machine-readable way to reach the
+    event's own registration page, so it is left to whatever assistive
+    reading the surrounding `<svg>`'s own `<title>` (the plain URL,
+    `registration_code_svg`'s own `title=` argument to segno) already
+    provides."""
+    qr_svg = registration_code_svg(event_id, dark=dark)
     return (
-        '<div class="registration-code-slot" data-registration-code-slot'
-        ' aria-hidden="true"></div>'
+        '<div class="registration-code-slot" data-registration-code-slot>'
+        f"{qr_svg}</div>"
     )
 
 
@@ -755,18 +813,26 @@ def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
 class Announcement:
     """Everything one edition's announcement composition needs to know.
 
+    `event_id` is the one thing the registration code encodes -- always an
+    id, per D-19 (`edition_code`, lower-cased), never a URL and never a
+    whole event or speaker record: see `_registration_slot_html` and
+    `registration_code.registration_code_svg` for why that signature is
+    what keeps a room link structurally unreachable here, not merely
+    absent by convention.
+
     `portrait_data_uri` defaults to `None` -- the common, legitimate state
     (P-4) -- rather than requiring every caller to spell it out. Nothing
-    else defaults: a title, a date, a name are what an announcement *is*.
-    `speaker_affiliation` may be `""` (a speaker with none to show), which
-    `_frame_html` handles by omitting the second caption line entirely
-    rather than rendering an empty one.
+    else defaults: a title, a date, a name, an event id are what an
+    announcement *is*. `speaker_affiliation` may be `""` (a speaker with
+    none to show), which `_frame_html` handles by omitting the second
+    caption line entirely rather than rendering an empty one.
     """
 
     title: str
     talk_date: date
     speaker_name: str
     speaker_affiliation: str
+    event_id: str
     portrait_data_uri: str | None = None
 
 
@@ -813,7 +879,9 @@ def render_announcement(
         speaker_affiliation=announcement.speaker_affiliation,
     )
     ribbon_svg = _ribbon_overlay_svg(width, height, root)
-    registration_slot = _registration_slot_html()
+    registration_slot = _registration_slot_html(
+        announcement.event_id, dark=colours["black"]
+    )
     safe_left_vw, safe_right_vw = _ribbon_safe_margins(width, height, root)
     safe_content_right_vw = _ribbon_content_right_margin(width, height, root)
 
@@ -853,7 +921,7 @@ def render_announcement(
   .band {{
     flex: 0 0 auto;
     background: var(--surface);
-    padding: 1.8vmin var(--safe-r) 1.8vmin var(--safe-l);
+    padding: 1.3vmin var(--safe-r) 1.3vmin var(--safe-l);
   }}
 
   .band--wordmark {{
@@ -861,22 +929,22 @@ def render_announcement(
     align-items: center;
     gap: 1.6vmin;
   }}
-  .wordmark-logo {{ width: 7.2vmin; height: 7.2vmin; flex: 0 0 auto; }}
+  .wordmark-logo {{ width: 5.6vmin; height: 5.6vmin; flex: 0 0 auto; }}
   .wordmark-text {{
     margin: 0;
-    font-size: 3vw;
+    font-size: 2.6vw;
     font-weight: 800;
     color: var(--purple);
     border-bottom: 0.18vmin solid var(--purple);
-    padding-bottom: 0.6vmin;
+    padding-bottom: 0.4vmin;
   }}
   .wordmark-text .accent {{ color: var(--turquoise-d); }}
   .wordmark-text .accent2 {{ color: var(--purple); }}
 
-  .hero {{ flex: 0 0 auto; padding: 2.2vmin var(--safe-r) 1.6vmin var(--safe-l); }}
+  .hero {{ flex: 0 0 auto; padding: 1.4vmin var(--safe-r) 1vmin var(--safe-l); }}
   .hero h1 {{
     margin: 0;
-    font-size: 4.7vw;
+    font-size: 4vw;
     line-height: 1.05;
     font-weight: 800;
     color: var(--purple);
@@ -884,12 +952,17 @@ def render_announcement(
     text-align: center;
   }}
   .hero p {{
-    margin: 1.6vmin 0 0;
-    font-size: 1.75vw;
-    line-height: 1.4;
+    margin: 1vmin 0 0;
+    font-size: 1.55vw;
+    line-height: 1.35;
     color: var(--black);
   }}
 
+  .band--talk-title {{
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }}
   .band--talk-title p {{
     margin: 0;
     text-align: center;
@@ -901,20 +974,21 @@ def render_announcement(
 
   .date-line {{
     flex: 0 0 auto;
-    margin: 1.8vmin var(--safe-r) 0.6vmin var(--safe-l);
+    margin: 1vmin var(--safe-r) 0.4vmin var(--safe-l);
     text-align: center;
-    font-size: 2.2vw;
+    font-size: 2vw;
     font-weight: 800;
     color: var(--purple);
   }}
 
   .content {{
-    flex: 1 1 auto;
+    flex: 1 20 auto;
     min-height: 0;
+    overflow: hidden;
     display: flex;
     align-items: flex-start;
     gap: 2vmin;
-    padding: 1.6vmin var(--safe-r-content) 3.2vmin var(--safe-l);
+    padding: 1vmin var(--safe-r-content) 1vmin var(--safe-l);
   }}
 
   .expect-col {{
@@ -946,13 +1020,13 @@ def render_announcement(
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding-top: 1vmin;
+    padding-top: 0.6vmin;
   }}
   .frame {{
     transform: rotate(6deg);
     background: var(--white);
-    width: 30vmin;
-    padding: 1.6vmin 1.6vmin 1.2vmin;
+    width: 25vmin;
+    padding: 1.3vmin 1.3vmin 1vmin;
     box-shadow: 0 0.6vmin 1.6vmin rgba(0, 0, 0, 0.28);
   }}
   .frame__photo {{
@@ -993,11 +1067,12 @@ def render_announcement(
   }}
 
   .register {{
-    margin-top: 2.4vmin;
+    flex: 0 0 auto;
+    padding: 0 var(--safe-r-content) 1.2vmin var(--safe-l);
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1.2vmin;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.4vmin;
   }}
   .register p {{
     margin: 0;
@@ -1008,10 +1083,19 @@ def render_announcement(
     text-transform: uppercase;
   }}
   .registration-code-slot {{
-    width: 16vmin;
-    height: 16vmin;
+    flex: 0 0 auto;
+    width: 12.5vmin;
+    height: 12.5vmin;
+    padding: 0.5vmin;
     background: var(--white);
-    border: 0.2vmin dashed var(--rule-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }}
+  .registration-code-slot svg {{
+    display: block;
+    width: 100%;
+    height: 100%;
   }}
 
   .ribbon-overlay {{
@@ -1034,12 +1118,12 @@ def render_announcement(
     <div class="content">
       <div class="expect-col">
         {_EXPECT_HTML}
-        <div class="register">
-          <p>Register<br>here</p>
-          {registration_slot}
-        </div>
       </div>
       <div class="frame-wrap">{frame}</div>
+    </div>
+    <div class="register">
+      <p>Register<br>here</p>
+      {registration_slot}
     </div>
     {ribbon_svg}
   </div>
