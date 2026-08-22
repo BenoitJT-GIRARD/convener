@@ -159,15 +159,17 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
 # The address and no-room-link checks below build the real `site/` project
 # with its own committed fixture (`src/_data/events.json`) and sweep the
 # *built* output, deliberately, rather than reading `event.njk`'s source
-# the way the tests above read `layout.njk`'s and `style.css`'s: the public
-# schema calls the room link `registration_link`
-# (`public_data.py::PUBLIC_FIELD_SOURCES`), never `zoom_link`, so a source
-# scan for that literal -- the technique
+# the way the tests above read `layout.njk`'s and `style.css`'s: the
+# template's own vocabulary never names the room link `zoom_link` -- the
+# internal field a source scan for that literal (the technique
 # `test_confirmation.py::test_no_public_announcement_template_publishes_
-# the_room_link` already uses for the toolkit's Markdown templates -- would
-# stay green even with a leak, because the string it looks for never
-# appears in this page's own vocabulary at all. Only the rendered page
-# shows what a visitor would actually see.
+# the_room_link` already uses for the toolkit's Markdown templates) would
+# have to look for -- so such a scan would stay green even with a leak.
+# (`public_data.py::PUBLIC_FIELD_SOURCES` used to publish it as
+# `registration_link`; task 9 stopped publishing it under any name at
+# all, which makes this template-layer guard the only proof left that a
+# future regression cannot slip a room-link-shaped value back onto a
+# page.) Only the rendered page shows what a visitor would actually see.
 # -------------------------------------------------------------------------- #
 
 _EVENT_TEMPLATE = SITE_SRC / "event.njk"
@@ -268,10 +270,13 @@ def test_a_built_public_page_never_carries_a_room_link(built_site: Path) -> None
     the homepage's "up next" card would be exactly as real a breach.
 
     Sweeps for the literal, non-empty `registration_link` value(s) the
-    fixture carries -- `public_data.py` publishes `zoom_link` under
-    that column name, and only while an event is `scheduled`
-    (`PUBLIC_FIELD_SOURCES`, `to_public`'s own status gate) -- which is
-    what a template regression would actually leak onto a page.
+    committed *fixture* carries -- a synthetic room-link-shaped column,
+    kept here as a template-regression canary even though `public_data.py`
+    no longer emits any column carrying a room link (task 9 removed it;
+    that mapping used to publish `zoom_link` under this same column name).
+    This test does not depend on the generator: it proves the template
+    still refuses to render a room-link-shaped value if one ever reached
+    the page's own data again, under whatever name.
     """
     events = _events_fixture()
     room_links = [
@@ -301,11 +306,11 @@ def test_a_built_html_page_never_mentions_the_internal_field_name_either(
     built_site: Path,
 ) -> None:
     """Belt and braces beside the value-based sweep above: even the
-    *name* `zoom_link` -- the speaker record's own internal field,
-    `public_data.py`'s allowlist renames it to `registration_link` before
-    anything public ever sees it -- must never appear on a built page,
-    which would mean some future template reached past that renaming
-    boundary and read the private record directly.
+    *name* `zoom_link` -- the speaker record's own internal field, which
+    `public_data.py` never maps to any published column (task 9) -- must
+    never appear on a built page, which would mean some future template
+    reached past the private/public boundary and read the record
+    directly.
     """
     offending = []
     for path in built_site.rglob("*.html"):
