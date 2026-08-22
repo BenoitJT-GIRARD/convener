@@ -178,6 +178,7 @@ export function SignupForm({ eventId }: { eventId?: string }) {
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const sentPanelRef = useRef<HTMLDivElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
 
   const [firstName, setFirstName] = useState('');
   const [surname, setSurname] = useState('');
@@ -228,6 +229,35 @@ export function SignupForm({ eventId }: { eventId?: string }) {
   // sentence that just replaced what they were looking at.
   useEffect(() => {
     if (submitState === 'sent') sentPanelRef.current?.focus();
+  }, [submitState]);
+
+  // Fix round 1 (task 11's manual pass, "how error messages are
+  // announced" -- flagged, not fixed, there; fixed here). Setting
+  // `submitState` to `'sending'` disables the button that still held
+  // focus a moment earlier -- a disabled element cannot hold focus, so
+  // the browser drops it to `<body>` immediately, before this component
+  // ever gets to render anything about what happened (confirmed against
+  // real Chrome in task 11's report). The `role="alert"` below already
+  // gets a screen-reader user this sentence read aloud the instant it is
+  // inserted, live-region delivery needs no focus to move at all -- but a
+  // keyboard user with no screen reader is left at `<body>` with no
+  // signal anything happened, and Tab restarts the whole page from the
+  // top to find out.
+  //
+  // Restoring focus to the button itself, not to the alert, on purpose:
+  // the button is the control the participant was actually operating,
+  // its own accessible name has not changed ("Register" again, once
+  // re-enabled), and it sits immediately before the alert in reading
+  // order, so a Tab press from here reaches it next. Moving focus onto
+  // the alert instead, the way the success panel moves onto itself,
+  // would very likely read twice to a screen-reader user: once from the
+  // live region firing as the paragraph is inserted, a second time from
+  // the browser's own "now focused: <accessible name>" announcement on
+  // arrival -- the success panel has no such double-announcement risk,
+  // because nothing there is also a live region competing with the
+  // focus-change announcement.
+  useEffect(() => {
+    if (submitState === 'error') submitButtonRef.current?.focus();
   }, [submitState]);
 
   async function submit(e: React.FormEvent) {
@@ -391,7 +421,12 @@ export function SignupForm({ eventId }: { eventId?: string }) {
             </span>
           </label>
 
-          <button type="submit" disabled={!canSubmit || submitState === 'sending'} className="btn btn--primary">
+          <button
+            ref={submitButtonRef}
+            type="submit"
+            disabled={!canSubmit || submitState === 'sending'}
+            className="btn btn--primary"
+          >
             {submitState === 'sending' ? 'Sending…' : 'Register'}
           </button>
 

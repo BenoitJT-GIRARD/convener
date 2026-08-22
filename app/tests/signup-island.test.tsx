@@ -516,6 +516,105 @@ describe('SignupForm -- sending', () => {
   });
 });
 
+// Fix round 1 (task 11's manual pass flagged this; task 11's own report
+// names the "sent" panel's `sentPanelRef.current?.focus()`, a few lines
+// above `submit` in SignupForm.tsx, as the exact precedent the error
+// path was missing). Real Chrome drops `document.activeElement` to
+// `<body>` the instant its focused element becomes `disabled` -- jsdom
+// does not reproduce that on its own (confirmed by hand: setting
+// `.disabled = true` on the focused element in jsdom leaves
+// `document.activeElement` unchanged). Without correcting for that gap,
+// a test asserting "focus survives an error" would pass against the
+// broken component too, since jsdom would never have moved focus away
+// in the first place -- exactly the "one artefact checking another"
+// trap. This observer makes jsdom's focus behaviour match the real
+// browser it stands in for, for the one property this suite needs, by
+// blurring whatever element the `disabled` attribute lands on while it
+// still holds focus.
+function simulateBrowserBlurOnDisable(): () => void {
+  const observer = new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      const target = mutation.target as HTMLButtonElement;
+      if (!target.disabled || document.activeElement !== target) continue;
+      // jsdom's own `blur()` is a no-op on an element that is *already*
+      // disabled (checked by hand) -- unlike real Chrome, which drops
+      // focus the instant the attribute lands. Toggling `disabled` off
+      // just long enough to call the real `blur()`, then restoring it,
+      // reaches the same end state real Chrome reaches directly: this
+      // element loses focus, `disabled` stays `true`.
+      target.disabled = false;
+      target.blur();
+      target.disabled = true;
+    }
+  });
+  observer.observe(document.body, { attributes: true, attributeFilter: ['disabled'], subtree: true });
+  return () => observer.disconnect();
+}
+
+describe('SignupForm -- focus after a failed submission', () => {
+  async function fillForm() {
+    fireEvent.change(await screen.findByLabelText(/first name/i), {
+      target: { value: 'Ada' },
+    });
+    fireEvent.change(screen.getByLabelText(/surname/i), { target: { value: 'Lovelace' } });
+    fireEvent.change(screen.getByLabelText(/email address/i), {
+      target: { value: 'ada@example.org' },
+    });
+  }
+
+  it('returns focus to the Register button, not to <body>, once the relay-not-configured error appears', async () => {
+    stubKeyFetchOk();
+    const stopSimulating = simulateBrowserBlurOnDisable();
+    try {
+      renderSignup('mrg-042');
+      await fillForm();
+      const button = screen.getByRole('button', { name: /register/i });
+      button.focus();
+      expect(document.activeElement).toBe(button);
+
+      fireEvent.click(button);
+      await screen.findByText(/registration is not open for this event yet/i);
+
+      // Assert on where focus actually landed, not that a ref was
+      // touched: a fix that focused the wrong element (the alert's own
+      // text, say, via a stray tabIndex) would satisfy "some ref got
+      // focus()'d" without satisfying this.
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: /register/i }));
+      expect(document.activeElement).not.toBe(document.body);
+    } finally {
+      stopSimulating();
+    }
+  });
+
+  it('returns focus to the Register button, not to <body>, after a relay error response too', async () => {
+    vi.stubEnv('VITE_SIGNUP_RELAY_URL', 'https://signup-relay.example/');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (String(url).match(/\/keys\/events\/.+\.pub$/)) {
+          return { ok: true, text: async () => VALID_PEM } as Response;
+        }
+        return { ok: false, status: 502 } as Response;
+      }),
+    );
+    const stopSimulating = simulateBrowserBlurOnDisable();
+    try {
+      renderSignup('mrg-042');
+      await fillForm();
+      const button = screen.getByRole('button', { name: /register/i });
+      button.focus();
+
+      fireEvent.click(button);
+      await screen.findByText(/could not be sent/i);
+
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: /register/i }));
+      expect(document.activeElement).not.toBe(document.body);
+    } finally {
+      stopSimulating();
+    }
+  });
+});
+
 describe('SignupForm -- reachable with no eventId at all', () => {
   it('treats a missing eventId prop as an unavailable key rather than crashing', async () => {
     render(<SignupForm />);
