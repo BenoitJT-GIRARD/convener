@@ -26,4 +26,6 @@ npm install
 npm start
 ```
 
-Then open <http://localhost:8080>.
+Then open <http://localhost:8080/example-showcase/>. The dev server honours the
+same path prefix the published site is served under, so a bare root only
+redirects there.
