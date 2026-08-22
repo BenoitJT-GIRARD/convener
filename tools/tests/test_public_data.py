@@ -65,8 +65,63 @@ def test_a_non_mapping_entry_is_skipped_not_crashed() -> None:
 
 
 def test_no_field_outside_the_allowlist_is_emitted() -> None:
+    # A sweep of real output, but against `PUBLIC_FIELDS` -- a set *derived*
+    # from `PUBLIC_FIELD_SOURCES` and the three classification sets below.
+    # It catches a column mapped straight past the classification (the
+    # loop-bypass class of bug); it cannot catch a column that is mapped
+    # *and* whose source field is misclassified as publishable in the same
+    # mistake, because that mistake moves this set too. See
+    # `test_the_feed_never_emits_a_column_outside_the_fixed_set` for the
+    # sweep that mutation cannot fool.
     out = to_public([_scheduled()])
     assert set(out[0]) <= PUBLIC_FIELDS
+
+
+#: The exact columns `to_public` may ever emit, spelled out here
+#: independently of `PUBLIC_FIELD_SOURCES` and the classification sets --
+#: nothing in `public_data.py` can move this set, because it is never read
+#: from the module under test. Growing it is a deliberate act: whoever adds
+#: a column has to come here and say so.
+_EXPECTED_PUBLIC_COLUMNS = frozenset(
+    {
+        "id",
+        "title",
+        "date",
+        "status",
+        "abstract",
+        "photo_url",
+        "bio",
+        "linkedin",
+        "seed_questions",
+        "youtube_url",
+        "forum_thread",
+        "speaker_name",
+        "speaker_affiliation",
+        "speaker_country",
+    }
+)
+
+
+def test_the_feed_never_emits_a_column_outside_the_fixed_set() -> None:
+    """The sweep `test_no_field_outside_the_allowlist_is_emitted` cannot be:
+    that test compares the real output to `PUBLIC_FIELDS`, which is itself
+    *derived* from `PUBLIC_FIELD_SOURCES` and the three classification
+    sets -- a mistake that adds a column mapped to a newly-added internal
+    field, and in the same breath misclassifies that field as publishable,
+    moves the derived allowlist and the output together, so a test built
+    from that derivation would still pass. This compares the real output
+    to a literal set instead, and it does not merely need the added column
+    to be wrong -- a genuinely new, correctly classified column also fails
+    it, on purpose, until this set is edited to say so.
+
+    Exercised on `_person()` (an archived talk, every consent-gated field
+    filled in and the gate open) so every column this function can ever
+    populate is actually present -- a scheduled talk alone would pass this
+    assertion by never populating half the set, proving nothing about the
+    other half.
+    """
+    out = to_public([_person()])
+    assert set(out[0]) == _EXPECTED_PUBLIC_COLUMNS
 
 
 def test_private_fields_never_leak() -> None:
@@ -100,9 +155,21 @@ def test_recording_is_only_exposed_once_the_gate_has_published_it() -> None:
     assert to_public([_published()])[0]["youtube_url"] == "https://youtu.be/abc"
 
 
-def test_registration_link_is_only_exposed_while_scheduled() -> None:
-    assert to_public([_scheduled()])[0]["registration_link"] != ""
-    assert to_public([_scheduled(status="delivered")])[0]["registration_link"] == ""
+def test_the_room_link_never_reaches_the_public_feed_under_any_name() -> None:
+    # This column used to exist, called `registration_link`, and published
+    # `zoom_link` under it -- a name that, once the event page carried its
+    # own registration form, read as exactly the wrong thing (task 5's
+    # implementer nearly rendered it believing it was the one to register
+    # at). Nothing reads it any more: registration happens on the event
+    # page's own address, and the room link now reaches a participant only
+    # through the confirmation e-mail. Swept on the output, not on
+    # `PUBLIC_FIELD_SOURCES`, so a future attempt to republish the same
+    # value under a *different* column name still fails this test.
+    out = to_public([_scheduled()])
+    assert "registration_link" not in out[0]
+    assert "zoom_link" not in out[0]
+    serialised = repr(out)
+    assert "https://example.org/room" not in serialised
 
 
 def test_archived_events_expose_the_recording() -> None:
