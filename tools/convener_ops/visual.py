@@ -51,6 +51,63 @@ document, so it always sits on top -- exactly what the reference shows:
 the purple stroke crosses over the lower "WHAT TO EXPECT?" text near the
 left edge in Anonymous's own poster, not behind it.
 
+Why a safe area, and why derived rather than hand-typed
+---------------------------------------------------------
+The ribbon still runs off every edge and still passes behind the bands --
+it keeps its full gesture, exactly as above. What it must never do is pass
+*through* the words this page sets: the reference's own content sits inside
+margins the ribbon lives outside of on both sides, nothing she sets ever
+crosses the stroke. `_ribbon_safe_margins` computes the same two margins
+for this composition by reading `ribbon.waypoints` -- the loop centres, the
+left tail's own fitted bulge, the points where the stroke crosses each
+edge -- and taking the deepest on-curve reach into the canvas on each side,
+plus the stroke's own width as clearance (half of it for the stroke's own
+physical extent either side of its centreline, the other half as a
+documented buffer for the small overshoot a Catmull-Rom curve makes past an
+interior anchor on its way to the next one -- `ribbon.py`'s own
+`_LEFT_TAIL_BULGE_X` comment measures this at ~8px on a 1200px canvas
+against a ~29px stroke there, comfortably inside one full stroke width).
+Every band and the hero section and the date line all read the same two
+margins (`--safe-l`/`--safe-r`, `vw`-relative custom properties on
+`.poster`) for their own horizontal padding, rather than each guessing its
+own clearance the way `.expect`'s own hand-typed `padding-left: 22vmin`
+used to (a number that, worked out independently here, turns out close to
+what `_ribbon_safe_margins` derives for a square canvas -- a useful sanity
+check, not a coincidence worth relying on for the next aspect ratio).
+Deriving the margins from `ribbon.waypoints` rather than typing two numbers
+is what makes them survive task 4 changing the aspect ratio: `waypoints`
+already expresses every loop and bulge as a fraction of the canvas's own
+short side, width or height (see that module's own docstring), so a margin
+computed from it adapts the same way the ribbon itself does, at any
+`width`/`height` this function is called with.
+
+`.content` is the one exception, and reads a third variable,
+`--safe-r-content`, for its own right padding instead of `--safe-r` --
+`_ribbon_content_right_margin`'s own docstring explains why: the right
+motif never reaches anywhere near as far down the page as `.content`
+itself sits, so the full corridor's own right margin is not a number
+`.content` needs to clear a threat with, only width it would otherwise
+lose for nothing. `.content`'s own left padding still reads `--safe-l`
+unchanged -- the left tail's own fitted bulge sits deep inside `.content`'s
+own vertical range, not above it the way the right motif's reach is. The
+register label reads neither variable directly: it is nested inside
+`.content`'s own `.expect-col` (below the "what to expect" copy, the same
+column the reference groups it in, rather than the earlier, sibling
+`.register` this fix round replaced), so it inherits `.content`'s own
+`--safe-l` padding by sitting inside the box that padding shapes -- not by
+repeating the property itself. That nesting is also what fixed a second,
+independent bug this fix round found in the same render: `.register` used
+to be positioned `absolute`, pinned a fixed distance from the *viewport's*
+own bottom regardless of how tall the content above it grew -- exactly the
+kind of fixed assumption a page whose text can wrap to more lines must not
+make. A wider or a taller-scripted title, narrowed further still by this
+very fix's own safe area, wraps the talk-title band to more lines than a
+Latin one of the same length would, which pushes `.content` down; with
+`.register` anchored to the viewport instead of to the content above it,
+the two could overlap. Placing `.register` in normal flow after the
+"what to expect" copy, in the same column, means it now moves down with
+that copy instead of past it.
+
 The variable parts, and how each is handled
 ------------------------------------------------
 - **Title** -- `render_announcement`'s own `title` parameter. Wrapped, not
@@ -118,6 +175,7 @@ from .ribbon import (
     ribbon_stroke_colour,
     ribbon_stroke_width,
     ribbon_width_ratio,
+    waypoints,
 )
 
 __all__ = [
@@ -582,6 +640,94 @@ def _frame_html(
     )
 
 
+#: Clearance beyond the ribbon's own deepest on-curve reach, expressed as a
+#: multiple of the ribbon's own stroke width -- see the module docstring's
+#: "Why a safe area, and why derived rather than hand-typed" for the two
+#: halves this covers (the stroke's own physical extent either side of its
+#: centreline, and a documented buffer for Catmull-Rom overshoot).
+_RIBBON_CLEARANCE_STROKE_WIDTHS: Final = 1.0
+
+
+def _ribbon_safe_margins(
+    width: float, height: float, root: Path
+) -> tuple[float, float]:
+    """The left and right text safe-area margins, in `vw` (of the canvas
+    *width* -- the axis every margin below is subtracted from), derived from
+    `ribbon.waypoints` rather than hand-typed -- see the module docstring.
+
+    Takes the largest x-coordinate any on-curve point of the left motif
+    reaches (its top entry, its loop's own arc, the fitted tail bulge, its
+    bottom exit) and the smallest x-coordinate any point of the right motif
+    reaches, symmetrically -- exactly the two numbers "how far into the
+    canvas does this side's ribbon go" asks for, with no need to sample the
+    rendered curve itself: `ribbon._catmull_rom` interpolates every one of
+    these points exactly, so the curve's own extremes cannot fall short of
+    them, only overshoot slightly past the tail bulge on its way to the next
+    anchor -- which `_RIBBON_CLEARANCE_STROKE_WIDTHS`'s own clearance
+    covers (see the module docstring).
+    """
+    w = waypoints(width, height)
+    stroke = ribbon_stroke_width(width, height, ratio=ribbon_width_ratio(root))
+    clearance = stroke * _RIBBON_CLEARANCE_STROKE_WIDTHS
+
+    left_reach = max(
+        x
+        for x, _y in (
+            w.left_top_entry,
+            w.left_top_exit,
+            *w.left_loop_arc,
+            w.left_tail_bulge,
+            w.left_bottom_exit,
+        )
+    )
+    right_reach = width - min(
+        x
+        for x, _y in (
+            *w.right_loop_arc,
+            w.right_loop_out,
+            w.right_tail_start,
+            w.right_tail_bulge,
+            w.right_tail_exit,
+        )
+    )
+    left_margin_vw = (left_reach + clearance) / width * 100.0
+    right_margin_vw = (right_reach + clearance) / width * 100.0
+    return left_margin_vw, right_margin_vw
+
+
+def _ribbon_content_right_margin(width: float, height: float, root: Path) -> float:
+    """The right-hand safe-area margin for `.content` alone, in `vw` --
+    narrower than `_ribbon_safe_margins`'s own right margin, because
+    `.content` never actually shares a row with the right motif.
+
+    `waypoints`'s own right-side points never reach lower than
+    `right_tail_exit`, the last of them -- see `ribbon.waypoints`'s own
+    docstring for the fitted `0.475`-of-height fraction that point sits at.
+    `.content` is this composition's last band: it renders after the
+    wordmark band and the hero section (both fixed text of a fixed
+    height), and after the talk-title band and date line -- so even at a
+    title's shortest, one line at `_TITLE_FONT_MAX_MRG`, `.content` still
+    begins at essentially that same fraction of the page (checked by
+    rendering a one-character title and reading where `.content` actually
+    starts, not merely assumed; the small residual gap that check found is
+    well inside the tail's own approach to the edge in that band, in turn
+    well inside `_RIBBON_CLEARANCE_STROKE_WIDTHS`'s own buffer, applied
+    below unchanged). Reusing `_ribbon_safe_margins`'s own full-height right
+    margin here would cost `.content` -- the "what to expect" copy and the
+    photo frame beside it -- width the right motif was never going to
+    reach: this fix's own first attempt did exactly that, and it was that
+    copy re-wrapping into the "register" label beneath it, not the ribbon,
+    that gave the mistake away. `.content`'s own *left* margin still uses
+    `_ribbon_safe_margins`'s full corridor unchanged (see
+    `render_announcement`) -- the left tail's own fitted bulge sits at
+    `0.747` of the page, well inside `.content`'s own vertical range, not
+    above it the way the right motif's reach is.
+    """
+    stroke = ribbon_stroke_width(width, height, ratio=ribbon_width_ratio(root))
+    clearance = stroke * _RIBBON_CLEARANCE_STROKE_WIDTHS
+    return clearance / width * 100.0
+
+
 def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
     """The ribbon, painted last so it sits on top of everything else --
     exactly what the reference shows (task 1's own stroke crosses over the
@@ -668,6 +814,8 @@ def render_announcement(
     )
     ribbon_svg = _ribbon_overlay_svg(width, height, root)
     registration_slot = _registration_slot_html()
+    safe_left_vw, safe_right_vw = _ribbon_safe_margins(width, height, root)
+    safe_content_right_vw = _ribbon_content_right_margin(width, height, root)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -697,12 +845,15 @@ def render_announcement(
     background: var(--surface-2);
     color: var(--ink);
     font-family: {_FONT_STACK};
+    --safe-l: {_num(safe_left_vw)}vw;
+    --safe-r: {_num(safe_right_vw)}vw;
+    --safe-r-content: {_num(safe_content_right_vw)}vw;
   }}
 
   .band {{
     flex: 0 0 auto;
     background: var(--surface);
-    padding: 1.8vmin 4vw;
+    padding: 1.8vmin var(--safe-r) 1.8vmin var(--safe-l);
   }}
 
   .band--wordmark {{
@@ -722,7 +873,7 @@ def render_announcement(
   .wordmark-text .accent {{ color: var(--turquoise-d); }}
   .wordmark-text .accent2 {{ color: var(--purple); }}
 
-  .hero {{ flex: 0 0 auto; padding: 2.2vmin 4vw 1.6vmin; }}
+  .hero {{ flex: 0 0 auto; padding: 2.2vmin var(--safe-r) 1.6vmin var(--safe-l); }}
   .hero h1 {{
     margin: 0;
     font-size: 4.7vw;
@@ -730,6 +881,7 @@ def render_announcement(
     font-weight: 800;
     color: var(--purple);
     text-transform: uppercase;
+    text-align: center;
   }}
   .hero p {{
     margin: 1.6vmin 0 0;
@@ -749,7 +901,7 @@ def render_announcement(
 
   .date-line {{
     flex: 0 0 auto;
-    margin: 1.8vmin 4vw 0.6vmin;
+    margin: 1.8vmin var(--safe-r) 0.6vmin var(--safe-l);
     text-align: center;
     font-size: 2.2vw;
     font-weight: 800;
@@ -762,10 +914,15 @@ def render_announcement(
     display: flex;
     align-items: flex-start;
     gap: 2vmin;
-    padding: 1.6vmin 4vw 3.2vmin;
+    padding: 1.6vmin var(--safe-r-content) 3.2vmin var(--safe-l);
   }}
 
-  .expect {{ flex: 1 1 56%; min-width: 0; padding-left: 22vmin; }}
+  .expect-col {{
+    flex: 1 1 56%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }}
   .expect h2 {{
     margin: 0 0 1.4vmin;
     font-size: 2vw;
@@ -836,9 +993,7 @@ def render_announcement(
   }}
 
   .register {{
-    position: absolute;
-    left: 4vw;
-    bottom: 3vmin;
+    margin-top: 2.4vmin;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -877,12 +1032,14 @@ def render_announcement(
     </div>
     <p class="date-line">{when}</p>
     <div class="content">
-      {_EXPECT_HTML}
+      <div class="expect-col">
+        {_EXPECT_HTML}
+        <div class="register">
+          <p>Register<br>here</p>
+          {registration_slot}
+        </div>
+      </div>
       <div class="frame-wrap">{frame}</div>
-    </div>
-    <div class="register">
-      <p>Register<br>here</p>
-      {registration_slot}
     </div>
     {ribbon_svg}
   </div>

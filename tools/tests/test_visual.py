@@ -1,14 +1,19 @@
 """The announcement composition -- pinning the properties that make it
 compose rather than a byte-identical page, the same discipline
 `test_ribbon.py` already applies to task 1's own module (see that file's
-own docstring). Four groups matter most, because each is where this task's
-own brief names a defect that would otherwise be invisible in a single
-screenshot: a long title staying inside its band, a missing portrait
-composing rather than breaking, every colour coming from `data/brand.json`
-rather than a hand-typed literal, and the date line reflecting the
-edition's real Europe/Paris offset -- pinned for a winter *and* a summer
-edition, because a test that only ever checked a winter date would pass
-against the reference poster's own hard-typed "(CET)" defect.
+own docstring). Five groups matter most, because each is where this task's
+own brief (or its fix round) names a defect that would otherwise be
+invisible in a single screenshot: a long title staying inside its band, a
+missing portrait composing rather than breaking, every colour coming from
+`data/brand.json` rather than a hand-typed literal, the date line
+reflecting the edition's real Europe/Paris offset -- pinned for a winter
+*and* a summer edition, because a test that only ever checked a winter date
+would pass against the reference poster's own hard-typed "(CET)" defect --
+and, since fix round 1, every text element staying inside a safe area that
+clears task 1's ribbon on both sides, checked against `ribbon.waypoints`
+itself rather than against a rendered pixel (see
+`test_the_safe_area_clears_every_ribbon_waypoint`'s own docstring for why a
+pixel could not be part of this suite).
 """
 
 from __future__ import annotations
@@ -24,6 +29,7 @@ from conftest import speaker
 import convener_ops.visual as visual
 from convener_ops.paths import repo_root
 from convener_ops.public_data import to_public
+from convener_ops.ribbon import waypoints
 from convener_ops.visual import (
     _AFFILIATION_FONT_MAX_VMIN,
     _AFFILIATION_FONT_MIN_VMIN,
@@ -35,6 +41,8 @@ from convener_ops.visual import (
     _affiliation_font_size,
     _frame_photo_html,
     _name_font_size,
+    _ribbon_content_right_margin,
+    _ribbon_safe_margins,
     _title_font_size,
     date_line,
     paris_standing_start,
@@ -506,3 +514,168 @@ def test_the_ribbon_is_painted_last_so_it_sits_on_top_of_everything() -> None:
 def test_the_ribbon_geometry_matches_the_requested_canvas() -> None:
     doc = render_announcement(_announcement(), width=900.0, height=1200.0, root=ROOT)
     assert 'viewBox="0 0 900 1200"' in doc
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1: text stays inside a safe area that clears the ribbon on both
+# sides -- in every render before this fix, it did not (the ribbon struck
+# through "READ TOGETHER", "Join the discussion" and the talk
+# title, on both left and right). See the module docstring's "Why a safe
+# area, and why derived rather than hand-typed".
+# ---------------------------------------------------------------------------
+
+
+def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
+    """The property this whole fix rests on: no on-curve point of the
+    ribbon -- either loop's own arc, the left tail's fitted bulge, the
+    points where the stroke crosses an edge -- lies inside the horizontal
+    band the page reserves for text. Checked against `ribbon.waypoints`
+    directly (imported here, not reached through `_ribbon_safe_margins`'s
+    own call to it) so a bug shared by both functions could not hide from
+    this test the way it could if this re-derived the same numbers through
+    the function under test.
+
+    This is "the property, not a pixel" this task's own fix-round brief
+    asks for: nothing here renders an image or opens a browser (no test in
+    this module does -- see the module docstring), because the collisions
+    the brief reported were only ever visible in a screenshot, not in this
+    module's own generated markup -- checking the geometry that produces
+    the collision is what makes the property visible to a test at all.
+
+    Checked at three aspect ratios, not only the square this task's own
+    report renders: `_ribbon_safe_margins` is built to survive task 4
+    changing it (see the module docstring's own argument for why), and a
+    property that only happened to hold at one aspect ratio would not be
+    evidence of that.
+    """
+    for width, height in ((1200.0, 1200.0), (1200.0, 630.0), (900.0, 1200.0)):
+        left_vw, right_vw = _ribbon_safe_margins(width, height, ROOT)
+        left_px = left_vw / 100.0 * width
+        right_px = right_vw / 100.0 * width
+
+        w = waypoints(width, height)
+        left_points = (
+            w.left_top_entry,
+            w.left_top_exit,
+            *w.left_loop_arc,
+            w.left_tail_bulge,
+            w.left_bottom_exit,
+        )
+        right_points = (
+            *w.right_loop_arc,
+            w.right_loop_out,
+            w.right_tail_start,
+            w.right_tail_bulge,
+            w.right_tail_exit,
+        )
+        deepest_left = max(x for x, _y in left_points)
+        deepest_right = width - min(x for x, _y in right_points)
+
+        assert deepest_left <= left_px, (width, height, deepest_left, left_px)
+        assert deepest_right <= right_px, (width, height, deepest_right, right_px)
+
+
+def test_the_safe_area_is_not_the_whole_canvas() -> None:
+    """A guard against the property test above passing for the wrong
+    reason: `_ribbon_safe_margins` could clear every waypoint trivially by
+    reserving the entire canvas for margin, leaving no room for content at
+    all. Both margins must leave a real content strip -- this project's
+    reference poster leaves roughly 72% of the width for content; this only
+    checks that *some* substantial majority remains, not that exact figure,
+    since this fix's own margins are deliberately more conservative than
+    hers (see the module docstring)."""
+    left_vw, right_vw = _ribbon_safe_margins(_W, _H, ROOT)
+    assert left_vw + right_vw < 50.0
+
+
+def test_every_text_bearing_rule_reads_the_derived_safe_area() -> None:
+    """`_ribbon_safe_margins` returning the right numbers is not enough on
+    its own -- every rule this task's fix-round brief named a collision in
+    (the wordmark and talk-title bands share `.band`, the hero section, the
+    date line) has to actually spend them, not fall back to a fixed `vw`
+    that happens to look similar. `.content` is the one rule that reads a
+    *narrower* right margin, `--safe-r-content` --
+    `_ribbon_content_right_margin`'s own docstring explains why -- but still
+    reads the full `--safe-l` on its own left."""
+    doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
+    for selector in (".band", ".hero", ".date-line"):
+        rule = _rule_block(doc, selector)
+        assert "var(--safe-l)" in rule
+        assert "var(--safe-r)" in rule
+    content_rule = _rule_block(doc, ".content")
+    assert "var(--safe-l)" in content_rule
+    assert "var(--safe-r-content)" in content_rule
+    assert "var(--safe-r)" not in content_rule
+
+
+def test_the_register_label_is_nested_inside_content_not_pinned_to_the_viewport() -> (
+    None
+):
+    """The register label used to be `position: absolute`, pinned a fixed
+    distance from the *viewport's* own bottom -- independent of how tall
+    the content above it grew. A wider or taller-scripted title (narrowed
+    further by this fix's own safe area) wraps the talk-title band to more
+    lines, pushing `.content` down; an anchored-to-the-viewport register
+    label could then overlap it. Nesting the register block inside
+    `.content`'s own `.expect-col`, after the "what to expect" copy, means
+    it moves down in normal flow with that copy instead -- checked here by
+    DOM nesting (the register markup appears between `.expect-col`'s own
+    opening and `.content`'s own closing tag), not by a pixel."""
+    doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
+    content_start = doc.index('<div class="content">')
+    expect_col_start = doc.index('<div class="expect-col">')
+    register_start = doc.index('<div class="register">')
+    frame_wrap_start = doc.index('<div class="frame-wrap">')
+    assert content_start < expect_col_start < register_start < frame_wrap_start
+    assert "position: absolute" not in _rule_block(doc, ".register")
+
+
+def test_the_safe_area_variables_match_the_derived_margins() -> None:
+    doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
+    poster_rule = _rule_block(doc, ".poster")
+    left_vw, right_vw = _ribbon_safe_margins(_W, _H, ROOT)
+    content_right_vw = _ribbon_content_right_margin(_W, _H, ROOT)
+    assert f"--safe-l: {left_vw:g}vw" in poster_rule
+    assert f"--safe-r: {right_vw:g}vw" in poster_rule
+    assert f"--safe-r-content: {content_right_vw:g}vw" in poster_rule
+
+
+def test_the_content_right_margin_is_narrower_than_the_full_corridor() -> None:
+    """The whole point of `_ribbon_content_right_margin` existing as a
+    second function: `.content` would lose real width for nothing if it
+    read the full-corridor `--safe-r` instead -- this is the property fix
+    round 1's own second bug rests on (see `_ribbon_content_right_margin`'s
+    own docstring for the collision that first exposed it: `.expect`'s copy
+    re-wrapping into the "register" label beneath it)."""
+    _, full_right_vw = _ribbon_safe_margins(_W, _H, ROOT)
+    content_right_vw = _ribbon_content_right_margin(_W, _H, ROOT)
+    assert content_right_vw < full_right_vw
+
+
+def test_the_right_motif_never_reaches_below_its_own_tail_exit() -> None:
+    """The property `_ribbon_content_right_margin` relies on:
+    `right_tail_exit` is the lowest any right-side on-curve point of the
+    ribbon ever reaches down the page. If `ribbon.waypoints` ever grew a
+    right-side point further down than that, `.content`'s own narrower
+    margin would need widening to match -- this is the canary for that,
+    checked at the same three aspect ratios the main safe-area property
+    test above is."""
+    for width, height in ((1200.0, 1200.0), (1200.0, 630.0), (900.0, 1200.0)):
+        w = waypoints(width, height)
+        right_points = (
+            *w.right_loop_arc,
+            w.right_loop_out,
+            w.right_tail_start,
+            w.right_tail_bulge,
+            w.right_tail_exit,
+        )
+        assert max(y for _x, y in right_points) == w.right_tail_exit[1]
+
+
+def test_the_series_title_is_centred_like_the_talk_title_and_date() -> None:
+    """The reference sets "READ TOGETHER" centred, like the talk
+    title (`.band--talk-title p`, already centred) and the date line
+    (`.date-line`, already centred) beneath it -- this task's fix round
+    corrects the one heading that had been left flush left."""
+    doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
+    assert "text-align: center" in _rule_block(doc, ".hero h1")
