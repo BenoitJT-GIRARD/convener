@@ -62,36 +62,40 @@
 }
 
 :root {
-  /* Grounds. Turquoise is the field; cream bands run across it; white
+/* BEGIN GENERATED TOKENS -- scripts/generate_brand_css.py */
+  /* Grounds: turquoise is the field, cream runs across it in bands, white
    * appears only inside photographic frames. */
   --paper:        #ffffff;
-  --surface:      #f4f0f1;   /* cream — her band colour */
-  --surface-2:    #fecac1;   /* turquoise — the ground itself */
+  --surface:      #f4f0f1;
+  --surface-2:    #fecac1;
 
-  /* Text. Warm, never slate: the warmth is the single thing that most
-   * distinguishes this identity from a generic purple-and-teal one.
-   * All three clear AA on cream and on white; --ink also clears AAA on
-   * turquoise (7.13:1). */
-  --ink:          #522f3c;   /* hers */
-  --ink-mute:     #794658;   /* hers, mixed 15% toward cream */
-  --ink-faint:    #8a596b;   /* 4.99 on cream, 5.64 on white */
+  /* Text: warm, never slate -- the warmth is the single thing that most
+   * distinguishes this identity from a generic purple-and-teal one. */
+  --ink:          #522f3c;
+  --ink-mute:     #794658;
+  --ink-faint:    #8a596b;
 
-  /* Turquoise. The plain value is a GROUND and must never carry text —
-   * 1.61:1 on white. --turquoise-d exists solely so links and accents have
-   * a turquoise that can be read: 6.12 on white, 5.41 on cream. */
+  /* The plain turquoise value is a GROUND and must never carry text.
+   * turquoise-d is the readable variant, for links and text accents. */
   --turquoise:    #fecac1;
   --turquoise-d:  #a24535;
   --turquoise-l:  #fedad4;
 
-  --purple:       #012765;   /* hers — the dominant colour, not an accent */
+  --purple:       #012765;
   --purple-d:     #011f51;
   --purple-l:     #d8dde7;
 
-  /* Rules and borders. Hers, confined to the use she gave it: 1.81:1 on
-   * white, so it can never carry text. */
+  /* Rules and borders only -- never text. */
   --rule:         #d0bbc3;
   --rule-strong:  #b18f9b;
   --select:       rgba(130, 219, 215, 0.35);
+
+  /* White as a foreground/border role, distinct in name from --paper (the
+   * ground) though currently the same value: text and a border drawn on a
+   * coloured background need "white" as a role of its own. */
+  --white:        #ffffff;
+  --white-rgb:    255, 255, 255;
+/* END GENERATED TOKENS -- edit data/brand.json, not this block */
 
   --gutter:       clamp(1.25rem, 4vw, 2.5rem);
   --content-w:    1100px;
@@ -150,14 +154,14 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   align-items: baseline;
   gap: .65rem;
   border-bottom: 0;
-  color: #fff;
+  color: var(--white);
   text-transform: uppercase;
 }
-.masthead__brand:hover { color: #fff; border-bottom: 0; }
+.masthead__brand:hover { color: var(--white); border-bottom: 0; }
 .masthead__brand-mark {
   font-family: var(--ff-mono);
   text-transform: none;
-  color: #fff;
+  color: var(--white);
   opacity: .85;
   font-size: .95rem;
 }
@@ -180,17 +184,17 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: var(--white);
+  border: 1px solid rgba(var(--white-rgb), 0.45);
   background: transparent;
   padding: .45rem .9rem;
   transition: background .15s, border-color .15s;
 }
 .masthead__access::after { content: " →"; margin-left: .25rem; }
 .masthead__access:hover {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: #fff;
-  color: #fff;
+  background: rgba(var(--white-rgb), 0.18);
+  border-color: var(--white);
+  color: var(--white);
 }
 
 /* ── Hero ─────────────────────────────────────────────────── */
@@ -204,6 +208,10 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   z-index: 1;
 }
 .hero__loops {
+  /* The ribbon motif -- data/brand.json's motif.ribbon_stroke, i.e. purple.
+   * Never a hand-typed hex here: the SVG in index.njk carries no colour of
+   * its own and takes this rule's stroke instead. */
+  stroke: var(--purple);
   position: absolute;
   pointer-events: none;
   right: -3rem;
@@ -280,13 +288,13 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 .btn--primary {
   background: var(--turquoise);
-  color: #fff;
+  color: var(--white);
   border-color: var(--turquoise);
 }
 .btn--primary:hover {
   background: var(--turquoise-d);
   border-color: var(--turquoise-d);
-  color: #fff;
+  color: var(--white);
 }
 .btn--ghost {
   background: transparent;
@@ -295,7 +303,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 .btn--ghost:hover {
   background: var(--purple);
-  color: #fff;
+  color: var(--white);
 }
 a.btn { border-bottom-style: solid; border-bottom-width: 2px; }
 a.btn:hover { border-bottom-width: 2px; }
@@ -502,7 +510,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
 }
 .archive__action:hover {
   background: var(--turquoise);
-  color: #fff;
+  color: var(--white);
   border-bottom: 0;
 }
 .archive__action--alt {
@@ -511,7 +519,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
 }
 .archive__action--alt:hover {
   background: var(--purple);
-  color: #fff;
+  color: var(--white);
 }
 .archive__action--disabled {
   font-family: var(--ff-display);
@@ -539,10 +547,15 @@ a.btn--ghost:hover { border-color: var(--purple); }
   position: relative;
   padding: 4rem 0;
   background: var(--purple);
-  color: #fff;
+  color: var(--white);
   overflow: hidden;
 }
 .coda__loops {
+  /* Turquoise here rather than the ribbon's usual purple: the coda's own
+   * background *is* purple (.coda below), and a purple ribbon on a purple
+   * ground would not be visible. Still a data/brand.json colour, never a
+   * hand-typed hex. */
+  stroke: var(--turquoise);
   position: absolute;
   pointer-events: none;
   left: -2rem;
@@ -570,7 +583,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
   font-size: clamp(1.5rem, 2.8vw, 2rem);
   line-height: 1.2;
   letter-spacing: -0.015em;
-  color: #fff;
+  color: var(--white);
   max-width: 26ch;
   text-transform: uppercase;
 }
@@ -579,14 +592,14 @@ a.btn--ghost:hover { border-color: var(--purple); }
   color: var(--turquoise);
 }
 .coda .btn--ghost {
-  color: #fff;
-  border-color: #fff;
+  color: var(--white);
+  border-color: var(--white);
   background: transparent;
 }
 .coda .btn--ghost:hover {
-  background: #fff;
+  background: var(--white);
   color: var(--purple);
-  border-color: #fff;
+  border-color: var(--white);
 }
 
 /* ── Colophon ─────────────────────────────────────────────── */

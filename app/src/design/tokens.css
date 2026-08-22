@@ -8,24 +8,26 @@
 @import url("https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap");
 
 :root {
+/* BEGIN GENERATED TOKENS -- scripts/generate_brand_css.py */
   --paper:         #ffffff;
-  --paper-soft:    #f7fafa;
+  --paper-soft:    #f4f0f1;
   --surface:       #ffffff;
-  --surface-mute:  #e0f5f8;
-  --ink:           #0f172a;
-  --ink-muted:     #475569;
-  --ink-faint:     #94a3b8;
-  --primary:       #3FB1C2;
-  --primary-hover: #2E8C9C;
-  --primary-soft:  #e0f5f8;
-  --accent:        #3D2D7C;
-  --accent-hover:  #2c1f5e;
-  --accent-soft:   #ede9f8;
-  --border:        #d6e5e7;
-  --border-strong: #b0cdd2;
+  --surface-mute:  #fedad4;
+  --ink:           #522f3c;
+  --ink-muted:     #794658;
+  --ink-faint:     #8a596b;
+  --primary:       #fecac1;
+  --primary-hover: #a24535;
+  --primary-soft:  #fedad4;
+  --accent:        #012765;
+  --accent-hover:  #011f51;
+  --accent-soft:   #d8dde7;
+  --border:        #d0bbc3;
+  --border-strong: #b18f9b;
   --danger:        #9b2226;
   --info:          #4a6c75;
-  --select:        rgba(63, 177, 194, 0.25);
+  --select:        rgba(130, 219, 215, 0.25);
+/* END GENERATED TOKENS -- edit data/brand.json, not this block */
 
   --radius-sm:     2px;
   --radius-md:     3px;

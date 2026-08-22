@@ -94,6 +94,15 @@ jobs:
         # files in the tree, so it would be satisfied by the shallow clone the
         # other jobs take; it runs here because this is the job that has `uv`.
         run: uv run python ../scripts/generate_schema_doc.py --check
+      - name: Brand tokens
+        working-directory: tools
+        # site/src/style.css, app/src/design/tokens.css and tokens.ts each
+        # carried data/brand.json's colours retyped by hand -- the shape
+        # that let the application drift to a reconstruction's palette
+        # unnoticed (docs/superpowers/deferred-work.md, entry 1). Same
+        # assertion-only run as the schema check above: writes nothing,
+        # fails if a committed file is not what the brand file derives.
+        run: uv run python ../scripts/generate_brand_css.py --check
 
   typescript:
     runs-on: ubuntu-latest
