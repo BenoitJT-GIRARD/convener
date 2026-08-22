@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import replace
 from datetime import date, datetime, timedelta, tzinfo
 from typing import Any
 
@@ -38,6 +39,7 @@ from convener_ops.visual import (
     _NAME_FONT_MIN_VMIN,
     _TITLE_FONT_MAX_MRG,
     _TITLE_FONT_MIN_MRG,
+    FIXTURE_ANNOUNCEMENT,
     Announcement,
     _affiliation_font_size,
     _frame_photo_html,
@@ -62,16 +64,12 @@ _W, _H = 1200.0, 1200.0
 
 
 def _announcement(**overrides: Any) -> Announcement:
-    base: dict[str, Any] = {
-        "title": "On analytical engines",
-        "talk_date": date(2026, 3, 12),
-        "speaker_name": "Ada Lovelace",
-        "speaker_affiliation": "Analytical Engines Institute",
-        "event_id": "mrg-9",
-        "portrait_data_uri": None,
-    }
-    base.update(overrides)
-    return Announcement(**base)
+    """Derived from `visual.FIXTURE_ANNOUNCEMENT` rather than a second,
+    hand-typed identity: task 5 commits versioned reference images
+    rendered from that exact constant, so this suite's own default state
+    and the one a reviewer sees in a reference PNG are provably the same
+    fixture, not two that happen to agree today."""
+    return replace(FIXTURE_ANNOUNCEMENT, **overrides)
 
 
 def _rule_block(css: str, selector: str) -> str:

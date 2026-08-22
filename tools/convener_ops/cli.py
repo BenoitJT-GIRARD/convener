@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import re
+import shutil
 
 # One fixed git invocation, in `_git_log` and nowhere else; see its docstring.
 import subprocess  # nosec B404
@@ -19,7 +20,15 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops import confirmation, delivery, eventkeys, signing, survey_invite
+from convener_ops import (
+    confirmation,
+    delivery,
+    eventkeys,
+    formats,
+    signing,
+    survey_invite,
+    visual,
+)
 from convener_ops.attendance import (
     EligibilityThreshold,
     MatchedAttendee,
@@ -4004,6 +4013,70 @@ def register() -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(rendered, encoding="utf-8", newline="")
     print(f"wrote {REGISTER_PATH.as_posix()} - {len(entries)} decision(s)")
+    return 0
+
+
+def render_visual_fixtures() -> int:
+    """`convener-render-visual-fixtures OUTPUT_DIR`: writes task 5's own pinned
+    render step its input -- one self-contained HTML page per named format
+    (`formats.FORMATS`), a `manifest.json` naming each one's format name and
+    pixel size, and a copy of the repository's self-hosted `fonts/` beside
+    them so a relative `url('fonts/...')` resolves once served.
+
+    The one disk-writing seam between the two halves of task 5's pipeline.
+    `visual.render_announcement` and `formats.FORMATS` stay pure -- neither
+    touches disk or knows this project builds a Node/Puppeteer step on top
+    of what they return -- and the pinned renderer (`visuals/`, a separate
+    npm package so only its own CI job ever pays for the Chrome-for-Testing
+    download P-2 accepts) never re-derives a page's own markup a second
+    time in JavaScript: it reads exactly the bytes this command wrote.
+
+    `manifest.json` is the shared *fixture* the two languages agree on
+    (D-14's own shape, applied to a boundary this project has not crossed
+    before): the pinned renderer reads a format's name and pixel size from
+    it rather than a second, hand-typed `{width: 1200, height: 1200}` in
+    JavaScript that `formats.py` could silently drift away from.
+
+    Always renders `visual.FIXTURE_ANNOUNCEMENT` -- the one fixed, versioned
+    identity task 5's own committed reference images are measured against
+    (see that constant's own docstring for why it is Ada Lovelace and no
+    photograph, never a real, living speaker's name or face). Nothing about
+    this command reads `data/speakers.yml`, the clock, or the network: the
+    same input always produces the same three pages, which is the entire
+    point of a pinned regression fixture.
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-visual-fixtures OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+    out.mkdir(parents=True, exist_ok=True)
+
+    manifest: list[dict[str, Any]] = []
+    for fmt in formats.FORMATS:
+        html = visual.render_announcement(
+            visual.FIXTURE_ANNOUNCEMENT, width=fmt.width, height=fmt.height, root=root
+        )
+        filename = f"{fmt.name}.html"
+        (out / filename).write_text(html, encoding="utf-8")
+        manifest.append(
+            {
+                "name": fmt.name,
+                "width": fmt.width,
+                "height": fmt.height,
+                "file": filename,
+            }
+        )
+
+    fonts_dest = out / "fonts"
+    if fonts_dest.exists():
+        shutil.rmtree(fonts_dest)
+    shutil.copytree(root / "fonts", fonts_dest)
+
+    (out / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(manifest)} visual fixture(s) to {out}")
     return 0
 
 

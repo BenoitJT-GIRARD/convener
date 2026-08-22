@@ -1,0 +1,161 @@
+name: Visuals
+
+# Task 5 (phase 6): renders the announcement composition on a pinned engine
+# and compares it against a versioned reference image, so a visual
+# regression fails loudly in CI instead of shipping unnoticed (acceptance
+# criterion 3). See `visuals/render-and-compare.mjs`'s own module comment
+# for the full argument (P-2): the comparison only means something because
+# the engine that renders it is pinned by this repository's own lockfile,
+# not whatever Chrome happens to be on the machine that runs it.
+#
+# Why a path filter, and why this exact list (D-25: a filter that silently
+# omits a path means a real regression ships green, so every entry below
+# names the thing that made it necessary -- read this before adding or
+# removing one, and prefer adding a path you are unsure about over leaving
+# it out):
+#
+# - `tools/convener_ops/visual.py` -- the composition itself (the HTML/CSS
+#   `render_announcement` builds) and `FIXTURE_ANNOUNCEMENT`, the fixed
+#   identity the reference images are rendered from.
+# - `tools/convener_ops/ribbon.py` -- the ribbon's own path, colour and stroke
+#   width (task 1); painted last, on top of everything else.
+# - `tools/convener_ops/registration_code.py` -- the QR code generator (task 3);
+#   its own pixels are part of every rendered format.
+# - `tools/convener_ops/formats.py` -- the three named canvas sizes (task 4) and
+#   the registration-slot geometry it shares with `visual.py`.
+# - `tools/convener_ops/governance.py` -- `PARIS`, the one `ZoneInfo` the date
+#   line's own text is computed from (`visual.paris_standing_start`); a
+#   change here can change what the date line reads without touching
+#   `visual.py` itself.
+# - `tools/convener_ops/cli.py` -- `render_visual_fixtures` lives here (that
+#   module's own docstring: "the only module that touches the disk"), so a
+#   bug in how the three pages are actually written to disk is a real way
+#   this check could start comparing the wrong thing -- accepted even
+#   though this is a large file most of whose other commands have nothing
+#   to do with this task, because a path filter has no finer grain than a
+#   file, and the alternative is silently not re-checking the one function
+#   in it that this task depends on.
+# - `data/brand.json` -- the one source of fact `visual.py`'s own
+#   `_load_colours` and `ribbon.py`'s own `_load_motif` each read directly.
+# - `fonts/**` -- the self-hosted web fonts every rendered glyph comes from.
+# - `tools/uv.lock` -- pins `segno` (the QR renderer) among everything
+#   else Python depends on; a version bump there can change rendered
+#   pixels without any file above changing. Accepted knowingly that this
+#   also re-runs the check for an unrelated dev-tool bump elsewhere in the
+#   same lock -- there is no finer-grained filter than the file, and an
+#   occasional unnecessary run against a warm cache costs little next to
+#   silently skipping the rare bump that does matter.
+# - `visuals/**` -- the render/compare script itself, its pinned
+#   `puppeteer` version and lockfile, and the committed reference images:
+#   changing any of these is exactly the case this job exists to exercise
+#   (a deliberate `--update` of a reference is not verified until this job
+#   has actually read it back).
+# - `.github/workflows/visuals.yml` -- this file.
+#
+# Deliberately absent: `data/speakers.yml` and the real per-edition data.
+# `render_visual_fixtures` never reads either -- this check renders one
+# fixed, fictional fixture (Ada Lovelace, no photograph), never a real
+# edition, so a change to real speaker data has nothing for this job to
+# see. Task 6 is where the *production* pipeline (real editions, real
+# portraits under consent) gets its own trigger; this one stays a pure
+# regression check against a fixture that never changes on its own.
+#
+# example-cockpit is private (D-15): Actions minutes are metered, not
+# unlimited the way a public repository's would be (2,000/month on the
+# free plan). A path filter plus the `actions/cache` step below (keyed on
+# `visuals/package-lock.json`, restoring the ~430MB Chrome-for-Testing
+# download `puppeteer` would otherwise re-fetch on every run) is what
+# keeps a job this heavy affordable at zero cost -- do not "simplify" this
+# away to a plain `on: push`, and do not drop the cache step because the
+# job passes without it; both exist for the budget, not for tidiness.
+on:
+  push:
+    branches: [main]
+    # A YAML anchor, not a repeated list: `pull_request` below reuses the
+    # exact same paths through `*visual_paths` rather than a second,
+    # hand-typed copy that could silently drift from this one -- the same
+    # "one source, never two hand-typed copies" discipline this project
+    # already applies everywhere else (D-14).
+    paths: &visual_paths
+      - 'tools/convener_ops/visual.py'
+      - 'tools/convener_ops/ribbon.py'
+      - 'tools/convener_ops/registration_code.py'
+      - 'tools/convener_ops/formats.py'
+      - 'tools/convener_ops/governance.py'
+      - 'tools/convener_ops/cli.py'
+      - 'data/brand.json'
+      - 'fonts/**'
+      - 'tools/uv.lock'
+      - 'visuals/**'
+      - '.github/workflows/visuals.yml'
+  pull_request:
+    paths: *visual_paths
+
+jobs:
+  visuals:
+    runs-on: ubuntu-latest
+    # Render + compare alone measures under 5 seconds on a warm machine
+    # (this task's own report); this allowance covers a cold cache miss
+    # that has to fetch the ~430MB Chrome-for-Testing build besides.
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      # `uv run` syncs the environment itself on first use (the same
+      # one-step idiom `a11y.yml`'s own "Generate throw-away event keys"
+      # step already relies on) -- no separate `uv sync` needed for a
+      # job that only ever calls this one command.
+      - name: Render the visual fixtures (pure Python/HTML, no browser yet)
+        run: |
+          uv run --project tools convener-render-visual-fixtures "${{ runner.temp }}/visual-fixtures"
+      # Restored *before* `npm ci` so its own postinstall download
+      # (`puppeteer`'s pinned Chrome-for-Testing build) can be skipped
+      # entirely on a cache hit -- keyed on this package's own lockfile,
+      # so a version bump changes the key and fetches the new build
+      # exactly once.
+      - name: Cache the pinned Chrome-for-Testing download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('visuals/package-lock.json') }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          # puppeteer 25.8.0's own declared floor (`engines.node`); every
+          # other job in this repository still targets Node 20, which is
+          # exactly why this dependency was isolated to its own package
+          # rather than joining `site/package.json` (this task's own
+          # report) -- nothing else in this repository is held back by
+          # this job using a newer Node than the rest.
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: visuals/package-lock.json
+      - name: Install the pinned renderer
+        working-directory: visuals
+        run: npm ci
+      # Task 12 (phase 5) established that every surface with a lockfile
+      # gets an audit in this same quality chain -- this package is a new
+      # surface with a new lockfile, so it gets one too rather than
+      # becoming the one exception.
+      - name: Dependency audit
+        working-directory: visuals
+        run: npm audit
+      - name: Render and compare against the versioned references
+        working-directory: visuals
+        run: |
+          node render-and-compare.mjs \
+            --fixtures "${{ runner.temp }}/visual-fixtures" \
+            --actual "${{ runner.temp }}/visual-actual"
+      # Only on a failing comparison -- see render-and-compare.mjs's own
+      # reporting for the pixel-level detail already printed to the log;
+      # this is for a human who wants to actually look at what rendered.
+      - name: Upload the rendered images for inspection
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: visuals-actual
+          path: ${{ runner.temp }}/visual-actual
+          retention-days: 14

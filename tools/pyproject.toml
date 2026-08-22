@@ -64,6 +64,7 @@ convener-survey-secret-name = "convener_ops.cli:resolve_survey_secret"
 convener-handle-survey-response = "convener_ops.cli:handle_survey_response"
 convener-invite-survey = "convener_ops.cli:invite_survey"
 convener-record-survey-invitation = "convener_ops.cli:record_survey_invitation"
+convener-render-visual-fixtures = "convener_ops.cli:render_visual_fixtures"
 
 [build-system]
 requires = ["hatchling"]

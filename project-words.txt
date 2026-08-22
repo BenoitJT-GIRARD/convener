@@ -81,3 +81,4 @@ mypy
 autoprefixer
 assertable
 pipefail
+segno

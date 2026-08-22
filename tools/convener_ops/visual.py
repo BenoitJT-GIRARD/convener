@@ -228,6 +228,7 @@ from .ribbon import (
 )
 
 __all__ = [
+    "FIXTURE_ANNOUNCEMENT",
     "REGISTRATION_SLOT_PADDING_VMIN",
     "REGISTRATION_SLOT_VMIN",
     "WIDE_ASPECT_THRESHOLD",
@@ -910,6 +911,27 @@ class Announcement:
     speaker_affiliation: str
     event_id: str
     portrait_data_uri: str | None = None
+
+
+#: The one canonical announcement task 5's versioned reference images
+#: render -- reusing `tools/tests/test_visual.py::_announcement`'s own
+#: default identity rather than inventing a second "canonical" one (two
+#: fixture identities claiming to be *the* announcement is exactly the
+#: unforced drift D-14 warns against). Ada Lovelace has been dead for over
+#: a century and a half: a name safe to commit to a versioned image where
+#: a real, living speaker's would not be (task 5's own brief: "no real
+#: person's name or face may enter them"). `portrait_data_uri` stays at
+#: its default, `None` -- no photograph is ever committed either, and P-4
+#: applies here exactly as it does to a real edition: a reference image is
+#: not an exemption from the consent gate, it is one more thing the gate
+#: must hold for.
+FIXTURE_ANNOUNCEMENT: Final = Announcement(
+    title="On analytical engines",
+    talk_date=date(2026, 3, 12),
+    speaker_name="Ada Lovelace",
+    speaker_affiliation="Analytical Engines Institute",
+    event_id="mrg-9",
+)
 
 
 def render_announcement(
