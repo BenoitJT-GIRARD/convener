@@ -1,0 +1,121 @@
+name: Accessibility
+
+# Task 11 (phase 5): acceptance criterion 4 -- AA conformance, verified
+# automatically on every push, and by a manual keyboard pass this
+# workflow cannot replace (tab order, field labels, how an error message
+# is announced -- see the phase's own spec, S:4, and this task's report
+# for what that pass found).
+#
+# This job builds the real showcase -- both the statically generated
+# pages (`site/`) and the two islands mounted on them
+# (`app/dist/islands/signup`, `app/dist/islands/verify`) -- and sweeps
+# every page axe-core (Deque's rule engine, MIT-licensed, no account, no
+# third-party call at run time) can reach in a real, JavaScript-executing
+# browser. D-26: checked at the address and in the topology it will
+# actually be served at (`/example-showcase/`), never a bare `localhost` root
+# -- see `site/scripts/check-a11y.mjs`'s own module comment for the full
+# reasoning, including why the two islands are covered here at all
+# rather than left entirely to the manual pass (a checker that only ever
+# saw the server-rendered HTML would report them empty and pass -- D-25).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  a11y:
+    runs-on: ubuntu-latest
+    # Building both site/ and app/, then rendering 14 pages at two
+    # viewports each in a real browser, comfortably fits inside the same
+    # 15-minute allowance publish-vitrine.yml's own mixed Python/Node job
+    # already gets for a lighter build.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      # The registration island only renders its real <input>/<label>
+      # markup once it reaches its own 'ready' key state
+      # (`app/src/islands/signup/SignupForm.tsx`) -- otherwise this run
+      # would see only the "registration is not available" fallback, and
+      # a future label regression in the form itself could pass this job
+      # unnoticed. A throw-away RSA key pair per fixture event, generated
+      # fresh on every run and never committed (this job never pushes
+      # anything): real enough for the browser's own WebCrypto import to
+      # accept, and provably not a key this project ever ships --
+      # `eventkeys.py`'s own module docstring already establishes that
+      # the private half never touches disk outside a CI job either, and
+      # this one is discarded with the runner at the end of the job.
+      - name: Generate throw-away event keys for accessibility testing
+        run: |
+          uv run --project tools python -c '
+          import json
+
+          from convener_ops import eventkeys
+          from convener_ops.paths import repo_root
+
+          root = repo_root()
+          events = json.loads(
+              (root / "site" / "src" / "_data" / "events.json").read_text(encoding="utf-8")
+          )
+          keys_dir = root / "keys" / "events"
+          keys_dir.mkdir(parents=True, exist_ok=True)
+          for event in events:
+              event_id = str(event["id"]).lower()
+              _, public_pem = eventkeys.generate()
+              (keys_dir / f"{event_id}.pub").write_text(public_pem, encoding="utf-8")
+          print(f"generated {len(events)} throw-away event key(s) for accessibility testing")
+          '
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            site/package-lock.json
+            app/package-lock.json
+      # Task 2: site/src/_data/events.json is committed as a build
+      # fixture (site/README.md) -- built from it directly, the same
+      # fixture-based build quality.yml's own `site` job already uses,
+      # rather than the real, currently-private event data: this check
+      # is about the templates and the islands' own markup, which the
+      # fixture already exercises in full (an upcoming edition and a
+      # past one both appear in it).
+      - name: Install site
+        working-directory: site
+        run: npm ci
+      - name: Build site
+        working-directory: site
+        run: npm run build
+      - name: Install app
+        working-directory: app
+        run: npm ci
+      - name: Build app
+        working-directory: app
+        run: npm run build
+      # `puppeteer-core` (site/package.json) has no bundled Chromium of
+      # its own -- nothing is ever downloaded here beyond the npm
+      # registry packages `npm ci` already fetched. `ubuntu-latest`
+      # ships Google Chrome preinstalled for exactly this kind of job
+      # (confirmed against that runner image's own published software
+      # list); this step only ever locates it, on the off chance the
+      # image ever drops it, this fails loudly rather than falling back
+      # to downloading a browser of its own (D-25).
+      - name: Locate the pre-installed browser
+        id: chrome
+        run: |
+          set -e
+          path="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser || true)"
+          if [ -z "$path" ]; then
+            echo "::error::no Chrome/Chromium executable found on this runner -- this checker never downloads one of its own, see site/scripts/check-a11y.mjs's own module comment"
+            exit 1
+          fi
+          echo "found $path"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+      - name: Check AA accessibility
+        working-directory: site
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.path }}
+        run: npm run check:a11y -- --app-dir ../app/dist

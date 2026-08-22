@@ -170,11 +170,13 @@ jobs:
         working-directory: site
         run: npm ci
       # site/eslint.config.js, the same minimal, plugin-free flat config
-      # services/auth-proxy's own already uses -- the only script here is
-      # Eleventy's own CommonJS config file.
+      # services/auth-proxy's own already uses -- Eleventy's own CommonJS
+      # config file, plus (task 11) the accessibility checker's own ES
+      # module, under its own scoped `sourceType: 'module'` override in
+      # that same config file.
       - name: Lint
         working-directory: site
-        run: npx --yes eslint@9 .eleventy.js
+        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs
       # Task 2: the showcase's templates moved into this repository (D-15)
       # without the construction that reads them ever running in CI --
       # this is that construction. `site/src/_data/events.json` is
