@@ -175,6 +175,29 @@ _RIGHT_LOOP_RADIUS: Final = 0.103
 #: property. See the task's own report for the side-by-side comparison.
 _ARC_STEPS: Final = 8
 
+#: The left tail's own bulge: the one interior anchor a Catmull-Rom curve
+#: threads between the loop's close point and the bottom exit. Fitted by
+#: least squares against a scanline trace of the reference
+#: (`announcement-template_initial.png`, 1200x1200): the purple stroke's own
+#: centre x at every row from the loop's close (y~543) to the bottom edge
+#: (y=1200), 4px steps, 165 rows. The fit does not sit at the traced
+#: curve's own plateau (~(0.234, 0.821) in the same units) -- placing the
+#: anchor there directly undershoots, because a Catmull-Rom curve overshoots
+#: past an interior anchor on its way to the next one; fitting the anchor's
+#: position against the whole traced row, not just its apex, is what lands
+#: the resulting curve's own apex at (0.240, 0.792), close to the trace.
+#: Residual: 9.4px RMS over the 165 rows, against a stroke ~29px wide at
+#: this scale -- under a third of the stroke's own half-width, and not only
+#: at the apex. This replaces task 1's own (0.213, 0.875), which its report
+#: named directly: "the tail curvature is a generic smooth interpolation,
+#: not a point-by-point trace" -- that anchor left the resulting curve's
+#: apex about 100px short of the traced centreline through the middle of
+#: the tail (worst row, y~807: 97px), most visible there and less so near
+#: the two ends, which is exactly the "gentler bow, swings less far right"
+#: a side-by-side render showed.
+_LEFT_TAIL_BULGE_X: Final = 0.233
+_LEFT_TAIL_BULGE_Y: Final = 0.747
+
 
 @dataclass(frozen=True)
 class Waypoints:
@@ -277,7 +300,7 @@ def waypoints(width: float, height: float) -> Waypoints:
         left_top_entry=(sx(0.106), 0.0),
         left_top_exit=(0.0, hy(0.2125)),
         left_loop_arc=left_arc,
-        left_tail_bulge=(sx(0.213), hy(0.875)),
+        left_tail_bulge=(sx(_LEFT_TAIL_BULGE_X), hy(_LEFT_TAIL_BULGE_Y)),
         left_bottom_exit=(sx(0.175), height),
         # Right: one large loop near the top, crossing the right edge twice
         # as it turns, then a short tail exiting lower down through the
