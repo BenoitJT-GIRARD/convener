@@ -98,8 +98,8 @@ jobs:
               # comment on this same dispatch. deploy.yml is what rebuilds
               # the file the verification page fetches -- a revocation is
               # exactly the case this matters most for: the holder's own
-              # signature still verifies (spec S:7's own "la signature
-              # reste valide"), and only the register's own state can
+              # signature still verifies (spec S:7's own "the signature
+              # remains valid"), and only the register's own state can
               # tell a visitor it was revoked. Carried item 4 (fix wave
               # 2): no publish-vitrine.yml dispatch beside this one any
               # more -- see issue-certificates.yml's own comment on why

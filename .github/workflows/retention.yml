@@ -1,9 +1,9 @@
 name: Retention sweep
 
 # Task 15: the job that makes the phase 4 spec's central promise true.
-# S:4's cycle-of-life table ends "destruction de la cle -- les donnees de
-# l'evenement deviennent definitivement illisibles" 90 days after the
-# event (tools/convener_ops/eventkeys.py::is_due_for_destruction); acceptance
+# S:4's cycle-of-life table ends "key destruction -- the event's data
+# becomes permanently unreadable" 90 days after the event
+# (tools/convener_ops/eventkeys.py::is_due_for_destruction); acceptance
 # criterion 6 requires this to actually run, not merely be documented.
 # Scheduled (R-33 -- a retention job that only runs when somebody
 # remembers is the failure this task exists to prevent), with

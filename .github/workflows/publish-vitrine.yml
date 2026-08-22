@@ -209,7 +209,7 @@ jobs:
           # diff, so a page removed from site/ disappears from the
           # publication too; task 5 and later extend this by adding pages
           # under site/, never by editing this step (progress.md's own
-          # inter-task scan: "la tache 5 etend, ne reecrit pas").
+          # inter-task scan: "task 5 extends, it does not rewrite").
           refresh_published_site() {
             find /tmp/vit -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'app' -exec rm -rf {} +
             cp -r "$SITE_OUTPUT/." /tmp/vit/

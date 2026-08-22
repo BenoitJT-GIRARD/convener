@@ -49,8 +49,8 @@ jobs:
           # convener_ops.registration.event_id_from_payload's own docstring,
           # which this step's entry point reuses unchanged: the envelope
           # shape a survey response arrives in is byte-identical to a
-          # registration's own (phase 4 spec S:6, "meme entree que
-          # l'inscription").
+          # registration's own (phase 4 spec S:6, "same entry as
+          # registration").
           SURVEY_PAYLOAD: ${{ github.event.client_payload.body }}
         run: uv run convener-survey-secret-name
       - name: Decrypt, store and commit the survey response
