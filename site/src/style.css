@@ -499,6 +499,21 @@ a.btn--ghost:hover { border-color: var(--purple); }
 .feature--empty {
   padding: 1rem 0;
 }
+.feature.feature--empty {
+  /* The compound selector, not `.feature--empty` alone: the empty state
+   * has only one child (its `<p>`), so above 760px it would otherwise
+   * land in `.feature`'s first grid column -- 8rem wide, meant for
+   * `.feature__rail` -- squeezing the message into a ten-character ribbon
+   * of text before its own `max-width: 52ch` on `.feature--empty p` ever
+   * gets a chance to apply. `.feature.feature--empty` (two classes,
+   * specificity 0,2,0) outranks `.feature`'s own `@media (min-width:
+   * 760px)` rule (one class, 0,1,0) regardless of source order, so this
+   * stays correct even if the stylesheet is reordered later -- unlike a
+   * plain `.feature--empty` override, which would only win by accident of
+   * appearing later in the file.
+   */
+  grid-template-columns: 1fr;
+}
 .feature--empty p {
   font-family: var(--ff-display);
   font-weight: 500;
