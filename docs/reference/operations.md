@@ -245,26 +245,60 @@ the registration form for an event with a published key; the worker
 answers `204` and the `registration-submitted` dispatch it sends triggers
 the workflow that handles it (see phase 4).
 
-## Publishing the application (GitHub Pages)
+## Publishing the showcase and the application (GitHub Pages)
 
-**Without it:** nothing else is affected here — this is how the app itself
-is published, not an optional integration.
+**Without it:** nothing else is affected here — this is how both public
+surfaces are published, not an optional integration.
 
 **To create:** nothing, on this repository — Pages is not enabled here.
 `example-cockpit` stays private (see *Before anything else* above), and GitHub
 Pages will not serve a private repository without a paid plan, which the
-project's no-cost constraint rules out. This page was right to name a
-fallback for that case (Netlify, Cloudflare Pages, pointed at `app/dist`);
-the fallback was never needed, because a route already sat closer to hand.
+project's no-cost constraint rules out.
 
 Pages is instead enabled on the separate, public
 `example-instance/example-showcase` repository: Settings → Pages → Source =
-*Deploy from a branch*, branch `main`, folder `/ (root)`. The *Deploy app*
-workflow (`.github/workflows/deploy.yml`) builds the app here and pushes
-`app/dist` into `example-showcase`, under `app/` — the same pattern *Publish
-vitrine data* (`.github/workflows/publish-vitrine.yml`) already uses to
-push the public events feed under `src/_data/`. The site is at
-`https://example-instance.github.io/example-showcase/app/`.
+*Deploy from a branch*, branch `main`, folder `/ (root)`. Before phase 5,
+`example-showcase` held the showcase's own Eleventy templates directly, and
+that repository's own `build.yml` published them to a `gh-pages` branch —
+one this *Source* setting above was never configured to serve (see *Not
+currently reachable*, below, for what that broke). Phase 5 moved those
+templates into this repository, under `site/` (D-15: private source,
+public artefact), so `example-showcase` is now **purely generated** — every
+byte there is reproducible from this repository, nothing hand-edited —
+and retired `example-showcase`'s own `build.yml` along with them: two workflows
+*here* now own the whole of `example-showcase`'s root between them, each
+touching only its own disjoint subtree. *Publish vitrine*
+(`.github/workflows/publish-vitrine.yml`) builds `site/` and pushes the
+result to that root, `.nojekyll` included (`site/src/.nojekyll`, carried
+through the build as a passthrough copy) — the file that stops GitHub
+Pages falling back to rendering the repository's own `README.md` instead
+of the real `index.html` now sitting there. *Deploy app*
+(`.github/workflows/deploy.yml`) builds `app/` and pushes it into that
+same root, under `app/`, unchanged from before. Neither workflow reads
+what the other last wrote; each simply refuses to touch it.
+
+Once published, the four public addresses are:
+
+```
+https://example-instance.github.io/example-showcase/               the showcase
+https://example-instance.github.io/example-showcase/events/<id>/   one page per event
+https://example-instance.github.io/example-showcase/app/           the cockpit
+https://example-instance.github.io/example-showcase/verify/        certificate verification
+```
+
+Every path either build emits carries that `/example-showcase/` prefix baked
+in at build time — `site/.eleventy.js`'s own `PATH_PREFIX` and
+`SITE_ORIGIN` constants for the showcase, `app/vite.config.ts`'s own
+`base` for the application — bound by `tools/tests/test_site.py` to the
+same two addresses `tools/convener_ops/registration.py::SIGNUP_BASE` and
+`tools/convener_ops/certificate.py::VERIFICATION_BASE` already pin, so the
+four cannot silently drift apart (D-14, applied to this one more
+boundary). **A build served from a bare `localhost` root is not a preview
+of this — it is a different topology** (D-26): the same test suite that
+binds the four addresses together also asserts that a root-relative path
+breaks at a bare root on purpose, which is why *Local preview*
+(`site/README.md`) is a convenience for editing content, never a
+rehearsal for how a page actually resolves once published.
 
 This route, and not a third-party static host, because it adds no account.
 A paid plan was already ruled out by the no-cost constraint; a third-party
@@ -272,7 +306,7 @@ host such as Netlify or Cloudflare Pages would still need its own account,
 which is one more account somebody has to own, and the project's
 constraints already forbid resting on any one collaborator's goodwill or
 position. `example-showcase` costs nothing new to add: it already exists, under
-the same organisation, to serve the public events feed.
+the same organisation.
 
 **Also needs correcting, outside this repository:** the GitHub App's homepage URL
 (the organisation's Settings → Developer settings → GitHub Apps → the app
@@ -281,36 +315,34 @@ registered above under *Authentication relay*) still reads
 setting, not code — no test, no CI job and no type will ever notice it
 drifting, so this paragraph is the only mechanism that gets it corrected.
 
-**To verify:** push to `main`; the *Deploy app* workflow ends green and the
-site answers at the address above.
+**To verify:** push to `main`; both *Publish vitrine* and *Deploy app* end
+green, and the showcase and the cockpit answer at the addresses above.
 
-**Not currently reachable (task 13 fix round 1, Important 5).** The
-application is not served today, and this is the honest current state, not
-a guess:
+**Not currently reachable.** No remote is connected to this repository yet
+(`docs/superpowers/mise-en-ligne.md`) — nothing has ever been pushed to
+GitHub, so every gate on this page has been verified by reproducing its
+command locally, never by a real deployment, and the honest current state
+is that none of the four addresses above answers anything today. Two
+things are worth keeping separate once a push does happen:
 
-- `VITRINE_DEPLOY_TOKEN` is unset, so *Deploy app*'s own push step exits
-  cleanly at its very first line without ever cloning `example-showcase` — this
-  is D-13's ordinary "absent is normal" state, not a failure, but it means
-  no build of this application has ever reached that repository.
-- Independently of that: a live `curl -I` against
-  `https://example-instance.github.io/example-showcase/` returns `200`, but
-  that response is Jekyll rendering the repository's own `README.md` (`<meta
-  name="generator" content="Jekyll v3.10.0">`), which is GitHub Pages'
-  default behaviour for *Source = Deploy from a branch, branch `main`,
-  folder `/ (root)`* — matching the setting this page names above.
-  `https://example-instance.github.io/example-showcase/app/` and `.../style.css`
-  both `404`. The showcase repository's own `build.yml`, separately, builds
-  its Eleventy site and publishes `_site` to a `gh-pages` branch — a
-  publication target this repository's Pages *Source* setting is not
-  configured to serve. Those two configurations, both real, cannot both be
-  in force at once; which one actually governs `example-showcase`'s Pages
-  setting is outside this repository to check or to change, and is the
-  owner's decision, not this task's.
-
-Net effect: even once `VITRINE_DEPLOY_TOKEN` is set, the application's own
-reachability at the address above still depends on that separate,
-external setting resolving in this page's favour. See
-`docs/superpowers/deferred-work.md` for what this blocks.
+- `VITRINE_DEPLOY_TOKEN` unset is D-13's ordinary "absent is normal"
+  state: both *Publish vitrine* and *Deploy app* log a message and exit
+  cleanly at their first push step, rather than failing loudly, and simply
+  push nothing.
+- Independently of that, task 13's fix round 1 found a second, real
+  problem, live at the time it was checked: a `curl -I` against the
+  showcase's address returned `200`, but from GitHub Pages' own Jekyll
+  rendering of `example-showcase`'s `README.md` (`<meta name="generator"
+  content="Jekyll v3.10.0">`) — no `index.html` had ever reached that
+  repository's root — and the application and the showcase's own
+  stylesheet both `404`d. That was the two-`build.yml` conflict this
+  section used to describe: `example-showcase`'s own build published to
+  `gh-pages`, a branch the *Source* setting above does not serve. Phase 5
+  removes the cause rather than working around it, exactly as described
+  above — but that removal has not yet been checked against a real
+  deployment, so treat it as the most likely first thing to verify once
+  this repository is finally connected to GitHub, not as settled. See
+  `docs/superpowers/deferred-work.md` for the fuller history.
 
 ## Meeting platform
 
@@ -1537,17 +1569,16 @@ repository still needs to know they exist and where they live.
   reads.
 - **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
   scoped to the separate `example-instance/example-showcase` repository
-  (contents: read & write only), that both *Publish vitrine data*
+  (contents: read & write only), that both *Publish vitrine*
   (`.github/workflows/publish-vitrine.yml`) and *Deploy app*
-  (`.github/workflows/deploy.yml`) use to push into it — the public events
-  feed under `src/_data/`, and, since the app is now published through
-  this same repository (see *Publishing the application (GitHub Pages)*
-  above), the built application under `app/`. It is no longer only the
-  events feed at stake: without it,
-  *Deploy app* still logs a message and exits cleanly rather than failing
-  loudly, but nothing is pushed anywhere and there is no fallback
-  publishing route, so there is no site at all. Set as a repository secret
-  on `example-cockpit`.
+  (`.github/workflows/deploy.yml`) use to push into it — the built
+  showcase at that repository's root, and the built cockpit application
+  under `app/`, two disjoint subtrees each workflow only ever touches (see
+  *Publishing the showcase and the application* above). Without it,
+  neither workflow fails loudly: each logs a message and exits cleanly at
+  its own first push step, but nothing is pushed anywhere and there is no
+  fallback publishing route, so there is no public site at all. Set as a
+  repository secret on `example-cockpit`.
 - **`CLOUDFLARE_API_TOKEN`** — already introduced above under
   *Authentication relay*: used by *Deploy auth relay* to deploy the
   worker in `services/auth-proxy/`, by *Deploy form relay* to deploy
