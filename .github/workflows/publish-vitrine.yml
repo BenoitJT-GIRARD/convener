@@ -109,21 +109,42 @@ jobs:
       # link on any public page, ever; it is delivered only by the
       # confirmation e-mail, and the event page this task adds is what
       # replaces it in every announcement instead.
-      # `tools/tests/test_site.py` already proves the templates keep
-      # `registration_link` off a build made from the committed fixture,
-      # on every push; this is the same check, run once more here against
-      # the *real* data this job is seconds away from publishing, the
-      # same "prove it against what is actually about to ship, not only
-      # a fixture" argument the D-25 empty-build guard further down this
-      # file already makes for a different failure mode. A field can be
-      # non-empty in production and still be empty in every fixture a
-      # test happens to carry.
+      # `tools/tests/test_site.py` already proves the templates keep a
+      # room link off a build made from a committed fixture, on every
+      # push; this is the same check, run once more here against the
+      # *real* room links this job is seconds away from publishing
+      # alongside, the same "prove it against what is actually about to
+      # ship, not only a fixture" argument the D-25 empty-build guard
+      # further down this file already makes for a different failure
+      # mode. A field can be non-empty in production and still be empty
+      # in every fixture a test happens to carry.
+      #
+      # Phase 5, task 9: reads `data/speakers.yml`'s own `zoom_link`
+      # directly, never `public-data/events-public.json` -- that file no
+      # longer carries the room link under any name. It used to, as
+      # `registration_link` (`public_data.py::PUBLIC_FIELD_SOURCES`), a
+      # name that read as exactly the opposite of what it carried once
+      # the event page gained its own registration form, and task 5's own
+      # implementer nearly rendered it believing it was the one to
+      # register at. The mapping is gone rather than renamed, so the one
+      # place left to learn what a leak would look like is the private
+      # record the room link actually lives in.
       - name: Refuse to publish a page that leaks the room link
         run: |
           set -e
-          links=$(jq -r '[.[] | .registration_link // empty] | .[]' public-data/events-public.json)
+          links=$(uv run --project tools python -c '
+          from convener_ops.paths import repo_root
+          from convener_ops.yaml_safe import safe_load
+
+          speakers = safe_load(
+              (repo_root() / "data" / "speakers.yml").read_text(encoding="utf-8")
+          )
+          for entry in speakers:
+              if isinstance(entry, dict) and entry.get("zoom_link"):
+                  print(entry["zoom_link"])
+          ')
           if [ -z "$links" ]; then
-            echo "no event in this run carries a room link -- nothing to check"
+            echo "no speaker record carries a room link -- nothing to check"
             exit 0
           fi
           leaked=0

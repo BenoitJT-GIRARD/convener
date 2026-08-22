@@ -31,10 +31,12 @@ jobs:
       # Phase 5, task 5: `tests/test_site.py` now builds the real `site/`
       # project itself (a genuine Eleventy build, into a scratch directory)
       # to sweep the *rendered* event pages for a leaked room link --
-      # acceptance criterion 2 cannot be checked any other way, because the
-      # public schema calls that field `registration_link`, never
-      # `zoom_link`, so a template-source scan would stay green even with a
-      # leak. That build needs `site/`'s own `node_modules`, which this job
+      # acceptance criterion 2 cannot be checked any other way, because a
+      # room link never appears in a template's own source under the
+      # internal name `zoom_link` (the public feed used to carry it as
+      # `registration_link`, task 9 stopped publishing it under any name at
+      # all), so a template-source scan would stay green even with a leak.
+      # That build needs `site/`'s own `node_modules`, which this job
       # otherwise never installs -- the `site` job below does, but it never
       # runs `pytest`. Mixing Python and Node tooling in one job is already
       # this pipeline's own idiom (`publish-vitrine.yml`, `deploy.yml`), not
