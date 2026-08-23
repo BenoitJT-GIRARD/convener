@@ -141,6 +141,24 @@ def expire_votes(
 # overnight. What comes back is a *proposal* -- the config as it would read,
 # and one line per member for a human to read, weigh and apply. The lines
 # describe a silence in the ballot record; they do not describe a person.
+#
+# Voting eligibility in `config.yml` is the only thing this rule touches.
+# Marking a member inactive does nothing to their GitHub repository write
+# access -- the two are separate systems, and a former board member proposed
+# inactive keeps that access, and with it the ability to read or exfiltrate
+# any secret this repository holds (AF-1: this project applies least
+# privilege to data, never to credentials). The proposed-inactive line below
+# says so every time, at the moment a human is already reading it to act on
+# that person, rather than once in a document nobody opens at the point of
+# action.
+#
+# This function does not revoke that access itself, and it must not gain
+# that ability later. Doing so would need an organisation-admin token -- a
+# credential able to rewrite permissions across the whole organisation,
+# more powerful than any secret this project currently holds. Adding it to
+# close this gap would create a larger secret to protect than the one being
+# closed. The fix is a human reading the line below and acting on GitHub
+# directly, never a second scheduled job.
 # ------------------------------------------------------------------ #
 
 
@@ -355,6 +373,9 @@ def sweep_inactive_members(
         prompts.append(
             f"{login}: no ballot since {seen}; proposed inactive so the "
             f"threshold stops counting the seat - the seat is kept, the annual "
-            f"meeting decides, and one word in config.yml undoes it"
+            f"meeting decides, and one word in config.yml undoes it. This "
+            f"does not touch {login}'s GitHub repository write access - "
+            f"revoke that separately on GitHub if their time on the board "
+            f"is really ending"
         )
     return proposed, prompts

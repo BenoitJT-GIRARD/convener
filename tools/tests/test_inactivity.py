@@ -78,6 +78,23 @@ def test_a_member_silent_past_the_threshold_is_proposed_inactive() -> None:
     assert [line.split(":")[0] for line in prompts] == ["Anonymous"]
 
 
+def test_the_proposed_inactive_line_names_the_repository_access_question() -> None:
+    """Marking a member inactive here only ever changes `config.yml`'s
+    voting eligibility (G-09) -- it does nothing to their GitHub repository
+    write access, and a former board member who keeps that access keeps the
+    ability to reach every secret this repository holds. The report a human
+    reads to act on that member has to say so at the point they are already
+    reading it, not in a document they would have to go looking for."""
+    cfg = config(inactivity_months=6, board=with_three_recent(board_member()))
+    speakers = [voted("Anonymous", "2025-06-01"), voted("ada", "2026-07-15")]
+    _, prompts = sweep_inactive_members(cfg, speakers, NOW)
+
+    line = prompts[0]
+    assert line.startswith("Anonymous:")
+    assert "GitHub repository write access" in line
+    assert "revoke" in line
+
+
 def test_a_recently_active_member_does_not_move() -> None:
     cfg = config(inactivity_months=6)
     speakers = [voted(login, "2026-08-01") for login in ("Anonymous", "grace", "ada")]
@@ -561,6 +578,10 @@ def test_the_rule_stops_before_the_board_can_no_longer_decide_anything() -> None
     held_back = [line for line in prompts if "not proposed" in line]
     assert [line.split(":")[0] for line in held_back] == ["grace", "ada"]
     assert "a vote needs" in held_back[0]
+    # Nobody here is being marked inactive, so the access question does not
+    # apply to them -- only a line that actually proposes someone inactive
+    # names it.
+    assert not any("GitHub repository write access" in line for line in held_back)
 
 
 def test_a_board_already_at_the_floor_moves_nobody() -> None:
