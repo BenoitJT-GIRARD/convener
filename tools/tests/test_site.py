@@ -2329,3 +2329,46 @@ def test_an_edition_with_no_banner_file_still_emits_no_og_image_tag(
         )
         twitter_card = _TWITTER_CARD_RE.search(page)
         assert twitter_card is not None and twitter_card.group(1) == "summary"
+
+
+def test_the_organiser_link_points_at_the_apps_real_published_base(
+    built_site: Path,
+) -> None:
+    """The masthead and the footer both offer "Organizer access" on every
+    page. That link used to be a hand-typed absolute address in
+    `site/src/_data/site.json`, naming a repository that will not exist and
+    a path that never did -- a dead link on every public page, and one that
+    only became visible when the cockpit's own directory was renamed to
+    match the repository it is.
+
+    It is now derived through Eleventy's `url` filter like every other
+    internal link, so the prefix comes from the one place
+    `test_the_path_prefix_agrees_with_the_addresses_python_already_pins`
+    already binds. This pins the other half: that it resolves to the base
+    the application is *actually* built with, which
+    `tools/tests/test_workflows.py::EXPECTED_BASE_PATH` pins on the Vite
+    side. Change the app's base without changing this link and one of the
+    two tests fails rather than the site quietly offering a 404.
+    """
+    expected = f'href="{_pfx("/app/")}"'
+    pages = sorted(built_site.rglob("*.html"))
+    assert pages, "the build wrote no pages at all"
+
+    carrying = [p for p in pages if expected in p.read_text(encoding="utf-8")]
+    assert carrying, (
+        f"no built page links the organiser application at {expected!r} -- "
+        "the masthead and footer offer it on every page, so either the link "
+        "moved or it stopped resolving against the published prefix"
+    )
+
+    stale = [
+        p.relative_to(built_site).as_posix()
+        for p in pages
+        if "workshop-series" in p.read_text(encoding="utf-8")
+    ]
+    assert not stale, (
+        "built pages still name the cockpit's old directory: "
+        f"{stale} -- the repository is example-cockpit, is private, and never "
+        "serves the application; the application is published under the "
+        "vitrine's own prefix"
+    )
