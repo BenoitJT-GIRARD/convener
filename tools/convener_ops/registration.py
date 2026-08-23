@@ -594,7 +594,16 @@ def find_by_matching_code(
         existing = to_registration(json.dumps(entry), private_pem)
         if existing is None:
             continue
-        if matching_code(event_id, existing.email, salt) == wanted:
+        # `hmac.compare_digest`, not `==` (security audit 2026-08-23, L1):
+        # `matching_code` returns an HMAC-derived code, and `wanted` is a
+        # workflow_dispatch input a caller typed -- the same reasoning
+        # `proposal.py`'s own signature check already applies.
+        # `derived_code` is never `None` here: `matching_code` only
+        # returns `None` for a falsy `salt`, already ruled out by the
+        # early return above -- named separately from this function's own
+        # `code` parameter so mypy sees the narrowed, non-optional type.
+        derived_code = matching_code(event_id, existing.email, salt)
+        if derived_code is not None and hmac.compare_digest(derived_code, wanted):
             matches.append(existing)
     if len(matches) > 1:
         # Minor 3 (round 2): the code itself does not go in this message.

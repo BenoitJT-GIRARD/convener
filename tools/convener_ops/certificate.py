@@ -782,7 +782,13 @@ def issue(
     matches = [
         entry
         for entry in existing
-        if entry.event_id == event.event_id and entry.fingerprint == entry_fingerprint
+        if entry.event_id == event.event_id
+        # `hmac.compare_digest`, not `==` (security audit 2026-08-23, L1):
+        # both sides are HMAC output, the same reasoning `proposal.py`'s
+        # own signature check already applies -- this call site is not
+        # reachable by an adversary who lacks a cheaper, more direct
+        # oracle, but the inconsistency itself is what this fix closes.
+        and hmac.compare_digest(entry.fingerprint, entry_fingerprint)
     ]
     issued_match = next(
         (entry for entry in matches if entry.state == STATE_ISSUED), None
@@ -927,7 +933,10 @@ def reissue(
     matches = [
         entry
         for entry in existing
-        if entry.event_id == event.event_id and entry.fingerprint == entry_fingerprint
+        # `hmac.compare_digest`, not `==` -- see `issue`'s own comment on
+        # its identical comparison (security audit 2026-08-23, L1).
+        if entry.event_id == event.event_id
+        and hmac.compare_digest(entry.fingerprint, entry_fingerprint)
     ]
     if not matches:
         raise ValueError(
