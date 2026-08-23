@@ -141,25 +141,82 @@ type ResolvedValue =
   | string
   | undefined;
 
+/**
+ * `{{ namespace.leaf }}`, plus one optional trailing sigil `_render`'s own
+ * `announce.py` counterpart shares byte-for-byte: `?` or `!`, read below and
+ * never passed to `MISSING` -- a token with neither behaves exactly as it
+ * always has.
+ */
+const TOKEN = /\{\{\s*([\w.]+)\s*([?!])?\s*\}\}/g;
+
+/** The value at `path` in `resolved`, and whether it actually resolved to a
+ *  non-empty leaf -- the one question both `?` and `!` below ask, and the
+ *  ordinary, sigil-less token asked all along (just without a name for it
+ *  until there was a second answer to give for the same question). */
+function resolvePath(path: string, resolved: Resolved): { value: string; present: boolean } {
+  const parts = path.split('.');
+  let cur: ResolvedValue = resolved;
+  for (const p of parts) {
+    if (cur && typeof cur === 'object' && p in cur) cur = (cur as Record<string, ResolvedValue>)[p];
+    else return { value: '', present: false };
+  }
+  if (cur === null || cur === undefined || cur === '') return { value: '', present: false };
+  // A path that stops on a branch rather than a leaf -- `{{speaker}}`, the
+  // vocabulary four toolkit pages were written in before this -- used to
+  // reach `String(cur)` and put the literal text "[object Object]" in front
+  // of a speaker. It is the same failure as a name nobody feeds, so it gets
+  // the same visible marker: a template written against a vocabulary the
+  // renderer does not have must look broken, not merely read oddly.
+  if (typeof cur === 'object') return { value: '', present: false };
+  return { value: String(cur), present: true };
+}
+
+/**
+ * Resolve every `{{ namespace.leaf }}` (and `?`/`!`) token in `text` against
+ * `ctx`, a line at a time rather than a token at a time.
+ *
+ * An ordinary token resolves exactly as it always has: the value, or the
+ * missing marker for an empty or absent one -- a field this project expects
+ * a row to carry by the time this text is drafted, so its absence should
+ * make the draft look exactly that unfinished (D-13).
+ *
+ * Fix round 2 (`tools/convener_ops/announce.py::_render`'s own docstring carries
+ * the argument in full; mirrored here so the two engines cannot show a
+ * volunteer two different things for the identical template): a field that
+ * is *ordinarily* absent -- `public.bio`, waiting on a consent nobody is
+ * obliged to give; `public.forum_thread`/`speaker.forum_thread`, waiting on
+ * a thread nobody has opened yet -- must not sit in the body as a
+ * `«missing: …»` marker a volunteer is about to paste as-is. `{{ ns.leaf? }}`
+ * resolves to the value when there is one, and otherwise drops the *entire
+ * line it sits on*; `{{ ns.leaf! }}`, in "Notes for the volunteer", is the
+ * mirror image -- the token alone disappears, leaving the rest of that line
+ * as a plain sentence, when the field is absent, and the *whole line*
+ * disappears when it is present, because the fact is already in the body.
+ * Excess blank lines a drop leaves behind collapse to one, so a dropped
+ * paragraph reads as no paragraph, not as a visible gap.
+ */
 export function substitute(text: string, ctx: SubstitutionContext): string {
   const resolved = buildContext(ctx);
-  return text.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, path) => {
-    const parts = path.split('.');
-    let cur: ResolvedValue = resolved;
-    for (const p of parts) {
-      if (cur && typeof cur === 'object' && p in cur) cur = (cur as Record<string, ResolvedValue>)[p];
-      else return MISSING(path);
-    }
-    if (cur === null || cur === undefined || cur === '') return MISSING(path);
-    // A path that stops on a branch rather than a leaf -- `{{speaker}}`, the
-    // vocabulary four toolkit pages were written in before this -- used to
-    // reach `String(cur)` and put the literal text "[object Object]" in front
-    // of a speaker. It is the same failure as a name nobody feeds, so it gets
-    // the same visible marker: a template written against a vocabulary the
-    // renderer does not have must look broken, not merely read oddly.
-    if (typeof cur === 'object') return MISSING(path);
-    return String(cur);
+  const lines = text.split('\n').map(line => {
+    let drop = false;
+    const rendered = line.replace(TOKEN, (_whole, path: string, sigil?: string) => {
+      const { value, present } = resolvePath(path, resolved);
+      if (sigil === '?') {
+        if (!present) drop = true;
+        return value;
+      }
+      if (sigil === '!') {
+        if (present) drop = true;
+        return '';
+      }
+      return present ? value : MISSING(path);
+    });
+    return drop ? null : rendered;
   });
+  return lines
+    .filter((line): line is string => line !== null)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n');
 }
 
 /** The `{{ consent.… }}` group, and only it. */

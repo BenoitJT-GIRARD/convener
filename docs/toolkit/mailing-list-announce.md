@@ -24,8 +24,7 @@ free to attend.
 
 Register here: {{ speaker.signup_link }}
 
-Questions can be posted ahead of time on the forum thread:
-{{ speaker.forum_thread }}
+Questions can be posted ahead of time on the forum thread: {{ speaker.forum_thread? }}
 
 The Example Collective is a virtual seminar series in behavioural science, held
 roughly monthly and open to anyone. Past talks and recordings are at
@@ -46,3 +45,4 @@ The Example Collective team
   meeting room link here. The room link only ever reaches a participant
   through the confirmation e-mail (see
   [Registration confirmed](emails/registration-confirmed.md)).
+- {{ speaker.forum_thread! }}No forum thread link is included above: none has been opened yet, so open one and add its link before you send this.

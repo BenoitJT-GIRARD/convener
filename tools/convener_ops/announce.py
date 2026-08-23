@@ -46,6 +46,24 @@ than resolved here, the same convention `visual.render_announcement` and
 rather than reading `paths.repo_root()` itself is the one every test in
 this module already calls against the real checkout.
 
+Fix round 2: an optional field is not a missing one
+-----------------------------------------------------
+`«missing: …»` is right for a field this project expects a row to carry by
+the time this text is drafted -- a title, a date -- because a draft missing
+one of those is not ready to post and should look exactly that unfinished.
+It was the wrong marker for `public.bio` and `public.forum_thread`
+(`recording-announce.md`), and `speaker.forum_thread`
+(`linkedin-post.md`, `mailing-list-announce.md`): each is ordinarily absent
+-- a biography waits on a consent nobody is obliged to give, a forum thread
+waits on somebody opening one -- and each sat, unmarked, inside the body an
+operator is meant to copy and paste as-is. `_render`'s own docstring carries
+the mechanism (`?`/`!` sigils); what belongs here is the reason the two
+absences must not read the same once they are off the body and into "Notes
+for the volunteer": a withheld biography is finished business -- nothing to
+fill in, and reading it as a task would invite a volunteer to paste in
+something the speaker never sent -- while an unopened forum thread is
+exactly a task, and the one the volunteer may be the person to close.
+
 No room link, structurally
 -----------------------------
 Nothing below ever reads a `"zoom_link"` (or any other) key off `row` that
@@ -87,7 +105,18 @@ TOOLKIT_DIR: Final[Path] = Path("docs") / "toolkit"
 #: `render.ts`'s own `{{ *.* }}` grammar -- a namespace, a dot, a leaf --
 #: reproduced here rather than imported: a `.ts` module cannot be required
 #: from Python, and this is the whole of what there is to reproduce.
-_PLACEHOLDER = re.compile(r"\{\{\s*([\w]+)\.([\w]+)\s*\}\}")
+#:
+#: Fix round 2 adds one thing to the grammar rather than a second one beside
+#: it: an optional trailing sigil, `?` or `!`, read by `_render` and never
+#: passed on to `_missing` -- see that function's own docstring for what
+#: each one does. A token with neither behaves exactly as before.
+_PLACEHOLDER = re.compile(r"\{\{\s*([\w]+)\.([\w]+)\s*([?!])?\s*\}\}")
+
+#: Two or more blank lines left behind by a dropped line -- `_render`'s own
+#: cleanup, run once per call rather than once per drop, so a line dropped
+#: next to another blank line never leaves a visible gap in the body an
+#: operator is about to paste (the finding fix round 2 exists to close).
+_EXCESS_BLANK_LINES = re.compile(r"\n{3,}")
 
 
 def _missing(namespace: str, leaf: str) -> str:
@@ -95,7 +124,11 @@ def _missing(namespace: str, leaf: str) -> str:
     around `namespace.leaf`, shown for an empty or absent field exactly as
     the cockpit shows it for the identical reason -- a template reading a
     field this row does not carry is not a bug in the template, it is this
-    row not being ready yet (D-13)."""
+    row not being ready yet (D-13). Reserved for a field this project
+    actually expects a row to carry by the time this text is drafted -- a
+    title, a date -- so that draft still looks, correctly, unfinished. An
+    optional field (`?`/`!`, below) never reaches this: its absence is
+    ordinary, not a gap to shout about in the middle of a public post."""
     return f"«missing: {namespace}.{leaf}»"
 
 
@@ -104,14 +137,79 @@ def _render(text: str, namespaces: Mapping[str, Mapping[str, str]]) -> str:
     `namespaces`, exactly the two rules `render.ts::substitute` applies: a
     namespace or leaf this call was not given resolves to the missing
     marker, and so does an empty string -- never a blank line silently
-    standing in for a field nobody filled in."""
+    standing in for a field nobody filled in.
 
-    def repl(match: re.Match[str]) -> str:
-        namespace, leaf = match.group(1), match.group(2)
-        value = namespaces.get(namespace, {}).get(leaf, "")
-        return value if value else _missing(namespace, leaf)
+    Fix round 2: that rule stayed exactly as strict for a field this project
+    expects to be there -- a title, a date, anything with no `?`/`!` sigil.
+    It was always the wrong rule for a field that is *ordinarily* absent,
+    read against a body an operator is about to copy verbatim and post
+    (`docs/toolkit/recording-announce.md`'s own `{{ public.bio }}`, sitting
+    alone as a paragraph, was the finding this fix round exists for): a
+    volunteer who pastes `«missing: public.bio»` into a forum reply has
+    pasted a bug report, not an announcement.
 
-    return _PLACEHOLDER.sub(repl, text)
+    So two more token shapes exist, resolved a line at a time rather than a
+    token at a time -- neither one leaves a marker, and both remove whole
+    lines rather than leave a token-shaped hole in the middle of one:
+
+    - `{{ ns.leaf? }}`, in the body: the value, when there is one, exactly
+      like an ordinary token; the *entire line it sits on*, when there is
+      not -- so a sentence written only to carry that field disappears with
+      it, rather than the sentence staying and the field it was about going
+      missing from the middle of it. A template that wants this drop to
+      take the whole sentence with it therefore has to give that sentence
+      its own line, which is why fix round 2 also reflows the two sentences
+      this applies to onto one line each in the three templates that carry
+      them, rather than leaving them soft-wrapped: dropping only the
+      *wrapped* half of a sentence would leave the other half behind,
+      reading as a sentence that stops short.
+    - `{{ ns.leaf! }}`, in "Notes for the volunteer": the mirror image. The
+      *token* disappears, leaving the rest of that line as an ordinary
+      sentence, when the field is absent -- so the template's own words say
+      what happened to it, in whichever of the two ways this field's own
+      absence should read (`docs/toolkit/recording-announce.md`'s own
+      `bio`/`forum_thread` notes read differently on purpose: one is
+      finished, the other is a task); the *whole line*, when the field is
+      present, because the fact is already in the body and does not need
+      saying twice.
+
+    Not a general templating language -- an `{{ ns.leaf? }}` with no `!`
+    counterpart anywhere in "Notes" is not wrong, it is a gap this project
+    is choosing not to call out in prose (there is none among the four
+    drafts today: every `?` this fix round adds has a `!` beside it). Both
+    sigils share one cleanup: `_EXCESS_BLANK_LINES` collapses whatever
+    blank-line stack a drop leaves behind to the ordinary one, so a dropped
+    paragraph in the body reads as no paragraph, not as a visible gap where
+    one used to be.
+    """
+
+    def render_line(line: str) -> str | None:
+        """The rendered line, or `None` if this line is dropped entirely."""
+        drop = False
+
+        def repl(match: re.Match[str]) -> str:
+            nonlocal drop
+            namespace, leaf, sigil = match.group(1), match.group(2), match.group(3)
+            value = namespaces.get(namespace, {}).get(leaf, "")
+            if sigil == "?":
+                if not value:
+                    drop = True
+                return value
+            if sigil == "!":
+                if value:
+                    drop = True
+                return ""
+            return value if value else _missing(namespace, leaf)
+
+        rendered = _PLACEHOLDER.sub(repl, line)
+        return None if drop else rendered
+
+    lines = [
+        rendered
+        for rendered in map(render_line, text.split("\n"))
+        if rendered is not None
+    ]
+    return _EXCESS_BLANK_LINES.sub("\n\n", "\n".join(lines))
 
 
 def _template(root: Path, name: str) -> str:

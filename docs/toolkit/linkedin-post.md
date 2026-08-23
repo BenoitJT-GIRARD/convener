@@ -19,6 +19,12 @@ We are hosting **{{ speaker.name }}** ({{ speaker.affiliation }}) for a talk on:
 [One line, in your own words, on why this talk matters. Written by hand — the record holds no such sentence.]
 
 Register here 👉 {{ speaker.signup_link }}
-Join the discussion on The Example Collective 👉 {{ speaker.forum_thread }}
+Join the discussion on The Example Collective 👉 {{ speaker.forum_thread? }}
 
 \#BehaviouralScience #Neuroscience #Webinar #OpenScience
+
+---
+
+## Notes for the volunteer posting this
+
+- {{ speaker.forum_thread! }}No forum thread link is included above: none has been opened yet, so open one and add its link before you post.

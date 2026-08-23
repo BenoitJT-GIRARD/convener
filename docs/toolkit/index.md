@@ -41,6 +41,21 @@ e-mail. So anything you have to write in by hand is written in **square
 brackets** instead — `[the day the LinkedIn post goes out]` — and reads as an
 instruction rather than as a field the workspace forgot to fill.
 
+A biography and a forum thread link are not fields the workspace forgot,
+though — they are ordinarily absent, waiting on a consent nobody is obliged
+to give or a thread nobody has opened yet — so `«missing: …»` is the wrong
+thing to show for them inside a page meant to be posted as-is. Three pages
+(`recording-announce.md`, `linkedin-post.md`, `mailing-list-announce.md`)
+pair each such field across two lines instead: `{{ public.bio? }}` (a
+trailing `?`) resolves to the value when there is one, and otherwise drops
+its *entire line* from the text rather than leaving the marker behind;
+`{{ public.bio! }}` (a trailing `!`), in "Notes for the volunteer", does the
+opposite — it drops its line when the field *is* there, and otherwise keeps
+the rest of that line as a plain sentence saying so. The two read
+differently on purpose: a withheld biography is finished business, nothing
+to add; an unopened forum thread is a task the volunteer may be the one to
+close.
+
 ## Emails
 
 - [Proposal received](emails/proposal-received.md) — acknowledging a proposal, the day it arrives

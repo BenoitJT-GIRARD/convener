@@ -125,6 +125,21 @@ class TestNetworkPost:
             _row(forum_thread="https://forum.example.org/t/77"), root=ROOT
         )
         assert "https://forum.example.org/t/77" in text
+        # Fix round 2: the fact is already in the body, so the conditional
+        # note in "Notes for the volunteer posting this" must not repeat it.
+        assert "none has been opened yet" not in text
+
+    def test_drops_the_forum_thread_line_and_flags_it_as_a_task_when_absent(
+        self,
+    ) -> None:
+        # Fix round 2: this template's own "Join the discussion ..." line
+        # exists only to carry the link, so an unopened thread must not
+        # leave that sentence -- or a marker -- sitting in the post a
+        # volunteer is about to paste onto LinkedIn.
+        text = network_post(_row(forum_thread=""), root=ROOT)
+        assert "Join the discussion" not in text
+        assert "«missing: speaker.forum_thread»" not in text
+        assert "none has been opened yet, so open one and add its link" in text
 
     def test_never_carries_a_room_link(self) -> None:
         row = _row(zoom_link=POISONED_ROOM_LINK)
@@ -154,14 +169,27 @@ class TestMailingListMessage:
         assert "CET" in text
         assert "CEST" not in text
 
-    def test_shows_the_missing_marker_when_there_is_no_thread_yet(self) -> None:
-        # Unlike task 7's own hand-rolled version, the template states this
-        # sentence unconditionally -- an edition with no thread yet shows
-        # the ordinary `«missing: …»` marker, the same "not ready yet"
-        # signal every other unfilled field in this project already shows,
-        # rather than the sentence disappearing outright.
+    def test_drops_the_forum_thread_sentence_and_flags_it_as_a_task_when_absent(
+        self,
+    ) -> None:
+        # Fix round 2: task 7's own hand-rolled version showed the ordinary
+        # `«missing: …»` marker here -- exactly the bug this fix round
+        # exists for, since this is plain text a volunteer forwards
+        # verbatim. An edition with no thread yet now drops the sentence
+        # from the body outright and says so, as a task, in "Notes for the
+        # volunteer sending this".
         text = mailing_list_message(_row(forum_thread=""), root=ROOT)
-        assert "«missing: speaker.forum_thread»" in text
+        body, _, notes = text.partition("## Notes for the volunteer sending this")
+        assert "forum thread" not in body
+        assert "«missing: speaker.forum_thread»" not in text
+        assert "none has been opened yet, so open one and add its link" in notes
+
+    def test_carries_the_forum_thread_sentence_and_no_note_when_present(self) -> None:
+        text = mailing_list_message(
+            _row(forum_thread="https://forum.example.org/t/77"), root=ROOT
+        )
+        assert "on the forum thread: https://forum.example.org/t/77" in text
+        assert "none has been opened yet" not in text
 
     def test_never_carries_a_room_link(self) -> None:
         row = _row(zoom_link=POISONED_ROOM_LINK)
@@ -193,18 +221,67 @@ class TestRecordingAnnouncement:
         assert text is not None
         assert "https://youtu.be/analytical-engines" in text
         assert "Ada writes the first published computer program." in text
+        # Fix round 2: the biography is right there in the body, so the
+        # conditional "withheld" note in "Notes for the volunteer posting
+        # this" must not appear alongside it.
+        assert "stays withheld" not in text
 
-    def test_shows_the_missing_marker_when_there_is_no_biography_yet(self) -> None:
-        # Fix round 1: the template states this sentence unconditionally,
-        # the same way `render.ts::substitute` already does on the app's
-        # own side -- a blank field is the ordinary missing-marker signal,
-        # not a paragraph this function decides to omit on its own.
+    def test_drops_the_biography_paragraph_and_notes_it_was_withheld(self) -> None:
+        # Fix round 2: this is the finding itself -- `docs/toolkit/
+        # recording-announce.md`'s `{{ public.bio }}` used to sit alone as a
+        # paragraph and render the bare `«missing: public.bio»` marker
+        # straight into the body a volunteer copies and pastes as-is. An
+        # unavailable biography now leaves no trace in the body -- no
+        # marker, no empty gap where the paragraph used to be -- and is
+        # named, as finished business rather than a task, in "Notes for the
+        # volunteer posting this".
         row = _row(
             status="archived", youtube_url="https://youtu.be/analytical-engines", bio=""
         )
         text = recording_announcement(row, root=ROOT)
         assert text is not None
-        assert "«missing: public.bio»" in text
+        body, _, notes = text.partition("## Notes for the volunteer posting this")
+        assert "«missing: public.bio»" not in text
+        assert "\n\n\n" not in body  # no empty gap left where the paragraph was
+        assert "stays withheld" in notes
+
+    def test_withheld_biography_and_unset_thread_read_differently_in_the_notes(
+        self,
+    ) -> None:
+        # The deeper point the finding raises: consent withheld (nothing to
+        # fill in -- and prompting the volunteer to supply one invites them
+        # to paste in something the speaker never sent) and not-yet-set (a
+        # task the volunteer may be the one to close) must not collapse
+        # into the same sentence.
+        row = _row(
+            status="archived",
+            youtube_url="https://youtu.be/analytical-engines",
+            bio="",
+            forum_thread="",
+        )
+        text = recording_announcement(row, root=ROOT)
+        assert text is not None
+        _, _, notes = text.partition("## Notes for the volunteer posting this")
+        bio_note = "No biography is included above: it stays withheld"
+        thread_note = "No forum thread link is included above: none has been opened yet"
+        assert bio_note in notes
+        assert thread_note in notes
+        assert bio_note != thread_note
+
+    def test_a_required_field_still_shows_the_loud_marker_when_absent(self) -> None:
+        # Contrast case: `title` is not one of the two ordinarily-absent
+        # fields above -- this project expects a scheduled or archived
+        # edition to have one -- so a row missing it is not ready to post
+        # and the draft must keep looking exactly that unfinished, the same
+        # `«missing: …»` marker every other required field already shows.
+        row = _row(
+            status="archived",
+            youtube_url="https://youtu.be/analytical-engines",
+            title="",
+        )
+        text = recording_announcement(row, root=ROOT)
+        assert text is not None
+        assert "«missing: public.title»" in text
 
     def test_never_carries_a_room_link(self) -> None:
         row = _row(
@@ -216,7 +293,11 @@ class TestRecordingAnnouncement:
         assert text is not None
         assert POISONED_ROOM_LINK not in text
 
-    def test_shows_the_missing_marker_when_there_is_no_thread_yet(self) -> None:
+    def test_drops_the_forum_thread_sentence_and_flags_it_as_a_task(self) -> None:
+        # Fix round 2: the sentence naming the forum thread existed only to
+        # carry that link, so an edition with no thread yet drops the whole
+        # sentence from the body -- not merely the address -- and names the
+        # gap as a task in "Notes for the volunteer posting this" instead.
         row = _row(
             status="archived",
             youtube_url="https://youtu.be/analytical-engines",
@@ -224,9 +305,13 @@ class TestRecordingAnnouncement:
         )
         text = recording_announcement(row, root=ROOT)
         assert text is not None
-        assert "«missing: public.forum_thread»" in text
-        # The sentence itself stays -- only the address is missing.
-        assert "forum thread" in text
+        body, _, notes = text.partition("## Notes for the volunteer posting this")
+        # The whole sentence goes -- not merely the address -- since it
+        # exists only to introduce the link.
+        assert "The questions asked before the talk" not in body
+        assert "on the forum thread" not in body
+        assert "«missing: public.forum_thread»" not in text
+        assert "none has been opened yet, so open one and add its link" in notes
 
 
 class TestRoutedThroughTheRealGate:

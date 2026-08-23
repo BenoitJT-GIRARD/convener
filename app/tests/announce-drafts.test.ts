@@ -180,21 +180,70 @@ describe('a template that reached for the room link fails loudly instead of leak
 
 describe('the recording announcement (docs/toolkit/recording-announce.md)', () => {
   const RECORDING_ANNOUNCE = 'toolkit/recording-announce.md';
+  const NOTES = '## Notes for the volunteer posting this';
 
-  it('shows the missing marker instead of the biography or the video while the gate is closed', () => {
-    const pending = archivedSpeaker({ publication: CLOSED_GATE });
-    const out = substitute(page(RECORDING_ANNOUNCE), { speaker: pending, today: '2026-06-20' });
-    expect(out).not.toContain(BIO);
-    expect(out).not.toContain(YOUTUBE);
-    expect(out).toMatch(/«missing: public\.(bio|youtube_url)»/);
-  });
+  function notesOf(out: string): string {
+    const [, notes] = out.split(NOTES);
+    return notes ?? '';
+  }
 
-  it('carries the real biography and video once the gate is open', () => {
+  function bodyOf(out: string): string {
+    return out.split(NOTES)[0]!;
+  }
+
+  it(
+    'drops the biography line (no marker, no gap) and notes it stays withheld, while the ' +
+      'video -- a genuinely required field once the gate is closed -- still shows the loud marker',
+    () => {
+      // Fix round 2: this was the finding itself -- `«missing: public.bio»`
+      // used to render straight into the body of a page whose own "Copy to
+      // clipboard" button copies exactly that text. A withheld biography now
+      // leaves no trace in the body a volunteer pastes, and is named, as
+      // finished business rather than a task, in "Notes for the volunteer
+      // posting this" instead.
+      const pending = archivedSpeaker({ publication: CLOSED_GATE });
+      const out = substitute(page(RECORDING_ANNOUNCE), { speaker: pending, today: '2026-06-20' });
+      expect(out).not.toContain(BIO);
+      expect(out).not.toContain(YOUTUBE);
+      expect(bodyOf(out)).not.toMatch(/«missing: public\.bio»/);
+      expect(bodyOf(out)).not.toMatch(/\n{3,}/); // no empty gap left behind
+      expect(out).toMatch(/«missing: public\.youtube_url»/);
+      expect(notesOf(out)).toContain('stays withheld');
+    },
+  );
+
+  it(
+    'drops the forum-thread sentence and flags it as a task when no thread has been opened ' +
+      'yet, distinctly from a withheld biography',
+    () => {
+      const open = archivedSpeaker({ forum_thread: '' });
+      const out = substitute(page(RECORDING_ANNOUNCE), { speaker: open, today: '2026-06-20' });
+      expect(out).toContain(BIO); // the gate is open -- only the thread is unset
+      expect(bodyOf(out)).not.toContain('on the forum thread');
+      expect(bodyOf(out)).not.toMatch(/«missing: public\.forum_thread»/);
+      const notes = notesOf(out);
+      expect(notes).toContain('none has been opened yet, so open one and add its link');
+      expect(notes).not.toContain('stays withheld'); // the biography is present -- no note for it
+    },
+  );
+
+  it('carries the real biography and video once the gate is open, with neither conditional note', () => {
     const open = archivedSpeaker();
     const out = substitute(page(RECORDING_ANNOUNCE), { speaker: open, today: '2026-06-20' });
     expect(out).toContain(BIO);
     expect(out).toContain(YOUTUBE);
     expect(out).not.toMatch(/«missing: /);
+    expect(notesOf(out)).not.toContain('stays withheld');
+    expect(notesOf(out)).not.toContain('none has been opened yet');
+  });
+
+  it('still shows the loud missing marker for a genuinely required field left blank', () => {
+    // Contrast case: `title` is not one of the two ordinarily-absent
+    // fields above, so its absence must keep looking exactly as
+    // unfinished as it always has.
+    const noTitle = archivedSpeaker({ title: '' });
+    const out = substitute(page(RECORDING_ANNOUNCE), { speaker: noTitle, today: '2026-06-20' });
+    expect(out).toMatch(/«missing: public\.title»/);
   });
 
   it('never contains the room link, whether the gate is open or closed', () => {
@@ -207,6 +256,34 @@ describe('the recording announcement (docs/toolkit/recording-announce.md)', () =
       expect(out).not.toContain('zoom');
     }
   });
+});
+
+describe('an unopened forum thread (linkedin-post.md, mailing-list-announce.md)', () => {
+  // Fix round 2: `speaker.forum_thread` shares the same shape as
+  // `public.forum_thread` above in both templates -- a sentence written
+  // only to carry the link. `forum_announcement` (forum-post-announce.md)
+  // is not covered here: it never reads `forum_thread` at all, since it is
+  // itself posted on that thread.
+  it.each([
+    ['toolkit/linkedin-post.md', 'Join the discussion'],
+    ['toolkit/mailing-list-announce.md', 'on the forum thread'],
+  ] as const)('%s drops the forum-thread sentence and flags it as a task when unset', (file, sentence) => {
+    const open = archivedSpeaker({ forum_thread: '' });
+    const out = substitute(page(file), { speaker: open, today: '2026-06-20' });
+    expect(out).not.toContain(sentence);
+    expect(out).not.toMatch(/«missing: speaker\.forum_thread»/);
+    expect(out).toContain('none has been opened yet, so open one and add its link');
+  });
+
+  it.each(['toolkit/linkedin-post.md', 'toolkit/mailing-list-announce.md'] as const)(
+    '%s carries the real link and no conditional note when a thread is open',
+    file => {
+      const open = archivedSpeaker();
+      const out = substitute(page(file), { speaker: open, today: '2026-06-20' });
+      expect(out).toContain('https://forum.example.org/t/77');
+      expect(out).not.toContain('none has been opened yet');
+    },
+  );
 });
 
 describe('a drafted date names the real Paris offset, never a hard-coded one', () => {

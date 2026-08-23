@@ -26,10 +26,9 @@ The recording of our seminar with **{{ public.name }}** ({{ public.affiliation }
 If you missed it live, this is the whole talk. If you were there, it is
 worth another watch, and a good one to send to a colleague who was not.
 
-{{ public.bio }}
+{{ public.bio? }}
 
-The questions asked before the talk, and the discussion that followed, are
-on the forum thread: {{ public.forum_thread }}
+The questions asked before the talk, and the discussion that followed, are on the forum thread: {{ public.forum_thread? }}
 
 ---
 
@@ -46,3 +45,5 @@ on the forum thread: {{ public.forum_thread }}
 - The discussion that followed the talk is not in the recording — it stops
   before the discussion begins, so that people can speak freely — and
   neither is anything about the speaker beyond what they agreed to.
+- {{ public.bio! }}No biography is included above: it stays withheld until the speaker sends one for publication, and it is not something to add on their behalf.
+- {{ public.forum_thread! }}No forum thread link is included above: none has been opened yet, so open one and add its link before you post.
