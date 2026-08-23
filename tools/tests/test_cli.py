@@ -24,6 +24,7 @@ from convener_ops.certificate import issue as certificate_issue
 from convener_ops.cli import (
     UNMATCHED_ATTENDANCE,
     _load,
+    agenda_internal,
     certificates_public_data,
     deliver_certificate,
     deliver_certificates,
@@ -331,6 +332,47 @@ def test_survey_status_public_data_reports_load_errors_and_returns_1(
     (tmp_path / "data").mkdir()
 
     assert survey_status_public_data() == 1
+    assert "file missing" in capsys.readouterr().out
+    assert not (tmp_path / "public-data").exists()
+
+
+def test_agenda_internal_writes_pure_crlf_bytes_for_a_scheduled_edition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`convener-agenda-internal`, wired end to end (task 8, phase 6): a
+    `scheduled` speaker becomes one `VEVENT`, and the file this CLI
+    command actually writes to disk carries the CRLF line endings RFC 5545
+    requires -- `write_bytes`, not a text-mode write that this project's
+    own Windows checkouts would corrupt (see `agenda_internal`'s own
+    docstring)."""
+    speakers = [
+        speaker(
+            id="spk-001", edition_code="MRG-07", status="scheduled", date="2026-09-10"
+        )
+    ]
+    _write_data(tmp_path, speakers, config())
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+
+    assert agenda_internal() == 0
+    assert "wrote 1 entrie(s)" in capsys.readouterr().out
+
+    written = (tmp_path / "public-data" / "agenda-internal.ics").read_bytes()
+    assert b"BEGIN:VEVENT" in written
+    assert b"mrg-07" in written
+    assert b"\r\n" in written
+    stripped = written.replace(b"\r\n", b"")
+    assert b"\n" not in stripped, (
+        "a bare LF survived the write -- CRLF was not preserved"
+    )
+
+
+def test_agenda_internal_reports_load_errors_and_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    (tmp_path / "data").mkdir()
+
+    assert agenda_internal() == 1
     assert "file missing" in capsys.readouterr().out
     assert not (tmp_path / "public-data").exists()
 

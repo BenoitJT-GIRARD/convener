@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import re
+import shutil
 
 # One fixed git invocation, in `_git_log` and nowhere else; see its docstring.
 import subprocess  # nosec B404
@@ -19,7 +20,17 @@ from typing import Any, Final
 
 import yaml
 
-from convener_ops import confirmation, delivery, eventkeys, signing, survey_invite
+from convener_ops import (
+    agenda,
+    announce,
+    confirmation,
+    delivery,
+    eventkeys,
+    formats,
+    signing,
+    survey_invite,
+    visual,
+)
 from convener_ops.attendance import (
     EligibilityThreshold,
     MatchedAttendee,
@@ -417,6 +428,40 @@ def survey_status_public_data() -> int:
         json.dumps(ids, indent=2) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(ids)} event(s) with the survey open")
+    return 0
+
+
+def agenda_internal() -> int:
+    """`convener-agenda-internal`: rebuild `public-data/agenda-internal.ics` from
+    `data/speakers.yml` and `data/config.yml` (task 8, phase 6) --
+    `public_data`'s own precedent (above), for a feed that must never reach
+    either published bundle: unlike `events-public.json`, nothing in this
+    build's own copy scripts ever names this file, and `.gitattributes`
+    marks it binary so a checkin never rewrites its own CRLF line endings to
+    this repository's own default `eol=lf`. See `agenda.py`'s module
+    docstring for the feed in full, and `.github/workflows/deploy.yml`'s own
+    "Commit internal agenda" step for where the committed copy comes from.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    if errors or cfg_errors:
+        for error in errors + cfg_errors:
+            print(f"  - {error}")
+        return 1
+
+    calendar = agenda.build_internal_calendar(speakers or [], cfg or {})
+    out_dir = root / "public-data"
+    out_dir.mkdir(exist_ok=True)
+    # Binary, not text mode: this string already carries real CRLF line
+    # endings RFC 5545 requires, and a text-mode write on this project's own
+    # Windows checkouts would translate each embedded "\n" to the platform
+    # line ending on top of the "\r" already there, corrupting every line to
+    # "\r\r\n" (`tools/convener_ops`'s own YAML writers hit the identical trap and
+    # guard against it with `newline=""`; binary mode is the same guarantee
+    # by a different route).
+    (out_dir / "agenda-internal.ics").write_bytes(calendar.encode("utf-8"))
+    print(f"wrote {calendar.count('BEGIN:VEVENT')} entrie(s)")
     return 0
 
 
@@ -4004,6 +4049,367 @@ def register() -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(rendered, encoding="utf-8", newline="")
     print(f"wrote {REGISTER_PATH.as_posix()} - {len(entries)} decision(s)")
+    return 0
+
+
+def render_visual_fixtures() -> int:
+    """`convener-render-visual-fixtures OUTPUT_DIR`: writes task 5's own pinned
+    render step its input -- one self-contained HTML page per named format
+    (`formats.FORMATS`), a `manifest.json` naming each one's format name and
+    pixel size, and a copy of the repository's self-hosted `fonts/` beside
+    them so a relative `url('fonts/...')` resolves once served.
+
+    The one disk-writing seam between the two halves of task 5's pipeline.
+    `visual.render_announcement` and `formats.FORMATS` stay pure -- neither
+    touches disk or knows this project builds a Node/Puppeteer step on top
+    of what they return -- and the pinned renderer (`visuals/`, a separate
+    npm package so only its own CI job ever pays for the Chrome-for-Testing
+    download P-2 accepts) never re-derives a page's own markup a second
+    time in JavaScript: it reads exactly the bytes this command wrote.
+
+    `manifest.json` is the shared *fixture* the two languages agree on
+    (D-14's own shape, applied to a boundary this project has not crossed
+    before): the pinned renderer reads a format's name and pixel size from
+    it rather than a second, hand-typed `{width: 1200, height: 1200}` in
+    JavaScript that `formats.py` could silently drift away from.
+
+    Always renders `visual.FIXTURE_ANNOUNCEMENT` -- the one fixed, versioned
+    identity task 5's own committed reference images are measured against
+    (see that constant's own docstring for why it is Ada Lovelace and no
+    photograph, never a real, living speaker's name or face). Nothing about
+    this command reads `data/speakers.yml`, the clock, or the network: the
+    same input always produces the same three pages, which is the entire
+    point of a pinned regression fixture.
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-visual-fixtures OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+    out.mkdir(parents=True, exist_ok=True)
+
+    manifest: list[dict[str, Any]] = []
+    for fmt in formats.FORMATS:
+        html = visual.render_announcement(
+            visual.FIXTURE_ANNOUNCEMENT, width=fmt.width, height=fmt.height, root=root
+        )
+        filename = f"{fmt.name}.html"
+        (out / filename).write_text(html, encoding="utf-8")
+        manifest.append(
+            {
+                "name": fmt.name,
+                "width": fmt.width,
+                "height": fmt.height,
+                "file": filename,
+            }
+        )
+
+    fonts_dest = out / "fonts"
+    if fonts_dest.exists():
+        shutil.rmtree(fonts_dest)
+    shutil.copytree(root / "fonts", fonts_dest)
+
+    (out / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {len(manifest)} visual fixture(s) to {out}")
+    return 0
+
+
+def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announcement]:
+    """`public_data.to_public`'s own output, turned into the
+    `visual.Announcement`s task 6's production render needs -- never a
+    second, looser read of the raw speaker record.
+
+    Filtered to `status == "scheduled"`: an edition still being announced,
+    the one state "a date locked" (the trigger's own language) describes.
+    Routing through `to_public` first is what withholds a portrait under
+    P-4 with no second check written here -- see `visual.py`'s own module
+    docstring, "Portrait", for why passing the gated projection through is
+    "enough on its own".
+
+    `photo_url` never becomes `portrait_data_uri` here, even on the rare
+    row where `to_public` leaves it non-empty. Today that is close to
+    unreachable for a *scheduled* row: `public_data.
+    personal_disclosure_withheld`'s own docstring records that its gate is
+    written to open only once a talk is archived and published, which is
+    after the point an announcement is useful -- so a real, ordinarily
+    written record never reaches this branch. But nothing stops a
+    hand-edited file from setting `publication.outcome: published` on a
+    still-`scheduled` row, and `docs/reference/schema.md` calls
+    `photo_url` "a link, not an upload": turning it into something
+    `render_announcement` can inline would mean this command reaching onto
+    the network for a URL a data file names, which this task does not take
+    on. A row that does carry a consented one prints a visible notice
+    instead of silently doing nothing about it (D-25) -- the alternative
+    is a gap that looks identical to the common, legitimate case of
+    "nothing to embed".
+    """
+    announcements: list[visual.Announcement] = []
+    for row in rows:
+        if row.get("status") != "scheduled":
+            continue
+        event_id = str(row.get("id", "")).lower()
+        raw_date = str(row.get("date") or "")
+        try:
+            talk_date = date.fromisoformat(raw_date)
+        except ValueError as exc:
+            raise ValueError(
+                f"{row.get('id')!r}: scheduled but its date {raw_date!r} is "
+                "not a valid YYYY-MM-DD -- data/speakers.yml disagrees "
+                "with its own validator"
+            ) from exc
+        if row.get("photo_url"):
+            print(
+                f"::notice::{event_id} has a consented photo_url but the "
+                "production renderer does not embed a portrait yet -- "
+                "rendering the no-portrait variant "
+                "(see _scheduled_announcements's own docstring)",
+                file=sys.stderr,
+            )
+        announcements.append(
+            visual.Announcement(
+                title=str(row.get("title", "")),
+                talk_date=talk_date,
+                speaker_name=str(row.get("speaker_name", "")),
+                speaker_affiliation=str(row.get("speaker_affiliation", "")),
+                event_id=event_id,
+                portrait_data_uri=None,
+            )
+        )
+    return announcements
+
+
+def render_visuals() -> int:
+    """`convener-render-visuals OUTPUT_DIR`: task 6's own disk-writing seam for
+    *production* visuals -- real, scheduled editions read from
+    `data/speakers.yml`, through the same public gate every other public
+    artefact in this project already goes through (`public_data.
+    to_public`), never a second, looser read of the raw record.
+
+    The opposite number of `render_visual_fixtures` above: that command
+    always renders the one fixed, fictional identity a regression check
+    needs and never touches `data/speakers.yml` at all; this one renders
+    *only* real, scheduled editions and touches nothing else. Zero
+    scheduled editions is a normal, expected state (D-13) -- printed
+    plainly, exit 0, an empty `manifest.json` -- not a failure; a
+    malformed date on a record that claims to be scheduled is not, and
+    fails loudly instead (D-25): `data/speakers.yml` disagreeing with its
+    own validator is a data defect this command must never render around
+    quietly.
+
+    Same discipline for `formats.qr_module_size_mm`: computed and checked
+    here, against every real scheduled edition's own `event_id`, before
+    anything is written -- `formats.py`'s own docstring proves the
+    function correct but never calls it against real data, and
+    `validate.py::EDITION_RE` bounds `edition_code`'s length but only in
+    the separate `convener-validate` command, which nothing requires this one
+    to run first. An edition whose id is long enough to bump
+    `registration_code_modules` past the point where a printed A4 poster's
+    QR module drops below `formats.SCANNABLE_QR_MODULE_MM` fails loudly
+    (D-25) instead of shipping a poster nobody can scan.
+
+    This is also the "manual command" the trigger requires, independently
+    of any workflow: `uv run --project tools convener-render-visuals
+    OUTPUT_DIR` renders the current, real state of `data/speakers.yml` on
+    demand, from a plain checkout, no CI needed.
+
+    Only touches the target directory once a valid state has actually been
+    computed (mirrors `publish-vitrine.yml`'s own "a build that cannot
+    replace what it would remove must never be allowed to begin removing
+    it"), and then regenerates it whole rather than accumulating into it
+    (the same discipline `render_visual_fixtures`'s own `fonts/` handling
+    and `register()` already apply): an edition no longer scheduled must
+    not leave a stale page sitting next to a manifest that no longer lists
+    it.
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-visuals OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
+
+    try:
+        announcements = _scheduled_announcements(to_public(speakers or []))
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    for announcement in announcements:
+        module_mm = formats.qr_module_size_mm(formats.PRINT, announcement.event_id)
+        if module_mm < formats.SCANNABLE_QR_MODULE_MM:
+            print(
+                f"::error::{announcement.event_id}: print QR module would be "
+                f"{module_mm:.3f}mm, below the {formats.SCANNABLE_QR_MODULE_MM}mm "
+                "scannable floor -- edition_code is too long for a printed "
+                "A4 poster to stay scannable",
+                file=sys.stderr,
+            )
+            return 1
+
+    out.mkdir(parents=True, exist_ok=True)
+    for stale_html in out.glob("*.html"):
+        stale_html.unlink()
+    manifest_path = out / "manifest.json"
+    if manifest_path.exists():
+        manifest_path.unlink()
+    fonts_dest = out / "fonts"
+    if fonts_dest.exists():
+        shutil.rmtree(fonts_dest)
+
+    manifest: list[dict[str, Any]] = []
+    if not announcements:
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        print(
+            "no scheduled edition in data/speakers.yml -- nothing to "
+            "render (normal until a date is locked)"
+        )
+        return 0
+
+    for announcement in announcements:
+        for fmt in formats.FORMATS:
+            html = visual.render_announcement(
+                announcement, width=fmt.width, height=fmt.height, root=root
+            )
+            filename = f"{announcement.event_id}-{fmt.name}.html"
+            (out / filename).write_text(html, encoding="utf-8")
+            manifest.append(
+                {
+                    "event_id": announcement.event_id,
+                    "name": fmt.name,
+                    "width": fmt.width,
+                    "height": fmt.height,
+                    "file": filename,
+                }
+            )
+
+    shutil.copytree(root / "fonts", fonts_dest)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"wrote {len(manifest)} production visual page(s) for "
+        f"{len(announcements)} scheduled edition(s) to {out}"
+    )
+    return 0
+
+
+def render_announcements() -> int:
+    """`convener-render-announcements OUTPUT_DIR`: task 7's own disk-writing
+    seam for the ready-to-publish texts (D-09) -- the forum announcement,
+    the professional-network post, the mailing-list message, and the
+    recording announcement, one Markdown file each, one subdirectory per
+    edition (`OUTPUT_DIR/<event id>/<channel>.md`).
+
+    The app (`app/`, D-15's "cockpit") already offers an authenticated
+    operator the same four texts, filled in live from the record they have
+    open, through `app/src/content/render.ts`'s gated `{{ public.… }}`
+    vocabulary (`app/src/state/consent.ts::toPublicFields`). This command
+    is the second, independent route to the identical four texts that
+    needs no browser and no authenticated session -- `uv run --project
+    tools convener-render-announcements OUTPUT_DIR` renders the current, real
+    state of `data/speakers.yml` on demand, from a plain checkout, exactly
+    the same "manual command, independent of any workflow" property
+    `render_visuals`'s own docstring states for the visuals.
+
+    Fix round 1: unlike task 7's own version, this command now has a real
+    consumer -- `.github/workflows/visuals-production.yml` runs it
+    alongside `convener-render-visuals` and uploads both into the identical
+    `announcement-visuals` artefact, one subdirectory per edition, so an
+    operator downloads the poster and the words for the same talk
+    together rather than hunting two separate places for them. The
+    per-edition subdirectory (rather than task 7's own flat `<event id>-
+    <channel>.txt` naming) is what makes that placement work without a
+    merge step: `render-production.mjs` already writes each edition's
+    images to `OUTPUT_DIR/<event id>/<format>.png` in that same artefact
+    directory, so this command's own `<event id>/<channel>.md` lands
+    alongside them, never colliding on a filename. `.md`, not `.txt`: the
+    text this command now writes is a page's worth of Markdown (headings,
+    emphasis, a volunteer's own working notes), not plain prose, because
+    it is now `docs/toolkit/*.md` itself, rendered (`announce.py`'s own
+    module docstring) -- the extension names what the file actually is.
+
+    Routed through `public_data.to_public` before either module of task 7
+    ever sees a row (`announce.py`'s own module docstring) -- never a
+    second, looser read of the raw record. A `scheduled` row gets its
+    three promotional texts; an `archived` row gets a recording
+    announcement only when `announce.recording_announcement` finds a
+    `youtube_url` to announce, which is the ordinary, common state (D-13)
+    until the speaker agrees and the board's own gate opens.
+
+    Zero renderable editions is a normal state, printed plainly, exit 0 --
+    the same "empty is normal" discipline `render_visuals` already
+    applies. A malformed date on a record that claims to be scheduled or
+    archived is not, and fails loudly instead (D-25).
+    """
+    if len(sys.argv) != 2:
+        print("usage: convener-render-announcements OUTPUT_DIR", file=sys.stderr)
+        return 1
+    root = repo_root()
+    out = Path(sys.argv[1])
+
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    if errors:
+        for error in errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
+
+    rows = to_public(speakers or [])
+
+    out.mkdir(parents=True, exist_ok=True)
+    for stale_text in out.glob("*/*.md"):
+        stale_text.unlink()
+    manifest_path = out / "manifest.json"
+    if manifest_path.exists():
+        manifest_path.unlink()
+
+    manifest: list[dict[str, Any]] = []
+    try:
+        for row in rows:
+            event_id = str(row.get("id", "")).lower()
+            if not event_id:
+                continue
+            status = row.get("status")
+            texts: dict[str, str] = {}
+            if status == "scheduled":
+                texts["forum"] = announce.forum_announcement(row, root=root)
+                texts["network"] = announce.network_post(row, root=root)
+                texts["mailing-list"] = announce.mailing_list_message(row, root=root)
+            elif status == "archived":
+                recording = announce.recording_announcement(row, root=root)
+                if recording is not None:
+                    texts["recording"] = recording
+            for channel, text in texts.items():
+                event_dir = out / event_id
+                event_dir.mkdir(parents=True, exist_ok=True)
+                filename = f"{channel}.md"
+                (event_dir / filename).write_text(text, encoding="utf-8")
+                manifest.append(
+                    {
+                        "event_id": event_id,
+                        "channel": channel,
+                        "file": f"{event_id}/{filename}",
+                    }
+                )
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    if not manifest:
+        print(
+            "no scheduled or announceable archived edition in "
+            "data/speakers.yml -- nothing to render (normal until a date "
+            "is locked or a recording is published)"
+        )
+        return 0
+    print(f"wrote {len(manifest)} announcement text(s) to {out}")
     return 0
 
 

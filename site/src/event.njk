@@ -31,6 +31,13 @@ eleventyComputed:
   # inline; it now calls the one shared rule (site/.eleventy.js::
   # eventDescriptionFallback) the body below and feed.njk both call too.
   pageDescription: "{{ event | eventDescription }}"
+  # Task 9 (phase 6): the share image, when this edition currently has one
+  # ready (`.eleventy.js::eventBannerUrl` / `src/_data/banners.js`) --
+  # empty string otherwise, which `layout.njk`'s own `{% if pageImage %}`
+  # treats as "no tag at all", the same absence phase 5's own task 10
+  # already chose over a broken pointer. `banners` is this page's own
+  # global data, read here the same way `site` already is elsewhere.
+  pageImage: "{{ event | eventBannerUrl(banners) }}"
 ---
 
 {% set isUpcoming = event.status == "scheduled" %}

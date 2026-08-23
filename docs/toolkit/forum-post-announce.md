@@ -6,7 +6,7 @@
 
 **Title:** Monthly Reading Group {{ speaker.edition_code }}: {{ speaker.title }}
 
-Don't miss the next Example Collective Webinar! As usual, we host a stellar speaker presenting their work on a **Thursday at 12:30 CET** — so everyone can join.
+Don't miss the next Example Collective Webinar! As usual, we host a stellar speaker presenting their work at our standing time of 12:30 Paris time on a Thursday — so everyone can join.
 
 In our next session we host **{{ speaker.name }}** ({{ speaker.affiliation }}), who will present:
 
@@ -14,8 +14,7 @@ In our next session we host **{{ speaker.name }}** ({{ speaker.affiliation }}), 
 
 *(Insert the session image here.)*
 
-- **When:** {{ speaker.date }}
-- **Time:** {{ speaker.time }} CET
+- **When:** {{ speaker.when }}
 - **Where:** online — registration needed
 - **Registration:** {{ speaker.signup_link }} — this is not the room link, which is never published anywhere but the confirmation e-mail (see [Registration confirmed](emails/registration-confirmed.md))
 

@@ -181,6 +181,18 @@ export const PHASES: PhaseDef[] = [
         contentKey: 'toolkit/linkedin-post',
       },
       {
+        // TEATIME, institute newsletters and internal messaging, and the
+        // RISC newsletter (F-03) are three different destinations but one
+        // message: none of them is a social feed with its own house style,
+        // so one drafted text covers all three rather than tripling a
+        // volunteer's copy-and-paste for no difference a reader would see.
+        key: 'scheduled/T-21/mailing-list',
+        form: 'checkbox',
+        label: 'Mailing list / newsletter message sent',
+        window: 21,
+        contentKey: 'toolkit/mailing-list-announce',
+      },
+      {
         // No template hangs off this line any more. It used to hand over an
         // e-mail asking a contact at another institute to open the room; the
         // series holds the meeting account itself now, so the link is either

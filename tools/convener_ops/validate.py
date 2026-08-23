@@ -174,7 +174,21 @@ NEEDS_SCHEDULE = frozenset({"scheduled", "delivered", "archived"})
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
-EDITION_RE = re.compile(r"^MRG-\d+$")
+#: One to four digits -- "MRG-01" today, and "MRG-9999" is centuries of
+#: headroom at this project's own cadence (a handful of editions a year).
+#: Bounded (not just `\d+`) because an unbounded id can grow
+#: `registration_code_modules`'s own QR version past the point where
+#: `formats.qr_module_size_mm` drops below `formats.SCANNABLE_QR_MODULE_MM`
+#: -- verified directly: even nine digits (`mrg-999999999`,
+#: `test_formats.py`'s own stress case) still clears the floor, so four is
+#: a data-contract choice with room to spare, not a value picked to just
+#: barely pass. `cli.py::render_visuals` is the check that actually runs
+#: this arithmetic against a real edition before rendering; this bound is
+#: the second, cheaper layer that keeps a pathological id out of
+#: `data/speakers.yml` in the first place. Checked before narrowing: no
+#: other module or language parses this pattern (`grep`-confirmed) -- only
+#: this file's own `EDITION_RE.match` reads it.
+EDITION_RE = re.compile(r"^MRG-\d{1,4}$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
 
 #: "no such setting", which is a different fact from "the setting is None".
@@ -466,7 +480,10 @@ def validate_speakers(
         edition = entry.get("edition_code")
         if edition:
             if not EDITION_RE.match(str(edition)):
-                errors.append(f"{where}: edition_code must match MRG-N, got {edition!r}")
+                errors.append(
+                    f"{where}: edition_code must match MRG-N (1-4 digits), "
+                    f"got {edition!r}"
+                )
             elif edition in seen_editions:
                 errors.append(f"{where}: duplicate edition_code {edition!r}")
             else:

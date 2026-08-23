@@ -81,3 +81,7 @@ mypy
 autoprefixer
 assertable
 pipefail
+segno
+regenerable
+Nunjucks
+pathspec

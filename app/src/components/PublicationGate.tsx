@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
+import { InlineContent } from '../content/InlineContent';
 import { parisToday } from '../state/derived';
 import { formatDecision, identifier, transitionDecision } from '../state/decisions';
 import { canArchive, objectionWindowCloses, standingObjections } from '../state/governance';
@@ -118,6 +119,18 @@ export function PublicationGate({ speaker, role }: { speaker: Speaker; role: Rol
         allowed={gate.allowed}
         onArchive={() => fire('finalize-archive')}
       />
+
+      {published && (
+        <div className="border-t border-border pt-4">
+          <p className="font-display font-bold uppercase tracking-widest text-[11px] text-ink-muted mb-2">
+            Tell people it is up
+          </p>
+          <InlineContent
+            contentKey="toolkit/recording-announce"
+            ctx={{ speaker, host: speaker.host_1, today }}
+          />
+        </div>
+      )}
     </section>
   );
 }

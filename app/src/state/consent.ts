@@ -39,7 +39,8 @@
  * by `tools/tests/fixtures/governance-cases.json`, read from both languages.
  */
 import { CONSENT_DECISIONS } from '../data/types';
-import type { PublicationConsent, Speaker } from '../data/types';
+import type { Publication, PublicationConsent, Speaker } from '../data/types';
+import { standingObjections } from './governance';
 
 /**
  * The programme of a public seminar.
@@ -334,4 +335,138 @@ export function answeredList(speakers: readonly Speaker[]): Speaker[] {
   return speakers
     .filter(s => (CONSENT_ASKABLE_FROM as readonly string[]).includes(s.status) && isAnswer(s.publication.consent))
     .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/* ------------------------------------------------------------------ *
+ * The public projection (P-4) -- what a *drafted announcement text* may
+ * quote, as distinct from what an authenticated volunteer may read on this
+ * record's own pages.
+ *
+ * A speaker's photograph, biography and online identities are gated exactly
+ * like the recording (`tools/convener_ops/public_data.py::_gate_closed`, read in
+ * full for the argument): agreeing to give a public talk is not agreeing to
+ * any of them, so a drafted forum post or newsletter message that quotes a
+ * biography or links a LinkedIn profile without the recorded permission is
+ * the same leak a poster embedding an unconsented portrait would be -- and
+ * easier to make, because prose reads as harmless.
+ *
+ * This app already reads the *live*, ungated record everywhere else
+ * (`ctx.speaker` in `content/render.ts`): an operator managing an event is
+ * trusted with the whole record, and a private page -- the introduction
+ * script a host reads aloud, say -- has nothing to do with what may be
+ * published. What follows is for the templates that draft something meant
+ * to leave the team: it must never read the raw field, only this gate's
+ * verdict on it.
+ * ------------------------------------------------------------------ */
+
+/** `data/speakers.yml` statuses a public announcement may ever describe.
+ *  Mirrors `tools/convener_ops/public_data.PUBLIC_STATUSES`. */
+const PUBLIC_STATUSES: readonly Speaker['status'][] = ['scheduled', 'delivered', 'archived'];
+
+/** The one status at which a recording may be linked -- mirrors
+ *  `tools/convener_ops/public_data.RECORDING_STATUSES`. See that constant's own
+ *  comment for why `delivered` does not qualify even with a URL already
+ *  typed into the wrap-up checklist. */
+const RECORDING_STATUSES: readonly Speaker['status'][] = ['archived'];
+
+/**
+ * The publication gate's verdict, read from a record -- mirrors
+ * `tools/convener_ops/public_data._gate_closed` field for field: the speaker's
+ * consent must be `granted` (not merely "not refused"), the board's gate
+ * must have actually opened (`outcome === 'published'`, written in exactly
+ * one place, `state/transitions.ts`'s `finalize-archive`), and no objection
+ * may still stand. Bound to the Python reading by
+ * `tools/tests/fixtures/governance-cases.json`'s `publication_gate_cases`,
+ * read from both languages, so the two cannot silently disagree about which
+ * publications this line treats as open.
+ */
+function gateClosed(p: Publication): boolean {
+  if (p.consent !== 'granted') return true;
+  if (p.outcome !== 'published') return true;
+  return standingObjections(p).length > 0;
+}
+
+/**
+ * Whether this speaker's personal fields -- portrait, biography, online
+ * identities, seed questions -- must stay out of anything drafted for
+ * publication. Mirrors `public_data.personal_disclosure_withheld`.
+ */
+export function personalDisclosureWithheld(s: Speaker): boolean {
+  return gateClosed(s.publication);
+}
+
+/**
+ * Whether this speaker's recording must not be named in anything drafted
+ * for publication. Mirrors `public_data.recording_withheld` -- deliberately
+ * the same gate as `personalDisclosureWithheld` rather than a second,
+ * gentler one (see that Python function's own docstring for why), kept as
+ * its own export so the day one gains a condition the other does not
+ * inherit it silently.
+ */
+export function recordingWithheld(s: Speaker): boolean {
+  return gateClosed(s.publication);
+}
+
+/** The fields a drafted public text may read off one speaker, already
+ *  reduced to what the gate allows -- the shape `tools/convener_ops/public_data
+ *  .to_public` projects one row into, read here for one record rather than
+ *  a list. `zoom_link` and `time` are structurally absent, the same
+ *  "permitted but unpublished" omission `PUBLIC_FIELD_SOURCES`'s own
+ *  comment gives them: there is no key here a template could reach for the
+ *  room link even by a typo. */
+export interface PublicSpeakerFields {
+  edition_code: string;
+  title: string;
+  abstract: string;
+  date: string;
+  status: string;
+  name: string;
+  affiliation: string;
+  country: string;
+  forum_thread: string;
+  photo_url: string;
+  bio: string;
+  linkedin: string;
+  youtube_url: string;
+}
+
+const BLANK_PUBLIC_FIELDS: PublicSpeakerFields = {
+  edition_code: '', title: '', abstract: '', date: '', status: '',
+  name: '', affiliation: '', country: '', forum_thread: '',
+  photo_url: '', bio: '', linkedin: '', youtube_url: '',
+};
+
+/**
+ * The gated projection of one speaker, for a template that drafts
+ * something meant to leave the team.
+ *
+ * A status this project does not treat as public (`lead`, `parked`, a
+ * declined lead) returns every field blank, mirroring `to_public`'s own
+ * `status not in PUBLIC_STATUSES` skip -- there is no announcement to draft
+ * about a candidate the board has not even scheduled. Otherwise the
+ * programme fields (name, affiliation, country, title, abstract, date,
+ * forum thread) are always carried, exactly as `PUBLISHABLE_ALWAYS`
+ * classifies them; the personal fields are blanked unless
+ * `personalDisclosureWithheld` says otherwise, and the recording is
+ * additionally blanked outside `RECORDING_STATUSES`.
+ */
+export function toPublicFields(s: Speaker): PublicSpeakerFields {
+  if (!PUBLIC_STATUSES.includes(s.status)) return { ...BLANK_PUBLIC_FIELDS };
+  const personalOk = !personalDisclosureWithheld(s);
+  const recordingOk = RECORDING_STATUSES.includes(s.status) && !recordingWithheld(s);
+  return {
+    edition_code: s.edition_code,
+    title: s.title,
+    abstract: s.abstract,
+    date: s.date,
+    status: s.status,
+    name: s.name,
+    affiliation: s.affiliation,
+    country: s.country,
+    forum_thread: s.forum_thread,
+    photo_url: personalOk ? s.photo_url : '',
+    bio: personalOk ? s.bio : '',
+    linkedin: personalOk ? s.linkedin : '',
+    youtube_url: recordingOk ? s.youtube_url : '',
+  };
 }

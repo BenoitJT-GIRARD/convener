@@ -1,0 +1,368 @@
+name: Visuals production
+
+# Task 6 (phase 6): the trigger. Renders task 6's own production seam
+# (`convener-render-visuals`, `tools/convener_ops/cli.py`) against real, *scheduled*
+# editions in `data/speakers.yml` -- locking a date, receiving a
+# portrait's consent, or correcting a title all land here through that one
+# file -- plus a GitHub-side manual command (`workflow_dispatch`)
+# mirroring the one this command already offers on the command line with
+# no workflow at all (`uv run --project tools convener-render-visuals
+# OUTPUT_DIR`).
+#
+# Fix round 1 (task 7's own follow-up): also runs `convener-render-announcements`
+# and uploads its output into the identical artefact, one subdirectory per
+# edition alongside that edition's own images
+# (`OUTPUT_DIR/<event id>/<channel>.md` next to `<event id>/<format>.png`).
+# Task 7 shipped this command with no consumer at all -- a real, tested CLI
+# nothing ever invoked, the same "unreachable feature" shape this project
+# has already shipped five times across its phases. This is that consumer:
+# an operator downloading the poster for a scheduled edition now gets the
+# forum, professional-network and mailing-list drafts in the same download,
+# and an archived edition whose recording just cleared the gate gets its
+# own recording announcement the same way -- the poster and the words for
+# the same talk, together, rather than two separate places to look.
+#
+# Deliberately its own workflow, not a step folded into
+# publish-vitrine.yml's own job: that job's own "wipe everything under
+# example-showcase's root except .git and app/, then copy site/_site over it
+# whole" step (see that file's own `refresh_published_site`) would delete
+# anything a second publisher wrote there on its very next run -- there is
+# no path under that repository's root a step added here could write to
+# and expect to survive. Publishing to a stable public address therefore
+# has to mean *this repository's own* address, committed here, so
+# `site/`'s own build (a file this job never touches) picks it up as an
+# ordinary source file and `publish-vitrine.yml`'s existing wipe-and-copy
+# carries it the same way it already carries every other file `site/`
+# writes -- never a second publisher racing that workflow's own wipe.
+#
+# `square.png` and `print.png` stay exactly what this task's own original
+# reasoning already settled: a downloadable run artefact, never committed
+# -- an operator's own forum post or a printed poster is a one-off action,
+# not a standing address anything links to, so there is nothing there for
+# a stable address to serve. `banner.png` is different in kind, not degree:
+# it is the one format a link-preview bot fetches on its own, unprompted,
+# every time someone shares an event page -- an artefact download link
+# needs a GitHub session and a run that has not expired, which is worse
+# than the tag phase 5 deliberately left out rather than point at
+# (`site/src/_includes/layout.njk`'s own comment). So task 9 (phase 6)
+# commits *only* that one format, under `site/src/banners/<event id>.png`,
+# regenerated whole on every run (an edition no longer scheduled loses its
+# file the same run -- see the "Sync the share banner" step below) rather
+# than accumulated into. This is a binary diff on every edition change,
+# same as any other committed image in this repository (`visuals/
+# references/*.png`, task 5) -- accepted for the one file an unattended
+# bot actually reads, not for the two a human downloads on demand.
+#
+# Why this exact path list, and why `data/speakers.yml` is in it (unlike
+# visuals.yml's own list, which names it only to say why it is
+# deliberately absent there): this job exists to render *real* editions,
+# so a change to the one file that carries them is precisely the case it
+# exists for. Every entry it shares with visuals.yml's own list mirrors
+# that file for the identical reason it gives each one -- the composition,
+# the ribbon, the QR generator, the three formats, the shared Paris clock,
+# the one disk-writing module, the brand source, the self-hosted fonts and
+# the Python lockfile pinning the QR renderer all change what a *real*
+# rendered edition looks like just as much as they change the fixture
+# visuals.yml checks. Fix round 1 adds `tools/convener_ops/announce.py`,
+# `tools/convener_ops/registration.py` (the registration address every drafted
+# text points at, D-19) and the four `docs/toolkit/*.md` pages themselves
+# -- `announce.py` now renders those files rather than composing its own
+# English (D-14), so a wording change to any one of them is exactly as
+# real a change to this job's own output as a change to `visual.py` is,
+# and none of the four was a dependency of this workflow before this
+# command had a consumer in it.
+#
+# Branch review, fix round 1: `tools/convener_ops/public_data.py` is in this
+# list too, and deliberately *not* in visuals.yml's -- re-derived from what
+# each job's own render actually calls, not copied across the two.
+# `render_visuals` and `render_announcements` (this job's own two commands,
+# `cli.py`) each call `public_data.to_public` directly, before either one
+# reads a row -- the P-4 consent gate (`_gate_closed`,
+# `personal_disclosure_withheld`, `recording_withheld`) every one of
+# `cli.py`'s, `announce.py`'s and `visual.py`'s own docstring names as the
+# reason a portrait or a room link cannot reach a rendered page. Harmless
+# today only because `_scheduled_announcements` never wires a portrait
+# through regardless of what the gate decides (deferred-work #14) -- the
+# day that changes, a bug in the gate's own logic must re-render and
+# re-check real editions, not wait for an unrelated file in this list to
+# change first. `render_visual_fixtures` (visuals.yml's own command) calls
+# none of this -- `FIXTURE_ANNOUNCEMENT` is a fixed, hand-built identity
+# that never goes through `to_public` at all -- so adding it there would
+# only trigger a fixture re-render that could never produce a different
+# pixel; see visuals.yml's own comment for the parallel statement about
+# `data/speakers.yml`, which `public_data.py` exists to gate.
+#
+# A single `paths:` list, not two: unlike visuals.yml, this workflow has no
+# `pull_request` trigger to keep a second copy in step with, so the
+# anchor/alias trap that caught visuals.yml's own first version (see
+# tools/tests/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias)
+# has nothing to bite here.
+#
+# No `pull_request` trigger: unlike visuals.yml's cheap, read-only
+# comparison, this job downloads and runs a ~430MB pinned Chromium and
+# uploads a real artefact -- worth paying for on `main`, where a change
+# actually ships, not on every push to a review branch. `example-cockpit` is
+# private (D-15): Actions minutes are metered (2,000/month on the free
+# plan), and the same reasoning visuals.yml's own comment gives for its
+# path filter applies again here, one workflow over.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/convener_ops/visual.py'
+      - 'tools/convener_ops/ribbon.py'
+      - 'tools/convener_ops/registration_code.py'
+      - 'tools/convener_ops/formats.py'
+      - 'tools/convener_ops/governance.py'
+      - 'tools/convener_ops/cli.py'
+      - 'tools/convener_ops/announce.py'
+      - 'tools/convener_ops/registration.py'
+      - 'tools/convener_ops/public_data.py'
+      - 'docs/toolkit/forum-post-announce.md'
+      - 'docs/toolkit/linkedin-post.md'
+      - 'docs/toolkit/mailing-list-announce.md'
+      - 'docs/toolkit/recording-announce.md'
+      - 'data/brand.json'
+      - 'fonts/**'
+      - 'tools/uv.lock'
+      - 'visuals/**'
+      - 'data/speakers.yml'
+      - '.github/workflows/visuals-production.yml'
+  workflow_dispatch:
+
+concurrency:
+  # A newer push already supersedes whatever an older, still-running
+  # render was about to produce -- nobody downloads the artefact from a
+  # superseded commit once a newer one has landed (the same argument
+  # deploy.yml's own concurrency block makes, applied here to a job that
+  # is expensive for the identical reason: a real browser download).
+  # Scoped to `github.ref` (always refs/heads/main for the push trigger
+  # above) so a manual dispatch made while a push-triggered run is still
+  # in flight joins the same group instead of racing it for the same
+  # ~430MB download.
+  group: visuals-production-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visuals-production:
+    runs-on: ubuntu-latest
+    # Render + compare alone measures under 5 seconds on a warm machine
+    # for a single edition (task 5's own report gives the identical figure
+    # for the regression fixture, which this job's own render step
+    # shares); this allowance covers a cold cache miss that has to fetch
+    # the ~430MB Chrome-for-Testing build besides, the same figure
+    # visuals.yml's own job budgets for the identical download.
+    timeout-minutes: 10
+    permissions:
+      # Task 9 (phase 6): `contents: write` is this job's own `GITHUB_TOKEN`
+      # committing `site/src/banners/` back to this same repository (never
+      # a repository secret -- see this file's own "reads no repository
+      # secret" test); `actions: write` is what lets it dispatch
+      # `publish-vitrine.yml` afterwards. Both are the exact pair
+      # `sweep.yml`, `retention.yml` and the three certificate workflows
+      # already carry for the identical reason: a push made with this
+      # job's own token cannot fire another workflow's `push` trigger
+      # (GitHub's recursion guard), so the commit alone would leave the
+      # freshly-committed banner unpublished until something else happened
+      # to touch `site/**` or `tools/**`.
+      contents: write
+      actions: write
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+      # `uv run` syncs the environment itself on first use, the same
+      # one-step idiom visuals.yml's own render step already relies on.
+      - name: Render the scheduled editions (pure Python/HTML, no browser yet)
+        run: |
+          uv run --project tools convener-render-visuals "${{ runner.temp }}/production-visuals"
+      # Fix round 1: writes straight into `production-visuals-out`, the
+      # same directory `render-production.mjs` writes each edition's own
+      # `<format>.png` into below -- one Markdown file per channel, nested
+      # under `<event id>/`, so `<event id>/forum.md` lands beside
+      # `<event id>/square.png` in the one artefact this job uploads,
+      # never a separate merge step to fold two output trees into one.
+      # Unconditional, unlike the browser pipeline below: this command is
+      # pure Python (no ~430MB Chrome download to gate), and it also
+      # covers `archived` editions with a freshly-published recording,
+      # which `convener-render-visuals` (scheduled editions only) never
+      # produces a page for at all -- gating this on that command's own
+      # page count would silently drop a recording announcement on the one
+      # run that has nothing else to render.
+      - name: Render the announcement texts (pure Python, no browser)
+        run: |
+          uv run --project tools convener-render-announcements "${{ runner.temp }}/production-visuals-out"
+      # D-13: no scheduled edition is a normal state, not a failure -- the
+      # command above already said so on its own stdout and wrote an empty
+      # manifest.json. Counted here, once, from the *pages actually
+      # written* (not a second read of manifest.json), so the expensive
+      # browser steps below can skip on the same signal rather than each
+      # re-deriving it. This count alone must never gate the final upload
+      # step (below) -- see the announcement count that follows.
+      - name: Count the pages the command above actually wrote
+        id: pages
+        run: |
+          count=$(find "${{ runner.temp }}/production-visuals" -maxdepth 1 -name '*.html' | wc -l)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      # A second, independent signal from the announcement command's own
+      # output, so a recording announcement rendered with zero scheduled
+      # editions in flight (the case above's own comment names) still
+      # reaches the upload step even though the page count alone is zero.
+      - name: Count the announcement texts the command above actually wrote
+        id: announcements
+        run: |
+          count=$(find "${{ runner.temp }}/production-visuals-out" -mindepth 2 -name '*.md' | wc -l)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      # D-25: a skip must be visible, not merely absent -- a job with
+      # every remaining step shown "skipped" and no line of its own saying
+      # why would look identical to a job that forgot to run them.
+      - name: Nothing scheduled -- nothing to render this run
+        if: steps.pages.outputs.count == '0' && steps.announcements.outputs.count == '0'
+        run: |
+          echo "::notice::no scheduled edition in data/speakers.yml -- this run produced nothing to publish, which is the normal state until a date is locked"
+      # Restored *before* `npm ci` so its own postinstall download
+      # (`puppeteer`'s pinned Chrome-for-Testing build) can be skipped
+      # entirely on a cache hit -- the identical key visuals.yml's own job
+      # already uses, so the two workflows share one cache entry: the
+      # ~430MB download is paid for at most once across *both* jobs
+      # combined, never once per workflow.
+      - name: Cache the pinned Chrome-for-Testing download
+        if: steps.pages.outputs.count != '0'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('visuals/package-lock.json') }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        if: steps.pages.outputs.count != '0'
+        with:
+          # Matches visuals.yml's own floor -- puppeteer 25.8.0's declared
+          # engines.node.
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: visuals/package-lock.json
+      - name: Install the pinned renderer
+        if: steps.pages.outputs.count != '0'
+        working-directory: visuals
+        run: npm ci
+      # Task 12 (phase 5) established that every surface with a lockfile
+      # gets an audit in this same quality chain -- visuals/ already gets
+      # one in visuals.yml; this is a second job installing the identical
+      # lockfile, so it gets one too rather than becoming the one
+      # exception that only happens to be exempt because another workflow
+      # already covers the same files.
+      - name: Dependency audit
+        if: steps.pages.outputs.count != '0'
+        working-directory: visuals
+        run: npm audit
+      - name: Render the production visuals
+        if: steps.pages.outputs.count != '0'
+        working-directory: visuals
+        run: |
+          node render-production.mjs \
+            --fixtures "${{ runner.temp }}/production-visuals" \
+            --out "${{ runner.temp }}/production-visuals-out"
+      # if-no-files-found: error catches an *empty* directory; it cannot
+      # catch a *partial* one (three formats promised, two written) --
+      # render-production.mjs's own file-count guard is what refuses that
+      # silently, by failing the step above before this one ever runs
+      # (see that script's own module comment).
+      #
+      # Gated on *either* count, not just the page count the browser
+      # pipeline above uses: a recording announcement can exist with zero
+      # scheduled editions in flight (the announcement-count step's own
+      # comment), and this is the one step that would otherwise silently
+      # skip uploading it -- the announcement command has already run and
+      # written it by this point regardless of which count is non-zero.
+      - name: Upload the rendered visuals
+        if: steps.pages.outputs.count != '0' || steps.announcements.outputs.count != '0'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: announcement-visuals
+          path: ${{ runner.temp }}/production-visuals-out
+          if-no-files-found: error
+          # Long enough that a human posting to the forum, a professional
+          # network or an institute's own printer does not have to catch
+          # every single run between locking a date and the talk itself;
+          # short enough that a superseded edition's images do not
+          # accumulate storage indefinitely. GitHub's own maximum.
+          retention-days: 90
+
+      # Task 9 (phase 6): the one format a link-preview bot fetches on its
+      # own, carried to this repository's own `site/src/banners/` -- see
+      # this file's own header comment for why this one format, and why
+      # here rather than publish-vitrine.yml. Unconditional (no `if:`),
+      # unlike the browser pipeline above: this step also has to run when
+      # `steps.pages.outputs.count` is `'0'`, because that is exactly the
+      # case an edition just left `scheduled` and its banner has to come
+      # down with it -- "no scheduled edition" must produce an *empty*
+      # `site/src/banners/`, not a directory this step never touched.
+      #
+      # Regenerated whole (`rm -rf` first), never accumulated into -- the
+      # same "regenerated whole, never accumulated into" discipline
+      # `convener-render-visuals`'s own `OUTPUT_DIR` handling already applies;
+      # a banner for an edition no longer in this run's manifest must not
+      # survive as a stale file sitting at a live public address once the
+      # seminar it pictures is no longer upcoming.
+      #
+      # `production-visuals-out` always exists by this point (`convener-render-
+      # announcements` above runs unconditionally and creates it), but the
+      # per-edition `banner.png` inside it only exists for an edition the
+      # (conditional) browser pipeline actually rendered -- `[ -f ... ]`
+      # is what tells an edition with only announcement texts (an archived
+      # recording, no scheduled edition at all) apart from one with a real
+      # banner to carry.
+      - name: Sync the share banner into the repository
+        run: |
+          set -e
+          rm -rf site/src/banners
+          mkdir -p site/src/banners
+          for dir in "${{ runner.temp }}"/production-visuals-out/*/; do
+            event_id=$(basename "$dir")
+            if [ -f "${dir}banner.png" ]; then
+              cp "${dir}banner.png" "site/src/banners/${event_id}.png"
+            fi
+          done
+          # Tidiness only -- `git add`, below, stages a removal correctly
+          # whether this directory is left empty or removed outright
+          # (confirmed by hand), so this line changes nothing about what
+          # gets committed. Removed rather than left empty so "zero
+          # scheduled editions" (D-13) leaves the working tree exactly as
+          # bare as a checkout that had never rendered one at all.
+          rmdir --ignore-fail-on-non-empty site/src/banners
+      # `git add site/src/banners 2>/dev/null || true`: the one path this
+      # repository has never committed anything under before this task
+      # lands is not a valid pathspec at all (confirmed by hand -- see
+      # this task's own report) -- `git add` on a pathspec that matches
+      # nothing it has ever tracked exits non-zero even under `set -e`'s
+      # relaxed context here, which would abort this step on the ordinary,
+      # ongoing "still nothing scheduled" case (D-13) rather than let the
+      # "nothing to commit" branch below report it. Every other shape --
+      # a new file, a changed one, a previously-tracked one now deleted --
+      # `git add` already handles the ordinary way.
+      - name: Commit the share banner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          git config user.name "convener-visuals"
+          git config user.email "convener-visuals@users.noreply.github.com"
+          git add site/src/banners 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "nothing to commit -- the share banner already matches the current scheduled edition(s)"
+            exit 0
+          fi
+          git commit -m "site: refresh the share banner for the current edition"
+          for attempt in 1 2 3; do
+            if git push; then
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
+            git pull --rebase
+          done
+          echo "::error::push failed after 3 attempts -- the share banner was not saved"
+          exit 1

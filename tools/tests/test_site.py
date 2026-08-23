@@ -19,6 +19,7 @@ already be installed, exactly the `npm ci` every other job that touches
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import shutil
@@ -30,12 +31,14 @@ from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
 import pytest
+from ics_reader import parse_calendar
 
 from convener_ops.certificate import VERIFICATION_BASE
 from convener_ops.confirmation import CONTACT_EMAIL
+from convener_ops.formats import BANNER
 from convener_ops.paths import repo_root
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
-from convener_ops.registration import SIGNUP_BASE
+from convener_ops.registration import SIGNUP_BASE, signup_url
 
 #: Fix round 1: the same zone `tools/convener_ops/governance.py::PARIS` already
 #: anchors this project's Python side on -- `zoneinfo`, the standard
@@ -315,6 +318,19 @@ def test_a_built_public_page_never_carries_a_room_link(built_site: Path) -> None
     This test does not depend on the generator: it proves the template
     still refuses to render a room-link-shaped value if one ever reached
     the page's own data again, under whatever name.
+
+    Task 8, fix round 1: also strips RFC 5545 line folding ("\\r\\n "
+    inserted every 75 octets, `agenda.ics`'s own format) before searching.
+    A leaked link is folded exactly like any other long property value, so
+    the literal, unfolded string this test searches for can straddle a
+    fold point and never appear contiguously in the raw file even though it
+    reached the published output -- confirmed by deliberately routing
+    `LOCATION` through the fixture's own `registration_link` in
+    `site/.eleventy.js::agendaVevent` and watching this sweep miss it until
+    this line was added. Inert for every other file this build writes
+    (HTML, XML, CSS): none of them ever folds a line this way, so stripping
+    a sequence they do not contain changes nothing about how they are
+    checked.
     """
     events = _events_fixture()
     room_links = [
@@ -331,11 +347,20 @@ def test_a_built_public_page_never_carries_a_room_link(built_site: Path) -> None
         if not path.is_file():
             continue
         try:
-            text = path.read_text(encoding="utf-8")
+            # `read_bytes().decode(...)`, not `read_text(...)`: the latter
+            # opens in text mode with universal-newline translation on by
+            # default, which silently rewrites every "\r\n" to "\n" before
+            # this function ever sees the string -- so a search for the
+            # literal "\r\n " fold-continuation marker below would never
+            # match anything, on any file, and would look like it worked
+            # only because it was vacuously true. Confirmed by watching
+            # this exact difference make the fold-strip below a no-op.
+            text = path.read_bytes().decode("utf-8")
         except (UnicodeDecodeError, ValueError):
             continue  # a font or another binary passthrough copy
+        unfolded = text.replace("\r\n ", "")
         for link in room_links:
-            if link in text:
+            if link in text or link in unfolded:
                 offending.append((path.relative_to(built_site).as_posix(), link))
     assert offending == [], f"room link leaked into the built site: {offending}"
 
@@ -1893,3 +1918,414 @@ def test_the_sitemap_still_lists_the_static_pages_with_no_editions_at_all(
         _absolute("/data/"),
         _absolute("/verify/"),
     }
+
+
+# ------------------------------------------------------------------ #
+# Task 8 (phase 6): the public agenda feed (`/agenda.ics`) -- iCalendar,
+# distinct from `feed.xml`'s RSS syndication feed above. Every test below
+# parses the real, built `agenda.ics` bytes with `ics_reader.parse_calendar`
+# -- a reader written independently of `site/.eleventy.js`'s own escape/
+# fold functions (see that module's own docstring) -- rather than grepping
+# the file as text, the same "parse it back the way a client would" standard
+# `tools/tests/test_agenda.py` already holds the internal feed to.
+# ------------------------------------------------------------------ #
+
+
+def test_agenda_feed_is_a_valid_calendar_with_one_scheduled_edition(
+    built_site: Path,
+) -> None:
+    events = _events_fixture()
+    scheduled = [e for e in events if e["status"] == "scheduled"]
+    assert len(scheduled) == 1, (
+        "this test assumes exactly one scheduled fixture edition"
+    )
+
+    raw = (built_site / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)
+    assert parsed.calendar.properties["VERSION"] == "2.0"
+    assert parsed.calendar.properties["PRODID"]
+    assert parsed.calendar.properties["CALSCALE"] == "GREGORIAN"
+    assert len(parsed.events) == 1
+
+    event = parsed.events[0].properties
+    expected_url = signup_url(str(scheduled[0]["id"]).lower())
+    assert event["SUMMARY"] == scheduled[0]["title"]
+    assert event["UID"] == expected_url
+    assert event["LOCATION"] == expected_url
+    assert event["URL"] == expected_url
+    assert event["DTSTAMP"] == event["DTSTART"]
+
+
+def test_agenda_feed_excludes_delivered_and_archived_editions(built_site: Path) -> None:
+    """A calendar is for what has not happened yet: the committed fixture
+    carries four non-`scheduled` editions (`delivered`/`archived`) besides
+    the one `scheduled` one, and none of them may appear."""
+    events = _events_fixture()
+    not_scheduled_urls = {
+        signup_url(str(e["id"]).lower()) for e in events if e["status"] != "scheduled"
+    }
+    assert not_scheduled_urls, (
+        "fixture carries no non-scheduled edition to check against"
+    )
+
+    raw = (built_site / "agenda.ics").read_bytes()
+    uids = {event.properties["UID"] for event in parse_calendar(raw).events}
+    assert uids.isdisjoint(not_scheduled_urls)
+
+
+def test_agenda_feed_is_pure_crlf(built_site: Path) -> None:
+    raw = (built_site / "agenda.ics").read_bytes()
+    assert b"\r\n" in raw
+    assert b"\n" not in raw.replace(b"\r\n", b"")
+
+
+def test_agenda_feed_rebuilds_byte_identical_from_unchanged_data(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    """The churn check: two builds from the same committed data must
+    produce the same bytes -- otherwise every subscriber's calendar client
+    would re-sync on every rebuild for no real reason, and hide an actual
+    change in that noise. A real, second Eleventy build, not merely calling
+    the same JavaScript function twice in this process: the whole point is
+    to prove the *build* is deterministic, not only the function."""
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    outputs = []
+    for i in range(2):
+        out = tmp_path_factory.mktemp(f"site-build-churn-{i}")
+        subprocess.run(
+            ["node", str(_ELEVENTY_CMD), f"--output={out.as_posix()}"],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        outputs.append((out / "agenda.ics").read_bytes())
+    assert outputs[0] == outputs[1]
+
+
+def test_the_agenda_feed_still_renders_valid_and_empty_with_no_editions_at_all(
+    built_site_no_events: Path,
+) -> None:
+    raw = (built_site_no_events / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)
+    assert parsed.calendar.properties["VERSION"] == "2.0"
+    assert parsed.events == []
+
+
+@pytest.fixture(scope="module")
+def built_site_agenda_dst_cases(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """One `scheduled` edition per date in the shared `paris-standing-start.
+    json` fixture -- both sides of both DST transitions, both years -- plus
+    one with a title long enough to force line folding. The committed
+    fixture (`built_site`) carries only a single `scheduled` edition, dated
+    once, so it cannot exercise the DST rule anywhere near a transition; a
+    test that only checked that one date would pass against a feed that
+    hard-typed a single offset (three of this project's own five real
+    fixture editions fall in summer, but none of them sits *next to* a
+    transition the way this fixture's eight dates deliberately do).
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    fixture_path = ROOT / "tools" / "tests" / "fixtures" / "paris-standing-start.json"
+    cases = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    scratch_src = tmp_path_factory.mktemp("site-src-agenda-dst") / "src"
+    shutil.copytree(SITE_SRC, scratch_src)
+    events = [
+        {
+            "id": f"DST-{i:02d}",
+            "title": f"DST case {case['iso_date']}",
+            "date": case["iso_date"],
+            "status": "scheduled",
+            "abstract": "",
+            "photo_url": "",
+            "bio": "",
+            "linkedin": "",
+            "seed_questions": "",
+            "youtube_url": "",
+            "registration_link": "",
+            "forum_thread": "",
+            "speaker_name": "Test Speaker",
+            "speaker_affiliation": "",
+            "speaker_country": "",
+        }
+        for i, case in enumerate(cases)
+    ]
+    # A 123-character title on the first case too, to prove folding and
+    # escaping survive alongside a real DST computation, not only in
+    # isolation: a comma (needs escaping) and a length that forces the
+    # SUMMARY property line past the 75-octet fold limit on its own.
+    long_title = (
+        "Reproducible, open-source behavioural neuroscience: motion tracking, "
+        "kinematics and cross-species comparison across borders"
+    )
+    assert len(long_title) == 123
+    events[0]["title"] = long_title
+
+    (scratch_src / "_data" / "events.json").write_text(
+        json.dumps(events), encoding="utf-8"
+    )
+    out = tmp_path_factory.mktemp("site-build-agenda-dst")
+    try:
+        subprocess.run(
+            [
+                "node",
+                str(_ELEVENTY_CMD),
+                f"--input={scratch_src.as_posix()}",
+                f"--output={out.as_posix()}",
+            ],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+def test_agenda_feed_dtstart_matches_the_shared_paris_offset_fixture(
+    built_site_agenda_dst_cases: Path,
+) -> None:
+    fixture_path = ROOT / "tools" / "tests" / "fixtures" / "paris-standing-start.json"
+    cases = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    raw = (built_site_agenda_dst_cases / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)
+    assert len(parsed.events) == len(cases)
+    by_uid = {event.properties["UID"]: event.properties for event in parsed.events}
+
+    for i, case in enumerate(cases):
+        url = signup_url(f"dst-{i:02d}")
+        event = by_uid[url]
+        # Independent of `site/.eleventy.js`: plain arithmetic on the
+        # fixture's own offset string, not a second call into `Intl` or
+        # `zoneinfo`.
+        sign = 1 if case["offset"].startswith("+") else -1
+        offset_hours = int(case["offset"][1:3])
+        utc_hour = 12 - sign * offset_hours
+        expected = f"{case['iso_date'].replace('-', '')}T{utc_hour:02d}3000Z"
+        assert event["DTSTART"] == expected, case["iso_date"]
+
+
+def test_agenda_feed_long_title_folds_and_round_trips_intact(
+    built_site_agenda_dst_cases: Path,
+) -> None:
+    long_title = (
+        "Reproducible, open-source behavioural neuroscience: motion tracking, "
+        "kinematics and cross-species comparison across borders"
+    )
+    raw = (built_site_agenda_dst_cases / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)  # raises if any physical line exceeds 75 octets
+    titles = {event.properties["SUMMARY"] for event in parsed.events}
+    assert long_title in titles
+
+
+# -------------------------------------------------------------------------- #
+# Task 9 (phase 6): the share banner reaches a stable, published address.
+#
+# `og:image`/`twitter:image` (phase 5's own task 10, whose comment on the
+# block these tests exercise explains why the tag was left out until now)
+# resolve to real content only once a banner file actually exists at the
+# address the tag names -- and the committed fixture this module's own
+# `built_site` builds from can never exercise that on its own: no fixture
+# banner is committed to this repository (see this task's own report for
+# why not -- a committed image is in git history for ever, and the real
+# pipeline that produces one, `visuals-production.yml`, only ever commits
+# a *real*, currently-scheduled edition's banner; there is nothing this
+# project should carry permanently as a stand-in for that).
+#
+# `built_site_with_share_banner`, below, is deliberately not built the way
+# every other scratch-copy fixture above is (`--input=<scratch>/src`
+# against the real, unmodified `site/`): `.eleventy.js`'s own
+# `addPassthroughCopy('src/banners')` resolves its source relative to the
+# *project root* (Eleventy's own documented behaviour -- confirmed by hand,
+# see this task's own report), never relative to a CLI `--input` override,
+# so a fixture that only swapped `src/` while still running the *real*
+# `site/.eleventy.js` would carry the real repository's own (currently
+# empty) `src/banners/`, not the scratch one this fixture writes a file
+# into. This fixture instead copies the *whole* `site/` project --
+# `.eleventy.js` and `package.json` included, `node_modules`/`_site`
+# excluded (Node resolves Eleventy's own CLI script, and everything it
+# `require`s, relative to that script's real install location, never to
+# `cwd`, so nothing here needs its own copy of the dependency tree) -- and
+# builds with no `--input` override at all, so the passthrough copy
+# resolves against *this* scratch copy's own root. That is what lets one
+# build exercise the real pipeline end to end: `src/_data/banners.js`
+# reading the scratch `src/banners/` it was actually given, `.eleventy.js::
+# eventBannerUrl` building this edition's real address from it, the
+# templates (`event.njk`, `layout.njk`) emitting the tag, and Eleventy's
+# own passthrough copy delivering the exact bytes into the built tree.
+# -------------------------------------------------------------------------- #
+
+_SITE_PROJECT_ROOT = ROOT / "site"
+
+#: The smallest byte sequence libpng accepts as a real image (a 1x1, true
+#: colour PNG) -- a stand-in for a real rendered banner, not one: these
+#: tests prove the *pipeline* (a file present, a tag built, its bytes
+#: delivered), never the composition itself (`test_visual.py` and task 5's
+#: own pinned image comparison already own that). Fabricated bytes, never
+#: Anonymous's own identity or any real speaker's likeness -- there is
+#: nothing here for P-4 or the "no personal data in the repository"
+#: constraint to say anything about.
+_MINIMAL_PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk"
+    "+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)
+
+
+@pytest.fixture(scope="module")
+def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A full, isolated copy of `site/` (config and source, never its
+    installed `node_modules` or a stale `_site`) with one banner file
+    added for the fixture's own scheduled edition -- see this section's
+    own module comment for why this fixture cannot use the plain
+    `--input` override every other scratch fixture in this module uses.
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    scratch_site = tmp_path_factory.mktemp("site-with-banner") / "site"
+    shutil.copytree(
+        _SITE_PROJECT_ROOT,
+        scratch_site,
+        ignore=shutil.ignore_patterns("node_modules", "_site"),
+    )
+    banners_dir = scratch_site / "src" / "banners"
+    banners_dir.mkdir(parents=True, exist_ok=True)
+    (banners_dir / f"{_the_one_scheduled_event_id()}.png").write_bytes(
+        _MINIMAL_PNG_BYTES
+    )
+    out = tmp_path_factory.mktemp("site-build-with-banner")
+    try:
+        subprocess.run(
+            ["node", str(_ELEVENTY_CMD), f"--output={out.as_posix()}"],
+            cwd=scratch_site,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+_OG_IMAGE_DIMENSION_RE = {
+    "width": re.compile(r'<meta property="og:image:width" content="([^"]*)"'),
+    "height": re.compile(r'<meta property="og:image:height" content="([^"]*)"'),
+}
+_TWITTER_CARD_RE = re.compile(r'<meta name="twitter:card" content="([^"]*)"')
+_TWITTER_IMAGE_RE = re.compile(r'<meta name="twitter:image" content="([^"]*)"')
+
+
+def test_a_scheduled_editions_share_banner_produces_a_correctly_dimensioned_tag(
+    built_site_with_share_banner: Path,
+) -> None:
+    """Task 9, acceptance step 2: `og:image` and its card equivalent, with
+    dimensions, pointing at the published address -- built from a real
+    banner file this fixture placed for the fixture's own scheduled
+    edition, not asserted against an absence the way phase 5's own task 10
+    test still correctly does for the ordinary, no-banner build
+    (`built_site`, above)."""
+    event_id = _the_one_scheduled_event_id()
+    page = (
+        built_site_with_share_banner / "events" / event_id / "index.html"
+    ).read_text(encoding="utf-8")
+
+    og_image = _OG_IMAGE_RE.search(page)
+    assert og_image is not None, "no og:image tag on a page with a real banner file"
+    expected_url = _absolute(f"/banners/{event_id}.png")
+    assert og_image.group(1) == expected_url
+
+    width = _OG_IMAGE_DIMENSION_RE["width"].search(page)
+    height = _OG_IMAGE_DIMENSION_RE["height"].search(page)
+    assert width is not None and height is not None
+    # Tied to `formats.py::BANNER` itself, not a hand-typed "1200"/"630" a
+    # second time: if that constant's own dimensions ever changed without
+    # `site/.eleventy.js`'s own hand-copied `SHARE_IMAGE_WIDTH`/
+    # `SHARE_IMAGE_HEIGHT` being updated to match, this is the assertion
+    # that would catch the drift (the same D-14 cross-language technique
+    # `_configured_path_prefix`/`_configured_site_origin` already use for
+    # this file's other hand-typed constants).
+    assert width.group(1) == str(int(BANNER.width))
+    assert height.group(1) == str(int(BANNER.height))
+
+    twitter_card = _TWITTER_CARD_RE.search(page)
+    twitter_image = _TWITTER_IMAGE_RE.search(page)
+    assert twitter_card is not None and twitter_card.group(1) == "summary_large_image"
+    assert twitter_image is not None and twitter_image.group(1) == expected_url
+
+
+def test_the_share_banners_tagged_address_resolves_to_the_exact_bytes_committed(
+    built_site_with_share_banner: Path,
+) -> None:
+    """The other half of acceptance step 1: the address is not merely
+    well-formed, it resolves inside the *built* tree, to the *same* bytes
+    this fixture placed under `src/banners/` -- proof that Eleventy's own
+    passthrough copy actually delivered this file, not merely that the
+    filter built a plausible-looking URL. Mutate this away (comment out
+    `.eleventy.js::addPassthroughCopy('src/banners')`) and this is the
+    test that notices the image has vanished from the built tree --
+    proven by hand, see this task's own report.
+    """
+    event_id = _the_one_scheduled_event_id()
+    page = (
+        built_site_with_share_banner / "events" / event_id / "index.html"
+    ).read_text(encoding="utf-8")
+    og_image = _OG_IMAGE_RE.search(page)
+    assert og_image is not None
+
+    target = _built_file_for_absolute_url(
+        og_image.group(1), built_site_with_share_banner
+    )
+    assert target.is_file(), (
+        f"{og_image.group(1)!r} does not resolve to a file the build wrote"
+    )
+    assert target.read_bytes() == _MINIMAL_PNG_BYTES
+
+
+def test_an_edition_with_no_banner_file_still_emits_no_og_image_tag(
+    built_site_with_share_banner: Path,
+) -> None:
+    """The mixed case: one edition in this same build has a banner, every
+    other one does not -- proof that a banner appearing for one edition
+    does not leak an `og:image` tag onto pages that have none of their
+    own, and that the "correct absence, not a broken pointer" choice
+    (phase 5's own task 10) still holds once the feature it was waiting
+    for exists."""
+    events = _events_fixture()
+    other_ids = [
+        str(e["id"]).lower()
+        for e in events
+        if str(e["id"]).lower() != _the_one_scheduled_event_id()
+    ]
+    assert other_ids, f"{_EVENTS_FIXTURE.as_posix()} carries only one event"
+    for other_id in other_ids:
+        page = (
+            built_site_with_share_banner / "events" / other_id / "index.html"
+        ).read_text(encoding="utf-8")
+        assert _OG_IMAGE_RE.search(page) is None, (
+            f"{other_id} carries no banner file but still got an og:image tag"
+        )
+        twitter_card = _TWITTER_CARD_RE.search(page)
+        assert twitter_card is not None and twitter_card.group(1) == "summary"

@@ -24,6 +24,7 @@ coming along.
 
 - [ ] Speaker told the promotion is starting — before anything is posted
 - [ ] LinkedIn post published
+- [ ] Mailing list / newsletter message sent — TEATIME, institute newsletters and internal messaging, and RISC
 
 ### T-14 days
 

@@ -65,6 +65,95 @@ export function parisToday(): string {
   return parisDayOf(new Date());
 }
 
+/** This project's one standing start time, Europe/Paris local. Mirrors
+ *  `tools/convener_ops/visual.py::STANDING_START_LOCAL` and
+ *  `site/.eleventy.js::STANDING_START_LOCAL`. */
+const STANDING_START_LOCAL = '12:30';
+
+const _WEEKDAYS = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+] as const;
+const _MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const;
+
+/**
+ * Europe/Paris's own UTC offset and abbreviation for `isoDate`, at this
+ * project's standing 12:30 local start time -- +01:00/CET from late October
+ * to late March, +02:00/CEST the rest of the year.
+ *
+ * A third independent reading of the identical fact
+ * `tools/convener_ops/visual.py::paris_standing_start` and
+ * `site/.eleventy.js::parisStandingStart` already compute (D-14: a rule
+ * crossing a language boundary is bound by a shared fixture, never moved to
+ * one side -- `tools/tests/fixtures` names no site for this one because
+ * neither of the other two reads this file either; the five fixture editions
+ * in `site/src/_data/events.json`, three of them in daylight-saving time, are
+ * what all three implementations are checked against). A hand-typed "CET"
+ * regardless of season was the reference poster's own defect (phase 5's
+ * fix round 1), reproduced here for a third possible place to reintroduce it:
+ * a drafted announcement text.
+ *
+ * `timeZoneName: 'shortOffset'` is stable across locales ('GMT+1', 'GMT+2');
+ * the CET/CEST abbreviation is not -- `en-US`'s own ICU data renders it as
+ * this same 'GMT+1'/'GMT+2' string, not the letters, while `en-GB`'s does
+ * (`site/.eleventy.js`'s own comment records checking both locally). Rather
+ * than pin this project's output to whichever one locale's data happens to
+ * spell it out, the offset is the only thing asked of `Intl` here, and the
+ * abbreviation is this project's own fixed naming of the one offset Europe/
+ * Paris is ever in at this project's own standing hour.
+ *
+ * Probed at midday UTC on `isoDate`, not at the standing local time itself
+ * (computing that would need the offset already known to convert it to UTC
+ * first): Europe/Paris's DST transitions always happen in the small hours,
+ * well before midday on the transition day, so a midday-UTC probe always
+ * resolves the offset actually in effect at 12:30 Paris local time on that
+ * same calendar date.
+ */
+export function parisStandingStart(isoDate: string): { offset: string; abbreviation: string } {
+  const probe = new Date(`${isoDate}T12:00:00Z`);
+  const part = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Paris',
+    timeZoneName: 'shortOffset',
+  })
+    .formatToParts(probe)
+    .find(p => p.type === 'timeZoneName');
+  const match = part ? /^GMT([+-])(\d{1,2})$/.exec(part.value) : null;
+  if (!match) {
+    throw new Error(`unexpected Europe/Paris UTC offset from Intl for ${isoDate}`);
+  }
+  const [, sign, hours] = match;
+  const offset = `${sign}${hours.padStart(2, '0')}:00`;
+  const abbreviation = offset === '+02:00' ? 'CEST' : 'CET';
+  return { offset, abbreviation };
+}
+
+/**
+ * "Thursday, 12 March 2026 at 12:30 CET" -- the one sentence a drafted
+ * announcement states an edition's date and time in, computed rather than
+ * assembled by hand so the zone label can never be a stale copy-paste.
+ * Mirrors `tools/convener_ops/visual.py::date_line` -- fixed English weekday and
+ * month names rather than `toLocaleDateString`, for the same reason that
+ * module gives: a rendered page's wording must not depend on the locale of
+ * whatever machine renders it.
+ *
+ * `''` for an unparseable or empty `isoDate`, so a record with no date yet
+ * shows the ordinary `«missing: …»` marker (`content/render.ts::substitute`)
+ * rather than a thrown error surfacing as a broken screen.
+ */
+export function dateLine(isoDate: string): string {
+  const parsed = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!parsed) return '';
+  const [, y, m, d] = parsed;
+  const asUtc = new Date(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(asUtc.getTime())) return '';
+  const { abbreviation } = parisStandingStart(isoDate);
+  const weekday = _WEEKDAYS[asUtc.getUTCDay()];
+  const month = _MONTHS[Number(m) - 1];
+  return `${weekday}, ${Number(d)} ${month} ${y} at ${STANDING_START_LOCAL} ${abbreviation}`;
+}
+
 export function hasEnded(s: Speaker, config: Config, now: Date): boolean {
   if (s.status !== 'scheduled' || !s.date) return false;
   if (s.time) {

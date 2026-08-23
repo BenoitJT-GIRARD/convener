@@ -12,7 +12,10 @@ record's own field names, reached through the object that holds them:
   `{{ speaker.affiliation }}`, `{{ speaker.country }}`, `{{ speaker.bio }}`;
 - their talk — `{{ speaker.title }}`, `{{ speaker.abstract }}`,
   `{{ speaker.edition_code }}`, `{{ speaker.date }}`, `{{ speaker.time }}`,
-  `{{ speaker.zoom_link }}`, `{{ speaker.forum_thread }}`,
+  `{{ speaker.when }}` (the date and time together, with the real Paris
+  offset for that day — "Thursday, 12 March 2026 at 12:30 CET" — never
+  write `{{ speaker.time }}` beside a hand-typed "CET": half the year that
+  is wrong), `{{ speaker.zoom_link }}`, `{{ speaker.forum_thread }}`,
   `{{ speaker.youtube_url }}`, `{{ speaker.live_peak }}`;
 - the people around it — `{{ host_1.name }}`, `{{ host_2.name }}`,
   `{{ proposed_by.name }}`;
@@ -20,11 +23,38 @@ record's own field names, reached through the object that holds them:
   `{{ consent.published_on_consent }}`, composed from the publication gate
   itself so that no message can promise something the gate would not do.
 
+A page drafted to be **posted somewhere public** — a forum announcement, a
+LinkedIn post, a mailing list message, a recording announcement — reads a
+speaker's personal fields (`bio`, `photo_url`, `linkedin`, `youtube_url`)
+through a second vocabulary instead, `{{ public.… }}` rather than
+`{{ speaker.… }}`. It carries the same names, but each one comes out empty —
+and so shows as `«missing: …»` — until the speaker's own recorded consent and
+the board's approval have actually cleared it, exactly the gate
+`tools/convener_ops/public_data.py` applies to the public feed itself
+(`state/consent.ts::toPublicFields`). A page that only ever tells the team
+something, never the outside world, keeps reading `{{ speaker.… }}`
+unfiltered, the same as it always has.
+
 A name that is not in that vocabulary does not resolve: it comes out as
 `«missing: …»` in the message, which is what a volunteer would paste into an
 e-mail. So anything you have to write in by hand is written in **square
 brackets** instead — `[the day the LinkedIn post goes out]` — and reads as an
 instruction rather than as a field the workspace forgot to fill.
+
+A biography and a forum thread link are not fields the workspace forgot,
+though — they are ordinarily absent, waiting on a consent nobody is obliged
+to give or a thread nobody has opened yet — so `«missing: …»` is the wrong
+thing to show for them inside a page meant to be posted as-is. Three pages
+(`recording-announce.md`, `linkedin-post.md`, `mailing-list-announce.md`)
+pair each such field across two lines instead: `{{ public.bio? }}` (a
+trailing `?`) resolves to the value when there is one, and otherwise drops
+its *entire line* from the text rather than leaving the marker behind;
+`{{ public.bio! }}` (a trailing `!`), in "Notes for the volunteer", does the
+opposite — it drops its line when the field *is* there, and otherwise keeps
+the rest of that line as a plain sentence saying so. The two read
+differently on purpose: a withheld biography is finished business, nothing
+to add; an unopened forum thread is a task the volunteer may be the one to
+close.
 
 ## Emails
 
@@ -65,6 +95,8 @@ here to fill them in.
 - [Forum post — announce](forum-post-announce.md)
 - [Forum post — discussion summary](forum-post-summary.md)
 - [LinkedIn post](linkedin-post.md)
+- [Mailing list / newsletter message](mailing-list-announce.md) — for TEATIME, institute newsletters and internal messaging, and the RISC newsletter
+- [Recording announcement](recording-announce.md) — once the recording is actually published, for every channel the seminar was announced on
 - [Intro scripts](intro-scripts.md) — what the hosts say over the opening slides
 - [Run of show](run-of-show.md) — the session slide by slide, and the split between the two hosts
 - [Slide template](slides/presentation-template.md) — what goes on the hosts' own slides

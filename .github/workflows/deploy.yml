@@ -150,6 +150,46 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- survey-status.json was not published to this repo"
           exit 1
+      # Task 8 (phase 6): the internal agenda feed -- everything the
+      # public `/agenda.ics` carries (site/, built entirely on the
+      # JavaScript side) plus the preparation deadlines `notify.due_date`
+      # is already tracking, generated from `data/speakers.yml` directly
+      # rather than the redacted public projection. Same shape as "Commit
+      # survey status" just above, and for the identical reason: this
+      # commits `public-data/agenda-internal.ics` back to *this*
+      # repository over the checkout's own `GITHUB_TOKEN` (`contents:
+      # write`, already granted above), never into the `example-showcase`
+      # clone the "Push to example-showcase" step further down builds --
+      # `.gitignore` and `.gitattributes` both carry a deliberate, named
+      # exception for this one path (see their own comments), and nothing
+      # in `app/scripts/` or in the "Push to example-showcase" step below ever
+      # names it, which is what keeps this feed off both published
+      # bundles. `tools/tests/test_agenda.py` sweeps every copy script and
+      # every workflow's own push step to prove that absence holds, not
+      # merely that it holds today.
+      - name: Commit internal agenda
+        run: |
+          set -e
+          git config user.name "convener-publisher"
+          git config user.email "convener-publisher@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-agenda-internal)
+            git add public-data/agenda-internal.ics
+            if git diff --staged --quiet; then
+              echo "no change to commit"
+              exit 0
+            fi
+            git commit -m "data: refresh the internal agenda feed"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $GITHUB_REF_NAME and retrying"
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
+          done
+          echo "::error::push failed after 3 attempts -- agenda-internal.ics was not published to this repo"
+          exit 1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'

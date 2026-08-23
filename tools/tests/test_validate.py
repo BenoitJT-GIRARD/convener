@@ -103,6 +103,23 @@ def test_a_malformed_edition_code_is_reported() -> None:
     assert any("edition_code must match MRG-N" in e for e in errors)
 
 
+def test_an_edition_code_past_four_digits_is_rejected() -> None:
+    """`EDITION_RE` bounds the digit run at four (`MRG-9999`) rather than
+    accepting `\\d+` unboundedly: an unbounded id can grow
+    `registration_code_modules`'s own QR version past the point where a
+    printed poster's QR module drops below the scannable floor
+    (`formats.SCANNABLE_QR_MODULE_MM`) -- `cli.py::render_visuals` is the
+    check that runs that arithmetic for real, but a record this malformed
+    should never pass `convener-validate` in the first place."""
+    errors = validate_speakers([speaker(edition_code="MRG-99999")])
+    assert any("edition_code must match MRG-N" in e for e in errors)
+
+
+def test_a_four_digit_edition_code_is_still_accepted() -> None:
+    errors = validate_speakers([speaker(edition_code="MRG-9999")])
+    assert not any("edition_code must match MRG-N" in e for e in errors)
+
+
 @pytest.mark.parametrize("key", ["host_1", "host_2"])
 def test_a_non_string_host_is_reported(key: str) -> None:
     errors = validate_speakers([speaker(**{key: 123})])
