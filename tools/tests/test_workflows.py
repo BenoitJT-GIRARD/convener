@@ -3318,3 +3318,74 @@ def test_the_secret_workflow_monitor_declares_no_yaml_anchor() -> None:
     added after it was written."""
     text = (ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8")
     assert _yaml_anchors_and_aliases(text) == []
+
+
+# ------------------------------------------------------------------ #
+# Phase 7, task 1: the anchor/alias sweep above is one instance of a wider
+# class -- nothing before it checked a workflow against GitHub's own
+# workflow schema at all. Every check in this module, including that
+# sweep, reads workflow YAML through PyYAML (`safe_load`) or as plain
+# text; both accept a document GitHub's own parser refuses. Phase 6 found
+# that the hard way with a YAML anchor that would have kept
+# visuals.yml from ever triggering, discovered by reading the file, not
+# by a tool.
+#
+# `.github/workflows/quality.yml`'s own `workflow-schema` job now runs
+# `actionlint` -- a real implementation of GitHub's workflow schema -- as
+# a CI step, not a test: it downloads a pinned release, reaching the
+# network the same way `npm audit`/`pip-audit`/`cspell` already do
+# elsewhere in this same chain, which this suite must never do. This test
+# pins that the step exists and is wired the way the task report
+# describes, without ever running the tool itself -- the same "pin the
+# step, run the tool for real in the task report" split
+# test_dependency_audit_workflow.py already uses for `npm audit`.
+# ------------------------------------------------------------------ #
+
+QUALITY_WORKFLOW = Path(".github/workflows/quality.yml")
+
+#: The exact release this project has verified against a real, network-
+#: reaching run (see the task 1 report): pinned so a silent bump to
+#: "latest" -- which could change what a future run reports without any
+#: diff in this repository explaining why -- fails this test instead.
+_ACTIONLINT_VERSION = "1.7.12"
+
+
+def test_quality_workflow_validates_workflows_against_github_actions_schema() -> None:
+    data = safe_load((ROOT / QUALITY_WORKFLOW).read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    job = data["jobs"].get("workflow-schema")
+    assert isinstance(job, dict), (
+        "quality.yml has no workflow-schema job -- GitHub's own workflow "
+        "schema is no longer validated in this chain at all"
+    )
+    assert job.get("permissions") == {"contents": "read"}
+    assert isinstance(job.get("timeout-minutes"), int)
+    scripts = " ".join(
+        step["run"] for step in job["steps"] if isinstance(step.get("run"), str)
+    )
+    assert "download-actionlint.bash" in scripts, (
+        "workflow-schema no longer installs actionlint from its own release page"
+    )
+    assert _ACTIONLINT_VERSION in scripts, (
+        "workflow-schema installs actionlint without pinning it to the "
+        "version this project has actually verified -- see the task 1 "
+        "report for the run that verified it"
+    )
+    assert "actionlint" in scripts.split("download-actionlint.bash", 1)[1], (
+        "workflow-schema installs actionlint but never runs it"
+    )
+
+
+def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() -> None:
+    """`workflow-schema` reaches the network through a pinned release
+    download in a `run:` step, the same shape `npm audit`/`pip-audit`/
+    `cspell` already use elsewhere in this chain -- never through a
+    third-party `uses:` action, which the SHA-pin sweep
+    (`test_every_action_reference_is_pinned_to_a_full_commit_sha`) would
+    otherwise have to hold to the same standard as every other action in
+    this repository. This pins that choice: only the shared
+    `actions/checkout` step should appear here."""
+    data = safe_load((ROOT / QUALITY_WORKFLOW).read_text(encoding="utf-8"))
+    job = data["jobs"]["workflow-schema"]
+    uses = [step["uses"] for step in job["steps"] if "uses" in step]
+    assert all(use.startswith("actions/checkout@") for use in uses)

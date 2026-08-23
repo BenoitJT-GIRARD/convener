@@ -91,3 +91,4 @@ checkmark
 unreviewable
 HSTS
 COEP
+shellcheck
