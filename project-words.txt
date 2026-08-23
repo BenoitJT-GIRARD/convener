@@ -85,3 +85,4 @@ segno
 regenerable
 Nunjucks
 pathspec
+undecryptable
