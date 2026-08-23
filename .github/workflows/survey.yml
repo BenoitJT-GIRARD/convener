@@ -40,6 +40,13 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
+          # H3 (2026-08-23 security audit): the same cost-per-accepted-
+          # dispatch reasoning registration.yml's own comment gives for
+          # its identical addition -- this workflow is dispatched by the
+          # same relay (services/signup-relay), through the same
+          # attacker-reachable `/survey` route, and shares the identical
+          # cost shape.
+          enable-cache: true
       - name: Resolve the event's key secret
         id: resolve
         working-directory: tools
