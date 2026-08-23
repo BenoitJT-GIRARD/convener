@@ -9,6 +9,19 @@ name: Visuals production
 # no workflow at all (`uv run --project tools convener-render-visuals
 # OUTPUT_DIR`).
 #
+# Fix round 1 (task 7's own follow-up): also runs `convener-render-announcements`
+# and uploads its output into the identical artefact, one subdirectory per
+# edition alongside that edition's own images
+# (`OUTPUT_DIR/<event id>/<channel>.md` next to `<event id>/<format>.png`).
+# Task 7 shipped this command with no consumer at all -- a real, tested CLI
+# nothing ever invoked, the same "unreachable feature" shape this project
+# has already shipped five times across its phases. This is that consumer:
+# an operator downloading the poster for a scheduled edition now gets the
+# forum, professional-network and mailing-list drafts in the same download,
+# and an archived edition whose recording just cleared the gate gets its
+# own recording announcement the same way -- the poster and the words for
+# the same talk, together, rather than two separate places to look.
+#
 # Deliberately its own workflow, not a step folded into
 # publish-vitrine.yml's own job: that job's own "wipe everything under
 # example-showcase's root except .git and app/, then copy site/_site over it
@@ -41,16 +54,23 @@ name: Visuals production
 # visuals.yml's own list, which names it only to say why it is
 # deliberately absent there): this job exists to render *real* editions,
 # so a change to the one file that carries them is precisely the case it
-# exists for. Every other entry mirrors visuals.yml's own list for the
-# identical reason that file gives each one -- the composition, the
-# ribbon, the QR generator, the three formats, the shared Paris clock, the
-# one disk-writing module, the brand source, the self-hosted fonts and the
-# Python lockfile pinning the QR renderer all change what a *real*
+# exists for. Every entry it shares with visuals.yml's own list mirrors
+# that file for the identical reason it gives each one -- the composition,
+# the ribbon, the QR generator, the three formats, the shared Paris clock,
+# the one disk-writing module, the brand source, the self-hosted fonts and
+# the Python lockfile pinning the QR renderer all change what a *real*
 # rendered edition looks like just as much as they change the fixture
-# visuals.yml checks. A single `paths:` list, not two: unlike visuals.yml,
-# this workflow has no `pull_request` trigger to keep a second copy in
-# step with, so the anchor/alias trap that caught visuals.yml's own first
-# version (see tools/tests/test_workflows.py::
+# visuals.yml checks. Fix round 1 adds `tools/convener_ops/announce.py`,
+# `tools/convener_ops/registration.py` (the registration address every drafted
+# text points at, D-19) and the four `docs/toolkit/*.md` pages themselves
+# -- `announce.py` now renders those files rather than composing its own
+# English (D-14), so a wording change to any one of them is exactly as
+# real a change to this job's own output as a change to `visual.py` is,
+# and none of the four was a dependency of this workflow before this
+# command had a consumer in it. A single `paths:` list, not two: unlike
+# visuals.yml, this workflow has no `pull_request` trigger to keep a
+# second copy in step with, so the anchor/alias trap that caught
+# visuals.yml's own first version (see tools/tests/test_workflows.py::
 # test_no_workflow_uses_a_yaml_anchor_or_alias) has nothing to bite here.
 #
 # No `pull_request` trigger: unlike visuals.yml's cheap, read-only
@@ -70,6 +90,12 @@ on:
       - 'tools/convener_ops/formats.py'
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
+      - 'tools/convener_ops/announce.py'
+      - 'tools/convener_ops/registration.py'
+      - 'docs/toolkit/forum-post-announce.md'
+      - 'docs/toolkit/linkedin-post.md'
+      - 'docs/toolkit/mailing-list-announce.md'
+      - 'docs/toolkit/recording-announce.md'
       - 'data/brand.json'
       - 'fonts/**'
       - 'tools/uv.lock'
@@ -113,21 +139,48 @@ jobs:
       - name: Render the scheduled editions (pure Python/HTML, no browser yet)
         run: |
           uv run --project tools convener-render-visuals "${{ runner.temp }}/production-visuals"
+      # Fix round 1: writes straight into `production-visuals-out`, the
+      # same directory `render-production.mjs` writes each edition's own
+      # `<format>.png` into below -- one Markdown file per channel, nested
+      # under `<event id>/`, so `<event id>/forum.md` lands beside
+      # `<event id>/square.png` in the one artefact this job uploads,
+      # never a separate merge step to fold two output trees into one.
+      # Unconditional, unlike the browser pipeline below: this command is
+      # pure Python (no ~430MB Chrome download to gate), and it also
+      # covers `archived` editions with a freshly-published recording,
+      # which `convener-render-visuals` (scheduled editions only) never
+      # produces a page for at all -- gating this on that command's own
+      # page count would silently drop a recording announcement on the one
+      # run that has nothing else to render.
+      - name: Render the announcement texts (pure Python, no browser)
+        run: |
+          uv run --project tools convener-render-announcements "${{ runner.temp }}/production-visuals-out"
       # D-13: no scheduled edition is a normal state, not a failure -- the
       # command above already said so on its own stdout and wrote an empty
       # manifest.json. Counted here, once, from the *pages actually
-      # written* (not a second read of manifest.json), so every step below
-      # can skip on the same signal rather than each re-deriving it.
+      # written* (not a second read of manifest.json), so the expensive
+      # browser steps below can skip on the same signal rather than each
+      # re-deriving it. This count alone must never gate the final upload
+      # step (below) -- see the announcement count that follows.
       - name: Count the pages the command above actually wrote
         id: pages
         run: |
           count=$(find "${{ runner.temp }}/production-visuals" -maxdepth 1 -name '*.html' | wc -l)
           echo "count=$count" >> "$GITHUB_OUTPUT"
+      # A second, independent signal from the announcement command's own
+      # output, so a recording announcement rendered with zero scheduled
+      # editions in flight (the case above's own comment names) still
+      # reaches the upload step even though the page count alone is zero.
+      - name: Count the announcement texts the command above actually wrote
+        id: announcements
+        run: |
+          count=$(find "${{ runner.temp }}/production-visuals-out" -mindepth 2 -name '*.md' | wc -l)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
       # D-25: a skip must be visible, not merely absent -- a job with
       # every remaining step shown "skipped" and no line of its own saying
       # why would look identical to a job that forgot to run them.
       - name: Nothing scheduled -- nothing to render this run
-        if: steps.pages.outputs.count == '0'
+        if: steps.pages.outputs.count == '0' && steps.announcements.outputs.count == '0'
         run: |
           echo "::notice::no scheduled edition in data/speakers.yml -- this run produced nothing to publish, which is the normal state until a date is locked"
       # Restored *before* `npm ci` so its own postinstall download
@@ -176,8 +229,15 @@ jobs:
       # render-production.mjs's own file-count guard is what refuses that
       # silently, by failing the step above before this one ever runs
       # (see that script's own module comment).
+      #
+      # Gated on *either* count, not just the page count the browser
+      # pipeline above uses: a recording announcement can exist with zero
+      # scheduled editions in flight (the announcement-count step's own
+      # comment), and this is the one step that would otherwise silently
+      # skip uploading it -- the announcement command has already run and
+      # written it by this point regardless of which count is non-zero.
       - name: Upload the rendered visuals
-        if: steps.pages.outputs.count != '0'
+        if: steps.pages.outputs.count != '0' || steps.announcements.outputs.count != '0'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: announcement-visuals

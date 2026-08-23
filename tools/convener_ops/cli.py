@@ -4246,7 +4246,8 @@ def render_announcements() -> int:
     """`convener-render-announcements OUTPUT_DIR`: task 7's own disk-writing
     seam for the ready-to-publish texts (D-09) -- the forum announcement,
     the professional-network post, the mailing-list message, and the
-    recording announcement, one plain-text file each.
+    recording announcement, one Markdown file each, one subdirectory per
+    edition (`OUTPUT_DIR/<event id>/<channel>.md`).
 
     The app (`app/`, D-15's "cockpit") already offers an authenticated
     operator the same four texts, filled in live from the record they have
@@ -4257,8 +4258,24 @@ def render_announcements() -> int:
     tools convener-render-announcements OUTPUT_DIR` renders the current, real
     state of `data/speakers.yml` on demand, from a plain checkout, exactly
     the same "manual command, independent of any workflow" property
-    `render_visuals`'s own docstring states for the visuals. Nothing here
-    wires it into a workflow yet.
+    `render_visuals`'s own docstring states for the visuals.
+
+    Fix round 1: unlike task 7's own version, this command now has a real
+    consumer -- `.github/workflows/visuals-production.yml` runs it
+    alongside `convener-render-visuals` and uploads both into the identical
+    `announcement-visuals` artefact, one subdirectory per edition, so an
+    operator downloads the poster and the words for the same talk
+    together rather than hunting two separate places for them. The
+    per-edition subdirectory (rather than task 7's own flat `<event id>-
+    <channel>.txt` naming) is what makes that placement work without a
+    merge step: `render-production.mjs` already writes each edition's
+    images to `OUTPUT_DIR/<event id>/<format>.png` in that same artefact
+    directory, so this command's own `<event id>/<channel>.md` lands
+    alongside them, never colliding on a filename. `.md`, not `.txt`: the
+    text this command now writes is a page's worth of Markdown (headings,
+    emphasis, a volunteer's own working notes), not plain prose, because
+    it is now `docs/toolkit/*.md` itself, rendered (`announce.py`'s own
+    module docstring) -- the extension names what the file actually is.
 
     Routed through `public_data.to_public` before either module of task 7
     ever sees a row (`announce.py`'s own module docstring) -- never a
@@ -4288,7 +4305,7 @@ def render_announcements() -> int:
     rows = to_public(speakers or [])
 
     out.mkdir(parents=True, exist_ok=True)
-    for stale_text in out.glob("*.txt"):
+    for stale_text in out.glob("*/*.md"):
         stale_text.unlink()
     manifest_path = out / "manifest.json"
     if manifest_path.exists():
@@ -4311,10 +4328,16 @@ def render_announcements() -> int:
                 if recording is not None:
                     texts["recording"] = recording
             for channel, text in texts.items():
-                filename = f"{event_id}-{channel}.txt"
-                (out / filename).write_text(text, encoding="utf-8")
+                event_dir = out / event_id
+                event_dir.mkdir(parents=True, exist_ok=True)
+                filename = f"{channel}.md"
+                (event_dir / filename).write_text(text, encoding="utf-8")
                 manifest.append(
-                    {"event_id": event_id, "channel": channel, "file": filename}
+                    {
+                        "event_id": event_id,
+                        "channel": channel,
+                        "file": f"{event_id}/{filename}",
+                    }
                 )
     except ValueError as exc:
         print(f"::error::{exc}", file=sys.stderr)

@@ -161,17 +161,19 @@ def test_a_skip_is_visible_not_merely_absent() -> None:
 
 
 def test_every_heavy_step_after_the_page_count_is_conditional_on_it() -> None:
-    """Every step from the Chrome cache onward only runs when there is
-    something to render -- the whole point of counting first (D-25's
-    "filter deliberately" applied at the step level, since the workflow's
-    own trigger-time path filter cannot see *how many* scheduled editions
-    a matching push actually leaves behind)."""
+    """Every step from the Chrome cache to the production render only runs
+    when there is an HTML page to screenshot -- the whole point of
+    counting first (D-25's "filter deliberately" applied at the step
+    level, since the workflow's own trigger-time path filter cannot see
+    *how many* scheduled editions a matching push actually leaves behind).
+    "Upload the rendered visuals" is deliberately not in this set any more
+    (fix round 1) -- see `test_the_upload_step_also_runs_when_only_
+    announcement_texts_exist` for why its own condition is now broader."""
     heavy_step_names = {
         "Cache the pinned Chrome-for-Testing download",
         "Install the pinned renderer",
         "Dependency audit",
         "Render the production visuals",
-        "Upload the rendered visuals",
     }
     steps = _JOB["steps"]
     found = set()
@@ -187,6 +189,52 @@ def test_every_heavy_step_after_the_page_count_is_conditional_on_it() -> None:
     assert found == heavy_step_names | {"setup-node"}, (
         f"expected to find every heavy step, only found {found!r}"
     )
+
+
+def test_the_announcement_command_runs_unconditionally() -> None:
+    """Fix round 1: `convener-render-announcements` is pure Python (no ~430MB
+    Chrome download to gate) and covers a case `convener-render-visuals`'s own
+    page count cannot see -- a freshly-published recording announcement
+    for an `archived` edition with zero editions currently `scheduled`.
+    Gating this step on the page count would silently drop that case."""
+    steps = _JOB["steps"]
+    render_step = next(
+        s
+        for s in steps
+        if s.get("name") == "Render the announcement texts (pure Python, no browser)"
+    )
+    assert "if" not in render_step
+    assert "convener-render-announcements " in render_step["run"]
+
+
+def test_the_upload_step_also_runs_when_only_announcement_texts_exist() -> None:
+    """A recording announcement for an archived edition, with no scheduled
+    edition at all, must still reach the artefact -- gating the upload on
+    the (expensive) Chrome pipeline's own page count alone would silently
+    drop it, since that pipeline never even runs in that case."""
+    steps = _JOB["steps"]
+    upload_step = next(
+        s for s in steps if s.get("name") == "Upload the rendered visuals"
+    )
+    condition = upload_step.get("if", "")
+    assert "steps.pages.outputs.count != '0'" in condition
+    assert "steps.announcements.outputs.count != '0'" in condition
+
+
+def test_the_skip_notice_requires_both_counts_to_be_zero() -> None:
+    """The one state that is genuinely "nothing to do" is both counts at
+    zero -- a page count of zero with an announcement still to upload must
+    not print the "nothing to render" notice."""
+    steps = _JOB["steps"]
+    notice_step = next(
+        s
+        for s in steps
+        if s.get("name") == "Nothing scheduled -- nothing to render this run"
+    )
+    condition = notice_step.get("if", "")
+    assert "steps.pages.outputs.count == '0'" in condition
+    assert "steps.announcements.outputs.count == '0'" in condition
+    assert "&&" in condition
 
 
 def test_the_chrome_cache_key_is_shared_with_visuals_yml() -> None:
