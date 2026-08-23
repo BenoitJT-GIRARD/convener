@@ -9,11 +9,24 @@
  * so its ~430MB Chrome-for-Testing download is paid for only by the one
  * job that needs it -- see this project's own task 5 report for the
  * measured footprint) downloads a Chromium build pinned by this package's
- * own committed lockfile: the same input renders the same bytes on every
- * machine that installs this exact lock, which `puppeteer-core` (the
- * accessibility checker's own dependency, deliberately bundling nothing)
- * cannot promise on its own -- it hands rendering to whatever Chrome
- * happens to already be on the machine it runs on.
+ * own committed lockfile: the same input renders matching output on every
+ * machine that installs this exact lock, within the tolerance this file's
+ * own comparison already carries for ordinary anti-aliasing noise
+ * (`PER_CHANNEL_THRESHOLD`, `MAX_DIFF_PIXEL_FRACTION` below) -- not
+ * "byte-identical" stated flatly. Branch review, fix round 1: measured,
+ * not assumed, and the two are not the same claim. `BANNER` -- the one
+ * format this project actually diffs byte-for-byte with zero tolerance
+ * (`site/src/banners/<event id>.png`, `visuals-production.yml`'s own
+ * `git diff --staged --quiet` gate) -- showed zero drift across repeated
+ * runs against the committed reference. `PRINT` (never committed, only
+ * ever compared through the tolerance below) showed a reproducible
+ * single-level anti-aliasing shift against the committed reference across
+ * three separate runs -- comfortably inside that tolerance, and exactly
+ * the class of run-to-run rasteriser noise it exists to absorb, not
+ * evidence it is papering over a real design difference. `puppeteer-core`
+ * (the accessibility checker's own dependency, deliberately bundling
+ * nothing) cannot promise even this much -- it hands rendering to
+ * whatever Chrome happens to already be on the machine it runs on.
  *
  * What this script does, in order
  * ----------------------------------
