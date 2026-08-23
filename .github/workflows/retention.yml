@@ -224,3 +224,61 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- the event key(s) were already destroyed, but the record was not saved; rerun this workflow to record it, or write data/event-key-destructions.yml by hand"
           exit 1
+      - name: Record that the retention workflow ran today
+        # H2 (2026-08-23 security audit, AF-2): D-25 makes every control
+        # above fail loudly *inside* this run. It says nothing about a run
+        # that never starts -- GitHub disables a workflow's own
+        # `schedule:` trigger after 60 days without any activity in the
+        # repository, and an exhausted Actions minute budget simply stops
+        # work, and neither ever turns a badge red because no run happens
+        # at all. This step writes the fact that a run *did* happen where
+        # it survives without any workflow ever running again to read it:
+        # a committed file, `data/retention-last-run.yml`, checked by
+        # `retention-watchdog.yml` on its own, independent schedule, and
+        # legible to a person who opens this repository with no CI
+        # required either way.
+        #
+        # `if: always()` -- deliberately unconditional on every step
+        # above, success or failure. This step answers exactly one
+        # question, "did the schedule fire and the job start running",
+        # never "did it finish correctly" -- that second question already
+        # has its own loud signal (this job's own red status on the
+        # Actions tab, and GitHub's own failure e-mail to the repository's
+        # watchers). Recording only on success would fold the two
+        # questions into one and let a *permanently* broken
+        # CONVENER_RETENTION_TOKEN -- failing loudly every single day -- hide
+        # behind a "ran recently" checkmark here; that is a real, ongoing
+        # failure this step must never launder into looking fine. See
+        # tools/convener_ops/retention_liveness.py's own module docstring and
+        # retention-watchdog.yml's own header comment for the rest of this
+        # reasoning, including what neither one catches.
+        #
+        # Its own retry loop, not the destruction-recording step's above:
+        # that step already may have pushed a commit this run, so this one
+        # re-derives against the latest tip first on every attempt, the
+        # same fetch-and-reset-hard shape used throughout this file,
+        # rather than risk a rejected push on a branch that just moved out
+        # from under it.
+        if: always()
+        run: |
+          set -e
+          git config user.name "convener-retention"
+          git config user.email "convener-retention@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+            (cd tools && uv run convener-record-retention-run)
+            git add data/retention-last-run.yml
+            if git diff --staged --quiet; then
+              echo "data/retention-last-run.yml already names today -- nothing to commit"
+              exit 0
+            fi
+            git commit -m "data: record that the retention sweep ran today"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- retrying"
+          done
+          echo "::error::push failed after 3 attempts -- today's retention run is not recorded; retention-watchdog.yml may report stale even though the job did run today"
+          exit 1

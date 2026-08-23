@@ -27,6 +27,7 @@ from convener_ops import (
     delivery,
     eventkeys,
     formats,
+    retention_liveness,
     signing,
     survey_invite,
     visual,
@@ -141,6 +142,14 @@ DESTRUCTIONS_HEADER = (
 SURVEY_INVITATIONS_HEADER = (
     "# Survey invitation registry -- no name, no address; "
     "see tools/convener_ops/survey_invite.py\n"
+)
+#: H2 (2026-08-23 security audit) -- evidence that retention.yml's own
+#: schedule still fires, independent of whether that day's sweep found
+#: anything due; see tools/convener_ops/retention_liveness.py's own module
+#: docstring.
+RETENTION_LAST_RUN_HEADER = (
+    "# Evidence the retention sweep still runs; "
+    "see tools/convener_ops/retention_liveness.py\n"
 )
 
 
@@ -1284,6 +1293,106 @@ def retention_sweep() -> int:
         f"destroyed_ids={','.join(due)}\n"
         f"destroyed_secrets={','.join(secret_names)}\n"
         f"destroyed_on={today.isoformat()}\n"
+    )
+    return 0
+
+
+def record_retention_run() -> int:
+    """`convener-record-retention-run`: record that today's `retention.yml` run
+    happened at all -- H2, 2026-08-23 security audit (AF-2).
+
+    Writes `data/retention-last-run.yml` with today's Paris date
+    (`governance.paris_today`), unconditionally. `retention.yml`'s own
+    "Record that the retention workflow ran today" step calls this last,
+    with `if: always()`, deliberately independent of whether the sweep
+    above it actually found anything, deleted a secret, or even ran to
+    completion -- this function answers only "did the schedule fire and
+    the job start", never "did it finish correctly". See
+    `tools/convener_ops/retention_liveness.py`'s own module docstring for why
+    conflating the two into one signal would be worse than answering
+    neither: a broken token failing loudly every day is already visible
+    on the Actions tab and in GitHub's own failure e-mail; recording that
+    as "healthy" here would bury it behind a checkmark instead.
+
+    Always succeeds -- there is no failure mode of its own to report; a
+    write failure (a read-only filesystem, a full disk) surfaces as an
+    unhandled exception, which is correct: this function does not attempt
+    to reason about a failure mode it cannot name.
+    """
+    root = repo_root()
+    today = paris_today(datetime.now(UTC))
+    path = retention_liveness.last_run_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        RETENTION_LAST_RUN_HEADER + _dump(retention_liveness.record_to_data(today)),
+        encoding="utf-8",
+        newline="",
+    )
+    print(f"recorded a retention run for {today.isoformat()}")
+    return 0
+
+
+def check_retention_liveness() -> int:
+    """`convener-check-retention-liveness`: `retention-watchdog.yml`'s own
+    command -- H2, 2026-08-23 security audit (AF-2).
+
+    Reads `data/retention-last-run.yml` (written by `record_retention_run`
+    above) and fails, loudly, once it has gone more than
+    `retention_liveness.MAX_SILENT_DAYS` days without moving. A missing
+    file is not the ordinary D-13 "an integration that may not exist yet"
+    state some other absent-secret checks in this module treat kindly --
+    it means retention.yml's own "Record that the retention workflow ran
+    today" step has never once landed a commit in this repository, which
+    is exactly the silence this command exists to report, so it is
+    reported the same way a stale date is: an error, not a shrug. A
+    malformed file (hand-edited, a partial write) is reported and refused
+    the same way `_load_destruction_registry` refuses one, rather than
+    guessed at.
+
+    Prints `::error::` on the failing path, the format GitHub Actions
+    renders as an annotation on the run -- see
+    `.github/workflows/retention-watchdog.yml`'s own header comment for
+    what a red run here does and does not mean.
+    """
+    root = repo_root()
+    path = retention_liveness.last_run_path(root)
+    if not path.exists():
+        print(
+            "::error::data/retention-last-run.yml does not exist -- "
+            "retention.yml has never recorded a run in this repository "
+            "(or the file was removed) -- see this command's own "
+            "docstring and retention-watchdog.yml's own header comment",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        print(
+            f"::error::data/retention-last-run.yml: invalid YAML - {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        last_run = retention_liveness.last_run_from_data(data)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    today = paris_today(datetime.now(UTC))
+    elapsed = retention_liveness.days_since(last_run, today)
+    if retention_liveness.is_stale(elapsed):
+        print(
+            f"::error::retention.yml last recorded a run on "
+            f"{last_run.isoformat()}, {elapsed} day(s) ago -- see "
+            "retention-watchdog.yml's own header comment for what that "
+            "does and does not mean",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"retention.yml last recorded a run on {last_run.isoformat()}, "
+        f"{elapsed} day(s) ago -- healthy"
     )
     return 0
 

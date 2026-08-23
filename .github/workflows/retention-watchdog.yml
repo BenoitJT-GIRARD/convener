@@ -1,0 +1,77 @@
+# H2 (2026-08-23 security audit) / AF-2: D-25 makes every control inside a
+# run fail loudly. It says nothing about a run that never starts --
+# `retention.yml` is exactly the job whose silence has legal weight (spec
+# P-2, D-22): it is what makes an event's registrations permanently
+# unreadable once the retention window has elapsed. GitHub disables a
+# workflow's own `schedule:` trigger after 60 days without any activity in
+# the repository, and an exhausted Actions minute budget simply stops
+# work, either way with no red badge anywhere -- a job that never runs
+# never turns anything red.
+#
+# What this workflow catches, honestly
+# -------------------------------------
+# `retention.yml`'s own last step, "Record that the retention workflow ran
+# today", commits `data/retention-last-run.yml` unconditionally, every day
+# its schedule fires -- regardless of whether that day's actual sweep
+# succeeded (a separate concern, already loud on its own: that job's own
+# red status on the Actions tab, and GitHub's own failure e-mail to the
+# repository's watchers, already cover "did it run correctly"; the record
+# only ever answers "did it run at all"). This workflow reads that one
+# committed fact, on its own independent daily schedule, and fails loudly
+# -- an `::error::` annotation, a red run -- once it has gone more than
+# `tools/convener_ops/retention_liveness.py::MAX_SILENT_DAYS` days without
+# moving. It therefore catches: `retention.yml`'s schedule quietly
+# disabled while the rest of the repository stays active, its own runs
+# failing before they ever reach that last step (a checkout failure, a
+# `uv sync` failure), the Actions minute budget running out specifically
+# during its own scheduled slot on multiple consecutive days, or a human
+# accidentally deleting or disabling the workflow file itself.
+#
+# What this workflow cannot catch, and why nothing at zero cost can
+# ---------------------------------------------------------------------
+# This is itself a scheduled GitHub Actions workflow. If the exact failure
+# it exists to detect ever actually happens in full -- the whole
+# repository goes inactive for 60 days and GitHub disables every schedule
+# in it, or the account exhausts its Actions minutes for the month before
+# this workflow's own slot -- this workflow is disabled or starved at the
+# same moment `retention.yml` is, for the same reason. A watchdog that
+# lives in the same scheduler it is watching cannot report on that
+# scheduler going dark; nothing running inside GitHub Actions can, at zero
+# cost (a hosted external monitor is a paid account, ruled out by the same
+# constraint that shapes every other fix in this audit). What survives
+# that scenario regardless is `data/retention-last-run.yml` itself: a
+# person who opens this repository -- no workflow run required -- can read
+# the date it names and draw the same conclusion this workflow would have
+# reported, by hand. That is the residue this fix leaves, stated rather
+# than hidden: a committed record legible without any CI running, plus a
+# second, independent schedule that reports on it for as long as any
+# schedule in this repository still runs at all.
+name: Retention liveness watchdog
+
+on:
+  schedule:
+    # Later than retention.yml's own 06:11 UTC cron, so a healthy day's
+    # record is always already written by the time this checks it -- this
+    # is never a same-day race against the job it watches.
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # Read-only: this job only reads a committed file and reports on it.
+      # It carries no secret and reaches no network beyond checking out
+      # this repository -- see the header comment above for why it must
+      # not, and cannot, do anything about the failure it detects.
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+          enable-cache: true
+      - name: Check that the retention sweep ran recently
+        working-directory: tools
+        run: uv run convener-check-retention-liveness

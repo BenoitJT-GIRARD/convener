@@ -87,3 +87,4 @@ Nunjucks
 pathspec
 undecryptable
 decryptable
+checkmark
