@@ -10,9 +10,11 @@ uses, so this page cannot quietly drift from what runs.
 
 This page covers one pipeline: registering for an event, being recognised
 in the room, and being issued a certificate afterwards. It does not cover
-`data/speakers.yml`, which holds a different category of personal data —
-speakers' own names and institutional email addresses — under a different
-process; see [How we validate speakers](selection-criteria.md).
+`data/speakers.yml`, a different file under a different legal footing
+entirely — a participant here chose to register for an event they already
+knew was happening, where a speaker candidate may not know their name was
+put forward at all. That file has its own record:
+[Data protection record — speaker and event-lead candidates](candidate-data-protection.md).
 
 ## What we hold
 

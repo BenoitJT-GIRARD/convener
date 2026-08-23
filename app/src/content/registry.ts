@@ -36,6 +36,16 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'governance/traitement-donnees.md',
     anchor: null,
   },
+  // Security audit fix (M2, 2026-08-23): the record above named
+  // `data/speakers.yml` in one sentence and pointed at
+  // `governance/selection-criteria` for the rest, which never described a
+  // data-handling process. This page replaces that sentence with its own
+  // record, so it is registered and linked from the page above rather than
+  // credited to one that does not deliver.
+  'governance/candidate-data-protection': {
+    file: 'governance/candidate-data-protection.md',
+    anchor: null,
+  },
 
   // decisions — the architecture decision records: why the system is shaped
   // the way it is, one file per decision, `D-NN` identifiers preserved

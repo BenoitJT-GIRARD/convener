@@ -2318,6 +2318,48 @@
       "notes"
     ]
   },
+  "_speaker_personal_data_fields_comment": "A different question from speaker_field_classification above: not what may leave the repository, but what describes an identifiable person -- the candidate, or someone else named on their behalf -- as opposed to how the Board is running this particular lead. Written twice -- app/src/state/candidate-data.ts and docs/governance/candidate-data-protection.md's own 'What we hold' section -- so it is pinned here and read from both: app/tests/personal-data-fields.test.ts and tools/tests/test_candidate_data_protection_record.py. The two lists are disjoint and their union is exactly the set of keys of Speaker; a field added to the model without a line here fails a test instead of the governance record quietly under-describing what it holds. The argument for each placement lives in candidate-data.ts, not here.",
+  "speaker_personal_data_fields": {
+    "personal": [
+      "name",
+      "gender",
+      "career_stage",
+      "email",
+      "affiliation",
+      "country",
+      "photo_url",
+      "bio",
+      "linkedin",
+      "seed_questions",
+      "conflicts_of_interest",
+      "proposed_by",
+      "links",
+      "notes"
+    ],
+    "process": [
+      "id",
+      "title",
+      "abstract",
+      "source",
+      "assigned_to",
+      "host_1",
+      "host_2",
+      "status",
+      "selection",
+      "publication",
+      "edition_code",
+      "candidate_dates",
+      "date",
+      "time",
+      "zoom_link",
+      "youtube_url",
+      "forum_thread",
+      "survey_enabled",
+      "runbook_progress",
+      "checklist",
+      "metrics"
+    ]
+  },
   "_event_registration_encryption_comment": "The wire format tools/convener_ops/eventkeys.py documents field by field (D-14): app/src/signup/encrypt.ts must reproduce it exactly, or every registration this phase encrypts becomes permanently unreadable the moment the two implementations disagree -- discovered only when someone tries to decrypt one for real. One RSA-2048 key pair, generated once for this fixture alone: never a real event's key, never touching real data, just a fixed pair so two test runners that never talk to each other still agree on it. Each case's `envelope` is the literal, unedited output of the real browser code (`encryptRegistration`, run once under Node's own crypto.subtle, which is what app/tests/signup-encrypt.test.ts itself runs under) encrypting `fields` under `public_pem` -- captured and pinned rather than recomputed, because AES-GCM draws fresh randomness every call and a recomputed envelope would never stay equal to itself. tools/tests/test_eventkeys.py decrypts each pinned `envelope` with `private_pem` through the real `eventkeys.decrypt` and checks the recovered JSON equals `fields` -- the one place that proves a browser-encrypted registration is actually readable by the job that has to read it, rather than both languages merely passing their own tests. app/tests/signup-encrypt.test.ts reads the same cases to re-encrypt `fields` fresh and check the wire shape, and to confirm the pinned `envelope` itself still has that shape.",
   "event_registration_encryption": {
     "public_pem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2q9C/nOAfN0W7tQYWCpg\nsYcPH+nFDiMCILfIv5cnifwiufU4sT7xdoVtHYz2WOrHyWTeMr+DPW+UUqdXZ81N\nhcohxPhg1oGg/xsk4lQcAEMk4QlrH0ZG29aM0QDuSfdk+3Kssda+k0cnc809ZmXx\n8fUasGWNFUZey+KOpwqljGSKBj62Ws5htQuZbLIJI7aY+c4iX+He+y5Flez+D1dW\nZswiFANLZaoefye8BS6hdhTrZ2fbf1u5lRIa6Q8XTQoEdLyUkYaIgR616KM4ay3m\nCmViYCB+8zbeKvNwDGihEGDxzdewbP6DIT3fNq/fkybvcKPciybTpvDYxkZJbeq0\nnwIDAQAB\n-----END PUBLIC KEY-----\n",
