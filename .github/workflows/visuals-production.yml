@@ -28,27 +28,30 @@ name: Visuals production
 # whole" step (see that file's own `refresh_published_site`) would delete
 # anything a second publisher wrote there on its very next run -- there is
 # no path under that repository's root a step added here could write to
-# and expect to survive. So this task's own trade-off (committed,
-# published or on demand -- see this task's own report for the fuller
-# version) was never a choice between three equally-reachable options:
-# publishing to a stable public address is real future work (an
-# `og:image` a link-preview bot can fetch needs exactly that -- see
-# `tools/convener_ops/formats.py`'s own module docstring), not something safely
-# retrofitted onto publish-vitrine.yml's existing wipe-and-copy without
-# also rebuilding how it decides what survives a push.
+# and expect to survive. Publishing to a stable public address therefore
+# has to mean *this repository's own* address, committed here, so
+# `site/`'s own build (a file this job never touches) picks it up as an
+# ordinary source file and `publish-vitrine.yml`'s existing wipe-and-copy
+# carries it the same way it already carries every other file `site/`
+# writes -- never a second publisher racing that workflow's own wipe.
 #
-# What this workflow does today, with nothing else to build around it, is
-# hand a human the real, current images as a downloadable run artefact --
-# produced fresh from real data on every relevant change, never committed
-# to this repository (a committed image would be a binary diff on every
-# edition change, and would tempt someone to read a stale commit as
-# current truth -- exactly what "a production is a regenerable artefact,
-# never the source of truth" rules out), and never treated as though it
-# sat at a permanent address (an artefact download link needs a GitHub
-# session and a run that has not expired; wiring one into a page's own
-# `og:image` would be worse than the tag phase 5 deliberately left out --
-# `site/src/_includes/layout.njk`'s own comment already explains why a
-# tag pointing nowhere real is worse than no tag at all).
+# `square.png` and `print.png` stay exactly what this task's own original
+# reasoning already settled: a downloadable run artefact, never committed
+# -- an operator's own forum post or a printed poster is a one-off action,
+# not a standing address anything links to, so there is nothing there for
+# a stable address to serve. `banner.png` is different in kind, not degree:
+# it is the one format a link-preview bot fetches on its own, unprompted,
+# every time someone shares an event page -- an artefact download link
+# needs a GitHub session and a run that has not expired, which is worse
+# than the tag phase 5 deliberately left out rather than point at
+# (`site/src/_includes/layout.njk`'s own comment). So task 9 (phase 6)
+# commits *only* that one format, under `site/src/banners/<event id>.png`,
+# regenerated whole on every run (an edition no longer scheduled loses its
+# file the same run -- see the "Sync the share banner" step below) rather
+# than accumulated into. This is a binary diff on every edition change,
+# same as any other committed image in this repository (`visuals/
+# references/*.png`, task 5) -- accepted for the one file an unattended
+# bot actually reads, not for the two a human downloads on demand.
 #
 # Why this exact path list, and why `data/speakers.yml` is in it (unlike
 # visuals.yml's own list, which names it only to say why it is
@@ -128,7 +131,21 @@ jobs:
     # visuals.yml's own job budgets for the identical download.
     timeout-minutes: 10
     permissions:
-      contents: read
+      # Task 9 (phase 6): `contents: write` is this job's own `GITHUB_TOKEN`
+      # committing `site/src/banners/` back to this same repository (never
+      # a repository secret -- see this file's own "reads no repository
+      # secret" test); `actions: write` is what lets it dispatch
+      # `publish-vitrine.yml` afterwards. Both are the exact pair
+      # `sweep.yml`, `retention.yml` and the three certificate workflows
+      # already carry for the identical reason: a push made with this
+      # job's own token cannot fire another workflow's `push` trigger
+      # (GitHub's recursion guard), so the commit alone would leave the
+      # freshly-committed banner unpublished until something else happened
+      # to touch `site/**` or `tools/**`.
+      contents: write
+      actions: write
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
@@ -249,3 +266,80 @@ jobs:
           # short enough that a superseded edition's images do not
           # accumulate storage indefinitely. GitHub's own maximum.
           retention-days: 90
+
+      # Task 9 (phase 6): the one format a link-preview bot fetches on its
+      # own, carried to this repository's own `site/src/banners/` -- see
+      # this file's own header comment for why this one format, and why
+      # here rather than publish-vitrine.yml. Unconditional (no `if:`),
+      # unlike the browser pipeline above: this step also has to run when
+      # `steps.pages.outputs.count` is `'0'`, because that is exactly the
+      # case an edition just left `scheduled` and its banner has to come
+      # down with it -- "no scheduled edition" must produce an *empty*
+      # `site/src/banners/`, not a directory this step never touched.
+      #
+      # Regenerated whole (`rm -rf` first), never accumulated into -- the
+      # same "regenerated whole, never accumulated into" discipline
+      # `convener-render-visuals`'s own `OUTPUT_DIR` handling already applies;
+      # a banner for an edition no longer in this run's manifest must not
+      # survive as a stale file sitting at a live public address once the
+      # seminar it pictures is no longer upcoming.
+      #
+      # `production-visuals-out` always exists by this point (`convener-render-
+      # announcements` above runs unconditionally and creates it), but the
+      # per-edition `banner.png` inside it only exists for an edition the
+      # (conditional) browser pipeline actually rendered -- `[ -f ... ]`
+      # is what tells an edition with only announcement texts (an archived
+      # recording, no scheduled edition at all) apart from one with a real
+      # banner to carry.
+      - name: Sync the share banner into the repository
+        run: |
+          set -e
+          rm -rf site/src/banners
+          mkdir -p site/src/banners
+          for dir in "${{ runner.temp }}"/production-visuals-out/*/; do
+            event_id=$(basename "$dir")
+            if [ -f "${dir}banner.png" ]; then
+              cp "${dir}banner.png" "site/src/banners/${event_id}.png"
+            fi
+          done
+          # Tidiness only -- `git add`, below, stages a removal correctly
+          # whether this directory is left empty or removed outright
+          # (confirmed by hand), so this line changes nothing about what
+          # gets committed. Removed rather than left empty so "zero
+          # scheduled editions" (D-13) leaves the working tree exactly as
+          # bare as a checkout that had never rendered one at all.
+          rmdir --ignore-fail-on-non-empty site/src/banners
+      # `git add site/src/banners 2>/dev/null || true`: the one path this
+      # repository has never committed anything under before this task
+      # lands is not a valid pathspec at all (confirmed by hand -- see
+      # this task's own report) -- `git add` on a pathspec that matches
+      # nothing it has ever tracked exits non-zero even under `set -e`'s
+      # relaxed context here, which would abort this step on the ordinary,
+      # ongoing "still nothing scheduled" case (D-13) rather than let the
+      # "nothing to commit" branch below report it. Every other shape --
+      # a new file, a changed one, a previously-tracked one now deleted --
+      # `git add` already handles the ordinary way.
+      - name: Commit the share banner
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          git config user.name "convener-visuals"
+          git config user.email "convener-visuals@users.noreply.github.com"
+          git add site/src/banners 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "nothing to commit -- the share banner already matches the current scheduled edition(s)"
+            exit 0
+          fi
+          git commit -m "site: refresh the share banner for the current edition"
+          for attempt in 1 2 3; do
+            if git push; then
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
+            git pull --rebase
+          done
+          echo "::error::push failed after 3 attempts -- the share banner was not saved"
+          exit 1

@@ -17,15 +17,18 @@ The three names
   project has reviewed.
 - `BANNER` (1200x630) -- the share preview: 1200x630 is the size several
   major platforms already expect for a link-preview image (a wide,
-  roughly-1.91:1 crop), and it is also what becomes the `og:image` phase 5
+  roughly-1.91:1 crop), and it is also what fills the `og:image` phase 5
   deliberately left absent (that phase's own task 10, and its acceptance
-  criterion 6). Wiring the actual `<meta property="og:image">` tag is not
+  criterion 6). Wiring the actual `<meta property="og:image">` tag was not
   this module's job, or this task's -- see `visual.py`'s own docstring for
   why: phase 5 left the tag out rather than pointing it at a file that did
-  not exist yet, and one still does not exist until task 5's pinned render
-  and task 6's publishing trigger produce one at a stable, real address.
-  This module only makes sure the *composition* that will fill that file is
-  a correct, tested derivation, ready for whichever later task wires it in.
+  not exist yet. Task 9 (phase 6) is what finally carries a real, currently
+  scheduled edition's own render to a stable address
+  (`site/src/banners/<event id>.png`, committed by `.github/workflows/
+  visuals-production.yml`) and wires `site/.eleventy.js::eventBannerUrl`/
+  `site/src/_includes/layout.njk` to it. This module's own job stays what
+  it always was: making sure the *composition* that fills that file is a
+  correct, tested derivation.
 - `PRINT` -- F-03's seventh channel: a poster actually printed and pinned up
   in an institute, not a hypothetical. See `_a4_dimensions_px`'s own
   docstring for the size and resolution this settles on, and why.

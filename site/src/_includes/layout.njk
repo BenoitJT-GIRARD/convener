@@ -34,22 +34,32 @@
 <link rel="stylesheet" href="{{ '/style.css' | url }}">
 {#
   Open Graph / Twitter Card: acceptance criterion 6, a shared event page
-  shows a correct preview. No `og:image`/`twitter:image` here -- the
-  distinctive social image is phase 6's own deliverable (spec §6 names it as
-  the image generated in phase 6). Omitting the tag rather than pointing it
-  at a file that does not exist yet is the "fallback that is not broken" the
-  brief asks for: a link-preview bot renders a correct text-only card (title,
-  description, address), never a broken image. `twitter:card` is `summary`,
-  not `summary_large_image`, for the same reason -- that value promises an
-  image every client would then fail to fetch. Switch both once phase 6
-  lands a real, published image.
+  shows a correct preview. Phase 5's own task 10 left `og:image`/
+  `twitter:image` out entirely rather than point either at a file that did
+  not exist yet -- a link-preview bot rendering a correct text-only card
+  (title, description, address) is "a fallback that is not broken",
+  a broken image is not. Task 9 (phase 6) is what makes the tag safe to
+  restore: `pageImage` (event.njk's own `eleventyComputed`, empty string
+  when this page sets none) is this edition's real, published banner
+  address, only ever set once a file actually exists there
+  (`.eleventy.js::eventBannerUrl`) -- so the `{% if %}` below still chooses
+  the text-only card, never a broken one, for every page (including an
+  event with no banner ready yet) that carries no `pageImage`.
 #}
 <meta property="og:site_name" content="{{ site.title }}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="{{ fullTitle }}">
 <meta property="og:description" content="{{ fullDescription }}">
 <meta property="og:url" content="{{ canonicalUrl }}">
+{% if pageImage %}
+<meta property="og:image" content="{{ pageImage }}">
+<meta property="og:image:width" content="{{ shareImageWidth }}">
+<meta property="og:image:height" content="{{ shareImageHeight }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ pageImage }}">
+{% else %}
 <meta name="twitter:card" content="summary">
+{% endif %}
 <meta name="twitter:title" content="{{ fullTitle }}">
 <meta name="twitter:description" content="{{ fullDescription }}">
 </head>

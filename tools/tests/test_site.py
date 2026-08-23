@@ -19,6 +19,7 @@ already be installed, exactly the `npm ci` every other job that touches
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import shutil
@@ -34,6 +35,7 @@ from ics_reader import parse_calendar
 
 from convener_ops.certificate import VERIFICATION_BASE
 from convener_ops.confirmation import CONTACT_EMAIL
+from convener_ops.formats import BANNER
 from convener_ops.paths import repo_root
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
 from convener_ops.registration import SIGNUP_BASE, signup_url
@@ -2130,3 +2132,200 @@ def test_agenda_feed_long_title_folds_and_round_trips_intact(
     parsed = parse_calendar(raw)  # raises if any physical line exceeds 75 octets
     titles = {event.properties["SUMMARY"] for event in parsed.events}
     assert long_title in titles
+
+
+# -------------------------------------------------------------------------- #
+# Task 9 (phase 6): the share banner reaches a stable, published address.
+#
+# `og:image`/`twitter:image` (phase 5's own task 10, whose comment on the
+# block these tests exercise explains why the tag was left out until now)
+# resolve to real content only once a banner file actually exists at the
+# address the tag names -- and the committed fixture this module's own
+# `built_site` builds from can never exercise that on its own: no fixture
+# banner is committed to this repository (see this task's own report for
+# why not -- a committed image is in git history for ever, and the real
+# pipeline that produces one, `visuals-production.yml`, only ever commits
+# a *real*, currently-scheduled edition's banner; there is nothing this
+# project should carry permanently as a stand-in for that).
+#
+# `built_site_with_share_banner`, below, is deliberately not built the way
+# every other scratch-copy fixture above is (`--input=<scratch>/src`
+# against the real, unmodified `site/`): `.eleventy.js`'s own
+# `addPassthroughCopy('src/banners')` resolves its source relative to the
+# *project root* (Eleventy's own documented behaviour -- confirmed by hand,
+# see this task's own report), never relative to a CLI `--input` override,
+# so a fixture that only swapped `src/` while still running the *real*
+# `site/.eleventy.js` would carry the real repository's own (currently
+# empty) `src/banners/`, not the scratch one this fixture writes a file
+# into. This fixture instead copies the *whole* `site/` project --
+# `.eleventy.js` and `package.json` included, `node_modules`/`_site`
+# excluded (Node resolves Eleventy's own CLI script, and everything it
+# `require`s, relative to that script's real install location, never to
+# `cwd`, so nothing here needs its own copy of the dependency tree) -- and
+# builds with no `--input` override at all, so the passthrough copy
+# resolves against *this* scratch copy's own root. That is what lets one
+# build exercise the real pipeline end to end: `src/_data/banners.js`
+# reading the scratch `src/banners/` it was actually given, `.eleventy.js::
+# eventBannerUrl` building this edition's real address from it, the
+# templates (`event.njk`, `layout.njk`) emitting the tag, and Eleventy's
+# own passthrough copy delivering the exact bytes into the built tree.
+# -------------------------------------------------------------------------- #
+
+_SITE_PROJECT_ROOT = ROOT / "site"
+
+#: The smallest byte sequence libpng accepts as a real image (a 1x1, true
+#: colour PNG) -- a stand-in for a real rendered banner, not one: these
+#: tests prove the *pipeline* (a file present, a tag built, its bytes
+#: delivered), never the composition itself (`test_visual.py` and task 5's
+#: own pinned image comparison already own that). Fabricated bytes, never
+#: Anonymous's own identity or any real speaker's likeness -- there is
+#: nothing here for P-4 or the "no personal data in the repository"
+#: constraint to say anything about.
+_MINIMAL_PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk"
+    "+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)
+
+
+@pytest.fixture(scope="module")
+def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A full, isolated copy of `site/` (config and source, never its
+    installed `node_modules` or a stale `_site`) with one banner file
+    added for the fixture's own scheduled edition -- see this section's
+    own module comment for why this fixture cannot use the plain
+    `--input` override every other scratch fixture in this module uses.
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    scratch_site = tmp_path_factory.mktemp("site-with-banner") / "site"
+    shutil.copytree(
+        _SITE_PROJECT_ROOT,
+        scratch_site,
+        ignore=shutil.ignore_patterns("node_modules", "_site"),
+    )
+    banners_dir = scratch_site / "src" / "banners"
+    banners_dir.mkdir(parents=True, exist_ok=True)
+    (banners_dir / f"{_the_one_scheduled_event_id()}.png").write_bytes(
+        _MINIMAL_PNG_BYTES
+    )
+    out = tmp_path_factory.mktemp("site-build-with-banner")
+    try:
+        subprocess.run(
+            ["node", str(_ELEVENTY_CMD), f"--output={out.as_posix()}"],
+            cwd=scratch_site,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+_OG_IMAGE_DIMENSION_RE = {
+    "width": re.compile(r'<meta property="og:image:width" content="([^"]*)"'),
+    "height": re.compile(r'<meta property="og:image:height" content="([^"]*)"'),
+}
+_TWITTER_CARD_RE = re.compile(r'<meta name="twitter:card" content="([^"]*)"')
+_TWITTER_IMAGE_RE = re.compile(r'<meta name="twitter:image" content="([^"]*)"')
+
+
+def test_a_scheduled_editions_share_banner_produces_a_correctly_dimensioned_tag(
+    built_site_with_share_banner: Path,
+) -> None:
+    """Task 9, acceptance step 2: `og:image` and its card equivalent, with
+    dimensions, pointing at the published address -- built from a real
+    banner file this fixture placed for the fixture's own scheduled
+    edition, not asserted against an absence the way phase 5's own task 10
+    test still correctly does for the ordinary, no-banner build
+    (`built_site`, above)."""
+    event_id = _the_one_scheduled_event_id()
+    page = (
+        built_site_with_share_banner / "events" / event_id / "index.html"
+    ).read_text(encoding="utf-8")
+
+    og_image = _OG_IMAGE_RE.search(page)
+    assert og_image is not None, "no og:image tag on a page with a real banner file"
+    expected_url = _absolute(f"/banners/{event_id}.png")
+    assert og_image.group(1) == expected_url
+
+    width = _OG_IMAGE_DIMENSION_RE["width"].search(page)
+    height = _OG_IMAGE_DIMENSION_RE["height"].search(page)
+    assert width is not None and height is not None
+    # Tied to `formats.py::BANNER` itself, not a hand-typed "1200"/"630" a
+    # second time: if that constant's own dimensions ever changed without
+    # `site/.eleventy.js`'s own hand-copied `SHARE_IMAGE_WIDTH`/
+    # `SHARE_IMAGE_HEIGHT` being updated to match, this is the assertion
+    # that would catch the drift (the same D-14 cross-language technique
+    # `_configured_path_prefix`/`_configured_site_origin` already use for
+    # this file's other hand-typed constants).
+    assert width.group(1) == str(int(BANNER.width))
+    assert height.group(1) == str(int(BANNER.height))
+
+    twitter_card = _TWITTER_CARD_RE.search(page)
+    twitter_image = _TWITTER_IMAGE_RE.search(page)
+    assert twitter_card is not None and twitter_card.group(1) == "summary_large_image"
+    assert twitter_image is not None and twitter_image.group(1) == expected_url
+
+
+def test_the_share_banners_tagged_address_resolves_to_the_exact_bytes_committed(
+    built_site_with_share_banner: Path,
+) -> None:
+    """The other half of acceptance step 1: the address is not merely
+    well-formed, it resolves inside the *built* tree, to the *same* bytes
+    this fixture placed under `src/banners/` -- proof that Eleventy's own
+    passthrough copy actually delivered this file, not merely that the
+    filter built a plausible-looking URL. Mutate this away (comment out
+    `.eleventy.js::addPassthroughCopy('src/banners')`) and this is the
+    test that notices the image has vanished from the built tree --
+    proven by hand, see this task's own report.
+    """
+    event_id = _the_one_scheduled_event_id()
+    page = (
+        built_site_with_share_banner / "events" / event_id / "index.html"
+    ).read_text(encoding="utf-8")
+    og_image = _OG_IMAGE_RE.search(page)
+    assert og_image is not None
+
+    target = _built_file_for_absolute_url(
+        og_image.group(1), built_site_with_share_banner
+    )
+    assert target.is_file(), (
+        f"{og_image.group(1)!r} does not resolve to a file the build wrote"
+    )
+    assert target.read_bytes() == _MINIMAL_PNG_BYTES
+
+
+def test_an_edition_with_no_banner_file_still_emits_no_og_image_tag(
+    built_site_with_share_banner: Path,
+) -> None:
+    """The mixed case: one edition in this same build has a banner, every
+    other one does not -- proof that a banner appearing for one edition
+    does not leak an `og:image` tag onto pages that have none of their
+    own, and that the "correct absence, not a broken pointer" choice
+    (phase 5's own task 10) still holds once the feature it was waiting
+    for exists."""
+    events = _events_fixture()
+    other_ids = [
+        str(e["id"]).lower()
+        for e in events
+        if str(e["id"]).lower() != _the_one_scheduled_event_id()
+    ]
+    assert other_ids, f"{_EVENTS_FIXTURE.as_posix()} carries only one event"
+    for other_id in other_ids:
+        page = (
+            built_site_with_share_banner / "events" / other_id / "index.html"
+        ).read_text(encoding="utf-8")
+        assert _OG_IMAGE_RE.search(page) is None, (
+            f"{other_id} carries no banner file but still got an og:image tag"
+        )
+        twitter_card = _TWITTER_CARD_RE.search(page)
+        assert twitter_card is not None and twitter_card.group(1) == "summary"

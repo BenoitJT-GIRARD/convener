@@ -162,6 +162,49 @@ function absoluteUrl(path) {
 }
 
 // ------------------------------------------------------------------ //
+// Task 9 (phase 6): the share image reaches the showcase.
+//
+// Phase 5's own task 10 left `og:image`/`twitter:image` out of layout.njk
+// entirely rather than point either at a file that did not exist yet (see
+// that file's own comment, still there, on the block this feeds). Phase 6
+// built the banner (`tools/convener_ops/formats.py::BANNER`) but nothing carried
+// it to a stable public address until now -- `.github/workflows/
+// visuals-production.yml` renders every currently *scheduled* real
+// edition's own banner on its one pinned-browser job (P-2: that cost is
+// paid there, never here) and commits exactly that set under
+// `src/banners/<event id>.png`, regenerated whole on every run so an
+// edition that is no longer scheduled loses its file the same run --
+// never a stale image sitting at a live public address once the seminar it
+// pictures is no longer upcoming.
+//
+// `eventBannerUrl` is the read side of that write: given an event and the
+// list of ids that currently have a file (`src/_data/banners.js`, below),
+// it returns this edition's real, published address, or `''` when none
+// exists -- `event.njk`'s own `eleventyComputed.pageImage` calls this, and
+// `layout.njk`'s `{% if pageImage %}` treats the empty string exactly like
+// "unset", so a page with no banner ready emits no `og:image`/
+// `twitter:image` tag at all, the identical "a correct absence, not a
+// broken pointer" choice task 10 already made.
+// ------------------------------------------------------------------ //
+
+function eventBannerUrl(event, banners) {
+  const id = String(event.id).toLowerCase();
+  if (!banners.includes(id)) return '';
+  return absoluteUrl(`/banners/${id}.png`);
+}
+
+// `tools/convener_ops/formats.py::BANNER`'s own pixel size, copied here by hand
+// -- the identical D-14 cross-language split `SEMINAR_DURATION_MINUTES`
+// above already accepts for the same reason (this file cannot import a
+// Python constant). Exposed as the global data `shareImageWidth`/
+// `shareImageHeight` (below, `addGlobalData`) for `layout.njk`'s own
+// `og:image:width`/`og:image:height`, rather than hand-typed a second time
+// in that template -- one number to change if `BANNER`'s own dimensions
+// ever do. Change both together.
+const SHARE_IMAGE_WIDTH = 1200;
+const SHARE_IMAGE_HEIGHT = 630;
+
+// ------------------------------------------------------------------ //
 // Task 8 (phase 6): the public agenda feed -- iCalendar (RFC 5545), a
 // second and unrelated feed format from the syndication one above
 // (`feed.njk`): a calendar client subscribes to this one, an RSS reader
@@ -362,9 +405,23 @@ module.exports = function (cfg) {
   // here rather than `touch`-ed by the publish workflow so that the built
   // site is reproducible from this repository alone.
   cfg.addPassthroughCopy('src/.nojekyll');
+  // Task 9 (phase 6): the share banner(s) `visuals-production.yml` commits
+  // under `src/banners/`. A plain string, anchored to this project's own
+  // root exactly like the three passthrough copies above -- confirmed
+  // empirically (see this task's own report) that Eleventy neither errors
+  // nor writes anything when the source directory does not exist yet,
+  // which is the ordinary state whenever no real edition is currently
+  // scheduled (D-13): zero editions is zero banners, not a build failure.
+  cfg.addPassthroughCopy('src/banners');
 
   // See `absoluteUrl`'s own comment above for what this does and why.
   cfg.addFilter('absoluteUrl', absoluteUrl);
+  // `event | eventBannerUrl(banners)` for event.njk's own `pageImage` --
+  // see `eventBannerUrl`'s own comment above for the argument in full.
+  cfg.addFilter('eventBannerUrl', eventBannerUrl);
+  // `shareImageWidth`/`shareImageHeight` -- see their own comment above.
+  cfg.addGlobalData('shareImageWidth', SHARE_IMAGE_WIDTH);
+  cfg.addGlobalData('shareImageHeight', SHARE_IMAGE_HEIGHT);
 
   // JSON-LD objects built in event.njk carry `null` for a field that does
   // not apply to this edition's state -- no `potentialAction` on a past

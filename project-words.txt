@@ -84,3 +84,4 @@ pipefail
 segno
 regenerable
 Nunjucks
+pathspec

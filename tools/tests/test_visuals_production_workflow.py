@@ -105,18 +105,84 @@ def test_the_workflow_names_its_own_file_in_its_own_filter() -> None:
     assert ".github/workflows/visuals-production.yml" in _TRIGGERS["push"]["paths"]
 
 
-def test_job_is_read_only_with_a_bounded_timeout() -> None:
-    assert _JOB["permissions"] == {"contents": "read"}
+def test_job_permissions_cover_the_commit_and_dispatch_with_a_bounded_timeout() -> None:
+    """Task 9 (phase 6): this job now commits `site/src/banners/` back to
+    this repository and dispatches `publish-vitrine.yml` -- `contents:
+    write` and `actions: write` are exactly the pair `sweep.yml`,
+    `retention.yml` and the three certificate workflows already carry for
+    the identical reason (this file's own header comment). Nothing else:
+    still no `pull-requests`, `issues` or any other scope this job never
+    touches."""
+    assert _JOB["permissions"] == {"contents": "write", "actions": "write"}
     assert isinstance(_JOB.get("timeout-minutes"), int)
 
 
 def test_the_workflow_reads_no_repository_secret() -> None:
-    """This job never pushes anywhere and never reads private data beyond
-    this repository's own checkout -- unlike publish-vitrine.yml, it needs
-    no `VITRINE_DEPLOY_TOKEN` or any other secret at all. The same check
+    """This job never reads private data beyond this repository's own
+    checkout, and its own commit-and-dispatch step (task 9) authenticates
+    with `github.token` -- the ambient, scoped token every job already
+    receives, granted through the `permissions:` block above, never a
+    repository secret. Unlike publish-vitrine.yml, this workflow needs no
+    `VITRINE_DEPLOY_TOKEN` or any other secret at all. The same check
     `test_preview_workflow.py`'s own `test_the_workflow_reads_no_
     repository_secret` makes for preview.yml, for the identical reason."""
     assert "secrets." not in _WORKFLOW
+    assert "github.token" in _WORKFLOW
+
+
+def test_the_commit_step_uses_a_distinct_bot_identity() -> None:
+    """The same `convener-<task>` naming convention `sweep.yml` (`convener-sweep`),
+    `retention.yml` (`convener-retention`) and the certificate workflows
+    (`convener-certificates`) already use -- a distinct identity per writer
+    makes the commit log say which job produced a given commit without
+    opening it."""
+    assert 'git config user.name "convener-visuals"' in _WORKFLOW
+    assert 'git config user.email "convener-visuals@users.noreply.github.com"' in _WORKFLOW
+
+
+def test_the_commit_step_dispatches_publish_vitrine_after_a_successful_push() -> None:
+    """GitHub's recursion guard: a push made with this job's own
+    `GITHUB_TOKEN` cannot fire `publish-vitrine.yml`'s own `push` trigger,
+    even though `site/**` (which `site/src/banners/` sits under) is one of
+    the paths that trigger names -- the identical mechanism `sweep.yml`'s
+    own header comment documents for `data/speakers.yml`. Without this
+    dispatch, a freshly committed banner would sit in this repository
+    unpublished until something else happened to touch `site/**` or
+    `tools/**`."""
+    assert "gh workflow run publish-vitrine.yml" in _WORKFLOW
+    assert '--ref "$TARGET_BRANCH"' in _WORKFLOW
+
+
+def test_the_sync_step_regenerates_the_banner_directory_whole() -> None:
+    """`rm -rf` before repopulating, the same "regenerated whole, never
+    accumulated into" discipline `convener-render-visuals`'s own `OUTPUT_DIR`
+    handling already applies -- an edition no longer scheduled must lose
+    its banner in the same run, not leave a stale file sitting at a live
+    public address."""
+    sync_step = next(
+        s
+        for s in _JOB["steps"]
+        if s.get("name") == "Sync the share banner into the repository"
+    )
+    assert "if" not in sync_step, (
+        "the sync step must run even when nothing is scheduled (D-13) -- "
+        "that is exactly the run that has to clear a stale banner"
+    )
+    assert "rm -rf site/src/banners" in sync_step["run"]
+    assert "banner.png" in sync_step["run"]
+
+
+def test_the_sync_step_only_carries_the_banner_format_not_square_or_print() -> None:
+    """This file's own header comment: `square.png` and `print.png` stay
+    artefact-only, downloaded on demand -- only the one format a
+    link-preview bot fetches unprompted is committed to a stable address."""
+    sync_step = next(
+        s
+        for s in _JOB["steps"]
+        if s.get("name") == "Sync the share banner into the repository"
+    )
+    assert "square.png" not in sync_step["run"]
+    assert "print.png" not in sync_step["run"]
 
 
 def test_concurrency_group_is_scoped_to_the_ref_and_cancels_in_progress() -> None:
