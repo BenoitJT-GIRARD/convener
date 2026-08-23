@@ -9,18 +9,30 @@ name: Erase a registration early
 # same way resend-confirmation.yml and revoke-certificate.yml make their
 # own manual procedures reachable rather than a script nobody can run.
 #
-# MATCHING_CODE, in preference to EMAIL (R-32). The code is already in
-# the participant's own confirmation e-mail (task 7) and is never stored
-# anywhere on our side -- recomputing it and comparing is
-# tools/convener_ops/registration.py::find_by_matching_code's own job. EMAIL is
-# accepted as a fallback for someone who no longer has that e-mail: the
-# same deliberate, documented exception resend-confirmation.yml's own
-# header comment already makes for an identical reason -- an address in a
-# workflow_dispatch input is rendered and retained on the run page for as
-# long as the run's history exists (review round 1, Important 4), and
-# workflow_dispatch is restricted to collaborators with repository write
-# access, the same trust boundary as anyone who could already read the
-# job log.
+# MATCHING_CODE, in preference to ENCRYPTED_IDENTIFIER (R-32). The code
+# is already in the participant's own confirmation e-mail (task 7) and is
+# never stored anywhere on our side -- recomputing it and comparing is
+# tools/convener_ops/registration.py::find_by_matching_code's own job.
+# encrypted_identifier is accepted as a fallback for someone who no
+# longer has that e-mail -- the same deliberate, documented exception
+# resend-confirmation.yml's own header comment already makes for an
+# identical reason.
+#
+# H1, fix wave 2 (security audit 2026-08-23): this input used to be
+# `email`, a bare address -- GitHub renders and retains a
+# workflow_dispatch input's own value on the run page for as long as the
+# run's history exists, so the one command whose entire purpose is
+# erasing someone's address was manufacturing a fresh, permanent,
+# plaintext copy of exactly that address every time the fallback was
+# used (D-24: an operator command names a record, never a person).
+# `encrypted_identifier` is that same address, hybrid-encrypted under
+# this event's own already-published public key -- produced on an
+# operator's own machine with `convener-encrypt-identifier` (needs no secret:
+# `keys/events/<id>.pub` is public data, not a secret) -- so the value
+# GitHub renders and retains is ciphertext, decryptable only by whichever
+# CI job later holds this event's EVENT_PRIVATE_KEY. workflow_dispatch is
+# still restricted to collaborators with repository write access, but
+# that trust boundary is no longer what this input's safety rests on.
 on:
   workflow_dispatch:
     inputs:
@@ -31,16 +43,17 @@ on:
       matching_code:
         description: >-
           Preferred: the matching code from the participant's own
-          confirmation e-mail (e.g. ABCD-2345). Leave blank to use the
-          e-mail address instead.
+          confirmation e-mail (e.g. ABCD-2345). Leave blank to use
+          encrypted_identifier instead.
         required: false
         type: string
-      email:
+      encrypted_identifier:
         description: >-
           Fallback only, used when no matching code is given: the
-          registrant's e-mail address, exactly as they typed it at
-          signup. See this file's own header comment for why this is a
-          deliberate, documented exception (R-32).
+          registrant's e-mail address, encrypted for this event with
+          `cd tools && EVENT_ID=<id> REGISTRATION_EMAIL=<address> uv run
+          convener-encrypt-identifier` -- never the address itself. See this
+          file's own header comment for why (R-32, D-24, H1).
         required: false
         type: string
 
@@ -89,7 +102,7 @@ jobs:
         env:
           EVENT_ID: ${{ inputs.event_id }}
           MATCHING_CODE: ${{ inputs.matching_code }}
-          REGISTRATION_EMAIL: ${{ inputs.email }}
+          EMAIL_ENVELOPE: ${{ inputs.encrypted_identifier }}
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
         # `convener-erase-registration` re-run inside the retry loop, the same

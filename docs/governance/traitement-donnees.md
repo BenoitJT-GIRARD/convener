@@ -59,15 +59,20 @@ attendance, issuing a certificate — does so inside its own GitHub Actions
 job, for the length of that job's run, never on a laptop and never in a
 browser.
 
-**Two documented exceptions** put an address somewhere outside that
-pipeline, and both are named, deliberate, and narrow rather than
-overlooked: resending a confirmation
+**Two documented exceptions** still name a participant by address rather
+than by matching code, and both are named, deliberate, and narrow rather
+than overlooked: resending a confirmation
 (`.github/workflows/resend-confirmation.yml`) and the early-erasure fallback
 for someone who no longer has their matching code
-(`.github/workflows/erase-registration.yml`) each take an address as a
-manually-triggered workflow input, which GitHub retains on that run's own
-page for as long as the run's history exists. Both are restricted to
-collaborators with write access to this repository — the same boundary
+(`.github/workflows/erase-registration.yml`). Neither puts the address
+itself outside the pipeline any more: as of a security-audit fix (H1,
+2026-08-23), both take that address hybrid-encrypted under the event's
+own published public key, produced locally with `convener-encrypt-identifier`,
+never the address itself — GitHub still retains the manually-triggered
+workflow input on that run's own page for as long as the run's history
+exists, but what it retains is ciphertext, decryptable only by whichever
+CI job later holds this event's own private key. Both are also restricted
+to collaborators with write access to this repository — the same boundary
 that already gates every other administrative action here — and both are
 named in `config/integrations.yml` and `docs/reference/operations.md`.
 

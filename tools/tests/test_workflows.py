@@ -1576,6 +1576,78 @@ def test_certificate_workflows_accept_only_the_allowlisted_inputs() -> None:
         )
 
 
+# ------------------------------------------------------------------ #
+# H1, fix wave 2 (security audit 2026-08-23): D-24 -- an operator command
+# names a thing, never a person -- applies to every workflow_dispatch
+# input in the repository, not only the certificate trio above. H1 found
+# exactly the gap `test_certificate_workflows_accept_only_the_
+# allowlisted_inputs`'s own docstring already names as the reason an
+# allowlist beats a denylist: `erase-registration.yml` and
+# `resend-confirmation.yml` both took a bare `email` input, which GitHub
+# renders and retains on the run's own page for as long as the run's
+# history exists -- so the erasure command was manufacturing a fresh,
+# permanent, plaintext copy of the exact address it exists to erase.
+#
+# Repository-wide, an allowlist of every legitimate input name is not
+# viable -- a future workflow may legitimately need a new identifier this
+# module has never seen -- so this closes the *class* the other way: a
+# denylist of the person-shaped word *parts* an input name's own
+# underscore-separated tokens must never contain. `certificate_id`,
+# `conference_id`, `encrypted_identifier` and `matching_code` all clear
+# it; `email`, `attendee_address`, `contact` and `first_name` all trip it,
+# whatever workflow they turn up in next.
+# ------------------------------------------------------------------ #
+
+#: Every token a workflow_dispatch input's own name, split on `_`, must
+#: never contain -- each one names a person-shaped fact rather than a
+#: record. Deliberately word *parts*, not whole names: `attendee_address`
+#: splits to `{"attendee", "address"}`, `contact_email` to `{"contact",
+#: "email"}`, `first_name` to `{"first", "name"}` -- every one caught by a
+#: single token here, without hand-listing every compound name a future
+#: workflow might spell it with.
+_PERSON_LIKE_INPUT_TOKENS = frozenset(
+    {
+        "email",
+        "mail",
+        "address",
+        "name",
+        "phone",
+        "surname",
+        "firstname",
+        "lastname",
+        "contact",
+        "who",
+        "institution",
+    }
+)
+
+
+def _workflow_dispatch_input_names(workflow: Path) -> set[str]:
+    text = workflow.read_text(encoding="utf-8")
+    trigger = text.split("jobs:")[0]
+    return set(_WORKFLOW_DISPATCH_INPUT_NAME_RE.findall(trigger))
+
+
+@pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
+def test_no_workflow_dispatch_input_looks_like_a_person(workflow: Path) -> None:
+    """D-24, repository-wide: closes the class H1 found one instance of.
+    Every workflow_dispatch input's own name is split on `_`; none of its
+    tokens may be a person-shaped word from `_PERSON_LIKE_INPUT_TOKENS`.
+    A thirtieth workflow that adds `attendee_address`, `contact_email` or
+    `first_name` fails this the moment it is written, by name, rather than
+    waiting for the next security audit to find it by hand."""
+    for name in _workflow_dispatch_input_names(workflow):
+        tokens = set(name.lower().split("_"))
+        offending = tokens & _PERSON_LIKE_INPUT_TOKENS
+        assert not offending, (
+            f"{workflow.name}: workflow_dispatch input {name!r} carries "
+            f"{sorted(offending)} -- an operator command names a record, "
+            "never a person (D-24); GitHub renders and retains a "
+            "dispatch input's own value on the run page for as long as "
+            "the run exists"
+        )
+
+
 def test_certificate_workflows_share_one_concurrency_group_per_event() -> None:
     """All three write the same `certificates.yml` for one event -- see
     issue-certificates.yml's own comment on why the group is shared
@@ -2155,7 +2227,7 @@ def test_resend_confirmation_workflow_carries_every_env_var_the_command_reads() 
     expected = _env_vars_read(CLI_MODULE_PATH, "resend_confirmation")
     assert expected == {
         "EVENT_ID",
-        "REGISTRATION_EMAIL",
+        "EMAIL_ENVELOPE",
         "EVENT_PRIVATE_KEY",
         "CONVENER_MATCHING_SALT",
         "CONVENER_MEETING_API_TOKEN",
@@ -2225,7 +2297,7 @@ def test_erase_registration_step_carries_every_env_var_the_command_reads() -> No
     assert expected == {
         "EVENT_ID",
         "MATCHING_CODE",
-        "REGISTRATION_EMAIL",
+        "EMAIL_ENVELOPE",
         "EVENT_PRIVATE_KEY",
         "CONVENER_MATCHING_SALT",
     }

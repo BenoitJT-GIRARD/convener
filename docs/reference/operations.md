@@ -538,13 +538,27 @@ first message carried. Use it when a confirmation is reported missing;
 spec S:9's own reasoning is that a certificate in the spam folder does not
 exist.
 
-One exception to the no-personal-data-in-a-retained-surface rule above:
-`workflow_dispatch`'s own `email` input is retained by GitHub on the run
-page for as long as the run's history exists. Deliberate, not an oversight
-— no other identifier for one registration exists to name it by instead
-(`tools/convener_ops/registration.py`'s own module docstring), and
-`workflow_dispatch` is restricted to collaborators with repository write
-access, the same trust boundary as the job log itself.
+One exception to the no-personal-data-in-a-retained-surface rule above: an
+address is still the only identifier for one registration
+(`tools/convener_ops/registration.py`'s own module docstring), so a resend still
+names one by address. **It never does so in the clear.**
+`workflow_dispatch`'s own `encrypted_identifier` input carries that address
+hybrid-encrypted under the event's own published public key, not the
+address itself — produce it with:
+
+```
+cd tools && EVENT_ID=mrg-042 REGISTRATION_EMAIL=person@example.org \
+  uv run convener-encrypt-identifier
+```
+
+which needs no secret (`keys/events/<id>.pub` is public data, not a
+secret) and prints one line of ciphertext to paste into the workflow's own
+form. GitHub still renders and retains a `workflow_dispatch` input's own
+value on the run page for as long as the run's history exists, but what it
+retains is now unreadable without this event's `EVENT_PRIVATE_KEY` — a
+security-audit fix (H1, 2026-08-23) closing what used to be a documented,
+deliberate exception resting only on `workflow_dispatch` being restricted
+to collaborators with repository write access.
 
 ## Video channel
 
@@ -769,11 +783,16 @@ code from the participant's own confirmation e-mail (`convener_ops.registration
 ever stores it). The e-mail address is accepted as a **documented,
 deliberate fallback** for someone who no longer has that e-mail (R-32) —
 the same exception *Outbound email*'s own "Manual resend" section above
-already makes for `convener-resend-confirmation`'s `email` input: rendered and
-retained on the run page for as long as the run's history exists,
-accepted anyway because refusing the request would be worse than the
-exposure, and `workflow_dispatch` is restricted to collaborators with
-repository write access regardless.
+already makes for `convener-resend-confirmation`'s `encrypted_identifier`
+input. As with that input, `erase-registration.yml`'s own
+`encrypted_identifier` field never carries the address itself: encrypt it
+first with `convener-encrypt-identifier` (see "Manual resend" above for the
+exact command), and paste the resulting ciphertext. `workflow_dispatch`
+is still restricted to collaborators with repository write access, but
+this fallback's safety no longer depends on that boundary — a security
+audit fix (H1, 2026-08-23) that closes what this exception used to
+accept as an open, permanent, plaintext copy of the address it exists to
+erase.
 
 **Once an event's key is destroyed, there is nothing left to erase, and
 this is provable rather than merely asserted (spec §4).**

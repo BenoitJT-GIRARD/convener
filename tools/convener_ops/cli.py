@@ -837,27 +837,31 @@ def resend_confirmation() -> int:
     phase 4 spec's risk table asks for (S:9: "a certificate in the spam
     folder does not exist").
 
-    Reads `EVENT_ID` and `REGISTRATION_EMAIL` -- both plain, operator-typed
-    values, not the encrypted relay payload `handle_registration` reads:
-    this is a human running a manual step (through a `workflow_dispatch`
-    input), never a public endpoint, so there is nothing here for a
-    stranger to reach. `EVENT_PRIVATE_KEY` is the same per-event secret
-    `handle_registration` reads.
+    Reads `EVENT_ID` -- a plain, operator-typed value -- and
+    `EMAIL_ENVELOPE`: not the address itself, but that address hybrid-
+    encrypted under this event's own public key (`eventkeys.encrypt`,
+    the identical wire format a browser already produces for a
+    registration), the same shape `convener-encrypt-identifier` exists to
+    produce on an operator's own machine. `EVENT_PRIVATE_KEY` is the same
+    per-event secret `handle_registration` reads, and is what this
+    function decrypts `EMAIL_ENVELOPE` with -- nothing here can recover an
+    address from `EMAIL_ENVELOPE` alone.
 
-    `REGISTRATION_EMAIL` is retained by GitHub on the run page for as long
-    as the run's history exists -- longer than the 14-day artefact
-    `resend-confirmation.yml` uploads specifically so an address does not
-    have to sit in a retained Actions surface (`config/integrations.yml`,
-    `docs/reference/operations.md`). This is a deliberate, narrow
-    exception, not an oversight: `registration.py`'s own module docstring
-    explains why no other identifier for one registration is stored at
-    all ("No stored identifier for whose entry is this"), so an address
-    is the only handle a resend can name a registration by, and
-    `workflow_dispatch` is restricted to collaborators with repository
-    write access -- the same trust boundary as anyone who could already
-    read the job log or a delivered artefact.
+    **H1, fix wave 2.** `EMAIL_ENVELOPE` used to be `REGISTRATION_EMAIL`,
+    a bare address: GitHub renders and retains a `workflow_dispatch`
+    input's own value on the run page for as long as the run's history
+    exists, which manufactured a fresh, permanent, plaintext copy of the
+    address every single resend -- the identical exposure H1 named for
+    `erase-registration.yml`'s own fallback. `registration.py`'s own
+    module docstring still explains why no other identifier for one
+    registration is stored at all ("No stored identifier for whose entry
+    is this"), so an address is still the only handle a resend can name a
+    registration by -- but D-24 requires it never sit on the run page in
+    the clear, and ciphertext is what closes that without giving up the
+    handle: only the CI job holding `EVENT_PRIVATE_KEY` can ever turn
+    `EMAIL_ENVELOPE` back into the address it names.
 
-    Finds the one entry for `REGISTRATION_EMAIL` in `registrations.enc`
+    Finds the one entry for the decrypted address in `registrations.enc`
     (`registration.find_by_email`) and re-composes the message
     `_send_confirmation` would have composed for it, with `changed=()`: a
     resend repeats the current, stored registration -- it does not
@@ -878,14 +882,29 @@ def resend_confirmation() -> int:
         print("no valid event id supplied", file=sys.stderr)
         return 1
 
-    email = os.environ.get("REGISTRATION_EMAIL", "").strip()
-    if not email:
-        print("no registration e-mail address supplied", file=sys.stderr)
+    envelope = os.environ.get("EMAIL_ENVELOPE", "").strip()
+    if not envelope:
+        print("no encrypted identifier supplied", file=sys.stderr)
         return 1
 
     private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
     if not private_pem:
         print(f"no private key configured for event {event_id}", file=sys.stderr)
+        return 1
+
+    try:
+        email = eventkeys.decrypt(private_pem, envelope).decode("utf-8").strip()
+    except (eventkeys.DecryptionError, UnicodeDecodeError):
+        # D-25: a supplied identifier this job cannot read must refuse
+        # loudly, not silently fall through to "no registration found" --
+        # the two causes (wrong identifier, undecryptable identifier) are
+        # not the same fact and must not be reported as though they were.
+        print(
+            "the supplied encrypted identifier could not be decrypted", file=sys.stderr
+        )
+        return 1
+    if not email:
+        print("the supplied encrypted identifier is empty", file=sys.stderr)
         return 1
 
     root = repo_root()
@@ -906,6 +925,66 @@ def resend_confirmation() -> int:
         return 1
 
     _send_confirmation(event_id, registration, ())
+    return 0
+
+
+def encrypt_identifier() -> int:
+    """`convener-encrypt-identifier`: turn a registrant's own e-mail address
+    into the ciphertext `resend-confirmation.yml`'s and
+    `erase-registration.yml`'s own `encrypted_identifier` input both
+    expect -- H1's fix, closing the class rather than the one instance.
+
+    D-24: an operator command names a record, never a person. Both
+    workflows' own declared exception lets a participant who lost their
+    confirmation e-mail -- and, with it, their own matching code -- be
+    resolved by address instead, but a raw address typed straight into a
+    `workflow_dispatch` input is rendered and permanently retained on
+    that run's own page, for anyone with repository read access, for as
+    long as the run's history exists. This command closes that without
+    giving up the fallback: it reuses `eventkeys.encrypt`, the identical
+    hybrid construction a browser already performs client-side for a
+    registration itself, so the value an operator pastes into the
+    dispatch form is ciphertext -- decryptable only by whichever CI job
+    later holds this event's own `EVENT_PRIVATE_KEY`, the same secret
+    that already never leaves a job's own environment (`eventkeys.py`'s
+    own module docstring).
+
+    Runs entirely outside continuous integration, on an operator's own
+    machine, against the event's already-published public key
+    (`keys/events/<id>.pub`) -- needs no secret at all: encrypting under
+    a public key is exactly the operation a stranger with no account
+    could already perform (the same reasoning
+    `encrypt_attendance_export`'s own docstring gives for its identical
+    "no secret needed" shape).
+
+    Reads `EVENT_ID` and `REGISTRATION_EMAIL` -- both plain, operator-
+    typed values on the operator's own terminal, never inside a CI job
+    and never written to any file this command controls. Refuses (exit
+    1) when the event id is not shaped like one, when no public key has
+    been published for it yet, or when `REGISTRATION_EMAIL` is empty.
+    Prints the resulting envelope -- `eventkeys.encrypt`'s own compact
+    JSON, one line -- to stdout and nothing else, for the operator to
+    copy into the workflow's own `encrypted_identifier` field.
+    """
+    event_id = os.environ.get("EVENT_ID", "").strip()
+    try:
+        eventkeys.secret_name(event_id)
+    except ValueError:
+        print("no valid event id supplied", file=sys.stderr)
+        return 1
+
+    email = os.environ.get("REGISTRATION_EMAIL", "").strip()
+    if not email:
+        print("no e-mail address supplied", file=sys.stderr)
+        return 1
+
+    public_path = eventkeys.public_key_path(event_id)
+    if not public_path.exists():
+        print(f"no public key published for event {event_id}", file=sys.stderr)
+        return 1
+
+    public_pem = public_path.read_text(encoding="utf-8")
+    print(eventkeys.encrypt(public_pem, email.encode("utf-8")))
     return 0
 
 
@@ -1338,18 +1417,26 @@ def erase_registration() -> int:
     concerne, procedure documentee et testee").
 
     **Identifies the registration by `MATCHING_CODE` in preference to
-    `REGISTRATION_EMAIL` (R-32).** The code is already in the
-    participant's own confirmation e-mail (task 7) and is recomputed and
-    compared against every stored entry
-    (`registration.find_by_matching_code`), never reversed out of
-    anything stored -- nothing here stores it. `REGISTRATION_EMAIL` is
-    accepted as a fallback for a participant who no longer has that
-    e-mail: the same **deliberate, documented exception**
-    `resend_confirmation` above already makes for the identical reason
-    (an address in a `workflow_dispatch` input is rendered and retained on
-    the run page -- review round 1, Important 4 -- accepted anyway because
-    refusing the request would be worse than the exposure). Both may be
-    supplied; the code is tried first.
+    `EMAIL_ENVELOPE` (R-32).** The code is already in the participant's
+    own confirmation e-mail (task 7) and is recomputed and compared
+    against every stored entry (`registration.find_by_matching_code`),
+    never reversed out of anything stored -- nothing here stores it.
+    `EMAIL_ENVELOPE` is accepted as a fallback for a participant who no
+    longer has that e-mail: the same **deliberate, documented exception**
+    `resend_confirmation` above already makes for the identical reason.
+
+    **H1, fix wave 2.** `EMAIL_ENVELOPE` used to be `REGISTRATION_EMAIL`,
+    a bare address rendered and retained on the run page for as long as
+    the run's history exists -- the erasure command manufacturing a
+    fresh, permanent, plaintext copy of the exact address it exists to
+    erase, which is the sharpest way D-24 can be broken. `EMAIL_ENVELOPE`
+    is that same address hybrid-encrypted under this event's own public
+    key instead (`eventkeys.encrypt`, produced on an operator's own
+    machine by `convener-encrypt-identifier`, needing no secret); this
+    function decrypts it with `EVENT_PRIVATE_KEY` -- already required
+    below for the erasure itself -- and the plaintext never exists
+    anywhere but this job's own memory. Both `MATCHING_CODE` and
+    `EMAIL_ENVELOPE` may be supplied; the code is tried first.
 
     **A code collision (Minor 8) is resolved by the address, if one was
     also given and it narrows the tie to exactly one entry** -- reading
@@ -1414,15 +1501,31 @@ def erase_registration() -> int:
         return 1
 
     code = os.environ.get("MATCHING_CODE", "").strip()
-    email = os.environ.get("REGISTRATION_EMAIL", "").strip()
-    if not code and not email:
-        print("no matching code or e-mail address supplied", file=sys.stderr)
+    envelope = os.environ.get("EMAIL_ENVELOPE", "").strip()
+    if not code and not envelope:
+        print("no matching code or encrypted identifier supplied", file=sys.stderr)
         return 1
 
     private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
     if not private_pem:
         print(f"no private key configured for event {event_id}", file=sys.stderr)
         return 1
+
+    email = ""
+    if envelope:
+        try:
+            email = eventkeys.decrypt(private_pem, envelope).decode("utf-8").strip()
+        except (eventkeys.DecryptionError, UnicodeDecodeError):
+            # D-25: refuse loudly rather than silently treating an
+            # undecryptable envelope the same as "no address supplied" --
+            # those are different facts, and folding them together would
+            # let a mistyped or stale envelope look like a plain refusal
+            # to identify anyone.
+            print(
+                "the supplied encrypted identifier could not be decrypted",
+                file=sys.stderr,
+            )
+            return 1
 
     rel_path = Path("data") / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path

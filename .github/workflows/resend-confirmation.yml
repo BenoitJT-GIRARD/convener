@@ -15,18 +15,27 @@ on:
         description: 'Event id, exactly as published (e.g. mrg-042)'
         required: true
         type: string
-      email:
-        # Review round 1, Important 4: GitHub renders and retains a
-        # workflow_dispatch input on the run page for as long as the run's
-        # history exists. Accepted here anyway, deliberately:
-        # registration.py's own module docstring explains why no other
-        # identifier for one registration is stored at all ("No stored
-        # identifier for whose entry is this"), so an address is the only
-        # handle a resend can name a registration by, and
-        # `workflow_dispatch` is restricted to collaborators with
-        # repository write access -- the same trust boundary as anyone who
-        # could already read the job log.
-        description: "The registrant's e-mail address, exactly as they typed it at signup"
+      encrypted_identifier:
+        # H1, fix wave 2 (security audit 2026-08-23): this input used to
+        # be `email`, a bare address -- GitHub renders and retains a
+        # workflow_dispatch input's own value on the run page for as long
+        # as the run's history exists, so every resend manufactured a
+        # fresh, permanent, plaintext copy of the registrant's address
+        # (D-24: an operator command names a record, never a person).
+        # `registration.py`'s own module docstring still explains why no
+        # other identifier for one registration is stored at all ("No
+        # stored identifier for whose entry is this"), so an address is
+        # still the only handle a resend can name a registration by -- but
+        # it now arrives encrypted under this event's own already-
+        # published public key, produced on an operator's own machine
+        # with `convener-encrypt-identifier` (needs no secret), never as the
+        # address itself. `workflow_dispatch` is still restricted to
+        # collaborators with repository write access, but that trust
+        # boundary is no longer what this input's safety rests on.
+        description: >-
+          The registrant's e-mail address, encrypted for this event with
+          `cd tools && EVENT_ID=<id> REGISTRATION_EMAIL=<address> uv run
+          convener-encrypt-identifier` -- never the address itself.
         required: true
         type: string
 
@@ -60,7 +69,7 @@ jobs:
         working-directory: tools
         env:
           EVENT_ID: ${{ inputs.event_id }}
-          REGISTRATION_EMAIL: ${{ inputs.email }}
+          EMAIL_ENVELOPE: ${{ inputs.encrypted_identifier }}
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           # Fix round 1, M1: same reasoning as registration.yml's own

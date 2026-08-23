@@ -48,6 +48,7 @@ convener-registration-secret-name = "convener_ops.cli:resolve_registration_secre
 convener-handle-registration = "convener_ops.cli:handle_registration"
 convener-send-confirmation = "convener_ops.cli:send_confirmation"
 convener-resend-confirmation = "convener_ops.cli:resend_confirmation"
+convener-encrypt-identifier = "convener_ops.cli:encrypt_identifier"
 convener-encrypt-attendance-export = "convener_ops.cli:encrypt_attendance_export"
 convener-match-attendance = "convener_ops.cli:match_attendance"
 convener-release-recording = "convener_ops.cli:release_recording"

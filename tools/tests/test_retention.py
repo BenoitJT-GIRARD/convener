@@ -471,6 +471,14 @@ def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, 
     return private_pem, public_pem
 
 
+def _email_envelope(public_pem: str, email: str) -> str:
+    """The `EMAIL_ENVELOPE` shape H1's fix expects: `email`, hybrid-
+    encrypted under `public_pem` -- the same envelope
+    `convener-encrypt-identifier` produces on an operator's own machine, and
+    `erase_registration`'s own new decrypt step expects to read back."""
+    return encrypt(public_pem, email.encode("utf-8"))
+
+
 def _write_speaker(
     tmp_path: Path, event_id: str = "mrg-042", event_date: str = ""
 ) -> None:
@@ -1041,7 +1049,9 @@ def test_erase_registration_for_an_unknown_event_returns_1(
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    # Never decrypted -- the "not known to this repository" refusal comes
+    # first, before EMAIL_ENVELOPE is even read.
+    monkeypatch.setenv("EMAIL_ENVELOPE", "irrelevant")
 
     assert erase_registration() == 1
     assert "not known to this repository" in capsys.readouterr().err
@@ -1057,7 +1067,9 @@ def test_erase_registration_after_destruction_proves_nothing_remains(
     _write_destruction_registry(tmp_path, {"mrg-042": date(2026, 4, 1)})
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    # Never decrypted -- the destroyed-event branch returns before
+    # EMAIL_ENVELOPE is read at all.
+    monkeypatch.setenv("EMAIL_ENVELOPE", "irrelevant")
     monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
 
     assert erase_registration() == 0
@@ -1079,7 +1091,9 @@ def test_erase_registration_refuses_a_key_supplied_for_a_destroyed_event(
     _write_destruction_registry(tmp_path, {"mrg-042": date(2026, 4, 1)})
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    # Never decrypted -- the contradiction refusal fires before
+    # EMAIL_ENVELOPE is read at all.
+    monkeypatch.setenv("EMAIL_ENVELOPE", "irrelevant")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert erase_registration() == 1
@@ -1095,19 +1109,19 @@ def test_erase_registration_with_no_identifying_input_returns_1(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.delenv("MATCHING_CODE", raising=False)
-    monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
+    monkeypatch.delenv("EMAIL_ENVELOPE", raising=False)
 
     assert erase_registration() == 1
-    assert "no matching code or e-mail address" in capsys.readouterr().err
+    assert "no matching code or encrypted identifier" in capsys.readouterr().err
 
 
 def test_erase_registration_without_a_configured_key_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    _publish_event_key(tmp_path, "mrg-042")
+    _private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
 
     assert erase_registration() == 1
@@ -1117,10 +1131,10 @@ def test_erase_registration_without_a_configured_key_returns_1(
 def test_erase_registration_with_nothing_recorded_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert erase_registration() == 1
@@ -1130,12 +1144,14 @@ def test_erase_registration_with_nothing_recorded_returns_1(
 def test_erase_registration_for_an_unknown_address_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "grace@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", _email_envelope(public_pem, "grace@example.org")
+    )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert erase_registration() == 1
@@ -1145,13 +1161,13 @@ def test_erase_registration_for_an_unknown_address_returns_1(
 def test_erase_registration_removes_only_the_named_entry_by_address(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.delenv("MATCHING_CODE", raising=False)
 
@@ -1192,7 +1208,7 @@ def test_erase_registration_also_removes_the_persons_attendance_rows(
 
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.delenv("MATCHING_CODE", raising=False)
 
@@ -1213,12 +1229,12 @@ def test_erase_registration_with_no_attendance_export_still_erases(
     FCC-configured event, or one whose attendance was never encrypted) --
     the registration is still erased, and the message names no
     attendance rows because there were none to name."""
-    private_pem, _public_pem = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.delenv("MATCHING_CODE", raising=False)
 
@@ -1236,7 +1252,7 @@ def test_erase_registration_refuses_on_a_malformed_attendance_export(
     than reporting success while unable to actually complete it, and
     `registrations.enc` must be left exactly as it was: no partial
     erasure, ever."""
-    private_pem, _public_pem = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
     attendance_path = (
@@ -1249,7 +1265,7 @@ def test_erase_registration_refuses_on_a_malformed_attendance_export(
 
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.delenv("MATCHING_CODE", raising=False)
 
@@ -1267,7 +1283,7 @@ def test_erase_registration_prefers_the_matching_code_over_the_address(
     e-mail, is tried first -- this test supplies a matching code that
     resolves to Ada and a *wrong* address, and expects Ada to be the one
     erased anyway."""
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
@@ -1275,7 +1291,9 @@ def test_erase_registration_prefers_the_matching_code_over_the_address(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("MATCHING_CODE", code)
-    monkeypatch.setenv("REGISTRATION_EMAIL", "not-ada-at-all@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", _email_envelope(public_pem, "not-ada-at-all@example.org")
+    )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
 
@@ -1311,7 +1329,7 @@ def test_erase_registration_refuses_an_ambiguous_matching_code(
     monkeypatch.setenv("MATCHING_CODE", "ABCD-2345")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
-    monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
+    monkeypatch.delenv("EMAIL_ENVELOPE", raising=False)
 
     assert erase_registration() == 1
     err = capsys.readouterr().err
@@ -1333,7 +1351,7 @@ def test_erase_registration_refuses_a_collision_the_address_does_not_narrow(
     tied entries either (here, an address belonging to neither Ada nor
     Grace) -- still refuses, the same as no address at all. Reading
     evidence that does not resolve anything is not a reason to guess."""
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
@@ -1344,7 +1362,9 @@ def test_erase_registration_refuses_a_collision_the_address_does_not_narrow(
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("MATCHING_CODE", "ABCD-2345")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "not-ada-or-grace@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", _email_envelope(public_pem, "not-ada-or-grace@example.org")
+    )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
 
@@ -1368,7 +1388,7 @@ def test_erase_registration_resolves_an_ambiguous_matching_code_using_the_addres
     AmbiguousMatchingCodeError's own docstring) refuses to make. Grace's own
     address disambiguates the tie between Ada and Grace; Ada must survive,
     byte-for-byte untouched."""
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     grace = Registration("Grace", "Hopper", "grace@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada, grace)
@@ -1379,7 +1399,9 @@ def test_erase_registration_resolves_an_ambiguous_matching_code_using_the_addres
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("MATCHING_CODE", "ABCD-2345")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "grace@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", _email_envelope(public_pem, "grace@example.org")
+    )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt")
 
@@ -1394,13 +1416,13 @@ def test_erase_registration_resolves_an_ambiguous_matching_code_using_the_addres
 def test_erase_registration_falls_back_to_the_address_without_a_salt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("MATCHING_CODE", "ZZZZ-9999")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
 
@@ -1414,17 +1436,42 @@ def test_erase_registration_falls_back_to_the_address_without_a_salt(
 def test_erase_registration_rejects_a_malformed_committed_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
+    private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
     enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
     enc_path.parent.mkdir(parents=True, exist_ok=True)
     enc_path.write_text('{"v": 2, "registrations": []}', encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv("EMAIL_ENVELOPE", _email_envelope(public_pem, "ada@example.org"))
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert erase_registration() == 1
     assert "not a supported format version" in capsys.readouterr().err
+
+
+def test_erase_registration_refuses_an_undecryptable_envelope(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """H1, fix wave 2 -- D-25: an EMAIL_ENVELOPE this job cannot decrypt
+    (wrong event's key, corrupted paste, or the pre-fix plaintext address
+    typed in by habit) must refuse loudly and specifically, never fall
+    through to a generic "no registration found" that would misreport
+    why nothing happened."""
+    private_pem, _public_pem = _publish_event_key(tmp_path, "mrg-042")
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("MATCHING_CODE", raising=False)
+    monkeypatch.setenv("EMAIL_ENVELOPE", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert erase_registration() == 1
+    assert "could not be decrypted" in capsys.readouterr().err
+
+    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
+    assert len(remaining.entries) == 1
 
 
 def test_erase_registration_rejects_a_malformed_destruction_registry(
@@ -1436,7 +1483,9 @@ def test_erase_registration_rejects_a_malformed_destruction_registry(
     registry_path.write_text("v: 2\ndestructions: []\n", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    # Never decrypted -- the malformed-registry refusal fires before
+    # EMAIL_ENVELOPE is read at all.
+    monkeypatch.setenv("EMAIL_ENVELOPE", "irrelevant")
 
     assert erase_registration() == 1
     assert "format version" in capsys.readouterr().err

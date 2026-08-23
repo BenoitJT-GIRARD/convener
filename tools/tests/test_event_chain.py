@@ -201,14 +201,16 @@ def _write_certificates_register_directly(
 def test_confirmation_resend_replays_from_a_committed_registration_alone(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    private_pem, _public_pem = _publish_event_key(tmp_path)
+    private_pem, public_pem = _publish_event_key(tmp_path)
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations_directly(tmp_path, "mrg-042", private_pem, ada)
 
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b"ada@example.org")
+    )
 
     assert resend_confirmation() == 0
 
@@ -663,14 +665,16 @@ def test_record_destructions_replays_from_env_alone_recovering_a_wedged_sweep(
 def test_erase_registration_replays_from_a_committed_register_alone(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    private_pem, _public_pem = _publish_event_key(tmp_path)
+    private_pem, public_pem = _publish_event_key(tmp_path)
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations_directly(tmp_path, "mrg-042", private_pem, ada)
 
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b"ada@example.org")
+    )
     monkeypatch.delenv("MATCHING_CODE", raising=False)
 
     assert erase_registration() == 0

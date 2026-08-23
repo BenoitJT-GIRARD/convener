@@ -542,8 +542,9 @@ class AmbiguousMatchingCodeError(Exception):
     not always the right answer.** A collision on the code alone must
     refuse -- there is nothing else to go on, and picking one would be
     exactly the guess `attendance._settle` exists to prevent. But R-32
-    already lets a requester supply `REGISTRATION_EMAIL` alongside the
-    code, and if that address picks out exactly one of the tied entries,
+    already lets a requester supply an encrypted address (`EMAIL_ENVELOPE`,
+    H1's fix wave 2) alongside the code, and if that address picks out
+    exactly one of the tied entries,
     using it is not guessing -- it is reading the evidence the requester
     actually gave us. Refusing anyway would deny erasure to someone who
     supplied more than enough to identify themselves, which is the

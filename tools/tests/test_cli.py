@@ -30,6 +30,7 @@ from convener_ops.cli import (
     deliver_certificates,
     discard_recording,
     encrypt_attendance_export,
+    encrypt_identifier,
     handle_proposal,
     handle_registration,
     handle_survey_response,
@@ -1411,7 +1412,9 @@ def test_resend_confirmation_reproduces_the_original_code(
     assert code in original
 
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b"ada@example.org")
+    )
     assert resend_confirmation() == 0
 
     assert len(_RecordingSmtpClient.sent) == 2
@@ -1457,7 +1460,9 @@ def test_resend_confirmation_does_not_claim_an_update(
     monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _RecordingSmtpClient)
 
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b"ada@example.org")
+    )
     assert resend_confirmation() == 0
 
     assert len(_RecordingSmtpClient.sent) == 1
@@ -1487,9 +1492,9 @@ def test_resend_confirmation_with_no_email_returns_1(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
+    monkeypatch.delenv("EMAIL_ENVELOPE", raising=False)
     assert resend_confirmation() == 1
-    assert "no registration e-mail" in capsys.readouterr().err
+    assert "no encrypted identifier supplied" in capsys.readouterr().err
 
 
 def test_resend_confirmation_without_a_configured_key_returns_1(
@@ -1497,20 +1502,57 @@ def test_resend_confirmation_without_a_configured_key_returns_1(
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    # Never decrypted -- the missing-key refusal fires before
+    # EMAIL_ENVELOPE is read at all.
+    monkeypatch.setenv("EMAIL_ENVELOPE", "irrelevant")
     monkeypatch.delenv("EVENT_PRIVATE_KEY", raising=False)
 
     assert resend_confirmation() == 1
     assert "no private key configured for event mrg-042" in capsys.readouterr().err
 
 
+def test_resend_confirmation_refuses_an_undecryptable_envelope(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """H1, fix wave 2 -- D-25: an EMAIL_ENVELOPE this job cannot decrypt
+    (a stale plaintext address typed in by habit, a corrupted paste, or
+    ciphertext meant for a different event) must refuse loudly and
+    specifically, never fall through to a generic "no registration
+    found" that would misreport why nothing happened."""
+    private_pem, _public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EMAIL_ENVELOPE", "ada@example.org")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert resend_confirmation() == 1
+    assert "could not be decrypted" in capsys.readouterr().err
+
+
+def test_resend_confirmation_refuses_an_envelope_decrypting_to_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A well-formed envelope that decrypts to an empty string is not the
+    same fact as none being supplied at all, and must say so."""
+    private_pem, public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b""))
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+
+    assert resend_confirmation() == 1
+    assert "encrypted identifier is empty" in capsys.readouterr().err
+
+
 def test_resend_confirmation_with_nothing_recorded_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    private_pem, _ = _publish_event_key(tmp_path)
+    private_pem, public_pem = _publish_event_key(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b"ada@example.org")
+    )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert resend_confirmation() == 1
@@ -1531,7 +1573,9 @@ def test_resend_confirmation_for_an_unknown_address_returns_1(
     assert handle_registration() == 0
 
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "grace@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b"grace@example.org")
+    )
 
     assert resend_confirmation() == 1
     assert "no registration found for event mrg-042" in capsys.readouterr().err
@@ -1540,13 +1584,15 @@ def test_resend_confirmation_for_an_unknown_address_returns_1(
 def test_resend_confirmation_rejects_a_malformed_committed_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    private_pem, _ = _publish_event_key(tmp_path)
+    private_pem, public_pem = _publish_event_key(tmp_path)
     events_dir = tmp_path / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
-    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+    monkeypatch.setenv(
+        "EMAIL_ENVELOPE", eventkeys.encrypt(public_pem, b"ada@example.org")
+    )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
 
     assert resend_confirmation() == 1
@@ -2059,6 +2105,98 @@ def test_encrypt_attendance_export_never_reads_the_private_key(
     monkeypatch.setattr(os_module.environ, "get", _guarded_get)
 
     assert encrypt_attendance_export() == 0
+
+
+# --- encrypt_identifier() ---------------------------------------------- #
+#
+# H1, fix wave 2: the local, no-secret command that lets an operator turn
+# a registrant's own address into the ciphertext erase-registration.yml's
+# and resend-confirmation.yml's own `encrypted_identifier` input expect,
+# so neither workflow ever has to accept the address itself.
+
+
+def test_encrypt_identifier_with_no_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("EVENT_ID", raising=False)
+    assert encrypt_identifier() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_encrypt_identifier_with_an_invalid_event_id_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "../escape")
+    assert encrypt_identifier() == 1
+    assert "no valid event id" in capsys.readouterr().err
+
+
+def test_encrypt_identifier_with_no_email_returns_1(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.delenv("REGISTRATION_EMAIL", raising=False)
+    assert encrypt_identifier() == 1
+    assert "no e-mail address" in capsys.readouterr().err
+
+
+def test_encrypt_identifier_without_a_published_key_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+
+    assert encrypt_identifier() == 1
+    assert "no public key published" in capsys.readouterr().err
+
+
+def test_encrypt_identifier_never_reads_the_private_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same "no secret needed" proof
+    `test_encrypt_attendance_export_never_reads_the_private_key` already
+    gives its own sibling command -- encrypting under a public key is
+    exactly the operation a stranger with no account, and this command
+    with no secret, could already perform."""
+    _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+
+    import os as os_module
+
+    real_get = os_module.environ.get
+
+    def _guarded_get(key: str, default: str | None = None) -> str | None:
+        assert key != "EVENT_PRIVATE_KEY", "must never read the event private key"
+        return real_get(key, default)
+
+    monkeypatch.setattr(os_module.environ, "get", _guarded_get)
+
+    assert encrypt_identifier() == 0
+
+
+def test_encrypt_identifier_prints_a_decryptable_envelope_and_nothing_else(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The round trip that actually matters: what this command prints is
+    exactly what `resend_confirmation` and `erase_registration` can
+    decrypt back into the same address -- and the address itself never
+    appears in anything this command prints."""
+    private_pem, _public_pem = _publish_event_key(tmp_path)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("REGISTRATION_EMAIL", "ada@example.org")
+
+    assert encrypt_identifier() == 0
+    out = capsys.readouterr().out
+    lines = out.strip("\n").splitlines()
+    assert len(lines) == 1
+    assert "ada@example.org" not in out
+
+    recovered = eventkeys.decrypt(private_pem, lines[0])
+    assert recovered == b"ada@example.org"
 
 
 def test_match_attendance_with_no_event_id_returns_1(

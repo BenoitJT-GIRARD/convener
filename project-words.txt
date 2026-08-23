@@ -86,3 +86,4 @@ regenerable
 Nunjucks
 pathspec
 undecryptable
+decryptable
