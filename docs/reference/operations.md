@@ -1631,6 +1631,39 @@ really been four for a year stops needing four voices to agree. Coming back
 is the same one word changed back to `active`, and a member re-seated
 through a nomination is reactivated in place rather than added twice.
 
+**This never touches the person's real GitHub access, and that gap is a
+security-relevant one — a manual step this rule does not take.** `inactive`
+is a flag in `data/config.yml`; the 2026-08-23 security audit's finding on
+write access is about a live GitHub setting (Settings → Collaborators, or
+whichever team grants access to this repository), which nothing in this
+codebase reads or writes. A member marked `inactive` here — or one who has
+left the Board entirely, replaced by a nomination — can keep full `Write`
+collaborator access indefinitely unless a maintainer separately removes it.
+That matters because `Write` is what lets a collaborator push a branch, add
+a step to a workflow that reads a sensitive secret, and dispatch that
+workflow against the branch — the exact path the audit's C1/C2 fix narrows
+with `.github/workflows/secret-workflow-monitor.yml` (detection, not
+prevention; see `docs/superpowers/mise-en-ligne.md` Sec 4 for why
+prevention itself is not available at zero cost here). Every person who
+keeps write after they stop being active is a needless widening of that
+population, at zero benefit to anyone.
+
+**The fix is a checklist item, run by hand, every time someone is marked
+`inactive` here or otherwise leaves an active role:** remove or downgrade
+their access under the organisation's collaborator settings, and remove
+them from any GitHub team that grants access to `example-cockpit`. There is no
+command for this and there should not be one. Automating it would need a
+token with organisation-admin (or at least member-management) permission —
+a credential that could add or remove *anyone's* access to *anything* the
+organisation holds is a far more dangerous secret than anything this system
+holds today, including `CONVENER_RETENTION_TOKEN`'s `Secrets: write` (see *CI-only
+secrets*, below, and *Retention and early erasure*, above, for what that one
+can already do). Building one to save a few minutes, a few times a year, is
+the exact trade AF-1 of the security audit already named as this project's
+own recurring mistake: a credential that can do more than its job. A person
+reading a short checklist is the right size of solution for a change this
+infrequent.
+
 Three things the rule will not do:
 
 - name anyone whose record cannot say when the silence began. Every
