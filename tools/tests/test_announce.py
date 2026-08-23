@@ -11,7 +11,17 @@ from convener_ops.announce import (
     network_post,
     recording_announcement,
 )
+from convener_ops.paths import repo_root
 from convener_ops.public_data import to_public
+
+#: Fix round 1: every function below now renders the real, committed
+#: `docs/toolkit/*.md` page -- the same file `app/src/content/render.ts`
+#: substitutes for the cockpit's own copy-to-clipboard button -- rather
+#: than a second, hand-typed English composed only in Python. `root=ROOT`
+#: is threaded through every call below the same way `visual.render_
+#: announcement(..., root=root)` already is: a pure function handed its
+#: own inputs, checked against the real checkout, never a fabricated one.
+ROOT = repo_root()
 
 # The literal value `site/src/_data/events.json`'s own MRG-05 fixture
 # carries, kept there as "a synthetic room-link-shaped column ... a
@@ -49,19 +59,28 @@ def _row(**overrides: Any) -> dict[str, Any]:
 
 class TestForumAnnouncement:
     def test_carries_the_real_facts(self) -> None:
-        text = forum_announcement(_row())
+        text = forum_announcement(_row(), root=ROOT)
         assert "Ada Lovelace" in text
         assert "Analytical Engines Institute" in text
         assert "On analytical engines" in text
         assert "An abstract about analytical engines." in text
 
-    def test_points_at_the_event_page_never_the_room(self) -> None:
-        text = forum_announcement(_row())
-        assert "https://example-instance.github.io/example-showcase/events/mrg-77/" in text
+    def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
+        """The property Fix round 1 exists to prove: a sentence that lives
+        only in `docs/toolkit/forum-post-announce.md`, never in this
+        module's own prose, must appear in the rendered text -- a
+        hand-rolled composition of the same facts could never produce it
+        by accident, so this fails the moment this module goes back to
+        composing English by hand instead of reading the file."""
+        text = forum_announcement(_row(), root=ROOT)
+        assert (
+            "we host a stellar speaker presenting their work at our "
+            "standing time of 12:30 Paris time on a Thursday" in text
+        )
 
-    def test_omits_the_thread_invitation_when_there_is_no_thread_yet(self) -> None:
-        text = forum_announcement(_row(forum_thread=""))
-        assert "join the discussion after the talk" not in text
+    def test_points_at_the_event_page_never_the_room(self) -> None:
+        text = forum_announcement(_row(), root=ROOT)
+        assert "https://example-instance.github.io/example-showcase/events/mrg-77/" in text
 
     def test_never_carries_a_room_link_even_if_one_reached_the_row(self) -> None:
         # `to_public` never maps a column to `zoom_link`, so a real row never
@@ -70,62 +89,99 @@ class TestForumAnnouncement:
         # itself never reads or echoes it, not merely that today's data
         # happens not to carry one.
         row = _row(zoom_link=POISONED_ROOM_LINK, registration_link=POISONED_ROOM_LINK)
-        text = forum_announcement(row)
+        text = forum_announcement(row, root=ROOT)
         assert POISONED_ROOM_LINK not in text
 
     def test_states_the_real_paris_offset_summer(self) -> None:
-        text = forum_announcement(_row(date="2026-06-11"))
+        text = forum_announcement(_row(date="2026-06-11"), root=ROOT)
         assert "CEST" in text
         assert "CET" not in text  # "CET" is not a substring of "CEST"
 
     def test_states_the_real_paris_offset_winter(self) -> None:
-        text = forum_announcement(_row(date="2026-03-12"))
+        text = forum_announcement(_row(date="2026-03-12"), root=ROOT)
         assert "CET" in text
         assert "CEST" not in text
 
 
 class TestNetworkPost:
-    def test_leads_with_the_title(self) -> None:
-        text = network_post(_row())
-        first_line = text.splitlines()[0]
-        assert first_line == "On analytical engines"
-
-    def test_carries_the_registration_link_and_the_real_offset(self) -> None:
-        text = network_post(_row(date="2026-09-10"))
+    def test_carries_the_real_facts_and_registration_link(self) -> None:
+        text = network_post(_row(date="2026-09-10"), root=ROOT)
+        assert "Ada Lovelace" in text
+        assert "Analytical Engines Institute" in text
+        assert "On analytical engines" in text
         assert "https://example-instance.github.io/example-showcase/events/mrg-77/" in text
         assert "CEST" in text
 
+    def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
+        text = network_post(_row(), root=ROOT)
+        assert "There is no LinkedIn robot behind this page and none is planned" in text
+
+    def test_carries_the_forum_thread_link_when_there_is_one(self) -> None:
+        # `docs/toolkit/linkedin-post.md` invites readers to the forum
+        # thread -- a field the old hand-rolled `network_post` never even
+        # read, since it composed its own, shorter English independently
+        # of the template.
+        text = network_post(
+            _row(forum_thread="https://forum.example.org/t/77"), root=ROOT
+        )
+        assert "https://forum.example.org/t/77" in text
+
     def test_never_carries_a_room_link(self) -> None:
         row = _row(zoom_link=POISONED_ROOM_LINK)
-        assert POISONED_ROOM_LINK not in network_post(row)
+        assert POISONED_ROOM_LINK not in network_post(row, root=ROOT)
 
 
 class TestMailingListMessage:
     def test_addresses_a_reader_who_does_not_know_the_series(self) -> None:
-        text = mailing_list_message(_row())
+        text = mailing_list_message(_row(), root=ROOT)
         assert "The Example Collective" in text
         assert "forum.example.test" in text
 
+    def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
+        text = mailing_list_message(_row(), root=ROOT)
+        assert "who did not ask about this particular talk" in text
+
     def test_carries_the_real_facts_and_registration_link(self) -> None:
-        text = mailing_list_message(_row())
+        text = mailing_list_message(_row(), root=ROOT)
         assert "Ada Lovelace" in text
         assert "https://example-instance.github.io/example-showcase/events/mrg-77/" in text
 
     def test_states_the_real_paris_offset_summer(self) -> None:
-        assert "CEST" in mailing_list_message(_row(date="2026-04-02"))
+        assert "CEST" in mailing_list_message(_row(date="2026-04-02"), root=ROOT)
 
     def test_states_the_real_paris_offset_winter(self) -> None:
-        assert "CET" in mailing_list_message(_row(date="2026-02-05"))
-        assert "CEST" not in mailing_list_message(_row(date="2026-02-05"))
+        text = mailing_list_message(_row(date="2026-02-05"), root=ROOT)
+        assert "CET" in text
+        assert "CEST" not in text
+
+    def test_shows_the_missing_marker_when_there_is_no_thread_yet(self) -> None:
+        # Unlike task 7's own hand-rolled version, the template states this
+        # sentence unconditionally -- an edition with no thread yet shows
+        # the ordinary `«missing: …»` marker, the same "not ready yet"
+        # signal every other unfilled field in this project already shows,
+        # rather than the sentence disappearing outright.
+        text = mailing_list_message(_row(forum_thread=""), root=ROOT)
+        assert "«missing: speaker.forum_thread»" in text
 
     def test_never_carries_a_room_link(self) -> None:
         row = _row(zoom_link=POISONED_ROOM_LINK)
-        assert POISONED_ROOM_LINK not in mailing_list_message(row)
+        assert POISONED_ROOM_LINK not in mailing_list_message(row, root=ROOT)
 
 
 class TestRecordingAnnouncement:
     def test_is_none_when_there_is_nothing_to_announce(self) -> None:
-        assert recording_announcement(_row(status="archived", youtube_url="")) is None
+        row = _row(status="archived", youtube_url="")
+        assert recording_announcement(row, root=ROOT) is None
+
+    def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
+        row = _row(
+            status="archived",
+            youtube_url="https://youtu.be/analytical-engines",
+            bio="Ada writes the first published computer program.",
+        )
+        text = recording_announcement(row, root=ROOT)
+        assert text is not None
+        assert "Check the recorded answer before you post" in text
 
     def test_carries_the_video_and_the_biography_when_present(self) -> None:
         row = _row(
@@ -133,19 +189,22 @@ class TestRecordingAnnouncement:
             youtube_url="https://youtu.be/analytical-engines",
             bio="Ada writes the first published computer program.",
         )
-        text = recording_announcement(row)
+        text = recording_announcement(row, root=ROOT)
         assert text is not None
         assert "https://youtu.be/analytical-engines" in text
         assert "Ada writes the first published computer program." in text
 
-    def test_omits_the_biography_paragraph_when_there_is_none(self) -> None:
+    def test_shows_the_missing_marker_when_there_is_no_biography_yet(self) -> None:
+        # Fix round 1: the template states this sentence unconditionally,
+        # the same way `render.ts::substitute` already does on the app's
+        # own side -- a blank field is the ordinary missing-marker signal,
+        # not a paragraph this function decides to omit on its own.
         row = _row(
             status="archived", youtube_url="https://youtu.be/analytical-engines", bio=""
         )
-        text = recording_announcement(row)
+        text = recording_announcement(row, root=ROOT)
         assert text is not None
-        # No stray blank paragraph or missing-marker left behind either.
-        assert "\n\n\n" not in text
+        assert "«missing: public.bio»" in text
 
     def test_never_carries_a_room_link(self) -> None:
         row = _row(
@@ -153,19 +212,21 @@ class TestRecordingAnnouncement:
             youtube_url="https://youtu.be/analytical-engines",
             zoom_link=POISONED_ROOM_LINK,
         )
-        text = recording_announcement(row)
+        text = recording_announcement(row, root=ROOT)
         assert text is not None
         assert POISONED_ROOM_LINK not in text
 
-    def test_omits_the_forum_paragraph_when_there_is_no_thread(self) -> None:
+    def test_shows_the_missing_marker_when_there_is_no_thread_yet(self) -> None:
         row = _row(
             status="archived",
             youtube_url="https://youtu.be/analytical-engines",
             forum_thread="",
         )
-        text = recording_announcement(row)
+        text = recording_announcement(row, root=ROOT)
         assert text is not None
-        assert "forum thread" not in text
+        assert "«missing: public.forum_thread»" in text
+        # The sentence itself stays -- only the address is missing.
+        assert "forum thread" in text
 
 
 class TestRoutedThroughTheRealGate:
@@ -211,7 +272,7 @@ class TestRoutedThroughTheRealGate:
         # regression that blanked the recording but forgot the biography.
         assert row["bio"] == ""
         assert row["youtube_url"] == ""
-        assert recording_announcement(row) is None
+        assert recording_announcement(row, root=ROOT) is None
 
     def test_discloses_once_consent_is_granted_and_the_board_has_published(
         self,
@@ -226,7 +287,7 @@ class TestRoutedThroughTheRealGate:
             }
         )
         [row] = to_public([entry])
-        text = recording_announcement(row)
+        text = recording_announcement(row, root=ROOT)
         assert text is not None
         assert "Ada writes the first published computer program." in text
         assert "https://youtu.be/analytical-engines" in text
@@ -243,7 +304,7 @@ class TestRoutedThroughTheRealGate:
         )
         [row] = to_public([entry])
         assert "zoom_link" not in row
-        text = recording_announcement(row)
+        text = recording_announcement(row, root=ROOT)
         assert text is not None
         assert POISONED_ROOM_LINK not in text
 
@@ -266,11 +327,15 @@ def test_each_of_the_four_texts_names_the_real_paris_offset(
     iso_date: str, expected: str
 ) -> None:
     row = _row(date=iso_date, status="scheduled")
-    for text in (forum_announcement(row), network_post(row), mailing_list_message(row)):
+    for text in (
+        forum_announcement(row, root=ROOT),
+        network_post(row, root=ROOT),
+        mailing_list_message(row, root=ROOT),
+    ):
         assert expected in text
     recording_row = _row(
         date=iso_date, status="archived", youtube_url="https://youtu.be/x"
     )
-    recording = recording_announcement(recording_row)
+    recording = recording_announcement(recording_row, root=ROOT)
     assert recording is not None
     assert expected in recording

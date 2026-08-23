@@ -4250,22 +4250,15 @@ def render_announcements() -> int:
 
     The app (`app/`, D-15's "cockpit") already offers an authenticated
     operator the same four texts, filled in live from the record they have
-    open -- see `docs/toolkit/mailing-list-announce.md` and
-    `docs/toolkit/recording-announce.md`, rendered through
-    `app/src/content/render.ts`'s gated `{{ public.… }}` vocabulary
-    (`app/src/state/consent.ts::toPublicFields`). This command is the
-    second, independent route to the identical four texts that needs no
-    browser and no authenticated session -- `uv run --project tools
-    convener-render-announcements OUTPUT_DIR` renders the current, real state of
-    `data/speakers.yml` on demand, from a plain checkout, exactly the same
-    "manual command, independent of any workflow" property
+    open, through `app/src/content/render.ts`'s gated `{{ public.… }}`
+    vocabulary (`app/src/state/consent.ts::toPublicFields`). This command
+    is the second, independent route to the identical four texts that
+    needs no browser and no authenticated session -- `uv run --project
+    tools convener-render-announcements OUTPUT_DIR` renders the current, real
+    state of `data/speakers.yml` on demand, from a plain checkout, exactly
+    the same "manual command, independent of any workflow" property
     `render_visuals`'s own docstring states for the visuals. Nothing here
-    wires it into a workflow: this task's own brief lists no
-    `.github/workflows/` file to touch, and D-09 asks for a text an
-    operator reads before it goes anywhere -- a scheduled job would be one
-    more standing mechanism nobody exercises, the exact hazard D-25 warns
-    against, for a text that would sit unread until somebody opened it
-    anyway.
+    wires it into a workflow yet.
 
     Routed through `public_data.to_public` before either module of task 7
     ever sees a row (`announce.py`'s own module docstring) -- never a
@@ -4310,11 +4303,11 @@ def render_announcements() -> int:
             status = row.get("status")
             texts: dict[str, str] = {}
             if status == "scheduled":
-                texts["forum"] = announce.forum_announcement(row)
-                texts["network"] = announce.network_post(row)
-                texts["mailing-list"] = announce.mailing_list_message(row)
+                texts["forum"] = announce.forum_announcement(row, root=root)
+                texts["network"] = announce.network_post(row, root=root)
+                texts["mailing-list"] = announce.mailing_list_message(row, root=root)
             elif status == "archived":
-                recording = announce.recording_announcement(row)
+                recording = announce.recording_announcement(row, root=root)
                 if recording is not None:
                     texts["recording"] = recording
             for channel, text in texts.items():

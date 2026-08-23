@@ -15,25 +15,36 @@ way `visual.render_announcement` never re-checks `photo_url`'s consent
 because `to_public` already emptied it. See `public_data.py`'s own module
 docstring for the argument in full; nothing here re-derives it.
 
-Why prose, not a `{{ }}` template
-----------------------------------
-`app/src/content/render.ts` already substitutes `docs/toolkit/*.md`'s own
-`{{ speaker.… }}`/`{{ public.… }}` placeholders for an operator working
-inside the cockpit (`app/`, D-15's "vitrine" vocabulary calls it that) --
-that is the surface named in this task's own brief as "where an operator
-would copy a text from", and it is not duplicated here. What this module
-adds is the same four texts built straight from `data/speakers.yml`, for a
-command line or a CI job with no browser and no authenticated session --
-`cli.py::render_announcements`'s own docstring says where that matters. So
-these functions compose plain English by hand, in Python, rather than
-re-reading the Markdown templates: a second templating engine over the same
-four files would be a second thing to keep in step with `render.ts`'s own,
-for a payoff -- byte-for-byte identical wording on two surfaces nobody reads
-side by side -- this project has not asked for. What *is* shared, and
-therefore reused rather than restated, is every fact that would otherwise
-drift: the real Europe/Paris offset (`visual.date_line`, D-14's own worked
-example of exactly this hazard) and the registration address (D-19,
-`registration.signup_url`).
+Fix round 1: one prose, not two
+--------------------------------
+This module used to compose its own English by hand, deliberately not
+reading `docs/toolkit/*.md` -- a second templating engine over the same
+four files, its own docstring argued, was a second thing to keep in step
+with `render.ts`'s own for a payoff nobody had asked for. That argument
+proved wrong the moment it was checked against what an operator actually
+copies: `InlineContent.tsx`'s "Copy to clipboard" button copies the whole
+substituted page, headers and volunteer notes included, and this module's
+hand-typed sentences were a *different*, shorter text under the same four
+names -- two independently-authored bodies of prose for one artefact, free
+to disagree the moment either one was edited without the other. D-14's own
+answer to a rule living on both sides of a language boundary is a shared
+fixture read from both sides, not two hand-typed copies; here the shared
+artefact is the templates themselves. So every function below now reads
+the identical file `render.ts` substitutes -- `docs/toolkit/forum-post-
+announce.md`, `linkedin-post.md`, `mailing-list-announce.md`, `recording-
+announce.md` -- through `_render`, a second, independent substitution
+engine (mechanics may exist twice; the words may not) that resolves the
+identical `{{ speaker.… }}`/`{{ public.… }}` vocabulary `render.ts::
+substitute` does, including the same `«missing: …»` marker for an unfilled
+field. A change to a template's wording now reaches both surfaces because
+there is only the one file to change; `tools/tests/test_announce.py`'s own
+mutation of a template proves it.
+
+`root` is threaded in by the caller (`cli.py::render_announcements`) rather
+than resolved here, the same convention `visual.render_announcement` and
+`_load_colours` already hold: a pure function that is handed its own inputs
+rather than reading `paths.repo_root()` itself is the one every test in
+this module already calls against the real checkout.
 
 No room link, structurally
 -----------------------------
@@ -41,14 +52,20 @@ Nothing below ever reads a `"zoom_link"` (or any other) key off `row` that
 `PUBLIC_FIELD_SOURCES` does not already map -- there is no such key to read,
 since `row` is `to_public`'s own output. `registration.signup_url` takes an
 event id, never a URL, so the one address every text below points at is
-always the event's own public page (D-19), never a room.
+always the event's own public page (D-19), never a room. And no template
+below ever declares a `{{ speaker.zoom_link }}`/`{{ public.zoom_link }}`
+token in the first place (`tools/tests/test_announce.py`'s own room-link
+mutation proves both halves: a token that is not in `row` cannot resolve,
+and a token that is not in the template is not there to resolve).
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from datetime import date
-from typing import Any
+from pathlib import Path
+from typing import Any, Final
 
 from .registration import signup_url
 from .visual import date_line
@@ -59,6 +76,46 @@ __all__ = [
     "network_post",
     "recording_announcement",
 ]
+
+#: Relative to the repository root, the same convention `register.py::
+#: REGISTER_PATH` already uses for a `docs/` file -- and the exact
+#: directory `app/scripts/copy-handbook.mjs` copies into the cockpit's own
+#: `public/handbook/toolkit/`, so this is provably the file an operator's
+#: browser fetches too, not a second copy of it.
+TOOLKIT_DIR: Final[Path] = Path("docs") / "toolkit"
+
+#: `render.ts`'s own `{{ *.* }}` grammar -- a namespace, a dot, a leaf --
+#: reproduced here rather than imported: a `.ts` module cannot be required
+#: from Python, and this is the whole of what there is to reproduce.
+_PLACEHOLDER = re.compile(r"\{\{\s*([\w]+)\.([\w]+)\s*\}\}")
+
+
+def _missing(namespace: str, leaf: str) -> str:
+    """`render.ts::MISSING`'s own marker, byte-for-byte: a guillemet pair
+    around `namespace.leaf`, shown for an empty or absent field exactly as
+    the cockpit shows it for the identical reason -- a template reading a
+    field this row does not carry is not a bug in the template, it is this
+    row not being ready yet (D-13)."""
+    return f"«missing: {namespace}.{leaf}»"
+
+
+def _render(text: str, namespaces: Mapping[str, Mapping[str, str]]) -> str:
+    """Resolve every `{{ namespace.leaf }}` token in `text` against
+    `namespaces`, exactly the two rules `render.ts::substitute` applies: a
+    namespace or leaf this call was not given resolves to the missing
+    marker, and so does an empty string -- never a blank line silently
+    standing in for a field nobody filled in."""
+
+    def repl(match: re.Match[str]) -> str:
+        namespace, leaf = match.group(1), match.group(2)
+        value = namespaces.get(namespace, {}).get(leaf, "")
+        return value if value else _missing(namespace, leaf)
+
+    return _PLACEHOLDER.sub(repl, text)
+
+
+def _template(root: Path, name: str) -> str:
+    return (root / TOOLKIT_DIR / name).read_text(encoding="utf-8")
 
 
 def _event_id(row: Mapping[str, Any]) -> str:
@@ -73,137 +130,76 @@ def _talk_date(row: Mapping[str, Any]) -> date:
     return date.fromisoformat(str(row["date"]))
 
 
-def _byline(row: Mapping[str, Any]) -> str:
-    name = str(row.get("speaker_name", ""))
-    affiliation = str(row.get("speaker_affiliation", ""))
-    return f"{name} ({affiliation})" if affiliation else name
+def _speaker_namespace(row: Mapping[str, Any]) -> dict[str, str]:
+    """The `{{ speaker.… }}` fields the forum, professional-network and
+    mailing-list templates read -- every one of them `PUBLISHABLE_ALWAYS`
+    (`public_data.py`), so reading them straight off `row` needs no further
+    gate: agreeing to give a public webinar is agreeing to appear in its
+    own programme."""
+    return {
+        "name": str(row.get("speaker_name", "")),
+        "affiliation": str(row.get("speaker_affiliation", "")),
+        "title": str(row.get("title", "")),
+        "abstract": str(row.get("abstract", "")),
+        "edition_code": str(row.get("id", "")),
+        "when": date_line(_talk_date(row)),
+        "signup_link": signup_url(_event_id(row)),
+        "forum_thread": str(row.get("forum_thread", "")),
+    }
 
 
-def forum_announcement(row: Mapping[str, Any]) -> str:
-    """The forum announcement: the longest of the four, for readers who
-    already know the series and can be given the full abstract and the
-    registration address in one place."""
-    when = date_line(_talk_date(row))
-    signup = signup_url(_event_id(row))
-    title = str(row.get("title", ""))
-    abstract = str(row.get("abstract", ""))
-    thread_note = str(row.get("forum_thread", ""))
-    lines = [
-        f"Don't miss the next The Example Collective Monthly Reading Group: {title}",
-        "",
-        f"We are hosting {_byline(row)}, {when}, online and free to attend.",
-        "",
-        title,
-        "",
-        abstract,
-        "",
-        f"Register here: {signup}",
-    ]
-    if thread_note:
-        lines += [
-            "",
-            "Post your questions ahead of time on this thread, and join the "
-            "discussion after the talk.",
-        ]
-    lines += [
-        "",
-        "As always, the recording is only published if our speaker later "
-        "agrees to it — the talk itself is open to everyone, live.",
-    ]
-    return "\n".join(lines) + "\n"
+def _public_namespace(row: Mapping[str, Any]) -> dict[str, str]:
+    """The `{{ public.… }}` fields the recording announcement reads --
+    `bio` and `youtube_url` are `PUBLISHABLE_ON_CONSENT`, already blanked by
+    `to_public` unless the speaker's consent and the board's own approval
+    both cleared (`public_data.personal_disclosure_withheld`/
+    `recording_withheld`, "deliberately the same gate ... not a second,
+    gentler one"). Named `public` rather than `speaker`, mirroring
+    `render.ts`'s own two namespaces, even though both read the identical
+    `row` here: Python only ever sees `to_public`'s output, so there is no
+    second, ungated record for a `speaker.*` token to reach for in this
+    module the way TypeScript's raw `Speaker` record still can."""
+    return {
+        "name": str(row.get("speaker_name", "")),
+        "affiliation": str(row.get("speaker_affiliation", "")),
+        "title": str(row.get("title", "")),
+        "when": date_line(_talk_date(row)),
+        "youtube_url": str(row.get("youtube_url", "")),
+        "bio": str(row.get("bio", "")),
+        "forum_thread": str(row.get("forum_thread", "")),
+    }
 
 
-def network_post(row: Mapping[str, Any]) -> str:
-    """The professional-network post: scanned, not read -- the talk's title
-    earns the first line, and everything else is short enough to take in
-    without clicking through."""
-    when = date_line(_talk_date(row))
-    signup = signup_url(_event_id(row))
-    title = str(row.get("title", ""))
-    lines = [
-        f"{title}",
-        "",
-        f"The Example Collective's next virtual seminar, {when}.",
-        "",
-        f"{_byline(row)}",
-        "",
-        f"Free to attend, online, registration required: {signup}",
-    ]
-    return "\n".join(lines) + "\n"
+def forum_announcement(row: Mapping[str, Any], *, root: Path) -> str:
+    """`docs/toolkit/forum-post-announce.md`, filled in from `row`."""
+    text = _template(root, "forum-post-announce.md")
+    return _render(text, {"speaker": _speaker_namespace(row)})
 
 
-def mailing_list_message(row: Mapping[str, Any]) -> str:
-    """The mailing-list message: plain text, for TEATIME, an institute's own
-    newsletter or internal messaging, and the RISC newsletter alike --
-    reaching people who did not ask about this particular talk, so nothing
-    here assumes they already know the series."""
-    when = date_line(_talk_date(row))
-    signup = signup_url(_event_id(row))
-    title = str(row.get("title", ""))
-    abstract = str(row.get("abstract", ""))
-    lines = [
-        f"Subject: The Example Collective — {title}",
-        "",
-        "Hello,",
-        "",
-        f"The Example Collective's next virtual seminar is {when}, online and "
-        "free to attend.",
-        "",
-        f"{_byline(row)} will present:",
-        "",
-        f'"{title}"',
-        "",
-        abstract,
-        "",
-        f"Register here: {signup}",
-        "",
-        "The Example Collective is a virtual seminar series in behavioural "
-        "science, held roughly monthly and open to anyone. Past talks and "
-        "recordings are at forum.example.test.",
-    ]
-    return "\n".join(lines) + "\n"
+def network_post(row: Mapping[str, Any], *, root: Path) -> str:
+    """`docs/toolkit/linkedin-post.md`, filled in from `row`. Named
+    `network_post`, not `linkedin_post`: the professional network is the
+    channel, LinkedIn is this project's own current choice of one, and the
+    template's own filename is the one place that choice is written down
+    (`docs/toolkit/linkedin-post.md`'s own module comment)."""
+    text = _template(root, "linkedin-post.md")
+    return _render(text, {"speaker": _speaker_namespace(row)})
 
 
-def recording_announcement(row: Mapping[str, Any]) -> str | None:
-    """The recording announcement: for people who missed the talk and for
-    people who want to revisit it. `None`, not an empty string, when
-    `row["youtube_url"]` is empty -- there is nothing to announce, an
-    ordinary state (D-13) for an archived edition whose speaker has not yet
-    agreed to publish, and the caller's job to treat it as such rather than
-    writing an announcement with a blank where the video should be.
+def mailing_list_message(row: Mapping[str, Any], *, root: Path) -> str:
+    """`docs/toolkit/mailing-list-announce.md`, filled in from `row`."""
+    text = _template(root, "mailing-list-announce.md")
+    return _render(text, {"speaker": _speaker_namespace(row)})
 
-    Includes the speaker's own biography, exactly as `row["bio"]` carries
-    it, when `to_public` has left one there -- which, since it shares the
-    same gate as the recording (`public_data.py`'s own module docstring:
-    "Deliberately the same gate ... not a second, gentler one"), is
-    whenever this function has anything to announce in the first place.
-    Omitted, not left as an empty paragraph, when there is none.
-    """
-    youtube_url = str(row.get("youtube_url", ""))
-    if not youtube_url:
+
+def recording_announcement(row: Mapping[str, Any], *, root: Path) -> str | None:
+    """`docs/toolkit/recording-announce.md`, filled in from `row` --
+    `None`, not a page full of missing markers, when `row["youtube_url"]`
+    is empty: there is nothing to announce yet, an ordinary state (D-13)
+    for an archived edition whose speaker has not yet agreed to publish,
+    and the caller's job to treat it as such."""
+    public = _public_namespace(row)
+    if not public["youtube_url"]:
         return None
-    when = date_line(_talk_date(row))
-    title = str(row.get("title", ""))
-    thread = str(row.get("forum_thread", ""))
-    bio = str(row.get("bio", ""))
-    lines = [
-        f"Now online: {title}",
-        "",
-        f"The recording of our seminar with {_byline(row)}, {title}, given "
-        f"{when}, is now online:",
-        "",
-        youtube_url,
-        "",
-        "If you missed it live, this is the whole talk. If you were there, "
-        "it is worth another watch, and a good one to send to a colleague "
-        "who was not.",
-    ]
-    if bio:
-        lines += ["", bio]
-    if thread:
-        lines += [
-            "",
-            "The questions asked before the talk, and the discussion that "
-            f"followed, are on the forum thread: {thread}",
-        ]
-    return "\n".join(lines) + "\n"
+    text = _template(root, "recording-announce.md")
+    return _render(text, {"public": public})
