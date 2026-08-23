@@ -37,6 +37,46 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     anchor: null,
   },
 
+  // decisions — the architecture decision records: why the system is shaped
+  // the way it is, one file per decision, `D-NN` identifiers preserved
+  // because the codebase cites them by number in comments and docstrings
+  // throughout. Governance rules (G-NN) are documented separately in
+  // governance/board-rules.md, not here.
+  'decisions/index': { file: 'decisions/index.md', anchor: null },
+  'decisions/d-01': { file: 'decisions/d-01-repository-of-record.md', anchor: null },
+  'decisions/d-02': { file: 'decisions/d-02-participant-data-encryption.md', anchor: null },
+  'decisions/d-03': { file: 'decisions/d-03-github-app-device-flow.md', anchor: null },
+  'decisions/d-04': { file: 'decisions/d-04-concurrent-writes.md', anchor: null },
+  'decisions/d-05': { file: 'decisions/d-05-meeting-platform-abstraction.md', anchor: null },
+  'decisions/d-06': { file: 'decisions/d-06-registration-ownership.md', anchor: null },
+  'decisions/d-07': { file: 'decisions/d-07-email-channels.md', anchor: null },
+  'decisions/d-08': { file: 'decisions/d-08-visuals-generated-in-ci.md', anchor: null },
+  'decisions/d-09': { file: 'decisions/d-09-no-linkedin-automation.md', anchor: null },
+  'decisions/d-10': { file: 'decisions/d-10-youtube-channel-ownership.md', anchor: null },
+  'decisions/d-11': {
+    file: 'decisions/d-11-organisation-accounts-and-vault.md',
+    anchor: null,
+  },
+  'decisions/d-12': { file: 'decisions/d-12-no-automatic-transcription.md', anchor: null },
+  'decisions/d-13': { file: 'decisions/d-13-deferred-configuration.md', anchor: null },
+  'decisions/d-14': { file: 'decisions/d-14-language-boundary.md', anchor: null },
+  'decisions/d-15': { file: 'decisions/d-15-publication-topology.md', anchor: null },
+  'decisions/d-16': { file: 'decisions/d-16-brand-source-of-truth.md', anchor: null },
+  'decisions/d-17': { file: 'decisions/d-17-typography-substitution.md', anchor: null },
+  'decisions/d-18': { file: 'decisions/d-18-static-pages-with-islands.md', anchor: null },
+  'decisions/d-19': { file: 'decisions/d-19-event-identifier.md', anchor: null },
+  'decisions/d-20': { file: 'decisions/d-20-certificate-wire-format.md', anchor: null },
+  'decisions/d-21': { file: 'decisions/d-21-certificate-lifecycle.md', anchor: null },
+  'decisions/d-22': { file: 'decisions/d-22-key-destruction-not-deletion.md', anchor: null },
+  'decisions/d-23': { file: 'decisions/d-23-encrypted-record-envelope.md', anchor: null },
+  'decisions/d-24': {
+    file: 'decisions/d-24-operator-commands-name-things.md',
+    anchor: null,
+  },
+  'decisions/d-25': { file: 'decisions/d-25-loud-failure.md', anchor: null },
+  'decisions/d-26': { file: 'decisions/d-26-verify-deployed-shape.md', anchor: null },
+  'decisions/d-27': { file: 'decisions/d-27-pin-the-render-engine.md', anchor: null },
+
   // toolkit — emails
   'toolkit/emails/invitation': { file: 'toolkit/emails/invitation.md', anchor: null },
   'toolkit/emails/talk-details': { file: 'toolkit/emails/talk-details.md', anchor: null },

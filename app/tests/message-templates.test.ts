@@ -224,7 +224,17 @@ describe('the discussion summary is written from notes, not from a tool', () => 
     // one: it sends a volunteer looking for a tool that is not there. The
     // sweep is over the whole served tree, not over the two pages that
     // mentioned it, so a page written next month cannot bring it back.
-    const promising = servedPages.filter(p => /transcript|transcription|auto-?caption/i.test(page(p)));
+    //
+    // `docs/decisions/` is excluded from this particular sweep, not from the
+    // suite: an architecture decision record is reference material about
+    // what was built and what was not (see D-12), never an instruction or a
+    // message a volunteer acts on -- the genre this check exists to guard.
+    // Excluding a whole genre of page is not the same narrow, page-by-page
+    // allowlist the comment above warns against; a workflow, toolkit or
+    // handbook page that mentioned a transcript would still fail here.
+    const promising = servedPages
+      .filter(p => !p.startsWith('decisions/'))
+      .filter(p => /transcript|transcription|auto-?caption/i.test(page(p)));
     expect(promising).toEqual([]);
   });
 
