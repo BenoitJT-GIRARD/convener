@@ -4,6 +4,25 @@ on:
   repository_dispatch:
     types: [proposal-submitted]
 
+# C4 (2026-08-23 security audit): this workflow had no concurrency block at
+# all, so two proposals landing at once could each read data/speakers.yml,
+# append their own lead, and race the "Commit" step's own `git pull
+# --rebase` below -- L2 of the same audit already names that rebase as a
+# real, if low-frequency, defect and defers fixing it; serialising runs
+# here removes the race that would otherwise trigger it, whichever comes
+# first. One shared group, not one per submitter: unlike the certificate
+# workflows or registration.yml, there is no per-submission identifier
+# safe to key on here (a submitter names no id at all, and the form's own
+# secret binds every call to the same one repository_dispatch type) --
+# every run touches the same file, so every run must queue behind the
+# last, the same "queue: max" reasoning registration.yml's own comment
+# gives for its per-event group, applied globally because there is only
+# one queue here to have.
+concurrency:
+  group: candidate-form
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   handle:
     runs-on: ubuntu-latest

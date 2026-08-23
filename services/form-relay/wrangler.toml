@@ -4,3 +4,36 @@ compatibility_date = "2026-01-01"
 
 # TALLY_WEBHOOK_SECRET and CONVENER_DISPATCH_TOKEN are Wrangler secrets, set with
 # `npx wrangler secret put <NAME>` -- never here. See README.md.
+
+# C4 (2026-08-23 security audit): FORM_RELAY_KV backs the whole-lifetime
+# cumulative submission ceiling (README.md, "Abuse protection"). Not a
+# secret -- a namespace id is not sensitive -- but it is specific to the
+# Cloudflare account this worker deploys to, so it cannot be filled in
+# until that namespace exists:
+#
+#   npx wrangler kv namespace create FORM_RELAY_KV
+#
+# paste the "id" it prints below before the first deploy.
+# deploy-form-relay.yml's own gate refuses to deploy while this is still
+# the placeholder, rather than letting `wrangler deploy` fail on it.
+[[kv_namespaces]]
+binding = "FORM_RELAY_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# C4: FORM_RATE_LIMITER -- the burst limiter (README.md, "Abuse
+# protection"). `namespace_id` needs no `wrangler ... create` step and no
+# account-specific value: Cloudflare's own docs describe it as "a positive
+# integer that uniquely defines this rate limiting namespace within your
+# Cloudflare account," chosen by the developer, not allocated.
+# services/signup-relay/wrangler.toml already uses "1" for its own
+# SIGNUP_RATE_LIMITER and "2" for the GLOBAL_RATE_LIMITER M5's fix adds
+# alongside it (same file, same account) -- "3" here keeps every rate
+# limiter this account declares on a distinct namespace id, so none of
+# them silently share one bucket.
+[[ratelimits]]
+name = "FORM_RATE_LIMITER"
+namespace_id = "3"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60

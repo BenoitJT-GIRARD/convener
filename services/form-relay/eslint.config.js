@@ -18,6 +18,7 @@ export default [
         btoa: 'readonly',
         console: 'readonly',
         globalThis: 'writable',
+        AbortSignal: 'readonly',
       },
     },
     rules: {

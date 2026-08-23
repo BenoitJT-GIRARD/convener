@@ -51,6 +51,9 @@ jobs:
           if [ -z "$TOKEN" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
             echo "CLOUDFLARE_API_TOKEN not set - form relay deploy skipped. This is a normal state until the Cloudflare account is connected."
+          elif grep -q "REPLACE_WITH_" services/form-relay/wrangler.toml; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "services/form-relay/wrangler.toml still has a placeholder id - form relay deploy skipped until the KV namespace is created and its id filled in. See services/form-relay/README.md."
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi

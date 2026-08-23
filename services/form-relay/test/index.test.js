@@ -27,18 +27,44 @@ if (!VALID_CASE || !INVALID_CASE) {
   throw new Error('fixture must hold at least one valid case and one invalid case');
 }
 
-function post(body, tallySignature) {
-  const headers = {};
-  if (tallySignature !== undefined) headers['Tally-Signature'] = tallySignature;
-  return new Request('https://relay.example/', { method: 'POST', headers, body });
+function post(body, tallySignature, headers = {}) {
+  const allHeaders = { ...headers };
+  if (tallySignature !== undefined) allHeaders['Tally-Signature'] = tallySignature;
+  return new Request('https://relay.example/', { method: 'POST', headers: allHeaders, body });
 }
 
 function requestAt(path, method) {
   return new Request(`https://relay.example${path}`, { method });
 }
 
-function env(secret, token = 'ghp_test-token') {
-  return { TALLY_WEBHOOK_SECRET: secret, CONVENER_DISPATCH_TOKEN: token };
+function makeKv(initial = {}) {
+  const store = new Map(Object.entries(initial));
+  return {
+    store,
+    get: vi.fn(async (key) => (store.has(key) ? store.get(key) : null)),
+    put: vi.fn(async (key, value) => {
+      store.set(key, value);
+    }),
+  };
+}
+
+function makeRateLimiter(success = true) {
+  return { limit: vi.fn(async () => ({ success })) };
+}
+
+// C4 (2026-08-23 security audit): FORM_RELAY_KV and FORM_RATE_LIMITER join
+// TALLY_WEBHOOK_SECRET and CONVENER_DISPATCH_TOKEN here -- a working mock of
+// both by default, so every test written before this fix (which knows
+// nothing about either) keeps passing unmodified; `overrides` is how a
+// new test replaces one on its own.
+function env(secret, token = 'ghp_test-token', overrides = {}) {
+  return {
+    TALLY_WEBHOOK_SECRET: secret,
+    CONVENER_DISPATCH_TOKEN: token,
+    FORM_RELAY_KV: makeKv(),
+    FORM_RATE_LIMITER: makeRateLimiter(),
+    ...overrides,
+  };
 }
 
 beforeEach(() => {
@@ -62,6 +88,10 @@ describe('form relay', () => {
     expect(init.headers.Accept).toBe('application/vnd.github+json');
     expect(init.headers['Content-Type']).toBe('application/json');
     expect(init.headers.Authorization).toBe('Bearer ghp_test-token');
+    // Neither GitHub call in this suite is left to hang on this worker's
+    // own invocation forever (C4 mirrors services/signup-relay's own
+    // GITHUB_FETCH_TIMEOUT_MS).
+    expect(init.signal).toBeInstanceOf(AbortSignal);
 
     const sent = JSON.parse(init.body);
     expect(sent.event_type).toBe('proposal-submitted');
@@ -149,7 +179,7 @@ describe('form relay', () => {
     // GitHub's dispatches endpoint is documented to answer success with
     // exactly 204. Passing upstream.status straight through would let an
     // unexpected 2xx leak to the caller as-is -- the caller must only
-    // ever see one of this worker's three codes: 204, 401, or 502.
+    // ever see one of this worker's response codes.
     globalThis.fetch = vi.fn(async () => new Response(null, { status: 200 }));
     const res = await handle(post(VALID_CASE.body, VALID_CASE.signature), env(VALID_CASE.secret));
     expect(res.status).toBe(204);
@@ -173,5 +203,184 @@ describe('form relay', () => {
     if (!c.valid) {
       expect(globalThis.fetch).not.toHaveBeenCalled();
     }
+  });
+});
+
+// ====================================================================== //
+// C4 (2026-08-23 security audit): body-size bound, burst limiter,
+// cumulative counter -- none of the three existed before this fix.
+// ====================================================================== //
+
+describe('form relay -- the body-size bound', () => {
+  it('refuses a body declared oversized by Content-Length before reading or verifying it', async () => {
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature, { 'content-length': String(200 * 1024) }),
+      env(VALID_CASE.secret),
+    );
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a body whose real byte length exceeds the budget even when Content-Length is absent', async () => {
+    // 70,000 bytes of ASCII, comfortably past MAX_BODY_BYTES (65,536) --
+    // never valid JSON, so this also proves the size check runs before
+    // any attempt to sign or parse it.
+    const oversized = 'x'.repeat(70_000);
+    const res = await handle(post(oversized, 'irrelevant-signature'), env(VALID_CASE.secret));
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuses a body whose real byte length exceeds the budget even when its UTF-16 length does not', async () => {
+    // A repeated 3-byte character keeps `.length` (UTF-16 units) a third
+    // of the true UTF-8 byte count, comfortably under the budget while
+    // the real byte count is comfortably over it -- the same distinction
+    // services/signup-relay's own test file pins for MAX_BODY_BYTES there.
+    const oversized = '€'.repeat(30_000); // length 30,000; byte length 90,000
+    const res = await handle(post(oversized, 'irrelevant-signature'), env(VALID_CASE.secret));
+    expect(res.status).toBe(400);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('still accepts a validly signed body comfortably under the size budget', async () => {
+    const res = await handle(post(VALID_CASE.body, VALID_CASE.signature), env(VALID_CASE.secret));
+    expect(res.status).toBe(204);
+  });
+});
+
+describe('form relay -- the burst limiter', () => {
+  it('refuses once the burst limiter trips, with Retry-After, and never calls GitHub', async () => {
+    const rateLimiter = makeRateLimiter(false);
+    const kv = makeKv();
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RATE_LIMITER: rateLimiter, FORM_RELAY_KV: kv }),
+    );
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(kv.get).not.toHaveBeenCalled();
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('keys the limiter by a fixed literal, never anything the caller sent -- the fix for M5\'s own gap', async () => {
+    const rateLimiter = makeRateLimiter(true);
+    await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RATE_LIMITER: rateLimiter }),
+    );
+    expect(rateLimiter.limit).toHaveBeenCalledWith({ key: 'proposal' });
+  });
+
+  it('is checked only after a valid signature -- an unsigned flood never spends this budget', async () => {
+    const rateLimiter = makeRateLimiter(true);
+    const res = await handle(
+      post(INVALID_CASE.body, INVALID_CASE.signature),
+      env(INVALID_CASE.secret, 'ghp_test-token', { FORM_RATE_LIMITER: rateLimiter }),
+    );
+    expect(res.status).toBe(401);
+    expect(rateLimiter.limit).not.toHaveBeenCalled();
+  });
+
+  it('fails closed (502) when the limiter itself cannot be reached, rather than skipping it', async () => {
+    const rateLimiter = { limit: vi.fn(async () => { throw new Error('unavailable'); }) };
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RATE_LIMITER: rateLimiter }),
+    );
+    expect(res.status).toBe(502);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('form relay -- the cumulative ceiling', () => {
+  it('refuses once the ceiling is reached, with Retry-After, without calling GitHub at all', async () => {
+    const kv = makeKv({ 'count:proposal': '2000' });
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RELAY_KV: kv }),
+    );
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('still accepts the request one below the ceiling, and the count becomes the ceiling', async () => {
+    const kv = makeKv({ 'count:proposal': '1999' });
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RELAY_KV: kv }),
+    );
+    expect(res.status).toBe(204);
+    expect(kv.put).toHaveBeenCalledWith('count:proposal', '2000');
+  });
+
+  it('counts a fresh worker (no stored count yet) as zero, not a refusal', async () => {
+    const kv = makeKv();
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RELAY_KV: kv }),
+    );
+    expect(res.status).toBe(204);
+    expect(kv.put).toHaveBeenCalledWith('count:proposal', '1');
+  });
+
+  it('treats a KV read failure as no count yet, rather than refusing the request', async () => {
+    const kv = makeKv();
+    kv.get = vi.fn(async () => {
+      throw new Error('kv unavailable');
+    });
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RELAY_KV: kv }),
+    );
+    expect(res.status).toBe(204);
+  });
+
+  it('does not count a failed dispatch toward the ceiling', async () => {
+    globalThis.fetch = vi.fn(async () => new Response(null, { status: 500 }));
+    const kv = makeKv();
+    await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { FORM_RELAY_KV: kv }),
+    );
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('still answers 204 when the counter cannot be written after a successful dispatch, and traces the failure', async () => {
+    const kv = makeKv();
+    kv.put = vi.fn(async () => {
+      throw new Error('kv unavailable');
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await handle(
+        post(VALID_CASE.body, VALID_CASE.signature),
+        env(VALID_CASE.secret, 'ghp_test-token', { FORM_RELAY_KV: kv }),
+      );
+      expect(res.status).toBe(204);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const [logged] = errorSpy.mock.calls[0];
+      // Never the body: the trace names only a fixed message, nothing
+      // that could identify who submitted it.
+      expect(logged).not.toContain(VALID_CASE.body);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
+describe('form relay -- fail closed on a missing abuse-protection binding', () => {
+  it.each([
+    ['FORM_RELAY_KV is not bound', { FORM_RELAY_KV: undefined }],
+    ['FORM_RATE_LIMITER is not bound', { FORM_RATE_LIMITER: undefined }],
+  ])('refuses every validly signed request when %s, and never calls GitHub', async (_label, overrides) => {
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', overrides),
+    );
+    expect(res.status).toBe(502);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
