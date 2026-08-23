@@ -100,6 +100,10 @@ function env(overrides = {}) {
     CONVENER_DISPATCH_TOKEN: 'ghp_test-token',
     SIGNUP_RELAY_KV: makeKv(),
     SIGNUP_RATE_LIMITER: makeRateLimiter(),
+    // M5 (2026-08-23 security audit): a second, independent limiter mock
+    // by default, so every test written before this fix (which knows
+    // nothing about it) keeps passing unmodified.
+    GLOBAL_RATE_LIMITER: makeRateLimiter(),
     ALLOWED_ORIGIN,
     ...overrides,
   };
@@ -439,6 +443,7 @@ describe('signup relay -- fail closed on a missing secret or store', () => {
     ['CONVENER_DISPATCH_TOKEN is an empty string', { CONVENER_DISPATCH_TOKEN: '' }],
     ['SIGNUP_RELAY_KV is not bound', { SIGNUP_RELAY_KV: undefined }],
     ['SIGNUP_RATE_LIMITER is not bound', { SIGNUP_RATE_LIMITER: undefined }],
+    ['GLOBAL_RATE_LIMITER is not bound', { GLOBAL_RATE_LIMITER: undefined }],
   ])('refuses every well-shaped request when %s, and never calls GitHub', async (_label, override) => {
     const res = await handle(post(VALID_BODY), env(override));
     expect(res.status).toBe(502);
@@ -467,6 +472,88 @@ describe('signup relay -- the burst limiter', () => {
   it('fails closed (502) when the limiter itself cannot be reached, rather than skipping it', async () => {
     const rateLimiter = { limit: vi.fn(async () => { throw new Error('unavailable'); }) };
     const res = await handle(post(VALID_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
+    expect(res.status).toBe(502);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('signup relay -- the global limiter (M5, 2026-08-23 security audit)', () => {
+  it('refuses once the global limiter trips, with Retry-After, and never calls GitHub', async () => {
+    const globalRateLimiter = makeRateLimiter(false);
+    const kv = makeKv();
+    const res = await handle(
+      post(VALID_BODY),
+      env({ GLOBAL_RATE_LIMITER: globalRateLimiter, SIGNUP_RELAY_KV: kv }),
+    );
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(kv.get).not.toHaveBeenCalled();
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('keys the global limiter by one fixed literal, never event_id', async () => {
+    const globalRateLimiter = makeRateLimiter(true);
+    await handle(post(VALID_BODY), env({ GLOBAL_RATE_LIMITER: globalRateLimiter }));
+    expect(globalRateLimiter.limit).toHaveBeenCalledWith({ key: 'global' });
+  });
+
+  it('shares one global bucket across different event ids -- the M5 gap this closes', async () => {
+    // The whole point: unlike the per-event limiter, varying event_id
+    // must not buy a fresh bucket. A limiter that answers false only once
+    // it has seen the fixed 'global' key at least twice proves the same
+    // key is reused across two structurally-different requests.
+    let calls = 0;
+    const globalRateLimiter = {
+      limit: vi.fn(async ({ key }) => {
+        if (key !== 'global') throw new Error(`unexpected key: ${key}`);
+        calls += 1;
+        return { success: calls <= 1 };
+      }),
+    };
+    const firstBody = VALID_BODY;
+    const secondBody = JSON.stringify({ event_id: 'mrg-999-fabricated', ...VALID_ENVELOPE });
+
+    const first = await handle(post(firstBody), env({ GLOBAL_RATE_LIMITER: globalRateLimiter }));
+    expect(first.status).toBe(204);
+
+    globalThis.fetch = stubFetch({ known: false }); // mrg-999-fabricated does not exist
+    const second = await handle(post(secondBody), env({ GLOBAL_RATE_LIMITER: globalRateLimiter }));
+    expect(second.status).toBe(429);
+    expect(globalRateLimiter.limit).toHaveBeenCalledTimes(2);
+  });
+
+  it('is checked before the per-event limiter -- an id-varying flood meets it first', async () => {
+    const order = [];
+    const globalRateLimiter = {
+      limit: vi.fn(async () => {
+        order.push('global');
+        return { success: true };
+      }),
+    };
+    const perEventRateLimiter = {
+      limit: vi.fn(async () => {
+        order.push('per-event');
+        return { success: true };
+      }),
+    };
+    await handle(
+      post(VALID_BODY),
+      env({ GLOBAL_RATE_LIMITER: globalRateLimiter, SIGNUP_RATE_LIMITER: perEventRateLimiter }),
+    );
+    expect(order).toEqual(['global', 'per-event']);
+  });
+
+  it('applies identically on /survey', async () => {
+    const globalRateLimiter = makeRateLimiter(false);
+    const res = await handle(postSurvey(SURVEY_BODY), env({ GLOBAL_RATE_LIMITER: globalRateLimiter }));
+    expect(res.status).toBe(429);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('fails closed (502) when the global limiter itself cannot be reached, rather than skipping it', async () => {
+    const globalRateLimiter = { limit: vi.fn(async () => { throw new Error('unavailable'); }) };
+    const res = await handle(post(VALID_BODY), env({ GLOBAL_RATE_LIMITER: globalRateLimiter }));
     expect(res.status).toBe(502);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });

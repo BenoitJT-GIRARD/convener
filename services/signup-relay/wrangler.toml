@@ -59,3 +59,30 @@ namespace_id = "1"
   [ratelimits.simple]
   limit = 30
   period = 60
+
+# M5 (2026-08-23 security audit): GLOBAL_RATE_LIMITER -- a second binding,
+# not a second key on SIGNUP_RATE_LIMITER above, because Cloudflare's
+# Workers Rate Limiting binding applies one limit/period to every key
+# checked against it; a global ceiling distinct from the per-event one
+# needs a binding of its own. Closes the gap a caller varying event_id on
+# every request could otherwise use to evade SIGNUP_RATE_LIMITER entirely
+# (README.md, "Abuse protection") -- see src/index.js's own
+# GLOBAL_RATE_LIMITER_KEY comment for the full reasoning. "2" is the next
+# unused rate-limiter namespace id on this account; services/form-relay's
+# own FORM_RATE_LIMITER (C4, same audit) takes "3", so no two limiters
+# declared anywhere in this account silently share one bucket.
+[[ratelimits]]
+name = "GLOBAL_RATE_LIMITER"
+namespace_id = "2"
+
+  [ratelimits.simple]
+  # Generous enough that a real announcement's traffic -- several events
+  # open for registration at once, each drawing its own legitimate burst
+  # up to SIGNUP_RATE_LIMITER's own 30/60s -- is never refused here first,
+  # while still capping this worker's total request rate to roughly
+  # 3,600/hour: comfortably inside CONVENER_DISPATCH_TOKEN's own 5,000/hour
+  # authenticated GitHub API budget even at sustained maximum throughput,
+  # leaving headroom for the survey route sharing the same token and the
+  # same budget.
+  limit = 60
+  period = 60

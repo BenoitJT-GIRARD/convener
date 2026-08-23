@@ -162,12 +162,13 @@ design — it sits behind an authenticated `repository_dispatch`, so an
 unset `TALLY_WEBHOOK_SECRET` there just skips a check a forged dispatch
 could not have passed anyway. This worker has no such shelter: it is the
 first thing a request from the open internet reaches. So a missing
-`CONVENER_DISPATCH_TOKEN`, a `SIGNUP_RELAY_KV` binding that was never set up, or
-a `SIGNUP_RATE_LIMITER` binding that was never set up, refuses every
-request with `502` rather than falling back to "no ceiling," "no burst
-limit" or "no known-event check" — none of GitHub, the counter or the
-limiter is ever touched on a misconfigured deploy. `test/index.test.js`
-pins this for all three. `ALLOWED_ORIGIN` fails closed too, but visibly
+`CONVENER_DISPATCH_TOKEN`, a `SIGNUP_RELAY_KV` binding that was never set up, a
+`SIGNUP_RATE_LIMITER` binding that was never set up, or (M5, 2026-08-23
+security audit) a `GLOBAL_RATE_LIMITER` binding that was never set up,
+refuses every request with `502` rather than falling back to "no
+ceiling," "no burst limit" or "no known-event check" — none of GitHub,
+the counter or either limiter is ever touched on a misconfigured deploy.
+`test/index.test.js` pins this for all four. `ALLOWED_ORIGIN` fails closed too, but visibly
 differently — see "Cross-origin requests" above — because an unset var
 naturally cannot equal any real `Origin` a browser sends, with no extra
 code needed to enforce it.
@@ -282,6 +283,48 @@ silently: `console.error` records the event id (already public — the same
 identifier every dispatch and every workflow run already names) and a
 fixed message, never the body, so a counter that stops advancing leaves a
 trace instead of just going quiet — the one thing a signal must not do.
+
+### M5 (2026-08-23 security audit): the per-event key was itself the gap
+
+`SIGNUP_RATE_LIMITER` above is keyed on `eventId` — attacker-supplied,
+read straight from the request body before this worker has any way to
+tell a real event from a fabricated one. A fabricated id can never reach a
+dispatch (`eventKeyExists` below refuses it with `404`), so the abuse this
+originally protected against — burning a real registrant's own budget —
+never happens. But a caller who sends a *different* fabricated id on every
+request gets a fresh rate-limiter bucket every time: `rateLimiter.limit({
+key: eventId })` never sees the same key twice, so it never trips,
+regardless of how fast the requests arrive. Each one still costs this
+worker a real Contents-API call against `CONVENER_DISPATCH_TOKEN`'s own shared
+GitHub budget before the 404 — and that budget is the same one every real
+registration, on every real event, and both `/survey` reads, all draw
+from. The per-event limiter was never wrong about *what* it bounds; it was
+wrong about *whose choice* the key was.
+
+`GLOBAL_RATE_LIMITER` (`wrangler.toml`) is the fix — a second binding, not
+a second key on `SIGNUP_RATE_LIMITER`: Cloudflare's Rate Limiting binding
+applies one `limit`/`period` to every key it is asked about, so a global
+ceiling that has to be more generous than any single event's own 30/60s
+needs a binding of its own, not a second call against the first.
+`GLOBAL_RATE_LIMITER_KEY` is one fixed literal (`'global'`) — never
+anything a caller sends, the one property that actually closes this gap:
+there is no field left on the request for an attacker to vary that would
+give them a second bucket. Checked first, before the per-event limiter,
+since it is the cheaper, coarser bound and the one an id-varying flood
+cannot evade by construction. `60` requests per `60` seconds — double the
+single-event ceiling — is generous enough that several real events open
+for registration at once, each drawing its own legitimate per-event burst,
+are never refused here first, while still capping this worker's total
+throughput to roughly 3,600 requests an hour: comfortably inside
+`CONVENER_DISPATCH_TOKEN`'s own 5,000/hour authenticated GitHub API budget even
+at sustained maximum throughput, with headroom left for the survey route
+sharing the same token and the same budget.
+
+This does not replace the per-event limiter or the per-event ceiling —
+both still matter for a flood aimed at one *real*, known event, where the
+attacker has no reason to vary `event_id` at all. It closes the one case
+those two could never reach: an attacker who never sends the same
+`event_id` twice.
 
 Cloudflare's own network-level DDoS mitigation sits beneath all of this,
 for every Worker, on every plan, automatically — nothing here replaces

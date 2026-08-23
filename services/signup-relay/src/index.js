@@ -11,8 +11,11 @@
  * Unlike services/form-relay, there is no shared secret a caller signs
  * with -- a static page cannot hold one -- so this endpoint is open by
  * construction. README.md ("Abuse protection") records the choice made for
- * that and why -- a per-event burst limiter plus a per-event cumulative
- * ceiling, both with their own storage bindings. Unlike services/auth-proxy,
+ * that and why -- a per-event burst limiter, a per-event cumulative
+ * ceiling, and (M5, 2026-08-23 security audit) a global burst limiter on
+ * top of the per-event one, closing the gap a caller who varies event_id
+ * could otherwise use to evade it entirely -- each with its own storage
+ * binding. Unlike services/auth-proxy,
  * this worker holds a GitHub token (turning a submission into a
  * repository_dispatch requires one), so it cannot be secret-free either --
  * see README.md for why that puts it in its own worker rather than a route
@@ -361,6 +364,24 @@ function surveyRateLimiterKey(eventId) {
   return `survey:${eventId}`;
 }
 
+// M5 (2026-08-23 security audit): the per-event/per-route keys above
+// (`eventId`, `surveyRateLimiterKey`) are exactly what let this limiter be
+// evaded -- a caller who varies event_id on every request gets a fresh
+// bucket every time, so SIGNUP_RATE_LIMITER never actually bounds a flood
+// that spreads itself across many fabricated ids. Fabricated ids cannot
+// reach a dispatch (`eventKeyExists` below refuses them with 404), but
+// each one still spends a real GitHub Contents-API call against this
+// worker's own shared token budget before that refusal -- degrading
+// service for real registrants on real events, whose calls draw from the
+// identical pool. GLOBAL_RATE_LIMITER_KEY is one fixed literal, checked on
+// a second, independent binding (GLOBAL_RATE_LIMITER, wrangler.toml) with
+// its own, higher ceiling -- see README.md, "Abuse protection", for why a
+// second binding rather than a second key on the same one: Cloudflare's
+// Workers Rate Limiting binding applies one limit/period to every key it
+// is asked about, so a global ceiling distinct from the per-event one
+// needs a binding of its own.
+const GLOBAL_RATE_LIMITER_KEY = 'global';
+
 export async function handle(request, env) {
   // CORS, first: the in-repo pattern services/auth-proxy/src/index.js
   // uses, copied rather than reinvented. A mismatched or absent Origin
@@ -455,7 +476,12 @@ export async function handle(request, env) {
   const token = env.CONVENER_DISPATCH_TOKEN;
   const kv = env.SIGNUP_RELAY_KV;
   const rateLimiter = env.SIGNUP_RATE_LIMITER;
-  if (!token || !kv || !rateLimiter) {
+  // M5: GLOBAL_RATE_LIMITER joins the fail-closed set -- a deploy missing
+  // this binding must refuse every request, the same as one missing the
+  // per-event limiter, rather than silently running with only half the
+  // abuse protection this worker now claims.
+  const globalRateLimiter = env.GLOBAL_RATE_LIMITER;
+  if (!token || !kv || !rateLimiter || !globalRateLimiter) {
     return respond(502, env, 'Bad Gateway');
   }
 
@@ -474,6 +500,22 @@ export async function handle(request, env) {
   // registration budget.
   const rateLimiterKey = isSurvey ? surveyRateLimiterKey(eventId) : eventId;
   const eventCounterKey = isSurvey ? surveyCounterKey(eventId) : counterKey(eventId);
+
+  // M5: the global limiter, checked first -- one fixed key, shared by
+  // both routes and every event, bounding this worker's total request
+  // rate regardless of what event_id a caller sends. Checked before the
+  // per-event limiter deliberately: it is the cheaper, coarser bound, and
+  // it is the one a caller varying event_id cannot evade by construction,
+  // so it should be the first thing an evasive flood actually meets.
+  let globalLimited;
+  try {
+    globalLimited = await globalRateLimiter.limit({ key: GLOBAL_RATE_LIMITER_KEY });
+  } catch {
+    return respond(502, env, 'Bad Gateway');
+  }
+  if (!globalLimited.success) {
+    return respond(429, env, 'Too Many Requests', { 'Retry-After': '60' });
+  }
 
   let limited;
   try {
