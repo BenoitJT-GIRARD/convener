@@ -1,5 +1,21 @@
 name: Security
 
+# H4 (2026-08-23 security audit): considered for a path filter alongside
+# a11y.yml and preview.yml, and deliberately left unfiltered on `push` and
+# `pull_request` -- stated here rather than by omission. The `secrets`
+# job (gitleaks) exists to catch a real secret pasted into *any* file, not
+# only one whose type or directory usually carries code -- S-9 of the
+# audit's own spec is explicit that this project's prior secret sweep
+# already relied on hand-picked patterns and named its own limit; a path
+# filter narrowing which pushes even get scanned would be a second,
+# broader version of the same limit, self-inflicted this time. A stray
+# credential pasted into a documentation file is exactly the shape this
+# job is for, and no filter list can name "wherever a human might paste
+# one next". The `codeql` job's own weekly schedule (below) is
+# unaffected either way -- `schedule:` triggers ignore `paths:` entirely,
+# so this is a trade-off about the `push`/`pull_request` runs only, not
+# about the scheduled sweep this file already carries in H4's own
+# scheduled-cost figure.
 on:
   push:
     branches: [main]

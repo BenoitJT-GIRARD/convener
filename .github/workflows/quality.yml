@@ -1,5 +1,30 @@
 name: Quality
 
+# H4 (2026-08-23 security audit): considered for a path filter alongside
+# a11y.yml and preview.yml, and deliberately left unfiltered -- stated
+# here rather than by omission (consolidation.md's own arbitration rule
+# for anything accepted without a fix).
+#
+# A path filter here would either cover so much of the repository that it
+# saved nothing, or risk exactly the "regression ships green" failure this
+# audit keeps naming: the `python` job's own "Decision register" step
+# (`uv run convener-register --check`) compares `docs/governance/register.md`
+# against the *entire* commit history, not against any one file's diff --
+# a decision-grammar commit whose only change sits outside whatever a
+# filter watched would still need this check to run, and there is no path
+# expression that names "the message of the next commit, whichever files
+# it touches". The same job's own `pytest` suite is close to as broad in
+# practice, not by design flaw but because it reads the repository as
+# its own fixtures: `test_entry_docs.py` follows every relative link out
+# of `README.md` and `docs/architecture.md`, including into
+# `docs/decisions/**`; `test_workflows.py` parses every file under
+# `.github/workflows/`; the schema and brand-token checks derive from
+# `app/src/data/types.ts`, `docs/reference/schema.md` and
+# `data/brand.json`. A filter list built to be honestly safe here would
+# have to include most of the tree, which is not a filter, it is a
+# larger diff with the same risk of a missed entry and none of the
+# saving. `enable-cache: true` below still reduces this job's own run
+# time without touching what it checks -- see that step's own comment.
 on:
   push:
     branches: [main]
@@ -25,6 +50,11 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
+          # H4 (2026-08-23 security audit): caches uv's own download/resolve
+          # step, keyed on tools/uv.lock -- part of reducing this project's
+          # self-inflicted Actions-minute cost, alongside this fix's path
+          # filters. Reduces run time only; changes nothing this job checks.
+          enable-cache: true
       - name: Install
         working-directory: tools
         run: uv sync --all-extras

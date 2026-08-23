@@ -17,10 +17,59 @@ name: Accessibility
 # reasoning, including why the two islands are covered here at all
 # rather than left entirely to the manual pass (a checker that only ever
 # saw the server-rendered HTML would report them empty and pass -- D-25).
+# H4 (2026-08-23 security audit): unfiltered before this fix, so this
+# workflow paid a full site+app build and a real Chrome-driven axe-core
+# sweep on every push and every pull request, including one touching only
+# `docs/`, `data/`, or an unrelated relay -- none of which this check can
+# possibly have anything to say about. Path-filtered now, the same
+# deliberate, path-by-path discipline `visuals.yml`'s own header comment
+# already applies (D-25: a filter that silently omits a path means a real
+# accessibility regression ships green, so read that comment's own
+# reasoning before adding or removing an entry here, and prefer including
+# a path you are unsure about over leaving it out):
+#
+# - `site/**` -- every template and page this check builds and sweeps.
+# - `app/**` -- both islands (`app/dist/islands/signup`,
+#   `app/dist/islands/verify`) this check mounts on the built pages.
+# - `tools/convener_ops/**` -- the "Generate throw-away event keys" step below
+#   runs `convener_ops.eventkeys.generate()` (imported through `paths.py`, and
+#   transitively whatever that module itself imports); a path filter has
+#   no finer grain than "the package", so the whole package is watched
+#   rather than the two files this step names directly.
+# - `tools/pyproject.toml`, `tools/uv.lock` -- what that same step's own
+#   `uv run --project tools` resolves and installs.
+# - `.github/workflows/a11y.yml` -- this file.
+#
+# Deliberately absent: `data/speakers.yml` and every other real,
+# per-edition data file -- this check builds from `site/src/_data/
+# events.json`, a committed fixture (site/README.md), and never reads real
+# event data at all, the same reasoning `quality.yml`'s own `site` job
+# already relies on for its identical fixture-based build.
 on:
   push:
     branches: [main]
+    paths:
+      - 'site/**'
+      - 'app/**'
+      - 'tools/convener_ops/**'
+      - 'tools/pyproject.toml'
+      - 'tools/uv.lock'
+      - '.github/workflows/a11y.yml'
   pull_request:
+    # Kept identical to push's own list above, by hand: GitHub Actions'
+    # workflow parser does not support YAML anchors or aliases (a
+    # documented limitation, not a version question) -- see
+    # visuals.yml's own header comment for the fix round that discovered
+    # this the hard way, and test_the_two_path_filters_are_identical_lists
+    # in tools/tests/test_h4_path_filters.py for what actually holds these
+    # two copies together.
+    paths:
+      - 'site/**'
+      - 'app/**'
+      - 'tools/convener_ops/**'
+      - 'tools/pyproject.toml'
+      - 'tools/uv.lock'
+      - '.github/workflows/a11y.yml'
 
 jobs:
   a11y:
@@ -37,6 +86,11 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
+          # H4 (2026-08-23 security audit): caches uv's own download/resolve
+          # step, keyed on tools/uv.lock -- part of reducing this project's
+          # self-inflicted Actions-minute cost, alongside this fix's path
+          # filters. Reduces run time only; changes nothing this job checks.
+          enable-cache: true
       # The registration island only renders its real <input>/<label>
       # markup once it reaches its own 'ready' key state
       # (`app/src/islands/signup/SignupForm.tsx`) -- otherwise this run

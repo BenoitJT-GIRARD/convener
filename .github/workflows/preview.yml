@@ -81,8 +81,27 @@ name: Preview
 # from that exact fixture, so the same sweep `publish-vitrine.yml` runs
 # against the real data applies here too, against the assembled preview
 # rather than a checkout of a second repository.
+# H4 (2026-08-23 security audit): unfiltered before this fix, so every
+# pull request -- including one touching only `docs/`, `data/`, or an
+# unrelated relay -- paid a full site+app build and packaged an artefact
+# nobody asked to review. Path-filtered now, deliberately the identical
+# list a11y.yml's own fix just adopted (both build the same fixture-based
+# site and app, from the same inputs): see that file's own header comment
+# for the path-by-path reasoning (D-25: a filter that silently omits a
+# path means a real regression ships an unreviewable preview, so prefer
+# including a path you are unsure about over leaving it out). Only one
+# trigger here (`pull_request`, never `push`, per this file's own header
+# comment above), so there is no second copy to keep in sync and no
+# YAML-anchor trap to fall into.
 on:
   pull_request:
+    paths:
+      - 'site/**'
+      - 'app/**'
+      - 'tools/convener_ops/**'
+      - 'tools/pyproject.toml'
+      - 'tools/uv.lock'
+      - '.github/workflows/preview.yml'
 
 jobs:
   preview:
@@ -102,6 +121,11 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
+          # H4 (2026-08-23 security audit): caches uv's own download/resolve
+          # step, keyed on tools/uv.lock -- part of reducing this project's
+          # self-inflicted Actions-minute cost, alongside this fix's path
+          # filters. Reduces run time only; changes nothing this job checks.
+          enable-cache: true
       # The registration island only renders its real <input>/<label>
       # markup once it reaches its own 'ready' key state
       # (`app/src/islands/signup/SignupForm.tsx`) -- see this workflow's
