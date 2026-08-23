@@ -352,6 +352,35 @@ def test_a_bad_date_on_a_scheduled_row_fails_the_whole_command(
     assert not out.exists()
 
 
+def test_a_print_qr_that_would_be_unscannable_fails_the_whole_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Important 2 (branch review): `formats.qr_module_size_mm` is a real,
+    tested function that nothing in the actual pipeline called against a
+    real edition before this guard. An `edition_code` long enough to bump
+    `registration_code_modules`'s own QR version drops the print poster's
+    module size below `formats.SCANNABLE_QR_MODULE_MM`; this must fail the
+    whole command (D-25) rather than ship an unscannable poster.
+
+    Deliberately bypasses `validate.py::EDITION_RE`'s own four-digit bound
+    (this fixture never calls `convener-validate`) to prove the render-time
+    guard is load-bearing on its own, not merely a backstop for a check
+    some other, unrelated command already ran."""
+    long_edition = "MRG-" + "9" * 120
+    _use_fake_root(
+        tmp_path,
+        monkeypatch,
+        [_scheduled(edition_code=long_edition, date="2026-01-08")],
+    )
+    out = tmp_path / "out"
+    exit_code = _run(out, monkeypatch)
+    assert exit_code == 1
+    err = capsys.readouterr().err
+    assert "::error::" in err
+    assert "scannable" in err
+    assert not out.exists()
+
+
 def test_wrong_argument_count_fails_with_a_usage_message(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

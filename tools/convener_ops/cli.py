@@ -4198,6 +4198,17 @@ def render_visuals() -> int:
     own validator is a data defect this command must never render around
     quietly.
 
+    Same discipline for `formats.qr_module_size_mm`: computed and checked
+    here, against every real scheduled edition's own `event_id`, before
+    anything is written -- `formats.py`'s own docstring proves the
+    function correct but never calls it against real data, and
+    `validate.py::EDITION_RE` bounds `edition_code`'s length but only in
+    the separate `convener-validate` command, which nothing requires this one
+    to run first. An edition whose id is long enough to bump
+    `registration_code_modules` past the point where a printed A4 poster's
+    QR module drops below `formats.SCANNABLE_QR_MODULE_MM` fails loudly
+    (D-25) instead of shipping a poster nobody can scan.
+
     This is also the "manual command" the trigger requires, independently
     of any workflow: `uv run --project tools convener-render-visuals
     OUTPUT_DIR` renders the current, real state of `data/speakers.yml` on
@@ -4229,6 +4240,18 @@ def render_visuals() -> int:
     except ValueError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return 1
+
+    for announcement in announcements:
+        module_mm = formats.qr_module_size_mm(formats.PRINT, announcement.event_id)
+        if module_mm < formats.SCANNABLE_QR_MODULE_MM:
+            print(
+                f"::error::{announcement.event_id}: print QR module would be "
+                f"{module_mm:.3f}mm, below the {formats.SCANNABLE_QR_MODULE_MM}mm "
+                "scannable floor -- edition_code is too long for a printed "
+                "A4 poster to stay scannable",
+                file=sys.stderr,
+            )
+            return 1
 
     out.mkdir(parents=True, exist_ok=True)
     for stale_html in out.glob("*.html"):
