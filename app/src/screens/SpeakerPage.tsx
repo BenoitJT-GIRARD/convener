@@ -1,4 +1,5 @@
 import { useParams, Navigate, Link } from 'react-router-dom';
+import { isSafeHref } from '../content/fetch';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
@@ -239,16 +240,29 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
       {s.links.length > 0 && (
         <DetailBlock title="Links">
           <ul className="space-y-1 text-sm">
+            {/* `links` comes from the public, unreviewed proposal intake
+                (tools/convener_ops/proposal.py) with no scheme check of its
+                own -- a candidate submitting `javascript:...` as a
+                "link" reaches this render unfiltered. `isSafeHref`
+                (content/fetch.ts, the same allowlist `handbookUrl`
+                already applies to handbook markdown) is the guard: an
+                unsafe scheme still shows the board what was submitted,
+                just never as a clickable href a board member's own
+                click could execute (security audit 2026-08-23, M3). */}
             {s.links.map(l => (
               <li key={l}>
-                <a
-                  href={l}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary-hover underline break-all"
-                >
-                  {l}
-                </a>
+                {isSafeHref(l) ? (
+                  <a
+                    href={l}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary-hover underline break-all"
+                  >
+                    {l}
+                  </a>
+                ) : (
+                  <span className="break-all">{l}</span>
+                )}
               </li>
             ))}
           </ul>

@@ -24,6 +24,26 @@ const SAFE_SCHEME = /^(https?:|mailto:)/i;
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
 /**
+ * Whether `href` is safe to hand to the browser as a raw, unfiltered
+ * `href` attribute: either it carries no scheme at all (a relative path,
+ * a `#fragment`, or a root-relative `/path`), or its scheme is on the
+ * allowlist above. A `javascript:` URI -- or any other scheme this
+ * project has not vetted -- fails this.
+ *
+ * The one allowlist for that decision, not two: `handbookUrl` below uses
+ * it for links written inside handbook markdown (reviewed content, but
+ * still rendered through react-markdown's own `urlTransform`, which this
+ * function stands in for). `SpeakerPage` uses it directly for a
+ * candidate's own `links` field, entered through the public, unreviewed
+ * proposal intake (`tools/convener_ops/proposal.py`) and rendered as a plain
+ * `<a href>` with no sanitiser of its own between the two -- security
+ * audit 2026-08-23, M3.
+ */
+export function isSafeHref(href: string): boolean {
+  return !HAS_SCHEME.test(href) || SAFE_SCHEME.test(href);
+}
+
+/**
  * Where a link written inside a handbook file points once that file is
  * rendered by the app.
  *
@@ -41,7 +61,7 @@ const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 export function handbookUrl(key: string, href: string | null | undefined): string {
   if (!href) return '';
   if (href.startsWith('#') || href.startsWith('/')) return href;
-  if (HAS_SCHEME.test(href)) return SAFE_SCHEME.test(href) ? href : '';
+  if (HAS_SCHEME.test(href)) return isSafeHref(href) ? href : '';
   const entry = CONTENT_REGISTRY[key];
   if (!entry) return '';
   const hashAt = href.indexOf('#');
