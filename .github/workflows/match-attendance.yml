@@ -15,9 +15,18 @@ name: Match attendance
 # the only place spec S:5's unmatched/unreachable distinction (acceptance
 # criterion 9) is ever named for a person to act on -- was produced by this
 # same command and had nowhere to be read from either. Uploaded here as a
-# short-retention, access-controlled build artefact, the same restriction
-# `cli.py::UNMATCHED_ATTENDANCE`'s own comment requires: it carries display
-# names and addresses, so it is never a public artefact and never committed.
+# short-retention, access-controlled build artefact.
+#
+# M1, fix wave 2 (security audit 2026-08-23): that artefact used to carry
+# display names and addresses in the clear -- readable by anyone with
+# repository read access, a wider set than those holding the event's own
+# decryption key, and outside the encryption/erasure/key-destruction
+# lifecycle every other piece of personal data here is held to.
+# `cli.py::UNMATCHED_ATTENDANCE`'s own comment has the fix: an unmatched
+# connection is named by a salted record identifier now, never a name or
+# an address (D-24) -- one more reason, beside the cascade's own matching
+# level, to configure `CONVENER_MATCHING_SALT` for an event that expects
+# unmatched attendance.
 #
 # No input carries an address: EVENT_ID and, optionally, conference_id are
 # the only things an operator names, the same shape issue-certificates.yml
@@ -100,10 +109,10 @@ jobs:
         # something else did. `if-no-files-found: ignore` because the
         # ordinary case -- everyone matched -- leaves no file at all.
         #
-        # Short-retention and access-controlled, never a public artefact:
-        # this file carries display names and addresses, the same
-        # restriction `cli.py::UNMATCHED_ATTENDANCE`'s own comment
-        # requires of whatever uploads it.
+        # Short-retention and access-controlled, never a public artefact --
+        # defence in depth, kept even though the file itself no longer
+        # carries a name or an address (M1, fix wave 2; see
+        # `cli.py::UNMATCHED_ATTENDANCE`'s own comment).
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

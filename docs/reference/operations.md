@@ -1185,10 +1185,22 @@ name). It is the diagnostic step an operator runs before issuing
 certificates for an event: it reports only counts on stdout (matched,
 unmatched, unreachable, rows read) and writes the host's short list of
 ties and unmatched attendees to `unmatched-attendance.md`, at the
-repository root -- `.gitignore`'d, and never printed, because it names
-people. `convener-issue-certificates` (below) re-runs the same join internally
-and never reads this file; it exists for a human to resolve an ambiguity by
-hand before certificates are minted, not as an input to anything automated.
+repository root -- `.gitignore`'d and never committed. `convener-issue-
+certificates` (below) re-runs the same join internally and never reads
+this file; it exists for a human to resolve an ambiguity by hand before
+certificates are minted, not as an input to anything automated.
+
+**`unmatched-attendance.md` names records, not people (M1, security audit
+2026-08-23).** An unmatched connection is listed by a salted record
+identifier -- `registration.matching_code`, the identical shape a
+registrant's own confirmation code already uses -- when
+`CONVENER_MATCHING_SALT` is configured, or by its position in the list
+otherwise; a tie the cascade refused to guess between is listed by each
+candidate's own record identifier, never its address. An unreachable
+connection (a telephone joiner: never host-resolvable regardless -- spec
+S:5's own boundary) collapses to one count-and-duration line, naming
+nobody. This used to carry display names and addresses in the clear; the
+fix is in `cli.py::UNMATCHED_ATTENDANCE`'s own comment.
 
 Like every other command in this section, it needs `EVENT_PRIVATE_KEY` to
 decrypt `registrations.enc` -- and per *Event registration keys* above, that
@@ -1205,13 +1217,13 @@ workflows' own header comments told an operator to "run
 actually follow, since the private key it needs never touches a laptop by
 design; both headers now name this workflow instead.
 
-`unmatched-attendance.md` -- the only artefact naming who could not be
+`unmatched-attendance.md` -- the only artefact naming what could not be
 matched, and the only place acceptance criterion 9's unmatched/unreachable
 distinction ever reaches a human -- is uploaded by this workflow's own
 last step as a short-retention (14 days), access-controlled build
-artefact, the same restriction `cli.py::UNMATCHED_ATTENDANCE`'s own
-comment requires of anything that publishes it: it carries display names
-and addresses, so it is never a public artefact and never committed.
+artefact. That restriction is defence in depth now, not the reason the
+file is safe: the file itself carries no name and no address any more
+(see above).
 
 **The manual implementation can now be run against real attendance in CI
 (task 17, closing the gap fix round 3 recorded here).** Before this, with

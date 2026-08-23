@@ -31,9 +31,14 @@ notify-body.md
 
 # The host's short list of attendance to resolve by hand
 # (tools/convener_ops/cli.py::match_attendance). Written only when
-# attendance.match finds an unmatched or unreachable attendee -- carries
-# display names and addresses, so it is never committed and never printed;
-# see match_attendance's own docstring for why a file.
+# attendance.match finds an unmatched or unreachable attendee. Never
+# committed regardless -- but M1 (security audit 2026-08-23) is the
+# reason this comment no longer says "never printed": that scope covered
+# stdout, not the 14-day build artefact this file was already being
+# uploaded as, which is exactly where the leak was. The file itself no
+# longer carries a name or an address either way (see
+# UNMATCHED_ATTENDANCE's own comment in cli.py); kept ignored as
+# defence in depth, not because its content still needs it.
 unmatched-attendance.md
 
 # Python

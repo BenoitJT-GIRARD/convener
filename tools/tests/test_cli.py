@@ -2336,12 +2336,54 @@ def test_match_attendance_catches_an_unresolved_conference_id_too(
     )
 
 
-def test_match_attendance_names_tied_candidates_in_the_host_list(
+def test_match_attendance_names_tied_candidates_by_record_id_in_the_host_list(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A tie the cascade refused to guess between is not left as a bare
-    "unmatched" in the host's own file -- both candidates' addresses are
-    named, so the host is resolving a specific ambiguity."""
+    "unmatched" in the host's own file -- both candidates are named, so
+    the host is resolving a specific ambiguity. M1, fix wave 2: named by
+    each candidate's own salted record identifier now, never its
+    address (D-24) -- the record identifier is the whole point of a tie
+    being worth naming at all, not the address it used to be."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    first_marie = Registration("Marie", "Martin", "marie.m1@example.org", "", False)
+    second_marie = Registration("Marie", "Martin", "marie.m2@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, first_marie, second_marie)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Marie Martin,someone-else@example.org,"
+        "2026-08-20T18:00:00Z,2026-08-20T18:30:00Z,1800",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+
+    assert match_attendance() == 0
+
+    host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
+    first_code = matching_code("mrg-042", "marie.m1@example.org", "s3cr3t-salt-value")
+    second_code = matching_code("mrg-042", "marie.m2@example.org", "s3cr3t-salt-value")
+    assert first_code is not None
+    assert second_code is not None
+    assert first_code in host_list
+    assert second_code in host_list
+    assert "marie.m1@example.org" not in host_list
+    assert "marie.m2@example.org" not in host_list
+    assert "someone-else@example.org" not in host_list
+    assert host_list.endswith("\n")
+    assert not host_list.endswith("\n\n")
+
+
+def test_match_attendance_tied_candidates_without_a_salt_show_no_addresses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The identical tie, with no salt configured: no record identifier
+    can be computed for either candidate, so the host list says exactly
+    that, and both addresses stay absent -- not the fallback the pre-fix
+    code took of printing the address instead."""
     private_pem, _ = _publish_event_key(tmp_path)
     first_marie = Registration("Marie", "Martin", "marie.m1@example.org", "", False)
     second_marie = Registration("Marie", "Martin", "marie.m2@example.org", "", False)
@@ -2361,22 +2403,89 @@ def test_match_attendance_names_tied_candidates_in_the_host_list(
     assert match_attendance() == 0
 
     host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
-    assert "marie.m1@example.org" in host_list
-    assert "marie.m2@example.org" in host_list
-    assert host_list.endswith("\n")
-    assert not host_list.endswith("\n\n")
+    assert "2 registrant(s) tied" in host_list
+    assert "CONVENER_MATCHING_SALT not configured" in host_list
+    assert "marie.m1@example.org" not in host_list
+    assert "marie.m2@example.org" not in host_list
+    assert "someone-else@example.org" not in host_list
 
 
-def test_match_attendance_prints_only_counts_and_writes_the_host_list(
+def test_match_attendance_unmatched_entry_shows_a_record_id_not_the_address(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The ordinary, non-tied unmatched case, salted: the host list names
+    the connection by its own salted record identifier, computed from the
+    address the platform observed -- never the address itself."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Grace Hopper,grace@example.org,2026-08-20T18:00:00Z,2026-08-20T18:30:00Z,1800",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+
+    assert match_attendance() == 0
+
+    host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
+    code = matching_code("mrg-042", "grace@example.org", "s3cr3t-salt-value")
+    assert code is not None
+    assert code in host_list
+    assert "grace@example.org" not in host_list
+    assert "Grace" not in host_list
+    assert "Hopper" not in host_list
+
+
+def test_match_attendance_refuses_rather_than_leak_if_a_record_id_cannot_be_computed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_salted_record_id`'s own defensive branch: with a truthy salt,
+    `matching_code` can never actually return `None` -- but if it ever
+    did, falling back to the address would be exactly the leak M1's fix
+    exists to close. Forced with a monkeypatch, the same technique
+    `test_find_by_matching_code_refuses_a_collision_instead_of_returning_
+    the_first` already uses to exercise an otherwise-unreachable branch:
+    this must raise loudly, never print the address instead."""
+    private_pem, _ = _publish_event_key(tmp_path)
+    ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
+    _write_registrations(tmp_path, "mrg-042", private_pem, ada)
+    _write_attendance_csv(
+        tmp_path,
+        "mrg-042",
+        "Grace Hopper,grace@example.org,2026-08-20T18:00:00Z,2026-08-20T18:30:00Z,1800",
+    )
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    monkeypatch.setenv("EVENT_ID", "mrg-042")
+    monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
+    monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
+    monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
+    monkeypatch.setattr("convener_ops.cli.matching_code", lambda event_id, email, salt: None)
+
+    with pytest.raises(RuntimeError, match="matching_code returned None"):
+        match_attendance()
+
+    assert not (tmp_path / UNMATCHED_ATTENDANCE).exists()
+
+
+def test_match_attendance_host_list_never_contains_a_raw_name_or_address(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Ada joins by the link with her own address (matched, level 2 --
-    no salt configured); Grace's connection carries an address that
-    matches nobody (unmatched); a third connection has no address at all
-    (unreachable). Neither Ada's nor Grace's name or address may appear
-    in anything this job prints -- only in the host's file, which is the
-    one place they are allowed to, because that is the whole point of
-    handing it to a human."""
+    """M1's own closing proof, security audit 2026-08-23: an artefact or a
+    log line must never carry a plaintext address (or name, or phone
+    number) out of the envelope, regardless of whether CONVENER_MATCHING_SALT
+    is configured. Ada joins by the link with her own address (matched,
+    level 2 -- no salt configured); Grace's connection carries an address
+    that matches nobody (unmatched); a third connection has no address at
+    all (unreachable, a phone number as its own display name). Before this
+    fix, `host_list` carried Grace's name and address and the caller's own
+    phone number verbatim -- this pins that it no longer does, on either
+    surface this job can write to: stdout/stderr, and the host's own
+    file."""
     private_pem, _ = _publish_event_key(tmp_path)
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
@@ -2399,15 +2508,25 @@ def test_match_attendance_prints_only_counts_and_writes_the_host_list(
     printed = (captured.out + captured.err).lower()
     assert "1 matched, 1 unmatched, 1 unreachable" in printed
     assert "3 row(s) read" in printed
-    for leaked in ("ada", "lovelace", "grace", "hopper", "555 0100"):
-        assert leaked not in printed, f"{leaked!r} leaked into job output"
 
     host_list = (tmp_path / UNMATCHED_ATTENDANCE).read_text(encoding="utf-8")
-    assert "Grace Hopper" in host_list
-    assert "grace@example.org" in host_list
-    assert "+1 555 0100" in host_list
-    assert "Ada" not in host_list
+    leaked_strings = ("ada", "lovelace", "grace", "hopper", "555 0100")
+    for leaked in leaked_strings:
+        assert leaked not in printed, f"{leaked!r} leaked into job output"
+        assert leaked not in host_list.lower(), (
+            f"{leaked!r} leaked into {UNMATCHED_ATTENDANCE}"
+        )
+    assert "grace@example.org" not in host_list
     assert "ada@example.org" not in host_list
+
+    # What the host does get instead: an unmatched entry naming a record,
+    # never a person, and an unreachable connection collapsed to a count
+    # -- both actionable without naming anybody (M1: "give them what they
+    # need to act without naming people").
+    assert "connection 1 (no record identifier" in host_list
+    assert "30 min" in host_list  # Grace's own 1800-second connection
+    assert "## Unreachable" in host_list
+    assert "1 connection(s), 10 min total" in host_list
 
 
 def test_match_attendance_reads_the_committed_encrypted_export(

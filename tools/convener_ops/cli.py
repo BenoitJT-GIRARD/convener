@@ -1623,19 +1623,31 @@ def erase_registration() -> int:
     return 0
 
 
-#: Where the host's short list of attendance to resolve by hand lands --
-#: names and addresses a volunteer needs to read directly, so this file is
-#: `.gitignore`d and never printed. Written only when there is something to
-#: report; unlinked otherwise, so a stale file from an earlier run of this
-#: same job workspace is never mistaken for this run's answer.
+#: Where the host's short list of attendance to resolve by hand lands.
+#: Written only when there is something to report; unlinked otherwise, so
+#: a stale file from an earlier run of this same job workspace is never
+#: mistaken for this run's answer. `.gitignore`d: never committed.
 #:
-#: WARNING for whoever uploads this as a workflow artefact (I-4, branch
-#: review, wired below): it must be a short-retention *private* build
-#: artefact, restricted to the run's own collaborators -- never a public
-#: one, the same restriction every other artefact in this repository that
-#: carries a name or an address already applies. Publishing it any other
-#: way would put names and addresses this whole module exists to keep out
-#: of anything a stranger can read.
+#: M1, fix wave 2 (security audit 2026-08-23): this file used to carry
+#: display names and addresses in the clear -- a 14-day build artefact
+#: readable by anyone with repository read access, a wider set than those
+#: holding the event's own decryption key, and entirely outside the
+#: encryption/erasure/key-destruction lifecycle every other piece of
+#: personal data in this project is held to (P-1, P-2). The `.gitignore`
+#: comment that used to guard it said "never printed" -- true, but that
+#: never covered "never uploaded", which is the surface that actually
+#: leaked. `match_attendance` below no longer writes a name or an address
+#: here at all: an unmatched connection is named by a record identifier
+#: (`registration.matching_code`, salted, the same shape a registrant's
+#: own confirmation code already uses) when `CONVENER_MATCHING_SALT` is
+#: configured, or by its position in this run's own list otherwise --
+#: D-24, applied to a report the same way it already applies to an
+#: operator command. An unreachable connection (never host-resolvable
+#: regardless -- see `attendance.py`'s own "boundary, not weakness"
+#: framing) collapses to one count-and-duration summary line, naming
+#: nobody. This file is still uploaded as a short-retention, access-
+#: controlled build artefact (defence in depth), but its own safety no
+#: longer depends on that restriction.
 UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
 
 
@@ -1802,6 +1814,24 @@ def _warn_if_title_truncated(event: CertificateEvent) -> None:
         )
 
 
+def _salted_record_id(event_id: str, email: str, salt: str) -> str:
+    """`registration.matching_code`, guaranteed non-`None` here: `salt` is
+    checked truthy by every caller before this is reached, and
+    `matching_code` only ever returns `None` for a falsy salt. Raised
+    explicitly rather than asserted -- an `assert` is stripped under
+    `python -O`, and D-25 requires this failure mode to survive that --
+    rather than silently falling back to the address it would otherwise
+    have to print instead, the one leak M1's fix exists to rule out."""
+    record_id = matching_code(event_id, email, salt)
+    if record_id is None:
+        raise RuntimeError(
+            "matching_code returned None for a truthy salt -- refusing "
+            "to fall back to the address this function exists to keep "
+            "out of the report"
+        )
+    return record_id
+
+
 def match_attendance() -> int:
     """`convener-match-attendance`: read the platform's attendance export for
     one event, join it against that event's stored registrations through
@@ -1828,6 +1858,20 @@ def match_attendance() -> int:
     ever reach stdout, never a name or an address. The host's actual short
     list goes to `UNMATCHED_ATTENDANCE` instead, never printed and never
     committed (see its own comment above).
+
+    **M1, fix wave 2: `UNMATCHED_ATTENDANCE` itself no longer carries a
+    name or an address either.** An unmatched connection is named by its
+    own salted record identifier (`_salted_record_id`, the identical
+    `matching_code` shape a registrant's own confirmation code already
+    uses) when `CONVENER_MATCHING_SALT` is configured, or by its position in
+    this run's own list when it is not -- D-24 applied to a report the
+    same way it already applies to every operator command. A tie the
+    cascade refused to guess between is still named, by each tied
+    candidate's own record identifier, never its address. An unreachable
+    connection collapses to one count-and-duration line: `attendance.py`'s
+    own module docstring already calls this outcome "not a host-resolvable
+    case", so there was never a name for a host to act on there in the
+    first place.
 
     **`CONVENER_MATCHING_SALT` and `CONVENER_FCC_CONFERENCE_ID`** (I-4, branch
     review): the same optional matching-salt and per-event conference id
@@ -1917,29 +1961,66 @@ def match_attendance() -> int:
         if result.unmatched:
             lines.append("")
             lines.append("## Unmatched -- the host can resolve these by hand")
-            for unmatched in result.unmatched:
+            for index, unmatched in enumerate(result.unmatched, start=1):
                 minutes = unmatched.duration_seconds // 60
-                line = (
-                    f"- {unmatched.display_name} <{unmatched.email}> -- {minutes} min"
-                )
+                # M1, fix wave 2: named by record, never by person (D-24).
+                # `unmatched.email` and `.display_name` are the platform's
+                # own observed values for this connection -- never printed
+                # here. `_salted_record_id` needs the same salt every
+                # registrant's own matching code already needs; with none
+                # configured, this run's own position is the only stable
+                # handle left, and that is said plainly rather than left
+                # to look like a missing feature.
+                if salt:
+                    record_id = _salted_record_id(event_id, unmatched.email, salt)
+                    label = f"record {record_id}"
+                else:
+                    label = (
+                        f"connection {index} (no record identifier -- "
+                        "CONVENER_MATCHING_SALT not configured)"
+                    )
+                line = f"- {label} -- {minutes} min"
                 if unmatched.tied_with:
                     # A tie the cascade refused to guess between (spec S:5:
                     # "empêche de revendiquer la présence d'autrui") --
                     # named here rather than left as a bare "unmatched",
                     # since the host is resolving a specific ambiguity, not
                     # starting from nothing. See attendance.py's own
-                    # "Ties are never resolved by guessing" section.
-                    line += f" -- ties: {', '.join(unmatched.tied_with)}"
+                    # "Ties are never resolved by guessing" section. Each
+                    # tied candidate is a real registrant, so it is named
+                    # by its own record identifier too, never its address.
+                    if salt:
+                        tied_ids = [
+                            _salted_record_id(event_id, address, salt)
+                            for address in unmatched.tied_with
+                        ]
+                        line += f" -- ties: {', '.join(tied_ids)}"
+                    else:
+                        line += (
+                            f" -- {len(unmatched.tied_with)} registrant(s) "
+                            "tied (no record identifier -- "
+                            "CONVENER_MATCHING_SALT not configured)"
+                        )
                 lines.append(line)
         if result.unreachable:
+            # M1, fix wave 2: `attendance.py`'s own module docstring already
+            # calls this outcome "not a host-resolvable case" -- no cascade
+            # level past the code could ever reach a telephone joiner, so a
+            # per-row name here was never actionable, only a name. One
+            # count-and-duration summary line says everything a host can
+            # act on: nobody, and how much total time.
             lines.append("")
             lines.append(
-                "## Unreachable -- joined by phone, no address on file, "
-                "cannot be matched"
+                "## Unreachable -- no address on file, not resolvable by "
+                "hand (spec S:5)"
             )
-            for unreachable in result.unreachable:
-                minutes = unreachable.duration_seconds // 60
-                lines.append(f"- {unreachable.display_name} -- {minutes} min")
+            unreachable_minutes = (
+                sum(entry.duration_seconds for entry in result.unreachable) // 60
+            )
+            lines.append(
+                f"- {len(result.unreachable)} connection(s), "
+                f"{unreachable_minutes} min total"
+            )
         # One explicit trailing newline, appended once, here -- not left to
         # depend on a section happening to end its own list with a blank
         # entry, which is the same "content plus one trailing newline"

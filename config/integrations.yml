@@ -211,15 +211,20 @@ integrations:
       tools/convener_ops/registration.py::matching_code returns nothing: no
       matching code is derived, printed, or put in the confirmation email
       (task 7). Attendance falls back to task 8's cascade -- exact address,
-      then normalised name -- instead of the typed code. An ordinary D-13
-      absence: the salt exists so the code cannot be forged or guessed by
-      anyone who knows an address, not so a job can refuse to run without
-      it, and the cascade it degrades to is a documented, working fallback
-      rather than personal data landing somewhere it should not. The same
-      secret has a second, unrelated consumer with a different, non-ordinary
-      shape of absence -- see the certificate_fingerprint row below, which
-      declares that difference structurally rather than in this row's own
-      prose.
+      then normalised name -- instead of the typed code. convener-match-
+      attendance's own unmatched-attendance.md (M1, security audit
+      2026-08-23) degrades the same way: with no salt, no salted record
+      identifier can be computed for an unmatched connection or a tied
+      candidate either, so the host's list falls back to naming each entry
+      by its own position in the run instead. An ordinary D-13 absence: the
+      salt exists so the code (and, since M1, the report) cannot be forged,
+      guessed or reversed by anyone who knows an address, not so a job can
+      refuse to run without it, and every fallback it degrades to is
+      documented and working, never personal data landing somewhere it
+      should not. The same secret has a second, unrelated consumer with a
+      different, non-ordinary shape of absence -- see the
+      certificate_fingerprint row below, which declares that difference
+      structurally rather than in this row's own prose.
 
   - name: certificate_fingerprint
     label: Certificate register fingerprint
