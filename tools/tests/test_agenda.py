@@ -186,10 +186,28 @@ def test_the_fixture_covers_both_sides_of_both_dst_boundaries() -> None:
 
 
 def test_a_room_link_never_reaches_the_internal_calendar() -> None:
-    room_link = "https://us02web.zoom.us/j/SHOULD-NEVER-APPEAR-IN-THE-CALENDAR"
+    """Fix round 2 (branch review, Important 1): the previous 61-octet
+    fixture link sat just under RFC 5545's 75-octet fold threshold and so
+    never exercised folding at all -- a byte-substring search against the
+    *unfolded* string would still report "absent" for a link that reached
+    the file but got folded by `_fold_line` first, the same false-pass
+    shape `test_site.py::test_a_built_public_page_never_carries_a_room_link`
+    already found and fixed for the built public site. This fixture is a
+    realistic 93-octet Zoom URL (a meeting id plus password), long enough
+    to actually cross the fold boundary, and the check strips the
+    `"\\r\\n "` fold-continuation marker before searching, mirroring that
+    fix verbatim.
+    """
+    room_link = (
+        "https://us02web.zoom.us/j/89234567890"
+        "?pwd=aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890abcdef"
+    )
     entry = _scheduled(zoom_link=room_link)
     raw = build_internal_calendar([entry], config()).encode("utf-8")
-    assert room_link.encode("utf-8") not in raw
+    text = raw.decode("utf-8")
+    unfolded = text.replace("\r\n ", "")
+    assert room_link not in text
+    assert room_link not in unfolded
 
 
 def test_no_speaker_name_or_email_reaches_a_deadline_entry() -> None:
