@@ -85,9 +85,11 @@ authority.
 - **The showcase is generated, not hand-built.** [`example-showcase`](https://github.com/example-instance/example-showcase) holds no source of its own — continuous integration here builds `site/` and `app/` and pushes the output to its root.
 
 See [`docs/architecture.md`](docs/architecture.md) for how these pieces
-fit together, why the structural choices were made, the diagram of where
-personal data goes, and the handover procedure. The cockpit's own original
-design is `docs/superpowers/specs/2026-05-23-convener-app-refonte-design.md`.
+fit together, the diagram of where personal data goes, and the handover
+procedure, and [`docs/decisions/`](docs/decisions/index.md) for why each
+structural choice was made — one record per decision, what was rejected,
+and what it costs. The cockpit's own original design is
+`docs/superpowers/specs/2026-05-23-convener-app-refonte-design.md`.
 
 ## Contributing
 

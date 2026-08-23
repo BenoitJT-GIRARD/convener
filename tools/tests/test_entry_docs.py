@@ -1,5 +1,5 @@
 """`README.md` and `docs/architecture.md` are the entry documentation a
-newcomer reads first (phase 5 spec Section 8, task 14). Two properties are
+newcomer reads first (phase 5 spec Section 8, task 14). Properties are
 pinned here rather than trusted by inspection:
 
 1. Every relative Markdown link the two files carry resolves to a real
@@ -10,20 +10,21 @@ pinned here rather than trusted by inspection:
    docs/architecture.md are not registered pages themselves, so nothing
    already checks their own outbound links the way
    `app/tests/registered-links.test.ts` checks a registered page's.
-2. The handful of `docs/superpowers/` and `docs/reference/` paths these
-   two files name *in prose, never as a clickable link* -- this
+2. `docs/reference/operations.md` -- documents every secret this project
+   uses and is deliberately excluded from the app's public bundle -- is
+   named by these two files *in prose, never as a clickable link*, this
    repository's own convention for a path a reader should not be led to
-   follow (`docs/reference/operations.md` documents secret names and is
-   deliberately excluded from the app's public bundle;
-   `docs/superpowers/` is a set of working documents this project never
-   publishes at all, `app/tests/copy-handbook.test.ts` again) -- are real
-   files, not stale references. `INFORMATION-ARCHITECTURE.md` and
-   `site/README.md` already use this exact convention for the same two
-   paths; this test holds the new pair to it too.
+   follow. `INFORMATION-ARCHITECTURE.md` and `site/README.md` already use
+   this same convention; this test holds the pair to it too.
+3. The published architecture decision records
+   (`docs/decisions/index.md`) are a real link from at least one of the
+   two files, not merely named -- the working register they were edited
+   from stays under `docs/superpowers/`, which never ships, but the edited
+   records do, so a reader must be able to click through to them.
 
-Both checks are a sweep over the two files' own text, not a fixed list of
-links transcribed by hand: a link added later that breaks either rule
-fails here on its own.
+Every check is a sweep over the two files' own text, not a fixed list of
+links transcribed by hand: a link added later that breaks any rule fails
+here on its own.
 """
 
 from __future__ import annotations
@@ -47,11 +48,15 @@ DOCS = ROOT / "docs"
 #: under `docs/` must be in the registry to be a safe link target.
 UNREGISTERED_BUT_SAFE = {"index.md", "README.md", "architecture.md"}
 
-#: The two paths this repository's own convention names in prose rather
-#: than links -- see `INFORMATION-ARCHITECTURE.md` (operations.md) and
-#: `site/README.md` (the decision register) for the precedent.
-DECISION_REGISTER = "docs/superpowers/specs/2026-08-18-convener-cadrage-decisions.md"
+#: The path this repository's own convention names in prose rather than as
+#: a link -- see `INFORMATION-ARCHITECTURE.md` and `site/README.md` for the
+#: precedent.
 OPERATIONS_REFERENCE = "docs/reference/operations.md"
+
+#: The published form of the decision register -- see
+#: `docs/decisions/index.md` itself, and `docs/superpowers/mise-en-ligne.md`
+#: Section 1 for why an edited copy exists at all.
+DECISIONS_INDEX = "docs/decisions/index.md"
 
 _LINK_RE = re.compile(r"\]\(([^)]+)\)")
 _SCHEME_RE = re.compile(r"^[a-z][a-z0-9+.\-]*:", re.IGNORECASE)
@@ -156,17 +161,22 @@ def test_a_docs_link_targets_a_published_page_or_a_known_safe_one() -> None:
     assert broken == []
 
 
-def test_the_decision_register_is_named_not_linked_and_real() -> None:
-    # docs/superpowers/ is never published (D-15, mise-en-ligne.md Section
-    # 2) -- a page a reader of this private repository can open directly,
-    # but a hyperlink a public reader could never follow, so this project's
-    # own convention (INFORMATION-ARCHITECTURE.md, site/README.md) names it
-    # in prose instead. Both properties are checked: the path is mentioned,
-    # and it is never inside a `](...)` link.
-    text = ARCHITECTURE.read_text(encoding="utf-8")
-    assert DECISION_REGISTER in text
-    assert f"]({DECISION_REGISTER})" not in text
-    assert (ROOT / DECISION_REGISTER).is_file()
+def test_the_entry_docs_link_to_the_decisions_index() -> None:
+    # mise-en-ligne.md Section 2: once the architecture decision records
+    # exist in their published form, README.md and docs/architecture.md
+    # must *link* to them, not merely name the private working register
+    # they were edited from -- naming without a link was only ever right
+    # while nothing published existed yet to point at.
+    target = (ROOT / DECISIONS_INDEX).resolve()
+    linked = False
+    for source in (README, ARCHITECTURE):
+        text = source.read_text(encoding="utf-8")
+        for href in _local_links(text):
+            candidate, _ = _target(source, href)
+            if candidate == target:
+                linked = True
+    assert linked
+    assert (ROOT / DECISIONS_INDEX).is_file()
 
 
 def test_the_operations_reference_is_named_not_linked_and_real() -> None:

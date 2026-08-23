@@ -131,12 +131,12 @@ touching anyone else's.
 The structural choices behind this system — why two repositories, why the
 data is encrypted the way it is, why an address is never an input to a
 workflow, why the showcase is static with a couple of interactive islands
-rather than a single application — are recorded as a single, numbered
-decision register, each entry naming what was rejected and why:
-`docs/superpowers/specs/2026-08-18-convener-cadrage-decisions.md`.
+rather than a single application — are recorded as a set of numbered
+[architecture decision records](decisions/index.md), each one naming what
+was rejected and why.
 
 This file cites a decision by its number rather than restating it, the
-same discipline that register asks of every other document in this
+same discipline those records ask of every other document in this
 project — a decision copied into a second place is a second thing that
 can go out of date. A handful that shape what is above: no database, the
 repository is the store (D-01); every integration degrades visibly when
