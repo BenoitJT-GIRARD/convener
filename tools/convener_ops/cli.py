@@ -56,6 +56,7 @@ from convener_ops.certificate import (
     revoke,
     sign_for,
 )
+from convener_ops.dispatch_alert import alert_message
 from convener_ops.governance import PARIS, paris_today
 from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
@@ -3970,6 +3971,55 @@ def notify_digest() -> int:
         return 1
 
     return _notify(daily_digest(speakers or [], cfg or {}, datetime.now(UTC)))
+
+
+def alert_secret_workflow_run() -> int:
+    """`convener-alert-secret-workflow-run`: composes the off-`main` alert for one
+    `workflow_run` event and addresses it, if a channel is configured.
+
+    Reads the triggering run's own facts from the environment --
+    `.github/workflows/secret-workflow-monitor.yml`'s own "Evaluate" step
+    sets them from `github.event.workflow_run.*` before calling this.
+
+    **Always exits 0.** Unlike `_notify`, whether to fail the job is not
+    decided in here: this command writes `off_main=true`/`off_main=false` to
+    `$GITHUB_OUTPUT`, and the workflow's own last step -- not this one --
+    fails the job when it reads `true`, unconditionally, whether or not a
+    channel was configured for the notification below. Keeping that one
+    decision in the workflow file rather than in an exit code means D-25's
+    loud failure is visible by reading the fifteen lines of YAML that make
+    it happen, not by tracing a library call's return value back through a
+    subprocess boundary -- and it means this command itself can be
+    exercised and asserted against without a workflow runner at all.
+    """
+    message = alert_message(
+        workflow_name=os.environ.get("WORKFLOW_NAME", ""),
+        head_branch=os.environ.get("HEAD_BRANCH") or None,
+        run_event=os.environ.get("RUN_EVENT", ""),
+        run_url=os.environ.get("RUN_URL", ""),
+        actor=os.environ.get("RUN_ACTOR", ""),
+    )
+    if message is None:
+        name = os.environ.get("WORKFLOW_NAME", "(unknown)")
+        print(f"{name} ran on main -- nothing to report")
+        _write_github_output("off_main=false\n")
+        return 0
+
+    print(message)
+    addressed = dispatch(message, os.environ)
+    if addressed is not None:
+        path = repo_root() / NOTIFY_BODY
+        path.write_text(addressed.body, encoding="utf-8", newline="")
+        print("")
+        print(f"addressed to thread {addressed.channel.thread}; left in {NOTIFY_BODY}")
+    else:
+        print("")
+        print(
+            "no notification channel is configured -- this alert reaches "
+            "nowhere but this run's own log"
+        )
+    _write_github_output("off_main=true\n")
+    return 0
 
 
 def _git_log(root: Path) -> tuple[str, str]:

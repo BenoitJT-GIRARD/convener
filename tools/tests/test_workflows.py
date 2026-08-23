@@ -2999,3 +2999,250 @@ def test_no_workflow_uses_a_yaml_anchor_or_alias(workflow: Path) -> None:
         "one copy must stay in sync (see visuals.yml's own path filter "
         "for the pattern)"
     )
+
+
+# ------------------------------------------------------------------ #
+# secret-workflow-monitor.yml: closes the class, not the instance. A
+# hand-maintained `workflows:` list drifts the moment somebody adds a
+# workflow carrying a new secret and does not think to also edit this
+# unrelated file. The tests below derive the *expected* list structurally
+# -- from the same `secrets.`/`secrets[...]` reference every job's own
+# `env:`/`with:` values already carry -- and assert it against what the
+# monitor actually watches, in both directions, so an addition on either
+# side without the other fails here, by name, rather than the monitor
+# silently watching nothing for a secret it was never told about.
+# ------------------------------------------------------------------ #
+
+SECRET_WORKFLOW_MONITOR = WORKFLOWS_DIR / "secret-workflow-monitor.yml"
+
+#: A `secrets.NAME` or dynamic `secrets[...]` reference, the same shape
+#: the security audit's supply-chain report scanned for. Matched against
+#: parsed YAML *values* (never the raw file text) below, specifically so a
+#: mention inside a `#` comment -- `safe_load` discards comments entirely
+#: -- can never be mistaken for a real reference; see
+#: `test_a_commented_out_secret_reference_is_not_detected` for the
+#: regression this exists to guard.
+_SECRETS_REFERENCE_RE = re.compile(r"secrets\.[A-Za-z0-9_]+|secrets\[[^\]]+\]")
+
+#: The one secret reference that does not count. No job in this repository
+#: uses this literal form today (the default token is read as
+#: `github.token`, never `secrets.GITHUB_TOKEN` -- confirmed by
+#: `test_every_job_declares_a_timeout`'s own sweep finding nothing of the
+#: kind), but the definition this test enforces is "declares a secret
+#: *beyond* GITHUB_TOKEN", so the one name that is not "beyond" it is
+#: excluded by name rather than by accident.
+_GITHUB_TOKEN_REFERENCE = "secrets.GITHUB_TOKEN"
+
+
+def _secret_references(value: Any) -> set[str]:
+    """Every `secrets.*`/`secrets[...]` reference found in any string
+    reachable from `value` -- a parsed YAML node, recursed through dicts
+    and lists. Never reads a raw file: comments are already gone by the
+    time `safe_load` produces `value`, which is the whole point."""
+    found: set[str] = set()
+    if isinstance(value, str):
+        found.update(_SECRETS_REFERENCE_RE.findall(value))
+    elif isinstance(value, dict):
+        for v in value.values():
+            found.update(_secret_references(v))
+    elif isinstance(value, list):
+        for v in value:
+            found.update(_secret_references(v))
+    return found
+
+
+def test_secret_reference_scanner_finds_a_dotted_reference() -> None:
+    """Positive control for `_secret_references`."""
+    probe = safe_load(
+        "jobs:\n  a:\n    steps:\n      - env:\n"
+        "          K: ${{ secrets.CONVENER_SIGNING_KEY }}\n"
+    )
+    assert _secret_references(probe["jobs"]) == {"secrets.CONVENER_SIGNING_KEY"}
+
+
+def test_secret_reference_scanner_finds_a_dynamic_reference() -> None:
+    """The certificate/registration/survey workflows resolve an event's own
+    key through `secrets[steps.resolve.outputs.secret_name]`, never a
+    literal dotted name -- `_secret_references` must see this form too."""
+    probe = safe_load(
+        "jobs:\n  a:\n    steps:\n      - env:\n"
+        "          K: ${{ secrets[steps.resolve.outputs.secret_name] }}\n"
+    )
+    assert _secret_references(probe["jobs"]) == {
+        "secrets[steps.resolve.outputs.secret_name]"
+    }
+
+
+def test_secret_reference_scanner_finds_nothing_in_a_workflow_with_no_secret() -> None:
+    probe = safe_load("jobs:\n  a:\n    steps:\n      - run: echo hi\n")
+    assert _secret_references(probe["jobs"]) == set()
+
+
+def test_a_commented_out_secret_reference_is_not_detected() -> None:
+    """The same evasion class `test_a_commented_out_timeout_does_not_
+    satisfy_the_job_level_requirement` guards against, applied here: a
+    `# secrets.CONVENER_SIGNING_KEY` mentioned only in prose must never make a
+    workflow look secret-bearing. Parsing YAML rather than scanning raw
+    text is what makes this true by construction -- `safe_load` never sees
+    a comment at all -- so this is a regression guard on the *approach*,
+    not merely one more case."""
+    probe = safe_load(
+        "jobs:\n  a:\n    steps:\n"
+        "      # reads secrets.CONVENER_SIGNING_KEY further down in a sibling workflow\n"
+        "      - run: echo hi\n"
+    )
+    assert _secret_references(probe["jobs"]) == set()
+
+
+def _declares_a_secret_beyond_github_token(workflow: Path) -> bool:
+    """Whether any job in `workflow` references a secret other than
+    `GITHUB_TOKEN` -- the honest definition of "sensitive" this monitor
+    uses: not a hand-picked severity judgement, a structural fact about
+    the file."""
+    data = safe_load(workflow.read_text(encoding="utf-8"))
+    jobs = data.get("jobs", {}) if isinstance(data, dict) else {}
+    refs = _secret_references(jobs)
+    return any(ref != _GITHUB_TOKEN_REFERENCE for ref in refs)
+
+
+def _secret_bearing_workflow_names(directory: Path, *, exclude: Path) -> set[str]:
+    """The `name:` of every workflow under `directory` that declares a
+    secret beyond `GITHUB_TOKEN`, excluding `exclude` -- the monitor's own
+    file must never be asked to watch itself; see
+    `test_the_monitor_would_otherwise_qualify_to_watch_itself` for why the
+    exclusion is deliberate rather than an oversight this function hides."""
+    names: set[str] = set()
+    for path in _workflow_files_in(directory):
+        if path == exclude:
+            continue
+        if not _declares_a_secret_beyond_github_token(path):
+            continue
+        data = safe_load(path.read_text(encoding="utf-8"))
+        name = data.get("name") if isinstance(data, dict) else None
+        assert isinstance(name, str) and name, (
+            f"{path.name} declares a secret beyond GITHUB_TOKEN but has no "
+            "`name:` -- workflow_run.workflows matches by name, never by "
+            "filename, so an unnamed workflow could never be watched"
+        )
+        names.add(name)
+    return names
+
+
+def test_the_secret_workflow_monitor_watches_every_secret_bearing_workflow() -> None:
+    """The class-closing assertion. A workflow added later that declares
+    any secret beyond `GITHUB_TOKEN` and is not also added to
+    `secret-workflow-monitor.yml`'s own `workflows:` list fails this test
+    by name -- see `test_a_workflow_with_a_new_secret_is_flagged_as_
+    unwatched` for the same check exercised against a synthetic addition,
+    proving it actually fails rather than only asserting it should."""
+    expected = _secret_bearing_workflow_names(
+        ROOT / WORKFLOWS_DIR, exclude=ROOT / SECRET_WORKFLOW_MONITOR
+    )
+    monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
+    watched = set(monitor[True]["workflow_run"]["workflows"])
+
+    missing = expected - watched
+    extra = watched - expected
+    assert not missing, (
+        "declares a secret beyond GITHUB_TOKEN but secret-workflow-monitor.yml "
+        f"does not watch it: {sorted(missing)}"
+    )
+    assert not extra, (
+        "secret-workflow-monitor.yml watches a workflow that declares no "
+        f"secret beyond GITHUB_TOKEN: {sorted(extra)} -- either it lost its "
+        "only sensitive secret and should be removed from the list, or the "
+        "list carries a name that no longer matches any workflow's own "
+        "`name:`"
+    )
+
+
+def test_a_workflow_with_a_new_secret_is_flagged_as_unwatched(tmp_path: Path) -> None:
+    """Mutation proof for the test above, against a synthetic directory so
+    the real `secret-workflow-monitor.yml` is never touched to prove it.
+    A stale monitor (watching only `Existing`) and a freshly added
+    workflow (`New`, carrying a secret) reproduce exactly the drift the
+    class-closing test exists to catch: `New` must come back in `missing`.
+    """
+    (tmp_path / "existing.yml").write_text(
+        "name: Existing\njobs:\n  a:\n    steps:\n"
+        "      - env:\n          K: ${{ secrets.CONVENER_SIGNING_KEY }}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "new.yml").write_text(
+        "name: New\njobs:\n  a:\n    steps:\n"
+        "      - env:\n          K: ${{ secrets.CONVENER_SMTP_PASSWORD }}\n",
+        encoding="utf-8",
+    )
+    monitor_path = tmp_path / "secret-workflow-monitor.yml"
+    monitor_path.write_text(
+        "name: Monitor secret-bearing workflow runs\n"
+        "on:\n  workflow_run:\n    workflows: [Existing]\n    types: [requested]\n",
+        encoding="utf-8",
+    )
+
+    expected = _secret_bearing_workflow_names(tmp_path, exclude=monitor_path)
+    monitor = safe_load(monitor_path.read_text(encoding="utf-8"))
+    watched = set(monitor[True]["workflow_run"]["workflows"])
+
+    assert expected - watched == {"New"}
+
+
+def test_a_workflow_that_lost_its_secret_is_flagged_as_over_watched(
+    tmp_path: Path,
+) -> None:
+    """The other direction of the same mutation: a workflow the monitor
+    still lists after every secret was removed from it must be reported
+    too, not silently tolerated as a harmless extra -- a stale entry is
+    exactly how the list stops being trustworthy evidence of what is
+    actually secret-bearing."""
+    (tmp_path / "retired.yml").write_text(
+        "name: Retired\njobs:\n  a:\n    steps:\n      - run: echo hi\n",
+        encoding="utf-8",
+    )
+    monitor_path = tmp_path / "secret-workflow-monitor.yml"
+    monitor_path.write_text(
+        "name: Monitor secret-bearing workflow runs\n"
+        "on:\n  workflow_run:\n    workflows: [Retired]\n    types: [requested]\n",
+        encoding="utf-8",
+    )
+
+    expected = _secret_bearing_workflow_names(tmp_path, exclude=monitor_path)
+    monitor = safe_load(monitor_path.read_text(encoding="utf-8"))
+    watched = set(monitor[True]["workflow_run"]["workflows"])
+
+    assert watched - expected == {"Retired"}
+
+
+def test_the_monitor_would_otherwise_qualify_to_watch_itself() -> None:
+    """`secret-workflow-monitor.yml` itself references `secrets.
+    CONVENER_NOTIFY_THREAD` and `secrets.CONVENER_NOTIFY_MENTION` to post its own
+    alert, so `_declares_a_secret_beyond_github_token` reads `True` for
+    it -- it would qualify for its own watch list by the same rule every
+    other workflow is held to. The `exclude=` parameter in
+    `_secret_bearing_workflow_names` is what keeps it out, deliberately:
+    `workflow_run` re-triggering on its own completed run would be a
+    self-loop, not a protection. This test pins that the exclusion is
+    doing real work, not guarding against a case that could never arise."""
+    assert _declares_a_secret_beyond_github_token(ROOT / SECRET_WORKFLOW_MONITOR)
+    monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
+    own_name = monitor["name"]
+    watched = set(monitor[True]["workflow_run"]["workflows"])
+    assert own_name not in watched
+
+
+def test_the_secret_workflow_monitor_fires_on_request_not_completion() -> None:
+    """`types: [requested]`, not `completed` -- see the workflow's own
+    header comment for why: an alert that can only confirm a run already
+    finished is not detection close enough behind the run to matter."""
+    monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
+    assert monitor[True]["workflow_run"]["types"] == ["requested"]
+
+
+def test_the_secret_workflow_monitor_declares_no_yaml_anchor() -> None:
+    """Redundant with the repo-wide sweep above once this file exists and
+    is discovered by `_workflow_files()` -- kept as an explicit,
+    independent check on this exact file so a reader of this test module
+    does not have to trust that the generic sweep really does cover a file
+    added after it was written."""
+    text = (ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8")
+    assert _yaml_anchors_and_aliases(text) == []
