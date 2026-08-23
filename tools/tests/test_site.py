@@ -2372,3 +2372,34 @@ def test_the_organiser_link_points_at_the_apps_real_published_base(
         "serves the application; the application is published under the "
         "vitrine's own prefix"
     )
+
+
+def test_the_build_emits_the_published_repositorys_own_readme(
+    built_site: Path,
+) -> None:
+    """`publish-vitrine.yml::refresh_published_site` deletes everything at the
+    vitrine's root except `.git` and `app/`, then copies this build's output
+    in. So anything that exists only as a commit in that repository -- its
+    README, its ignore file -- is destroyed by the first publish, and the
+    public repository anyone lands on becomes a bare listing of built HTML
+    with nothing saying what it is.
+
+    They therefore have to be *emitted here*, on every build, which also
+    makes this repository their single source. The README must keep saying
+    the thing that stops someone editing the wrong tree: that the vitrine
+    holds no source.
+    """
+    readme = built_site / "README.md"
+    assert readme.is_file(), (
+        "the build wrote no README.md -- the first publish would wipe the "
+        "vitrine's own copy and leave the public repository unexplained"
+    )
+    text = readme.read_text(encoding="utf-8")
+    assert "holds no source" in text, (
+        "the published README no longer warns that the vitrine holds no "
+        "source; that warning is what stops someone editing the generated "
+        "tree and losing the change on the next publish"
+    )
+    assert (built_site / ".gitignore").is_file(), (
+        "the build wrote no .gitignore for the published repository"
+    )

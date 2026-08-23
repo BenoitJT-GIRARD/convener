@@ -405,6 +405,20 @@ module.exports = function (cfg) {
   // here rather than `touch`-ed by the publish workflow so that the built
   // site is reproducible from this repository alone.
   cfg.addPassthroughCopy('src/.nojekyll');
+  // The published repository's own front page and its ignore file. They must
+  // be *emitted by this build*, not merely committed once to the vitrine:
+  // `publish-vitrine.yml::refresh_published_site` wipes everything at that
+  // root except `.git` and `app/` before copying this output in, so anything
+  // that lives only there is destroyed by the first publish. A public
+  // repository whose landing page is a bare file listing explains nothing.
+  //
+  // Kept outside `src/` deliberately: `templateFormats` includes `md`, so a
+  // `README.md` under `src/` would be rendered as a page at `/README/`
+  // instead of landing at the root as a file. The ignore file is stored
+  // under a neutral name for the same reason -- a real `.gitignore` here
+  // would apply to this build's own directory.
+  cfg.addPassthroughCopy({ 'publish/README.md': 'README.md' });
+  cfg.addPassthroughCopy({ 'publish/gitignore-for-vitrine': '.gitignore' });
   // Task 9 (phase 6): the share banner(s) `visuals-production.yml` commits
   // under `src/banners/`. A plain string, anchored to this project's own
   // root exactly like the three passthrough copies above -- confirmed
