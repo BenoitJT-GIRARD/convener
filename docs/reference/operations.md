@@ -344,6 +344,84 @@ things are worth keeping separate once a push does happen:
   this repository is finally connected to GitHub, not as settled. See
   `docs/superpowers/deferred-work.md` for the fuller history.
 
+## Content-Security-Policy and the security headers GitHub Pages cannot serve
+
+**Without it:** nothing else is affected here either — this section
+documents a fixed property of the hosting above, not an integration with
+a state to degrade out of.
+
+**The boundary, written down once so nobody meets it as a surprise.**
+GitHub Pages serves every response with no headers of its own beyond the
+bare minimum HTTP needs: no `X-Content-Type-Options`, no
+`Permissions-Policy`, no HTTP Strict Transport Security, no
+`Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy`/
+`Cross-Origin-Resource-Policy`. None of the five is missing by omission —
+there is no server on this project's side to configure, and Pages offers
+no mechanism to add one. Adding one is not a task on a list; it is a
+change of hosting provider, which the project's zero-cost, no-account
+constraint rules out for the same reason the previous section already
+ruled out a third-party static host.
+
+The one thing this project *can* still ship is a Content-Security-Policy
+carried by a `<meta http-equiv>` tag in each page's own `<head>` — the one
+mechanism available with no server behind it. Two directives that would
+otherwise belong in the same policy do not survive that delivery
+mechanism, by the CSP specification itself, not by an oversight here:
+
+- `frame-ancestors` is **ignored outright** when set by `<meta>` — nothing
+  in this project can stop the showcase or the cockpit being framed by
+  another site. This is the one clickjacking control the header form
+  would have given and the `<meta>` form cannot.
+- `sandbox` and `report-uri`/`report-to` are likewise specified to be
+  ignored by a `<meta>`-delivered policy.
+
+Naming any of the four above in the `<meta>` tag would not be a smaller
+version of the real control — it would read as protection while doing
+nothing, which is worse than the honest gap this section states instead.
+`tools/tests/test_site.py::
+test_content_security_policy_never_carries_a_directive_meta_delivery_ignores`
+and `app/tests/csp.test.ts`'s own `'never carries a directive a <meta>
+delivery ignores'` both fail the build the moment one of those four tokens
+reaches either policy, so this stays true by construction, not only by
+this paragraph.
+
+**What does work by `<meta>`, and is what this project ships:**
+`script-src`, `connect-src`, `object-src` and `form-action`. Two
+independent policies, one per document, built from what that document
+actually loads rather than one policy loose enough to cover both:
+
+- `site/src/_data/csp.js` — every page Eleventy builds (the showcase, and
+  the registration and certificate-verification islands mounted on two of
+  its pages). `script-src 'self'`, `object-src 'none'`, `form-action
+  'self'`, and `connect-src 'self'` plus the signup relay's own origin
+  (`VITE_SIGNUP_RELAY_URL`, the same repository variable *Signup relay*
+  above already forwards into the application build — read here rather
+  than hand-typed a second time) when one is configured.
+- `app/scripts/csp.mjs` (injected into `app/index.html` by
+  `app/vite.config.ts`'s own `cspHtmlPlugin`) — the operators' cockpit
+  *and*, on the same document, the public post-event survey route
+  (`App.tsx`'s `SurveyRoute`), since both are the same client-routed
+  bundle. `script-src 'self'`, `object-src 'none'`, `form-action 'self'`,
+  and `connect-src 'self' https://api.github.com` plus the auth relay's
+  own origin (`VITE_AUTH_PROXY_URL`) and the signup relay's own origin
+  (`VITE_SIGNUP_RELAY_URL`), each admitted only once its own variable is
+  configured.
+
+The two differ because the documents genuinely differ, not by oversight:
+the showcase's pages never call the GitHub API or the authentication
+relay, and the cockpit's own device sign-in and Contents-API calls have
+no business in a policy served to an anonymous visitor of the showcase.
+
+**To verify:** build both `site/` and `app/`, serve the result under
+`/example-showcase/` (D-26 — a bare `localhost` root hides the path-prefix
+class of defect this project has already paid for once), and read a real
+browser's console on every page. `site/scripts/check-a11y.mjs` already
+does the first two steps for every page this project publishes, in a
+real, JavaScript-executing Chrome; a clean console on that same run is
+this policy's own proof that legitimate content still loads under it. A
+`javascript:` URI submitted through the public proposal intake (finding
+M3) is exactly the kind of thing `script-src 'self'` refuses.
+
 ## Meeting platform
 
 **Without it:** the manual adapter (`tools/convener_ops/platform.py::ManualPlatform`)

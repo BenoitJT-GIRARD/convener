@@ -89,3 +89,5 @@ undecryptable
 decryptable
 checkmark
 unreviewable
+HSTS
+COEP

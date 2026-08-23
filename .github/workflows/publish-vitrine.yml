@@ -102,8 +102,19 @@ jobs:
       - name: Install site
         working-directory: site
         run: npm ci
+      # Security audit 2026-08-23, M4: the registration island this build
+      # mounts (event.njk) posts straight to the signup relay from this
+      # same document, so site/src/_data/csp.js's own connect-src needs
+      # that relay's origin at build time -- the identical repository
+      # variable deploy.yml already forwards into the application build,
+      # read here rather than a second, hand-typed copy of the same
+      # address (D-14). Absent (a private fork, a run before the relay is
+      # deployed) is D-13's ordinary state: csp.js omits the origin
+      # rather than naming one nothing will ever call.
       - name: Build site
         working-directory: site
+        env:
+          VITE_SIGNUP_RELAY_URL: ${{ vars.VITE_SIGNUP_RELAY_URL }}
         run: npm run build
       # Phase 5, task 5: acceptance criterion 2 is absolute -- no room
       # link on any public page, ever; it is delivered only by the

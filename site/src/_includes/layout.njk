@@ -3,6 +3,23 @@
 <head>
 <meta charset="utf-8" />
 {#
+  Security audit 2026-08-23, M4 + L3. `csp.meta` (site/src/_data/csp.js) is
+  this project's Content-Security-Policy -- see that file's own header
+  comment for what each directive is doing here and why the rest
+  (X-Content-Type-Options, Permissions-Policy, HSTS, COOP/COEP/CORP,
+  frame-ancestors) is categorically unavailable on GitHub Pages rather than
+  merely absent. `referrer` is a plain, static default -- every sensitive
+  value this project ever puts in a URL lives in the fragment
+  (`certificate.VERIFICATION_BASE`, a registration's own matching code),
+  which no `Referrer-Policy` setting ever sends in a `Referer` header
+  regardless (fragments are stripped before the browser composes one) --
+  `strict-origin-when-cross-origin` is stated explicitly rather than left
+  to each browser's own current default, so a future default change
+  cannot quietly loosen it.
+#}
+<meta http-equiv="Content-Security-Policy" content="{{ csp.meta }}">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+{#
   Task 10: referencing and sharing. `pageTitle`/`pageDescription` are set by
   the content template this layout wraps -- a short fragment (e.g. an
   event's own title) rather than the full `<title>` text, composed once here

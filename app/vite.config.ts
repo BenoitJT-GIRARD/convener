@@ -1,6 +1,47 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { cspMetaContent } from './scripts/csp.mjs';
+
+/**
+ * Security audit 2026-08-23, M4: injects this project's Content-Security-
+ * Policy as a `<meta http-equiv>` into `app/index.html` at build time --
+ * `<meta>` is the only delivery mechanism available at all (GitHub Pages
+ * sets no response headers), and this document carries both the
+ * operators' cockpit and the public survey route (`App.tsx`'s
+ * `SurveyRoute`), so it needs the policy, not only the site's own pages.
+ * `scripts/csp.mjs::cspMetaContent` is the one place the policy string
+ * itself is built (see that module's own header comment for every
+ * directive and why); this plugin only ever calls it and hands the
+ * result to Vite's own `transformIndexHtml` tag-injection API, never a
+ * string edit of the HTML template -- the same reason `react()` above is
+ * a plugin and not a source rewrite. Runs only against the main app
+ * build: `islandSignupConfig`/`islandVerifyConfig` below build straight
+ * from a `.tsx` entry, with no `index.html` for `transformIndexHtml` to
+ * ever see, so this plugin is deliberately not added to either.
+ */
+function cspHtmlPlugin(): Plugin {
+  return {
+    name: 'convener-csp-meta',
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'meta',
+          attrs: {
+            'http-equiv': 'Content-Security-Policy',
+            content: cspMetaContent(process.env),
+          },
+          injectTo: 'head-prepend',
+        },
+        {
+          tag: 'meta',
+          attrs: { name: 'referrer', content: 'strict-origin-when-cross-origin' },
+          injectTo: 'head-prepend',
+        },
+      ];
+    },
+  };
+}
 
 /**
  * Task 6: `mode === 'island-signup'` builds the registration island as its
@@ -127,7 +168,7 @@ export default defineConfig(({ mode }) => {
   if (mode === 'island-verify') return islandVerifyConfig();
 
   return {
-    plugins: [react()],
+    plugins: [react(), cspHtmlPlugin()],
     base: '/example-showcase/app/',
     build: { outDir: 'dist' },
     test: {

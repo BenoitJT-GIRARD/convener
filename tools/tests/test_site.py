@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -189,6 +190,153 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
         "style.css's @font-face block no longer names Archivo or JetBrains "
         "Mono -- D-17's chosen substitutes for Anonymous's own commercially "
         "licensed faces"
+    )
+
+
+# -------------------------------------------------------------------------- #
+# Security audit 2026-08-23, M4 + L3: a Content-Security-Policy and an
+# explicit referrer policy, both delivered by <meta> -- the only mechanism
+# available at all, since GitHub Pages sets no response headers. `built_site`
+# (below, task 5's own fixture) is built with no VITE_SIGNUP_RELAY_URL set,
+# so it also stands in for that variable's ordinary D-13 absence;
+# `built_site_with_signup_relay` proves the other half -- the relay's own
+# origin joining connect-src when the variable is configured, the identical
+# one deploy.yml already forwards into the application build.
+# -------------------------------------------------------------------------- #
+
+#: `frame-ancestors`, `report-uri`/`report-to` and `sandbox` are directives
+#: the CSP specification itself says a `<meta http-equiv>` delivery MUST
+#: ignore -- carrying one here would not be wrong exactly, it would be
+#: decorative: it reads as protection and does nothing. Closing the class,
+#: not just today's instance: this fails the moment any of these three
+#: tokens appears in the policy this project ships, regardless of which
+#: directive introduces it or why.
+_META_IGNORED_CSP_DIRECTIVES = ("frame-ancestors", "report-uri", "report-to", "sandbox")
+
+_CSP_META_RE = re.compile(
+    r'<meta http-equiv="Content-Security-Policy" content="([^"]*)">'
+)
+_REFERRER_META_RE = re.compile(r'<meta name="referrer" content="([^"]*)">')
+
+
+def test_every_page_carries_the_content_security_policy_this_project_ships(
+    built_site: Path,
+) -> None:
+    """Every built page -- not only the home page -- carries the one CSP
+    `layout.njk` emits (`site/src/_data/csp.js`): `script-src 'self'`
+    (this project's pages ship no inline script at all --
+    `test_archive_pages_carry_no_script_tag_at_all` already holds the
+    archive pages to that, and this is the same guarantee generalised),
+    `object-src 'none'` (no plugin embed anywhere), `form-action 'self'`
+    (no page under `site/` submits a form) and `connect-src 'self'` with
+    no relay origin appended -- this fixture is built with
+    `VITE_SIGNUP_RELAY_URL` unset, D-13's ordinary state."""
+    checked = 0
+    for path in built_site.rglob("*.html"):
+        page = path.read_text(encoding="utf-8")
+        match = _CSP_META_RE.search(page)
+        assert match is not None, (
+            f"{path.relative_to(built_site).as_posix()} carries no "
+            "Content-Security-Policy <meta> tag"
+        )
+        content = match.group(1).replace("&#39;", "'")
+        assert "script-src 'self'" in content, path
+        assert "object-src 'none'" in content, path
+        assert "form-action 'self'" in content, path
+        assert "connect-src 'self'" in content, path
+        assert "workers.dev" not in content, (
+            f"{path.relative_to(built_site).as_posix()} names a relay "
+            "origin though VITE_SIGNUP_RELAY_URL was never set for this "
+            "build -- csp.js's own D-13 absence handling regressed"
+        )
+        checked += 1
+    assert checked > 0, "no built page was found to check the CSP against"
+
+
+def test_content_security_policy_never_carries_a_directive_meta_delivery_ignores(
+    built_site: Path,
+) -> None:
+    for path in built_site.rglob("*.html"):
+        page = path.read_text(encoding="utf-8")
+        match = _CSP_META_RE.search(page)
+        if match is None:
+            continue
+        content = match.group(1)
+        for directive in _META_IGNORED_CSP_DIRECTIVES:
+            assert directive not in content, (
+                f"{path.relative_to(built_site).as_posix()}'s CSP names "
+                f"{directive!r}, which a <meta> delivery ignores outright -- "
+                "this reads as protection and does nothing; remove it "
+                "rather than ship a decorative directive"
+            )
+
+
+def test_every_page_carries_an_explicit_referrer_policy(built_site: Path) -> None:
+    checked = 0
+    for path in built_site.rglob("*.html"):
+        page = path.read_text(encoding="utf-8")
+        match = _REFERRER_META_RE.search(page)
+        assert match is not None, (
+            f"{path.relative_to(built_site).as_posix()} sets no explicit "
+            "referrer policy -- security audit 2026-08-23, L3"
+        )
+        assert match.group(1) == "strict-origin-when-cross-origin", path
+        checked += 1
+    assert checked > 0, "no built page was found to check the referrer policy against"
+
+
+@pytest.fixture(scope="module")
+def built_site_with_signup_relay(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The real `site/` project, built exactly like `built_site` above but
+    with `VITE_SIGNUP_RELAY_URL` set -- the configured state `deploy.yml`
+    forwards into the application build and `publish-vitrine.yml`'s own
+    "Build site" step now forwards here too. Proves the other half of
+    `csp.js`'s own D-13 handling: an address actually appears in
+    connect-src once one is actually configured, not just that its
+    absence is handled."""
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    out = tmp_path_factory.mktemp("site-build-signup-relay")
+    try:
+        subprocess.run(
+            ["node", str(_ELEVENTY_CMD), f"--output={out.as_posix()}"],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            env={
+                **os.environ,
+                "VITE_SIGNUP_RELAY_URL": "https://convener-signup-relay.example.workers.dev",
+            },
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+def test_content_security_policys_connect_src_admits_the_configured_signup_relay(
+    built_site_with_signup_relay: Path,
+) -> None:
+    page = (built_site_with_signup_relay / "events" / "mrg-05" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    match = _CSP_META_RE.search(page)
+    assert match is not None
+    content = match.group(1).replace("&#39;", "'")
+    assert (
+        "connect-src 'self' https://convener-signup-relay.example.workers.dev" in content
+    ), (
+        "the registration island posts straight to the configured signup "
+        "relay from this document -- connect-src must admit it or a real "
+        "registration would be blocked by this project's own policy"
     )
 
 
