@@ -187,6 +187,20 @@ def test_the_path_filter_never_reacts_to_real_speaker_data() -> None:
     assert not any("speakers.yml" in path for path in _TRIGGERS["push"]["paths"])
 
 
+def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:
+    """Branch review, fix round 1: `tools/convener_ops/public_data.py` (the
+    module `data/speakers.yml` is read *through*, P-4's consent gate
+    included) is deliberately absent here for the identical reason the
+    test above gives for `data/speakers.yml` itself --
+    `render_visual_fixtures` renders `FIXTURE_ANNOUNCEMENT`, a fixed,
+    hand-built identity that never goes through `public_data.to_public` at
+    all, so a change to the gate's own logic has nothing for this fixture
+    to see. `visuals-production.yml` is where that module belongs, and
+    does carry it (`test_visuals_production_workflow.py::
+    test_public_data_py_is_in_the_filter_the_consent_gate_needs`)."""
+    assert "tools/convener_ops/public_data.py" not in _TRIGGERS["push"]["paths"]
+
+
 def test_job_permissions_are_read_only() -> None:
     assert "permissions:\n      contents: read" in _WORKFLOW
 

@@ -52,13 +52,18 @@ name: Visuals
 #   has actually read it back).
 # - `.github/workflows/visuals.yml` -- this file.
 #
-# Deliberately absent: `data/speakers.yml` and the real per-edition data.
-# `render_visual_fixtures` never reads either -- this check renders one
-# fixed, fictional fixture (Ada Lovelace, no photograph), never a real
-# edition, so a change to real speaker data has nothing for this job to
+# Deliberately absent: `data/speakers.yml`, the real per-edition data, and
+# `tools/convener_ops/public_data.py`, the module that gates it (`to_public`,
+# `_gate_closed`, the P-4 consent check). `render_visual_fixtures` never
+# reads any of the three -- this check renders one fixed, fictional
+# fixture (Ada Lovelace, no photograph, `FIXTURE_ANNOUNCEMENT` built by
+# hand) that never goes through `to_public` at all, so a change to real
+# speaker data or to the gate that filters it has nothing for this job to
 # see. Task 6 is where the *production* pipeline (real editions, real
-# portraits under consent) gets its own trigger; this one stays a pure
-# regression check against a fixture that never changes on its own.
+# portraits under consent) gets its own trigger, `public_data.py` included
+# in its own path filter for exactly that reason (branch review, fix round
+# 1 -- see that workflow's own comment); this one stays a pure regression
+# check against a fixture that never changes on its own.
 #
 # example-cockpit is private (D-15): Actions minutes are metered, not
 # unlimited the way a public repository's would be (2,000/month on the

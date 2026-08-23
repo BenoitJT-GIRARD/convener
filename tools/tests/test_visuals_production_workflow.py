@@ -101,6 +101,19 @@ def test_every_composition_module_visuals_yml_names_is_named_here_too() -> None:
         )
 
 
+def test_public_data_py_is_in_the_filter_the_consent_gate_needs() -> None:
+    """Branch review, fix round 1: `render_visuals` and
+    `render_announcements` (this job's own two commands) each call
+    `public_data.to_public` directly before either one reads a row -- the
+    P-4 consent gate every one of `cli.py`'s, `announce.py`'s and
+    `visual.py`'s own docstrings names as the reason a portrait or a room
+    link cannot reach a rendered page. A change to the gate's own logic
+    must re-trigger this job the same way a change to `visual.py` itself
+    already does."""
+    paths = _TRIGGERS["push"]["paths"]
+    assert "tools/convener_ops/public_data.py" in paths
+
+
 def test_the_workflow_names_its_own_file_in_its_own_filter() -> None:
     assert ".github/workflows/visuals-production.yml" in _TRIGGERS["push"]["paths"]
 

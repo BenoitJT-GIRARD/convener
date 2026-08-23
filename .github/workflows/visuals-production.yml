@@ -70,11 +70,33 @@ name: Visuals production
 # English (D-14), so a wording change to any one of them is exactly as
 # real a change to this job's own output as a change to `visual.py` is,
 # and none of the four was a dependency of this workflow before this
-# command had a consumer in it. A single `paths:` list, not two: unlike
-# visuals.yml, this workflow has no `pull_request` trigger to keep a
-# second copy in step with, so the anchor/alias trap that caught
-# visuals.yml's own first version (see tools/tests/test_workflows.py::
-# test_no_workflow_uses_a_yaml_anchor_or_alias) has nothing to bite here.
+# command had a consumer in it.
+#
+# Branch review, fix round 1: `tools/convener_ops/public_data.py` is in this
+# list too, and deliberately *not* in visuals.yml's -- re-derived from what
+# each job's own render actually calls, not copied across the two.
+# `render_visuals` and `render_announcements` (this job's own two commands,
+# `cli.py`) each call `public_data.to_public` directly, before either one
+# reads a row -- the P-4 consent gate (`_gate_closed`,
+# `personal_disclosure_withheld`, `recording_withheld`) every one of
+# `cli.py`'s, `announce.py`'s and `visual.py`'s own docstring names as the
+# reason a portrait or a room link cannot reach a rendered page. Harmless
+# today only because `_scheduled_announcements` never wires a portrait
+# through regardless of what the gate decides (deferred-work #14) -- the
+# day that changes, a bug in the gate's own logic must re-render and
+# re-check real editions, not wait for an unrelated file in this list to
+# change first. `render_visual_fixtures` (visuals.yml's own command) calls
+# none of this -- `FIXTURE_ANNOUNCEMENT` is a fixed, hand-built identity
+# that never goes through `to_public` at all -- so adding it there would
+# only trigger a fixture re-render that could never produce a different
+# pixel; see visuals.yml's own comment for the parallel statement about
+# `data/speakers.yml`, which `public_data.py` exists to gate.
+#
+# A single `paths:` list, not two: unlike visuals.yml, this workflow has no
+# `pull_request` trigger to keep a second copy in step with, so the
+# anchor/alias trap that caught visuals.yml's own first version (see
+# tools/tests/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias)
+# has nothing to bite here.
 #
 # No `pull_request` trigger: unlike visuals.yml's cheap, read-only
 # comparison, this job downloads and runs a ~430MB pinned Chromium and
@@ -95,6 +117,7 @@ on:
       - 'tools/convener_ops/cli.py'
       - 'tools/convener_ops/announce.py'
       - 'tools/convener_ops/registration.py'
+      - 'tools/convener_ops/public_data.py'
       - 'docs/toolkit/forum-post-announce.md'
       - 'docs/toolkit/linkedin-post.md'
       - 'docs/toolkit/mailing-list-announce.md'
