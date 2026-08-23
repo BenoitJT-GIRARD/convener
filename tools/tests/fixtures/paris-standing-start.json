@@ -1,0 +1,50 @@
+[
+  {
+    "iso_date": "2025-03-29",
+    "offset": "+01:00",
+    "abbreviation": "CET",
+    "date_line": "Saturday, 29 March 2025 at 12:30 CET"
+  },
+  {
+    "iso_date": "2025-03-31",
+    "offset": "+02:00",
+    "abbreviation": "CEST",
+    "date_line": "Monday, 31 March 2025 at 12:30 CEST"
+  },
+  {
+    "iso_date": "2025-10-25",
+    "offset": "+02:00",
+    "abbreviation": "CEST",
+    "date_line": "Saturday, 25 October 2025 at 12:30 CEST"
+  },
+  {
+    "iso_date": "2025-10-27",
+    "offset": "+01:00",
+    "abbreviation": "CET",
+    "date_line": "Monday, 27 October 2025 at 12:30 CET"
+  },
+  {
+    "iso_date": "2026-03-28",
+    "offset": "+01:00",
+    "abbreviation": "CET",
+    "date_line": "Saturday, 28 March 2026 at 12:30 CET"
+  },
+  {
+    "iso_date": "2026-03-30",
+    "offset": "+02:00",
+    "abbreviation": "CEST",
+    "date_line": "Monday, 30 March 2026 at 12:30 CEST"
+  },
+  {
+    "iso_date": "2026-10-24",
+    "offset": "+02:00",
+    "abbreviation": "CEST",
+    "date_line": "Saturday, 24 October 2026 at 12:30 CEST"
+  },
+  {
+    "iso_date": "2026-10-26",
+    "offset": "+01:00",
+    "abbreviation": "CET",
+    "date_line": "Monday, 26 October 2026 at 12:30 CET"
+  }
+]

@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import parisStandingStartFixture from '../../tools/tests/fixtures/paris-standing-start.json';
 import { substitute } from '../src/content/render';
 import {
   personalDisclosureWithheld,
@@ -209,24 +210,24 @@ describe('the recording announcement (docs/toolkit/recording-announce.md)', () =
 });
 
 describe('a drafted date names the real Paris offset, never a hard-coded one', () => {
-  // Three of this project's own five fixture editions
-  // (`site/src/_data/events.json`) fall in daylight-saving time -- a test
-  // that only checked a winter date would pass against code that always
-  // said CET.
-  const SUMMER = ['2026-04-02', '2026-06-11', '2026-09-10'];
-  const WINTER = ['2026-02-05', '2026-03-12'];
-
-  it.each(SUMMER)('%s is CEST', iso => {
-    expect(parisStandingStart(iso).abbreviation).toBe('CEST');
-    expect(parisStandingStart(iso).offset).toBe('+02:00');
-    expect(dateLine(iso)).toContain('CEST');
-  });
-
-  it.each(WINTER)('%s is CET', iso => {
-    expect(parisStandingStart(iso).abbreviation).toBe('CET');
-    expect(parisStandingStart(iso).offset).toBe('+01:00');
-    expect(dateLine(iso)).toContain('CET');
-  });
+  // D-14, fix round 1: this used to be a hand-typed SUMMER/WINTER pair of
+  // date lists, pinned independently of `tools/tests/test_visual.py`'s own
+  // -- and they had already drifted (this list once pinned `2026-06-11` as
+  // its "CEST" case, while the Python list pins `2025-06-12`; two different
+  // dates for the identical claim). `paris-standing-start.json` is the one
+  // list every side now reads -- `tools/tests/
+  // test_paris_standing_start_fixture.py` runs the identical cases against
+  // Python and `.eleventy.js` -- spanning both sides of both DST
+  // transitions, in two different years, so a test that only ever checked
+  // one season could not pass by accident.
+  it.each(parisStandingStartFixture)(
+    '$iso_date resolves to $abbreviation ($offset)',
+    ({ iso_date: iso, offset, abbreviation, date_line: line }) => {
+      expect(parisStandingStart(iso).abbreviation).toBe(abbreviation);
+      expect(parisStandingStart(iso).offset).toBe(offset);
+      expect(dateLine(iso)).toBe(line);
+    },
+  );
 
   it('reads the real weekday off the date, not a fixed one', () => {
     // 12 March 2026 is a Thursday; 11 June 2026 is a Thursday too, but 10

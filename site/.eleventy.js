@@ -232,3 +232,20 @@ module.exports = function (cfg) {
     pathPrefix: PATH_PREFIX,
   };
 };
+
+// D-14, fix round 1: `parisStandingStart` above is one of three independent
+// implementations of the identical Europe/Paris seasonal-offset rule --
+// `tools/convener_ops/visual.py::paris_standing_start` and `app/src/state/
+// derived.ts::parisStandingStart` are the other two -- and nothing bound
+// the three together until now: each side's own test suite pinned its own
+// hand-typed list of dates, and two of those lists had already drifted.
+// `tools/tests/fixtures/paris-standing-start.json` is the one list every
+// side now reads. Eleventy itself only ever calls `require('./.eleventy.js')`
+// as a factory function (see `module.exports = function (cfg) {...}`
+// above) and never looks at its own properties, so attaching this named
+// export is inert to the real build -- it exists only for `site/scripts/
+// check-paris-standing-start.cjs`, run from `tools/tests/
+// test_paris_standing_start_fixture.py::test_eleventy_js_matches_the_
+// shared_fixture` (`site/` carries no JS test runner of its own -- no new
+// dependency -- so that Python suite is this function's only test).
+module.exports.parisStandingStart = parisStandingStart;

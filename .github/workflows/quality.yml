@@ -210,12 +210,13 @@ jobs:
       # site/eslint.config.js, the same minimal, plugin-free flat config
       # services/auth-proxy's own already uses -- Eleventy's own CommonJS
       # config file, plus (task 11) the accessibility checker's own ES
-      # module, and (task 12) the performance-budget checker's own, both
-      # under the same scoped `sourceType: 'module'` override in that same
-      # config file.
+      # module, (task 12) the performance-budget checker's own, and (fix
+      # round 1, phase 6 task 7) the shared Paris-offset fixture's own
+      # CommonJS check script, each under its own scoped override in that
+      # same config file.
       - name: Lint
         working-directory: site
-        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs
+        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs
       # Task 12: the same quality chain phase 1 already holds Python to
       # (`uv run pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
       # axe-core, puppeteer-core) had never been audited before this task.
