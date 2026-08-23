@@ -12,6 +12,18 @@ docs/assets/app/
 # deployed example-showcase URL that has never actually been built.
 public-data/*
 !public-data/survey-status.json
+# The internal agenda feed (task 8, phase 6): committed for the identical
+# reason survey-status.json is -- `.github/workflows/deploy.yml`'s own
+# "Commit internal agenda" step needs a tracked path to commit to. Unlike
+# survey-status.json, nothing reads this one over an API; it exists so an
+# internal subscriber's calendar client can point at this repository's own
+# copy directly. It is never copied into `app/public/` or
+# `site/src/_data/` by anything this build runs -- see `tools/convener_ops/
+# agenda.py`'s own module docstring for why that absence, not a flag, is
+# what keeps it off both published sites. `.gitattributes` marks it binary
+# so a checkin never renormalises its own CRLF line endings (RFC 5545's own
+# requirement) to this repository's default `eol=lf`.
+!public-data/agenda-internal.ics
 
 # Notification body -- a run artefact of convener-notify-*, written only when a
 # channel is configured, posted by the notify workflow, never edited.

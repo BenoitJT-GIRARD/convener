@@ -30,12 +30,13 @@ from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
 import pytest
+from ics_reader import parse_calendar
 
 from convener_ops.certificate import VERIFICATION_BASE
 from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.paths import repo_root
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
-from convener_ops.registration import SIGNUP_BASE
+from convener_ops.registration import SIGNUP_BASE, signup_url
 
 #: Fix round 1: the same zone `tools/convener_ops/governance.py::PARIS` already
 #: anchors this project's Python side on -- `zoneinfo`, the standard
@@ -315,6 +316,19 @@ def test_a_built_public_page_never_carries_a_room_link(built_site: Path) -> None
     This test does not depend on the generator: it proves the template
     still refuses to render a room-link-shaped value if one ever reached
     the page's own data again, under whatever name.
+
+    Task 8, fix round 1: also strips RFC 5545 line folding ("\\r\\n "
+    inserted every 75 octets, `agenda.ics`'s own format) before searching.
+    A leaked link is folded exactly like any other long property value, so
+    the literal, unfolded string this test searches for can straddle a
+    fold point and never appear contiguously in the raw file even though it
+    reached the published output -- confirmed by deliberately routing
+    `LOCATION` through the fixture's own `registration_link` in
+    `site/.eleventy.js::agendaVevent` and watching this sweep miss it until
+    this line was added. Inert for every other file this build writes
+    (HTML, XML, CSS): none of them ever folds a line this way, so stripping
+    a sequence they do not contain changes nothing about how they are
+    checked.
     """
     events = _events_fixture()
     room_links = [
@@ -331,11 +345,20 @@ def test_a_built_public_page_never_carries_a_room_link(built_site: Path) -> None
         if not path.is_file():
             continue
         try:
-            text = path.read_text(encoding="utf-8")
+            # `read_bytes().decode(...)`, not `read_text(...)`: the latter
+            # opens in text mode with universal-newline translation on by
+            # default, which silently rewrites every "\r\n" to "\n" before
+            # this function ever sees the string -- so a search for the
+            # literal "\r\n " fold-continuation marker below would never
+            # match anything, on any file, and would look like it worked
+            # only because it was vacuously true. Confirmed by watching
+            # this exact difference make the fold-strip below a no-op.
+            text = path.read_bytes().decode("utf-8")
         except (UnicodeDecodeError, ValueError):
             continue  # a font or another binary passthrough copy
+        unfolded = text.replace("\r\n ", "")
         for link in room_links:
-            if link in text:
+            if link in text or link in unfolded:
                 offending.append((path.relative_to(built_site).as_posix(), link))
     assert offending == [], f"room link leaked into the built site: {offending}"
 
@@ -1893,3 +1916,217 @@ def test_the_sitemap_still_lists_the_static_pages_with_no_editions_at_all(
         _absolute("/data/"),
         _absolute("/verify/"),
     }
+
+
+# ------------------------------------------------------------------ #
+# Task 8 (phase 6): the public agenda feed (`/agenda.ics`) -- iCalendar,
+# distinct from `feed.xml`'s RSS syndication feed above. Every test below
+# parses the real, built `agenda.ics` bytes with `ics_reader.parse_calendar`
+# -- a reader written independently of `site/.eleventy.js`'s own escape/
+# fold functions (see that module's own docstring) -- rather than grepping
+# the file as text, the same "parse it back the way a client would" standard
+# `tools/tests/test_agenda.py` already holds the internal feed to.
+# ------------------------------------------------------------------ #
+
+
+def test_agenda_feed_is_a_valid_calendar_with_one_scheduled_edition(
+    built_site: Path,
+) -> None:
+    events = _events_fixture()
+    scheduled = [e for e in events if e["status"] == "scheduled"]
+    assert len(scheduled) == 1, (
+        "this test assumes exactly one scheduled fixture edition"
+    )
+
+    raw = (built_site / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)
+    assert parsed.calendar.properties["VERSION"] == "2.0"
+    assert parsed.calendar.properties["PRODID"]
+    assert parsed.calendar.properties["CALSCALE"] == "GREGORIAN"
+    assert len(parsed.events) == 1
+
+    event = parsed.events[0].properties
+    expected_url = signup_url(str(scheduled[0]["id"]).lower())
+    assert event["SUMMARY"] == scheduled[0]["title"]
+    assert event["UID"] == expected_url
+    assert event["LOCATION"] == expected_url
+    assert event["URL"] == expected_url
+    assert event["DTSTAMP"] == event["DTSTART"]
+
+
+def test_agenda_feed_excludes_delivered_and_archived_editions(built_site: Path) -> None:
+    """A calendar is for what has not happened yet: the committed fixture
+    carries four non-`scheduled` editions (`delivered`/`archived`) besides
+    the one `scheduled` one, and none of them may appear."""
+    events = _events_fixture()
+    not_scheduled_urls = {
+        signup_url(str(e["id"]).lower()) for e in events if e["status"] != "scheduled"
+    }
+    assert not_scheduled_urls, (
+        "fixture carries no non-scheduled edition to check against"
+    )
+
+    raw = (built_site / "agenda.ics").read_bytes()
+    uids = {event.properties["UID"] for event in parse_calendar(raw).events}
+    assert uids.isdisjoint(not_scheduled_urls)
+
+
+def test_agenda_feed_is_pure_crlf(built_site: Path) -> None:
+    raw = (built_site / "agenda.ics").read_bytes()
+    assert b"\r\n" in raw
+    assert b"\n" not in raw.replace(b"\r\n", b"")
+
+
+def test_agenda_feed_rebuilds_byte_identical_from_unchanged_data(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    """The churn check: two builds from the same committed data must
+    produce the same bytes -- otherwise every subscriber's calendar client
+    would re-sync on every rebuild for no real reason, and hide an actual
+    change in that noise. A real, second Eleventy build, not merely calling
+    the same JavaScript function twice in this process: the whole point is
+    to prove the *build* is deterministic, not only the function."""
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    outputs = []
+    for i in range(2):
+        out = tmp_path_factory.mktemp(f"site-build-churn-{i}")
+        subprocess.run(
+            ["node", str(_ELEVENTY_CMD), f"--output={out.as_posix()}"],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        outputs.append((out / "agenda.ics").read_bytes())
+    assert outputs[0] == outputs[1]
+
+
+def test_the_agenda_feed_still_renders_valid_and_empty_with_no_editions_at_all(
+    built_site_no_events: Path,
+) -> None:
+    raw = (built_site_no_events / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)
+    assert parsed.calendar.properties["VERSION"] == "2.0"
+    assert parsed.events == []
+
+
+@pytest.fixture(scope="module")
+def built_site_agenda_dst_cases(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """One `scheduled` edition per date in the shared `paris-standing-start.
+    json` fixture -- both sides of both DST transitions, both years -- plus
+    one with a title long enough to force line folding. The committed
+    fixture (`built_site`) carries only a single `scheduled` edition, dated
+    once, so it cannot exercise the DST rule anywhere near a transition; a
+    test that only checked that one date would pass against a feed that
+    hard-typed a single offset (three of this project's own five real
+    fixture editions fall in summer, but none of them sits *next to* a
+    transition the way this fixture's eight dates deliberately do).
+    """
+    if not _ELEVENTY_CMD.exists():
+        pytest.skip(
+            f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
+            "before this suite (quality.yml's own python job now does)"
+        )
+    fixture_path = ROOT / "tools" / "tests" / "fixtures" / "paris-standing-start.json"
+    cases = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    scratch_src = tmp_path_factory.mktemp("site-src-agenda-dst") / "src"
+    shutil.copytree(SITE_SRC, scratch_src)
+    events = [
+        {
+            "id": f"DST-{i:02d}",
+            "title": f"DST case {case['iso_date']}",
+            "date": case["iso_date"],
+            "status": "scheduled",
+            "abstract": "",
+            "photo_url": "",
+            "bio": "",
+            "linkedin": "",
+            "seed_questions": "",
+            "youtube_url": "",
+            "registration_link": "",
+            "forum_thread": "",
+            "speaker_name": "Test Speaker",
+            "speaker_affiliation": "",
+            "speaker_country": "",
+        }
+        for i, case in enumerate(cases)
+    ]
+    # A 123-character title on the first case too, to prove folding and
+    # escaping survive alongside a real DST computation, not only in
+    # isolation: a comma (needs escaping) and a length that forces the
+    # SUMMARY property line past the 75-octet fold limit on its own.
+    long_title = (
+        "Reproducible, open-source behavioural neuroscience: motion tracking, "
+        "kinematics and cross-species comparison across borders"
+    )
+    assert len(long_title) == 123
+    events[0]["title"] = long_title
+
+    (scratch_src / "_data" / "events.json").write_text(
+        json.dumps(events), encoding="utf-8"
+    )
+    out = tmp_path_factory.mktemp("site-build-agenda-dst")
+    try:
+        subprocess.run(
+            [
+                "node",
+                str(_ELEVENTY_CMD),
+                f"--input={scratch_src.as_posix()}",
+                f"--output={out.as_posix()}",
+            ],
+            cwd=ROOT / "site",
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except FileNotFoundError:
+        pytest.skip("node is not on PATH -- cannot build site/ for this suite")
+    except subprocess.CalledProcessError as exc:
+        raise AssertionError(
+            f"site/ failed to build: {exc.stdout}\n{exc.stderr}"
+        ) from exc
+    return out
+
+
+def test_agenda_feed_dtstart_matches_the_shared_paris_offset_fixture(
+    built_site_agenda_dst_cases: Path,
+) -> None:
+    fixture_path = ROOT / "tools" / "tests" / "fixtures" / "paris-standing-start.json"
+    cases = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    raw = (built_site_agenda_dst_cases / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)
+    assert len(parsed.events) == len(cases)
+    by_uid = {event.properties["UID"]: event.properties for event in parsed.events}
+
+    for i, case in enumerate(cases):
+        url = signup_url(f"dst-{i:02d}")
+        event = by_uid[url]
+        # Independent of `site/.eleventy.js`: plain arithmetic on the
+        # fixture's own offset string, not a second call into `Intl` or
+        # `zoneinfo`.
+        sign = 1 if case["offset"].startswith("+") else -1
+        offset_hours = int(case["offset"][1:3])
+        utc_hour = 12 - sign * offset_hours
+        expected = f"{case['iso_date'].replace('-', '')}T{utc_hour:02d}3000Z"
+        assert event["DTSTART"] == expected, case["iso_date"]
+
+
+def test_agenda_feed_long_title_folds_and_round_trips_intact(
+    built_site_agenda_dst_cases: Path,
+) -> None:
+    long_title = (
+        "Reproducible, open-source behavioural neuroscience: motion tracking, "
+        "kinematics and cross-species comparison across borders"
+    )
+    raw = (built_site_agenda_dst_cases / "agenda.ics").read_bytes()
+    parsed = parse_calendar(raw)  # raises if any physical line exceeds 75 octets
+    titles = {event.properties["SUMMARY"] for event in parsed.events}
+    assert long_title in titles

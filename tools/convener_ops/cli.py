@@ -21,6 +21,7 @@ from typing import Any, Final
 import yaml
 
 from convener_ops import (
+    agenda,
     announce,
     confirmation,
     delivery,
@@ -427,6 +428,40 @@ def survey_status_public_data() -> int:
         json.dumps(ids, indent=2) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(ids)} event(s) with the survey open")
+    return 0
+
+
+def agenda_internal() -> int:
+    """`convener-agenda-internal`: rebuild `public-data/agenda-internal.ics` from
+    `data/speakers.yml` and `data/config.yml` (task 8, phase 6) --
+    `public_data`'s own precedent (above), for a feed that must never reach
+    either published bundle: unlike `events-public.json`, nothing in this
+    build's own copy scripts ever names this file, and `.gitattributes`
+    marks it binary so a checkin never rewrites its own CRLF line endings to
+    this repository's own default `eol=lf`. See `agenda.py`'s module
+    docstring for the feed in full, and `.github/workflows/deploy.yml`'s own
+    "Commit internal agenda" step for where the committed copy comes from.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    if errors or cfg_errors:
+        for error in errors + cfg_errors:
+            print(f"  - {error}")
+        return 1
+
+    calendar = agenda.build_internal_calendar(speakers or [], cfg or {})
+    out_dir = root / "public-data"
+    out_dir.mkdir(exist_ok=True)
+    # Binary, not text mode: this string already carries real CRLF line
+    # endings RFC 5545 requires, and a text-mode write on this project's own
+    # Windows checkouts would translate each embedded "\n" to the platform
+    # line ending on top of the "\r" already there, corrupting every line to
+    # "\r\r\n" (`tools/convener_ops`'s own YAML writers hit the identical trap and
+    # guard against it with `newline=""`; binary mode is the same guarantee
+    # by a different route).
+    (out_dir / "agenda-internal.ics").write_bytes(calendar.encode("utf-8"))
+    print(f"wrote {calendar.count('BEGIN:VEVENT')} entrie(s)")
     return 0
 
 

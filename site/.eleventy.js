@@ -145,6 +145,200 @@ function eventDescriptionFallback(event) {
   return `${description} — a The Example Collective virtual seminar.`;
 }
 
+// `path` is root-relative and unprefixed -- exactly `| url`'s own input
+// contract (every existing `| url` call site in this project's templates).
+// This does that identical prefixing plus SITE_ORIGIN, in one step, for the
+// handful of places a URL leaves this document for a context with no address
+// of its own to resolve a relative link against: canonical links, Open
+// Graph/Twitter Card metadata, JSON-LD, the sitemap, the syndication feed and
+// (task 8) the agenda feed below. A plain function, not only a filter (like
+// `parisStandingStart` and `eventDescriptionFallback` above), so this file's
+// own agenda-calendar code can call it directly with no Nunjucks pipeline of
+// its own -- see `eventPageUrl` below. Never chain the two (`x | url |
+// absoluteUrl` doubles the prefix) -- a page uses one or the other, never
+// both.
+function absoluteUrl(path) {
+  return `${SITE_ORIGIN}${PATH_PREFIX.slice(0, -1)}${path}`;
+}
+
+// ------------------------------------------------------------------ //
+// Task 8 (phase 6): the public agenda feed -- iCalendar (RFC 5545), a
+// second and unrelated feed format from the syndication one above
+// (`feed.njk`): a calendar client subscribes to this one, an RSS reader
+// to that one. Every function below builds towards `agendaCalendar`, the
+// one filter `src/agenda.njk` calls; see that file's own comment for why
+// line-ending purity (CRLF, RFC 5545's own requirement) is enforced by a
+// build-wide transform rather than trusted to this function's own return
+// value.
+// ------------------------------------------------------------------ //
+
+// The seminar's own fixed length, `data/config.yml::
+// seminar_duration_minutes` (also read, with the same 90-minute default,
+// by `tools/convener_ops/sweep.py::sweep` and now by this feed's own Python
+// twin, `tools/convener_ops/agenda.py::build_internal_calendar`) -- a plain
+// site-wide constant, on the same footing `STANDING_START_LOCAL` above
+// already stands on, not a computed rule the D-14 fixture would need to
+// bind across languages. This build has no path to `data/config.yml`
+// itself: that file also carries board membership and other internal
+// governance fields no public build may see (the same reason `time`
+// never reaches this data either -- see `STANDING_START_LOCAL`'s own
+// comment). So the one number a calendar entry needs beside its start
+// time is copied here by hand, the same way the standing start time
+// already is. Change both together if either changes.
+const SEMINAR_DURATION_MINUTES = 90;
+
+// RFC 5545 §3.3.11 TEXT escaping: a backslash, then a semicolon, then a
+// comma, then a literal line break -- in that order, so escaping a later
+// character never re-escapes a backslash this function just inserted for
+// an earlier one. Applied to every free-text property value this feed
+// writes (SUMMARY, DESCRIPTION, LOCATION): `eventDescriptionFallback`'s
+// own fallback text already contains a comma ("<speaker>, <affiliation>
+// — a The Example Collective virtual seminar."), which an unescaped ICS file
+// would misparse as the start of a second property.
+//
+// Mechanical and RFC-mandated, unlike `parisStandingStart`: there is no
+// project decision here that the two languages could disagree about, so
+// this is not bound to a shared fixture the way that function is --
+// each side (this one, and `tools/convener_ops/agenda.py::_escape_text`) is
+// instead checked independently against the RFC itself, by a test that
+// parses the rendered file back rather than re-running this same code.
+function icsEscapeText(value) {
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n');
+}
+
+// Fold one already-escaped "NAME:value" content line at 75 octets (RFC
+// 5545 §3.1): a continuation line is a CRLF followed by a single leading
+// space, repeated until the whole line is written -- so a continuation
+// line's own budget is 74 octets, the 75th being that mandatory leading
+// space. Every split lands on a UTF-8 character boundary, never inside a
+// multi-byte sequence's own continuation bytes (`10xxxxxx`, the top two
+// bits `10`): a title in this series can run past a hundred characters
+// and carry an accented or non-Latin character, and a fold mid-byte
+// would corrupt the file from that point on, not just misplace one line
+// break.
+function icsFoldLine(line) {
+  const bytes = Buffer.from(line, 'utf8');
+  if (bytes.length <= 75) return line;
+  const parts = [];
+  let start = 0;
+  let budget = 75;
+  while (start < bytes.length) {
+    let end = Math.min(start + budget, bytes.length);
+    while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end -= 1;
+    parts.push(bytes.slice(start, end).toString('utf8'));
+    start = end;
+    budget = 74;
+  }
+  return parts.join('\r\n ');
+}
+
+// `SIGNUP_BASE` plus the edition's own lower-cased id (D-19) -- the event
+// page's own address, exactly as `feed.njk`'s own `itemUrl` and
+// `event.njk`'s own registration link already build it, factored out here
+// so this file's agenda calendar can build the identical address with no
+// Nunjucks `| sort` pipeline of its own. Never the meeting room:
+// `events.json` carries no column that could resolve to one --
+// `PUBLIC_FIELD_SOURCES` in `tools/convener_ops/public_data.py` maps
+// `zoom_link` to nothing published at all.
+function eventPageUrl(event) {
+  return absoluteUrl(`/events/${String(event.id).toLowerCase()}/`);
+}
+
+// A Europe/Paris local instant (`parisStandingStart`'s own `startDate`,
+// e.g. `2026-09-10T12:30:00+02:00`) as an RFC 5545 UTC DATE-TIME
+// (`20260910T103000Z`): iCalendar's basic format strips every separator
+// `Date#toISOString` still carries, and drops the milliseconds `Date`
+// always writes even for a whole second. `minutes` shifts the instant
+// before formatting, for `DTEND`.
+function icsUtcStamp(isoWithOffset, minutes) {
+  const shifted = new Date(new Date(isoWithOffset).getTime() + (minutes || 0) * 60000);
+  return shifted.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+// One VEVENT block for a scheduled edition: title, start, end, timezone
+// and the event page's address -- task 8's own list in full.
+//
+// UTC (`Z`), not a `VTIMEZONE` component: a `VTIMEZONE` would carry its
+// own copy of Europe/Paris's DST transition rule, which is exactly the
+// rule `parisStandingStart` above already resolves once, from `Intl`,
+// per edition -- a second, static encoding of "when Paris changes clocks"
+// sitting inside every generated file is one more copy for that rule to
+// drift from, the identical failure D-14 already binds three
+// implementations against. Resolving the real offset once and writing an
+// absolute UTC instant carries no DST rule of its own to go stale, ever.
+//
+// `UID` is the event page's own address, not a manufactured `id@domain`:
+// the same identity `feed.njk`'s own `<guid isPermaLink="true">` already
+// uses for this exact edition, so the two feeds name the same thing the
+// same way. Stable across rebuilds (an edition's id does not change once
+// assigned) and globally unique by construction, being a URL.
+//
+// `DTSTAMP` is the same instant as `DTSTART`, not `new Date()` read at
+// build time: a calendar feed rebuilt on every push must not change
+// merely because it was rebuilt (the exact discipline `parisToday()` /
+// `paris_today` already enforce project-wide). RFC 5545 only asks that
+// `DTSTAMP` be *a* valid UTC instant, not that it record when this
+// particular file happened to be generated, so reusing `DTSTART`'s own
+// value is a legitimate, and the only deterministic, choice available.
+//
+// `LOCATION` and `URL` both carry the event page's address, never the
+// meeting room: "an event's location or URL is the event page, never the
+// room" (D-19) -- a calendar entry is forwarded and re-synced far more
+// casually than a web page, so a room link reaching a `LOCATION` field
+// would end up on devices this project never intended it to.
+function agendaVevent(event) {
+  const { startDate } = parisStandingStart(event.date);
+  const dtstart = icsUtcStamp(startDate);
+  const dtend = icsUtcStamp(startDate, SEMINAR_DURATION_MINUTES);
+  const url = eventPageUrl(event);
+  const lines = [
+    'BEGIN:VEVENT',
+    `UID:${url}`,
+    `DTSTAMP:${dtstart}`,
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+    `SUMMARY:${icsEscapeText(event.title)}`,
+    `DESCRIPTION:${icsEscapeText(eventDescriptionFallback(event))}`,
+    `LOCATION:${icsEscapeText(url)}`,
+    `URL:${url}`,
+    'END:VEVENT',
+  ];
+  return lines.map(icsFoldLine).join('\r\n');
+}
+
+// The public agenda feed in full: every `scheduled` edition (never a
+// `delivered` or `archived` one -- a calendar is for what has not
+// happened yet), soonest first, wrapped in the one VCALENDAR every
+// consumer expects. `events` is `events.json`'s own array, unfiltered and
+// unsorted -- the same input `feed.njk` receives -- so this is the only
+// place that does either for this feed.
+//
+// Each element of the array joined below is either one short, fixed
+// ASCII header/footer line (never long enough to need folding) or one
+// already-folded, already-CRLF-joined `agendaVevent` block: `.join`
+// inserts its separator only *between* array elements, never inside one,
+// so folding a VEVENT block a second time here would wrongly treat its
+// own internal CRLFs as ordinary content bytes -- deliberately not done.
+function agendaCalendar(events) {
+  const scheduled = events
+    .filter((event) => event.status === 'scheduled')
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//example-instance//Monthly Reading Group//EN',
+    'CALSCALE:GREGORIAN',
+    'X-WR-CALNAME:The Example Collective Monthly Reading Group',
+    ...scheduled.map(agendaVevent),
+    'END:VCALENDAR',
+  ];
+  return `${lines.join('\r\n')}\r\n`;
+}
+
 module.exports = function (cfg) {
   cfg.addPassthroughCopy('src/style.css');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
@@ -169,17 +363,8 @@ module.exports = function (cfg) {
   // site is reproducible from this repository alone.
   cfg.addPassthroughCopy('src/.nojekyll');
 
-  // `path` is root-relative and unprefixed -- exactly `| url`'s own input
-  // contract (every existing `| url` call site in this project's templates).
-  // This filter does that identical prefixing plus SITE_ORIGIN, in one step,
-  // for the handful of places a URL leaves this document for a context with
-  // no address of its own to resolve a relative link against: canonical
-  // links, Open Graph/Twitter Card metadata, JSON-LD, the sitemap and the
-  // feed. Never chain the two (`x | url | absoluteUrl` doubles the prefix) --
-  // a page uses one or the other, never both.
-  cfg.addFilter('absoluteUrl', function (path) {
-    return `${SITE_ORIGIN}${PATH_PREFIX.slice(0, -1)}${path}`;
-  });
+  // See `absoluteUrl`'s own comment above for what this does and why.
+  cfg.addFilter('absoluteUrl', absoluteUrl);
 
   // JSON-LD objects built in event.njk carry `null` for a field that does
   // not apply to this edition's state -- no `potentialAction` on a past
@@ -223,6 +408,31 @@ module.exports = function (cfg) {
   // a fixed `+01:00` -- see its own comment for why that fix matters here.
   cfg.addFilter('rfc822', function (isoDate) {
     return new Date(parisStandingStart(isoDate).startDate).toUTCString();
+  });
+
+  // `events | agendaCalendar` for `src/agenda.njk` (task 8) -- see
+  // `agendaCalendar`'s own comment above for the feed in full.
+  cfg.addFilter('agendaCalendar', agendaCalendar);
+
+  // RFC 5545 requires CRLF line endings throughout, unlike every other
+  // format this build writes (HTML, `style.css`, `feed.njk`'s own XML,
+  // all plain `\n`). Neither the template source file nor Nunjucks
+  // itself is CRLF-aware -- `agenda.njk`'s own trailing newline, and any
+  // future edit to it, writes whatever line ending that source file
+  // happens to end on, and this repository's own `.gitattributes`
+  // normalises checked-in text to `eol=lf` besides (the reverse of the
+  // CRLF-on-write trap `tools/convener_ops`'s own YAML writers guard against
+  // with `newline=""`). Rather than trust every layer between
+  // `agendaCalendar`'s own return value and the file GitHub Pages
+  // serves to preserve the CRLFs it already wrote correctly, this
+  // transform normalises the *rendered bytes* of every `.ics` output to
+  // CRLF, once, as the last thing that touches them before Eleventy
+  // writes the file.
+  cfg.addTransform('crlfForCalendarFeeds', function (content, outputPath) {
+    if (typeof outputPath === 'string' && outputPath.endsWith('.ics')) {
+      return content.replace(/\r\n|\r|\n/g, '\r\n');
+    }
+    return content;
   });
 
   return {

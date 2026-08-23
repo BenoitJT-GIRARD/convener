@@ -1,0 +1,37 @@
+---
+eleventyExcludeFromCollections: true
+permalink: "/agenda.ics"
+---
+{#-
+  Task 8 (phase 6): the public agenda feed -- iCalendar (RFC 5545), a
+  different format for a different consumer from feed.njk's own RSS
+  syndication feed above. A calendar client subscribes to this address
+  once; the scheduled editions it lists, their times and the event page
+  each one points to arrive on their own at every later rebuild, with
+  nothing to administer and no account -- the shared-calendar request
+  named in F-06 (spec §4).
+
+  All the real work -- filtering to `scheduled` editions, the Europe/Paris
+  DST-aware start time, RFC 5545 TEXT escaping and 75-octet line folding,
+  and why UID/LOCATION/URL all carry the event page's own address and
+  never the meeting room -- is `agendaCalendar` and the functions it
+  calls, in site/.eleventy.js: a single filter call, like feed.njk's own
+  `eventDescription` and `rfc822` above it, rather than template logic of
+  its own. `| safe` is required, not decorative: `agendaCalendar` already
+  returns a fully RFC 5545-escaped and folded string (backslash-escaping,
+  not HTML entities), and Nunjucks' own default auto-escaping would
+  otherwise turn every literal "&" this feed writes into "&amp;", which is
+  meaningless -- and wrong -- inside an iCalendar file. The same "already
+  serialised, mark it safe" contract event.njk's own `| jsonLd | safe`
+  already uses for the identical reason, one property syntax over.
+
+  Line endings: RFC 5545 requires CRLF throughout, unlike this file's own
+  front matter and this one line of template markup. `agendaCalendar`
+  already returns pure CRLF, but this file, or Eleventy's own handling of
+  it, still contributes whatever line ending it itself ends on -- so
+  purity is enforced once more, on the actual rendered bytes, by the
+  `crlfForCalendarFeeds` transform (site/.eleventy.js): see that
+  transform's own comment for why the belt is not made redundant by the
+  braces.
+-#}
+{{- events | agendaCalendar | safe }}

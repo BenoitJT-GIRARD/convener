@@ -83,3 +83,4 @@ assertable
 pipefail
 segno
 regenerable
+Nunjucks

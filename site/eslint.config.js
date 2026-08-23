@@ -10,6 +10,13 @@ module.exports = [
       globals: {
         module: 'writable',
         require: 'readonly',
+        // Task 8 (phase 6): `icsFoldLine`'s own UTF-8-aware line folding
+        // needs byte access a JavaScript string does not give directly --
+        // `Buffer`, Node's own built-in, no new dependency. The only file
+        // this bare, unscoped block actually lints is `.eleventy.js`
+        // itself, and this is the first place in it that has ever needed
+        // a Node global beyond `module`/`require`.
+        Buffer: 'readonly',
       },
     },
     rules: {
