@@ -3963,3 +3963,219 @@ def test_the_monitor_skips_only_the_two_events_that_cannot_leave_main() -> None:
     )
 
 
+# ------------------------------------------------------------------ #
+# Phase 8, task 3, change D: a superseded run is cancelled, and a push to
+# `main` is not.
+#
+# The trap this closes is one line wide. `group: ${{ github.ref }}` reads
+# like the obvious way to say "one run per branch", and it is -- for a
+# pull request. For a push to `main` it means every push shares one
+# group, so `cancel-in-progress: true` lets the next push kill the checks
+# on the commit before it, and that commit reaches production having been
+# verified by nothing. Nothing turns red; the run just says "cancelled".
+# D-25, and this repository has recorded that shape of failure thirteen
+# times.
+#
+# So the expression is not asserted by its text but *evaluated*, against
+# the contexts GitHub would supply, and what is asserted is the property:
+# two runs of the same workflow on a push to `main` land in two different
+# groups, two runs on the same pull-request branch land in one.
+# ------------------------------------------------------------------ #
+
+#: One `${{ ... }}` placeholder. Deliberately not a general expression
+#: parser: the only forms this repository's concurrency groups use are a
+#: context lookup and a `||` fallback chain of them, and `_render_group`
+#: below refuses anything else rather than guessing at it.
+_PLACEHOLDER_RE = re.compile(r"\$\{\{([^}]*)\}\}")
+
+#: A `github.*` context lookup, the only operand `_render_group` accepts.
+_CONTEXT_LOOKUP_RE = re.compile(r"github\.[a-z_]+(?:\.[a-z_]+)*")
+
+
+def _render_group(expression: str, context: dict[str, str]) -> str:
+    """`expression` with every `${{ ... }}` replaced the way GitHub would.
+
+    Two shapes only -- a bare context lookup, and lookups joined by `||`,
+    where an unset or empty context value is falsy and the chain yields
+    the first truthy one (the empty string if there is none). Anything
+    else raises, so a group expression that grew a function call or a
+    comparison fails here loudly instead of being quietly mis-evaluated
+    into a passing result.
+    """
+
+    def one(match: re.Match[str]) -> str:
+        for operand in (part.strip() for part in match.group(1).split("||")):
+            assert _CONTEXT_LOOKUP_RE.fullmatch(operand), (
+                f"{operand!r} is not a plain `github.*` context lookup -- "
+                "this evaluator understands lookups and `||` fallbacks "
+                "between them, and refuses to guess at anything else"
+            )
+            value = context.get(operand, "")
+            if value:
+                return value
+        return ""
+
+    return _PLACEHOLDER_RE.sub(one, expression)
+
+
+def _push_context(workflow_name: str, run_id: str) -> dict[str, str]:
+    """A push to `main`. `github.head_ref` is empty for every event that
+    is not a pull request -- GitHub's own documented behaviour, and the
+    hinge the whole expression turns on."""
+    return {
+        "github.workflow": workflow_name,
+        "github.head_ref": "",
+        "github.ref": "refs/heads/main",
+        "github.run_id": run_id,
+    }
+
+
+def _pull_request_context(
+    workflow_name: str, branch: str, run_id: str
+) -> dict[str, str]:
+    return {
+        "github.workflow": workflow_name,
+        "github.head_ref": branch,
+        "github.ref": "refs/pull/7/merge",
+        "github.run_id": run_id,
+    }
+
+
+def test_the_group_evaluator_reproduces_the_trap_it_exists_to_catch() -> None:
+    """Positive control. `${{ github.ref }}` -- the shorthand this change
+    had to avoid -- must come back *identical* for two different pushes to
+    `main`, which is exactly what would let the second cancel the first.
+    An evaluator that could not show that could not be trusted to show
+    the real expression avoiding it."""
+    naive = "${{ github.ref }}"
+    assert _render_group(naive, _push_context("Quality", "1")) == _render_group(
+        naive, _push_context("Quality", "2")
+    )
+
+    chosen = "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
+    assert _render_group(chosen, _push_context("Quality", "1")) != _render_group(
+        chosen, _push_context("Quality", "2")
+    )
+
+
+def _pull_request_workflows() -> list[Path]:
+    """Every workflow that runs on a pull request -- derived from the
+    trigger each file declares, never a list of names. The plan for this
+    change named five and there were six: `visuals.yml` runs on pull
+    requests too, and pays a real browser download to render a commit
+    already superseded."""
+    return [
+        workflow
+        for workflow in _workflow_files()
+        if "pull_request"
+        in workflow_event_names(safe_load(workflow.read_text(encoding="utf-8")) or {})
+    ]
+
+
+def test_the_pull_request_sweep_actually_matches_something() -> None:
+    """The same guard `test_the_externally_dispatched_sweep_actually_
+    matches_something` puts on its own sweep: a parametrisation that
+    silently found nothing would report green while checking nothing."""
+    found = [workflow.name for workflow in _pull_request_workflows()]
+    assert len(found) >= 6, (
+        f"only {found} were detected as pull-request-triggered -- either "
+        "they really are gone, or `workflow_event_names` has stopped "
+        "recognising the trigger"
+    )
+
+
+@pytest.mark.parametrize("workflow", _pull_request_workflows(), ids=lambda p: p.name)
+def test_a_workflow_that_runs_on_pull_requests_cancels_what_a_newer_push_replaced(
+    workflow: Path,
+) -> None:
+    """Two pushes to the same pull-request branch share one group, so the
+    older run is cancelled: the commit it was checking is not the one
+    that will be merged."""
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    concurrency = loaded.get("concurrency")
+    assert isinstance(concurrency, dict), (
+        f"{workflow.name} runs on pull requests and declares no "
+        "concurrency group -- every push to a branch under review starts a "
+        "full chain of checks on a commit the next push replaces"
+    )
+    assert concurrency.get("cancel-in-progress") is True, (
+        f"{workflow.name} declares a group but does not cancel, so a "
+        "superseded run is queued rather than dropped -- the minutes are "
+        "spent either way"
+    )
+
+    group = concurrency["group"]
+    name = str(loaded["name"])
+    first = _render_group(group, _pull_request_context(name, "feature-x", "2001"))
+    second = _render_group(group, _pull_request_context(name, "feature-x", "2002"))
+    assert first == second, (
+        f"{workflow.name}'s group is not stable across two runs of the "
+        f"same pull-request branch ({first!r} then {second!r}), so a newer "
+        "push cancels nothing"
+    )
+
+    other_branch = _render_group(
+        group, _pull_request_context(name, "feature-y", "2003")
+    )
+    assert other_branch != first, (
+        f"{workflow.name} puts two different pull-request branches in one "
+        "group -- opening a second pull request would cancel the checks on "
+        "the first"
+    )
+
+
+@pytest.mark.parametrize("workflow", _pull_request_workflows(), ids=lambda p: p.name)
+def test_a_push_outside_a_pull_request_can_never_be_cancelled(
+    workflow: Path,
+) -> None:
+    """The half that is not about minutes at all.
+
+    Every commit that reaches `main` is verified for itself, so no push to
+    `main` may ever be cancelled by a later one -- and the same holds for
+    a scheduled or hand-dispatched run, which nothing supersedes either.
+    Evaluated, not read: the group these workflows use falls back to
+    `github.run_id` whenever `github.head_ref` is empty, and
+    `github.run_id` is unique per run, so no two such runs can share a
+    group and `cancel-in-progress` has nothing to act on.
+    """
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    group = loaded["concurrency"]["group"]
+    name = str(loaded["name"])
+
+    first = _render_group(group, _push_context(name, "1001"))
+    second = _render_group(group, _push_context(name, "1002"))
+    assert first != second, (
+        f"{workflow.name} puts two pushes to main in the same concurrency "
+        f"group ({first!r}) while cancelling in progress -- a second push "
+        "would cancel the checks on the commit before it, and that commit "
+        "would reach production verified by nothing, with no red anywhere "
+        "(D-25)"
+    )
+
+    pull_request = _render_group(
+        group, _pull_request_context(name, "feature-x", "1003")
+    )
+    assert pull_request != first, (
+        f"{workflow.name} puts a push to main and a pull-request run in "
+        "the same group -- opening a pull request would cancel main's own "
+        "checks"
+    )
+
+
+def test_two_workflows_never_share_a_concurrency_group() -> None:
+    """Concurrency groups are repository-wide, not per workflow: without
+    something workflow-specific in the key, the six blocks above would
+    cancel *each other* on the same branch, and five of the six checks on
+    a pull request would simply stop happening. `github.workflow` is what
+    keeps them apart -- the same reason deploy.yml's own group already
+    carries it."""
+    rendered: dict[str, str] = {}
+    for workflow in _pull_request_workflows():
+        loaded = safe_load(workflow.read_text(encoding="utf-8"))
+        rendered[workflow.name] = _render_group(
+            loaded["concurrency"]["group"],
+            _pull_request_context(str(loaded["name"]), "feature-x", "2001"),
+        )
+    assert len(set(rendered.values())) == len(rendered), (
+        f"two pull-request workflows render the same group: {rendered}"
+    )

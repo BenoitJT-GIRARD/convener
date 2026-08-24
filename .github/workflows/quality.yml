@@ -78,6 +78,36 @@ on:
     branches: [main]
   pull_request:
 
+# Phase 8, task 3, change D. A newer push to a pull request replaces the
+# commit an older run of this workflow is still checking: that run is
+# verifying code nobody will ever merge. Three pushes in a quarter of an
+# hour cost three full chains of checks before this block, where only the
+# last one says anything about what will be merged.
+#
+# **A push to `main` must never be cancellable, and that is what the
+# expression below is shaped around.** `github.head_ref` is the source
+# branch of a pull request and is empty for every other event, so a
+# `pull_request` run groups with the other runs of the same branch and
+# the older one is cancelled -- while a push to `main` falls through to
+# `github.run_id`, unique to that one run, which nothing else can ever
+# join and therefore nothing can ever cancel. Every commit that reaches
+# production stays verified for itself. The obvious shorthand,
+# `github.ref`, would do the opposite in silence: two pushes to `main`
+# share one ref, so the second would cancel the first one's checks and
+# the commit in between would go to production unverified -- D-25, and
+# the reason this is pinned by a test that evaluates this exact
+# expression against both contexts rather than eyeballing its shape
+# (tools/tests/test_workflows.py::
+# test_a_push_outside_a_pull_request_can_never_be_cancelled).
+#
+# `github.workflow` scopes the group to this workflow's own name --
+# concurrency groups are shared repository-wide, so without it the five
+# workflows carrying this block would cancel each other. Same reasoning
+# deploy.yml's own group already states.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   python:
     runs-on: ubuntu-latest
