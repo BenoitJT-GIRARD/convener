@@ -4,54 +4,47 @@ on:
   repository_dispatch:
     types: [registration-submitted]
 
-# Two registrations landing at once is the ordinary case here -- every
-# submission dispatches its own run, with no batching -- not an edge case
-# to shrug off. `queue: single`, this workflow's implicit default without
-# this block, keeps only the most recently *queued* run and cancels any
-# others still waiting behind whichever run is already in progress: three
-# submissions arriving while one is being processed would silently cancel
-# two of them, not merely delay them. `queue: max`
-# (docs.github.com/en/actions/using-jobs/using-concurrency, checked
-# 2026-08-20 -- "Up to 100 jobs or workflow runs can be pending in the
-# concurrency group") queues up to 100 pending runs instead of 1 -- not
-# "none dropped" without limit, as an earlier version of this comment
-# claimed: the same page continues "When the queue is full, any additional
-# runs are canceled." At the relay's own per-event burst limiter (30/minute,
-# services/signup-relay/README.md) and roughly a minute per run end to end,
-# a sustained blast against one hot event can approach that ceiling within
-# several minutes -- this does not remove the limit, it only stops one such
-# event from starving every other event's queue too, which is why the group
-# is scoped per event below rather than left global. `cancel-in-progress`
-# stays false, its own default: it cannot combine with `queue: max` by
-# GitHub's own validation, and a run mid-decrypt must finish, never be cut
-# off mid-write.
-concurrency:
-  group: registration-${{ fromJSON(github.event.client_payload.body).event_id }}
-  cancel-in-progress: false
-  queue: max
-
+# Phase 7, task 2 (spec 6 ter): this workflow used to serialise same-event
+# runs with `group` plus a `queue: max` meant to queue up to 100 pending
+# runs behind the one in progress. `actionlint` (2026-08-24) found
+# `queue: max` is not a valid `concurrency` key at all -- the citation
+# about a hundred pending runs was real, the syntax spelling it out was
+# invented. What is left once that key is dropped -- `group` plus
+# `cancel-in-progress: false` -- does not queue: it lets exactly *one* run
+# wait behind the one in progress, and cancels any further arrival on top
+# of it. A cancelled run never starts, so the retry loop below (fetch,
+# reset --hard, re-run the handler) can never save what it was carrying --
+# and every run here carries one registrant's own submission, never a
+# later, replaceable one.
+#
+# This workflow stays ungrouped instead: two registrations landing at once
+# is the ordinary case here, not an edge case, and the retry loop below
+# already makes a concurrent write to the same event's `registrations.enc`
+# safe on its own -- `convener_ops.registration.upsert` is idempotent on the
+# same address (see the "Decrypt, store and commit" step's own comment),
+# so re-deriving against whatever another run just pushed reproduces this
+# registration's own entry beside it rather than needing anything queued.
 jobs:
   handle:
     runs-on: ubuntu-latest
-    # A serialised queue (above) means one run that never finishes blocks
-    # every other registration for the same event behind it, up to
-    # GitHub's own six-hour default. Ten minutes is generous for a job that
-    # is checkout, `uv sync`, one decrypt/re-encrypt/commit, and -- once
-    # that has landed (`if: success()` below) -- one more decrypt and one
-    # send attempt. See the retry loop below for the one part of this job
-    # with any real variance, bounded at three attempts.
+    # Ten minutes is generous for a job that is checkout, `uv sync`, one
+    # decrypt/re-encrypt/commit, and -- once that has landed (`if:
+    # success()` below) -- one more decrypt and one send attempt. See the
+    # retry loop below for the one part of this job with any real
+    # variance, bounded at three attempts; nothing here queues behind
+    # another run any more (see this file's own header comment), so this
+    # timeout bounds this run alone, never a chain of them.
     timeout-minutes: 10
     permissions:
       contents: write
     env:
       # Read once, used twice: by `actions/checkout` below (so this job
       # reads the branch *tip*, not the commit `repository_dispatch`
-      # pinned `github.sha` to at the moment the event was created -- with
-      # `queue: max` genuinely serialising runs, a later run in the same
-      # group starts only after an earlier one has already pushed, and
-      # checking out a fixed SHA would read the tree from *before* that
-      # push, silently reverting it) and by the retry loop, so the two can
-      # never name different branches.
+      # pinned `github.sha` to at the moment the event was created --
+      # checking out that fixed, older SHA would start this run's own
+      # retry loop one push further behind than it needs to be, reading a
+      # tree from *before* whatever else has already landed) and by the
+      # retry loop, so the two can never name different branches.
       TARGET_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -64,9 +57,9 @@ jobs:
           # "limit harder" -- 30 requests/minute and 500 total per event
           # are already the relay's own advertised, deliberately generous
           # limits (services/signup-relay/README.md) -- but "what should
-          # one accepted dispatch cost". At roughly a minute per run
-          # (this file's own concurrency comment) and PER_EVENT_CEILING's
-          # own 500, a sustained blast against one public event stayed
+          # one accepted dispatch cost". At roughly a minute per run end
+          # to end and PER_EVENT_CEILING's own 500, a sustained blast
+          # against one public event stayed
           # entirely within those limits while still spending close to a
           # quarter of the monthly 2,000-minute budget on one event. This
           # does not change what a run does, only how much of `uv sync`'s

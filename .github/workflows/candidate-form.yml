@@ -7,22 +7,22 @@ on:
 # C4 (2026-08-23 security audit): this workflow had no concurrency block at
 # all, so two proposals landing at once could each read data/speakers.yml,
 # append their own lead, and race the "Commit" step's own `git pull
-# --rebase` below -- L2 of the same audit already names that rebase as a
-# real, if low-frequency, defect and defers fixing it; serialising runs
-# here removes the race that would otherwise trigger it, whichever comes
-# first. One shared group, not one per submitter: unlike the certificate
-# workflows or registration.yml, there is no per-submission identifier
-# safe to key on here (a submitter names no id at all, and the form's own
-# secret binds every call to the same one repository_dispatch type) --
-# every run touches the same file, so every run must queue behind the
-# last, the same "queue: max" reasoning registration.yml's own comment
-# gives for its per-event group, applied globally because there is only
-# one queue here to have.
-concurrency:
-  group: candidate-form
-  cancel-in-progress: false
-  queue: max
-
+# --rebase` -- L2 of the same audit already named that rebase as a real,
+# if low-frequency, defect and deferred fixing it.
+#
+# Phase 7, task 2 (spec 6 ter) closes both together, and not with a
+# concurrency group. `actionlint` (2026-08-24) found the `queue: max` this
+# block used to carry is not a valid `concurrency` key at all, and what a
+# `group` plus `cancel-in-progress: false` leaves behind cancels a
+# *waiting* run rather than queuing it -- a lost proposal, not a delayed
+# one, for a workflow whose every run carries one submitter's own lead. A
+# cancelled run never starts, so the retry loop below (fetch, reset
+# --hard, re-run the handler) can never save it. This workflow stays
+# ungrouped instead: the step below re-derives on a rejected push rather
+# than rebasing, and `convener_ops.proposal.skip_reason` already refuses a
+# duplicate submission by email -- re-running the handler against
+# whatever another run just pushed is safe on its own, with nothing to
+# queue behind.
 jobs:
   handle:
     runs-on: ubuntu-latest
@@ -32,6 +32,12 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+    env:
+      # Read once, used twice -- see registration.yml's own comment for
+      # why the retry loop below must re-derive against the branch *tip*,
+      # never the (possibly stale) commit this run's own checkout started
+      # from.
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
@@ -42,8 +48,7 @@ jobs:
           # self-inflicted Actions-minute cost, alongside this fix's path
           # filters. Reduces run time only; changes nothing this job checks.
           enable-cache: true
-      - name: Process payload
-        working-directory: tools
+      - name: Process and commit the proposal
         env:
           # The relay (services/form-relay) sends client_payload as exactly
           # {"body": <raw Tally body>, "signature": <base64 signature>}. What
@@ -56,24 +61,34 @@ jobs:
           PROPOSAL_PAYLOAD: ${{ github.event.client_payload.body }}
           PROPOSAL_SIGNATURE: ${{ github.event.client_payload.signature }}
           TALLY_WEBHOOK_SECRET: ${{ secrets.TALLY_WEBHOOK_SECRET }}
-        run: uv run convener-handle-proposal
-      - name: Commit
+        # The retry, on a rejected push, is a fetch-and-reset-hard followed
+        # by *re-running the handler* (`uv run convener-handle-proposal`), not
+        # `git pull --rebase` -- see registration.yml's own comment for why
+        # replaying a diff over data/speakers.yml's own array conflicts
+        # instead of applying. Re-running is safe specifically because
+        # `convener_ops.proposal.skip_reason` refuses a submission whose email
+        # already matches an existing `lead`: re-running against the tip
+        # someone else just pushed reproduces this proposal's own new
+        # entry beside whatever that other push added, never a duplicate.
         run: |
           set -e
           git config user.name "convener-form"
           git config user.email "convener-form@users.noreply.github.com"
-          git add data/speakers.yml
-          if git diff --staged --quiet; then
-            echo "no new lead"
-            exit 0
-          fi
-          git commit -m "data: new lead from public form"
+
           for attempt in 1 2 3; do
+            (cd tools && uv run convener-handle-proposal)
+            git add data/speakers.yml
+            if git diff --staged --quiet; then
+              echo "no new lead"
+              exit 0
+            fi
+            git commit -m "data: new lead from public form"
             if git push; then
               exit 0
             fi
-            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
-            git pull --rebase
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
           done
           echo "::error::push failed after 3 attempts -- this lead was not saved"
           exit 1

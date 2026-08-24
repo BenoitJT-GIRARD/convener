@@ -27,31 +27,32 @@ def test_the_workflow_is_triggered_by_the_relays_own_dispatch_type() -> None:
     assert "types: [survey-response-submitted]" in _SURVEY
 
 
-def test_the_concurrency_group_is_scoped_per_event_id() -> None:
-    assert (
-        "group: survey-${{ fromJSON(github.event.client_payload.body).event_id }}"
-        in _SURVEY
-    )
-    assert "queue: max" in _SURVEY
-    assert "cancel-in-progress: false" in _SURVEY
+def test_the_workflow_declares_no_concurrency_group() -> None:
+    """Phase 7, task 2 (spec 6 ter) supersedes task 16's own decision here:
+    `queue: max`, this block's own key, was never a valid `concurrency`
+    key at all (`actionlint`, 2026-08-24), and what a `group` plus
+    `cancel-in-progress: false` leaves behind cancels a *waiting* run
+    rather than queuing it -- a lost survey response, not a delayed one.
+    This workflow's own retry loop (fetch, reset --hard, re-run the
+    handler) already makes a concurrent write to
+    `survey-responses.enc` -- an append-only file with no identity to
+    deduplicate on -- safe on its own, so it stays ungrouped."""
+    assert "concurrency:" not in _SURVEY
 
 
-def test_the_concurrency_group_is_distinct_from_registrations_own() -> None:
-    """Task 16's own decision: a separate group, not registration.yml's,
-    because the two workflows write different files for the same event and
-    have nothing to serialise against each other for."""
+def test_neither_survey_nor_registration_declares_a_concurrency_group() -> None:
+    """Task 16's own decision here was a *separate* group from
+    registration.yml's, because the two workflows write different files
+    for the same event and have nothing to serialise against each other
+    for. Phase 7, task 2 supersedes that: neither workflow groups runs at
+    all any more (see this module's own
+    test_the_workflow_declares_no_concurrency_group), so there is nothing
+    left to keep distinct."""
     registration = (_ROOT / ".github" / "workflows" / "registration.yml").read_text(
         encoding="utf-8"
     )
-    survey_group = (
-        "group: survey-${{ fromJSON(github.event.client_payload.body).event_id }}"
-    )
-    registration_group = (
-        "group: registration-${{ fromJSON(github.event.client_payload.body).event_id }}"
-    )
-    assert survey_group in _SURVEY
-    assert registration_group in registration
-    assert survey_group != registration_group
+    assert "concurrency:" not in _SURVEY
+    assert "concurrency:" not in registration
 
 
 def test_the_job_checks_out_the_branch_tip_not_the_pinned_dispatch_commit() -> None:

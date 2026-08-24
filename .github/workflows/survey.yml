@@ -4,27 +4,30 @@ on:
   repository_dispatch:
     types: [survey-response-submitted]
 
-# Its own concurrency group, not registration.yml's: this workflow writes
-# data/events/<id>/survey-responses.enc, registration.yml writes
-# data/events/<id>/registrations.enc -- two different files for the same
-# event, so there is no shared array for two concurrent runs to corrupt the
-# way registration.yml's own comment explains for its own file. Serialising
-# survey responses against registrations for the same event would only add
-# queuing delay neither file's own writer needs. `queue: max` and
-# `cancel-in-progress: false` for the identical reason registration.yml
-# gives: a burst of responses to one event is the ordinary case, not an
-# edge case, and a run mid-write must finish, never be cut off.
-concurrency:
-  group: survey-${{ fromJSON(github.event.client_payload.body).event_id }}
-  cancel-in-progress: false
-  queue: max
-
+# Phase 7, task 2 (spec 6 ter): this workflow used to declare its own
+# `group` plus `queue: max`, for the same reason registration.yml's own
+# (now-removed) block gave -- `actionlint` (2026-08-24) found `queue: max`
+# is not a valid `concurrency` key at all, and what a `group` plus
+# `cancel-in-progress: false` leaves behind cancels a *waiting* run rather
+# than queuing it. A cancelled run never starts, so the retry loop below
+# can never save the survey response it was carrying -- see
+# registration.yml's own header comment for the identical reasoning,
+# applied there first.
+#
+# This workflow stays ungrouped too: it writes
+# data/events/<id>/survey-responses.enc, an append-only array
+# (`tools/convener_ops/survey.py::add_response`, see the retry loop below) with
+# no identity to deduplicate on, so a concurrent write is already safe --
+# re-deriving against whatever another run just pushed appends this
+# response once more, beside whatever that other push added, never merging
+# or overwriting anything.
 jobs:
   handle:
     runs-on: ubuntu-latest
     # Same budget as registration.yml, for the same reason: checkout,
     # `uv sync`, one decrypt/re-encrypt/commit, bounded at three push-retry
-    # attempts.
+    # attempts. Nothing here queues behind another run (see this file's
+    # own header comment), so this timeout bounds this run alone.
     timeout-minutes: 10
     permissions:
       contents: write

@@ -22,6 +22,7 @@ Two things are asserted instead of the two things the brief names:
 from __future__ import annotations
 
 import ast
+import json
 import os
 import re
 import shutil
@@ -1038,6 +1039,272 @@ def test_every_job_declares_a_timeout(workflow: Path) -> None:
             "(a step-level timeout-minutes does not count -- it bounds "
             "only that one step, not the whole job)"
         )
+
+
+# ------------------------------------------------------------------ #
+# Phase 7, task 2: `queue: max` turned out not to be a valid `concurrency`
+# key at all (`actionlint`, 2026-08-24 -- see quality.yml). Once dropped,
+# what a `group` plus `cancel-in-progress: false` leaves behind cancels a
+# *waiting* run rather than queuing it -- a lost submission, not a delayed
+# one, for a workflow whose every run carries one. Five workflows also
+# rebased a local commit onto a rejected push instead of re-deriving
+# against the refreshed tip, which registration.yml's own retry-loop
+# comment already named as the way a JSON array's own closing lines get
+# corrupted by a rebase conflict. Both checks below are scanned
+# structurally, over every workflow this repository has, so a sixth one
+# added later is caught the same way rather than needing its name added to
+# a list here.
+# ------------------------------------------------------------------ #
+
+
+def _all_run_scripts(workflow: Path) -> list[tuple[str, str, str]]:
+    """`(job id, step name, run: script)` for every step in `workflow`
+    that has a `run:` key -- `uses:`-only steps carry nothing to scan."""
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    jobs = loaded.get("jobs") if isinstance(loaded, dict) else None
+    found: list[tuple[str, str, str]] = []
+    if not isinstance(jobs, dict):
+        return found
+    for job_id, job in jobs.items():
+        if not isinstance(job, dict):
+            continue
+        for step in job.get("steps", []):
+            if not isinstance(step, dict):
+                continue
+            run = step.get("run")
+            if isinstance(run, str):
+                found.append((job_id, step.get("name", "<unnamed>"), run))
+    return found
+
+
+@pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
+def test_no_run_script_rebases_a_local_commit_on_a_rejected_push(
+    workflow: Path,
+) -> None:
+    """Closes the class task 2 fixed five instances of
+    (candidate-form.yml, deploy.yml, register.yml, sweep.yml,
+    visuals-production.yml): a retry loop that rebases a local commit onto
+    a rejected push, rather than fetching the refreshed tip, hard-resetting
+    and re-running the handler against it (registration.yml's and
+    survey.yml's own shape, which every one of those five now follows
+    too).
+
+    Scanned on each step's parsed `run:` string, over uncommented lines
+    only -- `git pull --rebase` named in an explanatory comment (as
+    registration.yml's and survey.yml's own comments both still do, to say
+    why they do *not* use it) must never trip this, and parsing the YAML
+    structurally rather than grepping the raw file text is what keeps a
+    `#`-prefixed line invisible here the same way it is to `set -e`."""
+    for job_id, step_name, run in _all_run_scripts(workflow):
+        commands = [
+            line for line in run.splitlines() if not line.strip().startswith("#")
+        ]
+        assert not any("git rebase" in line for line in commands), (
+            f"{workflow.name}::{job_id} ({step_name}) rebases a local "
+            "commit on a rejected push -- re-derive instead: fetch, "
+            "reset --hard, re-run the handler"
+        )
+        assert not any("git pull" in line for line in commands), (
+            f"{workflow.name}::{job_id} ({step_name}) calls `git pull`, "
+            "which defaults to a merge or rebase, never the fetch-and-"
+            "reset-hard re-derive shape this repository standardises on "
+            "for a shared write"
+        )
+
+
+def _workflow_on_types(loaded: dict[str, Any]) -> set[str]:
+    """The event names a workflow declares under `on:` -- read as
+    `loaded[True]`, not `loaded["on"]`: PyYAML's YAML-1.1 bool resolver
+    reads the bare `on:` key as the boolean `True` before this module's own
+    content is inspected at all (the same gotcha the certificate- and
+    survey-workflow tests elsewhere in this file already work around)."""
+    on_block = loaded.get(True, {})
+    if isinstance(on_block, str):
+        return {on_block}
+    if isinstance(on_block, list):
+        return set(on_block)
+    if isinstance(on_block, dict):
+        return set(on_block)
+    return set()
+
+
+@pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
+def test_a_repository_dispatch_workflow_declares_no_concurrency_group(
+    workflow: Path,
+) -> None:
+    """Section 6 ter of the phase 7 spec, closed as a property rather than
+    a name list: a workflow triggered by `repository_dispatch` carries one
+    externally-submitted payload per run -- a registration, a survey
+    response, a proposal -- that only that one dispatch will ever deliver.
+    A `group` plus `cancel-in-progress: false` lets exactly one run wait
+    behind the one in progress and *cancels* any further arrival, and a
+    cancelled run never starts, so the retry loop inside it can never save
+    what it was carrying. A workflow triggered by `push`, `schedule` or
+    `workflow_dispatch` instead regenerates its own output from this
+    repository's own state, so a superseded run really is replaceable, and
+    keeps whatever `concurrency:` block it declares.
+
+    Derived from the trigger actually declared, not from
+    `{"registration.yml", "survey.yml", "candidate-form.yml"}` written out
+    by hand -- a sixth `repository_dispatch` workflow added next month is
+    caught by this test the same way those three were, without anyone
+    remembering to add its name anywhere."""
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    if "repository_dispatch" not in _workflow_on_types(loaded):
+        pytest.skip(f"{workflow.name} is not repository_dispatch-triggered")
+    assert "concurrency" not in loaded, (
+        f"{workflow.name} is dispatched externally -- one submission per "
+        "run -- and declares a concurrency group; see the phase 7 spec's "
+        "6 ter: grouping cancels a waiting run rather than queuing it, "
+        "which drops exactly the data this workflow exists to keep"
+    )
+
+
+def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # nosec B603, B607
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+
+def _local_repo_pair(tmp_path: Path) -> tuple[Path, Path]:
+    """A bare `origin`, seeded with one committed `shared.json: []`, and
+    two independent clones of it (`a`, `b`) -- stand-ins for two workflow
+    runs' own checkouts, started far enough apart that one has already
+    pushed by the time the other tries to. Everything lives on local disk;
+    the "remote" is a bare repo under `tmp_path`, never a network call."""
+    origin = tmp_path / "origin.git"
+    assert (
+        _run_git(
+            ["init", "--bare", "-q", "-b", "main", str(origin)], tmp_path
+        ).returncode
+        == 0
+    )
+
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    assert _run_git(["init", "-q", "-b", "main"], seed).returncode == 0
+    _run_git(["config", "user.email", "seed@users.noreply.github.com"], seed)
+    _run_git(["config", "user.name", "seed"], seed)
+    (seed / "shared.json").write_text("[]\n", encoding="utf-8")
+    _run_git(["add", "shared.json"], seed)
+    assert _run_git(["commit", "-q", "-m", "seed"], seed).returncode == 0
+    assert _run_git(["remote", "add", "origin", str(origin)], seed).returncode == 0
+    assert _run_git(["push", "-q", "origin", "main"], seed).returncode == 0
+
+    clone_a, clone_b = tmp_path / "a", tmp_path / "b"
+    for clone in (clone_a, clone_b):
+        assert (
+            _run_git(["clone", "-q", str(origin), str(clone)], tmp_path).returncode == 0
+        )
+        _run_git(["config", "user.email", "handler@users.noreply.github.com"], clone)
+        _run_git(["config", "user.name", "handler"], clone)
+    return clone_a, clone_b
+
+
+def _append_entry(clone: Path, entry: str) -> None:
+    """Stands in for a workflow's own handler (`convener-handle-registration`,
+    `convener-handle-survey-response`, `convener-handle-proposal`): read the current
+    array, append one more entry, write it back -- the exact "one array,
+    two concurrent writers" shape registration.yml's own retry-loop
+    comment names as what a rebase corrupts."""
+    path = clone / "shared.json"
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    if entry not in entries:
+        entries.append(entry)
+    path.write_text(json.dumps(entries) + "\n", encoding="utf-8")
+
+
+def test_re_deriving_on_a_rejected_push_loses_no_entry(tmp_path: Path) -> None:
+    """Provoked, not assumed. `a` pushes its own entry first; `b`'s
+    checkout is now stale, so appending its own entry and pushing is
+    rejected as a non-fast-forward -- the collision this repository's real
+    workflows face on every burst of concurrent public submissions.
+    Re-deriving (fetch, reset --hard, re-run the handler against the
+    refreshed file, recommit, retry) is exactly registration.yml's and
+    survey.yml's own retry loop, and -- after this task -- candidate-
+    form.yml's, deploy.yml's, register.yml's, sweep.yml's and visuals-
+    production.yml's too. Both entries must survive."""
+    clone_a, clone_b = _local_repo_pair(tmp_path)
+
+    _append_entry(clone_a, "run-a")
+    _run_git(["add", "shared.json"], clone_a)
+    _run_git(["commit", "-q", "-m", "run a"], clone_a)
+    assert _run_git(["push", "origin", "main"], clone_a).returncode == 0
+
+    _append_entry(clone_b, "run-b")
+    _run_git(["add", "shared.json"], clone_b)
+    _run_git(["commit", "-q", "-m", "run b"], clone_b)
+    first_attempt = _run_git(["push", "origin", "main"], clone_b)
+    assert first_attempt.returncode != 0, (
+        "the setup is wrong if b's first push is not rejected -- "
+        "there is no collision here to re-derive against"
+    )
+
+    # The re-derive loop itself -- fetch, reset --hard, re-run the
+    # handler, recommit, retry -- never `git pull --rebase`.
+    assert _run_git(["fetch", "-q", "origin", "main"], clone_b).returncode == 0
+    assert _run_git(["reset", "-q", "--hard", "origin/main"], clone_b).returncode == 0
+    _append_entry(clone_b, "run-b")
+    _run_git(["add", "shared.json"], clone_b)
+    _run_git(["commit", "-q", "-m", "run b"], clone_b)
+    assert _run_git(["push", "origin", "main"], clone_b).returncode == 0
+
+    _run_git(["fetch", "-q", "origin", "main"], clone_a)
+    shown = _run_git(["show", "origin/main:shared.json"], clone_a)
+    assert shown.returncode == 0, shown.stderr
+    final = json.loads(shown.stdout)
+    assert set(final) == {"run-a", "run-b"}, (
+        f"re-deriving lost an entry: {final!r} -- both concurrent writes "
+        "must survive a collision"
+    )
+
+
+def test_rebasing_on_a_rejected_push_can_lose_an_entry(tmp_path: Path) -> None:
+    """The mutation this task's own report has to show, not merely
+    describe: restore the pattern task 2 removed -- `git pull --rebase`
+    (here, its two constituent commands, to inspect the conflict rather
+    than let a plumbing wrapper hide it) instead of fetch-and-reset-hard --
+    against the identical collision the previous test proves re-deriving
+    survives, and watch it fail instead. Both runs append to the *same*
+    JSON array, so both diffs touch its own closing line -- exactly the
+    shape registration.yml's own retry-loop comment names as `git
+    rebase`'s failure mode."""
+    clone_a, clone_b = _local_repo_pair(tmp_path)
+
+    _append_entry(clone_a, "run-a")
+    _run_git(["add", "shared.json"], clone_a)
+    _run_git(["commit", "-q", "-m", "run a"], clone_a)
+    assert _run_git(["push", "origin", "main"], clone_a).returncode == 0
+
+    _append_entry(clone_b, "run-b")
+    _run_git(["add", "shared.json"], clone_b)
+    _run_git(["commit", "-q", "-m", "run b"], clone_b)
+    assert _run_git(["push", "origin", "main"], clone_b).returncode != 0
+
+    assert _run_git(["fetch", "-q", "origin", "main"], clone_b).returncode == 0
+    rebased = _run_git(["rebase", "origin/main"], clone_b)
+    assert rebased.returncode != 0, (
+        "expected the rebase to conflict on shared.json's own line -- if "
+        "it did not, this probe no longer reproduces the collision "
+        "registration.yml's own comment describes"
+    )
+    # Left mid-rebase on the conflict -- exactly the state registration.
+    # yml's own comment names: a `set -e` step would stop here, before its
+    # own `::error::` line, having neither pushed nor reported why. b's
+    # own entry never reaches origin.
+    _run_git(["rebase", "--abort"], clone_b)
+    shown = _run_git(["show", "origin/main:shared.json"], clone_a)
+    assert shown.returncode == 0, shown.stderr
+    assert json.loads(shown.stdout) == ["run-a"], (
+        "run-b never reached origin -- confirming the loss the rebase "
+        "pattern produces, which is exactly why task 2 removed it"
+    )
 
 
 # ------------------------------------------------------------------ #
