@@ -28,6 +28,7 @@ from convener_ops import (
     delivery,
     eventkeys,
     formats,
+    queue_watch,
     registration_routing,
     retention_liveness,
     signing,
@@ -1170,6 +1171,58 @@ QUEUE_CONFIRM_ENV: Final = "CONVENER_QUEUE_CONFIRM_FILE"
 #: `confirmation.FIELD_LABELS`' own values contain neither tabs nor commas.
 _CONFIRM_FIELD_SEPARATOR: Final = "\t"
 
+#: Where `drain_queue` writes the entries it could **not** finish and the
+#: reason for each -- one `<entry name><tab><reason>` line -- and where
+#: `record_queue_watch` reads them back from (phase 9, task 4).
+#:
+#: A third cross-step file rather than a step output, for the first of
+#: `QUEUE_CLEAR_ENV`'s two reasons: a drain that deferred two hundred
+#: entries would run past what an output can hold. Nothing on a line but a
+#: queue entry path, an event id and a repository path -- the same
+#: already-public identifiers `submission_queue.Note` is documented to be
+#: limited to, which is what lets this reach a committed record and a
+#: comment on the board's thread.
+QUEUE_DEFERRED_ENV: Final = "CONVENER_QUEUE_DEFERRED_FILE"
+
+#: Where the workflow leaves the queue branch's contents *after* the drain,
+#: the confirmations and the clearing have all finished -- one entry path
+#: per line, `git ls-tree` against the branch tip.
+#:
+#: Read rather than inferred, and that is the whole reliability of this
+#: record: what is still waiting is a fact about the branch, not something
+#: to be reconstructed from what three earlier steps intended. A drain that
+#: failed to push, a clearing step that could not commit, and a submission
+#: the relay wrote while this very run was working are all simply *there*,
+#: with no case analysis left to get wrong.
+QUEUE_WAITING_ENV: Final = "CONVENER_QUEUE_WAITING_FILE"
+
+#: The separator on a line of the deferral file. A tab, for
+#: `_CONFIRM_FIELD_SEPARATOR`'s own reason; named separately because the
+#: two files carry different things, and one shared constant would make a
+#: change to either silently reshape the other.
+_DEFERRED_FIELD_SEPARATOR: Final = "\t"
+
+#: Where a queue alarm that has somewhere to go is left for the workflow to
+#: post. A *third* body filename in one job, and deliberately neither
+#: `NOTIFY_BODY` nor `BUDGET_BODY`: the digest and the budget alarm are
+#: composed in the same job, and one filename for several messages means
+#: whichever is written last silently replaces the rest. Same channel, same
+#: thread, same team mention -- a second address book is what D-07 forbids,
+#: never a second message.
+QUEUE_BODY: Final = "queue-body.md"
+
+#: Phase 9, task 4 -- what the public submission queue still held the last
+#: time a drain looked at it, and since when. Committed on purpose, like
+#: every other record this repository keeps about itself: legible by
+#: opening the repository, with no run log to scroll and no CI required,
+#: which is exactly what survives the scenario a watchdog inside GitHub
+#: Actions cannot report on. See tools/convener_ops/queue_watch.py's own module
+#: docstring.
+QUEUE_WATCH_HEADER = (
+    "# What the public submission queue still holds, and since when; "
+    "see tools/convener_ops/queue_watch.py\n"
+)
+
 
 def _queue_entries(root: Path) -> dict[str, str]:
     """Every queue entry under `root`, keyed by its path inside
@@ -1404,6 +1457,30 @@ def drain_queue() -> int:
             newline="",
         )
 
+    deferred_file = os.environ.get(QUEUE_DEFERRED_ENV, "")
+    if deferred_file:
+        # Phase 9, task 4. The drain is the only thing in the run that
+        # knows *why* an entry is still waiting -- a key nobody
+        # configured, a committed file nobody can parse, more open events
+        # than there are secret slots -- and the fix differs by reason, so
+        # the record that outlives this run has to carry it rather than
+        # only the fact of waiting.
+        #
+        # `newline=""`, and `flatten_reason` on every line, for the same
+        # load-bearing reason the two files above carry theirs: this is
+        # read back line by line, and a deferral whose reason is a YAML
+        # parser's own several-line message would otherwise put a fragment
+        # of an error where the next line's entry path belongs.
+        Path(deferred_file).write_text(
+            "".join(
+                f"{note.name}{_DEFERRED_FIELD_SEPARATOR}"
+                f"{queue_watch.flatten_reason(note.reason)}\n"
+                for note in outcome.deferred
+            ),
+            encoding="utf-8",
+            newline="",
+        )
+
     for line in submission_queue.annotation_lines(outcome):
         print(line)
     print(submission_queue.summary(outcome))
@@ -1523,6 +1600,254 @@ def confirm_queued_registrations() -> int:
                 handle.write(f"{name}\n")
 
     print(f"{len(confirmed)} queued registration(s) confirmed and ready to clear")
+    return 0
+
+
+# ------------------------------------------------------------------ #
+# Whether the queue is emptying at all -- phase 9, task 4
+# ------------------------------------------------------------------ #
+
+
+def _queue_thresholds(root: Path) -> queue_watch.Thresholds:
+    """`config/queue-drain.yml`, parsed or refused.
+
+    Raises `ValueError` carrying a message already shaped for an
+    `::error::` annotation. Both commands below fail on it rather than
+    fall back to a built-in default, the identical call `_actions_budget`
+    makes and for the identical reason: a threshold with a fallback in
+    code is a constant with extra steps, and this is the one file that
+    decides when an unhandled submission stops being a backlog.
+    """
+    path = queue_watch.config_path(root)
+    named = queue_watch.CONFIG_PATH.as_posix()
+    if not path.exists():
+        raise ValueError(f"{named} does not exist -- nothing declares the thresholds")
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{named}: invalid YAML - {exc}") from exc
+    return queue_watch.thresholds_from_data(data)
+
+
+def _previous_queue_watch(root: Path) -> tuple[queue_watch.Record | None, bool]:
+    """`(record, restarted)`: the committed observation this run builds on,
+    and whether it had to be thrown away.
+
+    A **missing** file is `(None, False)`: no drain has ever written one,
+    which is the ordinary state of a repository before its first drain and
+    not a finding. A file that will not parse is `(None, True)` -- the
+    ages it carried are gone, which buys silence for anything that was
+    already stuck, so it is reported as its own alarm rather than
+    swallowed (`queue_watch.RESTARTED_ALARM`). Never raises: the record
+    must still be rewritten either way, or a malformed file would freeze
+    the record for ever and the watchdog would then report the *drain* as
+    dead when the drain is fine.
+    """
+    path = queue_watch.watch_path(root)
+    named = queue_watch.WATCH_PATH.as_posix()
+    if not path.exists():
+        return None, False
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        print(f"::error::{named}: invalid YAML - {exc}", file=sys.stderr)
+        return None, True
+    try:
+        return queue_watch.record_from_data(data), False
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return None, True
+
+
+def _queue_deferral_reasons() -> dict[str, str]:
+    """What the drain said about each entry it could not finish, read back
+    from `$CONVENER_QUEUE_DEFERRED_FILE`.
+
+    An absent or unset file is the empty mapping, not an error: a run whose
+    drain step never happened -- nothing was pending, or the step failed
+    before it wrote anything -- still has to record what the queue holds.
+    Every entry then simply has no reason attached, which
+    `queue_watch.next_record` reads as "keep whatever an earlier drain
+    said".
+    """
+    named = os.environ.get(QUEUE_DEFERRED_ENV, "")
+    if not named:
+        return {}
+    path = Path(named)
+    if not path.exists():
+        return {}
+    reasons: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        entry, _, reason = line.partition(_DEFERRED_FIELD_SEPARATOR)
+        reasons[entry] = reason
+    return reasons
+
+
+def record_queue_watch() -> int:
+    """`convener-record-queue-watch`: write down what the queue still holds, and
+    be loud about anything that has been in it too long.
+
+    The last of the daily job's queue steps, and the one that runs whatever
+    the four before it did. It reads the queue branch's contents *after*
+    the drain, the confirmations and the clearing have finished -- a fact
+    about the branch, listed by the workflow, never inferred from what
+    those steps intended -- pairs each remaining entry with the reason the
+    drain gave for it, and carries forward the instant each was first seen
+    waiting.
+
+    Two outcomes, and they are deliberately different things:
+
+    * `data/queue-watch.yml` is rewritten every single run, whatever it
+      found. Its *freshness* is the evidence the drain still runs at all,
+      which `convener-check-queue-liveness` reads from
+      `retention-watchdog.yml`'s own independent schedule -- a control
+      hosted inside the job it watches cannot report that job going quiet.
+    * `queue_alert` on `$GITHUB_OUTPUT`, and a body file to post, when an
+      entry has waited past `config/queue-drain.yml`'s threshold. That half
+      *can* live here, because an entry can only be known to be stuck by
+      something that read the queue, and this is the only place that has
+      both the queue and the board's channel (D-07).
+
+    Returns 0 even when the alarm fires: the workflow's own last step is
+    what turns the job red, the same split phase 8's budget alarm uses so
+    that an unconfigured channel can never turn a real finding into
+    silence.
+    """
+    root = repo_root()
+    try:
+        thresholds = _queue_thresholds(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    listing = os.environ.get(QUEUE_WAITING_ENV, "")
+    if not listing:
+        print(f"::error::{QUEUE_WAITING_ENV} is not set", file=sys.stderr)
+        return 1
+    path = Path(listing)
+    if not path.exists():
+        # Never read as "the queue is empty". A listing that was not taken
+        # is not the answer "nothing waiting", and reading it as one is how
+        # a control reports that everything is fine while it is not (R-36's
+        # own lesson, one file over in retention.yml).
+        print(
+            f"::error::{listing} does not exist -- the queue was never "
+            "listed, which is not the same as the queue being empty",
+            file=sys.stderr,
+        )
+        return 1
+    names = [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
+    reasons = _queue_deferral_reasons()
+    still_waiting = {name: reasons.get(name, "") for name in names if name}
+
+    previous, restarted = _previous_queue_watch(root)
+    now = datetime.now(UTC)
+    record = queue_watch.next_record(previous, still_waiting, now)
+    watch_file = queue_watch.watch_path(root)
+    watch_file.parent.mkdir(parents=True, exist_ok=True)
+    watch_file.write_text(
+        QUEUE_WATCH_HEADER + _dump(queue_watch.record_to_data(record)),
+        encoding="utf-8",
+        newline="",
+    )
+
+    stuck = queue_watch.overdue(record, now, thresholds.alarm_after_hours)
+    fired = queue_watch.alarms(stuck, now, restarted=restarted)
+    print(queue_watch.summary(record, stuck))
+    if not fired:
+        _write_github_output("queue_alert=false\n")
+        return 0
+
+    for line in queue_watch.annotation_lines(fired, stuck):
+        print(line)
+    addressed = dispatch(queue_watch.message(fired, stuck, now), os.environ)
+    if addressed is not None:
+        (root / QUEUE_BODY).write_text(addressed.body, encoding="utf-8", newline="")
+        print(f"addressed to thread {addressed.channel.thread}; left in {QUEUE_BODY}")
+    else:
+        print(
+            "no notification channel is configured -- this alarm reaches "
+            f"nowhere but this run's own red status and "
+            f"{queue_watch.WATCH_PATH.as_posix()}"
+        )
+    _write_github_output("queue_alert=true\n")
+    return 0
+
+
+def check_queue_liveness() -> int:
+    """`convener-check-queue-liveness`: has the drain itself stopped running?
+
+    The half of this control that cannot live in the daily job. An alarm
+    hosted inside the job it watches reports nothing when that job is the
+    thing that went quiet -- and a stopped drain is the most likely and the
+    most serious of the four ways a submission can sit in the queue for
+    ever. So `retention-watchdog.yml`, a second, independent schedule that
+    already exists and already asks this exact question about
+    `retention.yml` and `data/actions-usage.yml`, asks it about
+    `data/queue-watch.yml` too, in the same job, at no extra billed job.
+
+    Reads the record's freshness and nothing else. It deliberately does
+    *not* re-report the entries that are past the threshold: an entry can
+    only be known to be stuck by a drain that ran, so the daily job has
+    already said so with the board's channel in hand, and a second red run
+    saying the same thing on the same day is how an operator learns to
+    ignore both.
+
+    A missing file is an error, not a shrug -- the same call
+    `check_retention_liveness` and `check_actions_usage_liveness` make, for
+    the same reason: it means the daily job has never once landed this
+    record, which is the silence this command exists to report.
+
+    See `.github/workflows/retention-watchdog.yml`'s own header comment for
+    what a watchdog living inside the scheduler it watches can and cannot
+    catch. The answer is the same here, and so is the residue: the
+    committed file itself, readable by a person with no CI running at all.
+    """
+    root = repo_root()
+    try:
+        thresholds = _queue_thresholds(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+    path = queue_watch.watch_path(root)
+    named = queue_watch.WATCH_PATH.as_posix()
+    if not path.exists():
+        print(
+            f"::error::{named} does not exist -- the daily job has never "
+            "recorded what the public submission queue holds (or the file "
+            "was removed); see tools/convener_ops/queue_watch.py",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        print(f"::error::{named}: invalid YAML - {exc}", file=sys.stderr)
+        return 1
+    try:
+        record = queue_watch.record_from_data(data)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    today = paris_today(datetime.now(UTC))
+    observed_on = paris_today(record.observed_at)
+    elapsed = queue_watch.days_since(observed_on, today)
+    if queue_watch.is_stale(elapsed, thresholds.max_silent_days):
+        print(
+            f"::error::{named} last moved on {observed_on.isoformat()}, "
+            f"{elapsed} day(s) ago -- the public submission queue is no "
+            "longer being drained, so anything waiting in it is waiting "
+            "indefinitely and nothing else would say so",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"{named} last moved on {observed_on.isoformat()}, {elapsed} day(s) "
+        f"ago, with {len(record.waiting)} submission(s) waiting -- healthy"
+    )
     return 0
 
 

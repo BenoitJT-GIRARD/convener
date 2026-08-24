@@ -45,6 +45,13 @@ notify-body.md
 # the same job, cannot overwrite one another.
 budget-body.md
 
+# The submission queue alarm's own body, written by convener-record-queue-watch
+# only when a channel is configured *and* something actually fired. A third
+# filename for the third message this one job can compose, for the reason
+# budget-body.md is the second: one filename shared between them means
+# whichever is written last silently replaces the rest.
+queue-body.md
+
 # What the collector step read from the Actions API, one JSON object per
 # line, for tools/convener_ops/actions_usage.py to reduce offline. A run
 # artefact of a single job; the measurement derived from it is committed to

@@ -58,13 +58,55 @@
 # thing the alarm exists to warn about, is one of the reasons a scheduled
 # job stops running at all.
 #
+# A third record, and the reason it is here and not there (phase 9, task 4)
+# -------------------------------------------------------------------------
+# `data/queue-watch.yml` is what the public submission queue still held the
+# last time a drain looked at it. Since phase 9 a survey response and a
+# far-off registration no longer start a run each: they wait in a branch,
+# and one drain a day -- steps of `sweep-and-notify.yml`'s daily job again
+# -- handles everything waiting. Every failure *inside* a drain is already
+# loud. The failure that is not is a submission that entered the queue and
+# was never handled at all, because nothing looked: the submitter has their
+# answer from the relay and believes they are registered, and the
+# repository has nothing red. For a registration that is a person who never
+# receives the room link or the matching code, cannot join, and can never
+# be issued a certificate.
+#
+# That failure has two halves and they cannot live in one place. An entry
+# that is *known* to be stuck can only be known by something that read the
+# queue -- which is the drain, which is therefore running -- so that alarm
+# belongs in the daily job, which is also the only place already holding
+# the board's thread and team mention; it is there, and it posts and goes
+# red there. **The other half is the drain having stopped running at all,
+# and a control hosted inside the job that stopped reports nothing.** That
+# is this step: the daily job rewrites `data/queue-watch.yml` every day
+# whatever it found, and this reads its freshness, here, on a different
+# schedule.
+#
+# It deliberately does not re-report the entries the daily job has already
+# named. Two red runs a day saying the same thing is how an operator learns
+# to ignore both.
+#
+# One overlap, named rather than quietly relied on: `data/actions-usage.yml`
+# above is written by the *same* daily job, so "that job died" is detected
+# twice today. That is an accident of two records sharing a job and not a
+# contract -- this one is written by the queue steps and that one by the
+# steps after them, so a day when the queue steps stop and the rest of the
+# job carries on is visible here and nowhere else -- and the two messages
+# name different failures with different fixes, which is the whole point of
+# a control.
+#
 # The name below still says "retention" because the file is still
 # `retention-watchdog.yml` and every reference to it in this repository
-# uses that name. What it actually is, and has been since this second
-# check landed, is the one place that reports a daily record having gone
-# quiet -- and the paragraph above about what a watchdog inside its own
-# scheduler cannot catch applies to the second record exactly as it does
-# to the first.
+# uses that name. What it actually is, and has been since the second check
+# landed, is the one place that reports a daily record having gone quiet --
+# and the paragraph above about what a watchdog inside its own scheduler
+# cannot catch applies to the third record exactly as it does to the first
+# two. If the whole repository goes dark, this workflow is disabled or
+# starved at the same moment the drain is, and every queued submission
+# waits with nothing anywhere saying so. What survives even that is the
+# committed record itself: a person who opens this repository, with no run
+# log and no CI at all, can read the date it names and the entries it lists.
 name: Retention liveness watchdog
 
 on:
@@ -116,3 +158,22 @@ jobs:
         if: always() && steps.retention.conclusion != 'skipped'
         working-directory: tools
         run: uv run convener-check-actions-usage-liveness
+      # Phase 9, task 4 -- see this file's own header for why the "an entry
+      # is stuck" half of that control lives in the daily job and only this
+      # half can live out here.
+      #
+      # A step, not a job and not a workflow: this job already runs, so the
+      # extra question is free. Its `permissions:` stay `contents: read`
+      # and it carries no secret, because it reads one committed file and
+      # calls nothing -- the posting happens over in the daily job, which
+      # already holds the channel.
+      #
+      # The same guard and the same `always()` as the step above, for the
+      # same reason: a stale retention record, a dead budget alarm and a
+      # queue nobody is draining are three separate findings, and none of
+      # them may hide the others. Each step keeps its own red mark, so the
+      # run says which one it is.
+      - name: Check that the public submissions are still being drained
+        if: always() && steps.retention.conclusion != 'skipped'
+        working-directory: tools
+        run: uv run convener-check-queue-liveness

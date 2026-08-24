@@ -164,7 +164,15 @@ jobs:
     # terms once more -- a ceiling, not a bill: with no transport configured
     # (this project's ordinary state) the step composes and reports and
     # spends no network time at all.
-    timeout-minutes: 35
+    #
+    # Phase 9, task 4 adds 5 more for the step that records what the queue
+    # still holds: one shallow fetch of the queue branch, one `git ls-tree`
+    # of it, one `uv run` over that listing, and one push. Same terms
+    # again, and the same argument for why it is a step here rather than a
+    # job or a workflow of its own -- that would have cost a billed run
+    # every single day, which is the cost this whole phase exists to
+    # remove.
+    timeout-minutes: 40
     permissions:
       # The union of what the two files carried, and nothing past it.
       # `contents: write` is the sweep committing data/speakers.yml;
@@ -358,6 +366,13 @@ jobs:
           # typed -- the same thing `registration.yml` passes between its
           # own two steps for the same reason.
           CONVENER_QUEUE_CONFIRM_FILE: ${{ runner.temp }}/queue-confirm.txt
+          # Where the drain lists the entries it could not finish and the
+          # reason for each, for the record step at the bottom of this
+          # block (phase 9, task 4). The drain is the only thing in this
+          # run that knows *why* an entry is still waiting, and the fix
+          # differs by reason -- a key nobody configured is not the same
+          # problem as more open events than there are slots.
+          CONVENER_QUEUE_DEFERRED_FILE: ${{ runner.temp }}/queue-deferred.txt
           # Eight slots, matching `submission_queue.MAX_EVENTS_PER_DRAIN`
           # exactly (a test fails if they drift apart). One event's
           # responses can only be decrypted with that event's own key, and
@@ -558,6 +573,126 @@ jobs:
           DEFERRED: ${{ steps.queue-drain.outputs.deferred }}
         run: |
           echo "::error::$DEFERRED queued submission(s) could not be handled and are still waiting -- see the annotations above"
+          exit 1
+      # ----------------------------------------------------------------
+      # A queue that stops emptying (phase 9, task 4)
+      # ----------------------------------------------------------------
+      #
+      # Everything above is loud about a drain that *ran* and could not
+      # finish. What none of it covers is a submission that entered the
+      # queue and was never handled at all, because nothing looked: the
+      # submitter has their answer from the relay and believes they are
+      # registered, and the repository has nothing red. For a registration
+      # that means a person who never receives the room link or the
+      # matching code, cannot join, and can never be issued a certificate.
+      #
+      # The signal is the **age of the oldest waiting entry**, not how many
+      # are waiting: a hundred entries that arrived this morning is a good
+      # day, one entry stuck for five days is somebody who will never get
+      # into the room. See tools/convener_ops/queue_watch.py's own module
+      # docstring for why that age is measured from this repository's own
+      # successive observations rather than from the millisecond an entry
+      # id carries.
+      #
+      # **This is only half of the control, and the half that can live
+      # here.** An entry can only be *known* to be stuck by something that
+      # read the queue, which is this job, which is therefore running --
+      # and this job is also the only place that already holds the board's
+      # thread and team mention. The other half, "the drain stopped running
+      # at all", cannot be detected from inside the job that stopped: that
+      # is what data/queue-watch.yml is for, rewritten below every single
+      # day whatever this run found, and read by retention-watchdog.yml on
+      # its own independent schedule some hours later.
+      - name: Record what the queue still holds
+        id: queue-watch
+        # Guarded on the fetch, not on the drain, and that is deliberate:
+        # the morning the drain fails is exactly the morning this record
+        # has to move, or the watchdog two files over would report the
+        # *drain* as dead when what actually happened is that it ran and
+        # could not finish -- a wrong answer delivered confidently, which
+        # this workflow's own header calls worse than no answer.
+        if: always() && steps.queue-fetch.outcome == 'success'
+        env:
+          QUEUE_BRANCH: submission-queue
+          CONVENER_QUEUE_WAITING_FILE: ${{ runner.temp }}/queue-waiting.txt
+          CONVENER_QUEUE_DEFERRED_FILE: ${{ runner.temp }}/queue-deferred.txt
+          # Step-level, never job-level: the recording code must not be
+          # able to see the board's channel except while it is composing a
+          # message for it -- the same rule both Compose steps and the
+          # budget measurement below hold themselves to.
+          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
+        # The listing is taken from the branch tip *after* the drain, the
+        # confirmations and the clearing have all finished, so what is
+        # still waiting is a fact about the branch rather than something
+        # reconstructed from what three earlier steps intended. A drain
+        # that failed to push, a clearing step that could not commit, and a
+        # submission the relay wrote while this run was working are all
+        # simply there, with no case analysis left to get wrong.
+        #
+        # Then the same fetch-and-reset-hard retry loop every other push in
+        # this repository uses. Safe to re-run inside it because
+        # `convener-record-queue-watch` is a pure function of the listing (which
+        # lives in RUNNER_TEMP and is untouched by `git reset --hard`) and
+        # of the committed record it re-reads from the refreshed tip.
+        run: |
+          set -e
+          git config user.name "convener-queue"
+          git config user.email "convener-queue@users.noreply.github.com"
+
+          : > "$CONVENER_QUEUE_WAITING_FILE"
+          if git fetch --no-tags --depth=1 origin "$QUEUE_BRANCH"; then
+            git ls-tree -r --name-only FETCH_HEAD -- queue > "$CONVENER_QUEUE_WAITING_FILE"
+          else
+            echo "no $QUEUE_BRANCH branch yet -- nothing has ever been queued"
+          fi
+
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+            (cd tools && uv run convener-record-queue-watch)
+            git add -- data/queue-watch.yml
+            if git diff --staged --quiet; then
+              echo "data/queue-watch.yml already says this -- nothing to commit"
+              exit 0
+            fi
+            git commit -m "data: record what the public submission queue still holds"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+          done
+          echo "::error::push failed after 3 attempts -- today's observation of the queue was not saved, and retention-watchdog.yml calls the record stale if this keeps happening"
+          exit 1
+      - name: Tell the board the queue is not emptying
+        # The same channel as the digest and as the budget alarm below --
+        # same thread, same team mention (D-07). A third body file, for the
+        # reason budget-body.md is a second one: several messages composed
+        # in one job sharing one filename means whichever is written last
+        # silently replaces the rest.
+        if: >-
+          always() && steps.queue-watch.outputs.queue_alert == 'true' &&
+          hashFiles('queue-body.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+        run: gh issue comment "$THREAD" --body-file queue-body.md
+      - name: Fail if a submission has been waiting too long
+        # D-25, and kept in YAML rather than in an exit code for the
+        # identical reason the budget alarm's own last step is: this job
+        # goes red whenever the alarm fired, whether or not a channel was
+        # configured to also post to. An unconfigured integration must
+        # never be able to turn a real finding into silence.
+        #
+        # Unlike the deferral step above, there is no stranger-controlled
+        # half to keep out of the colour of this job. A submission can only
+        # reach this threshold by surviving drains that could not finish
+        # it, which is the operator's to fix in every case; a submission
+        # somebody sends today is handled by tomorrow's drain and never
+        # appears here at all.
+        if: always() && steps.queue-watch.outputs.queue_alert == 'true'
+        run: |
+          echo "::error::a public submission has been waiting past config/queue-drain.yml's alarm_after_hours -- see the annotations above and data/queue-watch.yml"
           exit 1
       - name: Compose
         id: compose
