@@ -166,7 +166,7 @@ function parseArgs(argv) {
   args.siteDir = path.resolve(args.siteDir || path.join(SITE_DIR, '_site'));
   if (!args.appDir) {
     throw new Error(
-      '--app-dir is required -- the two island pages this budget covers ' +
+      '--app-dir is required -- the island pages this budget covers ' +
         "cannot be weighed without the app's own built islands (D-25: a " +
         'run that silently skipped them would not be checking what it ' +
         'claims to check)'
@@ -178,8 +178,8 @@ function parseArgs(argv) {
 
 /** Merges the site's own build and the app's, addressed exactly the way
  *  `deploy.yml` and `publish-vitrine.yml` together publish them: the
- *  site's own files at the root, the app's (including its two island
- *  bundles) under `app/`. The same merge `check-a11y.mjs`'s own
+ *  site's own files at the root, the app's (including every island
+ *  bundle) under `app/`. The same merge `check-a11y.mjs`'s own
  *  `assembleTree` performs, for the identical reason -- both scripts need
  *  to resolve a page's real, prefixed references against one tree that
  *  matches the real deployment. */
