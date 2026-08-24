@@ -37,6 +37,9 @@ task-13-report.md`.
 from __future__ import annotations
 
 import re
+from typing import Any
+
+from conftest import WorkflowYaml
 
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
@@ -46,13 +49,13 @@ _WORKFLOW_PATH = _ROOT / ".github" / "workflows" / "preview.yml"
 _WORKFLOW_TEXT = _WORKFLOW_PATH.read_text(encoding="utf-8")
 
 
-def _workflow() -> dict:
+def _workflow() -> WorkflowYaml:
     loaded = safe_load(_WORKFLOW_TEXT)
     assert isinstance(loaded, dict)
     return loaded
 
 
-def _job() -> dict:
+def _job() -> dict[str, Any]:
     job = _workflow()["jobs"]["preview"]
     assert isinstance(job, dict)
     return job

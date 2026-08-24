@@ -19,6 +19,7 @@ the JS file-count guard).
 from __future__ import annotations
 
 import yaml
+from conftest import workflow_triggers
 
 from convener_ops.paths import repo_root
 
@@ -29,11 +30,10 @@ _SCRIPT = (_ROOT / "visuals" / "render-production.mjs").read_text(encoding="utf-
 _VISUALS_WORKFLOW = (_ROOT / ".github" / "workflows" / "visuals.yml").read_text(
     encoding="utf-8"
 )
-#: `loaded[True]`, not `loaded["on"]` -- PyYAML's YAML-1.1 bool resolver
-#: reads a bare `on:` key as `True` (the same gotcha `test_visuals_
-#: workflow.py`'s own module docstring already names for this project).
+#: The `on:` block is reached through `conftest.workflow_triggers`, which
+#: owns the reason it cannot simply be looked up as `"on"`.
 _WORKFLOW_DATA = yaml.safe_load(_WORKFLOW)
-_TRIGGERS = _WORKFLOW_DATA[True]
+_TRIGGERS = workflow_triggers(_WORKFLOW_DATA)
 _JOB = _WORKFLOW_DATA["jobs"]["visuals-production"]
 
 

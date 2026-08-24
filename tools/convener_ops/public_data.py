@@ -18,6 +18,7 @@ test instead of being published by omission.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 PUBLIC_STATUSES = frozenset({"scheduled", "delivered", "archived"})
@@ -328,7 +329,7 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def to_survey_status(speakers: list[dict[str, Any]]) -> list[str]:
+def to_survey_status(speakers: Sequence[object]) -> list[str]:
     """The event ids currently open for the post-event survey (task 16,
     fix round 1, R-37), sorted -- what `convener-survey-status-public-data`
     publishes to `public-data/survey-status.json` and, from there,
@@ -356,6 +357,13 @@ def to_survey_status(speakers: list[dict[str, Any]]) -> list[str]:
     edition code (`app/src/state/dates.ts`'s and `platform.find_speaker`'s
     own R-5 rule), so a record with nothing to key on can never be looked
     up by either consumer regardless of what this function does with it.
+
+    `Sequence[object]`, not `list[dict[str, Any]]`: the one production
+    caller (`cli.survey_status_public_data`) hands over whatever
+    `data/speakers.yml` parsed to, and a hand-edited list whose entries are
+    not mappings is exactly what the `isinstance` guard below is for. A
+    signature promising mappings would make that live guard look like dead
+    defensive code and its test look like a type error.
     """
     ids: list[str] = []
     for entry in speakers:

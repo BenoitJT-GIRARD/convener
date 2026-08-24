@@ -893,7 +893,12 @@ _HANDBOOK_REGISTRY_MJS = ROOT / "app" / "scripts" / "handbook-registry.mjs"
 
 
 def _site_config() -> dict[str, Any]:
-    return json.loads(_SITE_JSON.read_text(encoding="utf-8"))
+    config = json.loads(_SITE_JSON.read_text(encoding="utf-8"))
+    assert isinstance(config, dict), (
+        f"{_SITE_JSON.name} is a {type(config).__name__}, not the JSON "
+        "object Eleventy reads as `site.*` in every template"
+    )
+    return config
 
 
 def _past_events() -> list[dict[str, Any]]:
@@ -2073,6 +2078,27 @@ def _expected_rfc822(iso_date: str) -> str:
     )
 
 
+def _child_text(item: ET.Element, tag: str) -> str:
+    """The text of a feed `<item>`'s `<tag>` child.
+
+    `ElementTree.find` answers `None` for an element that is not there, and
+    `.text` is `None` for one that is there but empty -- a feed item that
+    lost its `<link>` or its `<pubDate>` is exactly the regression the
+    tests below exist to catch, and it must read as a named failure here
+    rather than as an `AttributeError` raised from inside a comprehension
+    that says nothing about which element or which item was missing."""
+    child = item.find(tag)
+    assert child is not None, (
+        f"a <item> in feed.xml carries no <{tag}> at all: "
+        f"{ET.tostring(item, encoding='unicode')}"
+    )
+    assert child.text is not None, (
+        f"a <item> in feed.xml carries an empty <{tag}>: "
+        f"{ET.tostring(item, encoding='unicode')}"
+    )
+    return child.text
+
+
 def test_feed_publication_dates_come_from_the_editions_own_date_never_the_clock(
     built_site: Path,
 ) -> None:
@@ -2086,7 +2112,7 @@ def test_feed_publication_dates_come_from_the_editions_own_date_never_the_clock(
     events = _events_fixture()
     tree = ET.parse(built_site / "feed.xml")
     by_link = {
-        item.find("link").text: item.find("pubDate").text
+        _child_text(item, "link"): _child_text(item, "pubDate")
         for item in tree.findall(".//item")
     }
     assert by_link, "feed.xml carries no <item> to check pubDate on"

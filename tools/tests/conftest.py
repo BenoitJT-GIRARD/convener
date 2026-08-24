@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import os
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import pytest
 
@@ -54,6 +54,58 @@ def _isolate_environment() -> Iterator[None]:
     for key, value in before.items():
         if os.environ.get(key) != value:
             os.environ[key] = value
+
+
+# ------------------------------------------------------------------ #
+# Reading a workflow file: the one key that is not a string.
+# ------------------------------------------------------------------ #
+
+#: A GitHub Actions workflow as PyYAML hands it back. Deliberately not
+#: `dict[str, Any]`: PyYAML implements YAML 1.1, whose bool resolver reads
+#: the bare `on:` key -- the trigger block every workflow must declare --
+#: as the boolean `True`, before any of this suite looks at the file's own
+#: content. Every other key really is the string the file spells, so the
+#: key type is `str | bool` and that single boolean is reached through the
+#: two readers below rather than written out as `loaded[True]` at each
+#: call site, where it reads as a typo rather than as a fact about YAML.
+type WorkflowYaml = dict[str | bool, Any]
+
+#: What `on:` actually parses to, named so a reader meets the reason
+#: rather than a bare `True` subscript.
+_ON_KEY_UNDER_YAML_1_1: Final = True
+
+
+def workflow_triggers(loaded: Mapping[str | bool, Any]) -> dict[str, Any]:
+    """A workflow's `on:` block in its mapping form -- `on:` with each
+    event name as a key of its own, the shape every workflow in this
+    repository uses.
+
+    Fails the test that asked for it, by name, when there is no such block
+    -- a workflow that lost its trigger, or one written in either of the
+    two scalar forms GitHub also accepts, which `workflow_event_names`
+    below reads instead."""
+    triggers = loaded.get(_ON_KEY_UNDER_YAML_1_1)
+    assert isinstance(triggers, dict), (
+        f"this workflow's `on:` block is {triggers!r}, not a mapping of "
+        "event names -- either it declares no trigger at all, or it uses "
+        "the bare-string or list form, which `workflow_event_names` reads"
+    )
+    return triggers
+
+
+def workflow_event_names(loaded: Mapping[str | bool, Any]) -> set[str]:
+    """Every event name a workflow declares under `on:`, in all three
+    shapes GitHub accepts: one bare event name, a list of them, or a
+    mapping from each event name to that event's own options. The empty
+    set when the workflow declares no trigger at all -- callers here sweep
+    every workflow file and report per file, so a missing block is a
+    finding to carry, not an exception to raise."""
+    triggers = loaded.get(_ON_KEY_UNDER_YAML_1_1)
+    if isinstance(triggers, str):
+        return {triggers}
+    if isinstance(triggers, list | dict):
+        return {str(event) for event in triggers}
+    return set()
 
 
 def ballot(**overrides: Any) -> dict[str, Any]:

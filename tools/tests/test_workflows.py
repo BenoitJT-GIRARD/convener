@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import WorkflowYaml, workflow_event_names, workflow_triggers
 
 from convener_ops import (
     certificate,
@@ -1297,22 +1298,6 @@ def test_no_run_script_rebases_a_local_commit_on_a_rejected_push(
         )
 
 
-def _workflow_on_types(loaded: dict[str, Any]) -> set[str]:
-    """The event names a workflow declares under `on:` -- read as
-    `loaded[True]`, not `loaded["on"]`: PyYAML's YAML-1.1 bool resolver
-    reads the bare `on:` key as the boolean `True` before this module's own
-    content is inspected at all (the same gotcha the certificate- and
-    survey-workflow tests elsewhere in this file already work around)."""
-    on_block = loaded.get(True, {})
-    if isinstance(on_block, str):
-        return {on_block}
-    if isinstance(on_block, list):
-        return set(on_block)
-    if isinstance(on_block, dict):
-        return set(on_block)
-    return set()
-
-
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
 def test_a_repository_dispatch_workflow_declares_no_concurrency_group(
     workflow: Path,
@@ -1336,7 +1321,7 @@ def test_a_repository_dispatch_workflow_declares_no_concurrency_group(
     remembering to add its name anywhere."""
     loaded = safe_load(workflow.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
-    if "repository_dispatch" not in _workflow_on_types(loaded):
+    if "repository_dispatch" not in workflow_event_names(loaded):
         pytest.skip(f"{workflow.name} is not repository_dispatch-triggered")
     assert "concurrency" not in loaded, (
         f"{workflow.name} is dispatched externally -- one submission per "
@@ -1350,10 +1335,11 @@ def test_the_externally_dispatched_sweep_actually_matches_something() -> None:
     """The guard above skips every workflow that is not
     `repository_dispatch`-triggered, which is the honest thing to do per
     file -- but a parametrised skip degrades silently. If
-    `_workflow_on_types` ever stopped recognising that trigger (a refactor,
-    a change in how the `on:` block is written, a bug), all 31 cases would
-    skip and the suite would still report green: a control that cannot
-    fail, which is the shape this repository has now caught a dozen times.
+    `workflow_event_names` ever stopped recognising that trigger (a
+    refactor, a change in how the `on:` block is written, a bug), all 31
+    cases would skip and the suite would still report green: a control
+    that cannot fail, which is the shape this repository has now caught a
+    dozen times.
 
     So the set is asserted non-empty here, separately, and named. This test
     fails loudly the day the detection breaks, while the guard above keeps
@@ -1362,13 +1348,13 @@ def test_the_externally_dispatched_sweep_actually_matches_something() -> None:
         workflow.name
         for workflow in _workflow_files()
         if "repository_dispatch"
-        in _workflow_on_types(safe_load(workflow.read_text(encoding="utf-8")) or {})
+        in workflow_event_names(safe_load(workflow.read_text(encoding="utf-8")) or {})
     )
     assert dispatched, (
         "no workflow was detected as repository_dispatch-triggered, so the "
         "concurrency guard above skipped every case and proved nothing -- "
         "either every externally dispatched workflow really is gone, or "
-        "`_workflow_on_types` has stopped recognising the trigger"
+        "`workflow_event_names` has stopped recognising the trigger"
     )
 
 
@@ -2588,7 +2574,7 @@ def test_deliver_certificate_workflow_has_its_own_concurrency_group() -> None:
 # ------------------------------------------------------------------ #
 
 
-def _issue_certificates_workflow() -> dict[str, Any]:
+def _issue_certificates_workflow() -> WorkflowYaml:
     loaded = safe_load((ROOT / ISSUE_CERTIFICATES_WORKFLOW).read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
@@ -2648,12 +2634,8 @@ def test_delivery_step_does_not_fail_the_whole_run_on_its_own() -> None:
 
 
 def test_issue_certificates_workflow_has_a_resend_all_input_defaulting_false() -> None:
-    """`loaded[True]`, not `loaded["on"]` -- PyYAML's YAML-1.1 bool
-    resolver reads a bare `on:` key as `True`, the same gotcha
-    `test_certificate_workflows_accept_only_the_allowlisted_inputs`'s own
-    docstring already names for this file."""
     loaded = _issue_certificates_workflow()
-    inputs = loaded[True]["workflow_dispatch"]["inputs"]
+    inputs = workflow_triggers(loaded)["workflow_dispatch"]["inputs"]
     assert inputs["resend_all"]["type"] == "boolean"
     assert inputs["resend_all"]["default"] is False
     assert inputs["resend_all"]["required"] is False
@@ -2933,8 +2915,13 @@ def test_erase_registration_workflow_has_a_concurrency_group() -> None:
 INVITE_SURVEY_WORKFLOW = Path(".github/workflows/invite-survey.yml")
 
 
-def _invite_survey_workflow() -> dict[str, Any]:
-    return safe_load((ROOT / INVITE_SURVEY_WORKFLOW).read_text(encoding="utf-8"))
+def _invite_survey_workflow() -> WorkflowYaml:
+    loaded = safe_load((ROOT / INVITE_SURVEY_WORKFLOW).read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict), (
+        f"{INVITE_SURVEY_WORKFLOW.name} does not parse as a mapping -- a "
+        "workflow file that is a list or a scalar is not a workflow at all"
+    )
+    return loaded
 
 
 def test_invite_survey_workflow_carries_every_env_var_the_command_reads() -> None:
@@ -2981,7 +2968,7 @@ def test_record_survey_invitation_step_carries_every_env_var_the_command_reads()
 
 def test_invite_survey_workflow_is_dispatchable_by_hand_only() -> None:
     loaded = _invite_survey_workflow()
-    assert set(loaded[True]) == {"workflow_dispatch"}, (
+    assert set(workflow_triggers(loaded)) == {"workflow_dispatch"}, (
         "invite-survey.yml must be reachable only by an operator's own "
         "decision -- never scheduled, never triggered by a push: an "
         "invitation is an outbound message to real people"
@@ -2990,7 +2977,7 @@ def test_invite_survey_workflow_is_dispatchable_by_hand_only() -> None:
 
 def test_invite_survey_workflow_has_a_resend_all_input_defaulting_false() -> None:
     loaded = _invite_survey_workflow()
-    inputs = loaded[True]["workflow_dispatch"]["inputs"]
+    inputs = workflow_triggers(loaded)["workflow_dispatch"]["inputs"]
     assert inputs["resend_all"]["type"] == "boolean"
     assert inputs["resend_all"]["default"] is False
     assert inputs["resend_all"]["required"] is False
@@ -3062,7 +3049,7 @@ def test_match_attendance_workflow_carries_every_env_var_the_command_reads() -> 
 
 def test_match_attendance_workflow_is_dispatchable_by_hand_only() -> None:
     loaded = safe_load((ROOT / MATCH_ATTENDANCE_WORKFLOW).read_text(encoding="utf-8"))
-    assert set(loaded[True]) == {"workflow_dispatch"}, (
+    assert set(workflow_triggers(loaded)) == {"workflow_dispatch"}, (
         "match-attendance.yml must be reachable only by an operator's own "
         "decision, the same as the workflows that depend on it"
     )
@@ -3689,7 +3676,7 @@ def test_the_secret_workflow_monitor_watches_every_secret_bearing_workflow() -> 
         ROOT / WORKFLOWS_DIR, exclude=ROOT / SECRET_WORKFLOW_MONITOR
     )
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
 
     missing = expected - watched
     extra = watched - expected
@@ -3732,7 +3719,7 @@ def test_a_workflow_with_a_new_secret_is_flagged_as_unwatched(tmp_path: Path) ->
 
     expected = _secret_bearing_workflow_names(tmp_path, exclude=monitor_path)
     monitor = safe_load(monitor_path.read_text(encoding="utf-8"))
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
 
     assert expected - watched == {"New"}
 
@@ -3758,7 +3745,7 @@ def test_a_workflow_that_lost_its_secret_is_flagged_as_over_watched(
 
     expected = _secret_bearing_workflow_names(tmp_path, exclude=monitor_path)
     monitor = safe_load(monitor_path.read_text(encoding="utf-8"))
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
 
     assert watched - expected == {"Retired"}
 
@@ -3776,7 +3763,7 @@ def test_the_monitor_would_otherwise_qualify_to_watch_itself() -> None:
     assert _declares_a_secret_beyond_github_token(ROOT / SECRET_WORKFLOW_MONITOR)
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
     own_name = monitor["name"]
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
     assert own_name not in watched
 
 
@@ -3785,7 +3772,7 @@ def test_the_secret_workflow_monitor_fires_on_request_not_completion() -> None:
     header comment for why: an alert that can only confirm a run already
     finished is not detection close enough behind the run to matter."""
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
-    assert monitor[True]["workflow_run"]["types"] == ["requested"]
+    assert workflow_triggers(monitor)["workflow_run"]["types"] == ["requested"]
 
 
 def test_the_secret_workflow_monitor_declares_no_yaml_anchor() -> None:

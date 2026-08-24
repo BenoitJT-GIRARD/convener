@@ -9,6 +9,7 @@ import re
 import urllib.parse
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, tzinfo
+from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -1266,9 +1267,15 @@ def test_handle_registration_survives_an_unanticipated_confirmation_failure(
 
 class _RecordingSmtpClient:
     """A fake `smtplib.SMTP`, substituted so `handle_registration` can
-    exercise a genuine "sent" outcome without opening a socket."""
+    exercise a genuine "sent" outcome without opening a socket.
 
-    sent: ClassVar[list[object]] = []
+    `sent` holds `EmailMessage`, not `object`: this double stands in for
+    `convener_ops.confirmation`'s own `smtplib.SMTP`, and that module builds an
+    `EmailMessage` before every send. It is also what the tests below read
+    back -- `get_content()` and header subscripting are `EmailMessage`'s
+    own API, which the base `email.message.Message` does not carry."""
+
+    sent: ClassVar[list[EmailMessage]] = []
 
     def __init__(self, host: str, port: int, timeout: float) -> None:
         self.host = host
@@ -1280,7 +1287,7 @@ class _RecordingSmtpClient:
     def login(self, user: str, password: str) -> None:
         pass
 
-    def send_message(self, message: object) -> None:
+    def send_message(self, message: EmailMessage) -> None:
         _RecordingSmtpClient.sent.append(message)
 
     def __enter__(self) -> _RecordingSmtpClient:

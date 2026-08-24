@@ -788,7 +788,12 @@ _SIGNUP_LINK_FIXTURE = Path(__file__).parent / "fixtures" / "signup-link.json"
 
 
 def _signup_link_cases() -> dict[str, Any]:
-    return json.loads(_SIGNUP_LINK_FIXTURE.read_text(encoding="utf-8"))
+    cases = json.loads(_SIGNUP_LINK_FIXTURE.read_text(encoding="utf-8"))
+    assert isinstance(cases, dict), (
+        f"{_SIGNUP_LINK_FIXTURE.name} is a {type(cases).__name__}, not the "
+        "JSON object of worked cases this module and `render.ts` both read"
+    )
+    return cases
 
 
 def test_signup_base_matches_the_shared_fixture() -> None:
