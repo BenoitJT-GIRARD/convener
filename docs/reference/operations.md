@@ -1829,6 +1829,71 @@ in both directions rather than only on bad news:
   not add to the errors and does not change the exit code; a target that
   could fail a run would be a rule wearing a softer word.
 
+## What the Actions runs cost, and the alarm before the budget runs out
+
+Every minute figure written down anywhere in this project is a
+`timeout-minutes` **ceiling**, not a measurement, because nothing here has
+ever run on GitHub. Ceilings and real durations can differ by a large
+factor in either direction, so no ceiling should ever be quoted as a
+prediction.
+
+`data/actions-usage.yml` is the one place a *measured* minute lives. The
+daily job in `.github/workflows/sweep-and-notify.yml` reads the Actions API
+for this repository's own runs over a rolling window, adds up what each one
+actually billed, and commits the result. It is committed rather than
+printed so that reading it takes opening this repository — no run log to
+scroll, no CI required — and so that the file's own history is the trend.
+
+Two things it can tell you that a ceiling cannot: what each half of the
+budget really costs (the scheduled half, which does not move, against
+pushes and public submissions, which do), and how many public submissions
+arrived on the busiest single day.
+
+**These figures are a lower bound on the bill, never the bill.** The free
+monthly allowance belongs to the organisation that owns this repository and
+is shared with every other private repository it owns. Reading the
+organisation's real consumption needs an `admin:org` credential, which
+nobody has created — and a control that cannot run without one is not a
+control, so this deliberately measures what a repository token can see and
+says so on every line it prints.
+
+Two things it also cannot see: runs GitHub has already aged out of its own
+retention, and any minute multiplier — everything here runs on
+`ubuntu-latest`, whose multiplier is one, and the measurement raises its own
+alarm rather than quietly mis-adding if that ever stops being true.
+
+**When it goes off.** The thresholds are in `config/actions-budget.yml`,
+with the reasoning for each written beside it; they are configuration
+precisely because they are guesses until real durations exist, and they are
+meant to be re-cut once this file holds a few weeks of them. Two of them
+matter most: the rate at which the window projects past a share of the
+monthly allowance, and the number of public submissions in a single day.
+The second is the one that can break suddenly rather than drift — it is the
+only item in the budget whose volume is decided by strangers, and the only
+one that grows when the series succeeds.
+
+When either fires, the daily job **goes red** and posts on the Board's own
+thread (see *Board notifications* above — the same thread and the same team
+mention, no second channel). It goes red whether or not that channel is
+configured: an unconfigured integration must never be able to turn a real
+finding into silence.
+
+**If the alarm itself stops.** An exhausted minute budget does not fail
+loudly; it simply stops work — which includes the very job this alarm lives
+in. `retention-watchdog.yml`, on its own independent schedule, therefore
+checks that `data/actions-usage.yml` is still moving, exactly as it already
+checks `data/retention-last-run.yml`. What neither can catch is the whole
+repository going dark at once, for the reason that workflow's own header
+comment gives; what survives even that is the committed file, readable by
+anyone who opens this repository.
+
+**Running it by hand.** `convener-actions-usage-window` prints the window;
+`convener-record-actions-usage` reads whatever the collector step left in
+`actions-usage-input.jsonl` and writes the record;
+`convener-check-actions-usage-liveness` is the watchdog's own question. Only the
+workflow step between the first two touches the network — the arithmetic is
+a pure function, and no test in this repository ever makes an API call.
+
 ## The one-shot scripts
 
 `scripts/migrate_v3.py` and `scripts/open_vote_window.py` have both already

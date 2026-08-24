@@ -92,3 +92,4 @@ unreviewable
 HSTS
 COEP
 shellcheck
+argjson

@@ -21,6 +21,7 @@ from typing import Any, Final
 import yaml
 
 from convener_ops import (
+    actions_usage,
     agenda,
     announce,
     confirmation,
@@ -151,6 +152,36 @@ RETENTION_LAST_RUN_HEADER = (
     "# Evidence the retention sweep still runs; "
     "see tools/convener_ops/retention_liveness.py\n"
 )
+#: Phase 8, task 4 -- what the last window of runs actually billed, and the
+#: only place in this repository where a *measured* minute exists rather
+#: than a `timeout-minutes` ceiling. Committed on purpose: legible by
+#: opening this repository, with no run log to scroll and no CI required.
+#: The second line is the caveat that must travel with every number in the
+#: file; see tools/convener_ops/actions_usage.py's own module docstring.
+ACTIONS_USAGE_HEADER = (
+    "# What this repository's own Actions runs really billed; "
+    "see tools/convener_ops/actions_usage.py\n"
+    "# A LOWER BOUND, never the bill: the free minutes belong to the "
+    "organisation and are shared.\n"
+)
+
+#: Where the collector step leaves what it read from the Actions API, one
+#: JSON object per line. The whole of this project's network access for
+#: this feature lives in that step, in `gh`; everything downstream of this
+#: file is a pure function a test drives from a fixture. A run artefact,
+#: git-ignored, never edited.
+ACTIONS_USAGE_INPUT: Final = "actions-usage-input.jsonl"
+
+#: Where a budget alarm that has somewhere to go is left for the workflow
+#: to post, exactly as `NOTIFY_BODY` works for the digest.
+#:
+#: Deliberately **not** `NOTIFY_BODY`: the daily digest already writes that
+#: file in the same job, and one file for two messages would mean the alarm
+#: silently overwriting the digest, or the digest silently overwriting the
+#: alarm, depending on step order. Same channel, same thread, same team
+#: mention -- a second address book is what is forbidden (D-07), not a
+#: second message.
+BUDGET_BODY: Final = "budget-body.md"
 
 
 class _Dumper(yaml.SafeDumper):
@@ -1392,6 +1423,225 @@ def check_retention_liveness() -> int:
         return 1
     print(
         f"retention.yml last recorded a run on {last_run.isoformat()}, "
+        f"{elapsed} day(s) ago -- healthy"
+    )
+    return 0
+
+
+# ------------------------------------------------------------------ #
+# What the runs really cost -- phase 8, task 4
+# ------------------------------------------------------------------ #
+
+
+def _actions_budget(root: Path) -> actions_usage.Budget:
+    """`config/actions-budget.yml`, parsed or refused.
+
+    Raises `ValueError` carrying a message already shaped for an
+    `::error::` annotation. All three commands below fail on it rather
+    than fall back to a built-in default: a threshold with a fallback in
+    code is a constant with extra steps, and this is the one file that
+    decides when the alarm goes off, so a value it cannot read must stop
+    the check rather than be quietly substituted.
+    """
+    path = actions_usage.budget_path(root)
+    named = actions_usage.BUDGET_PATH.as_posix()
+    if not path.exists():
+        raise ValueError(f"{named} does not exist -- nothing declares the thresholds")
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{named}: invalid YAML - {exc}") from exc
+    return actions_usage.budget_from_data(data)
+
+
+def actions_usage_window() -> int:
+    """`convener-actions-usage-window`: the first day the collector should ask
+    the Actions API for, and the cap on how many runs it may cost.
+
+    Writes `since=` and `max_runs=` to `$GITHUB_OUTPUT` for the `gh` step
+    that follows. The window lives here, derived from the same
+    configuration the arithmetic divides by, so the days the collector
+    fetches and the days the rate is computed over can never be two
+    different numbers -- the class of mistake that turns a projection into
+    a wrong answer delivered confidently.
+
+    `governance.paris_today`, never an implicit today.
+    """
+    root = repo_root()
+    try:
+        budget = _actions_budget(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+    today = paris_today(datetime.now(UTC))
+    since = actions_usage.window_start(today, budget)
+    _write_github_output(f"since={since.isoformat()}\nmax_runs={budget.max_runs}\n")
+    print(
+        f"window: {since.isoformat()} to {today.isoformat()} "
+        f"({budget.window_days} days), at most {budget.max_runs} runs"
+    )
+    return 0
+
+
+def record_actions_usage() -> int:
+    """`convener-record-actions-usage`: what the last window really billed, and
+    the alarm when the rate says the budget will not hold.
+
+    Reads what the collector step left behind -- one JSON object per line,
+    each pairing a run with its `/timing` answer -- and writes
+    `data/actions-usage.yml`: a committed file, so the measurement is
+    legible by opening this repository rather than by scrolling a job log
+    nobody opens. One line goes to the log, not thirty.
+
+    **Always exits 0 when it could measure at all**, and the same
+    reasoning as `alert_secret_workflow_run` above: whether to fail the
+    job is not decided in here. This writes `budget_alert=true`/`false` to
+    `$GITHUB_OUTPUT` and the workflow's own last step fails the job on
+    `true`, unconditionally, whether or not a channel was configured for
+    the notification -- so D-25's loud failure is visible by reading the
+    YAML that makes it happen, and this command can still be exercised and
+    asserted against with no workflow runner at all.
+
+    It exits 1 for the two things that are *not* an observation: unreadable
+    thresholds, and a collector that left nothing behind. Reporting
+    "0 minutes" for a step that never ran would be the exact shape of
+    silence this whole feature exists to prevent.
+    """
+    root = repo_root()
+    try:
+        budget = _actions_budget(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    source = root / os.environ.get("CONVENER_ACTIONS_USAGE_INPUT", ACTIONS_USAGE_INPUT)
+    if not source.exists():
+        print(
+            f"::error::{source.name} does not exist -- the collector step left "
+            "nothing to measure, so this run observed nothing at all (an "
+            "empty file is a real answer; a missing one is not)",
+            file=sys.stderr,
+        )
+        return 1
+
+    payloads: list[Any] = []
+    for line in source.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            payloads.append(json.loads(stripped))
+        except json.JSONDecodeError:
+            # A line that cannot be parsed is a run this cannot cost, not a
+            # run that cost nothing -- `summarise` counts `None` as exactly
+            # that, and `alarms` is loud about it.
+            payloads.append(None)
+
+    truncated = os.environ.get("CONVENER_ACTIONS_USAGE_TRUNCATED", "").strip() == "true"
+    today = paris_today(datetime.now(UTC))
+    usage = actions_usage.summarise(
+        payloads, observed_on=today, budget=budget, truncated=truncated
+    )
+
+    path = actions_usage.usage_path(root)
+    previous: list[dict[str, Any]] = []
+    if path.exists():
+        try:
+            previous = actions_usage.history_from_data(
+                yaml_safe_load(path.read_text(encoding="utf-8"))
+            )
+        except yaml.YAMLError:
+            print(
+                "::warning::data/actions-usage.yml is not readable YAML -- "
+                "today's measurement replaces it and the trend restarts here"
+            )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        ACTIONS_USAGE_HEADER + _dump(actions_usage.record_to_data(usage, previous)),
+        encoding="utf-8",
+        newline="",
+    )
+    print(actions_usage.summary_line(usage))
+
+    fired = actions_usage.alarms(usage, budget)
+    if not fired:
+        _write_github_output("budget_alert=false\n")
+        return 0
+
+    for alarm in fired:
+        print(f"::error::[{alarm.kind}] {alarm.text}", file=sys.stderr)
+    addressed = dispatch(actions_usage.message(usage, fired), os.environ)
+    if addressed is not None:
+        (root / BUDGET_BODY).write_text(addressed.body, encoding="utf-8", newline="")
+        print(f"addressed to thread {addressed.channel.thread}; left in {BUDGET_BODY}")
+    else:
+        print(
+            "no notification channel is configured -- this alarm reaches "
+            "nowhere but this run's own red status and data/actions-usage.yml"
+        )
+    _write_github_output("budget_alert=true\n")
+    return 0
+
+
+def check_actions_usage_liveness() -> int:
+    """`convener-check-actions-usage-liveness`: has the budget alarm itself
+    stopped running?
+
+    An alarm hosted inside the daily job it watches over cannot report its
+    own silence, and an exhausted budget is precisely what stops that job.
+    So `retention-watchdog.yml` -- a second, independent schedule that
+    already exists and already asks this exact question about
+    `retention.yml` -- asks it about `data/actions-usage.yml` too, in the
+    same job, at no extra billed job. See that workflow's own header
+    comment for what a watchdog living inside the scheduler it watches can
+    and cannot catch; the answer is the same here, and the residue is the
+    same: the committed file itself, readable by a person with no CI
+    running at all.
+
+    A missing file is an error, not a shrug -- the same call
+    `check_retention_liveness` makes above, for the same reason: it means
+    the daily job has never once landed this record, which is the silence
+    this command exists to report.
+    """
+    root = repo_root()
+    try:
+        budget = _actions_budget(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+    path = actions_usage.usage_path(root)
+    named = actions_usage.USAGE_PATH.as_posix()
+    if not path.exists():
+        print(
+            f"::error::{named} does not exist -- the daily job has never "
+            "recorded what this repository's runs cost (or the file was "
+            "removed); see tools/convener_ops/actions_usage.py",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        print(f"::error::{named}: invalid YAML - {exc}", file=sys.stderr)
+        return 1
+    try:
+        observed_on = actions_usage.observed_on_from_data(data)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    today = paris_today(datetime.now(UTC))
+    elapsed = actions_usage.days_since(observed_on, today)
+    if actions_usage.is_stale(elapsed, budget.max_silent_days):
+        print(
+            f"::error::{named} last moved on {observed_on.isoformat()}, "
+            f"{elapsed} day(s) ago -- the Actions budget is no longer being "
+            "watched, so nothing would report the budget running out",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"{named} last moved on {observed_on.isoformat()}, "
         f"{elapsed} day(s) ago -- healthy"
     )
     return 0
