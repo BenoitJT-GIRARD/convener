@@ -38,8 +38,11 @@ own directory-wide sweep (phase 9, task 1) rather than by anybody's care.
 
 **The precondition that sweep cannot enforce, restated here because this is
 the file a reader arrives at: no pull request may ever be opened from
-`QUEUE_BRANCH`.** Six workflows trigger on `pull_request`, and an open pull
-request whose head is this branch would start all six on every submission.
+`QUEUE_BRANCH`.** Six workflows trigger on `pull_request`; four filter on
+paths a `queue/**` file does not match, but `quality.yml` and `security.yml`
+do not filter at all, so an open pull request whose head is this branch would
+start two of them -- six billed jobs -- on every submission, six times what
+the queue replaced.
 Whether such a pull request exists is repository state, not file content, so
 no offline test can see it. What *is* held offline is the consequence one
 step further on: `tools/tests/test_submission_queue.py` fails if a queue

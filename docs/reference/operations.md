@@ -1146,9 +1146,11 @@ which `tools/tests/test_workflows.py` holds over the whole workflow
 directory (phase 9, task 1).
 
 > **Never open a pull request from `submission-queue`.** Six workflows
-> trigger on `pull_request`, and one open pull request whose head is that
-> branch would start all six on every single submission — worse than what
-> the queue replaced. No offline test can see whether such a pull request
+> trigger on `pull_request`, but four of them filter on paths a `queue/**`
+> file does not match; `quality.yml` and `security.yml` do not filter at
+> all. One open pull request whose head is that branch would therefore
+> start **two workflows — six billed jobs — on every single submission**,
+> six times what the queue replaced. No offline test can see whether such a pull request
 > exists. What is held instead is the consequence one step later:
 > `tools/tests/test_submission_queue.py` fails if a queue file ever
 > reaches a checkout of the default branch, so merging one is red rather
