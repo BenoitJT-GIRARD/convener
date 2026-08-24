@@ -2,6 +2,18 @@ name: Validate data
 
 on:
   push:
+    # Phase 8, task 3, change B: `main` only. Without a branch filter, a
+    # push to a branch with an open pull request fires this workflow
+    # twice -- once for `push`, once for `pull_request` -- on the same
+    # commit, the same tree and the same command, and the second run can
+    # only ever agree with the first.
+    #
+    # What that costs, named rather than left to be discovered: a push to
+    # a branch with *no* pull request open is no longer validated the
+    # moment it lands. It is validated when the pull request opens, which
+    # is before anything it carries can reach `main` -- the coverage that
+    # actually gates the merge is untouched.
+    branches: [main]
     paths:
       - 'data/**.yml'
       - 'tools/**'

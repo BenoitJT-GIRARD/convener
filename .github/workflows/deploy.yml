@@ -3,6 +3,38 @@ name: Deploy app
 on:
   push:
     branches: [main]
+    # Phase 8, task 3, change C. `paths-ignore:`, never `paths:`, and the
+    # direction is the whole decision.
+    #
+    # This build's inputs cover very nearly the whole repository:
+    # `app/package.json`'s own `prebuild` copies `fonts/`, `docs/` (the
+    # handbook, through `app/src/content/registry.ts`), `keys/events/`,
+    # `keys/signing/`, `public-data/certificates-public.json` and
+    # `public-data/survey-status.json` into the bundle, and the job's own
+    # first steps run two `tools/` commands over `data/`. A `paths:` list
+    # for that is a list of nearly everything, and a path left out of it
+    # publishes a stale bundle in silence -- D-25, the exact failure
+    # `a11y.yml`'s own header comment spends twenty lines refusing.
+    #
+    # `paths-ignore:` fails the other way: a path forgotten here merely
+    # runs this workflow when it did not strictly have to. For a workflow
+    # whose *absence* is the defect, that is the only safe direction, so
+    # this list holds only what provably cannot reach the bundle -- the
+    # planning notes, the showcase (`site/`, published by
+    # `publish-vitrine.yml`), the reference renders, the relays (each with
+    # its own deploy workflow), the tooling config, and the four
+    # repository-root files nothing under `app/` reads.
+    paths-ignore:
+      - 'docs/superpowers/**'
+      - '.superpowers/**'
+      - 'site/**'
+      - 'visuals/**'
+      - 'services/**'
+      - 'config/**'
+      - 'cspell.json'
+      - 'project-words.txt'
+      - 'README.md'
+      - 'INFORMATION-ARCHITECTURE.md'
   workflow_dispatch:
 
 # Three other workflows push to main, so two "Deploy app" runs overlapping is

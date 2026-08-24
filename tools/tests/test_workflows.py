@@ -11,7 +11,7 @@ Two things are asserted instead of the two things the brief names:
 
 * Rather than running `npm run build` and grepping `app/dist/index.html`
   (slow, and this suite runs on every push), the base path is asserted
-  straight from `app/vite.config.ts` — the one source Vite reads it from.
+  straight from `app/vite.config.ts` â€” the one source Vite reads it from.
 * The publish step is a hand-written shell script, the same shape as
   `publish-vitrine.yml`'s own push step. It is asserted against as text
   (`in` checks on the parsed `run:` block) rather than executed, because
@@ -86,7 +86,7 @@ def _push_step_script() -> str:
             assert isinstance(run, str)
             return run
     raise AssertionError(
-        "no step in the build job reads VITRINE_DEPLOY_TOKEN — "
+        "no step in the build job reads VITRINE_DEPLOY_TOKEN â€” "
         "the push-to-vitrine step is missing or was renamed away from it"
     )
 
@@ -106,7 +106,7 @@ def _survey_status_step_script() -> str:
         if isinstance(run, str) and "public-data/survey-status.json" in run:
             return run
     raise AssertionError(
-        "no step in the build job writes public-data/survey-status.json — "
+        "no step in the build job writes public-data/survey-status.json â€” "
         "the survey-status commit step is missing or was renamed away from it"
     )
 
@@ -457,7 +457,7 @@ def test_deploy_workflow_no_longer_uses_pages_actions() -> None:
     uses = _step_uses(_build_job())
     offending = [u for u in uses if any(name in u for name in banned)]
     assert offending == [], (
-        f"still uses Pages actions: {offending} — these can never succeed "
+        f"still uses Pages actions: {offending} â€” these can never succeed "
         "against a private repo without a paid GitHub plan"
     )
 
@@ -612,7 +612,7 @@ def test_deploy_workflow_builds_survey_status_before_the_npm_build() -> None:
 # (R-19, fix round 1, task 12). Before this, a revocation -- a change to
 # data/events/<id>/certificates.yml -- did not even fire this workflow,
 # and the file it would have built was never copied to the showcase, so
-# spec S:7's "le registre fait foi sur l'état" had no observable effect on
+# spec S:7's "le registre fait foi sur l'Ã©tat" had no observable effect on
 # any verifier. Text assertions on the parsed `run:` block, the same idiom
 # test_notify.py uses for notify.yml, because running the script means a
 # real clone of a real repository -- exactly the network access this
@@ -3854,3 +3854,112 @@ def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() 
     job = data["jobs"]["workflow-schema"]
     uses = [step["uses"] for step in job["steps"] if "uses" in step]
     assert all(use.startswith("actions/checkout@") for use in uses)
+# ------------------------------------------------------------------ #
+# Phase 8, task 3, change A prime: pinning the *narrowness* of the secret
+# monitor's own job guard.
+#
+# Change A rests on documented platform behaviour -- GitHub starts a
+# `schedule:` or `repository_dispatch:` run only from the default branch
+# -- which no offline test can execute. What a test can hold is the thing
+# that would actually go wrong later: somebody widening that guard to
+# skip `push` too, or replacing it with "only run for
+# `workflow_dispatch`". Both would save more minutes, and both would rest
+# on a property of the nineteen *watched* files (that none of them has a
+# `push:` trigger outside `branches: [main]`) rather than on anything the
+# platform promises -- so the day one of those files loses its branch
+# filter, the monitor would stop looking exactly where it had started to
+# matter, and in silence. The audit files that under its arbitration C
+# and the plan settles it on the side that keeps the control; this is
+# what keeps it settled.
+# ------------------------------------------------------------------ #
+
+#: A comparison of the *triggering run's* own event against a literal --
+#: `github.event.workflow_run.event`, never `github.event_name`, which on
+#: this workflow is always the constant `workflow_run`.
+_TRIGGERING_EVENT_TEST_RE = re.compile(
+    r"github\.event\.workflow_run\.event\s*(==|!=)\s*'([a-z_]+)'"
+)
+
+
+def _guard_event_tests(guard: str) -> tuple[set[str], set[str], str]:
+    """`(operators, event names, whatever is left)` for a job-level `if:`.
+
+    The leftover is what makes this useful: an added `||`, a second
+    context, or any other term stays behind once the comparisons are
+    removed, so a guard that grew a clause cannot pass merely by having
+    the two right event names among several.
+    """
+    found = _TRIGGERING_EVENT_TEST_RE.findall(guard)
+    leftover = _TRIGGERING_EVENT_TEST_RE.sub("", guard).replace("&&", "")
+    return (
+        {operator for operator, _ in found},
+        {event for _, event in found},
+        " ".join(leftover.split()),
+    )
+
+
+def test_the_guard_reader_sees_a_widened_guard_for_what_it_is() -> None:
+    """Positive control, on probes rather than on the real file: the
+    reader has to tell the narrow guard apart from both widenings that
+    would be tempting later, or it proves nothing about the real one."""
+    narrow = (
+        "github.event.workflow_run.event != 'schedule' && "
+        "github.event.workflow_run.event != 'repository_dispatch'"
+    )
+    assert _guard_event_tests(narrow) == (
+        {"!="},
+        {"schedule", "repository_dispatch"},
+        "",
+    )
+
+    wider = "github.event.workflow_run.event == 'workflow_dispatch'"
+    assert _guard_event_tests(wider) == ({"=="}, {"workflow_dispatch"}, "")
+
+    smuggled = (
+        "github.event.workflow_run.event != 'schedule' && "
+        "github.event.workflow_run.event != 'repository_dispatch' && "
+        "github.event.workflow_run.head_branch != 'main'"
+    )
+    _, events, leftover = _guard_event_tests(smuggled)
+    assert events == {"schedule", "repository_dispatch"}
+    assert leftover, "an extra clause must survive as leftover, not vanish"
+
+
+def test_the_monitor_skips_only_the_two_events_that_cannot_leave_main() -> None:
+    """The two events GitHub can only ever start from the default branch,
+    and no third. `push` in particular stays watched on purpose: a watched
+    workflow that one day loses its `branches: [main]` has to still be
+    seen, and that is the whole difference between this guard and the
+    wider one the audit costed and the plan refused."""
+    monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
+    guard = monitor["jobs"]["monitor"]["if"]
+    assert isinstance(guard, str) and guard, (
+        "secret-workflow-monitor.yml's own job carries no `if:` at all -- "
+        "change A was reverted, and the monitor is spending five minutes "
+        "of ceiling on every scheduled and dispatched run to answer a "
+        "question whose answer is a constant"
+    )
+
+    operators, events, leftover = _guard_event_tests(guard)
+    assert events == {"schedule", "repository_dispatch"}, (
+        f"the monitor's job guard names {sorted(events)} -- it may only "
+        "ever skip the two events GitHub starts from the default branch "
+        "and nothing else; anything wider rests on the *watched* files "
+        "keeping their `branches: [main]`, which is not a platform "
+        "guarantee and not what this monitor is for"
+    )
+    assert operators == {"!="}, (
+        f"the guard tests the triggering event with {sorted(operators)} -- "
+        "it must exclude those two events, never select for some other one"
+    )
+    assert leftover == "", (
+        "the guard carries a clause beyond those two comparisons: "
+        f"{leftover!r} -- every event this monitor can still see must stay "
+        "visible"
+    )
+    assert "||" not in guard, (
+        "the guard joins its comparisons with `||`, so a run only has to "
+        "not be one of the two to be skipped -- it must be neither"
+    )
+
+
