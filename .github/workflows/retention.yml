@@ -54,7 +54,8 @@ jobs:
       # populates from `keys/events/`, so the deployed bundle keeps
       # serving a destroyed event's public key until an unrelated push to
       # `main` happens to rebuild it -- the exact suppression trap the
-      # three certificate workflows and sweep.yml already dispatch around.
+      # three certificate workflows and sweep-and-notify.yml already
+      # dispatch around.
       # `actions: write` is what lets this job trigger that dispatch
       # itself, the same as those four.
       actions: write

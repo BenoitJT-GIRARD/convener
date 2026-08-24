@@ -10,6 +10,10 @@ access this suite must not take on.
 
 from __future__ import annotations
 
+from typing import Any
+
+from conftest import WorkflowYaml, workflow_triggers
+
 from convener_ops.paths import repo_root
 from convener_ops.yaml_safe import safe_load
 
@@ -18,13 +22,13 @@ _WATCHDOG_PATH = _ROOT / ".github" / "workflows" / "retention-watchdog.yml"
 _RETENTION_PATH = _ROOT / ".github" / "workflows" / "retention.yml"
 
 
-def _watchdog() -> dict:
+def _watchdog() -> WorkflowYaml:
     loaded = safe_load(_WATCHDOG_PATH.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
 
-def _retention() -> dict:
+def _retention() -> WorkflowYaml:
     loaded = safe_load(_RETENTION_PATH.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
@@ -36,12 +40,7 @@ def _retention() -> dict:
 
 
 def test_watchdog_is_scheduled_and_also_dispatchable_by_hand() -> None:
-    # PyYAML's YAML-1.1 bool resolver reads a bare `on:` key as the
-    # boolean `True`, not the string "on" -- the same gotcha
-    # test_workflows.py's own text-assertion modules already work around
-    # (see test_publish_vitrine_paths_trigger_includes_the_certificate_
-    # register's own comment).
-    triggers = _watchdog()[True]
+    triggers = workflow_triggers(_watchdog())
     schedule = triggers.get("schedule")
     assert isinstance(schedule, list) and schedule
     assert "workflow_dispatch" in triggers
@@ -52,8 +51,8 @@ def test_watchdog_runs_after_retentions_own_cron_the_same_day() -> None:
     own cron is '11 6 * * *' (06:11 UTC); the watchdog's hour must be
     later than 6 so a healthy day's record is already written by the time
     this checks it."""
-    watchdog_cron = _watchdog()[True]["schedule"][0]["cron"]
-    retention_cron = _retention()[True]["schedule"][0]["cron"]
+    watchdog_cron = workflow_triggers(_watchdog())["schedule"][0]["cron"]
+    retention_cron = workflow_triggers(_retention())["schedule"][0]["cron"]
     watchdog_hour = int(watchdog_cron.split()[1])
     retention_hour = int(retention_cron.split()[1])
     assert watchdog_hour > retention_hour, (
@@ -92,13 +91,13 @@ def test_watchdog_runs_the_liveness_check_command() -> None:
 # ==================================================================== #
 
 
-def _retention_steps() -> list[dict]:
+def _retention_steps() -> list[dict[str, Any]]:
     steps = _retention()["jobs"]["retention"]["steps"]
     assert isinstance(steps, list)
     return steps
 
 
-def _last_run_step() -> dict:
+def _last_run_step() -> dict[str, Any]:
     for step in _retention_steps():
         if step.get("name") == "Record that the retention workflow ran today":
             return step

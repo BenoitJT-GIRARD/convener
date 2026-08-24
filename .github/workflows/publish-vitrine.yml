@@ -11,7 +11,7 @@ name: Publish vitrine
 # but it is unreachable in the one case it exists for. GitHub does not
 # start a new workflow run from a push made with the checkout's own
 # `GITHUB_TOKEN` -- the recursion guard -- and issue-certificates.yml,
-# reissue-certificate.yml, revoke-certificate.yml and sweep.yml all commit
+# reissue-certificate.yml, revoke-certificate.yml and sweep-and-notify.yml all commit
 # with exactly that token (zero-cost: no new secret). So `workflow_dispatch`
 # is added here, and each of those four jobs invokes it directly as their
 # own last step once they have actually changed something --
@@ -42,8 +42,8 @@ name: Publish vitrine
 # `revoke-certificate.yml` no longer dispatch this workflow at all --
 # each dispatched run used to find nothing changed here and exit as a
 # no-op (the ordinary D-13 shape, not a defect, but motion with no
-# effect all the same). `sweep.yml` and `retention.yml` still dispatch
-# this workflow, unaffected: sweep.yml genuinely can change
+# effect all the same). `sweep-and-notify.yml` and `retention.yml` still dispatch
+# this workflow, unaffected: the sweep genuinely can change
 # `data/speakers.yml`, this workflow's own input.
 #
 # Phase 5, task 2: renamed from "Publish vitrine data" -- P-1 moved the

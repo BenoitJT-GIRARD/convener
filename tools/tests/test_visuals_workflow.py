@@ -20,6 +20,7 @@ import json
 import re
 
 import yaml
+from conftest import workflow_triggers
 
 from convener_ops.paths import repo_root
 
@@ -34,12 +35,11 @@ _PACKAGE_JSON = json.loads(
 #: Parsed structurally where a plain substring check would also match this
 #: file's own explanatory comments (which quite deliberately *do* mention
 #: `speakers.yml`, `--update` and `file://` -- to say why the workflow
-#: never uses them). `loaded[True]`, not `loaded["on"]` -- PyYAML's YAML-1.1
-#: bool resolver reads a bare `on:` key as `True`, the same gotcha
-#: `test_workflows.py::test_issue_certificates_workflow_has_a_resend_all_
-#: input_defaulting_false`'s own docstring already names for this project.
+#: never uses them). The `on:` block is reached through
+#: `conftest.workflow_triggers`, which owns the reason it cannot simply be
+#: looked up as `"on"`.
 _WORKFLOW_DATA = yaml.safe_load(_WORKFLOW)
-_TRIGGERS = _WORKFLOW_DATA[True]
+_TRIGGERS = workflow_triggers(_WORKFLOW_DATA)
 
 
 def test_puppeteer_is_pinned_to_an_exact_version_not_a_range() -> None:

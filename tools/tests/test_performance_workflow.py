@@ -1,4 +1,4 @@
-"""Task 12 (phase 5): pins `.github/workflows/quality.yml`'s own `site` job
+"""Task 12 (phase 5): pins `.github/workflows/quality.yml`'s own `site` lane
 and `site/scripts/check-performance-budget.mjs` against the properties a
 green run does not, by itself, prove -- acceptance criterion 7's own "the
 budget is tenu and verified automatically" only means something if the
@@ -44,22 +44,37 @@ _CHECKER = (_ROOT / "site" / "scripts" / "check-performance-budget.mjs").read_te
 )
 _PACKAGE_JSON = (_ROOT / "site" / "package.json").read_text(encoding="utf-8")
 
-# quality.yml carries several jobs; every assertion below that reads
-# "the site job" means exactly this slice -- the same isolation
-# `test_register.py`'s own `python_job` already uses for a different job
-# in this identical file, and for the identical reason (a workflow-wide
-# `in` check could match a different job entirely).
-_SITE_JOB = _WORKFLOW.split("\n  site:\n", 1)[1].split("\n  spelling:\n", 1)[0]
+# quality.yml carries several jobs, and since phase 8 task 2 one of them
+# carries several lanes: what were the `typescript`, `site` and
+# `spelling` jobs are three lanes of one `web` job (eight billed jobs
+# grouped into four, no check dropped -- see quality.yml's own header).
+# Every assertion below that reads "the site lane" means exactly this
+# slice -- the same isolation `test_register.py`'s own `python_job`
+# already uses for a different job in this identical file, and for the
+# identical reason (a workflow-wide `in` check could match a different
+# surface entirely; `--omit=dev` now lives one lane above this one).
+#
+# The lane opens at its own `Install site` step -- the step whose `id:`
+# every check in the lane guards on in the workflow itself -- and ends
+# where the spelling lane begins. `Build app` sits inside it on purpose:
+# the performance budget weighs `app/`'s real island bundles, so the
+# build that produces them belongs to the lane that reads them, while
+# the `npm ci` that used to accompany it is now the `web` job's single
+# app install, one lane above.
+_WEB_JOB = _WORKFLOW.split("\n  web:\n", 1)[1].split("\n  relays:\n", 1)[0]
+_SITE_LANE = _WEB_JOB.split("- name: Install site\n", 1)[1].split(
+    "- name: Spell check", 1
+)[0]
 
 
-def test_the_site_job_is_isolated_correctly() -> None:
+def test_the_site_lane_is_isolated_correctly() -> None:
     """A probe on the slicing above itself: if either marker ever moves
-    (a job renamed, or a new job inserted between `site:` and
-    `spelling:`), every other test in this module would silently start
-    reading the wrong slice rather than failing here with a clear reason.
-    """
-    assert "working-directory: site" in _SITE_JOB
-    assert "npm run build" in _SITE_JOB
+    (a job or a step renamed, a lane reordered, a new lane inserted
+    between the site one and the spelling one), every other test in this
+    module would silently start reading the wrong slice rather than
+    failing here with a clear reason."""
+    assert "working-directory: site" in _SITE_LANE
+    assert "npm run build" in _SITE_LANE
 
 
 def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
@@ -186,12 +201,17 @@ def test_the_two_page_budgets_are_measured_independently_of_each_other() -> None
 def test_the_workflow_builds_both_the_site_and_the_app() -> None:
     """The island budget needs the app's own built islands
     (`app/dist/islands/signup/signup.js`, `.../verify/verify.js`) -- a
-    job that only ever built `site/` could never weigh either page
-    carrying one, and `--app-dir` would have nothing real to point at."""
+    lane that only ever built `site/` could never weigh either page
+    carrying one, and `--app-dir` would have nothing real to point at.
+
+    Phase 8, task 2 merged this lane's job with the one that installs
+    `app/`; the install moved, the build did not, and this assertion is
+    what would fail if a future tidy-up moved the build out of the lane
+    that reads its output."""
     for working_directory in ("site", "app"):
         marker = f"working-directory: {working_directory}"
-        assert marker in _SITE_JOB, (
-            f"the site job never runs a step in {working_directory}/"
+        assert marker in _SITE_LANE, (
+            f"the site lane never runs a step in {working_directory}/"
         )
 
 
@@ -201,8 +221,8 @@ def test_the_workflow_runs_the_budget_check_against_the_apps_real_build() -> Non
     itself refuse to run (see `parseArgs`'s own required-argument check),
     but a hand-typed path drifting from where the "Build app" step above
     actually writes would silently point this check at nothing."""
-    assert "npm run check:budget" in _SITE_JOB
-    assert "--app-dir ../app/dist" in _SITE_JOB
+    assert "npm run check:budget" in _SITE_LANE
+    assert "--app-dir ../app/dist" in _SITE_LANE
 
 
 def test_the_workflow_lints_the_new_checker_script() -> None:
@@ -210,9 +230,9 @@ def test_the_workflow_lints_the_new_checker_script() -> None:
     `check-a11y.mjs` already is -- an unlisted file is invisible to the
     one lint command this job runs, `npx --yes eslint@9 ...`, no matter
     how strict `site/eslint.config.js`'s own rules are."""
-    assert "check-performance-budget.mjs" in _SITE_JOB
-    lint_line = [line for line in _SITE_JOB.splitlines() if "eslint@9" in line]
-    assert lint_line, "no eslint invocation found in the site job"
+    assert "check-performance-budget.mjs" in _SITE_LANE
+    lint_line = [line for line in _SITE_LANE.splitlines() if "eslint@9" in line]
+    assert lint_line, "no eslint invocation found in the site lane"
     assert "check-performance-budget.mjs" in lint_line[0]
     assert "check-a11y.mjs" in lint_line[0]
 
@@ -225,8 +245,8 @@ def test_the_workflow_audits_site_dependencies() -> None:
     declares (all of them are `devDependencies`: Eleventy, axe-core,
     puppeteer-core, all build-time tooling) and make the step pass
     vacuously regardless of what it found (D-25)."""
-    assert "npm audit" in _SITE_JOB
-    assert "--omit=dev" not in _SITE_JOB
+    assert "npm audit" in _SITE_LANE
+    assert "--omit=dev" not in _SITE_LANE
 
 
 def test_the_generator_version_is_pinned_exactly() -> None:

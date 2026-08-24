@@ -22,16 +22,24 @@ Two things are asserted instead of the two things the brief names:
 from __future__ import annotations
 
 import ast
+import importlib
+import inspect
 import json
 import os
 import re
 import shutil
 import stat
 import subprocess  # nosec B404
+import sys
+import textwrap
+import tomllib
+from collections.abc import Callable
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
+from conftest import WorkflowYaml, workflow_event_names, workflow_triggers
 
 from convener_ops import (
     certificate,
@@ -1297,22 +1305,6 @@ def test_no_run_script_rebases_a_local_commit_on_a_rejected_push(
         )
 
 
-def _workflow_on_types(loaded: dict[str, Any]) -> set[str]:
-    """The event names a workflow declares under `on:` -- read as
-    `loaded[True]`, not `loaded["on"]`: PyYAML's YAML-1.1 bool resolver
-    reads the bare `on:` key as the boolean `True` before this module's own
-    content is inspected at all (the same gotcha the certificate- and
-    survey-workflow tests elsewhere in this file already work around)."""
-    on_block = loaded.get(True, {})
-    if isinstance(on_block, str):
-        return {on_block}
-    if isinstance(on_block, list):
-        return set(on_block)
-    if isinstance(on_block, dict):
-        return set(on_block)
-    return set()
-
-
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
 def test_a_repository_dispatch_workflow_declares_no_concurrency_group(
     workflow: Path,
@@ -1336,7 +1328,7 @@ def test_a_repository_dispatch_workflow_declares_no_concurrency_group(
     remembering to add its name anywhere."""
     loaded = safe_load(workflow.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
-    if "repository_dispatch" not in _workflow_on_types(loaded):
+    if "repository_dispatch" not in workflow_event_names(loaded):
         pytest.skip(f"{workflow.name} is not repository_dispatch-triggered")
     assert "concurrency" not in loaded, (
         f"{workflow.name} is dispatched externally -- one submission per "
@@ -1350,10 +1342,11 @@ def test_the_externally_dispatched_sweep_actually_matches_something() -> None:
     """The guard above skips every workflow that is not
     `repository_dispatch`-triggered, which is the honest thing to do per
     file -- but a parametrised skip degrades silently. If
-    `_workflow_on_types` ever stopped recognising that trigger (a refactor,
-    a change in how the `on:` block is written, a bug), all 31 cases would
-    skip and the suite would still report green: a control that cannot
-    fail, which is the shape this repository has now caught a dozen times.
+    `workflow_event_names` ever stopped recognising that trigger (a
+    refactor, a change in how the `on:` block is written, a bug), all 31
+    cases would skip and the suite would still report green: a control
+    that cannot fail, which is the shape this repository has now caught a
+    dozen times.
 
     So the set is asserted non-empty here, separately, and named. This test
     fails loudly the day the detection breaks, while the guard above keeps
@@ -1362,13 +1355,13 @@ def test_the_externally_dispatched_sweep_actually_matches_something() -> None:
         workflow.name
         for workflow in _workflow_files()
         if "repository_dispatch"
-        in _workflow_on_types(safe_load(workflow.read_text(encoding="utf-8")) or {})
+        in workflow_event_names(safe_load(workflow.read_text(encoding="utf-8")) or {})
     )
     assert dispatched, (
         "no workflow was detected as repository_dispatch-triggered, so the "
         "concurrency guard above skipped every case and proved nothing -- "
         "either every externally dispatched workflow really is gone, or "
-        "`_workflow_on_types` has stopped recognising the trigger"
+        "`workflow_event_names` has stopped recognising the trigger"
     )
 
 
@@ -2204,7 +2197,13 @@ def test_certificate_workflow_job_has_write_permission_and_a_timeout(
 # ------------------------------------------------------------------ #
 
 PUBLISH_VITRINE_DISPATCH = "gh workflow run publish-vitrine.yml"
-SWEEP_WORKFLOW = Path(".github/workflows/sweep.yml")
+#: Phase 8, task 3, change E: the nightly sweep and the board digest are
+#: one workflow now (`sweep-and-notify.yml`), and the sweep is the first
+#: step of its `daily` job rather than a file and a cron of its own. The
+#: dispatch this constant's own tests below follow is unchanged, and so is
+#: the reason it exists.
+SWEEP_WORKFLOW = Path(".github/workflows/sweep-and-notify.yml")
+SWEEP_JOB = "daily"
 
 
 def _job_step_script(workflow_path: Path, job: str, run_contains: str) -> str:
@@ -2288,22 +2287,30 @@ def test_certificate_workflow_dispatches_deploy_only_after_a_real_push(
 
 
 def test_sweep_workflow_dispatches_publish_vitrine_only_after_a_real_push() -> None:
-    """The same fix, and the same two-halves guard, for sweep.yml -- the
+    """The same fix, and the same two-halves guard, for the sweep -- the
     re-review found the identical suppression there (a phase-3 defect:
     `events-public.json` has never been republished after a nightly sweep,
-    since sweep.yml also pushes `data/speakers.yml` with GITHUB_TOKEN)."""
-    script = _job_step_script(SWEEP_WORKFLOW, "sweep", "git commit -m")
+    since the sweep also pushes `data/speakers.yml` with GITHUB_TOKEN).
+
+    Phase 8, task 3, change E merged the sweep into
+    `sweep-and-notify.yml`, which makes this test matter *more*, not
+    less: the merged workflow's own `push:` trigger names
+    `data/speakers.yml`, the exact file the sweep commits, so a reader
+    could easily conclude the publication now happens by itself. It does
+    not -- the recursion guard is why this dispatch exists, and it is
+    unchanged by the merge."""
+    script = _job_step_script(SWEEP_WORKFLOW, SWEEP_JOB, "git commit -m")
 
     pushed = _guarded_block(script, "if git push; then")
     assert PUBLISH_VITRINE_DISPATCH in pushed, (
-        "sweep.yml does not dispatch publish-vitrine.yml once a change is "
+        "the sweep does not dispatch publish-vitrine.yml once a change is "
         "genuinely pushed -- events-public.json would never be republished "
         "after a sweep (Critical A)"
     )
 
     unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
     assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
-        "sweep.yml dispatches publish-vitrine.yml even when nothing changed this run"
+        "the sweep dispatches publish-vitrine.yml even when nothing changed this run"
     )
 
 
@@ -2588,7 +2595,7 @@ def test_deliver_certificate_workflow_has_its_own_concurrency_group() -> None:
 # ------------------------------------------------------------------ #
 
 
-def _issue_certificates_workflow() -> dict[str, Any]:
+def _issue_certificates_workflow() -> WorkflowYaml:
     loaded = safe_load((ROOT / ISSUE_CERTIFICATES_WORKFLOW).read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
@@ -2648,12 +2655,8 @@ def test_delivery_step_does_not_fail_the_whole_run_on_its_own() -> None:
 
 
 def test_issue_certificates_workflow_has_a_resend_all_input_defaulting_false() -> None:
-    """`loaded[True]`, not `loaded["on"]` -- PyYAML's YAML-1.1 bool
-    resolver reads a bare `on:` key as `True`, the same gotcha
-    `test_certificate_workflows_accept_only_the_allowlisted_inputs`'s own
-    docstring already names for this file."""
     loaded = _issue_certificates_workflow()
-    inputs = loaded[True]["workflow_dispatch"]["inputs"]
+    inputs = workflow_triggers(loaded)["workflow_dispatch"]["inputs"]
     assert inputs["resend_all"]["type"] == "boolean"
     assert inputs["resend_all"]["default"] is False
     assert inputs["resend_all"]["required"] is False
@@ -2933,8 +2936,13 @@ def test_erase_registration_workflow_has_a_concurrency_group() -> None:
 INVITE_SURVEY_WORKFLOW = Path(".github/workflows/invite-survey.yml")
 
 
-def _invite_survey_workflow() -> dict[str, Any]:
-    return safe_load((ROOT / INVITE_SURVEY_WORKFLOW).read_text(encoding="utf-8"))
+def _invite_survey_workflow() -> WorkflowYaml:
+    loaded = safe_load((ROOT / INVITE_SURVEY_WORKFLOW).read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict), (
+        f"{INVITE_SURVEY_WORKFLOW.name} does not parse as a mapping -- a "
+        "workflow file that is a list or a scalar is not a workflow at all"
+    )
+    return loaded
 
 
 def test_invite_survey_workflow_carries_every_env_var_the_command_reads() -> None:
@@ -2981,7 +2989,7 @@ def test_record_survey_invitation_step_carries_every_env_var_the_command_reads()
 
 def test_invite_survey_workflow_is_dispatchable_by_hand_only() -> None:
     loaded = _invite_survey_workflow()
-    assert set(loaded[True]) == {"workflow_dispatch"}, (
+    assert set(workflow_triggers(loaded)) == {"workflow_dispatch"}, (
         "invite-survey.yml must be reachable only by an operator's own "
         "decision -- never scheduled, never triggered by a push: an "
         "invitation is an outbound message to real people"
@@ -2990,7 +2998,7 @@ def test_invite_survey_workflow_is_dispatchable_by_hand_only() -> None:
 
 def test_invite_survey_workflow_has_a_resend_all_input_defaulting_false() -> None:
     loaded = _invite_survey_workflow()
-    inputs = loaded[True]["workflow_dispatch"]["inputs"]
+    inputs = workflow_triggers(loaded)["workflow_dispatch"]["inputs"]
     assert inputs["resend_all"]["type"] == "boolean"
     assert inputs["resend_all"]["default"] is False
     assert inputs["resend_all"]["required"] is False
@@ -3062,7 +3070,7 @@ def test_match_attendance_workflow_carries_every_env_var_the_command_reads() -> 
 
 def test_match_attendance_workflow_is_dispatchable_by_hand_only() -> None:
     loaded = safe_load((ROOT / MATCH_ATTENDANCE_WORKFLOW).read_text(encoding="utf-8"))
-    assert set(loaded[True]) == {"workflow_dispatch"}, (
+    assert set(workflow_triggers(loaded)) == {"workflow_dispatch"}, (
         "match-attendance.yml must be reachable only by an operator's own "
         "decision, the same as the workflows that depend on it"
     )
@@ -3689,7 +3697,7 @@ def test_the_secret_workflow_monitor_watches_every_secret_bearing_workflow() -> 
         ROOT / WORKFLOWS_DIR, exclude=ROOT / SECRET_WORKFLOW_MONITOR
     )
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
 
     missing = expected - watched
     extra = watched - expected
@@ -3732,7 +3740,7 @@ def test_a_workflow_with_a_new_secret_is_flagged_as_unwatched(tmp_path: Path) ->
 
     expected = _secret_bearing_workflow_names(tmp_path, exclude=monitor_path)
     monitor = safe_load(monitor_path.read_text(encoding="utf-8"))
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
 
     assert expected - watched == {"New"}
 
@@ -3758,7 +3766,7 @@ def test_a_workflow_that_lost_its_secret_is_flagged_as_over_watched(
 
     expected = _secret_bearing_workflow_names(tmp_path, exclude=monitor_path)
     monitor = safe_load(monitor_path.read_text(encoding="utf-8"))
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
 
     assert watched - expected == {"Retired"}
 
@@ -3776,7 +3784,7 @@ def test_the_monitor_would_otherwise_qualify_to_watch_itself() -> None:
     assert _declares_a_secret_beyond_github_token(ROOT / SECRET_WORKFLOW_MONITOR)
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
     own_name = monitor["name"]
-    watched = set(monitor[True]["workflow_run"]["workflows"])
+    watched = set(workflow_triggers(monitor)["workflow_run"]["workflows"])
     assert own_name not in watched
 
 
@@ -3785,7 +3793,7 @@ def test_the_secret_workflow_monitor_fires_on_request_not_completion() -> None:
     header comment for why: an alert that can only confirm a run already
     finished is not detection close enough behind the run to matter."""
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
-    assert monitor[True]["workflow_run"]["types"] == ["requested"]
+    assert workflow_triggers(monitor)["workflow_run"]["types"] == ["requested"]
 
 
 def test_the_secret_workflow_monitor_declares_no_yaml_anchor() -> None:
@@ -3867,3 +3875,1201 @@ def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() 
     job = data["jobs"]["workflow-schema"]
     uses = [step["uses"] for step in job["steps"] if "uses" in step]
     assert all(use.startswith("actions/checkout@") for use in uses)
+
+
+# ------------------------------------------------------------------ #
+# Phase 8, task 3, change A prime: pinning the *narrowness* of the secret
+# monitor's own job guard.
+#
+# Change A rests on documented platform behaviour -- GitHub starts a
+# `schedule:` or `repository_dispatch:` run only from the default branch
+# -- which no offline test can execute. What a test can hold is the thing
+# that would actually go wrong later: somebody widening that guard to
+# skip `push` too, or replacing it with "only run for
+# `workflow_dispatch`". Both would save more minutes, and both would rest
+# on a property of the nineteen *watched* files (that none of them has a
+# `push:` trigger outside `branches: [main]`) rather than on anything the
+# platform promises -- so the day one of those files loses its branch
+# filter, the monitor would stop looking exactly where it had started to
+# matter, and in silence. The audit files that under its arbitration C
+# and the plan settles it on the side that keeps the control; this is
+# what keeps it settled.
+# ------------------------------------------------------------------ #
+
+#: A comparison of the *triggering run's* own event against a literal --
+#: `github.event.workflow_run.event`, never `github.event_name`, which on
+#: this workflow is always the constant `workflow_run`.
+_TRIGGERING_EVENT_TEST_RE = re.compile(
+    r"github\.event\.workflow_run\.event\s*(==|!=)\s*'([a-z_]+)'"
+)
+
+
+def _guard_event_tests(guard: str) -> tuple[set[str], set[str], str]:
+    """`(operators, event names, whatever is left)` for a job-level `if:`.
+
+    The leftover is what makes this useful: an added `||`, a second
+    context, or any other term stays behind once the comparisons are
+    removed, so a guard that grew a clause cannot pass merely by having
+    the two right event names among several.
+    """
+    found = _TRIGGERING_EVENT_TEST_RE.findall(guard)
+    leftover = _TRIGGERING_EVENT_TEST_RE.sub("", guard).replace("&&", "")
+    return (
+        {operator for operator, _ in found},
+        {event for _, event in found},
+        " ".join(leftover.split()),
+    )
+
+
+def test_the_guard_reader_sees_a_widened_guard_for_what_it_is() -> None:
+    """Positive control, on probes rather than on the real file: the
+    reader has to tell the narrow guard apart from both widenings that
+    would be tempting later, or it proves nothing about the real one."""
+    narrow = (
+        "github.event.workflow_run.event != 'schedule' && "
+        "github.event.workflow_run.event != 'repository_dispatch'"
+    )
+    assert _guard_event_tests(narrow) == (
+        {"!="},
+        {"schedule", "repository_dispatch"},
+        "",
+    )
+
+    wider = "github.event.workflow_run.event == 'workflow_dispatch'"
+    assert _guard_event_tests(wider) == ({"=="}, {"workflow_dispatch"}, "")
+
+    smuggled = (
+        "github.event.workflow_run.event != 'schedule' && "
+        "github.event.workflow_run.event != 'repository_dispatch' && "
+        "github.event.workflow_run.head_branch != 'main'"
+    )
+    _, events, leftover = _guard_event_tests(smuggled)
+    assert events == {"schedule", "repository_dispatch"}
+    assert leftover, "an extra clause must survive as leftover, not vanish"
+
+
+def test_the_monitor_skips_only_the_two_events_that_cannot_leave_main() -> None:
+    """The two events GitHub can only ever start from the default branch,
+    and no third. `push` in particular stays watched on purpose: a watched
+    workflow that one day loses its `branches: [main]` has to still be
+    seen, and that is the whole difference between this guard and the
+    wider one the audit costed and the plan refused."""
+    monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
+    guard = monitor["jobs"]["monitor"]["if"]
+    assert isinstance(guard, str) and guard, (
+        "secret-workflow-monitor.yml's own job carries no `if:` at all -- "
+        "change A was reverted, and the monitor is spending five minutes "
+        "of ceiling on every scheduled and dispatched run to answer a "
+        "question whose answer is a constant"
+    )
+
+    operators, events, leftover = _guard_event_tests(guard)
+    assert events == {"schedule", "repository_dispatch"}, (
+        f"the monitor's job guard names {sorted(events)} -- it may only "
+        "ever skip the two events GitHub starts from the default branch "
+        "and nothing else; anything wider rests on the *watched* files "
+        "keeping their `branches: [main]`, which is not a platform "
+        "guarantee and not what this monitor is for"
+    )
+    assert operators == {"!="}, (
+        f"the guard tests the triggering event with {sorted(operators)} -- "
+        "it must exclude those two events, never select for some other one"
+    )
+    assert leftover == "", (
+        "the guard carries a clause beyond those two comparisons: "
+        f"{leftover!r} -- every event this monitor can still see must stay "
+        "visible"
+    )
+    assert "||" not in guard, (
+        "the guard joins its comparisons with `||`, so a run only has to "
+        "not be one of the two to be skipped -- it must be neither"
+    )
+
+
+# ------------------------------------------------------------------ #
+# Phase 8, task 3, change D: a superseded run is cancelled, and a push to
+# `main` is not.
+#
+# The trap this closes is one line wide. `group: ${{ github.ref }}` reads
+# like the obvious way to say "one run per branch", and it is -- for a
+# pull request. For a push to `main` it means every push shares one
+# group, so `cancel-in-progress: true` lets the next push kill the checks
+# on the commit before it, and that commit reaches production having been
+# verified by nothing. Nothing turns red; the run just says "cancelled".
+# D-25, and this repository has recorded that shape of failure thirteen
+# times.
+#
+# So the expression is not asserted by its text but *evaluated*, against
+# the contexts GitHub would supply, and what is asserted is the property:
+# two runs of the same workflow on a push to `main` land in two different
+# groups, two runs on the same pull-request branch land in one.
+# ------------------------------------------------------------------ #
+
+#: One `${{ ... }}` placeholder. Deliberately not a general expression
+#: parser: the only forms this repository's concurrency groups use are a
+#: context lookup and a `||` fallback chain of them, and `_render_group`
+#: below refuses anything else rather than guessing at it.
+_PLACEHOLDER_RE = re.compile(r"\$\{\{([^}]*)\}\}")
+
+#: A `github.*` context lookup, the only operand `_render_group` accepts.
+_CONTEXT_LOOKUP_RE = re.compile(r"github\.[a-z_]+(?:\.[a-z_]+)*")
+
+
+def _render_group(expression: str, context: dict[str, str]) -> str:
+    """`expression` with every `${{ ... }}` replaced the way GitHub would.
+
+    Two shapes only -- a bare context lookup, and lookups joined by `||`,
+    where an unset or empty context value is falsy and the chain yields
+    the first truthy one (the empty string if there is none). Anything
+    else raises, so a group expression that grew a function call or a
+    comparison fails here loudly instead of being quietly mis-evaluated
+    into a passing result.
+    """
+
+    def one(match: re.Match[str]) -> str:
+        for operand in (part.strip() for part in match.group(1).split("||")):
+            assert _CONTEXT_LOOKUP_RE.fullmatch(operand), (
+                f"{operand!r} is not a plain `github.*` context lookup -- "
+                "this evaluator understands lookups and `||` fallbacks "
+                "between them, and refuses to guess at anything else"
+            )
+            value = context.get(operand, "")
+            if value:
+                return value
+        return ""
+
+    return _PLACEHOLDER_RE.sub(one, expression)
+
+
+def _push_context(workflow_name: str, run_id: str) -> dict[str, str]:
+    """A push to `main`. `github.head_ref` is empty for every event that
+    is not a pull request -- GitHub's own documented behaviour, and the
+    hinge the whole expression turns on."""
+    return {
+        "github.workflow": workflow_name,
+        "github.head_ref": "",
+        "github.ref": "refs/heads/main",
+        "github.run_id": run_id,
+    }
+
+
+def _pull_request_context(
+    workflow_name: str, branch: str, run_id: str
+) -> dict[str, str]:
+    return {
+        "github.workflow": workflow_name,
+        "github.head_ref": branch,
+        "github.ref": "refs/pull/7/merge",
+        "github.run_id": run_id,
+    }
+
+
+def test_the_group_evaluator_reproduces_the_trap_it_exists_to_catch() -> None:
+    """Positive control. `${{ github.ref }}` -- the shorthand this change
+    had to avoid -- must come back *identical* for two different pushes to
+    `main`, which is exactly what would let the second cancel the first.
+    An evaluator that could not show that could not be trusted to show
+    the real expression avoiding it."""
+    naive = "${{ github.ref }}"
+    assert _render_group(naive, _push_context("Quality", "1")) == _render_group(
+        naive, _push_context("Quality", "2")
+    )
+
+    chosen = "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
+    assert _render_group(chosen, _push_context("Quality", "1")) != _render_group(
+        chosen, _push_context("Quality", "2")
+    )
+
+
+def _pull_request_workflows() -> list[Path]:
+    """Every workflow that runs on a pull request -- derived from the
+    trigger each file declares, never a list of names. The plan for this
+    change named five and there were six: `visuals.yml` runs on pull
+    requests too, and pays a real browser download to render a commit
+    already superseded."""
+    return [
+        workflow
+        for workflow in _workflow_files()
+        if "pull_request"
+        in workflow_event_names(safe_load(workflow.read_text(encoding="utf-8")) or {})
+    ]
+
+
+def test_the_pull_request_sweep_actually_matches_something() -> None:
+    """The same guard `test_the_externally_dispatched_sweep_actually_
+    matches_something` puts on its own sweep: a parametrisation that
+    silently found nothing would report green while checking nothing."""
+    found = [workflow.name for workflow in _pull_request_workflows()]
+    assert len(found) >= 6, (
+        f"only {found} were detected as pull-request-triggered -- either "
+        "they really are gone, or `workflow_event_names` has stopped "
+        "recognising the trigger"
+    )
+
+
+@pytest.mark.parametrize("workflow", _pull_request_workflows(), ids=lambda p: p.name)
+def test_a_workflow_that_runs_on_pull_requests_cancels_what_a_newer_push_replaced(
+    workflow: Path,
+) -> None:
+    """Two pushes to the same pull-request branch share one group, so the
+    older run is cancelled: the commit it was checking is not the one
+    that will be merged."""
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    concurrency = loaded.get("concurrency")
+    assert isinstance(concurrency, dict), (
+        f"{workflow.name} runs on pull requests and declares no "
+        "concurrency group -- every push to a branch under review starts a "
+        "full chain of checks on a commit the next push replaces"
+    )
+    assert concurrency.get("cancel-in-progress") is True, (
+        f"{workflow.name} declares a group but does not cancel, so a "
+        "superseded run is queued rather than dropped -- the minutes are "
+        "spent either way"
+    )
+
+    group = concurrency["group"]
+    name = str(loaded["name"])
+    first = _render_group(group, _pull_request_context(name, "feature-x", "2001"))
+    second = _render_group(group, _pull_request_context(name, "feature-x", "2002"))
+    assert first == second, (
+        f"{workflow.name}'s group is not stable across two runs of the "
+        f"same pull-request branch ({first!r} then {second!r}), so a newer "
+        "push cancels nothing"
+    )
+
+    other_branch = _render_group(
+        group, _pull_request_context(name, "feature-y", "2003")
+    )
+    assert other_branch != first, (
+        f"{workflow.name} puts two different pull-request branches in one "
+        "group -- opening a second pull request would cancel the checks on "
+        "the first"
+    )
+
+
+@pytest.mark.parametrize("workflow", _pull_request_workflows(), ids=lambda p: p.name)
+def test_a_push_outside_a_pull_request_can_never_be_cancelled(
+    workflow: Path,
+) -> None:
+    """The half that is not about minutes at all.
+
+    Every commit that reaches `main` is verified for itself, so no push to
+    `main` may ever be cancelled by a later one -- and the same holds for
+    a scheduled or hand-dispatched run, which nothing supersedes either.
+    Evaluated, not read: the group these workflows use falls back to
+    `github.run_id` whenever `github.head_ref` is empty, and
+    `github.run_id` is unique per run, so no two such runs can share a
+    group and `cancel-in-progress` has nothing to act on.
+    """
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    group = loaded["concurrency"]["group"]
+    name = str(loaded["name"])
+
+    first = _render_group(group, _push_context(name, "1001"))
+    second = _render_group(group, _push_context(name, "1002"))
+    assert first != second, (
+        f"{workflow.name} puts two pushes to main in the same concurrency "
+        f"group ({first!r}) while cancelling in progress -- a second push "
+        "would cancel the checks on the commit before it, and that commit "
+        "would reach production verified by nothing, with no red anywhere "
+        "(D-25)"
+    )
+
+    pull_request = _render_group(
+        group, _pull_request_context(name, "feature-x", "1003")
+    )
+    assert pull_request != first, (
+        f"{workflow.name} puts a push to main and a pull-request run in "
+        "the same group -- opening a pull request would cancel main's own "
+        "checks"
+    )
+
+
+def test_two_workflows_never_share_a_concurrency_group() -> None:
+    """Concurrency groups are repository-wide, not per workflow: without
+    something workflow-specific in the key, the six blocks above would
+    cancel *each other* on the same branch, and five of the six checks on
+    a pull request would simply stop happening. `github.workflow` is what
+    keeps them apart -- the same reason deploy.yml's own group already
+    carries it."""
+    rendered: dict[str, str] = {}
+    for workflow in _pull_request_workflows():
+        loaded = safe_load(workflow.read_text(encoding="utf-8"))
+        rendered[workflow.name] = _render_group(
+            loaded["concurrency"]["group"],
+            _pull_request_context(str(loaded["name"]), "feature-x", "2001"),
+        )
+    assert len(set(rendered.values())) == len(rendered), (
+        f"two pull-request workflows render the same group: {rendered}"
+    )
+
+
+# ------------------------------------------------------------------ #
+# Phase 8, task 5: the two triggers task 3 narrowed that nothing held.
+#
+# Task 3 made four trigger changes. Change A (the monitor's event guard)
+# and change D (branch-scoped cancellation) are pinned above. Changes B
+# and C were pinned by nothing at all, and the phase's own bilan (4.7)
+# wrote that down rather than fixing it. This section closes it. Neither
+# block below touches a workflow file: both workflows are correct, they
+# were merely unguarded.
+#
+# Change B (`validate-data.yml`'s `push: branches: [main]`) is the
+# smaller one. Change C is the one that can fail silently, and the reason
+# is worth stating precisely, because it is *not* the reason
+# `paths-ignore:` was chosen over `paths:`.
+#
+# That choice is about the filter's *direction*, and it is right: a path
+# left out of a `paths-ignore:` list merely runs the workflow when it did
+# not strictly have to, while a path left out of a `paths:` list
+# publishes a stale bundle in silence (D-25). But the direction protects
+# only the consequence of *forgetting* an entry. It says nothing about
+# the entries that are there. Each one is an assertion -- "nothing under
+# this path can reach the deployed bundle" -- and the day something under
+# `config/` or `site/` becomes an input to that bundle, `deploy.yml`
+# stops firing for changes to it, with nothing red anywhere. That is the
+# D-25 failure the direction was chosen to avoid, reintroduced through
+# the list's contents rather than through its direction.
+#
+# So what is pinned below is the *relationship*, not the list. "The list
+# still holds these ten strings" would detect an edit and nothing else --
+# and it would pass, green, on the exact day the bundle started reading
+# `config/`. What is asserted instead is that every path the list ignores
+# really is unreachable from the deploy build, with the build's inputs
+# *derived* from what produces it: `app/package.json`'s own copy scripts,
+# `app/src/content/registry.ts`'s publication allowlist, and the `tools/`
+# commands `deploy.yml` itself runs.
+# ------------------------------------------------------------------ #
+
+#: The repository's default branch. GitHub starts `schedule:` and
+#: `repository_dispatch:` only from it, a pull request is merged into it,
+#: and it is the one branch a `push:` trigger in this repository is meant
+#: to fire on -- see `secret-workflow-monitor.yml`'s own head-branch
+#: question, which turns on the same fact.
+DEFAULT_BRANCH = "main"
+
+
+# ------------------------------------------------------------------ #
+# Change B: a push to a branch under review must not run the same checks
+# twice.
+#
+# Pinned as that property, not as the line that implements it. Without a
+# branch filter, a push to a branch with an open pull request matches
+# `push:` *and* `pull_request:` -- the same job, on the same commit, over
+# the same tree, running the same command, where the second run can only
+# ever agree with the first. Five workflows here declare both events; the
+# sweep below finds them from their own triggers rather than naming them,
+# so a sixth is covered the day it is written.
+# ------------------------------------------------------------------ #
+
+
+def _push_trigger_fires_on(push: Any, branch: str) -> bool:
+    """Whether GitHub would start a workflow whose `on: push:` block is
+    `push` for a push to `branch`.
+
+    Two shapes only -- no options at all (`push:` alone, which matches
+    every branch) and a `branches:` list of plain branch names -- and
+    anything else raises rather than being guessed at, the same
+    discipline `_render_group` above applies to a concurrency expression.
+    In particular a wildcard pattern is refused rather than evaluated:
+    GitHub's own glob syntax is not `fnmatch`'s (`*` does not cross a `/`
+    there, `**` does), no branch filter in this repository uses one
+    today, and a filter that quietly meant something slightly different
+    from what this reader thought is exactly the silence these tests
+    exist to remove.
+
+    `paths:` is deliberately not consulted. The property below is the
+    stronger one -- this trigger must not fire for a non-default branch
+    at all -- so whether the two path filters happen to agree on a given
+    commit never enters into it.
+    """
+    if push is None:
+        return True
+    assert isinstance(push, dict), (
+        f"this workflow's `push:` trigger is {push!r}, not a mapping of "
+        "options -- this reader understands `push:` with no options and "
+        "`push:` with a `branches:` list, and refuses to guess at "
+        "anything else"
+    )
+    assert "branches-ignore" not in push, (
+        "this workflow filters its `push:` trigger with "
+        "`branches-ignore:` -- this reader only evaluates `branches:`, "
+        "and would silently report the wrong answer for the other form"
+    )
+    patterns = push.get("branches")
+    if patterns is None:
+        return True
+    assert isinstance(patterns, list) and patterns, (
+        f"`push: branches:` is {patterns!r}, not a non-empty list of branch names"
+    )
+    names = [str(pattern) for pattern in patterns]
+    for name in names:
+        assert not any(character in name for character in "*?[!+"), (
+            f"the branch filter {name!r} carries a glob pattern -- "
+            "GitHub's filter syntax is not `fnmatch`'s, so this reader "
+            "refuses to evaluate it rather than answer plausibly and "
+            "wrongly"
+        )
+    return branch in names
+
+
+def test_the_branch_filter_reader_sees_an_unfiltered_push_for_what_it_is() -> None:
+    """Positive control, on probes rather than on the real files: the
+    reader has to tell an unfiltered `push:` apart from a filtered one,
+    or it proves nothing about either.
+
+    The first two shapes are the before and after of change B itself --
+    `push:` carrying only a `paths:` list fires on every branch, which is
+    the double run; the same block with `branches: [main]` added does
+    not.
+    """
+    unfiltered = {"paths": ["data/**.yml"]}
+    assert _push_trigger_fires_on(unfiltered, "feature-x") is True
+    assert _push_trigger_fires_on(unfiltered, DEFAULT_BRANCH) is True
+
+    filtered = {"branches": [DEFAULT_BRANCH], "paths": ["data/**.yml"]}
+    assert _push_trigger_fires_on(filtered, "feature-x") is False
+    assert _push_trigger_fires_on(filtered, DEFAULT_BRANCH) is True
+
+    assert _push_trigger_fires_on(None, "feature-x") is True
+
+
+def _workflows_triggered_by_both_push_and_pull_request() -> list[Path]:
+    """Every workflow that declares both events -- derived from each
+    file's own trigger block, never a list of names, the same shape
+    `_pull_request_workflows` above uses. A workflow that declares only
+    one of the two cannot run twice on one commit and is not this
+    property's business."""
+    found: list[Path] = []
+    for workflow in _workflow_files():
+        events = workflow_event_names(
+            safe_load(workflow.read_text(encoding="utf-8")) or {}
+        )
+        if {"push", "pull_request"} <= events:
+            found.append(workflow)
+    return found
+
+
+def test_the_double_run_sweep_actually_matches_something() -> None:
+    """The same guard every other sweep in this module carries: a
+    parametrisation that silently found nothing would report green while
+    checking nothing at all."""
+    found = [
+        workflow.name
+        for workflow in _workflows_triggered_by_both_push_and_pull_request()
+    ]
+    assert "validate-data.yml" in found, (
+        f"validate-data.yml is not among the workflows detected as "
+        f"declaring both `push` and `pull_request` ({found}) -- either "
+        "its trigger changed, or `workflow_event_names` has stopped "
+        "recognising one of the two events, and change B is then held by "
+        "nothing again"
+    )
+    assert len(found) >= 5, (
+        f"only {found} were detected as declaring both events -- five did "
+        "at the end of phase 8, so either they really are gone or the "
+        "sweep has stopped seeing them"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow",
+    _workflows_triggered_by_both_push_and_pull_request(),
+    ids=lambda p: p.name,
+)
+def test_a_push_to_a_branch_under_review_does_not_run_the_same_checks_twice(
+    workflow: Path,
+) -> None:
+    """Phase 8, task 3, change B, pinned as its property.
+
+    A branch with an open pull request receives pushes. Each one matches
+    `pull_request:` already; if it also matches `push:`, the workflow
+    runs twice on the same commit, over the same tree, with the same
+    command, and the second run can only ever agree with the first. So
+    the `push:` half must not fire for a branch that is not the default
+    one.
+    """
+    triggers = workflow_triggers(safe_load(workflow.read_text(encoding="utf-8")))
+    assert not _push_trigger_fires_on(triggers["push"], "feature-x"), (
+        f"{workflow.name}'s `push:` trigger fires on a branch that is not "
+        f"{DEFAULT_BRANCH!r}, and the workflow also runs on "
+        "`pull_request:` -- so every push to a branch under review starts "
+        "this whole workflow twice on one commit, and the second run can "
+        "only agree with the first"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow",
+    _workflows_triggered_by_both_push_and_pull_request(),
+    ids=lambda p: p.name,
+)
+def test_narrowing_the_push_trigger_left_the_default_branch_covered(
+    workflow: Path,
+) -> None:
+    """The other half, and the reason the test above is not simply
+    "declare no `push:` at all".
+
+    The `push:` half is what checks a commit that reaches production
+    without ever having been in a pull request -- a workflow's own
+    dispatch, a direct push, a merge queue. A branch filter narrowed one
+    step further (to a branch that does not exist, or to none) would
+    satisfy the property above perfectly while deleting that coverage in
+    silence.
+    """
+    triggers = workflow_triggers(safe_load(workflow.read_text(encoding="utf-8")))
+    assert _push_trigger_fires_on(triggers["push"], DEFAULT_BRANCH), (
+        f"{workflow.name} no longer runs on a push to {DEFAULT_BRANCH!r} "
+        "-- change B narrowed this trigger to the default branch, not "
+        "away from it, and a commit reaching production is checked by "
+        "this `push:` half or by nothing"
+    )
+
+
+# ------------------------------------------------------------------ #
+# Change C: every path `deploy.yml` ignores really is unreachable from
+# the bundle it deploys.
+#
+# The build's inputs are derived, never listed. Three readers, one per
+# mechanism by which a repository path becomes an input to this build:
+#
+#   1. `_repository_paths_reached_from` -- a file under `app/` that names
+#      a path outside `app/`. Every copy script `package.json`'s own
+#      `prebuild` runs works this way (`resolve(__dirname, '..', '..',
+#      ...)`), and so would an app source file importing across the
+#      boundary.
+#   2. `_published_handbook_paths` -- the one input directory whose
+#      contents are filtered rather than copied wholesale. `docs/` is
+#      reached by `copy-handbook.mjs`, but only the pages
+#      `app/src/content/registry.ts` names actually ship, which is the
+#      whole reason `docs/superpowers/**` can sit in the ignore list at
+#      all.
+#   3. `_repository_paths_in_source` -- the `tools/` commands `deploy.yml`
+#      runs, read from the entry point each `uv run convener-...` names in
+#      `tools/pyproject.toml` and parsed for the `repo_root() / ...`
+#      paths each one builds.
+#
+# WHAT THIS DOES NOT COVER, stated rather than glossed:
+#
+#   * A path reached through a *variable* rather than a literal --
+#     `resolve(ROOT, someName)` on the JavaScript side, `root / name` on
+#     the Python side. One level of constant folding is done (a `const`
+#     bound to a `resolve(__dirname, ...)`, a local bound to
+#     `repo_root() / ...`); nothing beyond that is followed.
+#   * On the Python side, only the *entry function itself* is read, not
+#     the helpers it calls. Every path `deploy.yml`'s three commands
+#     build is constructed in the entry function today; one moved into a
+#     helper would leave this reader's sight. `tools/` and `data/` stay
+#     covered regardless (they are inputs by other routes below), but a
+#     *fourth* directory a command started reading from a helper would
+#     not be seen.
+#   * An input reached by an npm dependency's own configuration rather
+#     than by this repository's source -- a bundler alias, a PostCSS or
+#     Tailwind `content:` glob pointing outside `app/`.
+#     `tailwind.config.ts` and the config files beside it *are* scanned,
+#     so a literal there is seen; a path assembled inside a dependency is
+#     not.
+#   * `app/tests/**` and `app/public/**` are not scanned: neither is
+#     compiled into the bundle (`public/` is written by the copy scripts,
+#     not read by them). A build that started reading a repository path
+#     from a test helper would not be seen -- and would not reach the
+#     bundle either.
+#   * Runtime reads. `paths-ignore:` is about what changing a file does
+#     to the *build*; a page fetching a URL at runtime is a different
+#     question, answered elsewhere.
+#
+# What that adds up to: this is a strong detector of the mechanisms this
+# build actually uses to reach outside `app/`, not a proof of
+# unreachability. It fails in the safe direction -- a directory whose
+# filter it cannot derive is treated as read whole, which raises a false
+# alarm for a human rather than passing quietly.
+# ------------------------------------------------------------------ #
+
+#: A `/* ... */` block comment. Stripped before anything is extracted:
+#: this repository's source carries long explanatory headers, and
+#: `app/vite.config.ts`'s own comments name `site/src/style.css` several
+#: times over without the build ever reading it.
+_JS_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
+
+#: A `//` line comment. The lookbehind keeps `https://` and a `//` inside
+#: a quoted path from being read as the start of one.
+_JS_LINE_COMMENT_RE = re.compile(r"(?m)(?<![:'\"\w])//[^\n]*")
+
+#: One single- or double-quoted string literal, on one line.
+_JS_STRING_RE = re.compile(r"'([^'\n]*)'|\"([^\"\n]*)\"")
+
+#: A `resolve(...)`/`join(...)` call with no nested call inside it -- the
+#: shape every copy script under `app/scripts/` uses to reach out of
+#: `app/`, one path segment per argument.
+_JS_PATH_CALL_RE = re.compile(r"\b(?:resolve|join)\(([^()]*)\)")
+
+#: `const NAME = resolve(...)`, so a path assembled in two steps (a repo
+#: root bound once, then joined) is followed one level.
+_JS_PATH_BINDING_RE = re.compile(
+    r"\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:resolve|join)\(([^()]*)\)"
+)
+
+#: `uv run convener-something` inside one of `deploy.yml`'s own `run:` blocks.
+_UV_RUN_RE = re.compile(r"\buv run (convener-[a-z0-9-]+)")
+
+#: The files under `app/` that the deploy build compiles or executes.
+#: `tests/` and `public/` are deliberately absent -- see this section's
+#: own header for why, and for what that costs.
+_APP_BUILD_TREES = ("scripts", "src")
+_APP_BUILD_FILES = (
+    "package.json",
+    "index.html",
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "tsconfig.json",
+    "tsconfig.app.json",
+    "tsconfig.node.json",
+)
+
+
+def _strip_js_comments(text: str) -> str:
+    return _JS_LINE_COMMENT_RE.sub("", _JS_BLOCK_COMMENT_RE.sub("", text))
+
+
+def _js_string_literal(token: str) -> str | None:
+    match = _JS_STRING_RE.fullmatch(token.strip())
+    if match is None:
+        return None
+    single, double = match.group(1), match.group(2)
+    return single if single is not None else double
+
+
+def _joined_path(
+    here: Path, arguments: list[str], bases: dict[str, Path]
+) -> Path | None:
+    """The path a `resolve(...)`/`join(...)` argument list denotes, or
+    `None` when its first argument is not a base this reader knows.
+
+    Segments are consumed until the first argument that is not a string
+    literal, so `resolve(__dirname, '..', '..', name)` yields the
+    repository root rather than a guess at what `name` holds -- the safe
+    direction: a wider input, never a narrower one.
+    """
+    if not arguments:
+        return None
+    head = arguments[0].strip()
+    if head == "__dirname":
+        base = here
+    elif head in bases:
+        base = bases[head]
+    else:
+        return None
+    for token in arguments[1:]:
+        segment = _js_string_literal(token)
+        if segment is None:
+            break
+        base = base / segment
+    return base.resolve()
+
+
+def _repository_paths_reached_from(
+    source: str, here: Path, *, root: Path, inside: Path
+) -> set[str]:
+    """Every path outside `inside` that `source` -- a file sitting in
+    `here` -- names, as paths relative to `root`.
+
+    A plain `root`/`inside`/`here` argument rather than the real
+    repository baked in, so the probe test below can exercise this exact
+    reader against a temporary tree instead of against `app/` -- the same
+    reason `_workflow_files_in` above takes a directory.
+    """
+    text = _strip_js_comments(source)
+    bases: dict[str, Path] = {}
+    for match in _JS_PATH_BINDING_RE.finditer(text):
+        bound = _joined_path(here, match.group(2).split(","), bases)
+        if bound is not None:
+            bases[match.group(1)] = bound
+
+    absolute: set[Path] = set()
+    for match in _JS_PATH_CALL_RE.finditer(text):
+        joined = _joined_path(here, match.group(1).split(","), bases)
+        if joined is not None:
+            absolute.add(joined)
+    # The catch-all, for every shape that is not a segment list: any
+    # literal that climbs at all, resolved against the file that holds
+    # it. This is what would see `import '../../services/relay.mjs'`, or
+    # a stylesheet's own `url('../../fonts/x.woff2')`.
+    for match in _JS_STRING_RE.finditer(text):
+        single, double = match.group(1), match.group(2)
+        literal = single if single is not None else double
+        if literal and "../" in literal:
+            absolute.add((here / literal).resolve())
+
+    reached: set[str] = set()
+    for candidate in absolute:
+        if candidate == inside or inside in candidate.parents:
+            continue
+        try:
+            relative = candidate.relative_to(root)
+        except ValueError:
+            continue
+        if relative == Path("."):
+            continue
+        reached.add(relative.as_posix())
+    return reached
+
+
+def test_the_input_reader_sees_a_new_repository_input_for_what_it_is(
+    tmp_path: Path,
+) -> None:
+    """Positive control, on a probe tree rather than on the real `app/`:
+    the reader has to *see* a path under `config/`, `site/` or
+    `services/` becoming an input, or its silence about the real build
+    means nothing.
+
+    Each probe is one of the three shapes a copy script could plausibly
+    take, plus the decoy that made this reader strip comments in the
+    first place: `app/vite.config.ts` names `site/src/style.css` in its
+    own prose more than once, and a reader that counted that would fail
+    on a correct repository -- the fastest way for a test like this to be
+    deleted rather than believed.
+    """
+    here = tmp_path / "app" / "scripts"
+    here.mkdir(parents=True)
+    inside = tmp_path / "app"
+
+    def reached(source: str, where: Path = here) -> set[str]:
+        return _repository_paths_reached_from(
+            source, where, root=tmp_path, inside=inside
+        )
+
+    segments = "const SRC = resolve(__dirname, '..', '..', 'config', 'x.yml');"
+    assert reached(segments) == {"config/x.yml"}
+
+    two_step = (
+        "const ROOT = resolve(__dirname, '..', '..');\n"
+        "const SRC = resolve(ROOT, 'site', 'tokens.css');\n"
+    )
+    assert reached(two_step) == {"site/tokens.css"}
+
+    imported = "import { relay } from '../../services/signup-relay/api.mjs';"
+    assert reached(imported) == {"services/signup-relay/api.mjs"}
+
+    decoy = (
+        "/* styled by `site/src/style.css`, which the event page already\n"
+        " * loads -- see ../../site for the whole story. */\n"
+        "import { x } from './local.mjs';\n"
+    )
+    assert reached(decoy) == set(), (
+        "a path named only in a comment was read as a build input -- this "
+        "reader would then fail on a correct repository, which is how a "
+        "test like this one gets deleted instead of believed"
+    )
+
+    stays_inside = "import { encrypt } from '../../signup/encrypt';"
+    assert reached(stays_inside, inside / "src" / "islands" / "signup") == set(), (
+        "a relative import that never leaves `app/` was counted as a "
+        "repository input -- `app/src/islands/` is full of them"
+    )
+
+
+def _app_build_sources() -> list[Path]:
+    """Every file under `app/` the deploy build compiles or executes."""
+    files = [ROOT / "app" / name for name in _APP_BUILD_FILES]
+    for tree in _APP_BUILD_TREES:
+        files.extend(
+            sorted(path for path in (ROOT / "app" / tree).rglob("*") if path.is_file())
+        )
+    present = [path for path in files if path.is_file()]
+    assert len(present) > 50, (
+        f"only {len(present)} files were found under app/ to scan for "
+        "build inputs -- the tree moved, and this whole check would then "
+        "pass by having nothing to look at"
+    )
+    return present
+
+
+def _slice_between(source: str, start: str, end: str) -> str:
+    """The text strictly between `start`'s first occurrence and the next
+    `end` after it -- the same isolation
+    `app/scripts/handbook-registry.mjs` performs on this exact file, so a
+    decoy path in a *different* export, or in the prose around it, is
+    never even looked at."""
+    opened = source.find(start)
+    if opened == -1:
+        return ""
+    closed = source.find(end, opened + len(start))
+    if closed == -1:
+        return ""
+    return source[opened + len(start) : closed]
+
+
+def _published_handbook_paths() -> set[str]:
+    """Every file under `docs/` that actually reaches the bundle, as
+    repository-relative paths.
+
+    `copy-handbook.mjs` reaches `docs/` as a whole, but publishes only
+    what `app/src/content/registry.ts` names -- `CONTENT_REGISTRY`'s own
+    `file:` values and the `PUBLIC_ASSETS` array beside them. That filter
+    is the entire reason `docs/superpowers/**` can sit in `deploy.yml`'s
+    ignore list without contradicting the fact that `docs/` is an input.
+
+    Read from the registry's own source text with the two markers and the
+    two expressions `handbook-registry.mjs::publishedPaths` uses, because
+    that is what actually decides what ships.
+    `app/tests/copy-handbook.test.ts` pins the JavaScript half against the
+    real imported `CONTENT_REGISTRY` on every run; this is the same
+    allowlist, read the same way, on the Python side.
+    """
+    source = (ROOT / "app" / "src" / "content" / "registry.ts").read_text(
+        encoding="utf-8"
+    )
+    registry = _strip_js_comments(
+        _slice_between(source, "export const CONTENT_REGISTRY", "\n};")
+    )
+    assets = _strip_js_comments(
+        _slice_between(source, "export const PUBLIC_ASSETS", "\n];")
+    )
+    published = {
+        match.group(1) for match in re.finditer(r"\bfile:\s*'([^']+)'", registry)
+    }
+    published |= {match.group(1) for match in re.finditer(r"'([^']+)'", assets)}
+    assert len(published) > 50, (
+        f"only {len(published)} handbook paths were read out of "
+        "registry.ts -- the two markers no longer isolate the literals, "
+        "and `docs/` would then look far narrower an input than it is"
+    )
+    return {f"docs/{path}" for path in sorted(published)}
+
+
+def test_every_published_handbook_path_really_exists_under_docs() -> None:
+    """The registry reader's own non-vacuity check: a parse that returned
+    plausible-looking rubbish would still be a set of strings, and every
+    comparison below would still run. Each path must be a real file --
+    which is also what `copy-handbook.mjs` itself requires (a registered
+    page missing on disk throws from `cp` rather than being skipped)."""
+    missing = [
+        path
+        for path in sorted(_published_handbook_paths())
+        if not (ROOT / path).is_file()
+    ]
+    assert not missing, (
+        f"registry.ts names handbook pages that do not exist: {missing} -- "
+        "either the parse above is picking up strings that are not file "
+        "paths, or the build is registering a page it cannot copy"
+    )
+
+
+def _deploy_entry_points() -> list[tuple[str, Callable[[], int]]]:
+    """Every `uv run convener-...` command `deploy.yml` runs, resolved through
+    `tools/pyproject.toml`'s own `[project.scripts]` table to the function
+    that command actually executes."""
+    scripts = tomllib.loads(
+        (ROOT / "tools" / "pyproject.toml").read_text(encoding="utf-8")
+    )["project"]["scripts"]
+    workflow = (ROOT / DEPLOY_WORKFLOW).read_text(encoding="utf-8")
+    resolved: list[tuple[str, Callable[[], int]]] = []
+    for command in sorted(set(_UV_RUN_RE.findall(workflow))):
+        assert command in scripts, (
+            f"deploy.yml runs `uv run {command}`, which "
+            "tools/pyproject.toml declares no entry point for -- the "
+            "workflow would fail at that step"
+        )
+        module_name, _, function_name = str(scripts[command]).partition(":")
+        function: Callable[[], int] = getattr(
+            importlib.import_module(module_name), function_name
+        )
+        resolved.append((command, function))
+    assert resolved, (
+        "no `uv run convener-...` command was found in deploy.yml -- the Python "
+        "half of the input derivation would then be empty and this whole "
+        "check would quietly narrow"
+    )
+    return resolved
+
+
+def _repository_paths_in_source(source: str, module: ModuleType) -> set[str]:
+    """Every `repo_root() / ...` path built in `source`, relative to the
+    repository root.
+
+    Only maximal `/` chains are reported: `root / "public-data" /
+    "survey-status.json"` yields the file, and the `root / "public-data"`
+    inside it is reported separately only where the source itself binds
+    it to a name. A segment that is a module-level constant
+    (`EVENTS_DIR`) is resolved through `module`; a segment this reader
+    cannot resolve stops the chain there, yielding the enclosing
+    directory rather than a guess -- again the safe direction, a wider
+    input rather than a narrower one.
+    """
+    tree = ast.parse(source)
+    ordered = sorted(
+        ast.walk(tree),
+        key=lambda node: (getattr(node, "lineno", 0), getattr(node, "col_offset", 0)),
+    )
+    divisions = [
+        node
+        for node in ordered
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div)
+    ]
+    nested = {id(node.left) for node in divisions}
+    rooted: dict[str, list[str]] = {}
+    found: set[str] = set()
+
+    def literal_segments(node: ast.expr) -> list[str] | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [node.value]
+        if isinstance(node, ast.Name):
+            value = getattr(module, node.id, None)
+            if isinstance(value, str | Path):
+                return Path(value).as_posix().split("/")
+        return None
+
+    def segments(node: ast.expr) -> list[str] | None:
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "repo_root"
+        ):
+            return []
+        if isinstance(node, ast.Name) and node.id in rooted:
+            return list(rooted[node.id])
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            left = segments(node.left)
+            if left is None:
+                return None
+            right = literal_segments(node.right)
+            if right is None:
+                return None
+            return left + right
+        return None
+
+    for node in ordered:
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
+            bound = segments(node.value)
+            if bound is not None:
+                rooted[node.targets[0].id] = bound
+        if (
+            isinstance(node, ast.BinOp)
+            and isinstance(node.op, ast.Div)
+            and id(node) not in nested
+        ):
+            built = segments(node)
+            if built:
+                found.add("/".join(built))
+    return found
+
+
+def test_the_python_input_reader_sees_a_command_reading_a_new_directory() -> None:
+    """Positive control for the third reader, on a probe source rather
+    than on the real commands.
+
+    `config/integrations.yml` is not an idle example: `convener_ops.cli`
+    already reads exactly that file, from `check_config` -- a command
+    `deploy.yml` does not run, which is precisely why `config/**` may sit
+    in the ignore list today. The day one of the three commands it *does*
+    run starts reading it, this reader is what notices."""
+    probe = textwrap.dedent(
+        """
+        def probe() -> int:
+            root = repo_root()
+            declaration = root / "config" / "integrations.yml"
+            events = root / EVENTS_DIR
+            return 0
+        """
+    )
+    found = _repository_paths_in_source(probe, cli_module)
+    assert "config/integrations.yml" in found, (
+        f"a command reading config/integrations.yml went unseen: {found}"
+    )
+    assert "data/events" in found, (
+        "a path segment held in a module constant went unresolved: "
+        f"{found} -- `EVENTS_DIR` is how `certificates_public_data` names "
+        "the directory it reads, so losing that resolution loses `data/` "
+        "from the derived inputs"
+    )
+
+
+def _bundle_inputs() -> set[str]:
+    """Every repository path the deploy build reads, as repository-
+    relative paths where each stands for itself and everything beneath
+    it.
+
+    `docs/` is the one directory reached wholesale and published
+    selectively, so it is replaced by the pages `registry.ts` names. That
+    substitution is guarded: if any file other than `copy-handbook.mjs`
+    ever reaches `docs/`, the filter no longer describes what happens to
+    that directory and this fails rather than quietly keeping the
+    narrower answer.
+    """
+    inputs: set[str] = set()
+    docs_readers: set[str] = set()
+    for source in _app_build_sources():
+        for reached in _repository_paths_reached_from(
+            source.read_text(encoding="utf-8"),
+            source.parent,
+            root=ROOT,
+            inside=ROOT / "app",
+        ):
+            if reached == "docs":
+                docs_readers.add(source.relative_to(ROOT).as_posix())
+            else:
+                inputs.add(reached)
+
+    assert docs_readers == {"app/scripts/copy-handbook.mjs"}, (
+        f"`docs/` is reached by {sorted(docs_readers)} -- this check knows "
+        "one filter over that directory, `copy-handbook.mjs`'s own "
+        "registry allowlist, and it is only that filter which lets "
+        "`docs/superpowers/**` sit in deploy.yml's ignore list. A second "
+        "reader of `docs/`, or none at all, means the substitution below "
+        "no longer describes the build"
+    )
+    inputs |= _published_handbook_paths()
+
+    for _, function in _deploy_entry_points():
+        inputs |= _repository_paths_in_source(
+            textwrap.dedent(inspect.getsource(function)),
+            sys.modules[function.__module__],
+        )
+
+    # The directories the job itself works in: it runs `npm` in one and
+    # `uv run` in the other, so the whole of each is an input to what
+    # those commands do.
+    workflow = safe_load((ROOT / DEPLOY_WORKFLOW).read_text(encoding="utf-8"))
+    for step in workflow["jobs"]["build"]["steps"]:
+        directory = step.get("working-directory")
+        if directory:
+            inputs.add(str(directory).strip("/"))
+    return inputs
+
+
+def test_the_bundle_input_sweep_finds_every_source_the_build_actually_reads() -> None:
+    """Non-vacuity, and the sharpest form of it available here: the
+    derived set is checked against what `deploy.yml`'s own header comment
+    *claims* the build reads. The comment and the derivation are written
+    from opposite ends -- one by hand, one out of `package.json`,
+    `registry.ts` and `pyproject.toml` -- so agreement between them is
+    worth something, and a derivation that quietly stopped finding
+    anything could not fake it."""
+    inputs = _bundle_inputs()
+    for expected in (
+        "fonts",
+        "keys/events",
+        "keys/signing",
+        "public-data/certificates-public.json",
+        "public-data/survey-status.json",
+        "data/speakers.yml",
+        "data/config.yml",
+        "data/events",
+        "app",
+        "tools",
+    ):
+        assert expected in inputs, (
+            f"{expected!r} is a documented input of the deploy build and "
+            f"the derivation did not find it -- one of the three readers "
+            "has stopped seeing its own mechanism, and every assertion "
+            "below then checks less than it claims"
+        )
+    handbook = {path for path in inputs if path.startswith("docs/")}
+    assert len(handbook) > 50, (
+        f"only {len(handbook)} handbook pages were derived as inputs -- "
+        "`docs/` is reached wholesale and filtered by the registry, and a "
+        "filter that came back near-empty would make every `docs/...` "
+        "comparison below vacuous"
+    )
+
+
+def _deploy_paths_ignore() -> list[str]:
+    workflow = safe_load((ROOT / DEPLOY_WORKFLOW).read_text(encoding="utf-8"))
+    ignored = workflow_triggers(workflow)["push"]["paths-ignore"]
+    assert isinstance(ignored, list) and ignored, (
+        f"deploy.yml's `push: paths-ignore:` is {ignored!r} -- change C "
+        "was reverted, or the filter changed direction to `paths:`, which "
+        "is the D-25 shape this workflow refuses (see its own header)"
+    )
+    return [str(entry) for entry in ignored]
+
+
+def _ignored_subtree(entry: str) -> str:
+    """The repository path one `paths-ignore:` entry covers, as a subtree
+    root.
+
+    Two shapes only -- `some/where/**` and a plain path carrying no
+    wildcard at all -- and anything else raises rather than being guessed
+    at. A pattern this reader mis-read would report a clean result about
+    a filter that means something else, which is the whole failure mode
+    being closed here.
+    """
+    stem = entry[: -len("/**")] if entry.endswith("/**") else entry
+    assert not any(character in stem for character in "*?[!"), (
+        f"the ignore entry {entry!r} is not a plain path or a `dir/**` "
+        "subtree -- this reader refuses to evaluate a pattern shape it "
+        "was not written for rather than answer plausibly and wrongly"
+    )
+    return stem
+
+
+def _overlaps(one: str, other: str) -> bool:
+    """Whether two repository subtrees can hold a file in common. A plain
+    file path is simply a subtree of one member, which makes this one
+    rule rather than four."""
+    return one == other or one.startswith(f"{other}/") or other.startswith(f"{one}/")
+
+
+def test_the_overlap_rule_reproduces_the_distinction_it_exists_to_draw() -> None:
+    """Positive control. The whole of change C's correctness sits on one
+    distinction: `docs/superpowers` and `docs/governance/board-rules.md`
+    do *not* overlap even though both live under `docs/`, while `config`
+    and `config/integrations.yml` do. A rule that could not draw that
+    line would either pass on a broken list or fail on the correct one."""
+    assert not _overlaps("docs/superpowers", "docs/governance/board-rules.md")
+    assert not _overlaps("site", "site-map.md")
+    assert _overlaps("config", "config/integrations.yml")
+    assert _overlaps("data/events", "data")
+    assert _overlaps("cspell.json", "cspell.json")
+
+
+@pytest.mark.parametrize("entry", _deploy_paths_ignore())
+def test_no_path_the_deploy_ignores_can_reach_the_deployed_bundle(entry: str) -> None:
+    """Phase 8, task 3, change C, pinned as the relationship rather than
+    as the list.
+
+    Each entry of `paths-ignore:` asserts something about this
+    repository: that nothing under it is an input to the bundle
+    `deploy.yml` publishes. Should that stop being true -- an app source
+    importing from `config/`, a copy script reading `site/`, a `tools/`
+    command the workflow runs opening a file under either -- the workflow
+    silently stops firing for changes to that path, and a stale site is
+    published with nothing red anywhere. That is the D-25 failure
+    `paths-ignore:` was chosen to avoid, arriving through the list's
+    contents rather than through its direction, which is exactly why the
+    direction alone does not cover it.
+    """
+    ignored = _ignored_subtree(entry)
+    reachable = sorted(path for path in _bundle_inputs() if _overlaps(ignored, path))
+    assert not reachable, (
+        f"deploy.yml ignores {entry!r}, but the deploy build reads "
+        f"{reachable} -- a commit touching that path would now publish "
+        "nothing, and no run would go red to say so. Either the input is "
+        "wrong and should leave the build, or this entry is wrong and "
+        "must leave the ignore list (D-25)"
+    )
+
+
+@pytest.mark.parametrize("entry", _deploy_paths_ignore())
+def test_every_ignored_path_still_names_something_in_this_repository(
+    entry: str,
+) -> None:
+    """The cheap half of the reverse direction.
+
+    An entry that names nothing is not dangerous -- `paths-ignore:` fails
+    safe, and a filter matching no file merely runs the workflow -- but
+    it is invisible: a typo, or a directory that has since been renamed,
+    leaves a line that reads like a decision and enforces nothing. Every
+    entry must still point at something real, including `.superpowers/**`,
+    which git does not track but which is present in a working tree.
+    """
+    assert (ROOT / _ignored_subtree(entry)).exists(), (
+        f"deploy.yml ignores {entry!r}, which nothing in this repository "
+        "matches -- the line reads as a decision and filters nothing; "
+        "either it is a typo or the path it named has moved"
+    )

@@ -2,6 +2,18 @@ name: Validate data
 
 on:
   push:
+    # Phase 8, task 3, change B: `main` only. Without a branch filter, a
+    # push to a branch with an open pull request fires this workflow
+    # twice -- once for `push`, once for `pull_request` -- on the same
+    # commit, the same tree and the same command, and the second run can
+    # only ever agree with the first.
+    #
+    # What that costs, named rather than left to be discovered: a push to
+    # a branch with *no* pull request open is no longer validated the
+    # moment it lands. It is validated when the pull request opens, which
+    # is before anything it carries can reach `main` -- the coverage that
+    # actually gates the merge is untouched.
+    branches: [main]
     paths:
       - 'data/**.yml'
       - 'tools/**'
@@ -10,6 +22,19 @@ on:
     paths:
       - 'data/**.yml'
       - 'tools/**'
+
+# Phase 8, task 3, change D: a newer push to a pull request supersedes
+# the commit an older run is still checking, so that run is cancelled --
+# grouped by the source branch, `github.head_ref`. That field is empty
+# for anything that is not a pull request, so a push to `main` falls
+# through to `github.run_id`, which is unique per run: nothing else can
+# join that group, so nothing can cancel it, and every commit reaching
+# production stays verified for itself. See quality.yml's own copy of
+# this block for the full reasoning, and why `github.ref` would be the
+# wrong expression.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   validate:

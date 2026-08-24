@@ -159,7 +159,8 @@ jobs:
       # a repository secret -- see this file's own "reads no repository
       # secret" test); `actions: write` is what lets it dispatch
       # `publish-vitrine.yml` afterwards. Both are the exact pair
-      # `sweep.yml`, `retention.yml` and the three certificate workflows
+      # `sweep-and-notify.yml`, `retention.yml` and the three certificate
+      # workflows
       # already carry for the identical reason: a push made with this
       # job's own token cannot fire another workflow's `push` trigger
       # (GitHub's recursion guard), so the commit alone would leave the

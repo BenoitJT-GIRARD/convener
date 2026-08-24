@@ -46,6 +46,25 @@
 # than hidden: a committed record legible without any CI running, plus a
 # second, independent schedule that reports on it for as long as any
 # schedule in this repository still runs at all.
+# A second record, watched the same way (phase 8, task 4)
+# --------------------------------------------------------
+# This job now asks the same question twice, about two different daily
+# jobs. The second is `data/actions-usage.yml`, written at the bottom of
+# `sweep-and-notify.yml`'s own daily job (05:00 UTC, so a healthy day's
+# record is already written by the time this checks it at 12:00, exactly
+# as with retention.yml's 06:11). That job is where the Actions *budget*
+# alarm lives, and an alarm hosted inside the job it watches cannot report
+# its own silence -- least of all when an exhausted minute budget, the
+# thing the alarm exists to warn about, is one of the reasons a scheduled
+# job stops running at all.
+#
+# The name below still says "retention" because the file is still
+# `retention-watchdog.yml` and every reference to it in this repository
+# uses that name. What it actually is, and has been since this second
+# check landed, is the one place that reports a daily record having gone
+# quiet -- and the paragraph above about what a watchdog inside its own
+# scheduler cannot catch applies to the second record exactly as it does
+# to the first.
 name: Retention liveness watchdog
 
 on:
@@ -73,5 +92,27 @@ jobs:
           version: '0.5.x'
           enable-cache: true
       - name: Check that the retention sweep ran recently
+        id: retention
         working-directory: tools
         run: uv run convener-check-retention-liveness
+      # Phase 8, task 4. The Actions budget alarm lives inside
+      # sweep-and-notify.yml's own daily job, and a control hosted inside
+      # the job it watches cannot report that job going quiet -- least of
+      # all when the thing it exists to warn about, an exhausted minute
+      # budget, is one of the reasons a job stops running at all. This is
+      # the second independent schedule that reads its committed record,
+      # exactly as the step above reads retention.yml's.
+      #
+      # A step, not a job and not a workflow: this job already runs, so
+      # the extra question is free. Its `permissions:` stay
+      # `contents: read` because this reads one committed file and calls
+      # nothing -- the API work happens over in the daily job.
+      #
+      # `always()`, guarded on nothing: a stale retention record and a
+      # dead budget alarm are two separate findings, and the first must
+      # not hide the second. Each step keeps its own red mark, so the run
+      # says which one it is.
+      - name: Check that the Actions budget is still being watched
+        if: always() && steps.retention.conclusion != 'skipped'
+        working-directory: tools
+        run: uv run convener-check-actions-usage-liveness

@@ -1,0 +1,422 @@
+# Sweep what the night made elapsed, then tell the board what moved --
+# one run, in that order, with no external service (D-07).
+#
+# The platform is the whole delivery mechanism: this workflow posts a comment
+# on a repository thread and mentions the editorial team, and GitHub is what
+# turns that into email for everyone watching. No mail provider, no webhook,
+# no subscription, and nothing tied to one volunteer's account -- the mention
+# is a *team*, so the channel keeps working when any individual stops reading.
+#
+# Why these two are one workflow (phase 8, task 3, change E)
+# ----------------------------------------------------------
+# They were two files on two crons: *Sweep elapsed events* at 05:00 and
+# *Notify the board* at 06:00. That hour was never a schedule, it was a
+# dependency -- the digest reports the transitions the sweep has just
+# written, so it has to run after it, and the only thing making it do so
+# was a bet on the clock. GitHub's scheduled runs are routinely ten to
+# twenty minutes late and are dropped outright under load. The morning the
+# sweep ran long, the digest would have reported the previous day's state
+# and nothing anywhere would have said so -- a wrong answer delivered
+# confidently, which is worse than no answer. As two steps of one job the
+# order is a sequence, true by construction, and the bet is gone.
+#
+# It costs one billed job a day where the two files cost three (two
+# runners, plus the secret-workflow monitor the notify run pulled behind
+# it). That is the smaller half of the argument and not what decided it.
+#
+# Two jobs, and they never both run
+# ----------------------------------
+# `immediate` and `daily` exclude each other on `github.event_name`, the
+# same way notify.yml's own two jobs already did: a job GitHub skips on an
+# `if:` never gets a runner and never bills, so a run costs one job either
+# way. The split is kept for what it protects rather than for what it
+# costs. `immediate` reacts to a human's push and needs `contents: read`
+# and nothing else; `daily` writes to this repository and dispatches
+# another workflow. Folding them into one job would hand the push path
+# `contents: write` and `actions: write` it has no use for, which is a
+# real loss for no gain.
+#
+# The sweep writes `data/speakers.yml` -- the very path the `push:` trigger
+# below watches. That is not a loop: the commit is made with the job's own
+# GITHUB_TOKEN, and GitHub does not start a workflow run from an event a
+# GITHUB_TOKEN produced (its recursion guard). It is the same guard that
+# makes the `gh workflow run publish-vitrine.yml` dispatch in the sweep
+# step below load-bearing rather than a nicety -- without it the showcase
+# never reflects the sweep, a live defect this repository has already had
+# once (see that step's own comment).
+#
+# How "unconfigured sends nothing" works here
+# -------------------------------------------
+# There is no on/off switch in this file. `convener-notify-*` composes the message
+# and then asks `notify.dispatch` for an address; without both
+# CONVENER_NOTIFY_THREAD and CONVENER_NOTIFY_MENTION there is no address, so no postable
+# message is built and `notify-body.md` is never written. The Post step looks
+# for that file and finds nothing. A quiet day and an unconfigured repository
+# therefore reach exactly the same end, which is what stops the absent case
+# from turning into an error path somebody later "fixes" with a default.
+#
+# Today, with no secrets set, both jobs run green and post nothing, and the
+# composed text is visible in the job log for anyone who wants to check what
+# the channel would have said.
+#
+# And a third thing this job does (phase 8, task 4)
+# --------------------------------------------------
+# The `daily` job also measures what this repository's own Actions runs
+# actually billed over the last week, commits it to
+# `data/actions-usage.yml`, and goes red -- and posts on the same thread --
+# when the rate says the free monthly allowance will not hold. It lives
+# here, as steps, for one reason: a workflow or a job created to watch the
+# cost would cost a billed job a day, every day, which is self-defeating.
+# The steps themselves are at the bottom of `daily`, with their own
+# reasoning; `tools/convener_ops/actions_usage.py` holds the arithmetic and
+# `config/actions-budget.yml` the thresholds.
+
+name: Sweep and notify the board
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/speakers.yml'
+  schedule:
+    # 05:00 UTC, the hour the sweep already had. The digest no longer needs
+    # an hour of its own: it is the step after the sweep in the same job.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  # Spec section 7 reserves this for what calls for a quick reaction: a lead
+  # from the public form, a vote reaching its threshold, an objection on a
+  # publication. Everything else waits for the digest.
+  immediate:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Minor 2 (fix round 1, task 16): closes the project-wide gap
+    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    timeout-minutes: 10
+    permissions:
+      # Read-only, and only so actions/checkout can fetch the repository.
+      contents: read
+      # The one thing this workflow is allowed to do to the outside world.
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The whole history. The immediate events are a difference between
+          # two revisions of data/speakers.yml -- the working tree's and the
+          # one the branch was at before this push -- and a push carrying
+          # several commits moved the branch by more than one, so the parent
+          # of HEAD is not that revision. With the revision unreachable the
+          # tool says nothing rather than reading the whole file as new.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
+          # H4 (2026-08-23 security audit): caches uv's own download/resolve
+          # step, keyed on tools/uv.lock -- part of reducing this project's
+          # self-inflicted Actions-minute cost, alongside this fix's path
+          # filters. Reduces run time only; changes nothing this job checks.
+          enable-cache: true
+      - name: Compose
+        working-directory: tools
+        env:
+          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
+          # Where the branch was before this push, so every commit it carried
+          # is covered rather than only the last. The all-zero name GitHub
+          # sends for a branch's first push falls back to the parent of HEAD.
+          BEFORE: ${{ github.event.before }}
+        run: uv run convener-notify-immediate
+      - name: Post
+        if: hashFiles('notify-body.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+        run: gh issue comment "$THREAD" --body-file notify-body.md
+
+  daily:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    # The sweep's own 10 plus the digest's own 10, plus 5 for the budget
+    # measurement task 4 added at the bottom of this job: a merged job's
+    # ceiling has to cover the sum of what it does, so this number going
+    # up is the expected shape of the change and not a regression to hunt
+    # for.
+    #
+    # That last 5 is a real cost of task 4 and is named rather than
+    # buried: it is +5 of *ceiling* a day. It is not +5 of bill -- the
+    # step it covers is two `uv run`s and about two hundred `gh api`
+    # calls -- and the difference between those two sentences is the
+    # whole reason the step exists (P-5). It buys no new billed job:
+    # a workflow of its own would have cost one every single day.
+    timeout-minutes: 25
+    permissions:
+      # The union of what the two files carried, and nothing past it.
+      # `contents: write` is the sweep committing data/speakers.yml;
+      # `actions: write` is the same sweep dispatching publish-vitrine.yml
+      # afterwards, which the recursion guard makes necessary (see the
+      # sweep step below, and visuals-production.yml's own copy of the
+      # identical pair); `issues: write` is the digest's one way of
+      # reaching the outside world.
+      contents: write
+      actions: write
+      issues: write
+    env:
+      TARGET_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        id: checkout
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        id: uv
+        with:
+          version: '0.5.x'
+          # H4 (2026-08-23 security audit): caches uv's own download/resolve
+          # step, keyed on tools/uv.lock -- part of reducing this project's
+          # self-inflicted Actions-minute cost, alongside this fix's path
+          # filters. Reduces run time only; changes nothing this job checks.
+          enable-cache: true
+      # Critical A, fix round 3: the commit below pushes with this job's
+      # own GITHUB_TOKEN, which cannot fire publish-vitrine.yml's `push`-
+      # triggered `paths:` trigger (`data/speakers.yml` is one of the paths
+      # it names) -- GitHub's recursion guard. The re-review found
+      # `events-public.json` had therefore never been republished after a
+      # nightly sweep, a live phase-3 defect fixed by the explicit dispatch
+      # here, alongside the identical one in the three certificate
+      # workflows (see issue-certificates.yml's own comment on the same
+      # mechanism).
+      - name: Sweep and commit
+        id: sweep
+        # Nothing upstream of this step can be skipped for it to be
+        # meaningful, but naming the prerequisite rather than writing a
+        # bare `always()` is the point: a failed checkout or a failed `uv`
+        # install skips this instead of running a command that cannot
+        # work. Same guard shape quality.yml's own merged jobs use.
+        if: always() && steps.uv.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Phase 7, task 2: on a rejected push, re-derive against the
+        # refreshed tip rather than `git pull --rebase` -- the same shape
+        # registration.yml's own retry loop uses. `convener-sweep` rewrites
+        # data/speakers.yml as a pure function of the current time and the
+        # file's own current content (sweep_speakers/expire_votes are both
+        # idempotent -- an already-swept event stays swept, an already-
+        # expired vote window stays expired), so re-running it against
+        # whatever another push just landed reproduces the correct result
+        # instead of replaying a diff over lines a rebase would conflict
+        # on.
+        run: |
+          set -e
+          git config user.name "convener-sweep"
+          git config user.email "convener-sweep@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-sweep)
+            git add data/speakers.yml
+            if git diff --staged --quiet; then
+              echo "nothing to commit"
+              exit 0
+            fi
+            git commit -m "data: sweep elapsed events and expired vote windows"
+            if git push; then
+              gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
+                echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+          done
+          echo "::error::push failed after 3 attempts -- sweep result was not saved"
+          exit 1
+      - name: Compose
+        id: compose
+        # `always()`, guarded on the install rather than on the sweep: a
+        # sweep that failed to push is exactly the morning the board most
+        # needs its digest, and the reverse holds too -- a digest that
+        # cannot compose must not un-report a sweep that did land. Each
+        # step keeps its own red mark, so the job says which half failed
+        # instead of only that something did.
+        if: always() && steps.uv.outcome == 'success'
+        working-directory: tools
+        env:
+          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
+        run: uv run convener-notify-digest
+      - name: Post
+        # No file means the day was quiet, or no channel is configured. Both
+        # are ordinary, and both post nothing.
+        if: >-
+          always() && steps.compose.outcome == 'success' &&
+          hashFiles('notify-body.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+        run: gh issue comment "$THREAD" --body-file notify-body.md
+
+      # ----------------------------------------------------------------
+      # What the runs really cost, and the alarm before the budget goes
+      # (phase 8, task 4)
+      # ----------------------------------------------------------------
+      #
+      # Here rather than in a workflow of its own, and this is the whole
+      # constraint: a job added to watch the cost would itself cost a
+      # billed job every day. A *step* added to a job that already runs
+      # costs nothing but its own seconds. That is why this lives at the
+      # bottom of the daily sweep and not in a file called
+      # actions-budget.yml.
+      #
+      # `actions: read` is not added below because this job already
+      # declares `actions: write` for its publish-vitrine dispatch, and
+      # write includes read. Nothing here writes: the two endpoints called
+      # are GET /actions/runs and GET /actions/runs/<id>/timing.
+      #
+      # The three steps are separate on purpose. The middle one is the
+      # only thing in this feature that touches the network -- every line
+      # of arithmetic downstream is a pure function driven from a fixture
+      # by tools/tests/test_actions_usage.py, which is a project-wide rule
+      # and not a preference.
+      - name: Window
+        id: usage-window
+        # Guarded on the `uv` install, not on the sweep or the digest: the
+        # morning the sweep fails is exactly the morning the budget is
+        # worth checking, and an exhausted budget is one of the things
+        # that makes a job stop in the first place.
+        if: always() && steps.uv.outcome == 'success'
+        working-directory: tools
+        run: uv run convener-actions-usage-window
+      - name: Collect what the last runs actually billed
+        id: usage-collect
+        if: always() && steps.usage-window.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SINCE: ${{ steps.usage-window.outputs.since }}
+          MAX_RUNS: ${{ steps.usage-window.outputs.max_runs }}
+        # `/timing` per run, not the run's own wall clock: GitHub bills
+        # per job, rounded up to the whole minute, and only that endpoint
+        # reports the per-job durations the rounding applies to. A run's
+        # elapsed time would understate a parallel eight-job run by a
+        # factor of eight and overstate a single job that queued.
+        #
+        # A failed listing fails this step rather than being read as "no
+        # runs" -- R-36's own lesson, one file over in retention.yml: a
+        # question that could not be answered is not the answer "nothing",
+        # and reading it as one is how a control reports that everything
+        # is fine while it is not.
+        #
+        # `gh api` is asked for the page verbatim and `jq -c` reshapes it,
+        # rather than `gh --jq` doing both: `jq -c` is *defined* to emit one
+        # compact value per line, which is the format the next step reads,
+        # and `gh --jq`'s own output formatting is not something this
+        # repository can pin with a test. It also keeps `gh`'s exit status
+        # its own, so a failed call is distinguishable from an empty answer
+        # instead of being swallowed by a pipeline.
+        #
+        # Paged explicitly rather than with `--paginate`: the cap has to be
+        # a cap. `--paginate` would follow every page there is, which on
+        # the one day this most matters -- a burst -- is the day it costs
+        # the most calls.
+        run: |
+          set -e
+          pages=$(( (MAX_RUNS + 99) / 100 ))
+          : > runs.jsonl
+          truncated=false
+          for page in $(seq 1 "$pages"); do
+            if ! answer="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/runs" -f "created=>=$SINCE" -F per_page=100 -F "page=$page")"; then
+              echo "::error::could not list this repository's workflow runs -- nothing was measured, which is not the same as nothing having run"
+              exit 1
+            fi
+            got="$(printf '%s' "$answer" | jq -c '.workflow_runs[] | {id, name, event, created_at}')"
+            if [ -z "$got" ]; then
+              break
+            fi
+            printf '%s\n' "$got" >> runs.jsonl
+            count="$(printf '%s\n' "$got" | wc -l)"
+            if [ "$count" -lt 100 ]; then
+              break
+            fi
+            if [ "$page" -eq "$pages" ]; then
+              truncated=true
+            fi
+          done
+          : > actions-usage-input.jsonl
+          while IFS= read -r run; do
+            id="$(printf '%s' "$run" | jq -r '.id')"
+            if timing="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/timing")"; then
+              jq -c -n --argjson run "$run" --argjson timing "$timing" '{run: $run, timing: $timing}' >> actions-usage-input.jsonl
+            else
+              # Not dropped and not zeroed: recorded as a run whose cost
+              # could not be read, which convener-record-actions-usage reports
+              # as its own loud alarm instead of folding into the total.
+              jq -c -n --argjson run "$run" '{run: $run, timing: null}' >> actions-usage-input.jsonl
+            fi
+          done < runs.jsonl
+          echo "collected $(wc -l < actions-usage-input.jsonl) runs since $SINCE"
+          echo "truncated=$truncated" >> "$GITHUB_OUTPUT"
+      - name: Record what those runs cost
+        id: usage
+        if: always() && steps.usage-collect.outcome == 'success'
+        env:
+          CONVENER_ACTIONS_USAGE_TRUNCATED: ${{ steps.usage-collect.outputs.truncated }}
+          # Step-level, never job-level: the measuring code must not be
+          # able to see the board's channel except while it is composing a
+          # message for it -- the same rule the two Compose steps above
+          # hold themselves to.
+          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
+        # Its own retry loop, the same fetch-and-reset-hard shape every
+        # other push in this repository uses: the sweep step above may
+        # already have pushed this run, and a rejected push here is
+        # re-derived rather than rebased.
+        #
+        # Safe to re-run inside the loop because the command is a pure
+        # function of actions-usage-input.jsonl, which `git reset --hard`
+        # does not touch (it is untracked) -- re-running it against a
+        # refreshed tip reproduces the identical file rather than
+        # replaying a diff a rebase would conflict on.
+        run: |
+          set -e
+          git config user.name "convener-sweep"
+          git config user.email "convener-sweep@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+            (cd tools && uv run convener-record-actions-usage)
+            git add data/actions-usage.yml
+            if git diff --staged --quiet; then
+              echo "data/actions-usage.yml already says this -- nothing to commit"
+              exit 0
+            fi
+            git commit -m "data: record what this repository's runs cost"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+          done
+          echo "::error::push failed after 3 attempts -- today's measurement was not saved; the alarm below still reports on it, and retention-watchdog.yml calls the record stale if this keeps happening"
+          exit 1
+      - name: Tell the board the budget is going
+        # The same channel as the digest above -- same thread, same team
+        # mention (D-07). A second file, not NOTIFY_BODY, because the
+        # digest already used that name in this job and one file for two
+        # messages means whichever is composed last silently replaces the
+        # other.
+        if: >-
+          always() && steps.usage.outputs.budget_alert == 'true' &&
+          hashFiles('budget-body.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+        run: gh issue comment "$THREAD" --body-file budget-body.md
+      - name: Fail if the budget is running out
+        # D-25, and the one decision deliberately kept in YAML rather than
+        # in an exit code: this job goes red whenever the alarm fired,
+        # whether or not a channel was configured to also post to. An
+        # unconfigured integration must never be able to turn a real
+        # finding into silence -- the same shape
+        # secret-workflow-monitor.yml's own last step has, for the same
+        # reason.
+        if: always() && steps.usage.outputs.budget_alert == 'true'
+        run: |
+          echo "::error::the Actions budget alarm fired -- see the annotations above and data/actions-usage.yml"
+          exit 1

@@ -29,6 +29,19 @@ public-data/*
 # channel is configured, posted by the notify workflow, never edited.
 notify-body.md
 
+# The Actions budget alarm's own body, written by convener-record-actions-usage
+# only when a channel is configured *and* something actually fired -- the
+# same "the file's existence is the whole signal" shape notify-body.md has,
+# on its own filename so that the alarm and the daily digest, composed in
+# the same job, cannot overwrite one another.
+budget-body.md
+
+# What the collector step read from the Actions API, one JSON object per
+# line, for tools/convener_ops/actions_usage.py to reduce offline. A run
+# artefact of a single job; the measurement derived from it is committed to
+# data/actions-usage.yml, this raw form never is.
+actions-usage-input.jsonl
+
 # The host's short list of attendance to resolve by hand
 # (tools/convener_ops/cli.py::match_attendance). Written only when
 # attendance.match finds an unmatched or unreachable attendee. Never
