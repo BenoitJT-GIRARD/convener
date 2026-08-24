@@ -7,18 +7,23 @@ import { cspMetaContent } from './scripts/csp.mjs';
  * Security audit 2026-08-23, M4: injects this project's Content-Security-
  * Policy as a `<meta http-equiv>` into `app/index.html` at build time --
  * `<meta>` is the only delivery mechanism available at all (GitHub Pages
- * sets no response headers), and this document carries both the
- * operators' cockpit and the public survey route (`App.tsx`'s
- * `SurveyRoute`), so it needs the policy, not only the site's own pages.
- * `scripts/csp.mjs::cspMetaContent` is the one place the policy string
- * itself is built (see that module's own header comment for every
- * directive and why); this plugin only ever calls it and hands the
- * result to Vite's own `transformIndexHtml` tag-injection API, never a
- * string edit of the HTML template -- the same reason `react()` above is
- * a plugin and not a source rewrite. Runs only against the main app
- * build: `islandSignupConfig`/`islandVerifyConfig` below build straight
- * from a `.tsx` entry, with no `index.html` for `transformIndexHtml` to
- * ever see, so this plugin is deliberately not added to either.
+ * sets no response headers). `scripts/csp.mjs::cspMetaContent` is the one
+ * place the policy string itself is built (see that module's own header
+ * comment for every directive and why); this plugin only ever calls it
+ * and hands the result to Vite's own `transformIndexHtml` tag-injection
+ * API, never a string edit of the HTML template -- the same reason
+ * `react()` above is a plugin and not a source rewrite. Runs only against
+ * the main app build: `islandSignupConfig`/`islandVerifyConfig`/
+ * `islandSurveyConfig` below build straight from a `.tsx` entry, with no
+ * `index.html` for `transformIndexHtml` to ever see, so this plugin is
+ * deliberately not added to any of them.
+ *
+ * Phase 7 task 5 moved the last public route this document carried
+ * (`App.tsx`'s own former `SurveyRoute`, `/survey/:eventId`) onto its own
+ * island, mounted on `site/src/survey.njk` instead -- this document is now
+ * the operators' cockpit alone, gated on sign-in behind `Shell`. See
+ * `scripts/csp.mjs`'s own module comment for what that means for
+ * `connect-src`.
  */
 function cspHtmlPlugin(): Plugin {
   return {
@@ -163,9 +168,54 @@ function islandVerifyConfig() {
   };
 }
 
+/**
+ * Task 5 (phase 7): `mode === 'island-survey'` builds the post-event
+ * survey island the same way `islandSignupConfig`/`islandVerifyConfig`
+ * above build their own -- its own, separate artefact (P-2), picked apart
+ * at the command line by `npm run build`'s fourth `vite build` call.
+ * Everything `islandSignupConfig`'s own comment explains about fixed
+ * output names, `base: '/example-showcase/app/'`, and skipping `copyPublicDir`
+ * applies identically here: the consumer is `site/src/survey.njk`, a
+ * foreign toolchain with no manifest to read hashed names from, and this
+ * bundle runs on a page the *site* serves. `SurveyForm.tsx` reads this
+ * same `base` back through `import.meta.env.BASE_URL`, landing on
+ * `/example-showcase/app/keys/events/<id>.pub` and
+ * `/example-showcase/app/survey-status.json` -- exactly where the main app
+ * build's own `copy-event-keys.mjs` and `copy-survey-status.mjs` publish
+ * them inside `dist/`.
+ *
+ * No CSS import from this entry either, for the identical reason
+ * `islandSignupConfig`'s own comment gives: the island's class names are
+ * plain, semantic strings (`survey-form__field`, ...) styled by
+ * `site/src/style.css`, which the survey page already loads -- see
+ * `SurveyForm.tsx`'s own module comment.
+ */
+function islandSurveyConfig() {
+  return {
+    plugins: [react()],
+    base: '/example-showcase/app/',
+    build: {
+      outDir: 'dist/islands/survey',
+      emptyOutDir: true,
+      copyPublicDir: false,
+      cssCodeSplit: false,
+      rollupOptions: {
+        input: fileURLToPath(new URL('./src/islands/survey/main.tsx', import.meta.url)),
+        output: {
+          format: 'es' as const,
+          entryFileNames: 'survey.js',
+          chunkFileNames: 'survey-[name].js',
+          assetFileNames: 'survey.[ext]',
+        },
+      },
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   if (mode === 'island-signup') return islandSignupConfig();
   if (mode === 'island-verify') return islandVerifyConfig();
+  if (mode === 'island-survey') return islandSurveyConfig();
 
   return {
     plugins: [react(), cspHtmlPlugin()],
@@ -184,12 +234,14 @@ export default defineConfig(({ mode }) => {
         // individually rather than their whole directories: each is pure
         // crypto the phase 4 promise rests on (task 16's own survey intake is
         // the same promise, made a second time for a second page), while
-        // `islands/signup/SignupForm.tsx` and `SurveyForm.tsx` are UI like
-        // every other screen. `islands/verify/VerifyPage.tsx` (moved here
-        // from `verify/VerifyPage.tsx` by task 7) is excluded for the same
-        // reason; the rest of `verify/` is pure logic (crypto
-        // verification, register lookup, published-key loading, display
-        // formatting) the phase 4 certificate promise rests on just as
+        // `islands/signup/SignupForm.tsx`, `islands/verify/VerifyPage.tsx`
+        // (moved here from `verify/VerifyPage.tsx` by task 7) and
+        // `islands/survey/SurveyForm.tsx` (moved here from
+        // `survey/SurveyForm.tsx` by phase 7 task 5) are all excluded for
+        // the same reason -- UI like every other screen; the rest of
+        // `verify/` and `survey/` is pure logic (crypto, register lookup,
+        // published-key loading, display formatting, the survey-status
+        // fetch address) each phase's own promise rests on just as
         // directly as `encrypt.ts` does.
         include: [
           'src/state/**',

@@ -1,11 +1,20 @@
 /**
  * `scripts/csp.mjs::cspMetaContent` -- the Content-Security-Policy this
- * project's operators' cockpit (and, on the same document, the public
- * survey route) ships as a `<meta http-equiv>` (security audit 2026-08-23,
- * M4). `vite.config.ts`'s own `cspHtmlPlugin` is what actually injects the
- * result into `app/index.html`; this suite holds the pure string-builder
- * to account directly, the same split `copy-fonts.test.ts` and its
- * siblings already use for their own `*-files.mjs` logic.
+ * project's operators' cockpit ships as a `<meta http-equiv>` (security
+ * audit 2026-08-23, M4). `vite.config.ts`'s own `cspHtmlPlugin` is what
+ * actually injects the result into `app/index.html`; this suite holds the
+ * pure string-builder to account directly, the same split
+ * `copy-fonts.test.ts` and its siblings already use for their own
+ * `*-files.mjs` logic.
+ *
+ * Phase 7 task 5 moved the last public route this document carried (the
+ * post-event survey) onto its own island on `site/src/survey.njk` --
+ * `connect-src` here no longer admits the signup relay's origin at all;
+ * see `tools/tests/test_site.py`'s own
+ * `test_content_security_policys_connect_src_admits_the_configured_signup_relay`
+ * for the policy that page ships under now (built from
+ * `site/src/_data/csp.js`, unaffected by this file), and `csp.mjs`'s own
+ * module comment for the reasoning.
  */
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,10 +35,9 @@ describe('cspMetaContent', () => {
   });
 
   it('admits GitHub\'s own API and nothing else when no relay is configured', () => {
-    // D-13: a missing auth proxy or signup relay is an ordinary state --
-    // sign-in falls back to a personal access token, the survey form
-    // refuses to send, calmly. connect-src must not name an address
-    // nothing will ever call.
+    // D-13: a missing auth proxy is an ordinary state -- sign-in falls
+    // back to a personal access token. connect-src must not name an
+    // address nothing will ever call.
     const content = cspMetaContent({});
     expect(content).toContain("connect-src 'self' https://api.github.com");
     expect(content).not.toContain('workers.dev');
@@ -37,31 +45,28 @@ describe('cspMetaContent', () => {
 
   it('adds the auth relay\'s own origin once VITE_AUTH_PROXY_URL is configured', () => {
     const content = cspMetaContent({ VITE_AUTH_PROXY_URL: 'https://auth.example.workers.dev' });
-    expect(content).toContain(
-      "connect-src 'self' https://api.github.com https://auth.example.workers.dev",
+    expect(content).toBe(
+      "script-src 'self'; " +
+        "connect-src 'self' https://api.github.com https://auth.example.workers.dev; " +
+        "object-src 'none'; " +
+        "form-action 'self'",
     );
   });
 
-  it('adds the signup relay\'s own origin once VITE_SIGNUP_RELAY_URL is configured', () => {
-    // The survey form (survey/SurveyForm.tsx), not the registration
-    // island -- that one lives on a different document (site/).
-    const content = cspMetaContent({
-      VITE_SIGNUP_RELAY_URL: 'https://signup.example.workers.dev',
-    });
-    expect(content).toContain(
-      "connect-src 'self' https://api.github.com https://signup.example.workers.dev",
-    );
-  });
-
-  it('admits both configured origins together, in a stable order', () => {
+  it('never admits the signup relay\'s origin, configured or not (phase 7 task 5)', () => {
+    // The post-event survey (`islands/survey/SurveyForm.tsx`, the one caller
+    // this bundle ever had for VITE_SIGNUP_RELAY_URL) moved onto its own
+    // island on site/src/survey.njk -- nothing left in this document
+    // posts to the signup relay, so this variable must never reach this
+    // policy's connect-src at all, configured or not.
     const content = cspMetaContent({
       VITE_AUTH_PROXY_URL: 'https://auth.example.workers.dev',
       VITE_SIGNUP_RELAY_URL: 'https://signup.example.workers.dev',
     });
+    expect(content).not.toContain('signup.example.workers.dev');
     expect(content).toBe(
       "script-src 'self'; " +
-        "connect-src 'self' https://api.github.com https://auth.example.workers.dev " +
-        "https://signup.example.workers.dev; " +
+        "connect-src 'self' https://api.github.com https://auth.example.workers.dev; " +
         "object-src 'none'; " +
         "form-action 'self'",
     );

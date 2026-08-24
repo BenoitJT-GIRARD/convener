@@ -1,16 +1,22 @@
 /**
- * This project's Content-Security-Policy for `app/index.html` -- the one
- * document that carries both the operators' cockpit (every route under
- * `/example-showcase/app/`) and the public post-event survey (`/survey/:eventId`,
- * `App.tsx`'s own `SurveyRoute`), since both are the same client-routed
- * single-page bundle. Injected into the built HTML by `vite.config.ts`'s own
- * `cspHtmlPlugin`, via `transformIndexHtml` -- `<meta http-equiv>` is the
- * only mechanism available at all: GitHub Pages sets no response headers of
- * its own (security audit 2026-08-23). `X-Content-Type-Options`,
- * `Permissions-Policy`, HSTS and COOP/COEP/CORP are categorically
- * unavailable, not merely undone, and `frame-ancestors` is ignored outright
- * when delivered by `<meta>` -- see `docs/reference/operations.md`'s own
- * "Content-Security-Policy" section for that boundary written out in full.
+ * This project's Content-Security-Policy for `app/index.html` -- the
+ * operators' cockpit, every route under `/example-showcase/app/`, gated on
+ * sign-in behind `App.tsx`'s own `Shell`. Injected into the built HTML by
+ * `vite.config.ts`'s own `cspHtmlPlugin`, via `transformIndexHtml` --
+ * `<meta http-equiv>` is the only mechanism available at all: GitHub Pages
+ * sets no response headers of its own (security audit 2026-08-23).
+ * `X-Content-Type-Options`, `Permissions-Policy`, HSTS and COOP/COEP/CORP
+ * are categorically unavailable, not merely undone, and `frame-ancestors`
+ * is ignored outright when delivered by `<meta>` -- see
+ * `docs/reference/operations.md`'s own "Content-Security-Policy" section
+ * for that boundary written out in full.
+ *
+ * Phase 7 task 5 moved the last public route this document carried
+ * (`/survey/:eventId`, the post-event survey) onto its own island, mounted
+ * on `site/src/survey.njk` instead -- see that page's own
+ * `site/src/_data/csp.js` for the policy it now ships under. This
+ * document's own `connect-src` dropped the signup relay's origin as a
+ * direct consequence: nothing left in this bundle posts to it.
  *
  * `script-src`, `connect-src`, `object-src` and `form-action` all work by
  * `<meta>`, and are what this file emits -- each justified by what this
@@ -22,11 +28,11 @@
  * - `object-src 'none'`: no `<object>`/`<embed>`/`<applet>` anywhere in this
  *   project -- closes a legacy plugin vector at zero cost.
  * - `form-action 'self'`: every form in this bundle (sign-in, a new
- *   speaker, a survey response) is a React-controlled submit that never
- *   navigates the document; `'self'` is a safe, zero-cost default against
- *   the day one does by mistake.
+ *   speaker) is a React-controlled submit that never navigates the
+ *   document; `'self'` is a safe, zero-cost default against the day one
+ *   does by mistake.
  * - `connect-src`: `'self'` (this project's own content and public-data
- *   fetches) plus three origins this bundle calls by design, each admitted
+ *   fetches) plus two origins this bundle calls by design, each admitted
  *   only when the build that reaches it is actually configured to call it
  *   (D-13 -- an unset one is an ordinary state this policy must not name an
  *   address for):
@@ -40,11 +46,6 @@
  *       `auth/device.ts`'s device-flow exchange, when a relay is
  *       configured (D-13: sign-in otherwise falls back to a personal
  *       access token, which never calls it).
- *     - the signup relay's own origin (`VITE_SIGNUP_RELAY_URL`) -- not the
- *       registration island (a separate document, `site/`'s own
- *       `event.njk`), but this bundle's own survey form
- *       (`survey/SurveyForm.tsx`), which posts to the same relay's
- *       `/survey` route, when a relay is configured.
  */
 
 const GITHUB_API_ORIGIN = 'https://api.github.com';
@@ -64,10 +65,7 @@ function configured(value) {
  *  why each directive is here and what each one costs. */
 export function cspMetaContent(env) {
   const authProxy = configured(env.VITE_AUTH_PROXY_URL);
-  const signupRelay = configured(env.VITE_SIGNUP_RELAY_URL);
-  const connectSrc = ["'self'", GITHUB_API_ORIGIN, authProxy, signupRelay]
-    .filter(Boolean)
-    .join(' ');
+  const connectSrc = ["'self'", GITHUB_API_ORIGIN, authProxy].filter(Boolean).join(' ');
   return [
     "script-src 'self'",
     `connect-src ${connectSrc}`,

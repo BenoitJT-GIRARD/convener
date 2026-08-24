@@ -200,26 +200,39 @@ __all__ = [
     "survey_url",
 ]
 
-#: Mirrors `certificate.VERIFICATION_BASE` exactly: a `HashRouter` fragment
-#: (`app/src/App.tsx`'s own `path="/survey/:eventId"` route), so the event
-#: id sits after `#` and is never sent to a server on load, and so GitHub
-#: Pages -- which serves no server-side routing -- never has to answer a
-#: bare path. Unlike `verification_url`, there is no token to protect from
-#: `Referer` here (ruling 2: this module mints no per-person token at
-#: all), so the fragment placement is a consistency choice with the
-#: certificate's own address, not a second privacy property this module
-#: relies on. `test_survey_invite.py` pins this against `App.tsx`'s own
-#: route literal (D-14), the same "read from both sides" discipline
-#: `certificate.py`'s own shared fixture uses for its address.
-SURVEY_BASE: Final = "https://example-instance.github.io/example-showcase/app/#/survey/"
+#: Phase 7 task 5: mirrors `registration.SIGNUP_BASE`, not
+#: `certificate.VERIFICATION_BASE` -- a real, bare path, no `#` fragment.
+#: This used to mirror `VERIFICATION_BASE` (a `HashRouter` fragment on
+#: `App.tsx`'s own former `path="/survey/:eventId"` route; see git
+#: history), on the reasoning that both addresses lived on the same
+#: application. That reasoning stopped applying the moment task 5
+#: extracted the survey off `App.tsx` entirely, onto its own static page
+#: (`site/src/survey.njk`, D-19: one page per event, the same addressing
+#: `event.njk` already uses for registration) -- and unlike
+#: `verification_url`, there was never a token to protect from `Referer`
+#: here in the first place (ruling 2: this module mints no per-person
+#: token at all), so the fragment was only ever a consistency choice with
+#: the certificate's own address, never a second privacy property this
+#: module relied on. Losing it loses nothing.
+#: `tools/tests/test_workflows.py::test_survey_base_matches_the_survey_
+#: page_permalink` pins this against `survey.njk`'s own permalink,
+#: read from both sides, the same discipline that test module already
+#: holds `registration.SIGNUP_BASE` to.
+SURVEY_BASE: Final = "https://example-instance.github.io/example-showcase/survey/"
 
 
 def survey_url(event_id: str) -> str:
     """The one link every matched attendee of `event_id` receives -- see
     the module docstring's "ruling 2" section for why this is a single,
     person-independent address rather than anything computed from a
-    registration."""
-    return f"{SURVEY_BASE}{quote(event_id, safe='')}"
+    registration.
+
+    The trailing `/` mirrors `registration.signup_url` exactly, not
+    `certificate.verification_url`: both this address and registration's
+    own now name a real, bare Eleventy permalink (`survey.njk`/
+    `event.njk`, each `/<segment>/<event id>/`), which resolves to that
+    page's own `index.html` only with the slash present."""
+    return f"{SURVEY_BASE}{quote(event_id, safe='')}/"
 
 
 #: The one sentence every invitation carries about who receives it -- the

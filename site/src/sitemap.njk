@@ -29,6 +29,14 @@ permalink: "/sitemap.xml"
   JavaScript") -- this only decides what a crawler is pointed at, never
   what exists.
 
+  Phase 7 task 5 added a second exclusion for the identical reason, a
+  different shape: every survey page (`survey.njk`, also `sitemap: false`
+  in its own front matter) is reached exactly one way, a link in an
+  e-mail sent after the event to people this project already has a
+  reason to write to -- a search engine sending a stranger there answers
+  no question anyone searched for. Also fully reachable at its own real
+  address for anyone who holds the link.
+
   Year pages (`archives-year.njk`) are kept in, unlike the two filters
   above: a year is a real search intent ("The Example Collective talks 2025")
   that the full archive and the filters do not answer as directly, the

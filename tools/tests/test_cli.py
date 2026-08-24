@@ -3026,9 +3026,7 @@ def test_invite_survey_composes_the_same_link_for_every_matched_attendee(
     assert len(_RecordingSmtpClient.sent) == 2
     bodies = [message.get_content() for message in _RecordingSmtpClient.sent]
     links = {re.search(r"https://\S+", body).group(0) for body in bodies}  # type: ignore[union-attr]
-    assert links == {
-        "https://example-instance.github.io/example-showcase/app/#/survey/mrg-042"
-    }
+    assert links == {"https://example-instance.github.io/example-showcase/survey/mrg-042/"}
 
 
 def test_invite_survey_with_no_transport_configured_reports_all_unsent(

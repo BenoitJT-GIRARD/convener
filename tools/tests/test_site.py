@@ -340,6 +340,30 @@ def test_content_security_policys_connect_src_admits_the_configured_signup_relay
     )
 
 
+def test_the_survey_pages_connect_src_also_admits_the_configured_signup_relay(
+    built_site_with_signup_relay: Path,
+) -> None:
+    """Phase 7 task 5: the survey island posts to the identical relay's
+    own `/survey` route (`SurveyForm.tsx::surveyRelayUrl`), from a
+    *different* document (`survey.njk`, not `event.njk`) -- this pin is
+    the equivalent proof for that page, not merely an inference from the
+    event page's own test above."""
+    event_id = _the_one_scheduled_event_id()
+    page = (
+        built_site_with_signup_relay / "survey" / event_id / "index.html"
+    ).read_text(encoding="utf-8")
+    match = _CSP_META_RE.search(page)
+    assert match is not None
+    content = match.group(1).replace("&#39;", "'")
+    assert (
+        "connect-src 'self' https://convener-signup-relay.example.workers.dev" in content
+    ), (
+        "the survey island posts straight to the configured signup relay "
+        "from this document -- connect-src must admit it or a real survey "
+        "response would be blocked by this project's own policy"
+    )
+
+
 # -------------------------------------------------------------------------- #
 # Task 5: the event page -- one addressable page per edition (D-19), no
 # room link on any public page (acceptance criterion 2), and the phase 4
@@ -553,6 +577,86 @@ def test_the_notice_precedes_the_reserved_place_for_the_registration_form(
     notice_at = page.index("Before you register")
     placeholder_at = page.index('id="registration-form"')
     assert notice_at < placeholder_at
+
+
+# -------------------------------------------------------------------------- #
+# Phase 7 task 5: the post-event survey's own static page
+# (`site/src/survey.njk`), one per event (D-19) -- the same per-event
+# addressing `event.njk` already uses for registration, mirrored here
+# because both pages agree on what "this event" means.
+# -------------------------------------------------------------------------- #
+
+
+def test_every_event_has_one_survey_page_addressed_by_its_lower_cased_edition_code(
+    built_site: Path,
+) -> None:
+    """The identical D-19 guarantee
+    `test_every_event_has_exactly_one_page_addressed_by_its_lower_cased_
+    edition_code` proves for `event.njk`, proved here for `survey.njk`:
+    checked against the actual output paths, not the permalink expression
+    in the template's own front matter."""
+    events = _events_fixture()
+    expected = {f"survey/{str(event['id']).lower()}/index.html" for event in events}
+    actual = {
+        path.relative_to(built_site).as_posix()
+        for path in built_site.glob("survey/*/index.html")
+    }
+    assert actual == expected
+
+
+def test_the_survey_notice_precedes_the_reserved_place_for_the_survey_form(
+    built_site: Path,
+) -> None:
+    """Phase 4 spec S:6, the identical "notice before the form" ordering
+    `test_the_notice_precedes_the_reserved_place_for_the_registration_
+    form` already pins for registration -- `survey.njk` reserves this
+    page's own place for `app/src/islands/survey/`'s mount point beneath
+    its static notice, never above it.
+    """
+    event_id = _the_one_scheduled_event_id()
+    page = (built_site / "survey" / event_id / "index.html").read_text(encoding="utf-8")
+    notice_at = page.index("Before you answer")
+    placeholder_at = page.index('id="survey-form"')
+    assert notice_at < placeholder_at
+
+
+def test_the_survey_pages_notice_states_anonymity_retention_and_a_real_contact_address(
+    built_site: Path,
+) -> None:
+    """The static half of the notice `SurveyForm.tsx::Notice` used to
+    render before this task -- moved to `survey.njk`, unchanged, so every
+    claim phase 4's own review already earned (R-38's anonymity wording,
+    the 90-day retention figure tied to the event's own key) still reads
+    even with JavaScript disabled, and even before the island's own
+    fetches ever run."""
+    event_id = _the_one_scheduled_event_id()
+    page = (built_site / "survey" / event_id / "index.html").read_text(encoding="utf-8")
+    # Normalised, the same idiom `_normalised_docs_template` uses in
+    # `test_survey_invite.py`: the source template wraps this prose across
+    # several lines, so a literal multi-word phrase can straddle a
+    # newline in the raw HTML even though it reads as one sentence to a
+    # visitor's own browser, which collapses that whitespace itself.
+    normalised = " ".join(page.split())
+    assert "recorded as present" in normalised.lower()
+    assert "anonymous" in normalised.lower()
+    assert "cannot find your own answers" in normalised
+    assert "destroyed together with the event" in normalised
+    assert "90 days after the event" in normalised
+    assert "reading-group@example.test" in normalised
+
+
+def test_a_survey_page_carries_the_noscript_fallback_and_the_island_script(
+    built_site: Path,
+) -> None:
+    """The identical D-18 discipline `event.njk` and `verify.njk` already
+    hold themselves to: an empty mount point renders nothing without
+    JavaScript, so a `<noscript>` fallback must exist beside it, and the
+    island's own bundle must actually be loaded."""
+    event_id = _the_one_scheduled_event_id()
+    page = (built_site / "survey" / event_id / "index.html").read_text(encoding="utf-8")
+    assert "<noscript>" in page
+    assert 'id="survey-form"' in page
+    assert "/app/islands/survey/survey.js" in page
 
 
 def _a_past_event_id() -> str:

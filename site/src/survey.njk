@@ -1,0 +1,131 @@
+---
+layout: layout.njk
+pagination:
+  data: events
+  size: 1
+  alias: event
+  # Task 10 (phase 5) established this flag for event.njk, for the
+  # identical reason it is needed here: without it, Eleventy adds only the
+  # *first* page a paginated template generates to `collections.all`, and
+  # `sitemap.njk`'s own loop over that collection would list one survey
+  # page, not one per edition.
+  addAllPagesToCollections: true
+# D-19: `event_id` IS `edition_code`, lower-cased -- nothing else names an
+# event, the identical rule `event.njk`'s own permalink already applies,
+# and the one `tools/convener_ops/survey_invite.SURVEY_BASE`/`survey_url` must
+# agree with (pinned by `tools/tests/test_workflows.py::
+# test_survey_base_matches_the_survey_page_permalink`).
+permalink: "/survey/{{ event.id | lower }}/"
+# Excluded from the sitemap (site/sitemap.njk) -- see that template's own
+# comment for the pattern this follows, the same choice it already makes
+# for the two archive facets. This page is reached exactly one way: a
+# link in `tools/convener_ops/survey_invite.py`'s own e-mail, sent after the
+# event to people this project already has a reason to write to. A search
+# engine sending a stranger here gains that stranger nothing -- the page
+# answers no question anyone would search for, and a survey it has no
+# invitation for reads as 'not open' regardless. Still fully reachable at
+# its own real address for anyone who does hold the link; this flag
+# decides only what a crawler is pointed at.
+sitemap: false
+eleventyComputed:
+  pageTitle: "Survey — {{ event.title }}"
+  pageDescription: "A short, optional post-event survey for {{ event.title }}."
+---
+
+{#
+  Phase 7 task 5: the post-event survey's own static page, one per event
+  (D-19), the same per-event addressing `event.njk` already uses for
+  registration -- this is *why* that page is the closer mechanical
+  analogue, even though this page's own layout (a dedicated hero plus one
+  section, nothing else on it) reads closer to `verify.njk`: unlike
+  registration, which is one form among several bands on an edition's own
+  page, the survey has never lived there -- it is reached only from a
+  link in an e-mail (`tools/convener_ops/survey_invite.py`), sent after the
+  event, to people this project has no other reason to send back to the
+  event page itself.
+
+  Before this task, `/survey/<event id>` lived inside the operators'
+  own application bundle (`App.tsx`'s former `SurveyRoute`) -- the one
+  asymmetry the security audit's web surface review named: registration
+  and certificate verification were both already extracted (D-18); the
+  survey was not. This page, and the island it mounts
+  (`app/src/islands/survey/`), close that gap.
+#}
+
+<section class="hero">
+  <div class="container hero__inner">
+    <p class="hero__eyebrow">Post-event survey</p>
+    <h1 class="hero__title">What did you think?</h1>
+    <p class="hero__lede">
+      A short, optional survey for {{ event.title }}. Three questions, all short.
+    </p>
+  </div>
+</section>
+
+<section class="section container survey-page">
+  <p class="event-lead__back">
+    <a href="{{ ('/events/' ~ (event.id | lower) ~ '/') | url }}" class="unstyled">&larr; {{ event.title }}</a>
+  </p>
+
+  {#
+    Phase 4 spec S:6, the wording `app/src/survey/SurveyForm.tsx::Notice`
+    used to carry before this task (quoted here unchanged, not redrafted)
+    -- moved to plain static HTML ahead of this island's own mount point,
+    the identical D-18 move task 6 made for registration's own notice on
+    `event.njk`. `tools/tests/test_site.py` pins the ordering, the
+    retention figure and the anonymity claim against this copy now,
+    the same way it already pins `event.njk`'s.
+  #}
+  <div class="notice">
+    <p class="notice__eyebrow">Before you answer</p>
+    <p>
+      This short, optional survey is only sent to people we have recorded as present at
+      this event. Three questions, all short.
+    </p>
+    <p>
+      <strong>Your browser encrypts your answers before they are sent</strong>, using
+      this event&rsquo;s own key &mdash; the same key, and the same protection, as your
+      registration. Nobody &mdash; including us &mdash; can read your answers until a
+      workshop organiser decrypts them as part of running the event.
+    </p>
+    <p>
+      <strong>Your answers are anonymous.</strong> Nothing here &mdash; no name, no
+      address, no matching code &mdash; is sent alongside them, and that is deliberate.
+      Because of that, we cannot find your own answers to show them to you, correct them
+      or erase them individually once sent: there is nothing on file that says which
+      answers are yours. Please do not write your name, your email address, or anything
+      else that could identify you or anyone else, in the free-text box below.
+    </p>
+    <p>
+      All answers for this event, like your registration, are permanently destroyed
+      together with the event&rsquo;s key 90 days after the event. Questions about this
+      survey can be sent to
+      <a href="mailto:reading-group@example.test">reading-group@example.test</a>.
+    </p>
+  </div>
+
+  {#
+    The survey island itself, mounted here -- extracted from the
+    operators' application into its own small, self-contained bundle
+    (`app/src/islands/survey/`), the same move task 6 made for
+    registration and task 7 made for certificate verification. A
+    participant answering this survey never downloads the operators'
+    cockpit to do it.
+
+    `#survey-form` is `app/src/islands/survey/main.tsx`'s own `MOUNT_ID`.
+    `data-event-id` is how the island learns which event it is on: one
+    static page per event (D-19), not a route param this script
+    re-parses. The element starts empty; `survey.js` fills it in, which
+    is exactly why the `<noscript>` fallback beside it exists -- without
+    JavaScript, nothing here would ever render at all.
+  #}
+  <div id="survey-form" data-event-id="{{ event.id | lower }}"></div>
+  <noscript>
+    <p class="notice">
+      Answering this survey needs JavaScript enabled. If you cannot enable it, write to
+      <a href="mailto:reading-group@example.test">reading-group@example.test</a> and we
+      will note your feedback by hand.
+    </p>
+  </noscript>
+  <script type="module" src="{{ '/app/islands/survey/survey.js' | url }}"></script>
+</section>

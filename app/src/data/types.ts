@@ -395,7 +395,7 @@ export interface Speaker {
    *  `false` by default, and an event with the switch off carries nothing
    *  else about the survey: no `survey-responses.enc` file is ever
    *  written, and the page renders no hidden section -- see
-   *  `app/src/survey/SurveyForm.tsx`. */
+   *  `app/src/islands/survey/SurveyForm.tsx`. */
   survey_enabled: boolean;
 
   /** Which lines of the journey are ticked, keyed `phase/item`. */

@@ -22,19 +22,19 @@ const REAL_PROJECTION = ['mrg-05', 'mrg-12'];
 // app/tests/.. = app/
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-describe('PUBLIC_DIR is the exact directory SurveyForm.tsx fetches from', () => {
+describe('PUBLIC_DIR is the exact directory the survey island fetches from', () => {
   it('resolves to app/public, independent of cwd', () => {
     expect(PUBLIC_DIR).toBe(resolve(APP_ROOT, 'public'));
   });
 });
 
-describe('the filename copy-survey-status.mjs writes and SurveyForm.tsx fetches (R-42, fix round 2: two literals, pinned equal, not one shared import)', () => {
-  it('pins scripts/survey-status-projection.mjs::DEST_FILENAME to src/survey/SurveyForm.tsx::SURVEY_STATUS_FILENAME', () => {
+describe('the filename copy-survey-status.mjs writes and the survey island fetches (R-42, fix round 2: two literals, pinned equal, not one shared import)', () => {
+  it('pins scripts/survey-status-projection.mjs::DEST_FILENAME to src/survey/surveyStatus.ts::SURVEY_STATUS_FILENAME', () => {
     // Not one shared import -- survey-status-projection.mjs reaches into
     // node:fs, node:path and node:url, none of which exist in a browser
-    // bundle, so SurveyForm.tsx cannot import this module directly. Before
+    // bundle, so the island cannot import this module directly. Before
     // this test, either constant could be renamed alone and every other
-    // test in this suite (and survey-form.test.tsx's own) stayed green:
+    // test in this suite (and survey-island.test.tsx's own) stayed green:
     // the build would still publish under the old name, the page would
     // still fetch under the new one, both would 404, and the survey
     // switch would read as closed for every event, forever, with nothing

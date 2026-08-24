@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes, useParams } from 'react-router-dom';
+import { HashRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { Login } from './auth/Login';
 import { Layout } from './components/Layout';
@@ -14,7 +14,6 @@ import { Handbook } from './screens/Handbook';
 import { Templates } from './screens/Templates';
 import { SpeakerPage } from './screens/SpeakerPage';
 import { NewSpeaker } from './screens/NewSpeaker';
-import { SurveyForm } from './survey/SurveyForm';
 
 /**
  * Everything the organiser cockpit needs: gated on `useAuth` before
@@ -48,34 +47,12 @@ function Shell() {
   );
 }
 
-/** The same remount discipline `app/src/islands/signup/main.tsx::
- *  mountSignupIsland` gives the registration island (task 6 moved
- *  registration out of this application entirely -- see git history for
- *  the route this used to be), applied to the survey page for the
- *  identical reason: editing the event id in the address bar must reset
- *  `SurveyForm`'s own `keyState` rather than let a previous event's
- *  fetched key silently answer for a new one. */
-function SurveyRoute() {
-  const { eventId } = useParams<{ eventId: string }>();
-  return <SurveyForm key={eventId} />;
-}
-
 export function App() {
   return (
     <AuthProvider>
       <HashRouter>
         <Routes>
-          {/* Public, by construction: the post-event survey (spec S:6) is
-              reached from a link in an e-mail, never from `Shell`'s own
-              navigation, and a participant answering it has no account --
-              matched first, and never falls through to `Shell`'s auth gate
-              below. (`AuthProvider` still wraps the whole router, including
-              this route -- it only reads `localStorage` and, for a legacy
-              stored token, validates it; no participant data is involved,
-              and this route never reaches `Shell` or `DataProvider`, which
-              is the gate that actually matters here.)
-
-              Registration used to be a public route here too
+          {/* Registration used to be a public route here too
               (`/signup/:eventId`) -- task 6 extracted it into an island
               mounted on `site/src/event.njk` instead
               (`app/src/islands/signup/`), per D-18 ("static pages,
@@ -97,8 +74,22 @@ export function App() {
               comment, and `app/src/islands/verify/VerifyPage.tsx`'s own
               module comment, for why losing the router when this route
               left did not lose that property. See git history for the
-              route this replaced. */}
-          <Route path="/survey/:eventId" element={<SurveyRoute />} />
+              route this replaced.
+
+              The post-event survey (spec S:6) used to be the last public
+              route left here (`/survey/:eventId`) -- phase 7 task 5
+              extracted it too, into an island mounted on its own static
+              page (`site/src/survey.njk`, `app/src/islands/survey/`), the
+              identical D-18 move a third time. Unlike verification and
+              like registration, this one *did* move onto a real, bare
+              path: `survey_invite.SURVEY_BASE` carries only an event id,
+              never a name or a token, so there was never a Referer-leak
+              property tying it to a fragment in the first place (see that
+              constant's own comment). This was the one asymmetry the
+              security audit's web surface review named -- with this
+              route gone, `App` (below) mounts nothing a visitor with no
+              account is ever meant to reach; every route left is gated by
+              `Shell`. */}
           <Route path="/*" element={<Shell />} />
         </Routes>
       </HashRouter>

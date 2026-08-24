@@ -1,10 +1,25 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { SurveyForm } from '../src/survey/SurveyForm';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { SurveyForm } from '../src/islands/survey/SurveyForm';
 import { SURVEY_STATUS_FILENAME } from '../src/survey/surveyStatus';
-import { App } from '../src/App';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
+
+// Phase 7 task 5: this suite replaces `survey-form.test.tsx`, which tested
+// `app/src/survey/SurveyForm.tsx` (the operators' application's own
+// `/survey/:eventId` route -- see git history). The form is now
+// `app/src/islands/survey/SurveyForm.tsx`, an island with no router of its
+// own: `eventId` is a plain prop here, not a `useParams` read, so every
+// test below renders the component directly rather than through a
+// `MemoryRouter`. Remount-by-event-id discipline moved to its own file,
+// `survey-island-mount.test.tsx`, which exercises `main.tsx::
+// mountSurveyIsland` -- the thing that actually applies `key={eventId}`
+// now that `App.tsx`'s former `SurveyRoute` no longer exists to do it.
+//
+// The data-protection notice suite (`SurveyForm -- the notice`, in the
+// old file) is gone too, not merely moved: that text no longer renders
+// from this component at all (see `SurveyForm.tsx`'s own module comment)
+// -- `tools/tests/test_site.py` already covers the static copy
+// `site/src/survey.njk` carries instead.
 
 // Reuses the registration fixture's own key pair -- see
 // `survey-encrypt.test.ts`'s own comment for why one pair is pinned for
@@ -62,14 +77,8 @@ async function decryptEnvelopeFields(
   return JSON.parse(new TextDecoder().decode(unpadded));
 }
 
-function renderSurvey(eventId = 'mrg-042') {
-  return render(
-    <MemoryRouter initialEntries={[`/survey/${eventId}`]}>
-      <Routes>
-        <Route path="/survey/:eventId" element={<SurveyForm />} />
-      </Routes>
-    </MemoryRouter>,
-  );
+function renderSurvey(eventId: string | undefined = 'mrg-042') {
+  return render(<SurveyForm eventId={eventId} />);
 }
 
 /** Stubs both fetches `SurveyForm` makes before it can render a form: the
@@ -97,67 +106,27 @@ beforeEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('SurveyForm -- the notice', () => {
-  it('shows the data-protection notice before any field, not after', async () => {
+// Regression guard for the extraction itself: `site/src/survey.njk` now
+// renders the data-protection notice as static HTML ahead of this
+// island's own mount point (see SurveyForm.tsx's module comment). If this
+// component ever grew that text back, a built survey page would show it
+// twice -- the same guard `signup-island.test.tsx` keeps for registration.
+describe('SurveyForm -- does not duplicate the survey page\'s own notice', () => {
+  it('renders no copy of the "before you answer" data-protection notice', async () => {
     stubFetchReady();
     renderSurvey();
-
     await screen.findByRole('group', { name: /rate this session overall/i });
 
     const text = document.body.textContent ?? '';
-    const noticeAt = text.indexOf('Before you answer');
-    const firstFieldAt = text.indexOf('How would you rate');
-    expect(noticeAt).toBeGreaterThanOrEqual(0);
-    expect(firstFieldAt).toBeGreaterThan(noticeAt);
+    expect(text).not.toMatch(/before you answer/i);
+    expect(text).not.toMatch(/90 days/);
+    expect(text).not.toMatch(/recorded as present/i);
   });
 
-  it('shows the notice even while the key is still loading or unavailable', () => {
+  it('renders no copy of the notice even while the key is loading or unavailable', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 }) as Response));
     renderSurvey();
-    expect(screen.getByText('Before you answer')).toBeInTheDocument();
-  });
-
-  it('states only people recorded present receive this, same-key encryption, the 90-day retention and a real contact address', async () => {
-    stubFetchReady();
-    renderSurvey();
-    await screen.findByRole('group', { name: /rate this session overall/i });
-
-    const text = document.body.textContent ?? '';
-    expect(text).toMatch(/recorded as present/i);
-    expect(text).toMatch(/same key.*your registration/i);
-    // Minor 3 (fix round 2): pins the claim, not only the number --
-    // before this, only `/90 days/` was asserted, so weakening the
-    // sentence to "Answers are kept for 90 days" (dropping "destroyed
-    // together with the event's key," the actual mechanism task 15's own
-    // retention sweep implements) left this test green.
-    expect(text).toMatch(/destroyed together with the event.s key 90 days after the event/i);
-    expect(text).toContain('reading-group@example.test');
-  });
-
-  it('R-38: states the answers are anonymous, and why nothing can be individually shown, corrected or erased', async () => {
-    // Critical 1 (fix round 1): the notice used to promise access,
-    // correction and erasure "before that date" -- structurally false for
-    // an anonymous response. It must now say the opposite, and say why.
-    stubFetchReady();
-    renderSurvey();
-    await screen.findByRole('group', { name: /rate this session overall/i });
-
-    const text = document.body.textContent ?? '';
-    expect(text).toMatch(/anonymous/i);
-    expect(text).toMatch(/cannot find your own answers/i);
-    expect(text).not.toMatch(/access, correct or erase your data/i);
-  });
-
-  it('R-38: warns against writing identifying content into the free-text box, both in the notice and beside the field itself', async () => {
-    stubFetchReady();
-    renderSurvey();
-    await screen.findByRole('group', { name: /rate this session overall/i });
-
-    const text = document.body.textContent ?? '';
-    // Twice: once in the notice, once right beside the textarea -- the
-    // second occurrence is the one Critical 1 named as missing entirely.
-    const matches = text.match(/do not (write|include) your name/gi) ?? [];
-    expect(matches.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText(/before you answer/i)).not.toBeInTheDocument();
   });
 });
 
@@ -177,6 +146,14 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
 
     const feedback = screen.getByLabelText(/anything else you would like to tell us/i);
     expect(feedback).not.toBeRequired();
+  });
+
+  it('warns against writing identifying content beside the free-text field', async () => {
+    stubFetchReady();
+    renderSurvey();
+    await screen.findByRole('group', { name: /rate this session overall/i });
+
+    expect(screen.getByText(/do not include your name, email address/i)).toBeInTheDocument();
   });
 
   it('fetches the event public key from the event-scoped, same-origin path -- the same key registration uses', async () => {
@@ -233,7 +210,7 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
     expect(submit).not.toBeDisabled();
   });
 
-  it('Important 3: the free-text box refuses more than 2000 characters, with a visible counter', async () => {
+  it('the free-text box refuses more than 2000 characters, with a visible counter', async () => {
     stubFetchReady();
     renderSurvey();
     await screen.findByRole('group', { name: /rate this session overall/i });
@@ -262,7 +239,9 @@ describe('SurveyForm -- the public key cannot be fetched', () => {
 
     await screen.findByText(/this survey is not available right now/i);
 
-    expect(screen.queryByRole('group', { name: /rate this session overall/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: /rate this session overall/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /submit/i })).not.toBeInTheDocument();
   });
 });
@@ -273,7 +252,9 @@ describe('SurveyForm -- R-37: the survey switch, checked at the page layer', () 
     renderSurvey('mrg-042');
 
     await screen.findByText(/this survey is not open/i);
-    expect(screen.queryByRole('group', { name: /rate this session overall/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: /rate this session overall/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /submit/i })).not.toBeInTheDocument();
   });
 
@@ -320,7 +301,7 @@ describe('SurveyForm -- R-37: the survey switch, checked at the page layer', () 
     await screen.findByRole('group', { name: /rate this session overall/i });
   });
 
-  it('a different event\'s presence in survey-status.json does not enable this one', async () => {
+  it("a different event's presence in survey-status.json does not enable this one", async () => {
     stubFetchReady(['mrg-999']);
     renderSurvey('mrg-042');
 
@@ -461,8 +442,8 @@ describe('SurveyForm -- sending', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
     await screen.findByText(/submitting answers is not available yet/i);
-    // Minor 7: must not read the same as the 'closed' state's own message,
-    // which would tell a participant whose survey *is* open to give up.
+    // Distinct wording from the 'closed' state's own message, which would
+    // tell a participant whose survey *is* open to give up.
     expect(screen.queryByText(/this survey is not open$/i)).not.toBeInTheDocument();
   });
 
@@ -492,7 +473,7 @@ describe('SurveyForm -- sending', () => {
     );
   });
 
-  it('R-40: an answer that would overflow the pad target once encrypted is refused cleanly, not an unhandled crash', async () => {
+  it('an answer that would overflow the pad target once encrypted is refused cleanly, not an unhandled crash (R-40)', async () => {
     // `maxLength` on the real textarea caps this in the browser, but
     // `fireEvent.change` sets the DOM value directly the same way an
     // adversarial or buggy caller bypassing that attribute would --
@@ -523,86 +504,20 @@ describe('SurveyForm -- sending', () => {
 });
 
 describe('SurveyForm -- reachable with no eventId at all', () => {
-  it('treats a route with no eventId as an unavailable key rather than crashing', async () => {
-    render(
-      <MemoryRouter initialEntries={['/survey/']}>
-        <Routes>
-          <Route path="/survey/:eventId?" element={<SurveyForm />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+  it('treats a missing eventId prop as an unavailable key rather than crashing', async () => {
+    render(<SurveyForm />);
     await screen.findByText(/this survey is not available right now/i);
   });
 });
 
+// Sanity check that this component alone -- with no AuthProvider and no
+// DataProvider in the tree at all -- is the proof that it needs neither: a
+// screen requiring one would fail to render, not silently omit it.
 describe('SurveyForm -- needs no organiser account', () => {
   it('renders without AuthProvider or DataProvider in the tree', async () => {
     stubFetchReady();
     renderSurvey();
     await screen.findByRole('group', { name: /rate this session overall/i });
     expect(within(document.body).queryByText(/sign in/i)).not.toBeInTheDocument();
-  });
-});
-
-// The block above proves `SurveyForm` does not *need* an account; this
-// proves the production *route* actually reaches it without one either --
-// a property of route order in `App.tsx`, not of `SurveyForm`'s own
-// design, so it has to be checked through `App` itself. (Registration
-// used to have the identical block, in the now-deleted
-// `signup-form.test.tsx` -- task 6 moved it out of this application
-// entirely, onto an island mounted on a static page, which has no route
-// order left to prove.)
-describe('App -- the survey route in production, not standalone', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    window.location.hash = '';
-  });
-
-  it('reaches SurveyForm with no sign-in screen', async () => {
-    stubFetchReady();
-    window.location.hash = '#/survey/mrg-042';
-    render(<App />);
-
-    await screen.findByRole('group', { name: /rate this session overall/i });
-    expect(screen.queryByText(/for the team/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^sign in$/i)).not.toBeInTheDocument();
-  });
-
-  it('editing the event id in the address bar forces a full remount, the same discipline the registration island now uses', async () => {
-    vi.stubEnv('VITE_SIGNUP_RELAY_URL', 'https://signup-relay.example');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string) => {
-        const u = String(url);
-        if (u.endsWith('/keys/events/mrg-042.pub') || u.endsWith('/keys/events/mrg-043.pub')) {
-          return { ok: true, text: async () => VALID_PEM } as Response;
-        }
-        if (u.endsWith('/survey-status.json')) {
-          return { ok: true, json: async () => ['mrg-042', 'mrg-043'] } as Response;
-        }
-        throw new Error(`unexpected fetch in test: ${u}`);
-      }),
-    );
-
-    window.location.hash = '#/survey/mrg-042';
-    render(<App />);
-    const ratingGroup = await screen.findByRole('group', { name: /rate this session overall/i });
-    fireEvent.click(within(ratingGroup).getAllByRole('radio')[4]);
-
-    act(() => {
-      window.location.hash = '#/survey/mrg-043';
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
-
-    const freshGroup = await screen.findByRole('group', { name: /rate this session overall/i });
-    // A fresh instance: the earlier selection must not have survived the
-    // switch, proving the remount actually happened rather than merely a
-    // new key eventually being fetched.
-    expect(within(freshGroup).getAllByRole('radio').every(r => !(r as HTMLInputElement).checked)).toBe(
-      true,
-    );
   });
 });

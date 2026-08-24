@@ -164,7 +164,7 @@ def test_vite_config_base_no_longer_points_at_the_private_repo() -> None:
     )
 
 
-def test_both_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
+def test_all_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
     """Fix round 4 (the path-prefix defect): `islandSignupConfig` and
     `islandVerifyConfig` used to set `base: '/app/'`, deliberately distinct
     from the main config's own `base: '/example-showcase/app/'`
@@ -176,29 +176,47 @@ def test_both_islands_share_the_apps_published_base_not_a_divergent_one() -> Non
     (no CNAME, no custom domain), which is the identical gap
     `tools/tests/test_site.py::
     test_no_built_page_emits_a_root_relative_link_without_the_prefix` now
-    closes on the site's own side. Both islands publish into, and are
+    closes on the site's own side. Every island publishes into, and is
     addressed from, the exact same `example-showcase` `app/` subtree the main
     app does (`deploy.yml`'s single "Push to example-showcase" step carries all
-    three), so all three configs must now read the identical value -- a
-    stray `'/app/'` reappearing on either island is exactly the regression
-    this guards.
+    of them, `islandSurveyConfig` added by phase 7 task 5), so all four
+    configs must now read the identical value -- a stray `'/app/'`
+    reappearing on any island is exactly the regression this guards.
     """
     config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
     # Block comments stripped first: this file's own explanatory comments
     # quote `base: '/example-showcase/app/'` by way of describing the fix, which
-    # would otherwise inflate this count without a fourth real config.
+    # would otherwise inflate this count without a fifth real config.
     code_only = re.sub(r"/\*.*?\*/", "", config, flags=re.DOTALL)
     base_literals = re.findall(r"base:\s*'([^']*)'", code_only)
-    assert len(base_literals) == 3, (
-        f"expected exactly 3 `base:` literals in {VITE_CONFIG.as_posix()} "
-        f"(main app, island-signup, island-verify), found {base_literals!r}"
+    assert len(base_literals) == 4, (
+        f"expected exactly 4 `base:` literals in {VITE_CONFIG.as_posix()} "
+        "(main app, island-signup, island-verify, island-survey), found "
+        f"{base_literals!r}"
     )
     assert set(base_literals) == {EXPECTED_BASE_PATH}, (
-        f"{VITE_CONFIG.as_posix()}'s three `base:` literals are "
+        f"{VITE_CONFIG.as_posix()}'s four `base:` literals are "
         f"{base_literals!r}, not all {EXPECTED_BASE_PATH!r} -- an island "
         "publishing under a different base than the main app 404s its own "
         "fetches (event keys, the certificate register, signing keys) once "
         "served from the vitrine's real, single app/ subtree"
+    )
+
+
+def test_app_no_longer_declares_a_survey_route() -> None:
+    """Phase 7 task 5 moved the post-event survey off `App.tsx`'s own
+    former `<Route path="/survey/:eventId" .../>` onto a static page's
+    own island (`site/src/survey.njk`, `app/src/islands/survey/`), the
+    identical move task 6 and task 7 made for registration and
+    verification (see git history for the route this replaced). This was
+    the last public route `App.tsx` carried -- with it gone, every route
+    that document still declares is reached only through `Shell`, gated
+    on sign-in."""
+    app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
+    assert '"/survey/:eventId"' not in app_tsx, (
+        f"{APP_TSX.as_posix()} still declares a route at "
+        '"/survey/:eventId" -- task 5 moved the post-event survey onto '
+        "the static survey page's own island instead"
     )
 
 
@@ -264,14 +282,51 @@ def test_certificate_verification_base_no_longer_targets_the_app_subtree() -> No
     )
 
 
-def test_survey_base_targets_the_vitrine_app_subtree() -> None:
-    """M4's identical gap, applied to `survey_invite.SURVEY_BASE`: the D-14
-    pin in `test_survey_invite.py` binds `#/survey/` to `App.tsx`'s route,
-    but not the deployment base that comes before it."""
-    assert EXPECTED_BASE_PATH in survey_invite.SURVEY_BASE, (
-        f"survey_invite.SURVEY_BASE does not carry {EXPECTED_BASE_PATH!r} -- "
-        "it would not match app/vite.config.ts's own base, and every "
-        "survey invitation link would 404 once served"
+#: `site/src/survey.njk`'s own permalink expression -- D-19, `event_id` IS
+#: `edition_code` lower-cased, nothing else names an event, the identical
+#: rule `EVENT_PERMALINK` below already applies. Read from the template's
+#: own front matter rather than restated as a second literal, so a future
+#: change to that permalink fails this pin instead of quietly leaving
+#: `survey_invite.SURVEY_BASE` pointing at an address the site no longer
+#: serves.
+SURVEY_TEMPLATE = Path("site/src/survey.njk")
+SURVEY_PERMALINK = "/survey/{{ event.id | lower }}/"
+
+
+def test_survey_base_matches_the_survey_page_permalink() -> None:
+    """Phase 7 task 5 correction of the D-14 pin `test_survey_base_
+    matches_app_tsxs_own_survey_route` used to make (see git history):
+    `App.tsx` no longer declares a survey route at all -- the post-event
+    survey moved off it entirely, the same D-18 move task 6 made for
+    registration -- so the address `survey_invite.SURVEY_BASE` must now
+    match is the static survey page's own, exactly the way
+    `test_registration_signup_base_matches_the_event_page_permalink`
+    already holds `registration.SIGNUP_BASE` to `event.njk`'s."""
+    survey_njk = (ROOT / SURVEY_TEMPLATE).read_text(encoding="utf-8")
+    assert f'permalink: "{SURVEY_PERMALINK}"' in survey_njk, (
+        f"{SURVEY_TEMPLATE.as_posix()} does not declare the permalink "
+        f"{SURVEY_PERMALINK!r} this pin assumes -- update both together"
+    )
+    prefix = SURVEY_PERMALINK.split("{{", 1)[0]  # "/survey/"
+    assert survey_invite.SURVEY_BASE.endswith(prefix), (
+        f"survey_invite.SURVEY_BASE ({survey_invite.SURVEY_BASE!r}) does "
+        f"not end with the survey page's own address prefix ({prefix!r})"
+    )
+    assert survey_invite.survey_url("mrg-042") == f"{survey_invite.SURVEY_BASE}mrg-042/"
+
+
+def test_survey_base_no_longer_targets_the_app_subtree() -> None:
+    """Same gap `test_certificate_verification_base_no_longer_targets_the_
+    app_subtree` and `test_registration_signup_base_no_longer_targets_
+    the_app_subtree` guard for their own bases, applied here now that the
+    survey has the identical shape registration's own base already has: a
+    published survey link that still carried `EXPECTED_BASE_PATH` after
+    task 5 would point at the now-deleted `App.tsx` route's own asset
+    subtree, not at the survey page that replaced it."""
+    assert EXPECTED_BASE_PATH not in survey_invite.SURVEY_BASE, (
+        f"survey_invite.SURVEY_BASE still carries {EXPECTED_BASE_PATH!r} -- "
+        "task 5 moved the survey off the app's own route onto the survey "
+        "page; every survey invitation link should target that page instead"
     )
 
 
