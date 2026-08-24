@@ -38,6 +38,23 @@ const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cock
 const CONTENTS_URL = (id) =>
   `https://api.github.com/repos/example-instance/example-cockpit/contents/keys/events/${id}.pub`;
 
+// Phase 9, task 2: a survey response is written to the queue branch
+// through the Contents API instead of being dispatched. These mirror
+// `src/index.js`'s own constants, which in turn mirror
+// `tools/convener_ops/submission_queue.py`'s -- a branch name that disagreed
+// across the three would be a queue nothing ever drains.
+const QUEUE_BRANCH = 'submission-queue';
+const QUEUE_PREFIX =
+  'https://api.github.com/repos/example-instance/example-cockpit/contents/queue/survey/';
+const REF_URL =
+  'https://api.github.com/repos/example-instance/example-cockpit/git/ref/heads/main';
+const REFS_URL = 'https://api.github.com/repos/example-instance/example-cockpit/git/refs';
+
+/** The path component of a queue write, i.e. what `queueEntryPath` built.
+ *  `submission_queue.ENTRY_ID_RE` is the Python half of this shape; the
+ *  two are pinned against each other by the entry-id test below. */
+const QUEUE_ENTRY_RE = /^[0-9a-z]{1,16}-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.json$/;
+
 // R-41 (fix round 2): the survey switch is read through the same Contents
 // API `CONTENTS_URL` above already exercises, just a different path in
 // this repository -- not a second, deployed URL any more (that was
@@ -131,9 +148,37 @@ function stubFetch({
   surveyStatusHttpStatus = 200,
   surveyStatusContent,
   surveyStatusRawBody,
+  // Phase 9, task 2. `queueStatus` is what a queue write answers with
+  // (201 is what the Contents API answers a created file with);
+  // `queueStatusAfterBranch` is what the *retry* answers once the branch
+  // has been created, so a test can make the first write fail with 404
+  // and the second succeed. `refStatus` / `refSha` / `createRefStatus`
+  // drive the one-time branch creation.
+  queueStatus = 201,
+  queueStatusAfterBranch,
+  refStatus = 200,
+  refSha = '0'.repeat(40),
+  createRefStatus = 201,
 } = {}) {
+  let queueWrites = 0;
   return vi.fn(async (url) => {
     const u = String(url);
+    if (u.startsWith(QUEUE_PREFIX)) {
+      queueWrites += 1;
+      const status =
+        queueWrites > 1 && queueStatusAfterBranch !== undefined
+          ? queueStatusAfterBranch
+          : queueStatus;
+      return new Response(null, { status });
+    }
+    if (u === REF_URL) {
+      return new Response(JSON.stringify({ object: { sha: refSha } }), {
+        status: refStatus,
+      });
+    }
+    if (u === REFS_URL) {
+      return new Response(null, { status: createRefStatus });
+    }
     // Checked before the generic contents/ prefix below, which would
     // otherwise also match this URL.
     if (u === SURVEY_STATUS_CONTENTS_URL) {
@@ -653,15 +698,18 @@ describe('signup relay -- the per-event cumulative ceiling', () => {
 });
 
 describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
-  it('accepts a well-shaped, known-event survey envelope, and dispatches it as survey-response-submitted', async () => {
+  it('accepts a well-shaped, known-event survey envelope, and queues it instead of dispatching', async () => {
     const kv = makeKv();
     const res = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RELAY_KV: kv }));
 
     expect(res.status).toBe(204);
 
-    // Three calls, not two: the known-event check, R-37's own
-    // survey-status check (R-41, fix round 2: now the Contents API, not a
-    // deployed URL), and the dispatch itself.
+    // Three calls, not two, and not four: the known-event check, R-37's
+    // own survey-status check (R-41, fix round 2: the Contents API, not a
+    // deployed URL), and the queue write. Phase 9, task 2 replaced the
+    // dispatch with the write and spends exactly the same number of API
+    // calls doing it -- a queue that cost the relay more per submission
+    // than the thing it replaced would be the wrong shape.
     const calls = globalThis.fetch.mock.calls;
     expect(calls).toHaveLength(3);
     expect(String(calls[1][0])).toBe(SURVEY_STATUS_CONTENTS_URL);
@@ -670,10 +718,23 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     // than serving it from a public URL) is what makes reading it require
     // one in the first place.
     expect(calls[1][1].headers.Authorization).toBe('Bearer ghp_test-token');
-    const [, dispatchInit] = calls[2];
-    const sent = JSON.parse(dispatchInit.body);
-    expect(sent.event_type).toBe('survey-response-submitted');
-    expect(sent.client_payload.body).toBe(SURVEY_BODY);
+
+    // Nothing is dispatched any more: a survey response no longer starts a
+    // run of its own, which is the whole point of the phase.
+    expect(calls.map(([u]) => String(u))).not.toContain(DISPATCH_URL);
+
+    const [queueUrl, queueInit] = calls[2];
+    expect(String(queueUrl).startsWith(QUEUE_PREFIX)).toBe(true);
+    expect(queueInit.method).toBe('PUT');
+    expect(queueInit.headers.Authorization).toBe('Bearer ghp_test-token');
+    const written = JSON.parse(queueInit.body);
+    expect(written.branch).toBe(QUEUE_BRANCH);
+    // Byte for byte what the browser encrypted: what the drain decrypts
+    // has to be exactly what was submitted, never a re-serialisation.
+    expect(atob(written.content)).toBe(SURVEY_BODY);
+    // The precondition no test can enforce, written where somebody about
+    // to break it might read it.
+    expect(written.message).toContain('never open a pull request');
 
     // A distinct counter key from registration's own, so the two never
     // share -- or corrupt -- one budget.
@@ -880,5 +941,108 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
       const surveyRes = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RATE_LIMITER: rateLimiter }));
       expect(surveyRes.status).toBe(204);
     });
+  });
+});
+
+describe('signup relay -- the submission queue (phase 9, task 2)', () => {
+  it('names each entry so the drain can order it and never collide', async () => {
+    await handle(postSurvey(SURVEY_BODY), env());
+    const [queueUrl] = globalThis.fetch.mock.calls[2];
+    const name = String(queueUrl).slice(QUEUE_PREFIX.length);
+    // The shape `submission_queue.ENTRY_ID_RE` refuses anything else in:
+    // a fixed-width base36 millisecond, then a uuid. Ordering the names as
+    // strings and ordering the milliseconds as numbers have to be the same
+    // thing, or a drain would apply two submissions out of order.
+    expect(name).toMatch(QUEUE_ENTRY_RE);
+  });
+
+  it('gives two submissions two different names', async () => {
+    await handle(postSurvey(SURVEY_BODY), env());
+    const first = String(globalThis.fetch.mock.calls[2][0]);
+    globalThis.fetch = stubFetch();
+    await handle(postSurvey(SURVEY_BODY), env());
+    const second = String(globalThis.fetch.mock.calls[2][0]);
+    // Two submissions inside one millisecond are ordinary; the uuid is
+    // what stops one overwriting the other, and the drain's own ledger
+    // pruning rests on an entry name never coming back.
+    expect(first).not.toBe(second);
+  });
+
+  it('creates the queue branch the one time it does not exist yet, and retries the write', async () => {
+    globalThis.fetch = stubFetch({ queueStatus: 404, queueStatusAfterBranch: 201 });
+    const res = await handle(postSurvey(SURVEY_BODY), env());
+
+    expect(res.status).toBe(204);
+    const urls = globalThis.fetch.mock.calls.map(([u]) => String(u));
+    // Five calls, once in this repository's life: known-event,
+    // survey-status, the write that found no branch, the two that create
+    // it -- and then the retry.
+    expect(urls).toContain(REF_URL);
+    expect(urls).toContain(REFS_URL);
+    expect(urls.filter((u) => u.startsWith(QUEUE_PREFIX))).toHaveLength(2);
+    // Created from the default branch's own tip, with the sha the ref read
+    // answered -- never a fabricated one.
+    const createInit = globalThis.fetch.mock.calls.find(([u]) => String(u) === REFS_URL)[1];
+    expect(JSON.parse(createInit.body)).toEqual({
+      ref: `refs/heads/${QUEUE_BRANCH}`,
+      sha: '0'.repeat(40),
+    });
+  });
+
+  it('treats "the reference already exists" as the branch being there', async () => {
+    // Two submissions racing to create the branch: the loser gets 422, and
+    // that is a success for it too -- the branch it needed is there.
+    globalThis.fetch = stubFetch({
+      queueStatus: 404,
+      queueStatusAfterBranch: 201,
+      createRefStatus: 422,
+    });
+    const res = await handle(postSurvey(SURVEY_BODY), env());
+    expect(res.status).toBe(204);
+  });
+
+  it('answers 502 when the queue write cannot be completed, and counts nothing', async () => {
+    const kv = makeKv();
+    globalThis.fetch = stubFetch({ queueStatus: 500 });
+    const res = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RELAY_KV: kv }));
+
+    // The submitter learns at once that it did not work and can submit
+    // again -- the queue only ever delays what was *accepted*.
+    expect(res.status).toBe(502);
+    expect(kv.put).not.toHaveBeenCalled();
+  });
+
+  it('answers 502 rather than looping when the branch cannot be created either', async () => {
+    globalThis.fetch = stubFetch({ queueStatus: 404, refStatus: 500 });
+    const res = await handle(postSurvey(SURVEY_BODY), env());
+    expect(res.status).toBe(502);
+    // Exactly one write attempt: a second retry against a branch that is
+    // still not there would hold the submitter's request open for nothing.
+    const writes = globalThis.fetch.mock.calls.filter(([u]) =>
+      String(u).startsWith(QUEUE_PREFIX),
+    );
+    expect(writes).toHaveLength(1);
+  });
+
+  it('answers 502 when the ref read answers something with no sha in it', async () => {
+    globalThis.fetch = stubFetch({ queueStatus: 404, refSha: '' });
+    const res = await handle(postSurvey(SURVEY_BODY), env());
+    expect(res.status).toBe(502);
+  });
+
+  it('leaves the registration route dispatching exactly as before', async () => {
+    // Registration must not join the queue until the distance-to-event
+    // delay exists (phase 9, task 3): its confirmation e-mail carries the
+    // room link and the matching code, and there is no other channel for
+    // either, so a day's wait would strip a same-day registrant of theirs.
+    const res = await handle(post(VALID_BODY), env());
+    expect(res.status).toBe(204);
+    const urls = globalThis.fetch.mock.calls.map(([u]) => String(u));
+    expect(urls).toContain(DISPATCH_URL);
+    expect(urls.filter((u) => u.startsWith(QUEUE_PREFIX))).toHaveLength(0);
+    const dispatchInit = globalThis.fetch.mock.calls.find(([u]) => String(u) === DISPATCH_URL)[1];
+    const sent = JSON.parse(dispatchInit.body);
+    expect(sent.event_type).toBe('registration-submitted');
+    expect(sent.client_payload.body).toBe(VALID_BODY);
   });
 });

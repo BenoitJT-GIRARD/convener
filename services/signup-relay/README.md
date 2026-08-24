@@ -11,13 +11,30 @@ ciphertext.
 It accepts `POST` (and the `OPTIONS` preflight a browser sends ahead of it)
 on two routes, `/` and `/survey`, and nothing else. It reads the body raw,
 checks its **shape**, applies the abuse protection below, and — if
-everything holds — turns it into a `repository_dispatch`, byte-identical to
-what it received, the same `client_payload.body` pattern `services/form-relay`
-uses. `/` dispatches `registration-submitted`; `/survey` dispatches
-`survey-response-submitted` (see "A second route, not a second worker"
-below). It logs no request body and keeps nothing beyond the per-event
-counters described below, and a counter is a count, never the data that
-produced it.
+everything holds — forwards it byte-identically, never re-serialised. The
+two routes part company only there.
+
+`/` turns it into a `repository_dispatch` of type `registration-submitted`,
+the same `client_payload.body` pattern `services/form-relay` uses, and one
+workflow run starts for it. That stays true because the confirmation
+e-mail a registration produces carries the room link and the matching
+code, and there is no other channel for either.
+
+`/survey` **writes it to the submission queue instead** (phase 9, task 2):
+one Contents-API `PUT` of `queue/survey/<entry id>.json` on the
+`submission-queue` branch, and no run starts at all. One daily drain
+handles everything waiting — see `docs/reference/operations.md`, "Draining
+the submission queue", for the branch, the ledger and the one precondition
+nothing can enforce (never open a pull request from that branch). It costs
+this worker the same number of GitHub API calls the dispatch did, and the
+same credential: `Contents: read & write`, which
+`repository_dispatch` already required. Nothing about a survey response is
+sent back to the submitter, which is why the slowest cadence costs it
+nothing.
+
+It logs no request body and keeps nothing beyond the per-event counters
+described below, and a counter is a count, never the data that produced
+it.
 
 ## A second route, not a second worker
 
@@ -67,12 +84,12 @@ every time it changes.
 This is the relay's own layer, not the only one: `app/src/islands/survey/
 SurveyForm.tsx` still fetches the deployed `survey-status.json` from
 example-showcase — a static page has no token and cannot read the Contents API
-any other way — and `convener-handle-survey-response` checks the authoritative
+any other way — and the daily drain checks the authoritative
 `data/speakers.yml` again regardless. Three layers still, for the same
 reason as before: a page check is bypassable by posting straight to this
 worker, and a relay check — even one now reading this repository's own
 tip rather than a deployed artefact — is a courtesy that saves a wasted
-workflow run, never the authority.
+queue entry, never the authority.
 
 What genuinely is separate is the abuse ceiling. `/survey` is keyed by its
 own KV counter (`count:survey:<event_id>`, distinct from `/`'s own

@@ -16,6 +16,11 @@ export default [
         URL: 'readonly',
         atob: 'readonly',
         btoa: 'readonly',
+        // `crypto.randomUUID` names each queue entry (phase 9, task
+        // 2). A Worker global, and a Node one since 19 -- granted the
+        // same way services/form-relay's own config already grants it
+        // for its HMAC.
+        crypto: 'readonly',
         console: 'readonly',
         globalThis: 'writable',
         AbortSignal: 'readonly',

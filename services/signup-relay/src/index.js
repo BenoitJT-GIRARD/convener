@@ -35,18 +35,28 @@
  * -------------------------------------------------------------------
  * `POST /survey` accepts a post-event survey response -- `app/src/survey/
  * SurveyForm.tsx` and `app/src/survey/encrypt.ts`, the sibling of the
- * registration page and its own `encrypt.ts` -- and forwards it as a
- * `survey-response-submitted` dispatch instead of `registration-submitted`.
- * It is the *same* worker, not a fourth one, because spec S:6 says the
- * survey travels through "meme entree que l'inscription": the envelope this
- * worker validates is byte-identical in shape (`validatedEventId` below
- * makes no distinction between the two routes at all), the known-event
- * check is the same lookup against the same `keys/events/<id>.pub`, and the
- * GitHub token is the same one already scoped to this repository. Splitting
- * that into a second deployment would buy nothing this worker's own
- * reasoning for being a *third* worker (see "Why this is a third worker"
- * below) actually asked for -- there is no second trust boundary here, only
- * a second `client_payload.body` destination.
+ * registration page and its own `encrypt.ts`. It is the *same* worker, not
+ * a fourth one, because spec S:6 says the survey travels through "meme
+ * entree que l'inscription": the envelope this worker validates is
+ * byte-identical in shape (`validatedEventId` below makes no distinction
+ * between the two routes at all), the known-event check is the same lookup
+ * against the same `keys/events/<id>.pub`, and the GitHub token is the
+ * same one already scoped to this repository. Splitting that into a second
+ * deployment would buy nothing this worker's own reasoning for being a
+ * *third* worker (see "Why this is a third worker" below) actually asked
+ * for -- there is no second trust boundary here.
+ *
+ * Where the two routes *do* part company is what they do with an accepted
+ * body (phase 9, task 2). `/` still sends a `registration-submitted`
+ * dispatch, and one workflow run still starts for it, because the
+ * confirmation e-mail that run produces carries the room link and the
+ * matching code and there is no other channel for either. `/survey` writes
+ * the envelope to the `submission-queue` branch instead and starts nothing
+ * at all: a survey response sends nothing back to anybody, so waiting for
+ * the daily drain costs the person who submitted it precisely nothing,
+ * where it would cost a last-minute registrant their way into the room.
+ * See `queueSubmission` below, and docs/reference/operations.md's
+ * "Draining the submission queue".
  *
  * What *is* separate is the abuse ceiling: `/survey` gets its own KV
  * counter key and its own rate-limiter key (`surveyCounterKey`,
@@ -61,7 +71,34 @@ const ROUTE = '/';
 const SURVEY_ROUTE = '/survey';
 const REPO = 'example-instance/example-cockpit';
 const DISPATCH_URL = `https://api.github.com/repos/${REPO}/dispatches`;
+const CONTENTS_URL = `https://api.github.com/repos/${REPO}/contents/`;
 const USER_AGENT = 'convener-signup-relay';
+
+// Phase 9, task 2: where a survey response goes instead of straight to a
+// `repository_dispatch`. Mirrors `tools/convener_ops/submission_queue.py`'s own
+// QUEUE_BRANCH / QUEUE_DIR / SURVEY_KIND, which the drain reads from -- a
+// branch name that disagreed between the two would be a queue nothing ever
+// drains, with nothing red anywhere to say so.
+//
+// A branch, never a path on the default branch: `register.yml`,
+// `quality.yml` and `security.yml` start on *any* commit to the default
+// branch with no path filter at all, and this worker writes with its own
+// token rather than a job's GITHUB_TOKEN, so GitHub's recursion guard does
+// not apply to what it pushes. A queue file on the default branch would
+// bill at least five runs per submission -- the exact inverse of why this
+// exists. Nothing is triggered by a push to any other branch, and that is
+// held by `tools/tests/test_workflows.py`'s directory-wide sweep rather
+// than by anybody remembering.
+const QUEUE_BRANCH = 'submission-queue';
+const QUEUE_DIR = 'queue/survey';
+
+// The branch the queue branch is created from, the one time it does not
+// exist yet. Hardcoded like REPO above, and for the same reason: this
+// worker has no repository metadata call to derive it from and adding one
+// would cost an API call on every submission to save one on the first.
+const DEFAULT_BRANCH = 'main';
+const REF_URL = `https://api.github.com/repos/${REPO}/git/ref/heads/${DEFAULT_BRANCH}`;
+const REFS_URL = `https://api.github.com/repos/${REPO}/git/refs`;
 
 //: Mirrors tools/convener_ops/eventkeys.py -- see that module's docstring for why
 //: these are exactly these numbers, not approximations.
@@ -306,9 +343,10 @@ function base64DecodeContentsApi(value) {
  *
  * This is the relay's own layer of the switch, not the only one: a page
  * that skipped this check entirely and posted straight to this route
- * would still be refused here, and `convener-handle-survey-response` checks
- * again regardless -- this check is a courtesy that saves a wasted
- * workflow run, never the authority.
+ * would still be refused here, and the daily drain
+ * (`tools/convener_ops/submission_queue.py`) checks again regardless -- this
+ * check is a courtesy that saves a wasted queue entry, never the
+ * authority.
  */
 async function surveyEnabled(eventId, token) {
   const url = `https://api.github.com/repos/${REPO}/contents/public-data/survey-status.json`;
@@ -381,6 +419,139 @@ function surveyRateLimiterKey(eventId) {
 // is asked about, so a global ceiling distinct from the per-event one
 // needs a binding of its own.
 const GLOBAL_RATE_LIMITER_KEY = 'global';
+
+/**
+ * Base64 for the Contents API's own `content` field, over the request
+ * body's real UTF-8 bytes.
+ *
+ * Distinct from `base64Decode` above (which reads a stranger's field) and
+ * from `base64DecodeContentsApi` (which reads GitHub's answer): this one
+ * *writes*, and it has to write the exact bytes the drain will decrypt.
+ * `btoa` alone would throw on any code point above U+00FF. Every field
+ * this worker accepts is ASCII by construction, so that should be
+ * unreachable -- which is precisely why it is encoded properly rather than
+ * assumed away: a body that reached here with a multi-byte character would
+ * otherwise become an uncaught exception and workerd's own generic error
+ * page, outside the closed set of statuses this worker promises.
+ */
+function base64EncodeUtf8(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+/**
+ * One queue entry's path: `queue/survey/<milliseconds, base36>-<uuid>.json`,
+ * matching `submission_queue.ENTRY_ID_RE`.
+ *
+ * The timestamp is what gives the drain a total order over everything it
+ * finds -- two responses handled in one drain must land in the order they
+ * would have landed in two -- and it is padded to a fixed width so that
+ * ordering the *names* as strings and ordering the milliseconds as numbers
+ * are the same thing. The uuid is what keeps two submissions in the same
+ * millisecond from colliding on one filename, and it is also why the drain
+ * can be sure a cleared entry's name will never come back: the ledger's
+ * pruning rule rests on that.
+ *
+ * No date is read out of this by anything, ever -- the drain treats an
+ * entry id as an opaque, comparable string (`submission_queue`'s own
+ * module docstring). That is why using the wall clock here is not the
+ * "implicit today" this project forbids elsewhere: nothing derives a Paris
+ * calendar day, a deadline or a retention date from it.
+ */
+function queueEntryPath() {
+  const stamp = Date.now().toString(36).padStart(9, '0');
+  return `${QUEUE_DIR}/${stamp}-${crypto.randomUUID()}.json`;
+}
+
+/** One Contents-API write of `body` to `path` on the queue branch. */
+function putQueueEntry(path, body, token) {
+  return fetch(`${CONTENTS_URL}${encodeURI(path)}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'User-Agent': USER_AGENT,
+    },
+    body: JSON.stringify({
+      // Read by a person opening the branch, and it is the one place the
+      // precondition can be written where somebody about to break it might
+      // see it: an open pull request whose head is this branch would start
+      // six workflows per submission.
+      message: `queue: a survey response -- never open a pull request from ${QUEUE_BRANCH}`,
+      content: base64EncodeUtf8(body),
+      branch: QUEUE_BRANCH,
+    }),
+    signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
+  });
+}
+
+/**
+ * Create the queue branch at the default branch's current tip, for the one
+ * submission in this repository's life that arrives before it exists.
+ *
+ * `true` only when the branch is there afterwards -- which includes a 422,
+ * GitHub's answer when the reference already exists: two submissions
+ * racing to create it is a success for both, not a failure for the loser.
+ *
+ * Needs no privilege beyond the `Contents: read & write` this worker
+ * already holds for `repository_dispatch` (docs/reference/operations.md).
+ * That is the ceiling this design was built against, not a starting point:
+ * a queue that had needed more would have been the wrong shape.
+ */
+async function createQueueBranch(token) {
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+    'User-Agent': USER_AGENT,
+  };
+  const ref = await fetch(REF_URL, {
+    headers,
+    signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
+  });
+  if (!ref.ok) return false;
+  let sha;
+  try {
+    const data = await ref.json();
+    sha = data && data.object && data.object.sha;
+  } catch {
+    return false;
+  }
+  if (typeof sha !== 'string' || sha.length === 0) return false;
+  const created = await fetch(REFS_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ ref: `refs/heads/${QUEUE_BRANCH}`, sha }),
+    signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
+  });
+  return created.status === 201 || created.status === 422;
+}
+
+/**
+ * Put one survey response in the queue, and answer with whatever GitHub
+ * answered -- the caller reads `.ok` exactly as it reads the dispatch
+ * call's, so a queue write that did not land is a 502 to the submitter and
+ * never a silent loss.
+ *
+ * One API call in the ordinary case, the same count the dispatch it
+ * replaces spent. The three-call path below happens once: GitHub answers a
+ * write to a branch that does not exist with 404 (and, on some shapes,
+ * 422), so both are read as "the branch may be missing", the branch is
+ * created, and the write is retried exactly once. A second failure is
+ * returned as-is rather than retried again -- a submitter learning
+ * immediately that it did not work, and re-submitting, is a better outcome
+ * than this worker holding their request open.
+ */
+async function queueSubmission(body, token) {
+  const path = queueEntryPath();
+  const first = await putQueueEntry(path, body, token);
+  if (first.status !== 404 && first.status !== 422) return first;
+  if (!(await createQueueBranch(token))) return first;
+  return putQueueEntry(path, body, token);
+}
 
 export async function handle(request, env) {
   // CORS, first: the in-repo pattern services/auth-proxy/src/index.js
@@ -575,26 +746,42 @@ export async function handle(request, env) {
     }
   }
 
+  // The one place the two routes now part company (phase 9, task 2).
+  //
+  // A registration still becomes a `repository_dispatch` and still starts
+  // its own run, because the confirmation e-mail it produces carries the
+  // room link and the matching code and there is no other channel for
+  // either -- queuing it before the distance-to-event delay of task 3
+  // exists would strip a last-minute registrant of their link. A survey
+  // response sends nothing back to anybody, so the slowest cadence costs
+  // it nothing at all, and it goes in the queue.
+  //
+  // What the submitter sees is identical either way: 204 on success, 502
+  // on anything this worker could not complete. Every refusal above this
+  // line -- unknown event, closed survey, abuse ceiling -- is unchanged
+  // and still immediate; the queue only ever delays what was accepted.
   let upstream;
   try {
-    upstream = await fetch(DISPATCH_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-        'User-Agent': USER_AGENT,
-      },
-      // `body` is the JSON *string* read above, never a nested object: the
-      // workflow that handles this reads it as a bare
-      // ${{ github.event.client_payload.body }} interpolation, which only
-      // renders raw JSON when the value is a string.
-      body: JSON.stringify({
-        event_type: isSurvey ? 'survey-response-submitted' : 'registration-submitted',
-        client_payload: { body },
-      }),
-      signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
-    });
+    upstream = isSurvey
+      ? await queueSubmission(body, token)
+      : await fetch(DISPATCH_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github+json',
+            'Content-Type': 'application/json',
+            'User-Agent': USER_AGENT,
+          },
+          // `body` is the JSON *string* read above, never a nested object:
+          // the workflow that handles this reads it as a bare
+          // ${{ github.event.client_payload.body }} interpolation, which
+          // only renders raw JSON when the value is a string.
+          body: JSON.stringify({
+            event_type: 'registration-submitted',
+            client_payload: { body },
+          }),
+          signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
+        });
   } catch {
     // A rejected fetch -- GitHub unreachable, DNS failure, a reset
     // connection, this worker's own timeout -- is exactly as much "this
