@@ -1346,6 +1346,32 @@ def test_a_repository_dispatch_workflow_declares_no_concurrency_group(
     )
 
 
+def test_the_externally_dispatched_sweep_actually_matches_something() -> None:
+    """The guard above skips every workflow that is not
+    `repository_dispatch`-triggered, which is the honest thing to do per
+    file -- but a parametrised skip degrades silently. If
+    `_workflow_on_types` ever stopped recognising that trigger (a refactor,
+    a change in how the `on:` block is written, a bug), all 31 cases would
+    skip and the suite would still report green: a control that cannot
+    fail, which is the shape this repository has now caught a dozen times.
+
+    So the set is asserted non-empty here, separately, and named. This test
+    fails loudly the day the detection breaks, while the guard above keeps
+    reporting per file."""
+    dispatched = sorted(
+        workflow.name
+        for workflow in _workflow_files()
+        if "repository_dispatch"
+        in _workflow_on_types(safe_load(workflow.read_text(encoding="utf-8")) or {})
+    )
+    assert dispatched, (
+        "no workflow was detected as repository_dispatch-triggered, so the "
+        "concurrency guard above skipped every case and proved nothing -- "
+        "either every externally dispatched workflow really is gone, or "
+        "`_workflow_on_types` has stopped recognising the trigger"
+    )
+
+
 def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # nosec B603, B607
         ["git", *args],
