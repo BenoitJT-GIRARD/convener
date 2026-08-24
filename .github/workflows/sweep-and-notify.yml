@@ -281,9 +281,11 @@ jobs:
       # threshold; this job only ever sees what it already sent here.
       #
       # **No pull request may ever be opened from `submission-queue`.** Six
-      # workflows trigger on `pull_request`, and one open pull request whose
-      # head is that branch would start all six per submission -- worse
-      # than what this replaced. No offline test can see whether such a
+      # workflows trigger on `pull_request`, but four filter on paths a
+      # `queue/**` file does not match; `quality.yml` and `security.yml` do
+      # not filter at all. One open pull request whose head is that branch
+      # would therefore start two workflows -- six billed jobs -- per
+      # submission, six times what this replaced. No offline test can see whether such a
       # pull request exists; what is held instead is the consequence one
       # step on, in `tools/tests/test_submission_queue.py`, which fails if a
       # queue file ever reaches a checkout of the default branch.
