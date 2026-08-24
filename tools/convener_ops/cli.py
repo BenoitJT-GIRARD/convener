@@ -13,7 +13,7 @@ import subprocess  # nosec B404
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time
 from pathlib import Path
 from typing import Any, Final
@@ -30,6 +30,7 @@ from convener_ops import (
     formats,
     retention_liveness,
     signing,
+    submission_queue,
     survey_invite,
     visual,
 )
@@ -104,12 +105,6 @@ from convener_ops.registration import (
     to_registration,
     upsert,
 )
-from convener_ops.survey import (
-    add_response,
-    dump_response_file,
-    load_response_file,
-    to_survey_response,
-)
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import (
@@ -151,6 +146,15 @@ SURVEY_INVITATIONS_HEADER = (
 RETENTION_LAST_RUN_HEADER = (
     "# Evidence the retention sweep still runs; "
     "see tools/convener_ops/retention_liveness.py\n"
+)
+#: Phase 9, task 2 -- which queue entries a drain has already applied, so a
+#: drain that committed its result and was then interrupted before clearing
+#: the queue does not apply them a second time. Committed in the *same*
+#: commit as the data those entries produced, which is the whole of why it
+#: works; see tools/convener_ops/submission_queue.py's own module docstring.
+QUEUE_LEDGER_HEADER = (
+    "# Which queued submissions a drain has already applied; "
+    "see tools/convener_ops/submission_queue.py\n"
 )
 #: Phase 8, task 4 -- what the last window of runs actually billed, and the
 #: only place in this repository where a *measured* minute exists rather
@@ -1030,39 +1034,17 @@ def encrypt_identifier() -> int:
 
 # ------------------------------------------------------------------ #
 # The post-event survey (task 16, phase 4 spec S:6): "meme entree que
-# l'inscription, meme stockage chiffre, meme destruction de cle." The
-# three steps below are `.github/workflows/survey.yml`'s own twin of
-# registration.yml's `resolve_registration_secret` / `handle_registration`
-# -- see `tools/convener_ops/survey.py`'s module docstring for the storage
-# design, and that workflow's own comments for why there is no third,
-# "send a confirmation" step here: nothing is sent back to a participant
-# for submitting a survey response, so there is nothing to split for the
-# reason registration.yml's own send step was split off (R-9 round 1).
+# l'inscription, meme stockage chiffre, meme destruction de cle."
+#
+# Phase 9, task 2 removed the two console scripts that used to live here
+# -- `resolve_survey_secret` and `handle_survey_response`, the two steps of
+# `.github/workflows/survey.yml` -- along with that workflow itself. A
+# survey response no longer arrives as a `repository_dispatch` that starts
+# a run of its own; the relay writes it to the queue branch and the daily
+# drain below handles every waiting response at once. What remains here is
+# the one thing the drain still needs from this module: whether an event's
+# survey switch is on.
 # ------------------------------------------------------------------ #
-
-
-def resolve_survey_secret() -> int:
-    """`convener-survey-secret-name`: the first of the two steps
-    `.github/workflows/survey.yml` runs for one incoming survey response.
-
-    Identical in every respect to `resolve_registration_secret` except the
-    environment variable it reads -- `SURVEY_PAYLOAD` rather than
-    `REGISTRATION_PAYLOAD` -- because the envelope shape, and the secret it
-    names, are the same one `eventkeys.py` already defines: a survey
-    response is encrypted under the *same* per-event key a registration is
-    (spec S:6), so there is no second key, and no second naming scheme, to
-    resolve here.
-    """
-    payload = os.environ.get("SURVEY_PAYLOAD", "")
-    event_id = event_id_from_payload(payload)
-    if event_id is None:
-        print("no valid event id in the survey payload", file=sys.stderr)
-        return 1
-
-    _write_github_output(
-        f"event_id={event_id}\nsecret_name={eventkeys.secret_name(event_id)}\n"
-    )
-    return 0
 
 
 def _survey_enabled(root: Path, event_id: str) -> bool:
@@ -1087,91 +1069,256 @@ def _survey_enabled(root: Path, event_id: str) -> bool:
     return bool(record.get("survey_enabled") is True)
 
 
-def handle_survey_response() -> int:
-    """`convener-handle-survey-response`: the second of the two steps
-    `.github/workflows/survey.yml` runs -- decrypt one survey response and
-    append it, re-encrypted, to
-    `data/events/<id>/survey-responses.enc`.
+# ------------------------------------------------------------------ #
+# The submission queue (phase 9, task 2). Two steps of
+# `.github/workflows/sweep-and-notify.yml`'s own daily job, never a
+# workflow or a job of their own -- one of either would cost a billed run
+# every day, which is what this feature exists to stop.
+#
+# The split between them is the GitHub Actions constraint every other
+# event-key job in this repository already meets: a secret can only be
+# selected by an expression in the workflow file, from a *previous* step's
+# output, never by a name a running step computed. `plan_queue_drain`
+# names the secrets; the workflow selects them; `drain_queue` spends them.
+# Both read the same snapshot of the queue and both call the same pure
+# `submission_queue.plan_drain`, so they agree by construction rather than
+# by handing state to one another.
+# ------------------------------------------------------------------ #
 
-    Checked in this order, cheapest first, and every failure refuses
-    before anything is decrypted or written:
+#: Where the queue step leaves what it exported from `QUEUE_BRANCH` -- a
+#: directory holding `queue/<kind>/<id>.json`, outside the checkout so a
+#: queued entry can never be committed to the default branch by accident.
+#: Set by the workflow; both commands below refuse to guess it.
+QUEUE_DIR_ENV: Final = "CONVENER_QUEUE_DIR"
 
-    1. the payload names a valid event id;
-    2. **that event's survey switch is on** (`_survey_enabled` above) --
-       task 16's own mutant to kill: `services/signup-relay`'s own
-       known-event check only proves `keys/events/<id>.pub` exists, never
-       that this event's survey is open, so anyone who knows a live event
-       id could otherwise reach this far with a well-shaped envelope for
-       an event whose organiser never turned the survey on;
-    3. the event's private key is configured (D-13 does not apply here,
-       the same exception `eventkeys.py`'s own module docstring names for
-       `handle_registration`);
-    4. the ciphertext actually decrypts to a `SurveyResponse`
-       (`survey.to_survey_response`).
+#: Where `drain_queue` writes the entry names the clearing step must remove
+#: from `QUEUE_BRANCH`, one per line. A file rather than a step output
+#: because a drain of two hundred entries would run past what an output can
+#: hold, and because the clearing step must read exactly what the drain
+#: acted on -- not recompute it.
+QUEUE_CLEAR_ENV: Final = "CONVENER_QUEUE_CLEAR_FILE"
 
-    Never prints anything decrypted from the payload -- every message here
-    names only the event id, already public. The success line no longer
-    carries a running count either (R-39, fix round 1): "recorded a
-    survey response for event <id> (N total)" paired an index with a run
-    timestamp in the job log, a third channel the finding named as free to
-    close, on top of what the encryption already covers -- see
-    `survey.py::_PLAINTEXT_PAD_BYTES`'s own docstring for the two the
-    encryption covers directly.
+
+def _queue_entries(root: Path) -> dict[str, str]:
+    """Every queue entry under `root`, keyed by its path inside
+    `QUEUE_BRANCH` (`queue/<kind>/<id>.json`).
+
+    Reads every file it finds, whatever its name or depth, rather than only
+    the ones shaped like an entry: `submission_queue.read_entry` is what
+    decides an entry is unusable, and it says so loudly. A reader that
+    silently skipped an odd filename would turn a misplaced submission into
+    a submission that never existed.
     """
-    payload = os.environ.get("SURVEY_PAYLOAD", "")
-    event_id = event_id_from_payload(payload)
-    if event_id is None:
-        print("no valid event id in the survey payload", file=sys.stderr)
-        return 1
+    entries: dict[str, str] = {}
+    if not root.is_dir():
+        return entries
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            entries[path.relative_to(root).as_posix()] = path.read_text(
+                encoding="utf-8"
+            )
+        except (OSError, UnicodeDecodeError):
+            # Unreadable bytes are not a reason to lose the rest of the
+            # queue. Recorded as an entry that cannot be read at all, which
+            # `read_entry` refuses by name on the run.
+            entries[path.relative_to(root).as_posix()] = ""
+    return entries
 
-    root = repo_root()
-    if not _survey_enabled(root, event_id):
-        print(
-            f"the survey is not enabled for event {event_id} -- refusing to "
-            "store this response",
-            file=sys.stderr,
-        )
-        return 1
 
-    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
-    if not private_pem:
-        print(f"no private key configured for event {event_id}", file=sys.stderr)
-        return 1
-
-    response = to_survey_response(payload, private_pem)
-    if response is None:
-        # Important 3 (fix round 1): "could not be read", not "could not be
-        # decrypted". to_survey_response's own uniform None folds a
-        # too-long answer into the same outcome as an undecryptable one --
-        # correct for the untrusted-input reason its own docstring gives --
-        # but this operator-facing line no longer names the narrower,
-        # sometimes-wrong cause. A participant whose long, careful answer
-        # tripped the length cap deserves an honest "could not be read",
-        # not a claim about decryption that did not happen to fail.
-        print(
-            f"survey response for event {event_id} could not be read",
-            file=sys.stderr,
-        )
-        return 1
-
-    rel_path = Path("data") / "events" / event_id / "survey-responses.enc"
-    enc_path = root / rel_path
-    existing_text = enc_path.read_text(encoding="utf-8") if enc_path.exists() else None
+def _queue_ledger(root: Path) -> tuple[frozenset[str], str | None]:
+    """`(ledger, None)`, or `(empty, message)` on a committed file that will
+    not parse -- never raises, the same shape `_load_destruction_registry`
+    already has. A *missing* file means no drain has ever run, which is the
+    empty ledger and not an error."""
+    path = root / submission_queue.LEDGER_PATH
+    if not path.exists():
+        return frozenset(), None
     try:
-        current = load_response_file(existing_text)
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return (
+            frozenset(),
+            f"{submission_queue.LEDGER_PATH.as_posix()}: invalid YAML - {exc}",
+        )
+    try:
+        return submission_queue.ledger_from_data(data), None
     except ValueError as exc:
-        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return frozenset(), f"{submission_queue.LEDGER_PATH.as_posix()}: {exc}"
+
+
+@dataclass(frozen=True)
+class _QueueSnapshot:
+    """What both commands below read before they do anything: the queue as
+    it was exported, the committed ledger, and the plan the two imply.
+    `error` is a message when something is wrong enough that draining would
+    be worse than not draining -- an unset queue directory, or a ledger that
+    will not parse, which would otherwise be read as "nothing has ever been
+    handled" and re-apply every entry an earlier drain already did."""
+
+    plan: submission_queue.DrainPlan
+    entries: dict[str, str]
+    ledger: frozenset[str]
+    error: str | None
+
+
+def _queue_snapshot(root: Path) -> _QueueSnapshot:
+    """Read the queue and the ledger, and plan against both."""
+    queue_dir = os.environ.get(QUEUE_DIR_ENV, "")
+    if not queue_dir:
+        return _QueueSnapshot(
+            submission_queue.DrainPlan(), {}, frozenset(), f"{QUEUE_DIR_ENV} is not set"
+        )
+    entries = _queue_entries(Path(queue_dir))
+    ledger, error = _queue_ledger(root)
+    if error is not None:
+        return _QueueSnapshot(submission_queue.DrainPlan(), entries, ledger, error)
+    plan = submission_queue.plan_drain(
+        entries, ledger, lambda event_id: _survey_enabled(root, event_id)
+    )
+    return _QueueSnapshot(plan, entries, ledger, None)
+
+
+def plan_queue_drain() -> int:
+    """`convener-plan-queue-drain`: name the secrets today's drain will need.
+
+    Writes `pending`, and `event_1..N` / `secret_1..N` for
+    `submission_queue.MAX_EVENTS_PER_DRAIN` slots, to `$GITHUB_OUTPUT`. An
+    unused slot is the empty string on both, and `${{ secrets[''] }}`
+    resolves to the empty string rather than failing -- which is how one
+    fixed set of expressions serves a drain of one event and a drain of
+    eight.
+
+    Prints only counts and event ids. An event id is already public (it
+    names a `keys/events/<id>.pub` this repository publishes); nothing a
+    submitter wrote can reach this command at all, because nothing here
+    decrypts.
+    """
+    root = repo_root()
+    snapshot = _queue_snapshot(root)
+    if snapshot.error is not None:
+        print(f"::error::{snapshot.error}", file=sys.stderr)
         return 1
+    plan, entries = snapshot.plan, snapshot.entries
 
-    updated = add_response(current, response, private_pem=private_pem)
-    enc_path.parent.mkdir(parents=True, exist_ok=True)
-    enc_path.write_text(dump_response_file(updated), encoding="utf-8", newline="")
+    # `pending` is "is there anything at all to do", not "is there anything
+    # to handle". Three states beyond a fresh submission need the drain
+    # step to run: entries an earlier drain handled but could not clear
+    # (they have to be cleared now), entries it will refuse (same), and an
+    # empty queue with a non-empty ledger (the ledger has to be pruned, or
+    # it grows for ever). Only a queue *and* a ledger that are both empty
+    # mean a drain would do nothing at all -- and then nothing runs, and no
+    # commit is made.
+    pending = bool(entries) or bool(snapshot.ledger)
+    lines = [f"pending={'true' if pending else 'false'}\n"]
+    names = submission_queue.secret_names(plan)
+    for slot, secret in enumerate(names, start=1):
+        event_id = plan.event_ids[slot - 1] if slot <= len(plan.event_ids) else ""
+        lines.append(f"event_{slot}={event_id}\nsecret_{slot}={secret}\n")
+    _write_github_output("".join(lines))
 
-    # R-39 (fix round 1): no count. `(N total)` was a third, needless
-    # channel revealing how many responses an event has received -- the
-    # only thing worth this job printing is that one more was recorded,
-    # named by event id (already public), never by index.
-    print(f"recorded a survey response for event {event_id}")
+    print(
+        f"{len(entries)} entrie(s) in the queue: {len(plan.handle)} to handle "
+        f"across {len(plan.event_ids)} event(s), {len(plan.refused)} to refuse, "
+        f"{len(plan.deferred)} left waiting, {len(plan.already_handled)} already "
+        "handled by an earlier drain"
+    )
+    return 0
+
+
+def drain_queue() -> int:
+    """`convener-drain-queue`: handle everything the queue holds, in one pass.
+
+    Reads the same snapshot `plan_queue_drain` read, pairs each slot's event
+    id with the key the workflow selected for it, and writes the result --
+    every event's `survey-responses.enc` **and** `data/queue-ledger.yml` --
+    so the caller can commit the lot as one commit. The two must land
+    together or not at all: the ledger is what makes a replayed drain a
+    no-op, and a ledger committed without its data (or data without its
+    ledger) is exactly a lost or a doubled submission.
+
+    Writes nothing to the queue itself. The clearing step reads
+    `$CONVENER_QUEUE_CLEAR_FILE` **after** the commit has been pushed, which is
+    the whole ordering that makes an interruption safe -- see
+    `submission_queue`'s own module docstring.
+
+    Returns 0 even when entries were refused or deferred: a drain that
+    failed here would leave the good submissions uncommitted for the sake of
+    a bad one. Both are reported as annotations, and the workflow's own
+    reporting step is what turns a refusal red.
+    """
+    root = repo_root()
+    snapshot = _queue_snapshot(root)
+    if snapshot.error is not None:
+        print(f"::error::{snapshot.error}", file=sys.stderr)
+        return 1
+    plan, entries = snapshot.plan, snapshot.entries
+
+    # Paired by slot, not by name: the workflow put event id *i* and the
+    # secret it selected for event *i* in the same numbered pair, and this
+    # is the one place the two halves meet again. `plan_queue_drain` and
+    # this command compute the identical plan from the identical snapshot,
+    # so slot `i` names the same event in both.
+    keys: dict[str, str] = {}
+    for slot, event_id in enumerate(plan.event_ids, start=1):
+        named = os.environ.get(f"CONVENER_QUEUE_EVENT_{slot}", event_id)
+        if named != event_id:
+            # Belt and braces: if the two steps ever disagreed about which
+            # event holds slot `i`, the key in that slot belongs to another
+            # event and would decrypt nothing. Left empty, so every entry
+            # for this event is deferred and reported rather than refused.
+            print(
+                f"::warning::slot {slot} names event {named} but this drain "
+                f"planned {event_id} -- leaving it for the next drain",
+            )
+            continue
+        keys[event_id] = os.environ.get(f"CONVENER_QUEUE_KEY_{slot}", "")
+
+    existing: dict[str, str | None] = {}
+    for event_id in plan.event_ids:
+        rel = submission_queue.responses_path(event_id)
+        path = root / rel
+        existing[rel] = path.read_text(encoding="utf-8") if path.exists() else None
+
+    outcome = submission_queue.drain(plan, keys, existing, snapshot.ledger, entries)
+
+    for rel, text in sorted(outcome.files.items()):
+        path = root / Path(rel)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="")
+
+    ledger_path = root / submission_queue.LEDGER_PATH
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger_path.write_text(
+        QUEUE_LEDGER_HEADER + _dump(submission_queue.ledger_to_data(outcome.ledger)),
+        encoding="utf-8",
+        newline="",
+    )
+
+    clear_file = os.environ.get(QUEUE_CLEAR_ENV, "")
+    if clear_file:
+        # `newline=""`, the same discipline every other writer in this
+        # module holds, and here it is load-bearing rather than tidy: the
+        # clearing step reads this file line by line in `sh`, and a line
+        # ending Python had translated would make every path it read end
+        # in a carriage return. `git rm --ignore-unmatch` matches no such
+        # path, stages nothing, and the step reports the queue as already
+        # clear -- a queue that never empties, reported as success.
+        # Found by driving the real workflow shell, not by reading it.
+        Path(clear_file).write_text(
+            "".join(f"{name}\n" for name in outcome.clear),
+            encoding="utf-8",
+            newline="",
+        )
+
+    for line in submission_queue.annotation_lines(outcome):
+        print(line)
+    print(submission_queue.summary(outcome))
+    _write_github_output(
+        f"handled={outcome.handled}\nrefused={len(outcome.refused)}\n"
+        f"deferred={len(outcome.deferred)}\n"
+    )
     return 0
 
 

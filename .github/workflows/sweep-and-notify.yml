@@ -149,7 +149,15 @@ jobs:
     # calls -- and the difference between those two sentences is the
     # whole reason the step exists (P-5). It buys no new billed job:
     # a workflow of its own would have cost one every single day.
-    timeout-minutes: 25
+    #
+    # Phase 9, task 2 adds 5 more for the four queue steps, on the same
+    # terms: a ceiling, not a bill. The work itself is a shallow fetch of
+    # one branch, one RSA decrypt and one re-encrypt per queued response,
+    # and two pushes -- seconds, for a day's submissions. The ceiling is
+    # sized for the day a backlog arrives at once, because a drain that
+    # times out half way is exactly the interruption the ledger exists to
+    # survive and not one anybody should be inviting.
+    timeout-minutes: 30
     permissions:
       # The union of what the two files carried, and nothing past it.
       # `contents: write` is the sweep committing data/speakers.yml;
@@ -227,6 +235,232 @@ jobs:
             git reset --hard "origin/$TARGET_BRANCH"
           done
           echo "::error::push failed after 3 attempts -- sweep result was not saved"
+          exit 1
+      # ----------------------------------------------------------------
+      # The submission queue, drained (phase 9, task 2)
+      # ----------------------------------------------------------------
+      #
+      # Here, as steps of a job that already runs, for the identical reason
+      # the budget measurement below is here rather than in a file of its
+      # own: a workflow or a job created to drain the queue would cost a
+      # billed run every single day, which is precisely the cost this
+      # feature exists to remove. A *step* added to a job that already runs
+      # costs nothing but its own seconds.
+      #
+      # What it replaces: every survey response used to arrive as its own
+      # `repository_dispatch` and start its own run of `survey.yml` (now
+      # deleted). The relay writes the encrypted envelope to the
+      # `submission-queue` branch instead -- a branch no workflow watches,
+      # held by `tools/tests/test_workflows.py`'s directory-wide sweep
+      # (phase 9, task 1) -- and these four steps handle everything waiting
+      # in one commit, once a day.
+      #
+      # **No pull request may ever be opened from `submission-queue`.** Six
+      # workflows trigger on `pull_request`, and one open pull request whose
+      # head is that branch would start all six per submission -- worse
+      # than what this replaced. No offline test can see whether such a
+      # pull request exists; what is held instead is the consequence one
+      # step on, in `tools/tests/test_submission_queue.py`, which fails if a
+      # queue file ever reaches a checkout of the default branch.
+      #
+      # The order of the last two steps is the whole of "nothing is lost":
+      # the drain commits and pushes its result to `main` *first*, and only
+      # then clears what it handled from the queue. An interruption between
+      # the two leaves entries in the queue that `data/queue-ledger.yml`
+      # already records as handled, so the next drain clears them without
+      # applying them twice. The reverse order would lose a submission
+      # outright, and no ledger could recover it.
+      - name: Fetch what the submission queue holds
+        id: queue-fetch
+        # Guarded on the `uv` install like every other step in this job, not
+        # on the sweep: a failed sweep is no reason to leave a day's
+        # submissions waiting a second day.
+        if: always() && steps.uv.outcome == 'success'
+        env:
+          # Mirrors `submission_queue.QUEUE_BRANCH`; a test fails if the two
+          # ever disagree, because a queue nothing drains would be silent.
+          QUEUE_BRANCH: submission-queue
+        # Exported outside the checkout, into the runner's own temporary
+        # directory, so a queued entry can never be caught by a `git add`
+        # meant for `data/` and committed to the default branch -- which is
+        # the one place it must never land (see this block's own comment).
+        run: |
+          set -e
+          rm -rf "$RUNNER_TEMP/queue"
+          mkdir -p "$RUNNER_TEMP/queue"
+          : > "$RUNNER_TEMP/queue-names.txt"
+          if ! git fetch --no-tags --depth=1 origin "$QUEUE_BRANCH"; then
+            echo "no $QUEUE_BRANCH branch yet -- nothing has ever been queued"
+            exit 0
+          fi
+          git ls-tree -r --name-only FETCH_HEAD -- queue > "$RUNNER_TEMP/queue-names.txt"
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            mkdir -p "$RUNNER_TEMP/queue/$(dirname "$path")"
+            git cat-file blob "FETCH_HEAD:$path" > "$RUNNER_TEMP/queue/$path"
+          done < "$RUNNER_TEMP/queue-names.txt"
+          echo "fetched $(wc -l < "$RUNNER_TEMP/queue-names.txt") queued entrie(s)"
+      - name: Plan what the drain will need
+        id: queue-plan
+        if: always() && steps.queue-fetch.outcome == 'success'
+        working-directory: tools
+        env:
+          CONVENER_QUEUE_DIR: ${{ runner.temp }}/queue
+        # A separate step from the drain because of a GitHub Actions
+        # constraint every event-key job in this repository already meets: a
+        # secret can only be selected by an expression in this file, reading
+        # a *previous* step's output -- never by a name a running step
+        # computed. This step names them; the next one spends them.
+        run: uv run convener-plan-queue-drain
+      - name: Drain the submission queue
+        id: queue-drain
+        if: >-
+          always() && steps.queue-plan.outcome == 'success' &&
+          steps.queue-plan.outputs.pending == 'true'
+        env:
+          CONVENER_QUEUE_DIR: ${{ runner.temp }}/queue
+          # Where the drain writes what the clearing step must remove. A
+          # file, not a step output: a drain of two hundred entries would
+          # run past what an output can carry, and the clearing step has to
+          # remove exactly what the drain acted on rather than recompute it.
+          CONVENER_QUEUE_CLEAR_FILE: ${{ runner.temp }}/queue-clear.txt
+          # Eight slots, matching `submission_queue.MAX_EVENTS_PER_DRAIN`
+          # exactly (a test fails if they drift apart). One event's
+          # responses can only be decrypted with that event's own key, and
+          # a secret can only be named by an expression written here, so the
+          # number of events one drain can cover is however many of these
+          # lines exist. An unused slot's name is the empty string, and
+          # `secrets['']` is the empty string rather than an error, which is
+          # what lets the same eight lines serve a drain of one event.
+          # A ninth event waits for tomorrow's drain, reported, never lost.
+          CONVENER_QUEUE_EVENT_1: ${{ steps.queue-plan.outputs.event_1 }}
+          CONVENER_QUEUE_KEY_1: ${{ secrets[steps.queue-plan.outputs.secret_1] }}
+          CONVENER_QUEUE_EVENT_2: ${{ steps.queue-plan.outputs.event_2 }}
+          CONVENER_QUEUE_KEY_2: ${{ secrets[steps.queue-plan.outputs.secret_2] }}
+          CONVENER_QUEUE_EVENT_3: ${{ steps.queue-plan.outputs.event_3 }}
+          CONVENER_QUEUE_KEY_3: ${{ secrets[steps.queue-plan.outputs.secret_3] }}
+          CONVENER_QUEUE_EVENT_4: ${{ steps.queue-plan.outputs.event_4 }}
+          CONVENER_QUEUE_KEY_4: ${{ secrets[steps.queue-plan.outputs.secret_4] }}
+          CONVENER_QUEUE_EVENT_5: ${{ steps.queue-plan.outputs.event_5 }}
+          CONVENER_QUEUE_KEY_5: ${{ secrets[steps.queue-plan.outputs.secret_5] }}
+          CONVENER_QUEUE_EVENT_6: ${{ steps.queue-plan.outputs.event_6 }}
+          CONVENER_QUEUE_KEY_6: ${{ secrets[steps.queue-plan.outputs.secret_6] }}
+          CONVENER_QUEUE_EVENT_7: ${{ steps.queue-plan.outputs.event_7 }}
+          CONVENER_QUEUE_KEY_7: ${{ secrets[steps.queue-plan.outputs.secret_7] }}
+          CONVENER_QUEUE_EVENT_8: ${{ steps.queue-plan.outputs.event_8 }}
+          CONVENER_QUEUE_KEY_8: ${{ secrets[steps.queue-plan.outputs.secret_8] }}
+        # One commit for everything waiting -- the point of the whole
+        # feature, and what makes the three-attempt push contention that
+        # `survey.yml` was written around ("the ordinary case here, not an
+        # edge case") stop existing rather than be caught. The loop below
+        # is still the same shape every other push in this repository uses,
+        # for the residual case: this job's own earlier steps, or a human,
+        # pushing between the fetch and the push.
+        #
+        # Safe to re-run inside the loop because `convener-drain-queue` is a pure
+        # function of the exported queue (which lives in RUNNER_TEMP and is
+        # untouched by `git reset --hard`) and of the branch tip it re-reads
+        # -- re-deriving against whatever just landed, never `git pull
+        # --rebase` over a JSON array, for the reason registration.yml's own
+        # comment gives.
+        #
+        # `data/queue-ledger.yml` is staged in the *same* commit as
+        # `data/events/`: "this entry has been handled" and "here is what
+        # handling it produced" have to become one atomic fact, or a replay
+        # records a submission twice.
+        run: |
+          set -e
+          git config user.name "convener-queue"
+          git config user.email "convener-queue@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+            (cd tools && uv run convener-drain-queue)
+            git add -- data/queue-ledger.yml
+            # Conditional, because `git add` on a pathspec that matches
+            # nothing is a *failure*, and `set -e` would end the step
+            # there. A drain that refused everything it found writes no
+            # response file at all, and on a repository whose first drain
+            # refuses, data/events does not exist yet -- that run must
+            # still commit its ledger and go on to clear the queue, or
+            # those entries block it for ever. Found by driving this
+            # script, not by reading it.
+            if [ -d data/events ]; then
+              git add -- data/events
+            fi
+            if git diff --staged --quiet; then
+              echo "the drain changed nothing -- nothing to commit"
+              exit 0
+            fi
+            git commit -m "data: drain the public submission queue"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+          done
+          echo "::error::push failed after 3 attempts -- nothing was cleared, so every queued submission is still waiting for tomorrow's drain"
+          exit 1
+      - name: Clear what the drain handled
+        id: queue-clear
+        # Only ever after a drain that pushed. A clear that ran without one
+        # would delete a submission nothing had recorded, which is the one
+        # outcome this whole design exists to make impossible.
+        if: always() && steps.queue-drain.outcome == 'success'
+        env:
+          QUEUE_BRANCH: submission-queue
+          CLEAR_FILE: ${{ runner.temp }}/queue-clear.txt
+          WORKTREE: ${{ runner.temp }}/queue-worktree
+        # A worktree on the queue branch rather than a second checkout: the
+        # drained result is already committed in *this* checkout, and it
+        # must not be disturbed to remove files from an unrelated branch.
+        #
+        # Failing here is not a lost submission. Every entry stays in the
+        # queue and `data/queue-ledger.yml` already names it as handled, so
+        # tomorrow's drain clears it without applying it a second time.
+        run: |
+          set -e
+          if [ ! -s "$CLEAR_FILE" ]; then
+            echo "the drain handled nothing that needs clearing"
+            exit 0
+          fi
+          git config user.name "convener-queue"
+          git config user.email "convener-queue@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch --no-tags --depth=1 origin "$QUEUE_BRANCH"
+            rm -rf "$WORKTREE"
+            git worktree prune
+            git worktree add --detach "$WORKTREE" FETCH_HEAD
+            while IFS= read -r path; do
+              [ -n "$path" ] || continue
+              git -C "$WORKTREE" rm -q --ignore-unmatch -- "$path"
+            done < "$CLEAR_FILE"
+            if git -C "$WORKTREE" diff --staged --quiet; then
+              echo "the queue no longer holds any of it -- an earlier run cleared it"
+              exit 0
+            fi
+            git -C "$WORKTREE" commit -q -m "queue: clear what the drain handled"
+            if git -C "$WORKTREE" push origin "HEAD:refs/heads/$QUEUE_BRANCH"; then
+              exit 0
+            fi
+            echo "clearing push rejected (attempt $attempt/3) -- re-fetching the queue and retrying"
+          done
+          echo "::error::could not clear the queue after 3 attempts -- nothing is lost, and data/queue-ledger.yml stops tomorrow's drain re-applying any of it"
+          exit 1
+      - name: Fail if a queued submission could not be reached
+        # Deferrals only, never refusals -- see
+        # `submission_queue.annotation_lines`'s own docstring for why the
+        # colour of this job must not be something a stranger can decide. A
+        # deferral is an event key nobody configured, a committed file
+        # nobody can parse, or more open events than there are secret slots:
+        # every one of them is the operator's to fix, and every one of them
+        # is a submission waiting indefinitely if nobody looks.
+        if: always() && steps.queue-drain.outputs.deferred != '0' && steps.queue-drain.outputs.deferred != ''
+        env:
+          DEFERRED: ${{ steps.queue-drain.outputs.deferred }}
+        run: |
+          echo "::error::$DEFERRED queued submission(s) could not be handled and are still waiting -- see the annotations above"
           exit 1
       - name: Compose
         id: compose

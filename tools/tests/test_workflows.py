@@ -1413,7 +1413,7 @@ def _local_repo_pair(tmp_path: Path) -> tuple[Path, Path]:
 
 def _append_entry(clone: Path, entry: str) -> None:
     """Stands in for a workflow's own handler (`convener-handle-registration`,
-    `convener-handle-survey-response`, `convener-handle-proposal`): read the current
+    `convener-handle-proposal`): read the current
     array, append one more entry, write it back -- the exact "one array,
     two concurrent writers" shape registration.yml's own retry-loop
     comment names as what a rebase corrupts."""

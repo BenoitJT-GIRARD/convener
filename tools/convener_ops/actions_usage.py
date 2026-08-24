@@ -112,10 +112,17 @@ HISTORY_LENGTH: Final = 60
 SCHEDULED_EVENT: Final = "schedule"
 
 #: The event GitHub reports for a public submission arriving through a
-#: relay -- `registration.yml`, `candidate-form.yml`, `survey.yml` all
-#: trigger on `repository_dispatch`. **This is the only item in the whole
-#: budget whose volume is decided by strangers, and the only one that grows
-#: when the series succeeds.**
+#: relay -- `registration.yml` and `candidate-form.yml` trigger on
+#: `repository_dispatch`. **This is the only item in the whole budget whose
+#: volume is decided by strangers, and the only one that grows when the
+#: series succeeds.**
+#:
+#: Phase 9, task 2 took the survey off this line entirely: a survey
+#: response is written to the submission queue and handled by a step of a
+#: job that already runs, so it produces no run of its own and appears in
+#: no measurement here. What that means for a reading of
+#: `data/actions-usage.yml` spanning the change is that the count drops
+#: without the traffic dropping.
 SUBMISSION_EVENT: Final = "repository_dispatch"
 
 #: The runner OS whose billed minute is worth one minute. Everything this

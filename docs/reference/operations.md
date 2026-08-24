@@ -194,9 +194,9 @@ repository by `deploy.yml`'s own "Commit survey status" step, which is
 what makes the relay's own Contents-API read possible at all. This is one
 of three layers now (the page, the relay, and the CI handler each check
 independently, the relay now reading this repository's own committed
-copy rather than a deployed one); see
-`tools/convener_ops/cli.py::handle_survey_response`'s own docstring for why one
-alone was not enough.
+copy rather than a deployed one); see *Draining the submission queue*
+below, and `tools/convener_ops/submission_queue.py`'s own module docstring, for
+why one alone was not enough.
 
 **To create:**
 1. Deploy the worker from `services/signup-relay/`: `npm install`, then
@@ -926,17 +926,24 @@ participant wrote. Against a stranger without the event's private key,
 that is complete: there is nothing else on the entry to read. Against the
 organiser — who holds the key, and is the only party for whom anonymity is
 a promise rather than a mathematical certainty — one channel remains
-outside the encryption on purpose: `.github/workflows/survey.yml` commits
-once per response, `data: record a survey response for <id>`, at the
-wall-clock minute it arrived. Array position N in `survey-responses.enc`
-is therefore paired with a timestamp, permanently, in the git history. For
-a seminar with a handful of attendees answering within hours of the
-session, "the one who answered at 19:04" is a workable handle for whoever
-also holds the attendance list — and the organiser already holds the
-attendance list. This is accepted, not fixed: one commit per response as
-it arrives is what an append-only git store *is*, and batching responses
-to hide arrival time would break the very per-response independence task
-15 needs to drop one entry without touching its neighbours. Task 18, or
+outside the encryption on purpose: arrival time. Until phase 9 this was
+sharp — `.github/workflows/survey.yml` committed once per response, at the
+wall-clock minute it arrived, so array position N in
+`survey-responses.enc` was paired with a timestamp permanently in the git
+history, and "the one who answered at 19:04" was a workable handle for
+whoever also held the attendance list.
+
+**Phase 9 blunted it as a side effect of something else.** The daily drain
+(*Draining the submission queue*, below) writes every response that
+arrived since the last drain in *one* commit, so what the history now
+pairs with array position N is the drain's own run, not the participant's
+own minute — every response in a day's batch shares one timestamp. The
+channel is narrowed to "which day", not closed: the queue branch's own
+commits, while an entry is waiting, still carry the minute it was written,
+and anyone with access to that branch's history can read them. This was
+not the reason for the change and should not be relied on as a control;
+it is recorded because a later reader comparing this paragraph to the git
+history would otherwise find it wrong. Task 18, or
 whoever next writes anything that treats these responses as anonymous to
 the organiser specifically, should read this paragraph first.
 
@@ -1097,22 +1104,104 @@ again with the same address updates that same entry rather than adding a
 second one. Submitting for two different addresses to the same event in
 quick succession — the case the retry loop exists for — leaves both.
 
-## Handling a survey response
+## Draining the submission queue
 
 **Without it:** the signup relay's `/survey` route (see *Signup relay*
-above) has nowhere to send the `survey-response-submitted` dispatch it
-produces; the encrypted envelope it forwards is simply never turned into a
-stored response.
+above) writes each encrypted envelope to the queue branch and nothing ever
+picks it up. Responses accumulate on a branch nobody looks at, the
+submitters were all told `204`, and no badge anywhere turns red. Phase 9's
+task 4 adds the watchdog for exactly that silence.
 
-*Handle survey response* (`.github/workflows/survey.yml`) is *Handling a
-registration*'s own twin, cut down: it decrypts, checks the survey switch,
-and re-encrypts, into `data/events/<event id>/survey-responses.enc`
-(`tools/convener_ops/survey.py`) — one independent envelope per response, for
-the same reason `registrations.enc` holds one per registration. Unlike a
-registration, a response is never matched to an existing entry: nothing
-about it identifies who submitted it (see `survey.py`'s own docstring,
-"Why no identity travels with a response"), so `convener-handle-survey-response`
-only ever appends.
+**Where the queue is.** A branch of this repository called
+`submission-queue`, one file per submission at
+`queue/survey/<entry id>.json` holding the relay's request body byte for
+byte. `tools/convener_ops/submission_queue.py` names the branch, and
+`.github/workflows/sweep-and-notify.yml` and
+`services/signup-relay/src/index.js` mirror that name; a test fails if
+they drift apart.
+
+A **branch**, never a path on `main`: `register.yml`, `quality.yml` and
+`security.yml` start on any commit to the default branch with no path
+filter at all, and `deploy.yml` filters with `paths-ignore`, so a queue
+file on `main` would bill at least five runs per submission — the exact
+inverse of the point. The relay writes with its own token rather than a
+job's `GITHUB_TOKEN`, so GitHub's recursion guard does not save it; what
+does is that nothing triggers on a push to a branch other than `main`,
+which `tools/tests/test_workflows.py` holds over the whole workflow
+directory (phase 9, task 1).
+
+> **Never open a pull request from `submission-queue`.** Six workflows
+> trigger on `pull_request`, and one open pull request whose head is that
+> branch would start all six on every single submission — worse than what
+> the queue replaced. No offline test can see whether such a pull request
+> exists. What is held instead is the consequence one step later:
+> `tools/tests/test_submission_queue.py` fails if a queue file ever
+> reaches a checkout of the default branch, so merging one is red rather
+> than silent.
+
+**What drains it.** Four steps at the bottom of *Sweep and notify the
+board*'s own `daily` job — never a workflow or a job of their own, which
+would cost a billed run every day and defeat the purpose. They fetch the
+queue branch into the runner's temporary directory (never into the
+checkout), plan, drain, and clear:
+
+1. the **plan** step names the event key secrets the drain will need. It is
+   separate because of a GitHub Actions constraint every event-key job here
+   already meets: a secret can only be selected by an expression in the
+   workflow file, reading a previous step's output.
+2. the **drain** step decrypts, checks each event's survey switch,
+   validates and re-encrypts every waiting response into
+   `data/events/<event id>/survey-responses.enc`
+   (`tools/convener_ops/survey.py`) — one independent envelope per response,
+   appended, never matched to an existing entry, because nothing about a
+   response identifies who submitted it (see `survey.py`, "Why no identity
+   travels with a response"). It commits **the responses and
+   `data/queue-ledger.yml` together, in one commit**, and pushes.
+3. the **clear** step removes what was handled from the queue branch,
+   **only after that push succeeded**.
+4. the last step turns the job red if anything is still waiting.
+
+**That order is the whole of "nothing is lost".** An interruption between
+the commit and the clear leaves entries in the queue that
+`data/queue-ledger.yml` already records as handled, so tomorrow's drain
+clears them without applying them twice. The reverse order would lose a
+submission outright and no ledger could recover it.
+
+**`data/queue-ledger.yml`** holds the entry names a drain has applied, and
+nothing else — an entry name is a timestamp and a uuid, never anything a
+participant wrote. It does not grow without bound: an id is forgotten by
+the first drain that sees the entry is no longer in the queue.
+
+**Eight events per drain, and why there is a number at all.** A response
+can only be decrypted with its own event's key, and each key needs an
+expression written out in the workflow file, so the count of events one
+drain can cover is however many of those lines exist —
+`submission_queue.MAX_EVENTS_PER_DRAIN`, currently 8, pinned to the YAML
+by a test. A ninth event with responses waiting is **deferred**: its
+entries stay in the queue, the job goes red, and the next drain takes
+them. Nothing is dropped. If this ever bites, raise the constant and add
+the matching pair of lines in the same change.
+
+**Red is for the operator, never for a stranger.** A *deferral* — a key
+nobody configured, a committed responses file nobody can parse, more open
+events than slots — fails the job, because every one of those is
+something only the operator can fix and every one leaves a submission
+waiting indefinitely. A *refusal* — an envelope that will not decrypt, a
+survey closed between the submission and the drain — is annotated and
+counted but does not decide the colour of the run: anyone who can reach
+the relay could otherwise keep this job red at will and train you to
+ignore it.
+
+**Why the proposal form is not on this queue.** It receives Tally's
+webhook body, and that body is *plaintext*: a name, an address, an
+institution, an abstract. Queuing it would write a stranger's personal
+data into this repository's history in the clear, where D-22's key
+destruction — which is what makes every other stored submission
+unreadable — has no purchase at all, and it would keep a copy of
+proposals the Board declined and deleted from `data/speakers.yml`.
+`.github/workflows/candidate-form.yml` therefore still handles one
+proposal per run. Changing that is a decision about personal data, not a
+refactor.
 
 **The survey switch is checked before anything is decrypted or written —
 and, since fix round 1 (R-37), this is the third of three checks, not the
@@ -1127,8 +1216,8 @@ submission this pipeline could receive followed the one path that did
 check — the participant was thanked, the relay answered `204`, and the
 answer was discarded here, silently, with nobody told. Now the page checks
 first (never offering the form), the relay checks second (refusing the
-dispatch, see *Signup relay* above), and `convener-handle-survey-response` still
-checks a third time, reading the event's speaker record
+queue write, see *Signup relay* above), and the drain still checks a third
+time, reading the event's speaker record
 (`survey_enabled`, `data/speakers.yml`) itself, because it is the only one
 of the three reading the authoritative file rather than a possibly
 momentarily stale, published copy of it. There is no D-13 fallback here at
@@ -1136,29 +1225,35 @@ any of the three layers: a switch that is off is the ordinary state for
 most events, but a *response arriving* for one is not something this job
 may quietly discard by writing nothing and exiting clean — an unexplained
 green run that stored nothing would be indistinguishable from an ordinary
-day, and this is a case worth an operator's attention (the same reasoning
-the retention sweep's own `::warning::` annotations follow, above, for a
-different silence).
+day, and this is a case worth an operator's attention. Since phase 9 it is
+one of the drain's *refusals*: annotated on the run by entry id and
+reason, cleared from the queue (it will not become true by waiting, and an
+entry that waits for ever is a queue that never empties), and deliberately
+not a red job — see *Draining the submission queue* above for why a
+stranger must not get to decide the colour of that run.
 
-There is no third step sending a confirmation, unlike registration's own
-workflow: nothing is returned to a participant for answering a survey, so
-there is nothing here for R-9's "one step, gated `if: success()`" split to
-apply to.
+There is no step sending a confirmation, unlike registration's own
+workflow: nothing is returned to a participant for answering a survey.
+That is precisely why the survey could be moved to the slowest cadence
+with no trade-off at all, and why registration could not.
 
 **To verify:** with an event's `survey_enabled` set to `true` in
 `data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
 (`AdminOverride.tsx`, fix round 1's minor 9) — submit the survey form
 (`/survey/<event id>/` on the vitrine, its own island since phase 7 task
-5); *Handle survey response* runs, and
-`data/events/<event id>/survey-responses.enc` gains one entry. Submitting
-again adds a second, independent entry — this is by design, not a defect;
-see `survey.py`'s own docstring. With `survey_enabled` left `false` (the
-default for every event, task 16 ruling 1), the same submission is refused
-and no file is written at all.
+5). **Nothing runs at that moment, and that is the change:** a file
+appears under `queue/survey/` on the `submission-queue` branch. Run *Sweep
+and notify the board* by hand (`workflow_dispatch`) rather than waiting
+for 05:00 UTC, and `data/events/<event id>/survey-responses.enc` gains one
+entry while the queue file disappears. Submitting again adds a second,
+independent entry — this is by design, not a defect; see `survey.py`'s own
+docstring. With `survey_enabled` left `false` (the default for every
+event, task 16 ruling 1), the submission is refused by the relay before it
+is ever queued, and no file is written at all.
 
 **Toggling that checkbox is not immediately live for a participant** (fix
 round 2, minor 5): `data/speakers.yml` is the authoritative record
-`convener-handle-survey-response` reads, but `SurveyForm.tsx` and the signup
+the drain reads, but `SurveyForm.tsx` and the signup
 relay both read `survey-status.json` instead (see *Signup relay* above),
 which only reflects a new checkbox state once *Deploy app* next builds and
 commits it. A board member who ticks the box expecting the survey page to
