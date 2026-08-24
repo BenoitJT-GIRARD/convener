@@ -825,12 +825,51 @@ def test_publish_vitrine_site_ships_nojekyll() -> None:
 #: A scan covers a workflow nobody has written yet, which a list never can.
 WORKFLOWS_DIR = Path(".github/workflows")
 
-_USER_EMAIL_RE = re.compile(r'user\.email\s+"([^"]+)"')
-_USER_NAME_RE = re.compile(r'user\.name\s+"([^"]+)"')
+#: Entry 5 of the deferred-work register. The check used to look for one
+#: syntax only -- `user\.email\s+"..."`, a double-quoted literal directly
+#: after `user.email` -- because that is the shape the defect it was built
+#: to catch happened to take (`deploy.yml` copying `publish-vitrine.yml`'s
+#: push step, stale `@forum.example.test` address and all). An unquoted
+#: address, a single-quoted one, an identity set through an
+#: `actions/github-script` object literal instead of `git config`, or one
+#: assigned through a `GIT_AUTHOR_EMAIL`/`GIT_COMMITTER_EMAIL` environment
+#: variable would all have read back zero matches and passed unnoticed --
+#: the same shape of failure as the iCalendar leak guard that never saw
+#: line folding.
+#:
+#: Whatever sets a commit's author, the address itself is written down
+#: somewhere as text in the workflow that sets it -- `git config`'s
+#: argument, an `env:` value, or a `github-script` field name are all just
+#: different surroundings for the same address. So this reads by the
+#: address's own shape, not by the syntax around it, and it no longer
+#: matters which of those surroundings a future workflow chooses.
+_EMAIL_SHAPE_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 
 #: The only domain a commit author here may use: a `users.noreply.github.com`
 #: address claims nothing beyond what GitHub itself already vouches for.
 _ALLOWED_EMAIL_DOMAIN = "users.noreply.github.com"
+
+
+def _commit_emails(text: str) -> list[str]:
+    """Every email-shaped string in `text`, in the order it appears."""
+    return _EMAIL_SHAPE_RE.findall(text)
+
+
+def _names_the_local_part(text: str, local: str) -> bool:
+    """Whether `local` -- the part of a commit-author address before its
+    `@` -- appears in `text` as its own token at least once *beyond* the
+    address itself.
+
+    Reads by shape for the same reason `_commit_emails` does: the token
+    naming an automated identity might be `user.name "local"`, a
+    `GIT_AUTHOR_NAME`/`GIT_COMMITTER_NAME` environment value, an
+    `actions/github-script` `name:` field, or nothing more structured than
+    a bare word -- all of them put `local` down as a standalone token, so a
+    plain word-boundary count -- at least one occurrence beyond the address
+    match itself -- catches every one of those shapes without caring which
+    it is.
+    """
+    return len(re.findall(rf"\b{re.escape(local)}\b", text)) >= 2
 
 
 def _workflow_files_in(directory: Path) -> list[Path]:
@@ -869,36 +908,127 @@ def test_the_workflow_sweep_globs_yaml_files_too_not_only_yml(tmp_path: Path) ->
     assert sorted(p.name for p in found) == ["a.yml", "b.yaml"]
 
 
+def _assert_no_foreign_domain(workflow_name: str, text: str) -> None:
+    for email in _commit_emails(text):
+        assert email.endswith(f"@{_ALLOWED_EMAIL_DOMAIN}"), (
+            f"{workflow_name} carries the address {email!r}, not on "
+            f"{_ALLOWED_EMAIL_DOMAIN} -- a domain this project does not "
+            "administer (criterion 8)"
+        )
+
+
+def _assert_every_address_is_named(workflow_name: str, text: str) -> None:
+    for email in _commit_emails(text):
+        local = email.split("@", 1)[0]
+        assert _names_the_local_part(text, local), (
+            f"{workflow_name} carries the address {email!r} without a "
+            f"matching name for {local!r} anywhere in the file"
+        )
+
+
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
 def test_automated_commit_author_is_not_on_a_domain_we_do_not_administer(
     workflow: Path,
 ) -> None:
-    text = workflow.read_text(encoding="utf-8")
-    emails = _USER_EMAIL_RE.findall(text)
-    for email in emails:
-        assert email.endswith(f"@{_ALLOWED_EMAIL_DOMAIN}"), (
-            f"{workflow.name} signs a commit as {email!r}, not on "
-            f"{_ALLOWED_EMAIL_DOMAIN} -- a domain this project does not "
-            "administer (criterion 8)"
-        )
+    _assert_no_foreign_domain(workflow.name, workflow.read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
 def test_automated_commit_identity_pairs_a_name_with_its_address(
     workflow: Path,
 ) -> None:
-    """Every `user.email` a workflow sets has a matching `user.name` naming
-    the same identity, so an automated commit reads as a recognisable bot
-    rather than a bare, unexplained address."""
-    text = workflow.read_text(encoding="utf-8")
-    emails = _USER_EMAIL_RE.findall(text)
-    names = _USER_NAME_RE.findall(text)
-    for email in emails:
-        local = email.split("@", 1)[0]
-        assert local in names, (
-            f'{workflow.name} sets user.email "{email}" without a '
-            f'matching user.name "{local}"'
-        )
+    """Every commit-author address a workflow carries has a matching name
+    naming the same identity, so an automated commit reads as a
+    recognisable bot rather than a bare, unexplained address -- whatever
+    syntax set the address (see `_commit_emails`'s own comment)."""
+    _assert_every_address_is_named(workflow.name, workflow.read_text(encoding="utf-8"))
+
+
+# ------------------------------------------------------------------ #
+# Entry 5 (deferred-work register), proven by name: five shapes the
+# previous check -- `user\.email\s+"..."`, a double-quoted literal directly
+# after the literal text `user.email` -- would have let a foreign-domain
+# commit author through in without either test above ever seeing it. Each
+# is run against the real assertion the parametrized tests above call
+# (`_assert_no_foreign_domain`), not a reimplementation of it, so a
+# regression in the checker itself fails these too, exactly the way
+# `test_rebasing_on_a_rejected_push_can_lose_an_entry` proves the rebase
+# defect by running the real re-derive helper instead of describing what a
+# rebase would do.
+# ------------------------------------------------------------------ #
+
+_FOREIGN_ADDRESS = "convener-publisher@forum.example.test"
+
+#: Escaped once, reused everywhere below: the address's domain contains a
+#: literal `.`, a regex metacharacter `pytest.raises(match=...)` would
+#: otherwise interpret rather than match.
+_FOREIGN_DOMAIN_PATTERN = re.escape("forum.example.test")
+
+
+def test_evasion_1_unquoted_address_is_still_caught() -> None:
+    """No quotes at all -- `git config user.email` accepts a bare token as
+    happily as a quoted one; the old regex required a `"` right after the
+    key and found nothing here."""
+    text = f"run: git config user.email {_FOREIGN_ADDRESS}\n"
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_2_single_quoted_address_is_still_caught() -> None:
+    """Single quotes -- valid shell, invalid to a pattern anchored on `"`."""
+    text = f"run: git config user.email '{_FOREIGN_ADDRESS}'\n"
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_3_identity_via_github_script_is_still_caught() -> None:
+    """No `git config` at all -- `actions/github-script` sets the commit
+    author through the REST API's own `author`/`committer` object, entirely
+    outside the `user.email`/`user.name` vocabulary the old regex looked
+    for."""
+    text = f"""
+    - uses: actions/github-script@0123456789abcdef0123456789abcdef01234567
+      with:
+        script: |
+          await github.rest.git.createCommit({{
+            owner, repo, message: 'automated',
+            author: {{ name: 'convener-publisher', email: '{_FOREIGN_ADDRESS}' }},
+          }});
+    """
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_4_identity_via_environment_variable_is_still_caught() -> None:
+    """Set through `env:` (`GIT_AUTHOR_EMAIL`/`GIT_COMMITTER_EMAIL`, the
+    environment variables `git` itself reads) rather than through
+    `git config` -- the address never appears next to the literal text
+    `user.email` at all."""
+    text = f"""
+    env:
+      GIT_AUTHOR_EMAIL: {_FOREIGN_ADDRESS}
+      GIT_AUTHOR_NAME: convener-publisher
+    run: git commit -am "automated"
+    """
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_5_dot_yaml_workflow_is_still_swept(tmp_path: Path) -> None:
+    """Not a parsing evasion but a discovery one: a smarter regex over a
+    file the sweep never opens protects nothing. `_workflow_files_in`
+    already globs `.yaml` (fixed independently, for sweep evasion 3 --
+    `test_the_workflow_sweep_globs_yaml_files_too_not_only_yml`), so this
+    closes entry 5 end to end by proving a `.yaml` file both reaches the
+    sweep and still fails the real check once it does."""
+    workflow = tmp_path / "probe.yaml"
+    workflow.write_text(
+        f'run: git config user.email "{_FOREIGN_ADDRESS}"\n', encoding="utf-8"
+    )
+
+    assert workflow in _workflow_files_in(tmp_path)
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain(workflow.name, workflow.read_text(encoding="utf-8"))
 
 
 # ------------------------------------------------------------------ #

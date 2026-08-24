@@ -8,6 +8,7 @@ same cases from one file.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ from convener_ops.governance import (
     working_days_elapsed,
 )
 from convener_ops.notify import due_date, overdue, overdue_text, waiting_since
+from convener_ops.paths import repo_root
 from convener_ops.sweep import _unsettled_candidates
 
 CASES = json.loads(
@@ -154,6 +156,71 @@ def test_unsettled_nominations_match_the_shared_fixture(case: dict[str, Any]) ->
     candidates = _unsettled_candidates({"nominations": [case["nomination"]]})
     expected = {case["nomination"]["candidate"]} if case["unsettled"] else set()
     assert candidates == expected
+
+
+#: Every case block the fixture carries, excluding the underscore-prefixed
+#: prose comments that document individual blocks -- those are not data
+#: either language reads, and would trivially "match" their own block's
+#: name if counted.
+_TOP_LEVEL_KEYS = [key for key in CASES if not key.startswith("_")]
+
+
+def _corpus(directory: Path, pattern: str) -> str:
+    return "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted(directory.glob(pattern))
+    )
+
+
+def _is_read(key: str, corpus: str) -> bool:
+    """Whether `key` is used as a fixture lookup somewhere in `corpus`.
+
+    Checked textually, the same way `handbook-registry.mjs` already checks
+    fixture-file completeness in this project: a quoted subscript
+    (`CASES["name"]`, the shape every Python reader of this fixture uses) or
+    a dotted property access (`cases.name`, the shape the TypeScript readers
+    use, since a JSON import types every key as a real property). Neither
+    pattern matches a bare, unquoted mention in prose, so a comment that
+    merely names a block does not count as reading it.
+    """
+    escaped = re.escape(key)
+    quoted = re.search(rf"""(['"]){escaped}\1""", corpus)
+    dotted = re.search(rf"\.{escaped}\b", corpus)
+    return bool(quoted or dotted)
+
+
+def test_every_top_level_fixture_key_is_read_by_somebody() -> None:
+    """Entry 4 of the deferred-work register.
+
+    Neither this module nor `app/tests/governance-fixture.test.ts` used to
+    assert that every top-level block of `governance-cases.json` is read by
+    *somebody* -- either language's suite, anywhere, not only by the two
+    files most obviously named after the fixture. A block can otherwise sit
+    unread indefinitely, which is exactly the drift D-14's shared fixture
+    exists to prevent: cases were added here precisely because reading them
+    from one language and not the other let two implementations disagree
+    without either suite noticing.
+
+    "Read by somebody" does not require both languages to read the same
+    block -- some blocks describe a rule with no browser-side counterpart
+    (the webhook-signature cases, for instance, exercised only by
+    `test_proposal.py`) -- only that at least one real test, in either
+    language, actually looks the block up.
+    """
+    corpus = "\n".join(
+        [
+            _corpus(Path(__file__).parent, "test_*.py"),
+            _corpus(repo_root() / "app" / "tests", "*.test.ts"),
+            _corpus(repo_root() / "app" / "tests", "*.test.tsx"),
+        ]
+    )
+    unread = [key for key in _TOP_LEVEL_KEYS if not _is_read(key, corpus)]
+    assert unread == [], f"fixture key(s) read by nobody: {unread}"
+
+
+def test_the_completeness_check_itself_has_something_to_check() -> None:
+    """An empty `_TOP_LEVEL_KEYS` would pass the test above vacuously -- the
+    same guard every other sweep in this suite puts on its own walk."""
+    assert len(_TOP_LEVEL_KEYS) > 0
 
 
 def test_the_unsettled_fixture_still_covers_both_kinds_of_deferral() -> None:
