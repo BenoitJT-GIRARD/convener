@@ -13,7 +13,7 @@ import subprocess  # nosec B404
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time
 from pathlib import Path
 from typing import Any, Final
@@ -28,8 +28,12 @@ from convener_ops import (
     delivery,
     eventkeys,
     formats,
+    queue_watch,
+    registration_routing,
     retention_liveness,
+    routing_watch,
     signing,
+    submission_queue,
     survey_invite,
     visual,
 )
@@ -104,12 +108,6 @@ from convener_ops.registration import (
     to_registration,
     upsert,
 )
-from convener_ops.survey import (
-    add_response,
-    dump_response_file,
-    load_response_file,
-    to_survey_response,
-)
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
 from convener_ops.validate import (
@@ -151,6 +149,15 @@ SURVEY_INVITATIONS_HEADER = (
 RETENTION_LAST_RUN_HEADER = (
     "# Evidence the retention sweep still runs; "
     "see tools/convener_ops/retention_liveness.py\n"
+)
+#: Phase 9, task 2 -- which queue entries a drain has already applied, so a
+#: drain that committed its result and was then interrupted before clearing
+#: the queue does not apply them a second time. Committed in the *same*
+#: commit as the data those entries produced, which is the whole of why it
+#: works; see tools/convener_ops/submission_queue.py's own module docstring.
+QUEUE_LEDGER_HEADER = (
+    "# Which queued submissions a drain has already applied; "
+    "see tools/convener_ops/submission_queue.py\n"
 )
 #: Phase 8, task 4 -- what the last window of runs actually billed, and the
 #: only place in this repository where a *measured* minute exists rather
@@ -469,6 +476,59 @@ def survey_status_public_data() -> int:
         json.dumps(ids, indent=2) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(ids)} event(s) with the survey open")
+    return 0
+
+
+def registration_routing_public_data() -> int:
+    """`convener-registration-routing-public-data`: rebuild
+    `public-data/registration-routing.json` from `data/speakers.yml` and
+    `config/registration-lanes.yml` (phase 9, task 3) --
+    `survey_status_public_data`'s own precedent above, for a third consumer
+    and a third question.
+
+    What it publishes is one already-resolved instant per event: the moment
+    that event stops being far enough away for a registration to wait for
+    the daily drain. `services/signup-relay` reads it through the Contents
+    API, with the credential and the call shape it already uses for
+    `keys/events/<id>.pub` and `public-data/survey-status.json`, and its
+    whole share of the rule becomes one comparison against the clock. Every
+    piece of arithmetic that has a project decision in it -- Europe/Paris,
+    the standing start, the configured threshold -- happens here, in the
+    language it already lives in.
+
+    Deliberately its own file and its own command rather than a field folded
+    into `survey-status.json`, for that file's own stated reason: the two
+    answer different questions for different readers, and a consumer that
+    checks membership in a list of ids must not have to know about a
+    mapping of instants to do it.
+
+    Returns 1, printing why, on a `config/registration-lanes.yml` this code
+    cannot read as the shape it knows. Never a default: a threshold guessed
+    at is a threshold that could route a last-minute registrant into a queue
+    they cannot afford to wait in, and a red build is the cheap version of
+    finding that out.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    config_data, config_errors = _load(root / registration_routing.CONFIG_PATH)
+    if errors or config_errors:
+        for error in errors + config_errors:
+            print(f"  - {error}")
+        return 1
+    try:
+        threshold = registration_routing.threshold_from_data(config_data)
+    except ValueError as exc:
+        print(f"  - {exc}")
+        return 1
+
+    data = registration_routing.to_routing_data(speakers or [], threshold)
+    out_path = root / registration_routing.ROUTING_PATH
+    out_path.parent.mkdir(exist_ok=True)
+    out_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"wrote {len(data['queue_until'])} event(s) whose registrations may "
+        f"wait for the drain more than {threshold}h before they start"
+    )
     return 0
 
 
@@ -1030,39 +1090,17 @@ def encrypt_identifier() -> int:
 
 # ------------------------------------------------------------------ #
 # The post-event survey (task 16, phase 4 spec S:6): "meme entree que
-# l'inscription, meme stockage chiffre, meme destruction de cle." The
-# three steps below are `.github/workflows/survey.yml`'s own twin of
-# registration.yml's `resolve_registration_secret` / `handle_registration`
-# -- see `tools/convener_ops/survey.py`'s module docstring for the storage
-# design, and that workflow's own comments for why there is no third,
-# "send a confirmation" step here: nothing is sent back to a participant
-# for submitting a survey response, so there is nothing to split for the
-# reason registration.yml's own send step was split off (R-9 round 1).
+# l'inscription, meme stockage chiffre, meme destruction de cle."
+#
+# Phase 9, task 2 removed the two console scripts that used to live here
+# -- `resolve_survey_secret` and `handle_survey_response`, the two steps of
+# `.github/workflows/survey.yml` -- along with that workflow itself. A
+# survey response no longer arrives as a `repository_dispatch` that starts
+# a run of its own; the relay writes it to the queue branch and the daily
+# drain below handles every waiting response at once. What remains here is
+# the one thing the drain still needs from this module: whether an event's
+# survey switch is on.
 # ------------------------------------------------------------------ #
-
-
-def resolve_survey_secret() -> int:
-    """`convener-survey-secret-name`: the first of the two steps
-    `.github/workflows/survey.yml` runs for one incoming survey response.
-
-    Identical in every respect to `resolve_registration_secret` except the
-    environment variable it reads -- `SURVEY_PAYLOAD` rather than
-    `REGISTRATION_PAYLOAD` -- because the envelope shape, and the secret it
-    names, are the same one `eventkeys.py` already defines: a survey
-    response is encrypted under the *same* per-event key a registration is
-    (spec S:6), so there is no second key, and no second naming scheme, to
-    resolve here.
-    """
-    payload = os.environ.get("SURVEY_PAYLOAD", "")
-    event_id = event_id_from_payload(payload)
-    if event_id is None:
-        print("no valid event id in the survey payload", file=sys.stderr)
-        return 1
-
-    _write_github_output(
-        f"event_id={event_id}\nsecret_name={eventkeys.secret_name(event_id)}\n"
-    )
-    return 0
 
 
 def _survey_enabled(root: Path, event_id: str) -> bool:
@@ -1087,91 +1125,840 @@ def _survey_enabled(root: Path, event_id: str) -> bool:
     return bool(record.get("survey_enabled") is True)
 
 
-def handle_survey_response() -> int:
-    """`convener-handle-survey-response`: the second of the two steps
-    `.github/workflows/survey.yml` runs -- decrypt one survey response and
-    append it, re-encrypted, to
-    `data/events/<id>/survey-responses.enc`.
+# ------------------------------------------------------------------ #
+# The submission queue (phase 9, task 2). Two steps of
+# `.github/workflows/sweep-and-notify.yml`'s own daily job, never a
+# workflow or a job of their own -- one of either would cost a billed run
+# every day, which is what this feature exists to stop.
+#
+# The split between them is the GitHub Actions constraint every other
+# event-key job in this repository already meets: a secret can only be
+# selected by an expression in the workflow file, from a *previous* step's
+# output, never by a name a running step computed. `plan_queue_drain`
+# names the secrets; the workflow selects them; `drain_queue` spends them.
+# Both read the same snapshot of the queue and both call the same pure
+# `submission_queue.plan_drain`, so they agree by construction rather than
+# by handing state to one another.
+# ------------------------------------------------------------------ #
 
-    Checked in this order, cheapest first, and every failure refuses
-    before anything is decrypted or written:
+#: Where the queue step leaves what it exported from `QUEUE_BRANCH` -- a
+#: directory holding `queue/<kind>/<id>.json`, outside the checkout so a
+#: queued entry can never be committed to the default branch by accident.
+#: Set by the workflow; both commands below refuse to guess it.
+QUEUE_DIR_ENV: Final = "CONVENER_QUEUE_DIR"
 
-    1. the payload names a valid event id;
-    2. **that event's survey switch is on** (`_survey_enabled` above) --
-       task 16's own mutant to kill: `services/signup-relay`'s own
-       known-event check only proves `keys/events/<id>.pub` exists, never
-       that this event's survey is open, so anyone who knows a live event
-       id could otherwise reach this far with a well-shaped envelope for
-       an event whose organiser never turned the survey on;
-    3. the event's private key is configured (D-13 does not apply here,
-       the same exception `eventkeys.py`'s own module docstring names for
-       `handle_registration`);
-    4. the ciphertext actually decrypts to a `SurveyResponse`
-       (`survey.to_survey_response`).
+#: Where `drain_queue` writes the entry names the clearing step must remove
+#: from `QUEUE_BRANCH`, one per line. A file rather than a step output
+#: because a drain of two hundred entries would run past what an output can
+#: hold, and because the clearing step must read exactly what the drain
+#: acted on -- not recompute it.
+QUEUE_CLEAR_ENV: Final = "CONVENER_QUEUE_CLEAR_FILE"
 
-    Never prints anything decrypted from the payload -- every message here
-    names only the event id, already public. The success line no longer
-    carries a running count either (R-39, fix round 1): "recorded a
-    survey response for event <id> (N total)" paired an index with a run
-    timestamp in the job log, a third channel the finding named as free to
-    close, on top of what the encryption already covers -- see
-    `survey.py::_PLAINTEXT_PAD_BYTES`'s own docstring for the two the
-    encryption covers directly.
+#: Where `drain_queue` writes the registrations whose confirmation still has
+#: to go out -- one `<entry name><tab><comma-joined changed labels>` line per
+#: registration -- and where `confirm_queued_registrations` reads them back
+#: from, after the drain's commit has actually been pushed.
+#:
+#: A file for the same two reasons as `QUEUE_CLEAR_ENV`, and one more: the
+#: only things on a line are a queue entry path and R-9 field *labels*
+#: (`confirmation.FIELD_LABELS`, never a value), so nothing here is personal
+#: data even though it crosses between two steps of a job whose log a
+#: volunteer can read. That is the same property `registration.yml` relies on
+#: when it passes `changed` between its own two steps as a step output.
+QUEUE_CONFIRM_ENV: Final = "CONVENER_QUEUE_CONFIRM_FILE"
+
+#: The separator on a line of that file. A tab, because a queue entry path
+#: is `queue/<kind>/<id>.json` (no tabs by construction, `ENTRY_ID_RE`) and
+#: `confirmation.FIELD_LABELS`' own values contain neither tabs nor commas.
+_CONFIRM_FIELD_SEPARATOR: Final = "\t"
+
+#: Where `drain_queue` writes the entries it could **not** finish and the
+#: reason for each -- one `<entry name><tab><reason>` line -- and where
+#: `record_queue_watch` reads them back from (phase 9, task 4).
+#:
+#: A third cross-step file rather than a step output, for the first of
+#: `QUEUE_CLEAR_ENV`'s two reasons: a drain that deferred two hundred
+#: entries would run past what an output can hold. Nothing on a line but a
+#: queue entry path, an event id and a repository path -- the same
+#: already-public identifiers `submission_queue.Note` is documented to be
+#: limited to, which is what lets this reach a committed record and a
+#: comment on the board's thread.
+QUEUE_DEFERRED_ENV: Final = "CONVENER_QUEUE_DEFERRED_FILE"
+
+#: Where the workflow leaves the queue branch's contents *after* the drain,
+#: the confirmations and the clearing have all finished -- one entry path
+#: per line, `git ls-tree` against the branch tip.
+#:
+#: Read rather than inferred, and that is the whole reliability of this
+#: record: what is still waiting is a fact about the branch, not something
+#: to be reconstructed from what three earlier steps intended. A drain that
+#: failed to push, a clearing step that could not commit, and a submission
+#: the relay wrote while this very run was working are all simply *there*,
+#: with no case analysis left to get wrong.
+QUEUE_WAITING_ENV: Final = "CONVENER_QUEUE_WAITING_FILE"
+
+#: The separator on a line of the deferral file. A tab, for
+#: `_CONFIRM_FIELD_SEPARATOR`'s own reason; named separately because the
+#: two files carry different things, and one shared constant would make a
+#: change to either silently reshape the other.
+_DEFERRED_FIELD_SEPARATOR: Final = "\t"
+
+#: Where a queue alarm that has somewhere to go is left for the workflow to
+#: post. A *third* body filename in one job, and deliberately neither
+#: `NOTIFY_BODY` nor `BUDGET_BODY`: the digest and the budget alarm are
+#: composed in the same job, and one filename for several messages means
+#: whichever is written last silently replaces the rest. Same channel, same
+#: thread, same team mention -- a second address book is what D-07 forbids,
+#: never a second message.
+QUEUE_BODY: Final = "queue-body.md"
+
+#: Phase 9, task 4 -- what the public submission queue still held the last
+#: time a drain looked at it, and since when. Committed on purpose, like
+#: every other record this repository keeps about itself: legible by
+#: opening the repository, with no run log to scroll and no CI required,
+#: which is exactly what survives the scenario a watchdog inside GitHub
+#: Actions cannot report on. See tools/convener_ops/queue_watch.py's own module
+#: docstring.
+QUEUE_WATCH_HEADER = (
+    "# What the public submission queue still holds, and since when; "
+    "see tools/convener_ops/queue_watch.py\n"
+)
+
+
+def _queue_entries(root: Path) -> dict[str, str]:
+    """Every queue entry under `root`, keyed by its path inside
+    `QUEUE_BRANCH` (`queue/<kind>/<id>.json`).
+
+    Reads every file it finds, whatever its name or depth, rather than only
+    the ones shaped like an entry: `submission_queue.read_entry` is what
+    decides an entry is unusable, and it says so loudly. A reader that
+    silently skipped an odd filename would turn a misplaced submission into
+    a submission that never existed.
     """
-    payload = os.environ.get("SURVEY_PAYLOAD", "")
-    event_id = event_id_from_payload(payload)
-    if event_id is None:
-        print("no valid event id in the survey payload", file=sys.stderr)
-        return 1
+    entries: dict[str, str] = {}
+    if not root.is_dir():
+        return entries
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            entries[path.relative_to(root).as_posix()] = path.read_text(
+                encoding="utf-8"
+            )
+        except (OSError, UnicodeDecodeError):
+            # Unreadable bytes are not a reason to lose the rest of the
+            # queue. Recorded as an entry that cannot be read at all, which
+            # `read_entry` refuses by name on the run.
+            entries[path.relative_to(root).as_posix()] = ""
+    return entries
 
-    root = repo_root()
-    if not _survey_enabled(root, event_id):
-        print(
-            f"the survey is not enabled for event {event_id} -- refusing to "
-            "store this response",
-            file=sys.stderr,
-        )
-        return 1
 
-    private_pem = os.environ.get("EVENT_PRIVATE_KEY", "")
-    if not private_pem:
-        print(f"no private key configured for event {event_id}", file=sys.stderr)
-        return 1
-
-    response = to_survey_response(payload, private_pem)
-    if response is None:
-        # Important 3 (fix round 1): "could not be read", not "could not be
-        # decrypted". to_survey_response's own uniform None folds a
-        # too-long answer into the same outcome as an undecryptable one --
-        # correct for the untrusted-input reason its own docstring gives --
-        # but this operator-facing line no longer names the narrower,
-        # sometimes-wrong cause. A participant whose long, careful answer
-        # tripped the length cap deserves an honest "could not be read",
-        # not a claim about decryption that did not happen to fail.
-        print(
-            f"survey response for event {event_id} could not be read",
-            file=sys.stderr,
-        )
-        return 1
-
-    rel_path = Path("data") / "events" / event_id / "survey-responses.enc"
-    enc_path = root / rel_path
-    existing_text = enc_path.read_text(encoding="utf-8") if enc_path.exists() else None
+def _queue_ledger(root: Path) -> tuple[frozenset[str], str | None]:
+    """`(ledger, None)`, or `(empty, message)` on a committed file that will
+    not parse -- never raises, the same shape `_load_destruction_registry`
+    already has. A *missing* file means no drain has ever run, which is the
+    empty ledger and not an error."""
+    path = root / submission_queue.LEDGER_PATH
+    if not path.exists():
+        return frozenset(), None
     try:
-        current = load_response_file(existing_text)
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return (
+            frozenset(),
+            f"{submission_queue.LEDGER_PATH.as_posix()}: invalid YAML - {exc}",
+        )
+    try:
+        return submission_queue.ledger_from_data(data), None
     except ValueError as exc:
-        print(f"{rel_path.as_posix()}: {exc}", file=sys.stderr)
+        return frozenset(), f"{submission_queue.LEDGER_PATH.as_posix()}: {exc}"
+
+
+@dataclass(frozen=True)
+class _QueueSnapshot:
+    """What both commands below read before they do anything: the queue as
+    it was exported, the committed ledger, and the plan the two imply.
+    `error` is a message when something is wrong enough that draining would
+    be worse than not draining -- an unset queue directory, or a ledger that
+    will not parse, which would otherwise be read as "nothing has ever been
+    handled" and re-apply every entry an earlier drain already did."""
+
+    plan: submission_queue.DrainPlan
+    entries: dict[str, str]
+    ledger: frozenset[str]
+    error: str | None
+
+
+def _queue_snapshot(root: Path) -> _QueueSnapshot:
+    """Read the queue and the ledger, and plan against both."""
+    queue_dir = os.environ.get(QUEUE_DIR_ENV, "")
+    if not queue_dir:
+        return _QueueSnapshot(
+            submission_queue.DrainPlan(), {}, frozenset(), f"{QUEUE_DIR_ENV} is not set"
+        )
+    entries = _queue_entries(Path(queue_dir))
+    ledger, error = _queue_ledger(root)
+    if error is not None:
+        return _QueueSnapshot(submission_queue.DrainPlan(), entries, ledger, error)
+    plan = submission_queue.plan_drain(
+        entries, ledger, lambda event_id: _survey_enabled(root, event_id)
+    )
+    return _QueueSnapshot(plan, entries, ledger, None)
+
+
+def plan_queue_drain() -> int:
+    """`convener-plan-queue-drain`: name the secrets today's drain will need.
+
+    Writes `pending`, and `event_1..N` / `secret_1..N` for
+    `submission_queue.MAX_EVENTS_PER_DRAIN` slots, to `$GITHUB_OUTPUT`. An
+    unused slot is the empty string on both, and `${{ secrets[''] }}`
+    resolves to the empty string rather than failing -- which is how one
+    fixed set of expressions serves a drain of one event and a drain of
+    eight.
+
+    Prints only counts and event ids. An event id is already public (it
+    names a `keys/events/<id>.pub` this repository publishes); nothing a
+    submitter wrote can reach this command at all, because nothing here
+    decrypts.
+    """
+    root = repo_root()
+    snapshot = _queue_snapshot(root)
+    if snapshot.error is not None:
+        print(f"::error::{snapshot.error}", file=sys.stderr)
+        return 1
+    plan, entries = snapshot.plan, snapshot.entries
+
+    # `pending` is "is there anything at all to do", not "is there anything
+    # to handle". Three states beyond a fresh submission need the drain
+    # step to run: entries an earlier drain handled but could not clear
+    # (they have to be cleared now), entries it will refuse (same), and an
+    # empty queue with a non-empty ledger (the ledger has to be pruned, or
+    # it grows for ever). Only a queue *and* a ledger that are both empty
+    # mean a drain would do nothing at all -- and then nothing runs, and no
+    # commit is made.
+    pending = bool(entries) or bool(snapshot.ledger)
+    lines = [f"pending={'true' if pending else 'false'}\n"]
+    names = submission_queue.secret_names(plan)
+    for slot, secret in enumerate(names, start=1):
+        event_id = plan.event_ids[slot - 1] if slot <= len(plan.event_ids) else ""
+        lines.append(f"event_{slot}={event_id}\nsecret_{slot}={secret}\n")
+    _write_github_output("".join(lines))
+
+    print(
+        f"{len(entries)} entrie(s) in the queue: {len(plan.handle)} to handle "
+        f"across {len(plan.event_ids)} event(s), {len(plan.refused)} to refuse, "
+        f"{len(plan.deferred)} left waiting, {len(plan.already_handled)} already "
+        "handled by an earlier drain"
+    )
+    return 0
+
+
+def drain_queue() -> int:
+    """`convener-drain-queue`: handle everything the queue holds, in one pass.
+
+    Reads the same snapshot `plan_queue_drain` read, pairs each slot's event
+    id with the key the workflow selected for it, and writes the result --
+    every event's `survey-responses.enc` **and** `data/queue-ledger.yml` --
+    so the caller can commit the lot as one commit. The two must land
+    together or not at all: the ledger is what makes a replayed drain a
+    no-op, and a ledger committed without its data (or data without its
+    ledger) is exactly a lost or a doubled submission.
+
+    Writes nothing to the queue itself. The clearing step reads
+    `$CONVENER_QUEUE_CLEAR_FILE` **after** the commit has been pushed, which is
+    the whole ordering that makes an interruption safe -- see
+    `submission_queue`'s own module docstring.
+
+    Returns 0 even when entries were refused or deferred: a drain that
+    failed here would leave the good submissions uncommitted for the sake of
+    a bad one. Both are reported as annotations, and the workflow's own
+    reporting step is what turns a refusal red.
+    """
+    root = repo_root()
+    snapshot = _queue_snapshot(root)
+    if snapshot.error is not None:
+        print(f"::error::{snapshot.error}", file=sys.stderr)
+        return 1
+    plan, entries = snapshot.plan, snapshot.entries
+
+    # Paired by slot, not by name: the workflow put event id *i* and the
+    # secret it selected for event *i* in the same numbered pair, and this
+    # is the one place the two halves meet again. `plan_queue_drain` and
+    # this command compute the identical plan from the identical snapshot,
+    # so slot `i` names the same event in both.
+    keys: dict[str, str] = {}
+    for slot, event_id in enumerate(plan.event_ids, start=1):
+        named = os.environ.get(f"CONVENER_QUEUE_EVENT_{slot}", event_id)
+        if named != event_id:
+            # Belt and braces: if the two steps ever disagreed about which
+            # event holds slot `i`, the key in that slot belongs to another
+            # event and would decrypt nothing. Left empty, so every entry
+            # for this event is deferred and reported rather than refused.
+            print(
+                f"::warning::slot {slot} names event {named} but this drain "
+                f"planned {event_id} -- leaving it for the next drain",
+            )
+            continue
+        keys[event_id] = os.environ.get(f"CONVENER_QUEUE_KEY_{slot}", "")
+
+    existing: dict[str, str | None] = {}
+    for event_id in plan.event_ids:
+        for rel in (
+            submission_queue.responses_path(event_id),
+            submission_queue.registrations_path(event_id),
+        ):
+            path = root / rel
+            existing[rel] = path.read_text(encoding="utf-8") if path.exists() else None
+
+    outcome = submission_queue.drain(plan, keys, existing, snapshot.ledger, entries)
+
+    for rel, text in sorted(outcome.files.items()):
+        path = root / Path(rel)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="")
+
+    ledger_path = root / submission_queue.LEDGER_PATH
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger_path.write_text(
+        QUEUE_LEDGER_HEADER + _dump(submission_queue.ledger_to_data(outcome.ledger)),
+        encoding="utf-8",
+        newline="",
+    )
+
+    clear_file = os.environ.get(QUEUE_CLEAR_ENV, "")
+    if clear_file:
+        # `newline=""`, the same discipline every other writer in this
+        # module holds, and here it is load-bearing rather than tidy: the
+        # clearing step reads this file line by line in `sh`, and a line
+        # ending Python had translated would make every path it read end
+        # in a carriage return. `git rm --ignore-unmatch` matches no such
+        # path, stages nothing, and the step reports the queue as already
+        # clear -- a queue that never empties, reported as success.
+        # Found by driving the real workflow shell, not by reading it.
+        Path(clear_file).write_text(
+            "".join(f"{name}\n" for name in outcome.clear),
+            encoding="utf-8",
+            newline="",
+        )
+
+    confirm_file = os.environ.get(QUEUE_CONFIRM_ENV, "")
+    if confirm_file:
+        # `newline=""` for the identical, load-bearing reason the clear file
+        # above carries it: the confirming step reads this back line by
+        # line, and a line ending Python had translated would make every
+        # entry path it read end in a carriage return -- an entry nothing
+        # in the exported queue matches, i.e. a confirmation silently never
+        # sent, reported as success.
+        Path(confirm_file).write_text(
+            "".join(
+                f"{item.name}{_CONFIRM_FIELD_SEPARATOR}{','.join(item.changed)}\n"
+                for item in outcome.confirm
+            ),
+            encoding="utf-8",
+            newline="",
+        )
+
+    deferred_file = os.environ.get(QUEUE_DEFERRED_ENV, "")
+    if deferred_file:
+        # Phase 9, task 4. The drain is the only thing in the run that
+        # knows *why* an entry is still waiting -- a key nobody
+        # configured, a committed file nobody can parse, more open events
+        # than there are secret slots -- and the fix differs by reason, so
+        # the record that outlives this run has to carry it rather than
+        # only the fact of waiting.
+        #
+        # `newline=""`, and `flatten_reason` on every line, for the same
+        # load-bearing reason the two files above carry theirs: this is
+        # read back line by line, and a deferral whose reason is a YAML
+        # parser's own several-line message would otherwise put a fragment
+        # of an error where the next line's entry path belongs.
+        Path(deferred_file).write_text(
+            "".join(
+                f"{note.name}{_DEFERRED_FIELD_SEPARATOR}"
+                f"{queue_watch.flatten_reason(note.reason)}\n"
+                for note in outcome.deferred
+            ),
+            encoding="utf-8",
+            newline="",
+        )
+
+    for line in submission_queue.annotation_lines(outcome):
+        print(line)
+    print(submission_queue.summary(outcome))
+    _write_github_output(
+        f"handled={outcome.handled}\nrefused={len(outcome.refused)}\n"
+        f"deferred={len(outcome.deferred)}\n"
+        f"confirm={len(outcome.confirm)}\n"
+    )
+    return 0
+
+
+def confirm_queued_registrations() -> int:
+    """`convener-confirm-queued-registrations`: send the confirmation for every
+    registration `convener-drain-queue` stored, and only then let it be cleared.
+
+    The third of the queue's steps, and the one whose *position* is the
+    whole of its correctness. It runs **after** the drain's commit has been
+    pushed, so no confirmation can ever go out for a registration a rejected
+    push then discarded -- the identical ordering `registration.yml` spells
+    out for the immediate lane -- and **before** the clearing step, so an
+    entry is only ever removed from the queue once its confirmation has
+    actually been attempted. A run that stopped between the two would leave
+    the entry in the queue, and the next drain would find it in the ledger
+    *and* still waiting, which is exactly how it recognises "stored, not yet
+    confirmed" (`submission_queue.DrainPlan.confirm_only`).
+
+    "Attempted", not "delivered", and the difference is deliberate: with no
+    SMTP transport configured -- this project's ordinary D-13 state -- no
+    confirmation is ever delivered at all, and a clear that waited for
+    delivery would mean a queue that never empties and an alarm every single
+    day. `_send_confirmation` already reports a message it could not send
+    and names `convener-resend-confirmation` as the recovery, and that is the
+    same recovery here.
+
+    Reads the queue the drain read (`CONVENER_QUEUE_DIR`), the list the drain
+    wrote (`CONVENER_QUEUE_CONFIRM_FILE`), and the same numbered
+    `CONVENER_QUEUE_EVENT_<n>` / `CONVENER_QUEUE_KEY_<n>` pairs -- decrypting the
+    payload a second time from the same ciphertext, because a registration's
+    plaintext lives in one process's memory at a time and there is no other
+    way to ask for it again (`send_confirmation`'s own docstring makes the
+    identical point about the identical second decrypt).
+
+    Appends what it confirmed to `CONVENER_QUEUE_CLEAR_FILE`, so the clearing
+    step removes exactly the entries that are now completely done, alongside
+    the survey responses and refusals the drain already put there.
+    """
+    queue_dir = os.environ.get(QUEUE_DIR_ENV, "")
+    if not queue_dir:
+        print(f"::error::{QUEUE_DIR_ENV} is not set", file=sys.stderr)
+        return 1
+    confirm_file = os.environ.get(QUEUE_CONFIRM_ENV, "")
+    if not confirm_file:
+        print(f"::error::{QUEUE_CONFIRM_ENV} is not set", file=sys.stderr)
+        return 1
+    pending = Path(confirm_file)
+    if not pending.exists():
+        print("the drain stored no registration that still needs a confirmation")
+        return 0
+
+    entries = _queue_entries(Path(queue_dir))
+    keys: dict[str, str] = {}
+    for slot in range(1, submission_queue.MAX_EVENTS_PER_DRAIN + 1):
+        event_id = os.environ.get(f"CONVENER_QUEUE_EVENT_{slot}", "")
+        if event_id:
+            keys[event_id] = os.environ.get(f"CONVENER_QUEUE_KEY_{slot}", "")
+
+    confirmed: list[str] = []
+    for line in pending.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        name, _, raw_changed = line.partition(_CONFIRM_FIELD_SEPARATOR)
+        payload = entries.get(name)
+        if payload is None:
+            # The queue no longer holds it, so an earlier run already
+            # cleared it, which -- by this step's own ordering -- means its
+            # confirmation already went out. Nothing to do, and nothing
+            # wrong: never a second message for one submission.
+            print(f"::warning::{name}: no longer in the queue, nothing sent")
+            continue
+        read = submission_queue.read_entry(name, payload)
+        if isinstance(read, submission_queue.Note):
+            print(f"::warning::{name}: {read.reason}")
+            confirmed.append(name)
+            continue
+        private_pem = keys.get(read.event_id, "")
+        if not private_pem:
+            # Left in the queue and *not* confirmed: the next drain finds
+            # it in the ledger and still waiting, and tries again. Loud,
+            # because a key nobody configured is the operator's to fix.
+            print(
+                f"::error::{name}: no private key configured for event "
+                f"{read.event_id} -- its confirmation is still waiting"
+            )
+            continue
+        registration = to_registration(read.payload, private_pem)
+        if registration is None:
+            # Stored it was not (the drain refuses exactly the same
+            # envelope), so there is nothing this can confirm. Cleared
+            # rather than left to block the queue for ever.
+            print(
+                f"::warning::{name}: a queued registration for event "
+                f"{read.event_id} could not be read, nothing sent"
+            )
+            confirmed.append(name)
+            continue
+        changed = tuple(field for field in raw_changed.split(",") if field)
+        _send_confirmation(read.event_id, registration, changed)
+        confirmed.append(name)
+
+    if confirmed:
+        clear_file = os.environ.get(QUEUE_CLEAR_ENV, "")
+        if not clear_file:
+            print(f"::error::{QUEUE_CLEAR_ENV} is not set", file=sys.stderr)
+            return 1
+        with Path(clear_file).open("a", encoding="utf-8", newline="") as handle:
+            for name in confirmed:
+                handle.write(f"{name}\n")
+
+    print(f"{len(confirmed)} queued registration(s) confirmed and ready to clear")
+    return 0
+
+
+# ------------------------------------------------------------------ #
+# Whether the queue is emptying at all -- phase 9, task 4
+# ------------------------------------------------------------------ #
+
+
+def _queue_thresholds(root: Path) -> queue_watch.Thresholds:
+    """`config/queue-drain.yml`, parsed or refused.
+
+    Raises `ValueError` carrying a message already shaped for an
+    `::error::` annotation. Both commands below fail on it rather than
+    fall back to a built-in default, the identical call `_actions_budget`
+    makes and for the identical reason: a threshold with a fallback in
+    code is a constant with extra steps, and this is the one file that
+    decides when an unhandled submission stops being a backlog.
+    """
+    path = queue_watch.config_path(root)
+    named = queue_watch.CONFIG_PATH.as_posix()
+    if not path.exists():
+        raise ValueError(f"{named} does not exist -- nothing declares the thresholds")
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{named}: invalid YAML - {exc}") from exc
+    return queue_watch.thresholds_from_data(data)
+
+
+def _previous_queue_watch(root: Path) -> tuple[queue_watch.Record | None, bool]:
+    """`(record, restarted)`: the committed observation this run builds on,
+    and whether it had to be thrown away.
+
+    A **missing** file is `(None, False)`: no drain has ever written one,
+    which is the ordinary state of a repository before its first drain and
+    not a finding. A file that will not parse is `(None, True)` -- the
+    ages it carried are gone, which buys silence for anything that was
+    already stuck, so it is reported as its own alarm rather than
+    swallowed (`queue_watch.RESTARTED_ALARM`). Never raises: the record
+    must still be rewritten either way, or a malformed file would freeze
+    the record for ever and the watchdog would then report the *drain* as
+    dead when the drain is fine.
+    """
+    path = queue_watch.watch_path(root)
+    named = queue_watch.WATCH_PATH.as_posix()
+    if not path.exists():
+        return None, False
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        print(f"::error::{named}: invalid YAML - {exc}", file=sys.stderr)
+        return None, True
+    try:
+        return queue_watch.record_from_data(data), False
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return None, True
+
+
+def _queue_deferral_reasons() -> dict[str, str]:
+    """What the drain said about each entry it could not finish, read back
+    from `$CONVENER_QUEUE_DEFERRED_FILE`.
+
+    An absent or unset file is the empty mapping, not an error: a run whose
+    drain step never happened -- nothing was pending, or the step failed
+    before it wrote anything -- still has to record what the queue holds.
+    Every entry then simply has no reason attached, which
+    `queue_watch.next_record` reads as "keep whatever an earlier drain
+    said".
+    """
+    named = os.environ.get(QUEUE_DEFERRED_ENV, "")
+    if not named:
+        return {}
+    path = Path(named)
+    if not path.exists():
+        return {}
+    reasons: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        entry, _, reason = line.partition(_DEFERRED_FIELD_SEPARATOR)
+        reasons[entry] = reason
+    return reasons
+
+
+def record_queue_watch() -> int:
+    """`convener-record-queue-watch`: write down what the queue still holds, and
+    be loud about anything that has been in it too long.
+
+    The last of the daily job's queue steps, and the one that runs whatever
+    the four before it did. It reads the queue branch's contents *after*
+    the drain, the confirmations and the clearing have finished -- a fact
+    about the branch, listed by the workflow, never inferred from what
+    those steps intended -- pairs each remaining entry with the reason the
+    drain gave for it, and carries forward the instant each was first seen
+    waiting.
+
+    Two outcomes, and they are deliberately different things:
+
+    * `data/queue-watch.yml` is rewritten every single run, whatever it
+      found. Its *freshness* is the evidence the drain still runs at all,
+      which `convener-check-queue-liveness` reads from
+      `retention-watchdog.yml`'s own independent schedule -- a control
+      hosted inside the job it watches cannot report that job going quiet.
+    * `queue_alert` on `$GITHUB_OUTPUT`, and a body file to post, when an
+      entry has waited past `config/queue-drain.yml`'s threshold. That half
+      *can* live here, because an entry can only be known to be stuck by
+      something that read the queue, and this is the only place that has
+      both the queue and the board's channel (D-07).
+
+    Returns 0 even when the alarm fires: the workflow's own last step is
+    what turns the job red, the same split phase 8's budget alarm uses so
+    that an unconfigured channel can never turn a real finding into
+    silence.
+    """
+    root = repo_root()
+    try:
+        thresholds = _queue_thresholds(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
         return 1
 
-    updated = add_response(current, response, private_pem=private_pem)
-    enc_path.parent.mkdir(parents=True, exist_ok=True)
-    enc_path.write_text(dump_response_file(updated), encoding="utf-8", newline="")
+    listing = os.environ.get(QUEUE_WAITING_ENV, "")
+    if not listing:
+        print(f"::error::{QUEUE_WAITING_ENV} is not set", file=sys.stderr)
+        return 1
+    path = Path(listing)
+    if not path.exists():
+        # Never read as "the queue is empty". A listing that was not taken
+        # is not the answer "nothing waiting", and reading it as one is how
+        # a control reports that everything is fine while it is not (R-36's
+        # own lesson, one file over in retention.yml).
+        print(
+            f"::error::{listing} does not exist -- the queue was never "
+            "listed, which is not the same as the queue being empty",
+            file=sys.stderr,
+        )
+        return 1
+    names = [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
+    reasons = _queue_deferral_reasons()
+    still_waiting = {name: reasons.get(name, "") for name in names if name}
 
-    # R-39 (fix round 1): no count. `(N total)` was a third, needless
-    # channel revealing how many responses an event has received -- the
-    # only thing worth this job printing is that one more was recorded,
-    # named by event id (already public), never by index.
-    print(f"recorded a survey response for event {event_id}")
+    previous, restarted = _previous_queue_watch(root)
+    now = datetime.now(UTC)
+    record = queue_watch.next_record(previous, still_waiting, now)
+    watch_file = queue_watch.watch_path(root)
+    watch_file.parent.mkdir(parents=True, exist_ok=True)
+    watch_file.write_text(
+        QUEUE_WATCH_HEADER + _dump(queue_watch.record_to_data(record)),
+        encoding="utf-8",
+        newline="",
+    )
+
+    stuck = queue_watch.overdue(record, now, thresholds.alarm_after_hours)
+    fired = queue_watch.alarms(stuck, now, restarted=restarted)
+    print(queue_watch.summary(record, stuck))
+    if not fired:
+        _write_github_output("queue_alert=false\n")
+        return 0
+
+    for line in queue_watch.annotation_lines(fired, stuck):
+        print(line)
+    addressed = dispatch(queue_watch.message(fired, stuck, now), os.environ)
+    if addressed is not None:
+        (root / QUEUE_BODY).write_text(addressed.body, encoding="utf-8", newline="")
+        print(f"addressed to thread {addressed.channel.thread}; left in {QUEUE_BODY}")
+    else:
+        print(
+            "no notification channel is configured -- this alarm reaches "
+            f"nowhere but this run's own red status and "
+            f"{queue_watch.WATCH_PATH.as_posix()}"
+        )
+    _write_github_output("queue_alert=true\n")
+    return 0
+
+
+def check_queue_liveness() -> int:
+    """`convener-check-queue-liveness`: has the drain itself stopped running?
+
+    The half of this control that cannot live in the daily job. An alarm
+    hosted inside the job it watches reports nothing when that job is the
+    thing that went quiet -- and a stopped drain is the most likely and the
+    most serious of the four ways a submission can sit in the queue for
+    ever. So `retention-watchdog.yml`, a second, independent schedule that
+    already exists and already asks this exact question about
+    `retention.yml` and `data/actions-usage.yml`, asks it about
+    `data/queue-watch.yml` too, in the same job, at no extra billed job.
+
+    Reads the record's freshness and nothing else. It deliberately does
+    *not* re-report the entries that are past the threshold: an entry can
+    only be known to be stuck by a drain that ran, so the daily job has
+    already said so with the board's channel in hand, and a second red run
+    saying the same thing on the same day is how an operator learns to
+    ignore both.
+
+    A missing file is an error, not a shrug -- the same call
+    `check_retention_liveness` and `check_actions_usage_liveness` make, for
+    the same reason: it means the daily job has never once landed this
+    record, which is the silence this command exists to report.
+
+    See `.github/workflows/retention-watchdog.yml`'s own header comment for
+    what a watchdog living inside the scheduler it watches can and cannot
+    catch. The answer is the same here, and so is the residue: the
+    committed file itself, readable by a person with no CI running at all.
+    """
+    root = repo_root()
+    try:
+        thresholds = _queue_thresholds(root)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+    path = queue_watch.watch_path(root)
+    named = queue_watch.WATCH_PATH.as_posix()
+    if not path.exists():
+        print(
+            f"::error::{named} does not exist -- the daily job has never "
+            "recorded what the public submission queue holds (or the file "
+            "was removed); see tools/convener_ops/queue_watch.py",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        data = yaml_safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        print(f"::error::{named}: invalid YAML - {exc}", file=sys.stderr)
+        return 1
+    try:
+        record = queue_watch.record_from_data(data)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    today = paris_today(datetime.now(UTC))
+    observed_on = paris_today(record.observed_at)
+    elapsed = queue_watch.days_since(observed_on, today)
+    if queue_watch.is_stale(elapsed, thresholds.max_silent_days):
+        print(
+            f"::error::{named} last moved on {observed_on.isoformat()}, "
+            f"{elapsed} day(s) ago -- the public submission queue is no "
+            "longer being drained, so anything waiting in it is waiting "
+            "indefinitely and nothing else would say so",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"{named} last moved on {observed_on.isoformat()}, {elapsed} day(s) "
+        f"ago, with {len(record.waiting)} submission(s) waiting -- healthy"
+    )
+    return 0
+
+
+#: Phase 9, task 6 -- where `check_registration_routing` leaves the body it
+#: composed, for the workflow step that posts it. Neither `NOTIFY_BODY`,
+#: nor `BUDGET_BODY`, nor `QUEUE_BODY`: four messages are now composed in
+#: the one daily job, and one filename for several of them means whichever
+#: is written last silently replaces the rest. Same channel, same thread,
+#: same team mention -- a second address book is what D-07 forbids, never a
+#: second message.
+ROUTING_BODY: Final = "routing-body.md"
+
+
+def _published_routing(root: Path) -> tuple[dict[str, str], str | None]:
+    """`(cutoffs, None)` for a projection the relay can read, or
+    `({}, why)` for one it cannot.
+
+    Never raises, and never falls back to a default: an empty mapping here
+    always travels with the reason beside it, so the caller cannot mistake
+    "the file says no event is queueable" for "there is no file". That
+    distinction is the whole of `routing_watch.UNPUBLISHED`.
+
+    A **missing** file is a finding rather than the ordinary pre-first-run
+    state its neighbours treat it as. `data/queue-watch.yml` absent means
+    no drain has run yet; this file absent means the relay's every read
+    404s, which is exactly the silent fallback to the immediate lane this
+    command exists to report -- and it stays true on the morning an
+    announcement goes out.
+    """
+    named = registration_routing.ROUTING_PATH.as_posix()
+    routing_file = root / registration_routing.ROUTING_PATH
+    if not routing_file.exists():
+        return {}, (
+            f"{named} does not exist in this repository, so every read the "
+            "relay makes of it is a 404."
+        )
+    try:
+        data = json.loads(routing_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return {}, f"{named} could not be read as JSON ({exc})."
+    try:
+        return routing_watch.published_from_data(data), None
+    except ValueError as exc:
+        return {}, f"{exc}, so the relay refuses it and reads no cutoff at all."
+
+
+def check_registration_routing() -> int:
+    """`convener-check-registration-routing`: can a registration still reach the
+    queue at all?
+
+    The last of phase 9's controls, and the one that guards the *saving*
+    rather than a submission. Every failure the relay meets while reading
+    `public-data/registration-routing.json` resolves to the immediate lane,
+    deliberately and correctly -- and therefore invisibly. If that file goes
+    missing or falls behind the data, every registration bills a run again,
+    the queue is simply empty, and an empty queue looks like a quiet day.
+
+    This recomputes the projection from `data/speakers.yml` and
+    `config/registration-lanes.yml` with the same function `deploy.yml`
+    runs, and compares it with the committed file over the events a
+    registration arriving now could still be queued for. See
+    `tools/convener_ops/routing_watch.py` for why that comparison rather than
+    the file's age, and for why a file naming only past events is a quiet
+    season instead of an alarm.
+
+    Returns 0 even when a finding fires, the same split phase 8's budget
+    alarm and task 4's queue alarm use: the workflow's own last step is
+    what turns the job red, so an unconfigured channel can never turn a
+    real finding into silence. Returns 1 only for the inputs *this*
+    repository owns and cannot read -- a missing or malformed
+    `data/speakers.yml` or `config/registration-lanes.yml` -- which is a
+    broken repository rather than a stale deployment.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    config_data, config_errors = _load(root / registration_routing.CONFIG_PATH)
+    if errors or config_errors:
+        for error in errors + config_errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
+    try:
+        threshold = registration_routing.threshold_from_data(config_data)
+        expected = registration_routing.to_routing_data(speakers or [], threshold)
+        published, unreadable = _published_routing(root)
+        now = datetime.now(UTC)
+        cutoffs = expected["queue_until"]
+        live = routing_watch.live_events(cutoffs, published, now)
+        diverged = routing_watch.divergences(cutoffs, published, now)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    fired = routing_watch.findings(diverged, unreadable)
+    print(routing_watch.summary(live, diverged))
+    if not fired:
+        _write_github_output("routing_alert=false\n")
+        return 0
+
+    for line in routing_watch.annotation_lines(fired, diverged):
+        print(line)
+    addressed = dispatch(routing_watch.message(fired, diverged), os.environ)
+    if addressed is not None:
+        (root / ROUTING_BODY).write_text(addressed.body, encoding="utf-8", newline="")
+        print(f"addressed to thread {addressed.channel.thread}; left in {ROUTING_BODY}")
+    else:
+        print(
+            "no notification channel is configured -- this finding reaches "
+            "nowhere but this run's own red status"
+        )
+    _write_github_output("routing_alert=true\n")
     return 0
 
 

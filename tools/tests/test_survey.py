@@ -8,6 +8,7 @@ import pytest
 
 from convener_ops import eventkeys
 from convener_ops.survey import (
+    _MAX_FEEDBACK_LENGTH,
     _PLAINTEXT_PAD_BYTES,
     FILE_VERSION,
     ResponseFile,
@@ -582,3 +583,36 @@ def test_to_survey_response_refuses_rather_than_lets_pad_raise() -> None:
     # character cap work" (already covered elsewhere in this file).
     envelope = eventkeys.encrypt(public_pem, _to_plaintext(response))
     assert to_survey_response(envelope, private_pem) is None
+
+
+def test_to_survey_response_refuses_a_capped_answer_that_is_still_too_many_bytes() -> (
+    None
+):
+    """The byte cap's own reachable case, which the test above does not
+    reach: it raises the *character* count past the cap too, so it is the
+    character gate that refuses it and the byte gate is never asked.
+
+    Two thousand control characters is inside the character cap exactly --
+    `_MAX_FEEDBACK_LENGTH` counts code points, and `strip()` leaves these
+    where it would remove whitespace -- while `json.dumps` writes each one
+    as a six-byte `\\uXXXX` escape even with `ensure_ascii=False`, because
+    JSON's own grammar has no other way to spell a control character. So
+    the same answer is 2000 characters and 12000 bytes, and only the byte
+    check can turn it away before `_pad` raises on it.
+
+    Phase 9, task 2: this is checked here rather than through a job,
+    because the job that used to reach it (`handle_survey_response`) is
+    gone -- the queue drain calls `to_survey_response` directly.
+    """
+    private_pem, public_pem = eventkeys.generate()
+    response = SurveyResponse(
+        overall_rating=3, recommend=True, feedback="\x01" * _MAX_FEEDBACK_LENGTH
+    )
+    plaintext = _to_plaintext(response)
+    assert len(response.feedback) == _MAX_FEEDBACK_LENGTH
+    assert len(plaintext) >= _PLAINTEXT_PAD_BYTES
+
+    assert (
+        to_survey_response(eventkeys.encrypt(public_pem, plaintext), private_pem)
+        is None
+    )

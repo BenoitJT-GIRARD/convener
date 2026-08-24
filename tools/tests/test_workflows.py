@@ -36,7 +36,7 @@ import tomllib
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Final
 
 import pytest
 from conftest import WorkflowYaml, workflow_event_names, workflow_triggers
@@ -1413,7 +1413,7 @@ def _local_repo_pair(tmp_path: Path) -> tuple[Path, Path]:
 
 def _append_entry(clone: Path, entry: str) -> None:
     """Stands in for a workflow's own handler (`convener-handle-registration`,
-    `convener-handle-survey-response`, `convener-handle-proposal`): read the current
+    `convener-handle-proposal`): read the current
     array, append one more entry, write it back -- the exact "one array,
     two concurrent writers" shape registration.yml's own retry-loop
     comment names as what a rebase corrupts."""
@@ -4263,28 +4263,42 @@ DEFAULT_BRANCH = "main"
 # ------------------------------------------------------------------ #
 
 
-def _push_trigger_fires_on(push: Any, branch: str) -> bool:
-    """Whether GitHub would start a workflow whose `on: push:` block is
-    `push` for a push to `branch`.
+def _push_trigger_branches(push: Any) -> frozenset[str] | None:
+    """Every branch a workflow whose `on: push:` block is `push` starts
+    for -- or `None` when it starts for all of them.
+
+    Phase 9 lifted this out of `_push_trigger_fires_on` below, which now
+    asks it about a single branch. Two questions, one reader: a second
+    parser of GitHub's branch-filter syntax living beside this one is
+    exactly the drift these tests exist to remove.
 
     Two shapes only -- no options at all (`push:` alone, which matches
     every branch) and a `branches:` list of plain branch names -- and
     anything else raises rather than being guessed at, the same
     discipline `_render_group` above applies to a concurrency expression.
-    In particular a wildcard pattern is refused rather than evaluated:
-    GitHub's own glob syntax is not `fnmatch`'s (`*` does not cross a `/`
-    there, `**` does), no branch filter in this repository uses one
-    today, and a filter that quietly meant something slightly different
-    from what this reader thought is exactly the silence these tests
-    exist to remove.
+    Three refusals in particular:
 
-    `paths:` is deliberately not consulted. The property below is the
-    stronger one -- this trigger must not fire for a non-default branch
-    at all -- so whether the two path filters happen to agree on a given
-    commit never enters into it.
+    * a wildcard pattern, because GitHub's own glob syntax is not
+      `fnmatch`'s (`*` does not cross a `/` there, `**` does), no branch
+      filter in this repository uses one today, and a filter that quietly
+      meant something slightly different from what this reader thought is
+      exactly the silence these tests exist to remove;
+    * `branches-ignore:`, because this reader evaluates `branches:` and
+      would report the wrong answer for the other form;
+    * `tags:` and `tags-ignore:`, because there the plausible answer is
+      the *permissive* one. A `push:` block carrying only tag filters
+      starts for no branch at all, so a reader that guessed would answer
+      "this fires on nothing" -- the answer that waves a queue write
+      through -- about the one shape it was never written for. Refusing
+      fails loudly instead, which is the direction to fail in.
+
+    `paths:` is deliberately not consulted. The properties asked of this
+    reader are the stronger one -- this trigger must not fire for a
+    non-default branch at all -- so whether two path filters happen to
+    agree on a given commit never enters into it.
     """
     if push is None:
-        return True
+        return None
     assert isinstance(push, dict), (
         f"this workflow's `push:` trigger is {push!r}, not a mapping of "
         "options -- this reader understands `push:` with no options and "
@@ -4296,9 +4310,14 @@ def _push_trigger_fires_on(push: Any, branch: str) -> bool:
         "`branches-ignore:` -- this reader only evaluates `branches:`, "
         "and would silently report the wrong answer for the other form"
     )
+    assert not {"tags", "tags-ignore"} & set(push), (
+        "this workflow filters its `push:` trigger by tag -- this reader "
+        "evaluates branch filters only, and the answer it would invent "
+        "for a tag filter is the permissive one, so it refuses instead"
+    )
     patterns = push.get("branches")
     if patterns is None:
-        return True
+        return None
     assert isinstance(patterns, list) and patterns, (
         f"`push: branches:` is {patterns!r}, not a non-empty list of branch names"
     )
@@ -4310,7 +4329,18 @@ def _push_trigger_fires_on(push: Any, branch: str) -> bool:
             "refuses to evaluate it rather than answer plausibly and "
             "wrongly"
         )
-    return branch in names
+    return frozenset(names)
+
+
+def _push_trigger_fires_on(push: Any, branch: str) -> bool:
+    """Whether GitHub would start a workflow whose `on: push:` block is
+    `push` for a push to `branch`.
+
+    One question put to `_push_trigger_branches` above, which does all of
+    the reading and all of the refusing.
+    """
+    branches = _push_trigger_branches(push)
+    return branches is None or branch in branches
 
 
 def test_the_branch_filter_reader_sees_an_unfiltered_push_for_what_it_is() -> None:
@@ -5073,3 +5103,309 @@ def test_every_ignored_path_still_names_something_in_this_repository(
         "matches -- the line reads as a decision and filters nothing; "
         "either it is a typo or the path it named has moved"
     )
+
+
+# ------------------------------------------------------------------ #
+# Phase 9, task 1: nothing outside the default branch runs.
+#
+# Phase 9 puts a queue of public submissions somewhere in this
+# repository: the signup relay writes each encrypted submission down, and
+# one drain later handles the lot in a single run instead of one run per
+# person who fills in a form. The whole saving rests on a single fact --
+# a push to a branch other than the default one starts no workflow at
+# all -- and that fact is true today by accumulation, not by contract.
+# Thirteen workflows declare `push:`; all thirteen carry
+# `branches: [main]` because thirteen separate decisions happened to go
+# that way.
+#
+# The trap is worth stating in full, because it is the opposite of the
+# usual one. The relay pushes with its own token, not with a job's
+# `GITHUB_TOKEN`, so GitHub's recursion guard -- which is what normally
+# stops a workflow's own commit from starting another workflow -- does
+# not apply to anything the relay writes. A queue on the default branch
+# would start `deploy`, `register` and `validate-data` on every single
+# submission: four billed runs per registrant where there is one today,
+# the exact inverse of the phase's purpose. A queue anywhere else is
+# free only for as long as this invariant holds, and the invariant is
+# one absent-minded `push:` away from being gone with nothing red
+# anywhere (D-25).
+#
+# The sweep phase 8 wrote does not hold it. It visits workflows
+# declaring both `push:` and `pull_request:` -- five of the thirteen --
+# because the property it was written for is about running the same
+# checks twice on one commit. The eight that declare `push:` alone,
+# `deploy.yml` and `register.yml` among them, escape it entirely.
+#
+# Two properties are held below, because a branch write reaches a
+# workflow by two different routes and only one of them is a `push:`
+# filter.
+# ------------------------------------------------------------------ #
+
+
+def _workflows_triggered_by_a_push() -> list[Path]:
+    """Every workflow declaring `push:`, whatever else it declares --
+    derived from each file's own trigger block, never a list of names.
+    That is the point of the task rather than a stylistic preference: a
+    workflow written next month has to be covered without anyone
+    remembering it exists, and a list of names is precisely the thing
+    that would not cover it."""
+    return [
+        workflow
+        for workflow in _workflow_files()
+        if "push"
+        in workflow_event_names(safe_load(workflow.read_text(encoding="utf-8")) or {})
+    ]
+
+
+def test_the_push_sweep_reaches_the_workflows_the_double_run_sweep_cannot() -> None:
+    """Non-vacuity, in the form that also pins the gap this task exists
+    to close.
+
+    A parametrisation that silently found nothing would report green
+    forever, so the count is guarded like every other sweep here. But the
+    sharper statement is the containment: this sweep must be a strict
+    superset of phase 8's, and `register.yml` -- `push:` with no
+    `pull_request:` beside it -- must be in the difference. The day both
+    sweeps agree, either the repository changed shape or this one has
+    quietly narrowed to the older property.
+    """
+    found = {workflow.name for workflow in _workflows_triggered_by_a_push()}
+    also_reviewed = {
+        workflow.name
+        for workflow in _workflows_triggered_by_both_push_and_pull_request()
+    }
+    assert len(found) >= 13, (
+        f"only {sorted(found)} were detected as declaring `push:` -- "
+        "thirteen did when this was written, so either they really are "
+        "gone or the sweep has stopped seeing them"
+    )
+    assert also_reviewed < found, (
+        f"the push sweep ({sorted(found)}) no longer strictly contains "
+        f"the double-run sweep ({sorted(also_reviewed)}) -- this sweep "
+        "exists because the older one visits only workflows declaring "
+        "`pull_request:` too, and it is now no wider than the thing it "
+        "was written to widen"
+    )
+    assert "register.yml" in found - also_reviewed, (
+        f"register.yml is no longer among the `push:`-only workflows "
+        f"({sorted(found - also_reviewed)}) -- it is the plainest example "
+        "of the eight that phase 8's sweep cannot see, and if it has "
+        "stopped being one, check that this sweep still sees the others"
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow",
+    _workflows_triggered_by_a_push(),
+    ids=lambda p: p.name,
+)
+def test_no_push_trigger_starts_outside_the_default_branch(workflow: Path) -> None:
+    """The invariant the queue is built on, stated over the whole
+    directory.
+
+    Note that it is a statement about the set of branches, not about one
+    sample branch. Asking `_push_trigger_fires_on(push, "feature-x")` --
+    which is what phase 8's property does, correctly, for its own purpose
+    -- would pass on `branches: [main, submissions]` while the queue
+    branch it names started a run on every submission. So what is
+    asserted is that the trigger reaches no branch beyond the default
+    one, and `_push_trigger_branches` refuses every filter shape it
+    cannot answer that about rather than guessing.
+    """
+    triggers = workflow_triggers(safe_load(workflow.read_text(encoding="utf-8")))
+    fires_on = _push_trigger_branches(triggers["push"])
+    reach = (
+        "every branch there is"
+        if fires_on is None
+        else f"{sorted(fires_on - {DEFAULT_BRANCH})} besides {DEFAULT_BRANCH!r}"
+    )
+    assert fires_on is not None and fires_on <= {DEFAULT_BRANCH}, (
+        f"{workflow.name}'s `push:` trigger starts on {reach}, and this "
+        f"repository holds that a push to a branch other than "
+        f"{DEFAULT_BRANCH!r} starts no workflow at all. That is not "
+        "tidiness. The signup relay writes public submissions into this "
+        "repository with its own token, not with a job's `GITHUB_TOKEN`, "
+        "so GitHub's recursion guard does not apply to what it pushes: "
+        "every trigger a queue write can reach bills one run per member "
+        "of the public who fills in a form, which is the thing the queue "
+        "exists to stop. Add `branches: [main]` to this trigger; if this "
+        "workflow genuinely has to run elsewhere, then it is the queue "
+        "that has to move first, and that is a decision, not a fix"
+    )
+
+
+# ------------------------------------------------------------------ #
+# The second route, and the reason the branch filters above are not the
+# whole invariant.
+#
+# `create:` fires when a branch or a tag is created, and it takes no
+# filter of any kind -- no `branches:`, nothing. `delete:` is the same on
+# the way out. A single workflow declaring either would start on the day
+# the relay first creates the queue branch, and no amount of care with
+# `push: branches:` would say a word about it. Neither event is declared
+# here today, which is exactly why this is worth pinning now rather than
+# after someone adds one.
+#
+# Held as an allowlist rather than as a blocklist of those two. A
+# blocklist answers "is this one of the two events I know about", which
+# is green by default for every event GitHub adds after today; an
+# allowlist answers "has anyone worked out whether a branch write starts
+# this", which is red by default and asks the question of the person who
+# is actually adding the trigger.
+# ------------------------------------------------------------------ #
+
+#: Events that a write to a branch other than the default one cannot
+#: start, with the reason each is on the list -- because a name alone
+#: would be an assertion nobody could check.
+#:
+#: * `workflow_dispatch` and `repository_dispatch` are deliberate calls,
+#:   by a person or by an external system holding a token scoped for it.
+#:   Neither is a consequence of a commit arriving, and the relay's token
+#:   carries `Contents: read & write` and nothing else, so it cannot make
+#:   either call however much it writes.
+#: * `schedule` runs from the default branch only, on its own clock.
+#: * `workflow_run` fires when a named workflow completes, so it is inert
+#:   here by transitivity: no run of the named workflow, no run of this
+#:   one. It is on the list because of the property above, not beside it
+#:   -- if a push trigger ever escaped the default branch, this would
+#:   escape with it.
+#: * `pull_request` fires on pull-request activity, and a push to a
+#:   branch is such activity only when an open pull request has that
+#:   branch as its head. That is repository state, not file content: no
+#:   test here can see it, and no test here goes near the network to look.
+#:   It is an operational precondition on wherever the queue ends up
+#:   living -- no pull request is ever opened from the queue branch --
+#:   and it is written down here rather than left implied.
+_EVENTS_NO_BRANCH_WRITE_CAN_START: Final = frozenset(
+    {
+        "workflow_dispatch",
+        "repository_dispatch",
+        "schedule",
+        "workflow_run",
+        "pull_request",
+    }
+)
+
+
+def test_the_event_classification_still_refuses_the_two_events_it_exists_for() -> None:
+    """Positive control on the allowlist itself.
+
+    `create:` and `delete:` are the whole reason this classification is
+    here: they fire on a branch being created or removed and accept no
+    filter at all, so the queue branch appearing would start them. An
+    allowlist that had quietly grown either name would pass the sweep
+    below on the exact workflow that breaks the invariant.
+
+    The second half is the non-vacuity half: the six events this
+    repository declares today must all be classified, or the sweep below
+    is asserting something about an empty set.
+    """
+    assert not {"create", "delete"} & _EVENTS_NO_BRANCH_WRITE_CAN_START, (
+        "`create` or `delete` has been classified as an event a branch "
+        "write cannot start -- both fire on a branch being created or "
+        "deleted, and neither accepts a branch filter, so a workflow "
+        "declaring one runs the moment the queue branch appears"
+    )
+    declared: set[str] = set()
+    for workflow in _workflow_files():
+        declared |= workflow_event_names(
+            safe_load(workflow.read_text(encoding="utf-8")) or {}
+        )
+    assert declared >= {
+        "push",
+        "pull_request",
+        "schedule",
+        "repository_dispatch",
+        "workflow_dispatch",
+        "workflow_run",
+    }, (
+        f"this repository declares {sorted(declared)} -- six events were "
+        "declared when this was written, and a sweep that has stopped "
+        "seeing some of them classifies less than it appears to"
+    )
+
+
+@pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
+def test_every_event_a_workflow_declares_has_been_weighed_against_the_queue(
+    workflow: Path,
+) -> None:
+    """Every event declared anywhere in the directory is either `push:`
+    -- whose branch filter the sweep above reads -- or one somebody has
+    worked out a branch write cannot start.
+
+    This fails on an event nobody has classified yet, and that is the
+    intended behaviour rather than an inconvenience: the person adding
+    the trigger is the one holding the answer, and a suite that shrugged
+    at an unknown event would go on reporting that the queue is
+    unreachable while having no idea whether it still is.
+    """
+    events = workflow_event_names(safe_load(workflow.read_text(encoding="utf-8")) or {})
+    unclassified = sorted(events - _EVENTS_NO_BRANCH_WRITE_CAN_START - {"push"})
+    assert not unclassified, (
+        f"{workflow.name} declares {unclassified}, which nothing here has "
+        "weighed against phase 9's invariant: a push to a branch other "
+        f"than {DEFAULT_BRANCH!r} starts no workflow at all, which is "
+        "what makes it free to queue public submissions on a branch "
+        "instead of billing a run per submission. Work out whether a "
+        "write to a branch that is not the default one can start this "
+        "event. If it cannot, add it to "
+        "`_EVENTS_NO_BRANCH_WRITE_CAN_START` with the reason. If it can "
+        "-- `create:` and `delete:` do, and take no filter to stop them "
+        "-- then this trigger and the queue cannot both stay where they "
+        "are"
+    )
+
+
+def test_the_branch_reader_reports_which_branches_a_push_trigger_reaches() -> None:
+    """Reader control, on probes rather than on the real files.
+
+    Phase 8's control asks the yes/no question; this one asks the set
+    question, and the third case is what separates them. A trigger
+    listing the default branch and another one fires on a branch that is
+    not the default while `_push_trigger_fires_on(push, "feature-x")`
+    still answers `False`, so a set this reader could not report would
+    leave the property above unable to see its own failure mode.
+    """
+    assert _push_trigger_branches(None) is None
+    assert _push_trigger_branches({"paths": ["data/**.yml"]}) is None
+    assert _push_trigger_branches({"branches": [DEFAULT_BRANCH]}) == frozenset(
+        {DEFAULT_BRANCH}
+    )
+    assert _push_trigger_branches(
+        {"branches": [DEFAULT_BRANCH, "submissions"], "paths": ["queue/**"]}
+    ) == frozenset({DEFAULT_BRANCH, "submissions"})
+
+
+@pytest.mark.parametrize(
+    ("push", "refusal"),
+    [
+        ({"branches-ignore": ["gh-pages"]}, "branches-ignore"),
+        ({"branches": ["main", "release/*"]}, "glob pattern"),
+        ({"tags": ["v*"]}, "by tag"),
+        ({"branches": ["main"], "tags-ignore": ["v*"]}, "by tag"),
+        ({"branches": []}, "non-empty list"),
+        (["main"], "not a mapping"),
+    ],
+    ids=[
+        "branches-ignore",
+        "glob",
+        "tags-only",
+        "tags-ignore",
+        "empty-list",
+        "not-a-mapping",
+    ],
+)
+def test_the_branch_reader_refuses_the_filter_shapes_it_cannot_evaluate(
+    push: Any, refusal: str
+) -> None:
+    """The refusals are load-bearing, so they are controlled like the
+    answers.
+
+    A reader that answered plausibly here would be worse than no reader
+    at all: `branches-ignore:` and a glob would be read against the wrong
+    syntax, and a tag-only filter would be read as reaching no branch --
+    the permissive answer, on the one shape this was never written for.
+    Each must raise, and the message must say which shape it declined.
+    """
+    with pytest.raises(AssertionError, match=refusal):
+        _push_trigger_branches(push)

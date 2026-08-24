@@ -183,6 +183,59 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- survey-status.json was not published to this repo"
           exit 1
+      # Phase 9, task 3: the registration lane cutoffs, published the same
+      # way and to the same reader. `services/signup-relay` decides whether
+      # an arriving registration waits for the daily drain or is dispatched
+      # at once, and the only thing that decides is the distance to the
+      # event -- so it needs one instant per event, and it cannot get that
+      # from `data/speakers.yml` (YAML, in a worker with no parser for it)
+      # or re-derive Europe/Paris start times of its own. It reads this
+      # file instead, with the credential and the call shape it already
+      # uses for `keys/events/<id>.pub` and `public-data/survey-status.json`
+      # just above.
+      #
+      # A step here rather than a workflow, a job or a schedule of its own,
+      # for the reason this whole phase exists: those would each cost a
+      # billed run. This one costs two `uv run`s of a pure projection.
+      #
+      # Same retry shape and same reasoning as "Commit survey status": a
+      # fetch-and-reset-hard followed by *re-running the projection*, never
+      # `git rebase` over generated JSON. `registration_routing.
+      # to_routing_data` is a pure, sorted function of `data/speakers.yml`
+      # and `config/registration-lanes.yml`, so re-deriving against whatever
+      # landed on the branch in the meantime reproduces the identical file.
+      #
+      # Note what this file's *staleness* can and cannot cost, because it
+      # is the one thing worth knowing before editing the threshold:
+      # `paths-ignore` above names `config/**`, so editing the threshold
+      # does not start this workflow, and the change lands at the next run
+      # of it (or a `workflow_dispatch` by hand). Nothing is lost by that
+      # lag -- a stale cutoff only routes a registration to the wrong
+      # *lane*, and `registration_routing.floor_hours` is what keeps the
+      # slow lane safe either way.
+      - name: Commit registration routing
+        run: |
+          set -e
+          git config user.name "convener-publisher"
+          git config user.email "convener-publisher@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            (cd tools && uv run convener-registration-routing-public-data)
+            git add public-data/registration-routing.json
+            if git diff --staged --quiet; then
+              echo "no change to commit"
+              exit 0
+            fi
+            git commit -m "data: refresh the published registration lane cutoffs"
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $GITHUB_REF_NAME and retrying"
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
+          done
+          echo "::error::push failed after 3 attempts -- registration-routing.json was not published to this repo"
+          exit 1
       # Task 8 (phase 6): the internal agenda feed -- everything the
       # public `/agenda.ics` carries (site/, built entirely on the
       # JavaScript side) plus the preparation deadlines `notify.due_date`
