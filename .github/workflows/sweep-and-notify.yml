@@ -694,6 +694,84 @@ jobs:
         run: |
           echo "::error::a public submission has been waiting past config/queue-drain.yml's alarm_after_hours -- see the annotations above and data/queue-watch.yml"
           exit 1
+      # ----------------------------------------------------------------
+      # The lane rule that quietly stops applying (phase 9, task 6)
+      # ----------------------------------------------------------------
+      #
+      # Everything above is about a submission that reached the queue. This
+      # is about the ones that never do.
+      #
+      # `services/signup-relay` decides a registration's lane by reading
+      # `public-data/registration-routing.json`, and every failure to
+      # resolve that read -- a 404, an unknown version, an event absent
+      # from it, a rate limit -- falls open to the immediate lane. That
+      # direction is right and nothing here changes it: the confirmation
+      # carries the room link and the matching code, and doubt has to
+      # resolve towards sending it now.
+      #
+      # What it means is that the whole saving of this phase can disappear
+      # without anything turning red. A stale projection, or a new event
+      # that never reached it, and every registration bills a run again --
+      # while the queue simply stays empty, which looks exactly like a
+      # quiet day. A control that cannot fail loudly is not a control
+      # (D-25), and this is that requirement applied to a saving rather
+      # than to a protection.
+      #
+      # Here, as three steps of a job that already runs, for the identical
+      # reason the drain and the budget measurement are: a workflow or a
+      # job created for this would itself cost a billed run every day,
+      # which is the very cost it exists to protect. It also needs
+      # `data/speakers.yml`, which this job already has checked out, and
+      # the board's thread, which this job already holds.
+      #
+      # The signal is what the file can still *route*, never how old it
+      # is -- see tools/convener_ops/routing_watch.py's own module docstring
+      # for the three mechanical reasons an age check would be the wrong
+      # one here, chief among them that `deploy.yml` ignores `config/**`,
+      # so this file can be minutes old and already wrong.
+      - name: Check that registrations can still be queued
+        id: routing-watch
+        # Guarded on the `uv` install, not on the sweep or on the queue
+        # steps: it reads two committed files and a clock, so a drain that
+        # could not finish is no reason to stop asking whether tomorrow's
+        # registrations will even reach the queue.
+        if: always() && steps.uv.outcome == 'success'
+        working-directory: tools
+        env:
+          # Step-level, never job-level: the checking code must not be able
+          # to see the board's channel except while it is composing a
+          # message for it -- the same rule every Compose step and the
+          # budget measurement below hold themselves to.
+          CONVENER_NOTIFY_THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+          CONVENER_NOTIFY_MENTION: ${{ secrets.CONVENER_NOTIFY_MENTION }}
+        run: uv run convener-check-registration-routing
+      - name: Tell the board registrations are no longer being queued
+        # The same channel as the digest, the queue alarm and the budget
+        # alarm -- same thread, same team mention (D-07). A fourth body
+        # file, for the reason there is a third: several messages composed
+        # in one job sharing one filename means whichever is written last
+        # silently replaces the rest.
+        if: >-
+          always() && steps.routing-watch.outputs.routing_alert == 'true' &&
+          hashFiles('routing-body.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          THREAD: ${{ secrets.CONVENER_NOTIFY_THREAD }}
+        run: gh issue comment "$THREAD" --body-file routing-body.md
+      - name: Fail if registrations can no longer be queued
+        # D-25, and kept in YAML rather than in an exit code for the same
+        # reason the two alarms above are: this job goes red whenever the
+        # finding fired, whether or not a channel was configured to also
+        # post to. An unconfigured integration must never be able to turn a
+        # real finding into silence.
+        #
+        # No stranger-controlled half either: nothing a submitter does can
+        # put an event in this list. It is a disagreement between two files
+        # in this repository, or a file that is not there.
+        if: always() && steps.routing-watch.outputs.routing_alert == 'true'
+        run: |
+          echo "::error::public-data/registration-routing.json can no longer route registrations to the queue -- see the annotations above; it is regenerated and committed by Deploy app, which nothing in this job starts"
+          exit 1
       - name: Compose
         id: compose
         # `always()`, guarded on the install rather than on the sweep: a

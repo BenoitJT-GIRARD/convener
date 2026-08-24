@@ -31,6 +31,7 @@ from convener_ops import (
     queue_watch,
     registration_routing,
     retention_liveness,
+    routing_watch,
     signing,
     submission_queue,
     survey_invite,
@@ -1848,6 +1849,116 @@ def check_queue_liveness() -> int:
         f"{named} last moved on {observed_on.isoformat()}, {elapsed} day(s) "
         f"ago, with {len(record.waiting)} submission(s) waiting -- healthy"
     )
+    return 0
+
+
+#: Phase 9, task 6 -- where `check_registration_routing` leaves the body it
+#: composed, for the workflow step that posts it. Neither `NOTIFY_BODY`,
+#: nor `BUDGET_BODY`, nor `QUEUE_BODY`: four messages are now composed in
+#: the one daily job, and one filename for several of them means whichever
+#: is written last silently replaces the rest. Same channel, same thread,
+#: same team mention -- a second address book is what D-07 forbids, never a
+#: second message.
+ROUTING_BODY: Final = "routing-body.md"
+
+
+def _published_routing(root: Path) -> tuple[dict[str, str], str | None]:
+    """`(cutoffs, None)` for a projection the relay can read, or
+    `({}, why)` for one it cannot.
+
+    Never raises, and never falls back to a default: an empty mapping here
+    always travels with the reason beside it, so the caller cannot mistake
+    "the file says no event is queueable" for "there is no file". That
+    distinction is the whole of `routing_watch.UNPUBLISHED`.
+
+    A **missing** file is a finding rather than the ordinary pre-first-run
+    state its neighbours treat it as. `data/queue-watch.yml` absent means
+    no drain has run yet; this file absent means the relay's every read
+    404s, which is exactly the silent fallback to the immediate lane this
+    command exists to report -- and it stays true on the morning an
+    announcement goes out.
+    """
+    named = registration_routing.ROUTING_PATH.as_posix()
+    routing_file = root / registration_routing.ROUTING_PATH
+    if not routing_file.exists():
+        return {}, (
+            f"{named} does not exist in this repository, so every read the "
+            "relay makes of it is a 404."
+        )
+    try:
+        data = json.loads(routing_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return {}, f"{named} could not be read as JSON ({exc})."
+    try:
+        return routing_watch.published_from_data(data), None
+    except ValueError as exc:
+        return {}, f"{exc}, so the relay refuses it and reads no cutoff at all."
+
+
+def check_registration_routing() -> int:
+    """`convener-check-registration-routing`: can a registration still reach the
+    queue at all?
+
+    The last of phase 9's controls, and the one that guards the *saving*
+    rather than a submission. Every failure the relay meets while reading
+    `public-data/registration-routing.json` resolves to the immediate lane,
+    deliberately and correctly -- and therefore invisibly. If that file goes
+    missing or falls behind the data, every registration bills a run again,
+    the queue is simply empty, and an empty queue looks like a quiet day.
+
+    This recomputes the projection from `data/speakers.yml` and
+    `config/registration-lanes.yml` with the same function `deploy.yml`
+    runs, and compares it with the committed file over the events a
+    registration arriving now could still be queued for. See
+    `tools/convener_ops/routing_watch.py` for why that comparison rather than
+    the file's age, and for why a file naming only past events is a quiet
+    season instead of an alarm.
+
+    Returns 0 even when a finding fires, the same split phase 8's budget
+    alarm and task 4's queue alarm use: the workflow's own last step is
+    what turns the job red, so an unconfigured channel can never turn a
+    real finding into silence. Returns 1 only for the inputs *this*
+    repository owns and cannot read -- a missing or malformed
+    `data/speakers.yml` or `config/registration-lanes.yml` -- which is a
+    broken repository rather than a stale deployment.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    config_data, config_errors = _load(root / registration_routing.CONFIG_PATH)
+    if errors or config_errors:
+        for error in errors + config_errors:
+            print(f"::error::{error}", file=sys.stderr)
+        return 1
+    try:
+        threshold = registration_routing.threshold_from_data(config_data)
+        expected = registration_routing.to_routing_data(speakers or [], threshold)
+        published, unreadable = _published_routing(root)
+        now = datetime.now(UTC)
+        cutoffs = expected["queue_until"]
+        live = routing_watch.live_events(cutoffs, published, now)
+        diverged = routing_watch.divergences(cutoffs, published, now)
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    fired = routing_watch.findings(diverged, unreadable)
+    print(routing_watch.summary(live, diverged))
+    if not fired:
+        _write_github_output("routing_alert=false\n")
+        return 0
+
+    for line in routing_watch.annotation_lines(fired, diverged):
+        print(line)
+    addressed = dispatch(routing_watch.message(fired, diverged), os.environ)
+    if addressed is not None:
+        (root / ROUTING_BODY).write_text(addressed.body, encoding="utf-8", newline="")
+        print(f"addressed to thread {addressed.channel.thread}; left in {ROUTING_BODY}")
+    else:
+        print(
+            "no notification channel is configured -- this finding reaches "
+            "nowhere but this run's own red status"
+        )
+    _write_github_output("routing_alert=true\n")
     return 0
 
 

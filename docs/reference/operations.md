@@ -260,6 +260,30 @@ routing file, an unknown event, a network failure — **dispatches immediately**
 rather than queuing: the confirmation is the only channel the room link and the
 matching code ever travel on, so doubt resolves towards sending it now.
 
+**If the board says "registrations are no longer being queued".** That
+fallback is right for the participant and invisible by construction: nothing
+is lost, nobody waits, the queue simply stays empty — which looks exactly
+like a quiet day while every registration bills a run again. The daily
+*Sweep and notify the board* run therefore recomputes what
+`public-data/registration-routing.json` should hold, from `data/speakers.yml`
+and `config/registration-lanes.yml`, and compares it with the committed file
+over the events a registration arriving today could still be queued for. A
+file that is missing, unreadable, carrying an unknown version, or wrong about
+one of those events turns the job red and posts to the board's thread naming
+the events affected.
+
+**The fix is always the same, and it is a deployment rather than an
+edit:** that file is regenerated and committed by *Deploy app*, which
+ignores `config/**` and is not started by the pushes this repository's own
+jobs make — so nothing heals it on its own. Run *Deploy app* from the
+Actions tab (`workflow_dispatch`) and the next daily run goes quiet. Two
+consequences worth knowing before you go looking for a data problem: editing
+`config/registration-lanes.yml` changes every cutoff and starts nothing, and
+a file untouched for a month is perfectly healthy as long as it still names
+every event that is open for registration — the alarm is about what the file
+can still route, never about its age. A season with no upcoming event is
+silent, because there is nothing to route.
+
 ## Publishing the showcase and the application (GitHub Pages)
 
 **Without it:** nothing else is affected here — this is how both public
