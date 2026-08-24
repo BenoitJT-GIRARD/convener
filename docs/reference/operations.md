@@ -657,7 +657,8 @@ moves from `absent` to `production`.
 ## Board notifications
 
 **Without it:** nothing is sent. The digest and the immediate events are
-still composed and printed to the *Notify the board* job log, where any
+still composed and printed to the *Sweep and notify the board* job log,
+where any
 volunteer can read exactly what would have gone out, but they are addressed
 to nobody and no comment is posted.
 

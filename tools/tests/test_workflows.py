@@ -11,7 +11,7 @@ Two things are asserted instead of the two things the brief names:
 
 * Rather than running `npm run build` and grepping `app/dist/index.html`
   (slow, and this suite runs on every push), the base path is asserted
-  straight from `app/vite.config.ts` â€” the one source Vite reads it from.
+  straight from `app/vite.config.ts` — the one source Vite reads it from.
 * The publish step is a hand-written shell script, the same shape as
   `publish-vitrine.yml`'s own push step. It is asserted against as text
   (`in` checks on the parsed `run:` block) rather than executed, because
@@ -86,7 +86,7 @@ def _push_step_script() -> str:
             assert isinstance(run, str)
             return run
     raise AssertionError(
-        "no step in the build job reads VITRINE_DEPLOY_TOKEN â€” "
+        "no step in the build job reads VITRINE_DEPLOY_TOKEN — "
         "the push-to-vitrine step is missing or was renamed away from it"
     )
 
@@ -106,7 +106,7 @@ def _survey_status_step_script() -> str:
         if isinstance(run, str) and "public-data/survey-status.json" in run:
             return run
     raise AssertionError(
-        "no step in the build job writes public-data/survey-status.json â€” "
+        "no step in the build job writes public-data/survey-status.json — "
         "the survey-status commit step is missing or was renamed away from it"
     )
 
@@ -457,7 +457,7 @@ def test_deploy_workflow_no_longer_uses_pages_actions() -> None:
     uses = _step_uses(_build_job())
     offending = [u for u in uses if any(name in u for name in banned)]
     assert offending == [], (
-        f"still uses Pages actions: {offending} â€” these can never succeed "
+        f"still uses Pages actions: {offending} — these can never succeed "
         "against a private repo without a paid GitHub plan"
     )
 
@@ -612,7 +612,7 @@ def test_deploy_workflow_builds_survey_status_before_the_npm_build() -> None:
 # (R-19, fix round 1, task 12). Before this, a revocation -- a change to
 # data/events/<id>/certificates.yml -- did not even fire this workflow,
 # and the file it would have built was never copied to the showcase, so
-# spec S:7's "le registre fait foi sur l'Ã©tat" had no observable effect on
+# spec S:7's "le registre fait foi sur l'état" had no observable effect on
 # any verifier. Text assertions on the parsed `run:` block, the same idiom
 # test_notify.py uses for notify.yml, because running the script means a
 # real clone of a real repository -- exactly the network access this
@@ -2190,7 +2190,13 @@ def test_certificate_workflow_job_has_write_permission_and_a_timeout(
 # ------------------------------------------------------------------ #
 
 PUBLISH_VITRINE_DISPATCH = "gh workflow run publish-vitrine.yml"
-SWEEP_WORKFLOW = Path(".github/workflows/sweep.yml")
+#: Phase 8, task 3, change E: the nightly sweep and the board digest are
+#: one workflow now (`sweep-and-notify.yml`), and the sweep is the first
+#: step of its `daily` job rather than a file and a cron of its own. The
+#: dispatch this constant's own tests below follow is unchanged, and so is
+#: the reason it exists.
+SWEEP_WORKFLOW = Path(".github/workflows/sweep-and-notify.yml")
+SWEEP_JOB = "daily"
 
 
 def _job_step_script(workflow_path: Path, job: str, run_contains: str) -> str:
@@ -2274,22 +2280,30 @@ def test_certificate_workflow_dispatches_deploy_only_after_a_real_push(
 
 
 def test_sweep_workflow_dispatches_publish_vitrine_only_after_a_real_push() -> None:
-    """The same fix, and the same two-halves guard, for sweep.yml -- the
+    """The same fix, and the same two-halves guard, for the sweep -- the
     re-review found the identical suppression there (a phase-3 defect:
     `events-public.json` has never been republished after a nightly sweep,
-    since sweep.yml also pushes `data/speakers.yml` with GITHUB_TOKEN)."""
-    script = _job_step_script(SWEEP_WORKFLOW, "sweep", "git commit -m")
+    since the sweep also pushes `data/speakers.yml` with GITHUB_TOKEN).
+
+    Phase 8, task 3, change E merged the sweep into
+    `sweep-and-notify.yml`, which makes this test matter *more*, not
+    less: the merged workflow's own `push:` trigger names
+    `data/speakers.yml`, the exact file the sweep commits, so a reader
+    could easily conclude the publication now happens by itself. It does
+    not -- the recursion guard is why this dispatch exists, and it is
+    unchanged by the merge."""
+    script = _job_step_script(SWEEP_WORKFLOW, SWEEP_JOB, "git commit -m")
 
     pushed = _guarded_block(script, "if git push; then")
     assert PUBLISH_VITRINE_DISPATCH in pushed, (
-        "sweep.yml does not dispatch publish-vitrine.yml once a change is "
+        "the sweep does not dispatch publish-vitrine.yml once a change is "
         "genuinely pushed -- events-public.json would never be republished "
         "after a sweep (Critical A)"
     )
 
     unchanged = _guarded_block(script, "if git diff --staged --quiet; then")
     assert PUBLISH_VITRINE_DISPATCH not in unchanged, (
-        "sweep.yml dispatches publish-vitrine.yml even when nothing changed this run"
+        "the sweep dispatches publish-vitrine.yml even when nothing changed this run"
     )
 
 
@@ -3854,6 +3868,8 @@ def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() 
     job = data["jobs"]["workflow-schema"]
     uses = [step["uses"] for step in job["steps"] if "uses" in step]
     assert all(use.startswith("actions/checkout@") for use in uses)
+
+
 # ------------------------------------------------------------------ #
 # Phase 8, task 3, change A prime: pinning the *narrowness* of the secret
 # monitor's own job guard.

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import ballot, nomination, objection, speaker
+from conftest import ballot, nomination, objection, speaker, workflow_triggers
 from conftest import config as make_config
 
 from convener_ops import cli, notify
@@ -42,6 +42,7 @@ from convener_ops.notify import (
 )
 from convener_ops.paths import repo_root
 from convener_ops.sweep import expire_votes
+from convener_ops.yaml_safe import safe_load
 
 NOW = datetime(2026, 8, 18, 9, 0, tzinfo=UTC)
 
@@ -1640,11 +1641,23 @@ def test_anything_that_is_not_an_object_name_falls_back_to_the_parent(
 def test_the_immediate_job_fetches_enough_history_to_reach_that_commit() -> None:
     """`fetch-depth: 2` gives the parent of HEAD and nothing before it, so a
     push of three commits could not read the revision it has to compare
-    against even when GitHub names it."""
-    workflow = (repo_root() / ".github" / "workflows" / "notify.yml").read_text(
-        encoding="utf-8"
+    against even when GitHub names it.
+
+    Phase 8, task 3, change E: the file this reads is now
+    `sweep-and-notify.yml` and the job that follows `immediate` is `daily`
+    (the sweep and the digest, in that order, as one job) rather than
+    `digest`. The property is unchanged -- it is about the *immediate*
+    job, and slicing the file at whatever job comes next is still what
+    keeps a `fetch-depth: 0` belonging to some other job from satisfying
+    it.
+    """
+    workflow = (
+        repo_root() / ".github" / "workflows" / "sweep-and-notify.yml"
+    ).read_text(encoding="utf-8")
+    immediate = workflow.split("\n  daily:")[0]
+    assert "\n  immediate:" in immediate, (
+        "the immediate job was renamed or removed -- this slice no longer describes it"
     )
-    immediate = workflow.split("digest:")[0]
     assert "fetch-depth: 0" in immediate
     assert "BEFORE: ${{ github.event.before }}" in immediate
 
@@ -1667,8 +1680,157 @@ def test_the_channel_is_declared_as_an_integration() -> None:
 
 
 def test_the_workflow_asks_for_no_permission_beyond_issues_and_checkout() -> None:
-    workflow = (repo_root() / ".github" / "workflows" / "notify.yml").read_text(
-        encoding="utf-8"
+    """Least privilege, restated for the shape phase 8's task 3 left.
+
+    Before change E this file held only the notification, so one assertion
+    over the whole file said it all: `contents: read` to check out,
+    `issues: write` to post, nothing else. The sweep now shares the file,
+    and it genuinely needs more -- it commits `data/speakers.yml` and
+    dispatches `publish-vitrine.yml`. So the property is asserted per job
+    instead of per file, which is stricter rather than looser: the push
+    path (`immediate`) must still carry *exactly* what it always did, and
+    the daily job must carry the union of the two merged jobs and not one
+    scope more. A single file-wide set would now pass while `immediate`
+    quietly gained `contents: write`.
+    """
+    loaded = safe_load(
+        (repo_root() / ".github" / "workflows" / "sweep-and-notify.yml").read_text(
+            encoding="utf-8"
+        )
     )
-    granted = re.findall(r"^\s+(\w+): (read|write)$", workflow, flags=re.MULTILINE)
-    assert set(granted) == {("contents", "read"), ("issues", "write")}
+    jobs = loaded["jobs"]
+    assert set(jobs) == {"immediate", "daily"}
+    assert jobs["immediate"]["permissions"] == {
+        "contents": "read",
+        "issues": "write",
+    }, (
+        "the push-triggered job may only read the repository and post a "
+        "comment -- it writes nothing and dispatches nothing"
+    )
+    assert jobs["daily"]["permissions"] == {
+        "contents": "write",
+        "actions": "write",
+        "issues": "write",
+    }, (
+        "the daily job carries the union of the sweep's own scopes "
+        "(commit data/speakers.yml, dispatch publish-vitrine.yml) and the "
+        "digest's own (post a comment) -- and nothing beyond that union"
+    )
+
+
+# ------------------------------------------------------------------ #
+# Phase 8, task 3, change E: the nightly sweep and this digest are one
+# workflow now. What follows pins what the merge had to keep, because a
+# merge is exactly the moment a trigger or an ordering gets dropped by
+# hand and nothing says so afterwards.
+# ------------------------------------------------------------------ #
+
+
+def _merged_workflow() -> dict[str | bool, Any]:
+    loaded = safe_load(
+        (repo_root() / ".github" / "workflows" / "sweep-and-notify.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _daily_steps() -> list[dict[str, Any]]:
+    jobs = _merged_workflow()["jobs"]
+    assert isinstance(jobs, dict)
+    return list(jobs["daily"]["steps"])
+
+
+def test_the_merged_workflow_keeps_every_trigger_the_two_files_had() -> None:
+    """Three triggers went into the merge and each one is somebody's only
+    way in: the push on `data/speakers.yml` is what makes an immediate
+    event immediate (without it a lead from the public form waits for the
+    next morning), the daily cron is the only scheduled run either half
+    ever had, and `workflow_dispatch` is the operator's own hand. A merge
+    that quietly dropped one would look entirely healthy."""
+    triggers = workflow_triggers(_merged_workflow())
+    assert set(triggers) == {"push", "schedule", "workflow_dispatch"}
+    assert triggers["push"]["branches"] == ["main"]
+    assert triggers["push"]["paths"] == ["data/speakers.yml"], (
+        "the push trigger no longer watches data/speakers.yml -- the "
+        "immediate events are a diff of that file, so nothing would ever "
+        "fire them"
+    )
+    crons = [entry["cron"] for entry in triggers["schedule"]]
+    assert crons == ["0 5 * * *"], (
+        f"the merged workflow declares {crons} -- one daily cron, at the "
+        "hour the sweep already had: the digest no longer needs one of its "
+        "own now that it is the step after the sweep"
+    )
+
+
+def test_the_daily_job_sweeps_before_it_composes_the_digest() -> None:
+    """The whole reason the two files became one. They used to be two
+    crons an hour apart, and that hour was a dependency dressed as a
+    schedule: the digest reports what the sweep has just written. GitHub's
+    scheduled runs are routinely late, so the morning the sweep ran past
+    06:00 the digest would have reported the previous day's state and
+    nothing would have said so. As two steps of one job the order is a
+    sequence rather than a bet, and this is what keeps it one."""
+    names = [step.get("name") for step in _daily_steps()]
+    assert "Sweep and commit" in names and "Compose" in names, (
+        f"the daily job's steps are {names} -- one of the two halves is "
+        "gone or was renamed"
+    )
+    assert names.index("Sweep and commit") < names.index("Compose"), (
+        "the digest composes before the sweep runs, so it reports the "
+        "state of the previous day -- the exact defect merging the two "
+        "files existed to remove"
+    )
+
+
+def test_a_failing_sweep_still_lets_the_digest_report() -> None:
+    """And the reverse. Merging two jobs into one makes it very easy for
+    the first failure to swallow everything after it; the digest is the
+    project's only channel to volunteers who do not open the app (D-07),
+    and the morning the sweep could not push is not the morning to also
+    go silent. The guard names the *installation* it needs rather than
+    saying `always()` alone, so a failed checkout still skips a step that
+    could not have worked -- the same shape quality.yml's merged jobs
+    use."""
+    compose = next(step for step in _daily_steps() if step.get("name") == "Compose")
+    guard = str(compose["if"])
+    assert "always()" in guard, (
+        "the digest is skipped as soon as the sweep fails -- a merged job "
+        "must not make one half's failure the other half's silence"
+    )
+    assert "steps.sweep" not in guard, (
+        "the digest is conditioned on the sweep's own outcome, which is "
+        "the same silence written a longer way"
+    )
+    assert "steps.uv.outcome == 'success'" in guard, (
+        "the digest runs on a bare always(), so a failed `uv` install "
+        "would run a command that cannot possibly work and report that as "
+        "the finding"
+    )
+
+
+def test_the_sweep_step_never_sees_the_notification_secrets() -> None:
+    """Declared per step, never on the job: the sweep runs `convener-sweep`
+    and `git push`, and has no business being handed the thread and the
+    mention the digest posts with. Merging two jobs is precisely when
+    somebody lifts both `env:` blocks up to the job to save six lines --
+    P-5 of the security audit, isolation of secrets, which the three
+    `deploy-*-relay.yml` files keep for the same reason."""
+    jobs = _merged_workflow()["jobs"]
+    assert isinstance(jobs, dict)
+    for job_id, job in jobs.items():
+        job_env = " ".join(str(value) for value in job.get("env", {}).values())
+        assert "secrets." not in job_env, (
+            f"the {job_id} job declares a secret at job level, so every "
+            "step in it can read it"
+        )
+
+    sweep = next(
+        step for step in _daily_steps() if step.get("name") == "Sweep and commit"
+    )
+    carried = " ".join(str(value) for value in sweep.get("env", {}).values())
+    assert THREAD_ENV not in carried and MENTION_ENV not in carried, (
+        "the sweep step carries the notification secrets it never uses"
+    )

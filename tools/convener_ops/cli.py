@@ -4120,7 +4120,7 @@ def discard_recording() -> int:
 #:
 #: The file's *existence* is the whole signal: it is written only when
 #: `notify.dispatch` returned a `Dispatch`, which cannot happen without a
-#: configured channel. `.github/workflows/notify.yml` posts what it finds here
+#: configured channel. `.github/workflows/sweep-and-notify.yml` posts what it finds here
 #: and does nothing at all when it finds nothing -- so there is no
 #: "notifications on/off" switch anywhere in the chain, only a message that
 #: either has an address or was never composed with one. Git-ignored: it is a
@@ -4145,7 +4145,8 @@ def previous_revision(env: Mapping[str, str]) -> str:
     branch. A push carrying three commits moved the branch by three, so
     comparing against the parent of HEAD describes the last one and silently
     drops the events of the other two. GitHub sends where the branch actually
-    was as `github.event.before`, and `.github/workflows/notify.yml` passes it
+    was as `github.event.before`, and `.github/workflows/sweep-and-notify.yml`
+    passes it
     through as `BEFORE`; that is what this prefers.
 
     Falls back to `HEAD~1` when `BEFORE` is absent, malformed, or the all-zero

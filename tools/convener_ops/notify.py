@@ -29,7 +29,8 @@ And this package cannot send in any case: it holds **no transport at all**.
 No `smtplib`, no `urllib`, no `http`, no `socket`, no `subprocess` -- see
 `tests/test_notify.py::test_the_notification_module_holds_no_transport`, which
 reads this file's own source. Composing text and delivering it are separated
-by a process boundary: `.github/workflows/notify.yml` is what posts, using the
+by a process boundary: `.github/workflows/sweep-and-notify.yml` is what posts,
+using the
 platform's own issue thread, and the platform is what turns that into email
 (D-07: no external service, no subscription, ever).
 
