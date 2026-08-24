@@ -157,7 +157,14 @@ jobs:
     # sized for the day a backlog arrives at once, because a drain that
     # times out half way is exactly the interruption the ledger exists to
     # survive and not one anybody should be inviting.
-    timeout-minutes: 30
+    #
+    # Phase 9, task 3 adds 5 more again, for the confirmation step: one SMTP
+    # conversation per queued registration, and that is the one part of this
+    # job whose duration depends on something outside this repository. Same
+    # terms once more -- a ceiling, not a bill: with no transport configured
+    # (this project's ordinary state) the step composes and reports and
+    # spends no network time at all.
+    timeout-minutes: 35
     permissions:
       # The union of what the two files carried, and nothing past it.
       # `contents: write` is the sweep committing data/speakers.yml;
@@ -252,8 +259,18 @@ jobs:
       # deleted). The relay writes the encrypted envelope to the
       # `submission-queue` branch instead -- a branch no workflow watches,
       # held by `tools/tests/test_workflows.py`'s directory-wide sweep
-      # (phase 9, task 1) -- and these four steps handle everything waiting
-      # in one commit, once a day.
+      # (phase 9, task 1) -- and these steps handle everything waiting in
+      # one commit, once a day.
+      #
+      # Phase 9, task 3 added the second kind: a registration whose event is
+      # still further away than `config/registration-lanes.yml`'s threshold
+      # comes here too. A registration closer than that is still dispatched
+      # the instant it arrives and still handled by `registration.yml`,
+      # unchanged -- the confirmation e-mail carries the room link and the
+      # matching code, and there is no second channel for either, so nothing
+      # near an event is ever made to wait. `tools/convener_ops/
+      # registration_routing.py` owns that rule and the floor under its
+      # threshold; this job only ever sees what it already sent here.
       #
       # **No pull request may ever be opened from `submission-queue`.** Six
       # workflows trigger on `pull_request`, and one open pull request whose
@@ -263,13 +280,24 @@ jobs:
       # step on, in `tools/tests/test_submission_queue.py`, which fails if a
       # queue file ever reaches a checkout of the default branch.
       #
-      # The order of the last two steps is the whole of "nothing is lost":
-      # the drain commits and pushes its result to `main` *first*, and only
-      # then clears what it handled from the queue. An interruption between
-      # the two leaves entries in the queue that `data/queue-ledger.yml`
-      # already records as handled, so the next drain clears them without
-      # applying them twice. The reverse order would lose a submission
-      # outright, and no ledger could recover it.
+      # The order of these steps is the whole of "nothing is lost": the
+      # drain commits and pushes its result to `main` *first*, and only then
+      # clears what it handled from the queue. An interruption between the
+      # two leaves entries in the queue that `data/queue-ledger.yml` already
+      # records as handled, so the next drain clears them without applying
+      # them twice. The reverse order would lose a submission outright, and
+      # no ledger could recover it.
+      #
+      # The confirmation step sits *between* those two, and its position is
+      # the same argument one step further on. It runs after the push, so no
+      # confirmation can go out for a registration a rejected push then
+      # discarded (the identical rule `registration.yml` states for the
+      # immediate lane); and before the clear, so an entry only leaves the
+      # queue once its confirmation has actually been attempted. A drain
+      # interrupted in between leaves the entry in the ledger *and* in the
+      # queue, which is exactly how the next drain recognises "stored, not
+      # yet confirmed" -- see `tools/convener_ops/submission_queue.py`'s own
+      # module docstring, including why that is deliberately at-least-once.
       - name: Fetch what the submission queue holds
         id: queue-fetch
         # Guarded on the `uv` install like every other step in this job, not
@@ -299,7 +327,7 @@ jobs:
             mkdir -p "$RUNNER_TEMP/queue/$(dirname "$path")"
             git cat-file blob "FETCH_HEAD:$path" > "$RUNNER_TEMP/queue/$path"
           done < "$RUNNER_TEMP/queue-names.txt"
-          echo "fetched $(wc -l < "$RUNNER_TEMP/queue-names.txt") queued entrie(s)"
+          echo "fetched $(wc -l < "$RUNNER_TEMP/queue-names.txt") queued entries"
       - name: Plan what the drain will need
         id: queue-plan
         if: always() && steps.queue-fetch.outcome == 'success'
@@ -324,6 +352,12 @@ jobs:
           # run past what an output can carry, and the clearing step has to
           # remove exactly what the drain acted on rather than recompute it.
           CONVENER_QUEUE_CLEAR_FILE: ${{ runner.temp }}/queue-clear.txt
+          # Where the drain lists the registrations it stored whose
+          # confirmation has not gone out yet, for the step below. Entry
+          # paths and R-9 field *labels* only -- never a value a registrant
+          # typed -- the same thing `registration.yml` passes between its
+          # own two steps for the same reason.
+          CONVENER_QUEUE_CONFIRM_FILE: ${{ runner.temp }}/queue-confirm.txt
           # Eight slots, matching `submission_queue.MAX_EVENTS_PER_DRAIN`
           # exactly (a test fails if they drift apart). One event's
           # responses can only be decrypted with that event's own key, and
@@ -401,6 +435,69 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- nothing was cleared, so every queued submission is still waiting for tomorrow's drain"
           exit 1
+      - name: Send the confirmations the drain stored
+        id: queue-confirm
+        # `always() && ... == 'success'`: only ever after a drain that
+        # actually pushed. A confirmation sent for a registration that is
+        # not on the branch is the one thing this ordering exists to make
+        # impossible -- the participant would hold a room link and a
+        # matching code for a registration no attendance match will ever
+        # find, and therefore no certificate.
+        #
+        # This step failing is not a lost registration and not a lost
+        # confirmation: every entry it did not reach stays in the queue with
+        # the ledger already naming it, so the next drain finds it as
+        # "stored, not yet confirmed" and sends it then.
+        if: always() && steps.queue-drain.outcome == 'success'
+        working-directory: tools
+        env:
+          CONVENER_QUEUE_DIR: ${{ runner.temp }}/queue
+          CONVENER_QUEUE_CONFIRM_FILE: ${{ runner.temp }}/queue-confirm.txt
+          # Appended to, not rewritten: the drain already listed the survey
+          # responses and the refusals it finished with, and this step adds
+          # the registrations it has now confirmed. The clearing step below
+          # removes the union, which is exactly the set of entries that are
+          # completely done.
+          CONVENER_QUEUE_CLEAR_FILE: ${{ runner.temp }}/queue-clear.txt
+          # The same eight numbered pairs the drain spent, re-read here for
+          # the same reason `registration.yml`'s own third step re-reads
+          # them: a registration's plaintext lives in one process's memory
+          # at a time, so a later step that needs it again has no way to ask
+          # for it but to decrypt the same ciphertext again. No new secret,
+          # and no slot that was not already selected above.
+          CONVENER_QUEUE_EVENT_1: ${{ steps.queue-plan.outputs.event_1 }}
+          CONVENER_QUEUE_KEY_1: ${{ secrets[steps.queue-plan.outputs.secret_1] }}
+          CONVENER_QUEUE_EVENT_2: ${{ steps.queue-plan.outputs.event_2 }}
+          CONVENER_QUEUE_KEY_2: ${{ secrets[steps.queue-plan.outputs.secret_2] }}
+          CONVENER_QUEUE_EVENT_3: ${{ steps.queue-plan.outputs.event_3 }}
+          CONVENER_QUEUE_KEY_3: ${{ secrets[steps.queue-plan.outputs.secret_3] }}
+          CONVENER_QUEUE_EVENT_4: ${{ steps.queue-plan.outputs.event_4 }}
+          CONVENER_QUEUE_KEY_4: ${{ secrets[steps.queue-plan.outputs.secret_4] }}
+          CONVENER_QUEUE_EVENT_5: ${{ steps.queue-plan.outputs.event_5 }}
+          CONVENER_QUEUE_KEY_5: ${{ secrets[steps.queue-plan.outputs.secret_5] }}
+          CONVENER_QUEUE_EVENT_6: ${{ steps.queue-plan.outputs.event_6 }}
+          CONVENER_QUEUE_KEY_6: ${{ secrets[steps.queue-plan.outputs.secret_6] }}
+          CONVENER_QUEUE_EVENT_7: ${{ steps.queue-plan.outputs.event_7 }}
+          CONVENER_QUEUE_KEY_7: ${{ secrets[steps.queue-plan.outputs.secret_7] }}
+          CONVENER_QUEUE_EVENT_8: ${{ steps.queue-plan.outputs.event_8 }}
+          CONVENER_QUEUE_KEY_8: ${{ secrets[steps.queue-plan.outputs.secret_8] }}
+          # The identical set `registration.yml`'s own "Send the
+          # registration confirmation" step reads, and for the identical
+          # reasons -- see that file for each one. Absent is ordinary D-13
+          # here too: with no transport configured nothing is delivered,
+          # `convener-confirm-queued-registrations` says so on the run, and
+          # `convener-resend-confirmation` is the recovery. Nothing is cleared
+          # any differently for it, because a queue that only empties on a
+          # configured mailer is a queue that alarms every day on a project
+          # whose default state is not to have one.
+          CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
+          CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
+          CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
+          CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
+          CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}
+          CONVENER_SMTP_PASSWORD: ${{ secrets.CONVENER_SMTP_PASSWORD }}
+          CONVENER_SMTP_FROM: ${{ secrets.CONVENER_SMTP_FROM }}
+        run: uv run convener-confirm-queued-registrations
       - name: Clear what the drain handled
         id: queue-clear
         # Only ever after a drain that pushed. A clear that ran without one

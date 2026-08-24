@@ -28,6 +28,7 @@ from convener_ops import (
     delivery,
     eventkeys,
     formats,
+    registration_routing,
     retention_liveness,
     signing,
     submission_queue,
@@ -473,6 +474,59 @@ def survey_status_public_data() -> int:
         json.dumps(ids, indent=2) + "\n", encoding="utf-8"
     )
     print(f"wrote {len(ids)} event(s) with the survey open")
+    return 0
+
+
+def registration_routing_public_data() -> int:
+    """`convener-registration-routing-public-data`: rebuild
+    `public-data/registration-routing.json` from `data/speakers.yml` and
+    `config/registration-lanes.yml` (phase 9, task 3) --
+    `survey_status_public_data`'s own precedent above, for a third consumer
+    and a third question.
+
+    What it publishes is one already-resolved instant per event: the moment
+    that event stops being far enough away for a registration to wait for
+    the daily drain. `services/signup-relay` reads it through the Contents
+    API, with the credential and the call shape it already uses for
+    `keys/events/<id>.pub` and `public-data/survey-status.json`, and its
+    whole share of the rule becomes one comparison against the clock. Every
+    piece of arithmetic that has a project decision in it -- Europe/Paris,
+    the standing start, the configured threshold -- happens here, in the
+    language it already lives in.
+
+    Deliberately its own file and its own command rather than a field folded
+    into `survey-status.json`, for that file's own stated reason: the two
+    answer different questions for different readers, and a consumer that
+    checks membership in a list of ids must not have to know about a
+    mapping of instants to do it.
+
+    Returns 1, printing why, on a `config/registration-lanes.yml` this code
+    cannot read as the shape it knows. Never a default: a threshold guessed
+    at is a threshold that could route a last-minute registrant into a queue
+    they cannot afford to wait in, and a red build is the cheap version of
+    finding that out.
+    """
+    root = repo_root()
+    speakers, errors = _load(root / "data" / "speakers.yml")
+    config_data, config_errors = _load(root / registration_routing.CONFIG_PATH)
+    if errors or config_errors:
+        for error in errors + config_errors:
+            print(f"  - {error}")
+        return 1
+    try:
+        threshold = registration_routing.threshold_from_data(config_data)
+    except ValueError as exc:
+        print(f"  - {exc}")
+        return 1
+
+    data = registration_routing.to_routing_data(speakers or [], threshold)
+    out_path = root / registration_routing.ROUTING_PATH
+    out_path.parent.mkdir(exist_ok=True)
+    out_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"wrote {len(data['queue_until'])} event(s) whose registrations may "
+        f"wait for the drain more than {threshold}h before they start"
+    )
     return 0
 
 
@@ -1098,6 +1152,24 @@ QUEUE_DIR_ENV: Final = "CONVENER_QUEUE_DIR"
 #: acted on -- not recompute it.
 QUEUE_CLEAR_ENV: Final = "CONVENER_QUEUE_CLEAR_FILE"
 
+#: Where `drain_queue` writes the registrations whose confirmation still has
+#: to go out -- one `<entry name><tab><comma-joined changed labels>` line per
+#: registration -- and where `confirm_queued_registrations` reads them back
+#: from, after the drain's commit has actually been pushed.
+#:
+#: A file for the same two reasons as `QUEUE_CLEAR_ENV`, and one more: the
+#: only things on a line are a queue entry path and R-9 field *labels*
+#: (`confirmation.FIELD_LABELS`, never a value), so nothing here is personal
+#: data even though it crosses between two steps of a job whose log a
+#: volunteer can read. That is the same property `registration.yml` relies on
+#: when it passes `changed` between its own two steps as a step output.
+QUEUE_CONFIRM_ENV: Final = "CONVENER_QUEUE_CONFIRM_FILE"
+
+#: The separator on a line of that file. A tab, because a queue entry path
+#: is `queue/<kind>/<id>.json` (no tabs by construction, `ENTRY_ID_RE`) and
+#: `confirmation.FIELD_LABELS`' own values contain neither tabs nor commas.
+_CONFIRM_FIELD_SEPARATOR: Final = "\t"
+
 
 def _queue_entries(root: Path) -> dict[str, str]:
     """Every queue entry under `root`, keyed by its path inside
@@ -1277,9 +1349,12 @@ def drain_queue() -> int:
 
     existing: dict[str, str | None] = {}
     for event_id in plan.event_ids:
-        rel = submission_queue.responses_path(event_id)
-        path = root / rel
-        existing[rel] = path.read_text(encoding="utf-8") if path.exists() else None
+        for rel in (
+            submission_queue.responses_path(event_id),
+            submission_queue.registrations_path(event_id),
+        ):
+            path = root / rel
+            existing[rel] = path.read_text(encoding="utf-8") if path.exists() else None
 
     outcome = submission_queue.drain(plan, keys, existing, snapshot.ledger, entries)
 
@@ -1312,13 +1387,142 @@ def drain_queue() -> int:
             newline="",
         )
 
+    confirm_file = os.environ.get(QUEUE_CONFIRM_ENV, "")
+    if confirm_file:
+        # `newline=""` for the identical, load-bearing reason the clear file
+        # above carries it: the confirming step reads this back line by
+        # line, and a line ending Python had translated would make every
+        # entry path it read end in a carriage return -- an entry nothing
+        # in the exported queue matches, i.e. a confirmation silently never
+        # sent, reported as success.
+        Path(confirm_file).write_text(
+            "".join(
+                f"{item.name}{_CONFIRM_FIELD_SEPARATOR}{','.join(item.changed)}\n"
+                for item in outcome.confirm
+            ),
+            encoding="utf-8",
+            newline="",
+        )
+
     for line in submission_queue.annotation_lines(outcome):
         print(line)
     print(submission_queue.summary(outcome))
     _write_github_output(
         f"handled={outcome.handled}\nrefused={len(outcome.refused)}\n"
         f"deferred={len(outcome.deferred)}\n"
+        f"confirm={len(outcome.confirm)}\n"
     )
+    return 0
+
+
+def confirm_queued_registrations() -> int:
+    """`convener-confirm-queued-registrations`: send the confirmation for every
+    registration `convener-drain-queue` stored, and only then let it be cleared.
+
+    The third of the queue's steps, and the one whose *position* is the
+    whole of its correctness. It runs **after** the drain's commit has been
+    pushed, so no confirmation can ever go out for a registration a rejected
+    push then discarded -- the identical ordering `registration.yml` spells
+    out for the immediate lane -- and **before** the clearing step, so an
+    entry is only ever removed from the queue once its confirmation has
+    actually been attempted. A run that stopped between the two would leave
+    the entry in the queue, and the next drain would find it in the ledger
+    *and* still waiting, which is exactly how it recognises "stored, not yet
+    confirmed" (`submission_queue.DrainPlan.confirm_only`).
+
+    "Attempted", not "delivered", and the difference is deliberate: with no
+    SMTP transport configured -- this project's ordinary D-13 state -- no
+    confirmation is ever delivered at all, and a clear that waited for
+    delivery would mean a queue that never empties and an alarm every single
+    day. `_send_confirmation` already reports a message it could not send
+    and names `convener-resend-confirmation` as the recovery, and that is the
+    same recovery here.
+
+    Reads the queue the drain read (`CONVENER_QUEUE_DIR`), the list the drain
+    wrote (`CONVENER_QUEUE_CONFIRM_FILE`), and the same numbered
+    `CONVENER_QUEUE_EVENT_<n>` / `CONVENER_QUEUE_KEY_<n>` pairs -- decrypting the
+    payload a second time from the same ciphertext, because a registration's
+    plaintext lives in one process's memory at a time and there is no other
+    way to ask for it again (`send_confirmation`'s own docstring makes the
+    identical point about the identical second decrypt).
+
+    Appends what it confirmed to `CONVENER_QUEUE_CLEAR_FILE`, so the clearing
+    step removes exactly the entries that are now completely done, alongside
+    the survey responses and refusals the drain already put there.
+    """
+    queue_dir = os.environ.get(QUEUE_DIR_ENV, "")
+    if not queue_dir:
+        print(f"::error::{QUEUE_DIR_ENV} is not set", file=sys.stderr)
+        return 1
+    confirm_file = os.environ.get(QUEUE_CONFIRM_ENV, "")
+    if not confirm_file:
+        print(f"::error::{QUEUE_CONFIRM_ENV} is not set", file=sys.stderr)
+        return 1
+    pending = Path(confirm_file)
+    if not pending.exists():
+        print("the drain stored no registration that still needs a confirmation")
+        return 0
+
+    entries = _queue_entries(Path(queue_dir))
+    keys: dict[str, str] = {}
+    for slot in range(1, submission_queue.MAX_EVENTS_PER_DRAIN + 1):
+        event_id = os.environ.get(f"CONVENER_QUEUE_EVENT_{slot}", "")
+        if event_id:
+            keys[event_id] = os.environ.get(f"CONVENER_QUEUE_KEY_{slot}", "")
+
+    confirmed: list[str] = []
+    for line in pending.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        name, _, raw_changed = line.partition(_CONFIRM_FIELD_SEPARATOR)
+        payload = entries.get(name)
+        if payload is None:
+            # The queue no longer holds it, so an earlier run already
+            # cleared it, which -- by this step's own ordering -- means its
+            # confirmation already went out. Nothing to do, and nothing
+            # wrong: never a second message for one submission.
+            print(f"::warning::{name}: no longer in the queue, nothing sent")
+            continue
+        read = submission_queue.read_entry(name, payload)
+        if isinstance(read, submission_queue.Note):
+            print(f"::warning::{name}: {read.reason}")
+            confirmed.append(name)
+            continue
+        private_pem = keys.get(read.event_id, "")
+        if not private_pem:
+            # Left in the queue and *not* confirmed: the next drain finds
+            # it in the ledger and still waiting, and tries again. Loud,
+            # because a key nobody configured is the operator's to fix.
+            print(
+                f"::error::{name}: no private key configured for event "
+                f"{read.event_id} -- its confirmation is still waiting"
+            )
+            continue
+        registration = to_registration(read.payload, private_pem)
+        if registration is None:
+            # Stored it was not (the drain refuses exactly the same
+            # envelope), so there is nothing this can confirm. Cleared
+            # rather than left to block the queue for ever.
+            print(
+                f"::warning::{name}: a queued registration for event "
+                f"{read.event_id} could not be read, nothing sent"
+            )
+            confirmed.append(name)
+            continue
+        changed = tuple(field for field in raw_changed.split(",") if field)
+        _send_confirmation(read.event_id, registration, changed)
+        confirmed.append(name)
+
+    if confirmed:
+        clear_file = os.environ.get(QUEUE_CLEAR_ENV, "")
+        if not clear_file:
+            print(f"::error::{QUEUE_CLEAR_ENV} is not set", file=sys.stderr)
+            return 1
+        with Path(clear_file).open("a", encoding="utf-8", newline="") as handle:
+            for name in confirmed:
+                handle.write(f"{name}\n")
+
+    print(f"{len(confirmed)} queued registration(s) confirmed and ready to clear")
     return 0
 
 

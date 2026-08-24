@@ -47,14 +47,38 @@
  * for -- there is no second trust boundary here.
  *
  * Where the two routes *do* part company is what they do with an accepted
- * body (phase 9, task 2). `/` still sends a `registration-submitted`
- * dispatch, and one workflow run still starts for it, because the
- * confirmation e-mail that run produces carries the room link and the
- * matching code and there is no other channel for either. `/survey` writes
- * the envelope to the `submission-queue` branch instead and starts nothing
- * at all: a survey response sends nothing back to anybody, so waiting for
- * the daily drain costs the person who submitted it precisely nothing,
- * where it would cost a last-minute registrant their way into the room.
+ * body (phase 9, tasks 2 and 3). `/survey` always writes the envelope to
+ * the `submission-queue` branch and starts nothing at all: a survey
+ * response sends nothing back to anybody, so waiting for the daily drain
+ * costs the person who submitted it precisely nothing.
+ *
+ * `/` has two lanes, and **the distance to the event is the only thing that
+ * chooses between them** (task 3). The confirmation e-mail a registration
+ * produces is not a receipt, it is the entry ticket -- it carries the room
+ * link and the matching code, and there is no other channel for either --
+ * so a fixed delay is out. Further from the event than the published
+ * cutoff: the envelope goes in the same queue, and no run starts. Closer
+ * than it: the `registration-submitted` dispatch goes out exactly as it
+ * always did, `registration.yml` runs, and the confirmation is in the
+ * registrant's inbox within the minute. Same cost as before, same latency.
+ *
+ * The cutoff is not computed here. `registrationCutoff` reads one
+ * already-resolved instant per event out of
+ * `public-data/registration-routing.json`, which
+ * `tools/convener_ops/registration_routing.py` produces and `deploy.yml`
+ * commits, so every part of the rule with a project decision in it --
+ * Europe/Paris, the standing start, the configured threshold and the floor
+ * under it -- lives on the side that has tests and fixtures for it. This
+ * worker's whole share is one comparison against the clock.
+ *
+ * **An unreadable answer means "dispatch now", never "queue".** That is the
+ * opposite direction from `surveyEnabled` below, which fails closed, and
+ * the asymmetry is deliberate: there, the risk is storing an answer nobody
+ * asked for, so silence must mean no; here, the risk is a participant who
+ * never receives the only message carrying their way into the room, so
+ * silence must mean send it now. Guessing wrong in this direction costs one
+ * billed workflow run.
+ *
  * See `queueSubmission` below, and docs/reference/operations.md's
  * "Draining the submission queue".
  *
@@ -90,7 +114,12 @@ const USER_AGENT = 'convener-signup-relay';
 // held by `tools/tests/test_workflows.py`'s directory-wide sweep rather
 // than by anybody remembering.
 const QUEUE_BRANCH = 'submission-queue';
-const QUEUE_DIR = 'queue/survey';
+const QUEUE_DIR = 'queue';
+// The two kinds the queue carries, mirroring `submission_queue.KINDS`. A
+// closed pair here as it is there: the drain refuses an entry under any
+// other directory rather than guessing what to do with it.
+const SURVEY_KIND = 'survey';
+const REGISTRATION_KIND = 'registration';
 
 // The branch the queue branch is created from, the one time it does not
 // exist yet. Hardcoded like REPO above, and for the same reason: this
@@ -99,6 +128,13 @@ const QUEUE_DIR = 'queue/survey';
 const DEFAULT_BRANCH = 'main';
 const REF_URL = `https://api.github.com/repos/${REPO}/git/ref/heads/${DEFAULT_BRANCH}`;
 const REFS_URL = `https://api.github.com/repos/${REPO}/git/refs`;
+
+// Phase 9, task 3. Mirrors `registration_routing.ROUTING_PATH` and
+// `ROUTING_FILE_VERSION`; a version this worker does not know is read as
+// "no answer", which routes to the immediate lane rather than guessing at a
+// shape somebody changed.
+const ROUTING_URL = `${CONTENTS_URL}public-data/registration-routing.json`;
+const ROUTING_FILE_VERSION = 1;
 
 //: Mirrors tools/convener_ops/eventkeys.py -- see that module's docstring for why
 //: these are exactly these numbers, not approximations.
@@ -442,8 +478,9 @@ function base64EncodeUtf8(text) {
 }
 
 /**
- * One queue entry's path: `queue/survey/<milliseconds, base36>-<uuid>.json`,
- * matching `submission_queue.ENTRY_ID_RE`.
+ * One queue entry's path:
+ * `queue/<kind>/<milliseconds, base36>-<uuid>.json`, matching
+ * `submission_queue.entry_path` and `submission_queue.ENTRY_ID_RE`.
  *
  * The timestamp is what gives the drain a total order over everything it
  * finds -- two responses handled in one drain must land in the order they
@@ -460,13 +497,13 @@ function base64EncodeUtf8(text) {
  * "implicit today" this project forbids elsewhere: nothing derives a Paris
  * calendar day, a deadline or a retention date from it.
  */
-function queueEntryPath() {
+function queueEntryPath(kind) {
   const stamp = Date.now().toString(36).padStart(9, '0');
-  return `${QUEUE_DIR}/${stamp}-${crypto.randomUUID()}.json`;
+  return `${QUEUE_DIR}/${kind}/${stamp}-${crypto.randomUUID()}.json`;
 }
 
 /** One Contents-API write of `body` to `path` on the queue branch. */
-function putQueueEntry(path, body, token) {
+function putQueueEntry(path, body, token, kind) {
   return fetch(`${CONTENTS_URL}${encodeURI(path)}`, {
     method: 'PUT',
     headers: {
@@ -480,7 +517,7 @@ function putQueueEntry(path, body, token) {
       // precondition can be written where somebody about to break it might
       // see it: an open pull request whose head is this branch would start
       // six workflows per submission.
-      message: `queue: a survey response -- never open a pull request from ${QUEUE_BRANCH}`,
+      message: `queue: a ${kind} submission -- never open a pull request from ${QUEUE_BRANCH}`,
       content: base64EncodeUtf8(body),
       branch: QUEUE_BRANCH,
     }),
@@ -545,12 +582,88 @@ async function createQueueBranch(token) {
  * immediately that it did not work, and re-submitting, is a better outcome
  * than this worker holding their request open.
  */
-async function queueSubmission(body, token) {
-  const path = queueEntryPath();
-  const first = await putQueueEntry(path, body, token);
+async function queueSubmission(body, token, kind) {
+  const path = queueEntryPath(kind);
+  const first = await putQueueEntry(path, body, token, kind);
   if (first.status !== 404 && first.status !== 422) return first;
   if (!(await createQueueBranch(token))) return first;
-  return putQueueEntry(path, body, token);
+  return putQueueEntry(path, body, token, kind);
+}
+
+/**
+ * The instant `eventId` stops being far enough from its own event for a
+ * registration to wait for the daily drain, in epoch milliseconds -- or
+ * `null` for every answer this worker could not read as exactly that.
+ *
+ * `null` is not an error path with a hole in it, it is the answer: the
+ * caller routes it to the immediate lane, which is what every registration
+ * did before this existed. A 404 (nothing has ever been published), a rate
+ * limit, an unreachable GitHub, a body that will not decode, a version this
+ * worker does not know, an event absent from the file, a timestamp that
+ * will not parse -- all of them mean "this worker does not know how far
+ * away that event is", and the safe answer to that is to send the
+ * confirmation now. See the file-level comment for why that is the opposite
+ * of `surveyEnabled`'s fail-closed direction, and correctly so for each.
+ *
+ * Never throws, for the same reason: there is no failure here worth
+ * refusing a registration over.
+ */
+async function registrationCutoff(eventId, token) {
+  let res;
+  try {
+    res = await fetch(ROUTING_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': USER_AGENT,
+      },
+      signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
+    });
+  } catch {
+    return null;
+  }
+  if (res.status !== 200) return null;
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return null;
+  }
+  const bytes = base64DecodeContentsApi(body && body.content);
+  if (!bytes) return null;
+  let data;
+  try {
+    data = JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+  if (!data || typeof data !== 'object' || data.v !== ROUTING_FILE_VERSION) return null;
+  const cutoffs = data.queue_until;
+  if (!cutoffs || typeof cutoffs !== 'object') return null;
+  // `Object.prototype.hasOwnProperty.call`, never `cutoffs[eventId]` alone:
+  // an event id of `constructor` or `toString` would otherwise read a
+  // function off the prototype chain and reach `Date.parse` as something
+  // that is not a timestamp at all. `EVENT_ID_RE` does not exclude either
+  // word.
+  if (!Object.prototype.hasOwnProperty.call(cutoffs, eventId)) return null;
+  const value = cutoffs[eventId];
+  if (typeof value !== 'string') return null;
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? at : null;
+}
+
+/**
+ * `'queue'` or `'immediate'` for one arriving registration -- the JavaScript
+ * twin of `registration_routing.lane`, and the whole of this worker's share
+ * of the rule.
+ *
+ * The boundary is closed on the immediate side: a registration arriving at
+ * exactly the cutoff is dispatched, not queued. An off-by-one at a boundary
+ * has to fall on the side that still delivers the link.
+ */
+function registrationLane(cutoff, now) {
+  if (cutoff === null) return 'immediate';
+  return now < cutoff ? 'queue' : 'immediate';
 }
 
 export async function handle(request, env) {
@@ -746,24 +859,34 @@ export async function handle(request, env) {
     }
   }
 
-  // The one place the two routes now part company (phase 9, task 2).
+  // The one place the routes part company (phase 9, tasks 2 and 3).
   //
-  // A registration still becomes a `repository_dispatch` and still starts
-  // its own run, because the confirmation e-mail it produces carries the
-  // room link and the matching code and there is no other channel for
-  // either -- queuing it before the distance-to-event delay of task 3
-  // exists would strip a last-minute registrant of their link. A survey
-  // response sends nothing back to anybody, so the slowest cadence costs
-  // it nothing at all, and it goes in the queue.
+  // A survey response always goes in the queue: nothing is ever sent back
+  // to whoever submitted it, so the slowest cadence costs them nothing.
   //
-  // What the submitter sees is identical either way: 204 on success, 502
+  // A registration goes in the queue only when its event is still further
+  // away than the published cutoff. Closer than that -- or whenever this
+  // worker could not read the cutoff at all -- it becomes the same
+  // `repository_dispatch` it always was, and the confirmation carrying the
+  // room link and the matching code goes out within the minute. The clock
+  // is read exactly once, here, and only to compare against that cutoff:
+  // nothing derives a calendar day, a deadline or a retention date from it,
+  // which is the same reason `queueEntryPath` above may use `Date.now`.
+  //
+  // What the submitter sees is identical in every lane: 204 on success, 502
   // on anything this worker could not complete. Every refusal above this
-  // line -- unknown event, closed survey, abuse ceiling -- is unchanged
-  // and still immediate; the queue only ever delays what was accepted.
+  // line -- unknown event, closed survey, abuse ceiling -- is unchanged and
+  // still immediate; the queue only ever delays what was accepted.
+  let queued = isSurvey;
+  if (!isSurvey) {
+    queued =
+      registrationLane(await registrationCutoff(eventId, token), Date.now()) === 'queue';
+  }
+
   let upstream;
   try {
-    upstream = isSurvey
-      ? await queueSubmission(body, token)
+    upstream = queued
+      ? await queueSubmission(body, token, isSurvey ? SURVEY_KIND : REGISTRATION_KIND)
       : await fetch(DISPATCH_URL, {
           method: 'POST',
           headers: {

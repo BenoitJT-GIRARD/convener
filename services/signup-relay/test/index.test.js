@@ -44,8 +44,13 @@ const CONTENTS_URL = (id) =>
 // `tools/convener_ops/submission_queue.py`'s -- a branch name that disagreed
 // across the three would be a queue nothing ever drains.
 const QUEUE_BRANCH = 'submission-queue';
-const QUEUE_PREFIX =
-  'https://api.github.com/repos/example-instance/example-cockpit/contents/queue/survey/';
+const QUEUE_ROOT =
+  'https://api.github.com/repos/example-instance/example-cockpit/contents/queue/';
+const QUEUE_PREFIX = `${QUEUE_ROOT}survey/`;
+// Phase 9, task 3: the second kind the same queue now carries. A branch of
+// its own under the same directory, mirroring
+// `submission_queue.REGISTRATION_KIND`.
+const REGISTRATION_QUEUE_PREFIX = `${QUEUE_ROOT}registration/`;
 const REF_URL =
   'https://api.github.com/repos/example-instance/example-cockpit/git/ref/heads/main';
 const REFS_URL = 'https://api.github.com/repos/example-instance/example-cockpit/git/refs';
@@ -62,6 +67,18 @@ const QUEUE_ENTRY_RE = /^[0-9a-z]{1,16}-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{
 // var of the same name; see that file's comment for why).
 const SURVEY_STATUS_CONTENTS_URL =
   'https://api.github.com/repos/example-instance/example-cockpit/contents/public-data/survey-status.json';
+
+// Phase 9, task 3: the registration lane cutoffs, read the same way from
+// the same API. `tools/convener_ops/registration_routing.py` is what writes it
+// and `deploy.yml` what commits it; this file only ever stands in for it.
+const ROUTING_CONTENTS_URL =
+  'https://api.github.com/repos/example-instance/example-cockpit/contents/public-data/registration-routing.json';
+
+/** An ISO-8601 UTC instant `offsetMs` from now, spelled exactly the way
+ *  `registration_routing.to_routing_data` spells one. */
+function isoFromNow(offsetMs) {
+  return new Date(Date.now() + offsetMs).toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
 
 /** Base64-encodes the way `Buffer` does -- this test file's own stand-in
  *  for what GitHub's Contents API returns in a response's `content`
@@ -159,11 +176,23 @@ function stubFetch({
   refStatus = 200,
   refSha = '0'.repeat(40),
   createRefStatus = 201,
+  // Phase 9, task 3. `routing` is the object the routing file decodes to;
+  // `undefined` (the default) makes the read answer 404, i.e. "nothing has
+  // ever been published", which is the immediate lane -- so every test
+  // written before this task keeps dispatching, unmodified, and does so
+  // through the same code path a real unpublished file would take.
+  // `routingHttpStatus`, `routingContent` and `routingRawBody` are the
+  // same three escape hatches the survey-status stub already offers, in
+  // the same order of precedence.
+  routing,
+  routingHttpStatus,
+  routingContent,
+  routingRawBody,
 } = {}) {
   let queueWrites = 0;
   return vi.fn(async (url) => {
     const u = String(url);
-    if (u.startsWith(QUEUE_PREFIX)) {
+    if (u.startsWith(QUEUE_ROOT)) {
       queueWrites += 1;
       const status =
         queueWrites > 1 && queueStatusAfterBranch !== undefined
@@ -181,6 +210,23 @@ function stubFetch({
     }
     // Checked before the generic contents/ prefix below, which would
     // otherwise also match this URL.
+    if (u === ROUTING_CONTENTS_URL) {
+      if (routingRawBody !== undefined) {
+        return new Response(routingRawBody, { status: routingHttpStatus ?? 200 });
+      }
+      if (routingContent !== undefined) {
+        return new Response(JSON.stringify({ content: routingContent }), {
+          status: routingHttpStatus ?? 200,
+        });
+      }
+      if (routing === undefined) {
+        return new Response(null, { status: routingHttpStatus ?? 404 });
+      }
+      return new Response(
+        JSON.stringify({ content: contentsApiBase64(JSON.stringify(routing)) }),
+        { status: routingHttpStatus ?? 200 },
+      );
+    }
     if (u === SURVEY_STATUS_CONTENTS_URL) {
       if (surveyStatusRawBody !== undefined) {
         return new Response(surveyStatusRawBody, { status: surveyStatusHttpStatus });
@@ -275,17 +321,26 @@ describe('signup relay -- the happy path', () => {
     expect(res.status).toBe(204);
 
     const calls = globalThis.fetch.mock.calls;
-    expect(calls).toHaveLength(2);
+    // Three, not two, since phase 9's task 3: the known-event check, the
+    // lane read, and the dispatch. The lane read answers 404 here (nothing
+    // published), which is the immediate lane -- see `stubFetch`'s own
+    // `routing` option.
+    expect(calls).toHaveLength(3);
 
     const [existsUrl, existsInit] = calls[0];
     expect(String(existsUrl)).toBe(CONTENTS_URL(EVENT_ID));
     expect(existsInit.headers.Authorization).toBe('Bearer ghp_test-token');
     expect(existsInit.headers['User-Agent']).toBe('convener-signup-relay');
-    // Neither GitHub call is left to hang on this worker's own invocation
-    // forever -- both carry a timeout signal.
+    // No GitHub call is left to hang on this worker's own invocation
+    // forever -- every one of them carries a timeout signal.
     expect(existsInit.signal).toBeInstanceOf(AbortSignal);
 
-    const [dispatchUrl, dispatchInit] = calls[1];
+    const [routingUrl, routingInit] = calls[1];
+    expect(String(routingUrl)).toBe(ROUTING_CONTENTS_URL);
+    expect(routingInit.headers.Authorization).toBe('Bearer ghp_test-token');
+    expect(routingInit.signal).toBeInstanceOf(AbortSignal);
+
+    const [dispatchUrl, dispatchInit] = calls[2];
     expect(dispatchUrl).toBe(DISPATCH_URL);
     expect(dispatchInit.headers['User-Agent']).toBe('convener-signup-relay');
     expect(dispatchInit.headers.Authorization).toBe('Bearer ghp_test-token');
@@ -1030,19 +1085,194 @@ describe('signup relay -- the submission queue (phase 9, task 2)', () => {
     expect(res.status).toBe(502);
   });
 
-  it('leaves the registration route dispatching exactly as before', async () => {
-    // Registration must not join the queue until the distance-to-event
-    // delay exists (phase 9, task 3): its confirmation e-mail carries the
-    // room link and the matching code, and there is no other channel for
-    // either, so a day's wait would strip a same-day registrant of theirs.
+  it('never writes a registration under the survey kind', async () => {
+    // One queue, two directories: `submission_queue.read_entry` decides
+    // what to do with an entry from the directory it is in, so a
+    // registration filed under `queue/survey/` would be handed to the
+    // survey drain and refused as ciphertext that will not read.
+    globalThis.fetch = stubFetch({
+      routing: { v: 1, queue_until: { [EVENT_ID]: isoFromNow(30 * 24 * 3600 * 1000) } },
+    });
+    await handle(post(VALID_BODY), env());
+    const urls = globalThis.fetch.mock.calls.map(([u]) => String(u));
+    expect(urls.filter((u) => u.startsWith(QUEUE_PREFIX))).toHaveLength(0);
+    expect(urls.filter((u) => u.startsWith(REGISTRATION_QUEUE_PREFIX))).toHaveLength(1);
+  });
+});
+
+// -------------------------------------------------------------------- //
+// Phase 9, task 3 -- which lane a registration takes
+// -------------------------------------------------------------------- //
+
+describe('signup relay -- the registration lane', () => {
+  /** The routing file as `registration_routing.to_routing_data` writes it,
+   *  with this event's cutoff `offsetMs` from now. */
+  function routingFor(offsetMs, id = EVENT_ID) {
+    return { v: 1, queue_until: { [id]: isoFromNow(offsetMs) } };
+  }
+
+  function urlsOf() {
+    return globalThis.fetch.mock.calls.map(([u]) => String(u));
+  }
+
+  it('queues a registration whose event is still weeks away, and starts no run for it', async () => {
+    globalThis.fetch = stubFetch({ routing: routingFor(30 * 24 * 3600 * 1000) });
+    const res = await handle(post(VALID_BODY), env());
+
+    expect(res.status).toBe(204);
+    const urls = urlsOf();
+    // The whole point: no dispatch, so no billed workflow run.
+    expect(urls).not.toContain(DISPATCH_URL);
+
+    const [queueUrl, queueInit] = globalThis.fetch.mock.calls.find(([u]) =>
+      String(u).startsWith(REGISTRATION_QUEUE_PREFIX),
+    );
+    expect(queueInit.method).toBe('PUT');
+    const written = JSON.parse(queueInit.body);
+    expect(written.branch).toBe(QUEUE_BRANCH);
+    // Byte-identical to what the browser encrypted: what the drain
+    // decrypts has to be exactly what was received, never re-serialised.
+    expect(Buffer.from(written.content, 'base64').toString('utf-8')).toBe(VALID_BODY);
+    // The same entry-id shape `submission_queue.ENTRY_ID_RE` pins, so the
+    // drain's total order over one day's arrivals is the order they
+    // arrived in.
+    expect(String(queueUrl).slice(REGISTRATION_QUEUE_PREFIX.length)).toMatch(
+      QUEUE_ENTRY_RE,
+    );
+  });
+
+  it('dispatches a registration whose event is hours away, exactly as it always did', async () => {
+    globalThis.fetch = stubFetch({ routing: routingFor(-2 * 3600 * 1000) });
+    const res = await handle(post(VALID_BODY), env());
+
+    expect(res.status).toBe(204);
+    const urls = urlsOf();
+    expect(urls).toContain(DISPATCH_URL);
+    expect(urls.filter((u) => u.startsWith(QUEUE_ROOT))).toHaveLength(0);
+    const dispatchInit = globalThis.fetch.mock.calls.find(([u]) => String(u) === DISPATCH_URL)[1];
+    expect(JSON.parse(dispatchInit.body).client_payload.body).toBe(VALID_BODY);
+  });
+
+  it('dispatches a registration arriving at exactly the cutoff, and queues the one a second earlier', async () => {
+    // The boundary, driven on both sides rather than reasoned about. It is
+    // closed on the immediate side deliberately: an off-by-one here has to
+    // fall on the side that still delivers the room link.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-09-01T00:00:00Z'));
+      const cutoff = { v: 1, queue_until: { [EVENT_ID]: '2026-09-01T00:00:00Z' } };
+
+      globalThis.fetch = stubFetch({ routing: cutoff });
+      await handle(post(VALID_BODY), env());
+      expect(urlsOf()).toContain(DISPATCH_URL);
+
+      globalThis.fetch = stubFetch({
+        routing: { v: 1, queue_until: { [EVENT_ID]: '2026-09-01T00:00:01Z' } },
+      });
+      await handle(post(VALID_BODY), env());
+      expect(urlsOf()).not.toContain(DISPATCH_URL);
+      expect(urlsOf().filter((u) => u.startsWith(REGISTRATION_QUEUE_PREFIX))).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['no routing file has ever been published', { routingHttpStatus: 404 }],
+    ['GitHub answered something other than 200', { routing: {}, routingHttpStatus: 403 }],
+    ['the response body is not JSON at all', { routingRawBody: 'not json' }],
+    ['the content field does not decode', { routingContent: '!!!not base64!!!' }],
+    ['the content decodes to something that is not JSON', { routingContent: 'bm90IGpzb24=' }],
+    ['the file carries a version this worker does not know', { routing: { v: 99, queue_until: {} } }],
+    ['queue_until is not an object', { routing: { v: 1, queue_until: 'soon' } }],
+    ['this event is not in the file', { routing: { v: 1, queue_until: { 'mrg-999': '2099-01-01T00:00:00Z' } } }],
+    ['the instant will not parse', { routing: { v: 1, queue_until: { [EVENT_ID]: 'tomorrow' } } }],
+  ])('dispatches immediately when %s', async (_why, options) => {
+    // Every unreadable answer routes to the immediate lane, never the
+    // queue. The cost of guessing wrong in this direction is one billed
+    // run; the cost of guessing wrong in the other is a participant who
+    // never receives the only message carrying their way into the room.
+    globalThis.fetch = stubFetch(options);
     const res = await handle(post(VALID_BODY), env());
     expect(res.status).toBe(204);
-    const urls = globalThis.fetch.mock.calls.map(([u]) => String(u));
-    expect(urls).toContain(DISPATCH_URL);
-    expect(urls.filter((u) => u.startsWith(QUEUE_PREFIX))).toHaveLength(0);
-    const dispatchInit = globalThis.fetch.mock.calls.find(([u]) => String(u) === DISPATCH_URL)[1];
-    const sent = JSON.parse(dispatchInit.body);
-    expect(sent.event_type).toBe('registration-submitted');
-    expect(sent.client_payload.body).toBe(VALID_BODY);
+    expect(urlsOf()).toContain(DISPATCH_URL);
+    expect(urlsOf().filter((u) => u.startsWith(QUEUE_ROOT))).toHaveLength(0);
+  });
+
+  it('dispatches immediately when the routing read fails outright', async () => {
+    const inner = stubFetch({});
+    globalThis.fetch = vi.fn(async (url, init) => {
+      if (String(url) === ROUTING_CONTENTS_URL) throw new Error('network down');
+      return inner(url, init);
+    });
+    const res = await handle(post(VALID_BODY), env());
+    expect(res.status).toBe(204);
+    expect(urlsOf()).toContain(DISPATCH_URL);
+  });
+
+  it('does not read a cutoff off Object.prototype for an event named after one of its keys', async () => {
+    // `EVENT_ID_RE` accepts `constructor`, and `queue_until.constructor`
+    // is a function on every plain object. Read with a bare subscript it
+    // would reach Date.parse as something that is not a timestamp at all.
+    const id = 'constructor';
+    const body = JSON.stringify({ event_id: id, ...VALID_ENVELOPE });
+    globalThis.fetch = stubFetch({ routing: { v: 1, queue_until: {} } });
+    const res = await handle(post(body), env());
+    expect(res.status).toBe(204);
+    expect(urlsOf()).toContain(DISPATCH_URL);
+  });
+
+  it('answers 502 rather than losing a queued registration whose write did not land', async () => {
+    globalThis.fetch = stubFetch({
+      routing: routingFor(30 * 24 * 3600 * 1000),
+      queueStatus: 500,
+    });
+    const res = await handle(post(VALID_BODY), env());
+    expect(res.status).toBe(502);
+    // Nothing is counted for a submission that did not land, and nothing
+    // is dispatched either -- the submitter learns now and can retry.
+    expect(urlsOf()).not.toContain(DISPATCH_URL);
+  });
+
+  it('creates the queue branch for the first registration ever queued, then writes again', async () => {
+    globalThis.fetch = stubFetch({
+      routing: routingFor(30 * 24 * 3600 * 1000),
+      queueStatus: 404,
+      queueStatusAfterBranch: 201,
+    });
+    const res = await handle(post(VALID_BODY), env());
+    expect(res.status).toBe(204);
+    const urls = urlsOf();
+    expect(urls).toContain(REFS_URL);
+    expect(urls.filter((u) => u.startsWith(REGISTRATION_QUEUE_PREFIX))).toHaveLength(2);
+  });
+
+  it('never reads the routing file for a refusal that has to stay immediate', async () => {
+    // Unknown event, and the same holds for the abuse limits above it: a
+    // refusal is decided before the lane is, so nothing a stranger sends
+    // can be slowed down or sped up by this file's contents.
+    globalThis.fetch = stubFetch({ known: false, routing: routingFor(3600 * 1000) });
+    const res = await handle(post(VALID_BODY), env());
+    expect(res.status).toBe(404);
+    expect(urlsOf()).not.toContain(ROUTING_CONTENTS_URL);
+  });
+
+  it('leaves the survey route queuing whatever the routing file says', async () => {
+    // Q-3: the delay rule is the registration's alone. A survey response
+    // never reads this file at all.
+    globalThis.fetch = stubFetch({ routing: routingFor(-2 * 3600 * 1000) });
+    const res = await handle(postSurvey(SURVEY_BODY), env());
+    expect(res.status).toBe(204);
+    expect(urlsOf()).not.toContain(ROUTING_CONTENTS_URL);
+    expect(urlsOf().filter((u) => u.startsWith(QUEUE_PREFIX))).toHaveLength(1);
+  });
+
+  it('counts a queued registration on the same counter a dispatched one uses', async () => {
+    // The per-event ceiling must not become evadable by choosing a lane:
+    // the counter key is the route's, not the lane's.
+    const kv = makeKv({ 'count:mrg-042': '7' });
+    globalThis.fetch = stubFetch({ routing: routingFor(30 * 24 * 3600 * 1000) });
+    await handle(post(VALID_BODY), env({ SIGNUP_RELAY_KV: kv }));
+    expect(kv.store.get('count:mrg-042')).toBe('8');
   });
 });

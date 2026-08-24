@@ -93,3 +93,6 @@ HSTS
 COEP
 shellcheck
 argjson
+worktree
+cutoff
+cutoffs
