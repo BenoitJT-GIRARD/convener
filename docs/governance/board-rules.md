@@ -123,7 +123,7 @@ The yearly meeting acts through that same door: a member whose objection the mee
 
 **Inactivity** is the other half. A member who has cast no ballot for the configured number of months stops counting toward the bar, so a Board of five that has really been four for a year stops needing four voices to agree.
 
-Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in [Operations — Inactivity](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#inactivity-g-09).
+Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in `docs/reference/operations.md` ("Inactivity").
 
 Inactive is not a departure and not a judgement. The seat is kept, the entry stays in the file with the day you joined intact, and coming back is one word changed back. A member re-seated through a nomination is reactivated in place rather than added a second time.
 
@@ -184,6 +184,6 @@ Where the record does not hold the day a clock would start from, **there is no d
 
 Both are known, accepted and dated. Neither is a defect to be rediscovered.
 
-**The Board is declared with five entries for four people, using first names rather than GitHub logins.** Until that is corrected at the September meeting, the bar is four out of four available voices — effective unanimity — and the app recognises only one of the five identifiers as a signed-in member. What has to change, and in what order, is written up in [Operations — after the September collaborators' meeting](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#after-the-september-collaborators-meeting). Do not fix it piecemeal beforehand.
+**The Board is declared with five entries for four people, using first names rather than GitHub logins.** Until that is corrected at the September meeting, the bar is four out of four available voices — effective unanimity — and the app recognises only one of the five identifiers as a signed-in member. What has to change, and in what order, is written up in `docs/reference/operations.md` ("After the September collaborators' meeting"). Do not fix it piecemeal beforehand.
 
 **No speaker on record has given publication consent.** All 31 have it empty or not yet answered, and none of them has been asked. Nothing may be published for any of them until they are asked and their answer is recorded — which is the gate working, not the gate being broken.

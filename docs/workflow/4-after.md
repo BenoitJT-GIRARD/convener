@@ -26,13 +26,13 @@ Otherwise, before anyone can issue certificates: download the attendance export 
 2. From `tools/`, run `EVENT_ID=<event id> uv run convener-encrypt-attendance-export`. This needs no account and no secret; it only reads the event's already-published public key.
 3. Commit and push the `attendance-import.csv.enc` file this writes.
 
-See [operations reference](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md) ("Encrypting the manual attendance export") for the full procedure. Tick the matching line below once this is done — issuing certificates re-reads this file, so nothing can proceed without it.
+See `docs/reference/operations.md` ("Encrypting the manual attendance export") for the full procedure. Tick the matching line below once this is done — issuing certificates re-reads this file, so nothing can proceed without it.
 
 ## Two boundaries when matching attendance
 
 Before certificates are issued, attendance is matched against registrations by matching code, then by address, then by normalised name. Two things can come out of that which are not the same, and must not be reported as if they were:
 
-- **Unmatched** — someone was in the room, but nothing tied their address or name to a registration. This is the case worth resolving by hand: [operations reference](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#matching-attendance) ("Matching attendance") writes a short list for exactly that.
+- **Unmatched** — someone was in the room, but nothing tied their address or name to a registration. This is the case worth resolving by hand: `docs/reference/operations.md` ("Matching attendance") writes a short list for exactly that.
 - **Unreachable** — someone joined by telephone, so the platform gave us no address and no display name to match against at all. This is not a case to resolve — it is a boundary of the phone connection itself, and it is stated on the event page too, for the same reason: turning up without registering, or joining in a way that cannot be matched, are both reported honestly, never silently folded into "not eligible" without saying why.
 
 Never report a telephone joiner as unmatched. They were never reachable to begin with, and treating the two the same sends whoever is doing the manual review chasing an address the platform never collected.
