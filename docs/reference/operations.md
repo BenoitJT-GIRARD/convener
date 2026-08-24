@@ -241,9 +241,24 @@ needs a creation step; both are set directly in
 `wrangler.toml` ships with.
 
 **To verify:** with `VITE_SIGNUP_RELAY_URL` set and the app rebuilt, submit
-the registration form for an event with a published key; the worker
-answers `204` and the `registration-submitted` dispatch it sends triggers
-the workflow that handles it (see phase 4).
+the registration form for an event with a published key; the worker answers
+`204`. **What happens next depends on how far away the seminar is**, and both
+outcomes are correct:
+
+- **More than `queue_beyond_hours` away** (`config/registration-lanes.yml`): the
+  worker writes the encrypted envelope to the `submission-queue` branch and
+  starts nothing. The confirmation goes out on the next daily drain, from the
+  scheduled *Sweep and notify the board* run. Seeing no workflow run at all is
+  the expected result here, not a failure.
+- **Closer than that**: the `registration-submitted` dispatch goes out exactly
+  as it always did, and *Handle registration* runs within the minute.
+
+The threshold is held above a floor derived from the drain's own cron, so a
+queued registration always has its room link before the seminar starts even if a
+scheduled run is dropped. Anything the worker cannot resolve — an unreadable
+routing file, an unknown event, a network failure — **dispatches immediately**
+rather than queuing: the confirmation is the only channel the room link and the
+matching code ever travel on, so doubt resolves towards sending it now.
 
 ## Publishing the showcase and the application (GitHub Pages)
 
