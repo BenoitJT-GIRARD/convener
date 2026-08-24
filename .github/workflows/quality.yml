@@ -25,6 +25,54 @@ name: Quality
 # larger diff with the same risk of a missed entry and none of the
 # saving. `enable-cache: true` below still reduces this job's own run
 # time without touching what it checks -- see that step's own comment.
+#
+# ---------------------------------------------------------------------
+# Phase 8, task 2: eight jobs became four, and nothing was removed.
+#
+# GitHub bills a job by the minute, rounded *up*: a job doing twenty
+# seconds of useful work still bills a whole minute, and eight of them
+# bill eight. The four jobs below carry exactly the steps the eight
+# carried, regrouped by what they already shared -- one runner, one
+# checkout, one Node installation -- so the saving costs no check.
+#
+#   `python`          unchanged; the heaviest, and the only one needing `uv`.
+#   `web`             was `typescript` + `site` + `spelling`: one Node 20,
+#                     and `app/`'s own `npm ci` was previously run twice
+#                     (once by `typescript`, again by `site` for the
+#                     performance budget's island bundles). Now once.
+#   `relays`          was `auth-proxy` + `form-relay` + `signup-relay`:
+#                     one runner. Two `setup-node` steps, not one --
+#                     `signup-relay` is on Node 22 and stays there.
+#   `workflow-schema` unchanged, and deliberately *not* merged: two tests
+#                     in tools/tests/test_workflows.py pin a job *named*
+#                     `workflow-schema` whose only `uses:` is
+#                     `actions/checkout`. Merging it would mean rewriting
+#                     the two guards that are the point of it, to win one
+#                     minute of rounding. A bad trade.
+#
+# **The saving does not appear in the ceilings, and looking for it there
+# is a wasted afternoon.** A merged job's `timeout-minutes` must cover the
+# sum of what it does, so 10+10+12+10 +10+10+10 +5 = 77 becomes
+# 10 + 32 + 30 + 5 = 77. The gain is four fewer billed jobs per trigger --
+# up to four minutes of rounding, and `quality.yml` fires on the pull
+# request *and* on `main` after the merge, so up to about eight minutes
+# per change -- plus four `checkout` steps, three `setup-node` steps and
+# one duplicated `npm ci` that no longer run at all.
+#
+# **A failure has to stay attributable, and that is the constraint the
+# merge had to respect.** Eight
+# jobs each reported their own failure; one job that says only "something
+# went red" would be a worse trade than the minutes are worth. So every
+# step below is named for what it checks, and every check runs whenever
+# *its own* prerequisites succeeded -- `if: always() && steps.<id>.outcome
+# == 'success'` -- rather than being skipped because some earlier,
+# unrelated step failed first. A broken type therefore no longer hides a
+# misspelling, which is what the eight-job split gave for free and what a
+# naive merge would have quietly taken away. The guards name a step id
+# rather than saying `always()` alone, so that a failed `checkout` or a
+# failed `setup-node` still skips everything downstream instead of running
+# a dozen steps that cannot possibly work.
+# ---------------------------------------------------------------------
 on:
   push:
     branches: [main]
@@ -67,10 +115,12 @@ jobs:
       # `registration_link`, task 9 stopped publishing it under any name at
       # all), so a template-source scan would stay green even with a leak.
       # That build needs `site/`'s own `node_modules`, which this job
-      # otherwise never installs -- the `site` job below does, but it never
-      # runs `pytest`. Mixing Python and Node tooling in one job is already
-      # this pipeline's own idiom (`publish-vitrine.yml`, `deploy.yml`), not
-      # a pattern introduced here.
+      # otherwise never installs -- the `web` job below does, but it never
+      # runs `pytest`, and it is a separate runner with a separate
+      # workspace, so neither job can lend the other its install. Mixing
+      # Python and Node tooling in one job is already this pipeline's own
+      # idiom (`publish-vitrine.yml`, `deploy.yml`), not a pattern
+      # introduced here.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
@@ -166,25 +216,48 @@ jobs:
         # fails if a committed file is not what the brand file derives.
         run: uv run python ../scripts/generate_brand_css.py --check
 
-  typescript:
+  # Phase 8, task 2: the former `typescript`, `site` and `spelling` jobs.
+  # Three jobs, one Node 20, one checkout -- and `app/`'s own `npm ci` run
+  # twice between them. See this file's header for the reasoning, and for
+  # why the ceiling below is their sum rather than anything smaller.
+  #
+  # The three lanes below (`app/`, `site/`, spelling) stay textually
+  # separate, and are read that way by the tests that pin them
+  # (test_dependency_audit_workflow.py, test_performance_workflow.py):
+  # each lane opens with the install step whose `id:` that lane's own
+  # checks guard on, so a red lane never silences another.
+  web:
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
-    timeout-minutes: 10
+    # 10 (`typescript`) + 12 (`site`) + 10 (`spelling`). A merged job has
+    # to bound the sum of what it does; see the header -- the saving is in
+    # billed jobs, never in this number.
+    timeout-minutes: 32
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - id: node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: app/package-lock.json
-      - name: Install
+          # Both lock files, the same multi-path cache `a11y.yml` already
+          # uses: this one job installs `app/` (for its own checks, and for
+          # the island bundles the performance budget weighs) and `site/`.
+          cache-dependency-path: |
+            app/package-lock.json
+            site/package-lock.json
+
+      # ---- app/ ------------------------------------------------------
+      # Installed once. Before phase 8 task 2 this `npm ci` ran twice, in
+      # two jobs, on two runners, for one tree.
+      - name: Install app
+        id: install-app
         working-directory: app
         run: npm ci
-      # Fix round 1 (task 12 follow-up): task 12 wired `npm audit` into the
-      # `site` job only -- `app/`'s own tree (React, Vite, the whole
+      # Fix round 1 (task 12 follow-up): task 12 wired `npm audit` into
+      # `site/`'s own steps only -- `app/`'s own tree (React, Vite, the whole
       # application toolchain) had never been audited at all, and it is the
       # larger surface: `react-router`/`react-router-dom` and `js-yaml` are
       # `dependencies`, not `devDependencies`, so they ship in the built
@@ -195,6 +268,7 @@ jobs:
       # which import neither package), but real. `--omit=dev` is the gate:
       # it fails on exactly that shipped surface, and only that surface.
       - name: Dependency audit (production)
+        if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: npm audit --omit=dev
       # The other 19 findings `npm audit` (no flag) reports today are all
@@ -210,42 +284,30 @@ jobs:
       # the mirror is just as true -- a finding nothing ever surfaces is
       # not reported either) without failing the job or blocking a merge.
       - name: Dependency audit (development tooling, informational)
-        working-directory: app
         continue-on-error: true
+        if: always() && steps.install-app.outcome == 'success'
+        working-directory: app
         run: npm audit
-      - name: Lint
+      - name: Lint app
+        if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: npm run lint
-      - name: Types
+      - name: Types app
+        if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: npm run typecheck
-      - name: Tests and coverage
+      - name: Tests and coverage app
+        if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: npm run test:cov
 
-  site:
-    runs-on: ubuntu-latest
-    # Bumped from 10 to 12 (task 12): this job now also installs and builds
-    # `app/` (tsc -b plus three vite builds -- the main SPA and both
-    # islands), so the performance-budget check below has real island
-    # bundles to weigh, not just the site's own static pages.
-    timeout-minutes: 12
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: '20'
-          cache: 'npm'
-          # Task 12: `app/package-lock.json` joins the site's own, the same
-          # multi-path cache `a11y.yml` already uses -- this job now runs
-          # `npm ci` in both directories, for the identical reason (the
-          # performance budget below needs the app's real island bundles).
-          cache-dependency-path: |
-            site/package-lock.json
-            app/package-lock.json
-      - name: Install
+      # ---- site/ -----------------------------------------------------
+      # Guarded on `node`, never on the app lane above: a red `app/` must
+      # not stop the showcase being built and weighed, which is exactly
+      # what a separate `site` job used to guarantee for free.
+      - name: Install site
+        id: install-site
+        if: always() && steps.node.outcome == 'success'
         working-directory: site
         run: npm ci
       # site/eslint.config.js, the same minimal, plugin-free flat config
@@ -255,16 +317,18 @@ jobs:
       # round 1, phase 6 task 7) the shared Paris-offset fixture's own
       # CommonJS check script, each under its own scoped override in that
       # same config file.
-      - name: Lint
+      - name: Lint site
+        if: always() && steps.install-site.outcome == 'success'
         working-directory: site
         run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs
       # Task 12: the same quality chain phase 1 already holds Python to
       # (`uv run pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
       # axe-core, puppeteer-core) had never been audited before this task.
       # Queries npm's own advisory database, the identical shape of network
-      # call `pip-audit` already makes in this same job; not a test, and no
-      # account or paid service involved.
-      - name: Dependency audit
+      # call `pip-audit` already makes in this same chain; not a test, and
+      # no account or paid service involved.
+      - name: Dependency audit site
+        if: always() && steps.install-site.outcome == 'success'
         working-directory: site
         run: npm audit
       # Task 2: the showcase's templates moved into this repository (D-15)
@@ -273,6 +337,8 @@ jobs:
       # committed as a fixture (see site/README.md), so this build needs
       # no data generated by `tools/`, unlike publish-vitrine.yml's own.
       - name: Build
+        id: build-site
+        if: always() && steps.install-site.outcome == 'success'
         working-directory: site
         run: npm run build
       # Task 12: the performance budget below covers two page classes --
@@ -282,10 +348,11 @@ jobs:
       # `a11y.yml` already runs (no real event keys or signing keys exist
       # here, and none are needed: the check below weighs the built
       # `signup.js`/`verify.js` bundles themselves, not their behaviour).
-      - name: Install app
-        working-directory: app
-        run: npm ci
+      # The install this build needs is the app lane's own, above -- the
+      # duplicate `npm ci` phase 8 task 2 removed.
       - name: Build app
+        id: build-app
+        if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: npm run build
       # Task 12: acceptance criterion 7 -- a performance budget, verified
@@ -294,40 +361,56 @@ jobs:
       # budget.mjs's own module comment for the two budgets, the reasoning
       # behind each, and why the self-hosted fonts (D-17) are measured and
       # reported separately rather than folded into a page's own weight.
+      #
+      # The one step here that needs two lanes green at once: it weighs
+      # `site/`'s pages *and* `app/`'s islands, so it is guarded on both
+      # builds rather than run against half a build and reported as a
+      # budget breach that is really a missing file.
       - name: Performance budget
+        if: >-
+          always() && steps.build-site.outcome == 'success'
+          && steps.build-app.outcome == 'success'
         working-directory: site
         run: npm run check:budget -- --app-dir ../app/dist
 
-  spelling:
-    runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: '20'
+      # ---- spelling --------------------------------------------------
+      # Needs nothing but Node, and is therefore guarded on nothing but
+      # Node: this is the lane the header names, the one a broken type in
+      # `app/` must never be allowed to silence.
       - name: Spell check (en-GB)
+        if: always() && steps.node.outcome == 'success'
         run: npx --yes cspell@8 lint --no-progress
 
-  auth-proxy:
+  # Phase 8, task 2: the former `auth-proxy`, `form-relay` and
+  # `signup-relay` jobs. One runner, one checkout -- but *two*
+  # `setup-node` steps, because `signup-relay` runs on Node 22 and the
+  # other two on Node 20. Two `setup-node` steps in one job is still one
+  # billed job; putting all three relays on a single Node version to make
+  # this file look tidier would change what is tested, which is not a
+  # trade this task is allowed to make. The Node 22 step comes last
+  # because `setup-node` changes the version for every step after it.
+  relays:
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
-    timeout-minutes: 10
+    # 10 + 10 + 10, the three jobs this replaces. See the header: the
+    # saving is in billed jobs, not in this number.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - id: node-20
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: services/auth-proxy/package-lock.json
-      - name: Install
+          cache-dependency-path: |
+            services/auth-proxy/package-lock.json
+            services/form-relay/package-lock.json
+
+      # ---- services/auth-proxy (Node 20) -----------------------------
+      - name: Install auth-proxy
+        id: install-auth-proxy
         working-directory: services/auth-proxy
         run: npm ci
       # Fix round 1 (task 12 follow-up): this relay declares no
@@ -340,73 +423,76 @@ jobs:
       # every dependency this package declares and pass regardless of what
       # it found (D-25, and `test_the_workflow_audits_site_dependencies`'s
       # own reasoning for `site/`, applied here for the same cause).
-      - name: Dependency audit
+      - name: Dependency audit auth-proxy
+        if: always() && steps.install-auth-proxy.outcome == 'success'
         working-directory: services/auth-proxy
         run: npm audit
-      - name: Lint
+      - name: Lint auth-proxy
+        if: always() && steps.install-auth-proxy.outcome == 'success'
         working-directory: services/auth-proxy
         run: npx --yes eslint@9 src test
-      - name: Test
+      - name: Test auth-proxy
+        if: always() && steps.install-auth-proxy.outcome == 'success'
         working-directory: services/auth-proxy
         run: npm test
 
-  form-relay:
-    runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: services/form-relay/package-lock.json
-      - name: Install
+      # ---- services/form-relay (Node 20) -----------------------------
+      # Guarded on the Node 20 step, not on the relay above it: three
+      # separate jobs used to mean a red auth-proxy said nothing at all
+      # about the form relay, and that stays true here.
+      - name: Install form-relay
+        id: install-form-relay
+        if: always() && steps.node-20.outcome == 'success'
         working-directory: services/form-relay
         run: npm ci
       # Fix round 1 (task 12 follow-up): same shape as services/auth-proxy's
       # own step above -- no `dependencies`, `wrangler`/`vitest` are the
       # whole tree, no flag, never `--omit=dev` (D-25).
-      - name: Dependency audit
+      - name: Dependency audit form-relay
+        if: always() && steps.install-form-relay.outcome == 'success'
         working-directory: services/form-relay
         run: npm audit
-      - name: Lint
+      - name: Lint form-relay
+        if: always() && steps.install-form-relay.outcome == 'success'
         working-directory: services/form-relay
         run: npx --yes eslint@9 src test
-      - name: Test
+      - name: Test form-relay
+        if: always() && steps.install-form-relay.outcome == 'success'
         working-directory: services/form-relay
         run: npm test
 
-  signup-relay:
-    runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      # ---- services/signup-relay (Node 22) ---------------------------
+      # Node 22, deliberately: this relay is developed and deployed on 22,
+      # and a merge that quietly moved it to 20 would be testing something
+      # other than what is deployed. Placed last because this step changes
+      # the version every step after it sees. Guarded on the checkout
+      # rather than on either relay above, so a red form relay does not
+      # skip this lane.
+      - id: node-22
+        if: always() && steps.checkout.outcome == 'success'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: services/signup-relay/package-lock.json
-      - name: Install
+      - name: Install signup-relay
+        id: install-signup-relay
+        if: always() && steps.node-22.outcome == 'success'
         working-directory: services/signup-relay
         run: npm ci
       # Fix round 1 (task 12 follow-up): same shape as services/auth-proxy's
       # own step above -- no `dependencies`, `wrangler`/`vitest` are the
       # whole tree, no flag, never `--omit=dev` (D-25).
-      - name: Dependency audit
+      - name: Dependency audit signup-relay
+        if: always() && steps.install-signup-relay.outcome == 'success'
         working-directory: services/signup-relay
         run: npm audit
-      - name: Lint
+      - name: Lint signup-relay
+        if: always() && steps.install-signup-relay.outcome == 'success'
         working-directory: services/signup-relay
         run: npx --yes eslint@9 src test
-      - name: Test
+      - name: Test signup-relay
+        if: always() && steps.install-signup-relay.outcome == 'success'
         working-directory: services/signup-relay
         run: npm test
 
@@ -430,6 +516,12 @@ jobs:
     # never a test (tools/tests/test_workflows.py::
     # test_quality_workflow_validates_workflows_against_github_actions_schema pins
     # the version string below without ever running the tool itself).
+    #
+    # Phase 8, task 2 left this job alone on purpose while merging the
+    # other seven into three: the two tests named in this file's header pin
+    # a job *called* `workflow-schema` whose only `uses:` is
+    # `actions/checkout`, so folding it into another job means rewriting
+    # the guards themselves in exchange for one minute of rounding.
     timeout-minutes: 5
     permissions:
       contents: read
