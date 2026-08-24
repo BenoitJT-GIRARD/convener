@@ -33,9 +33,12 @@ def _registration(**overrides: Any) -> Registration:
     return Registration(**base)
 
 
-def test_survey_url_names_the_event_after_the_hash_fragment() -> None:
+def test_survey_url_names_the_event_on_the_survey_pages_own_address() -> None:
+    # Phase 7 task 5: a real, bare path -- SURVEY_BASE's own comment
+    # explains why this no longer carries a `#` fragment (there was never
+    # a Referer-leak property tying it to one in the first place).
     url = survey_url("mrg-042")
-    assert url == "https://example-instance.github.io/example-showcase/app/#/survey/mrg-042"
+    assert url == "https://example-instance.github.io/example-showcase/survey/mrg-042/"
 
 
 def test_survey_url_quotes_a_hostile_event_id() -> None:
@@ -170,22 +173,25 @@ def test_registry_from_data_rejects_malformed_input(data: Any) -> None:
 
 
 # ------------------------------------------------------------------ #
-# D-14: `SURVEY_BASE`'s own `#/survey/` fragment is bound to `App.tsx`'s
-# real route, read from both sides -- the same discipline
-# `test_confirmation.py` uses to pin `CONTACT_EMAIL` against
-# `SignupForm.tsx`.
+# Phase 7 task 5: `SURVEY_BASE` used to be bound to `App.tsx`'s own route
+# (D-14, "read from both sides") -- that route is gone (see git history).
+# `SURVEY_BASE` is now the survey page's own address, one page per event
+# (D-19) exactly like `registration.SIGNUP_BASE` -- the shape check below
+# mirrors `test_registration.py::test_signup_base_is_the_event_pages_own_
+# address`, and `tools/tests/test_workflows.py::
+# test_survey_base_matches_the_survey_page_permalink` binds the value
+# itself against `site/src/survey.njk`'s own permalink, the D-14
+# "read from both sides" discipline moved to that module instead, the
+# identical move `test_registration_signup_base_matches_the_event_page_
+# permalink` already made for registration.
 # ------------------------------------------------------------------ #
 
-_APP_TSX = Path(__file__).resolve().parents[2] / "app" / "src" / "App.tsx"
 
-
-def test_survey_base_matches_app_tsxs_own_survey_route() -> None:
-    source = _APP_TSX.read_text(encoding="utf-8")
-    assert 'path="/survey/:eventId"' in source, (
-        "App.tsx no longer declares the /survey/:eventId route -- "
-        "SURVEY_BASE would link to a route that does not exist"
-    )
-    assert SURVEY_BASE.endswith("#/survey/")
+def test_survey_base_is_the_survey_pages_own_address() -> None:
+    assert SURVEY_BASE.endswith("/survey/")
+    assert SURVEY_BASE.startswith("https://example-instance.github.io/example-showcase/")
+    assert "#" not in SURVEY_BASE
+    assert "/app/" not in SURVEY_BASE
 
 
 # ------------------------------------------------------------------ #

@@ -169,5 +169,5 @@ address the confirmation email and the event page's own notice both name.
 registration form itself as a mounted island
 (`app/src/islands/signup/SignupForm.tsx`), for what a participant reads before
 registering, and
-[Operations](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md) for the full procedures behind
+`docs/reference/operations.md` for the full procedures behind
 every measure named above.*

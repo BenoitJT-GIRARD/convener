@@ -22,6 +22,7 @@ Two things are asserted instead of the two things the brief names:
 from __future__ import annotations
 
 import ast
+import json
 import os
 import re
 import shutil
@@ -163,7 +164,7 @@ def test_vite_config_base_no_longer_points_at_the_private_repo() -> None:
     )
 
 
-def test_both_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
+def test_all_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
     """Fix round 4 (the path-prefix defect): `islandSignupConfig` and
     `islandVerifyConfig` used to set `base: '/app/'`, deliberately distinct
     from the main config's own `base: '/example-showcase/app/'`
@@ -175,29 +176,47 @@ def test_both_islands_share_the_apps_published_base_not_a_divergent_one() -> Non
     (no CNAME, no custom domain), which is the identical gap
     `tools/tests/test_site.py::
     test_no_built_page_emits_a_root_relative_link_without_the_prefix` now
-    closes on the site's own side. Both islands publish into, and are
+    closes on the site's own side. Every island publishes into, and is
     addressed from, the exact same `example-showcase` `app/` subtree the main
     app does (`deploy.yml`'s single "Push to example-showcase" step carries all
-    three), so all three configs must now read the identical value -- a
-    stray `'/app/'` reappearing on either island is exactly the regression
-    this guards.
+    of them, `islandSurveyConfig` added by phase 7 task 5), so all four
+    configs must now read the identical value -- a stray `'/app/'`
+    reappearing on any island is exactly the regression this guards.
     """
     config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
     # Block comments stripped first: this file's own explanatory comments
     # quote `base: '/example-showcase/app/'` by way of describing the fix, which
-    # would otherwise inflate this count without a fourth real config.
+    # would otherwise inflate this count without a fifth real config.
     code_only = re.sub(r"/\*.*?\*/", "", config, flags=re.DOTALL)
     base_literals = re.findall(r"base:\s*'([^']*)'", code_only)
-    assert len(base_literals) == 3, (
-        f"expected exactly 3 `base:` literals in {VITE_CONFIG.as_posix()} "
-        f"(main app, island-signup, island-verify), found {base_literals!r}"
+    assert len(base_literals) == 4, (
+        f"expected exactly 4 `base:` literals in {VITE_CONFIG.as_posix()} "
+        "(main app, island-signup, island-verify, island-survey), found "
+        f"{base_literals!r}"
     )
     assert set(base_literals) == {EXPECTED_BASE_PATH}, (
-        f"{VITE_CONFIG.as_posix()}'s three `base:` literals are "
+        f"{VITE_CONFIG.as_posix()}'s four `base:` literals are "
         f"{base_literals!r}, not all {EXPECTED_BASE_PATH!r} -- an island "
         "publishing under a different base than the main app 404s its own "
         "fetches (event keys, the certificate register, signing keys) once "
         "served from the vitrine's real, single app/ subtree"
+    )
+
+
+def test_app_no_longer_declares_a_survey_route() -> None:
+    """Phase 7 task 5 moved the post-event survey off `App.tsx`'s own
+    former `<Route path="/survey/:eventId" .../>` onto a static page's
+    own island (`site/src/survey.njk`, `app/src/islands/survey/`), the
+    identical move task 6 and task 7 made for registration and
+    verification (see git history for the route this replaced). This was
+    the last public route `App.tsx` carried -- with it gone, every route
+    that document still declares is reached only through `Shell`, gated
+    on sign-in."""
+    app_tsx = (ROOT / APP_TSX).read_text(encoding="utf-8")
+    assert '"/survey/:eventId"' not in app_tsx, (
+        f"{APP_TSX.as_posix()} still declares a route at "
+        '"/survey/:eventId" -- task 5 moved the post-event survey onto '
+        "the static survey page's own island instead"
     )
 
 
@@ -263,14 +282,51 @@ def test_certificate_verification_base_no_longer_targets_the_app_subtree() -> No
     )
 
 
-def test_survey_base_targets_the_vitrine_app_subtree() -> None:
-    """M4's identical gap, applied to `survey_invite.SURVEY_BASE`: the D-14
-    pin in `test_survey_invite.py` binds `#/survey/` to `App.tsx`'s route,
-    but not the deployment base that comes before it."""
-    assert EXPECTED_BASE_PATH in survey_invite.SURVEY_BASE, (
-        f"survey_invite.SURVEY_BASE does not carry {EXPECTED_BASE_PATH!r} -- "
-        "it would not match app/vite.config.ts's own base, and every "
-        "survey invitation link would 404 once served"
+#: `site/src/survey.njk`'s own permalink expression -- D-19, `event_id` IS
+#: `edition_code` lower-cased, nothing else names an event, the identical
+#: rule `EVENT_PERMALINK` below already applies. Read from the template's
+#: own front matter rather than restated as a second literal, so a future
+#: change to that permalink fails this pin instead of quietly leaving
+#: `survey_invite.SURVEY_BASE` pointing at an address the site no longer
+#: serves.
+SURVEY_TEMPLATE = Path("site/src/survey.njk")
+SURVEY_PERMALINK = "/survey/{{ event.id | lower }}/"
+
+
+def test_survey_base_matches_the_survey_page_permalink() -> None:
+    """Phase 7 task 5 correction of the D-14 pin `test_survey_base_
+    matches_app_tsxs_own_survey_route` used to make (see git history):
+    `App.tsx` no longer declares a survey route at all -- the post-event
+    survey moved off it entirely, the same D-18 move task 6 made for
+    registration -- so the address `survey_invite.SURVEY_BASE` must now
+    match is the static survey page's own, exactly the way
+    `test_registration_signup_base_matches_the_event_page_permalink`
+    already holds `registration.SIGNUP_BASE` to `event.njk`'s."""
+    survey_njk = (ROOT / SURVEY_TEMPLATE).read_text(encoding="utf-8")
+    assert f'permalink: "{SURVEY_PERMALINK}"' in survey_njk, (
+        f"{SURVEY_TEMPLATE.as_posix()} does not declare the permalink "
+        f"{SURVEY_PERMALINK!r} this pin assumes -- update both together"
+    )
+    prefix = SURVEY_PERMALINK.split("{{", 1)[0]  # "/survey/"
+    assert survey_invite.SURVEY_BASE.endswith(prefix), (
+        f"survey_invite.SURVEY_BASE ({survey_invite.SURVEY_BASE!r}) does "
+        f"not end with the survey page's own address prefix ({prefix!r})"
+    )
+    assert survey_invite.survey_url("mrg-042") == f"{survey_invite.SURVEY_BASE}mrg-042/"
+
+
+def test_survey_base_no_longer_targets_the_app_subtree() -> None:
+    """Same gap `test_certificate_verification_base_no_longer_targets_the_
+    app_subtree` and `test_registration_signup_base_no_longer_targets_
+    the_app_subtree` guard for their own bases, applied here now that the
+    survey has the identical shape registration's own base already has: a
+    published survey link that still carried `EXPECTED_BASE_PATH` after
+    task 5 would point at the now-deleted `App.tsx` route's own asset
+    subtree, not at the survey page that replaced it."""
+    assert EXPECTED_BASE_PATH not in survey_invite.SURVEY_BASE, (
+        f"survey_invite.SURVEY_BASE still carries {EXPECTED_BASE_PATH!r} -- "
+        "task 5 moved the survey off the app's own route onto the survey "
+        "page; every survey invitation link should target that page instead"
     )
 
 
@@ -824,12 +880,51 @@ def test_publish_vitrine_site_ships_nojekyll() -> None:
 #: A scan covers a workflow nobody has written yet, which a list never can.
 WORKFLOWS_DIR = Path(".github/workflows")
 
-_USER_EMAIL_RE = re.compile(r'user\.email\s+"([^"]+)"')
-_USER_NAME_RE = re.compile(r'user\.name\s+"([^"]+)"')
+#: Entry 5 of the deferred-work register. The check used to look for one
+#: syntax only -- `user\.email\s+"..."`, a double-quoted literal directly
+#: after `user.email` -- because that is the shape the defect it was built
+#: to catch happened to take (`deploy.yml` copying `publish-vitrine.yml`'s
+#: push step, stale `@forum.example.test` address and all). An unquoted
+#: address, a single-quoted one, an identity set through an
+#: `actions/github-script` object literal instead of `git config`, or one
+#: assigned through a `GIT_AUTHOR_EMAIL`/`GIT_COMMITTER_EMAIL` environment
+#: variable would all have read back zero matches and passed unnoticed --
+#: the same shape of failure as the iCalendar leak guard that never saw
+#: line folding.
+#:
+#: Whatever sets a commit's author, the address itself is written down
+#: somewhere as text in the workflow that sets it -- `git config`'s
+#: argument, an `env:` value, or a `github-script` field name are all just
+#: different surroundings for the same address. So this reads by the
+#: address's own shape, not by the syntax around it, and it no longer
+#: matters which of those surroundings a future workflow chooses.
+_EMAIL_SHAPE_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 
 #: The only domain a commit author here may use: a `users.noreply.github.com`
 #: address claims nothing beyond what GitHub itself already vouches for.
 _ALLOWED_EMAIL_DOMAIN = "users.noreply.github.com"
+
+
+def _commit_emails(text: str) -> list[str]:
+    """Every email-shaped string in `text`, in the order it appears."""
+    return _EMAIL_SHAPE_RE.findall(text)
+
+
+def _names_the_local_part(text: str, local: str) -> bool:
+    """Whether `local` -- the part of a commit-author address before its
+    `@` -- appears in `text` as its own token at least once *beyond* the
+    address itself.
+
+    Reads by shape for the same reason `_commit_emails` does: the token
+    naming an automated identity might be `user.name "local"`, a
+    `GIT_AUTHOR_NAME`/`GIT_COMMITTER_NAME` environment value, an
+    `actions/github-script` `name:` field, or nothing more structured than
+    a bare word -- all of them put `local` down as a standalone token, so a
+    plain word-boundary count -- at least one occurrence beyond the address
+    match itself -- catches every one of those shapes without caring which
+    it is.
+    """
+    return len(re.findall(rf"\b{re.escape(local)}\b", text)) >= 2
 
 
 def _workflow_files_in(directory: Path) -> list[Path]:
@@ -868,36 +963,127 @@ def test_the_workflow_sweep_globs_yaml_files_too_not_only_yml(tmp_path: Path) ->
     assert sorted(p.name for p in found) == ["a.yml", "b.yaml"]
 
 
+def _assert_no_foreign_domain(workflow_name: str, text: str) -> None:
+    for email in _commit_emails(text):
+        assert email.endswith(f"@{_ALLOWED_EMAIL_DOMAIN}"), (
+            f"{workflow_name} carries the address {email!r}, not on "
+            f"{_ALLOWED_EMAIL_DOMAIN} -- a domain this project does not "
+            "administer (criterion 8)"
+        )
+
+
+def _assert_every_address_is_named(workflow_name: str, text: str) -> None:
+    for email in _commit_emails(text):
+        local = email.split("@", 1)[0]
+        assert _names_the_local_part(text, local), (
+            f"{workflow_name} carries the address {email!r} without a "
+            f"matching name for {local!r} anywhere in the file"
+        )
+
+
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
 def test_automated_commit_author_is_not_on_a_domain_we_do_not_administer(
     workflow: Path,
 ) -> None:
-    text = workflow.read_text(encoding="utf-8")
-    emails = _USER_EMAIL_RE.findall(text)
-    for email in emails:
-        assert email.endswith(f"@{_ALLOWED_EMAIL_DOMAIN}"), (
-            f"{workflow.name} signs a commit as {email!r}, not on "
-            f"{_ALLOWED_EMAIL_DOMAIN} -- a domain this project does not "
-            "administer (criterion 8)"
-        )
+    _assert_no_foreign_domain(workflow.name, workflow.read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
 def test_automated_commit_identity_pairs_a_name_with_its_address(
     workflow: Path,
 ) -> None:
-    """Every `user.email` a workflow sets has a matching `user.name` naming
-    the same identity, so an automated commit reads as a recognisable bot
-    rather than a bare, unexplained address."""
-    text = workflow.read_text(encoding="utf-8")
-    emails = _USER_EMAIL_RE.findall(text)
-    names = _USER_NAME_RE.findall(text)
-    for email in emails:
-        local = email.split("@", 1)[0]
-        assert local in names, (
-            f'{workflow.name} sets user.email "{email}" without a '
-            f'matching user.name "{local}"'
-        )
+    """Every commit-author address a workflow carries has a matching name
+    naming the same identity, so an automated commit reads as a
+    recognisable bot rather than a bare, unexplained address -- whatever
+    syntax set the address (see `_commit_emails`'s own comment)."""
+    _assert_every_address_is_named(workflow.name, workflow.read_text(encoding="utf-8"))
+
+
+# ------------------------------------------------------------------ #
+# Entry 5 (deferred-work register), proven by name: five shapes the
+# previous check -- `user\.email\s+"..."`, a double-quoted literal directly
+# after the literal text `user.email` -- would have let a foreign-domain
+# commit author through in without either test above ever seeing it. Each
+# is run against the real assertion the parametrized tests above call
+# (`_assert_no_foreign_domain`), not a reimplementation of it, so a
+# regression in the checker itself fails these too, exactly the way
+# `test_rebasing_on_a_rejected_push_can_lose_an_entry` proves the rebase
+# defect by running the real re-derive helper instead of describing what a
+# rebase would do.
+# ------------------------------------------------------------------ #
+
+_FOREIGN_ADDRESS = "convener-publisher@forum.example.test"
+
+#: Escaped once, reused everywhere below: the address's domain contains a
+#: literal `.`, a regex metacharacter `pytest.raises(match=...)` would
+#: otherwise interpret rather than match.
+_FOREIGN_DOMAIN_PATTERN = re.escape("forum.example.test")
+
+
+def test_evasion_1_unquoted_address_is_still_caught() -> None:
+    """No quotes at all -- `git config user.email` accepts a bare token as
+    happily as a quoted one; the old regex required a `"` right after the
+    key and found nothing here."""
+    text = f"run: git config user.email {_FOREIGN_ADDRESS}\n"
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_2_single_quoted_address_is_still_caught() -> None:
+    """Single quotes -- valid shell, invalid to a pattern anchored on `"`."""
+    text = f"run: git config user.email '{_FOREIGN_ADDRESS}'\n"
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_3_identity_via_github_script_is_still_caught() -> None:
+    """No `git config` at all -- `actions/github-script` sets the commit
+    author through the REST API's own `author`/`committer` object, entirely
+    outside the `user.email`/`user.name` vocabulary the old regex looked
+    for."""
+    text = f"""
+    - uses: actions/github-script@0123456789abcdef0123456789abcdef01234567
+      with:
+        script: |
+          await github.rest.git.createCommit({{
+            owner, repo, message: 'automated',
+            author: {{ name: 'convener-publisher', email: '{_FOREIGN_ADDRESS}' }},
+          }});
+    """
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_4_identity_via_environment_variable_is_still_caught() -> None:
+    """Set through `env:` (`GIT_AUTHOR_EMAIL`/`GIT_COMMITTER_EMAIL`, the
+    environment variables `git` itself reads) rather than through
+    `git config` -- the address never appears next to the literal text
+    `user.email` at all."""
+    text = f"""
+    env:
+      GIT_AUTHOR_EMAIL: {_FOREIGN_ADDRESS}
+      GIT_AUTHOR_NAME: convener-publisher
+    run: git commit -am "automated"
+    """
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain("probe.yml", text)
+
+
+def test_evasion_5_dot_yaml_workflow_is_still_swept(tmp_path: Path) -> None:
+    """Not a parsing evasion but a discovery one: a smarter regex over a
+    file the sweep never opens protects nothing. `_workflow_files_in`
+    already globs `.yaml` (fixed independently, for sweep evasion 3 --
+    `test_the_workflow_sweep_globs_yaml_files_too_not_only_yml`), so this
+    closes entry 5 end to end by proving a `.yaml` file both reaches the
+    sweep and still fails the real check once it does."""
+    workflow = tmp_path / "probe.yaml"
+    workflow.write_text(
+        f'run: git config user.email "{_FOREIGN_ADDRESS}"\n', encoding="utf-8"
+    )
+
+    assert workflow in _workflow_files_in(tmp_path)
+    with pytest.raises(AssertionError, match=_FOREIGN_DOMAIN_PATTERN):
+        _assert_no_foreign_domain(workflow.name, workflow.read_text(encoding="utf-8"))
 
 
 # ------------------------------------------------------------------ #
@@ -1038,6 +1224,298 @@ def test_every_job_declares_a_timeout(workflow: Path) -> None:
             "(a step-level timeout-minutes does not count -- it bounds "
             "only that one step, not the whole job)"
         )
+
+
+# ------------------------------------------------------------------ #
+# Phase 7, task 2: `queue: max` turned out not to be a valid `concurrency`
+# key at all (`actionlint`, 2026-08-24 -- see quality.yml). Once dropped,
+# what a `group` plus `cancel-in-progress: false` leaves behind cancels a
+# *waiting* run rather than queuing it -- a lost submission, not a delayed
+# one, for a workflow whose every run carries one. Five workflows also
+# rebased a local commit onto a rejected push instead of re-deriving
+# against the refreshed tip, which registration.yml's own retry-loop
+# comment already named as the way a JSON array's own closing lines get
+# corrupted by a rebase conflict. Both checks below are scanned
+# structurally, over every workflow this repository has, so a sixth one
+# added later is caught the same way rather than needing its name added to
+# a list here.
+# ------------------------------------------------------------------ #
+
+
+def _all_run_scripts(workflow: Path) -> list[tuple[str, str, str]]:
+    """`(job id, step name, run: script)` for every step in `workflow`
+    that has a `run:` key -- `uses:`-only steps carry nothing to scan."""
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    jobs = loaded.get("jobs") if isinstance(loaded, dict) else None
+    found: list[tuple[str, str, str]] = []
+    if not isinstance(jobs, dict):
+        return found
+    for job_id, job in jobs.items():
+        if not isinstance(job, dict):
+            continue
+        for step in job.get("steps", []):
+            if not isinstance(step, dict):
+                continue
+            run = step.get("run")
+            if isinstance(run, str):
+                found.append((job_id, step.get("name", "<unnamed>"), run))
+    return found
+
+
+@pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
+def test_no_run_script_rebases_a_local_commit_on_a_rejected_push(
+    workflow: Path,
+) -> None:
+    """Closes the class task 2 fixed five instances of
+    (candidate-form.yml, deploy.yml, register.yml, sweep.yml,
+    visuals-production.yml): a retry loop that rebases a local commit onto
+    a rejected push, rather than fetching the refreshed tip, hard-resetting
+    and re-running the handler against it (registration.yml's and
+    survey.yml's own shape, which every one of those five now follows
+    too).
+
+    Scanned on each step's parsed `run:` string, over uncommented lines
+    only -- `git pull --rebase` named in an explanatory comment (as
+    registration.yml's and survey.yml's own comments both still do, to say
+    why they do *not* use it) must never trip this, and parsing the YAML
+    structurally rather than grepping the raw file text is what keeps a
+    `#`-prefixed line invisible here the same way it is to `set -e`."""
+    for job_id, step_name, run in _all_run_scripts(workflow):
+        commands = [
+            line for line in run.splitlines() if not line.strip().startswith("#")
+        ]
+        assert not any("git rebase" in line for line in commands), (
+            f"{workflow.name}::{job_id} ({step_name}) rebases a local "
+            "commit on a rejected push -- re-derive instead: fetch, "
+            "reset --hard, re-run the handler"
+        )
+        assert not any("git pull" in line for line in commands), (
+            f"{workflow.name}::{job_id} ({step_name}) calls `git pull`, "
+            "which defaults to a merge or rebase, never the fetch-and-"
+            "reset-hard re-derive shape this repository standardises on "
+            "for a shared write"
+        )
+
+
+def _workflow_on_types(loaded: dict[str, Any]) -> set[str]:
+    """The event names a workflow declares under `on:` -- read as
+    `loaded[True]`, not `loaded["on"]`: PyYAML's YAML-1.1 bool resolver
+    reads the bare `on:` key as the boolean `True` before this module's own
+    content is inspected at all (the same gotcha the certificate- and
+    survey-workflow tests elsewhere in this file already work around)."""
+    on_block = loaded.get(True, {})
+    if isinstance(on_block, str):
+        return {on_block}
+    if isinstance(on_block, list):
+        return set(on_block)
+    if isinstance(on_block, dict):
+        return set(on_block)
+    return set()
+
+
+@pytest.mark.parametrize("workflow", _workflow_files(), ids=lambda p: p.name)
+def test_a_repository_dispatch_workflow_declares_no_concurrency_group(
+    workflow: Path,
+) -> None:
+    """Section 6 ter of the phase 7 spec, closed as a property rather than
+    a name list: a workflow triggered by `repository_dispatch` carries one
+    externally-submitted payload per run -- a registration, a survey
+    response, a proposal -- that only that one dispatch will ever deliver.
+    A `group` plus `cancel-in-progress: false` lets exactly one run wait
+    behind the one in progress and *cancels* any further arrival, and a
+    cancelled run never starts, so the retry loop inside it can never save
+    what it was carrying. A workflow triggered by `push`, `schedule` or
+    `workflow_dispatch` instead regenerates its own output from this
+    repository's own state, so a superseded run really is replaceable, and
+    keeps whatever `concurrency:` block it declares.
+
+    Derived from the trigger actually declared, not from
+    `{"registration.yml", "survey.yml", "candidate-form.yml"}` written out
+    by hand -- a sixth `repository_dispatch` workflow added next month is
+    caught by this test the same way those three were, without anyone
+    remembering to add its name anywhere."""
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    if "repository_dispatch" not in _workflow_on_types(loaded):
+        pytest.skip(f"{workflow.name} is not repository_dispatch-triggered")
+    assert "concurrency" not in loaded, (
+        f"{workflow.name} is dispatched externally -- one submission per "
+        "run -- and declares a concurrency group; see the phase 7 spec's "
+        "6 ter: grouping cancels a waiting run rather than queuing it, "
+        "which drops exactly the data this workflow exists to keep"
+    )
+
+
+def test_the_externally_dispatched_sweep_actually_matches_something() -> None:
+    """The guard above skips every workflow that is not
+    `repository_dispatch`-triggered, which is the honest thing to do per
+    file -- but a parametrised skip degrades silently. If
+    `_workflow_on_types` ever stopped recognising that trigger (a refactor,
+    a change in how the `on:` block is written, a bug), all 31 cases would
+    skip and the suite would still report green: a control that cannot
+    fail, which is the shape this repository has now caught a dozen times.
+
+    So the set is asserted non-empty here, separately, and named. This test
+    fails loudly the day the detection breaks, while the guard above keeps
+    reporting per file."""
+    dispatched = sorted(
+        workflow.name
+        for workflow in _workflow_files()
+        if "repository_dispatch"
+        in _workflow_on_types(safe_load(workflow.read_text(encoding="utf-8")) or {})
+    )
+    assert dispatched, (
+        "no workflow was detected as repository_dispatch-triggered, so the "
+        "concurrency guard above skipped every case and proved nothing -- "
+        "either every externally dispatched workflow really is gone, or "
+        "`_workflow_on_types` has stopped recognising the trigger"
+    )
+
+
+def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # nosec B603, B607
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+
+def _local_repo_pair(tmp_path: Path) -> tuple[Path, Path]:
+    """A bare `origin`, seeded with one committed `shared.json: []`, and
+    two independent clones of it (`a`, `b`) -- stand-ins for two workflow
+    runs' own checkouts, started far enough apart that one has already
+    pushed by the time the other tries to. Everything lives on local disk;
+    the "remote" is a bare repo under `tmp_path`, never a network call."""
+    origin = tmp_path / "origin.git"
+    assert (
+        _run_git(
+            ["init", "--bare", "-q", "-b", "main", str(origin)], tmp_path
+        ).returncode
+        == 0
+    )
+
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    assert _run_git(["init", "-q", "-b", "main"], seed).returncode == 0
+    _run_git(["config", "user.email", "seed@users.noreply.github.com"], seed)
+    _run_git(["config", "user.name", "seed"], seed)
+    (seed / "shared.json").write_text("[]\n", encoding="utf-8")
+    _run_git(["add", "shared.json"], seed)
+    assert _run_git(["commit", "-q", "-m", "seed"], seed).returncode == 0
+    assert _run_git(["remote", "add", "origin", str(origin)], seed).returncode == 0
+    assert _run_git(["push", "-q", "origin", "main"], seed).returncode == 0
+
+    clone_a, clone_b = tmp_path / "a", tmp_path / "b"
+    for clone in (clone_a, clone_b):
+        assert (
+            _run_git(["clone", "-q", str(origin), str(clone)], tmp_path).returncode == 0
+        )
+        _run_git(["config", "user.email", "handler@users.noreply.github.com"], clone)
+        _run_git(["config", "user.name", "handler"], clone)
+    return clone_a, clone_b
+
+
+def _append_entry(clone: Path, entry: str) -> None:
+    """Stands in for a workflow's own handler (`convener-handle-registration`,
+    `convener-handle-survey-response`, `convener-handle-proposal`): read the current
+    array, append one more entry, write it back -- the exact "one array,
+    two concurrent writers" shape registration.yml's own retry-loop
+    comment names as what a rebase corrupts."""
+    path = clone / "shared.json"
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    if entry not in entries:
+        entries.append(entry)
+    path.write_text(json.dumps(entries) + "\n", encoding="utf-8")
+
+
+def test_re_deriving_on_a_rejected_push_loses_no_entry(tmp_path: Path) -> None:
+    """Provoked, not assumed. `a` pushes its own entry first; `b`'s
+    checkout is now stale, so appending its own entry and pushing is
+    rejected as a non-fast-forward -- the collision this repository's real
+    workflows face on every burst of concurrent public submissions.
+    Re-deriving (fetch, reset --hard, re-run the handler against the
+    refreshed file, recommit, retry) is exactly registration.yml's and
+    survey.yml's own retry loop, and -- after this task -- candidate-
+    form.yml's, deploy.yml's, register.yml's, sweep.yml's and visuals-
+    production.yml's too. Both entries must survive."""
+    clone_a, clone_b = _local_repo_pair(tmp_path)
+
+    _append_entry(clone_a, "run-a")
+    _run_git(["add", "shared.json"], clone_a)
+    _run_git(["commit", "-q", "-m", "run a"], clone_a)
+    assert _run_git(["push", "origin", "main"], clone_a).returncode == 0
+
+    _append_entry(clone_b, "run-b")
+    _run_git(["add", "shared.json"], clone_b)
+    _run_git(["commit", "-q", "-m", "run b"], clone_b)
+    first_attempt = _run_git(["push", "origin", "main"], clone_b)
+    assert first_attempt.returncode != 0, (
+        "the setup is wrong if b's first push is not rejected -- "
+        "there is no collision here to re-derive against"
+    )
+
+    # The re-derive loop itself -- fetch, reset --hard, re-run the
+    # handler, recommit, retry -- never `git pull --rebase`.
+    assert _run_git(["fetch", "-q", "origin", "main"], clone_b).returncode == 0
+    assert _run_git(["reset", "-q", "--hard", "origin/main"], clone_b).returncode == 0
+    _append_entry(clone_b, "run-b")
+    _run_git(["add", "shared.json"], clone_b)
+    _run_git(["commit", "-q", "-m", "run b"], clone_b)
+    assert _run_git(["push", "origin", "main"], clone_b).returncode == 0
+
+    _run_git(["fetch", "-q", "origin", "main"], clone_a)
+    shown = _run_git(["show", "origin/main:shared.json"], clone_a)
+    assert shown.returncode == 0, shown.stderr
+    final = json.loads(shown.stdout)
+    assert set(final) == {"run-a", "run-b"}, (
+        f"re-deriving lost an entry: {final!r} -- both concurrent writes "
+        "must survive a collision"
+    )
+
+
+def test_rebasing_on_a_rejected_push_can_lose_an_entry(tmp_path: Path) -> None:
+    """The mutation this task's own report has to show, not merely
+    describe: restore the pattern task 2 removed -- `git pull --rebase`
+    (here, its two constituent commands, to inspect the conflict rather
+    than let a plumbing wrapper hide it) instead of fetch-and-reset-hard --
+    against the identical collision the previous test proves re-deriving
+    survives, and watch it fail instead. Both runs append to the *same*
+    JSON array, so both diffs touch its own closing line -- exactly the
+    shape registration.yml's own retry-loop comment names as `git
+    rebase`'s failure mode."""
+    clone_a, clone_b = _local_repo_pair(tmp_path)
+
+    _append_entry(clone_a, "run-a")
+    _run_git(["add", "shared.json"], clone_a)
+    _run_git(["commit", "-q", "-m", "run a"], clone_a)
+    assert _run_git(["push", "origin", "main"], clone_a).returncode == 0
+
+    _append_entry(clone_b, "run-b")
+    _run_git(["add", "shared.json"], clone_b)
+    _run_git(["commit", "-q", "-m", "run b"], clone_b)
+    assert _run_git(["push", "origin", "main"], clone_b).returncode != 0
+
+    assert _run_git(["fetch", "-q", "origin", "main"], clone_b).returncode == 0
+    rebased = _run_git(["rebase", "origin/main"], clone_b)
+    assert rebased.returncode != 0, (
+        "expected the rebase to conflict on shared.json's own line -- if "
+        "it did not, this probe no longer reproduces the collision "
+        "registration.yml's own comment describes"
+    )
+    # Left mid-rebase on the conflict -- exactly the state registration.
+    # yml's own comment names: a `set -e` step would stop here, before its
+    # own `::error::` line, having neither pushed nor reported why. b's
+    # own entry never reaches origin.
+    _run_git(["rebase", "--abort"], clone_b)
+    shown = _run_git(["show", "origin/main:shared.json"], clone_a)
+    assert shown.returncode == 0, shown.stderr
+    assert json.loads(shown.stdout) == ["run-a"], (
+        "run-b never reached origin -- confirming the loss the rebase "
+        "pattern produces, which is exactly why task 2 removed it"
+    )
 
 
 # ------------------------------------------------------------------ #
@@ -3318,3 +3796,74 @@ def test_the_secret_workflow_monitor_declares_no_yaml_anchor() -> None:
     added after it was written."""
     text = (ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8")
     assert _yaml_anchors_and_aliases(text) == []
+
+
+# ------------------------------------------------------------------ #
+# Phase 7, task 1: the anchor/alias sweep above is one instance of a wider
+# class -- nothing before it checked a workflow against GitHub's own
+# workflow schema at all. Every check in this module, including that
+# sweep, reads workflow YAML through PyYAML (`safe_load`) or as plain
+# text; both accept a document GitHub's own parser refuses. Phase 6 found
+# that the hard way with a YAML anchor that would have kept
+# visuals.yml from ever triggering, discovered by reading the file, not
+# by a tool.
+#
+# `.github/workflows/quality.yml`'s own `workflow-schema` job now runs
+# `actionlint` -- a real implementation of GitHub's workflow schema -- as
+# a CI step, not a test: it downloads a pinned release, reaching the
+# network the same way `npm audit`/`pip-audit`/`cspell` already do
+# elsewhere in this same chain, which this suite must never do. This test
+# pins that the step exists and is wired the way the task report
+# describes, without ever running the tool itself -- the same "pin the
+# step, run the tool for real in the task report" split
+# test_dependency_audit_workflow.py already uses for `npm audit`.
+# ------------------------------------------------------------------ #
+
+QUALITY_WORKFLOW = Path(".github/workflows/quality.yml")
+
+#: The exact release this project has verified against a real, network-
+#: reaching run (see the task 1 report): pinned so a silent bump to
+#: "latest" -- which could change what a future run reports without any
+#: diff in this repository explaining why -- fails this test instead.
+_ACTIONLINT_VERSION = "1.7.12"
+
+
+def test_quality_workflow_validates_workflows_against_github_actions_schema() -> None:
+    data = safe_load((ROOT / QUALITY_WORKFLOW).read_text(encoding="utf-8"))
+    assert isinstance(data, dict)
+    job = data["jobs"].get("workflow-schema")
+    assert isinstance(job, dict), (
+        "quality.yml has no workflow-schema job -- GitHub's own workflow "
+        "schema is no longer validated in this chain at all"
+    )
+    assert job.get("permissions") == {"contents": "read"}
+    assert isinstance(job.get("timeout-minutes"), int)
+    scripts = " ".join(
+        step["run"] for step in job["steps"] if isinstance(step.get("run"), str)
+    )
+    assert "download-actionlint.bash" in scripts, (
+        "workflow-schema no longer installs actionlint from its own release page"
+    )
+    assert _ACTIONLINT_VERSION in scripts, (
+        "workflow-schema installs actionlint without pinning it to the "
+        "version this project has actually verified -- see the task 1 "
+        "report for the run that verified it"
+    )
+    assert "actionlint" in scripts.split("download-actionlint.bash", 1)[1], (
+        "workflow-schema installs actionlint but never runs it"
+    )
+
+
+def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() -> None:
+    """`workflow-schema` reaches the network through a pinned release
+    download in a `run:` step, the same shape `npm audit`/`pip-audit`/
+    `cspell` already use elsewhere in this chain -- never through a
+    third-party `uses:` action, which the SHA-pin sweep
+    (`test_every_action_reference_is_pinned_to_a_full_commit_sha`) would
+    otherwise have to hold to the same standard as every other action in
+    this repository. This pins that choice: only the shared
+    `actions/checkout` step should appear here."""
+    data = safe_load((ROOT / QUALITY_WORKFLOW).read_text(encoding="utf-8"))
+    job = data["jobs"]["workflow-schema"]
+    uses = [step["uses"] for step in job["steps"] if "uses" in step]
+    assert all(use.startswith("actions/checkout@") for use in uses)

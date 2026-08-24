@@ -121,6 +121,17 @@ jobs:
           # check that read no commit, and shell in a workflow file is the one
           # place nothing can test.
           range="$(uv run convener-commit-range)"
+          # Intentional, not an oversight: `commit_format.commit_range()`'s
+          # own docstring says the workflow "reads them unquoted into
+          # `git log`, so this prints one line and nothing else."
+          # `log_range()` returns either one token (`"start..head"`) or two
+          # (`"-1 head"`, when there is no commit to subtract from) --
+          # quoting `$range` would pass `"-1 head"` to `git log` as a
+          # single bad revision instead of two arguments. Found by
+          # `actionlint` (the workflow-schema job below), not by this
+          # project's own tests: PyYAML has no opinion on shell inside a
+          # `run:` block.
+          # shellcheck disable=SC2086
           git log --format=%B%x00 $range | uv run convener-check-commits
       - name: Decision register
         working-directory: tools
@@ -398,3 +409,34 @@ jobs:
       - name: Test
         working-directory: services/signup-relay
         run: npm test
+
+  workflow-schema:
+    runs-on: ubuntu-latest
+    # Phase 7, task 1: nothing else in this chain checks that a workflow is
+    # valid *for GitHub*. `test_workflows.py` and every other check above
+    # parse these files with PyYAML, which accepts syntax GitHub's own
+    # parser rejects outright -- phase 6 learned this the hard way with a
+    # YAML anchor that would have kept the visual-regression workflow from
+    # ever triggering, found by reading the file, not by a tool
+    # (test_workflows.py's own hand-rolled anchor/alias sweep exists
+    # because of that gap, and still guards that one instance; this closes
+    # the class). `actionlint` parses against GitHub's real workflow
+    # schema instead of PyYAML's permissive one.
+    #
+    # A pinned release download, not a third-party `uses:` action -- so
+    # there is nothing here for the SHA-pin sweep to check, and it reaches
+    # the network the same way `npm audit`/`pip-audit`/`cspell` already do
+    # elsewhere in this same chain, which is why this is a CI step and
+    # never a test (tools/tests/test_workflows.py::
+    # test_quality_workflow_validates_workflows_against_github_actions_schema pins
+    # the version string below without ever running the tool itself).
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12
+      - name: Validate workflows against GitHub's schema
+        run: ./actionlint

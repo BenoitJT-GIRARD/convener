@@ -89,16 +89,20 @@ const SITE_DIR = path.resolve(__dirname, '..');
  */
 const STATIC_PAGE_BUDGET_GZIP_BYTES = 40 * 1024;
 
-/** Pages carrying a client-side island -- currently the one event page
- *  accepting registrations, and the certificate-verification page: HTML
- *  plus the shared stylesheet plus the one island bundle the page mounts,
- *  gzip.
+/** Pages carrying a client-side island -- the one event page accepting
+ *  registrations, the certificate-verification page, and every survey
+ *  page (`survey.njk`, phase 7 task 5): HTML plus the shared stylesheet
+ *  plus the one island bundle the page mounts, gzip.
  *
  *  Measured on the real built output, 2026-08-22: the heavier of the two
- *  is the verify page, 72,968 B gzip (1,462 B HTML + 9,523 B CSS + 61,983 B
- *  for `verify.js`); the registration island's own event page comes out
- *  within a few hundred bytes of it. This budget allows roughly 50% growth
- *  over that measurement -- a dependency bump, more form fields, more
+ *  islands then in existence was the verify page, 72,968 B gzip (1,462 B
+ *  HTML + 9,523 B CSS + 61,983 B for `verify.js`); the registration
+ *  island's own event page comes out within a few hundred bytes of it.
+ *  The survey island, measured phase 7 task 5's own report, comes out
+ *  close to the same weight as its two siblings (one shared HTML/CSS
+ *  shape, one island bundle of comparable size) -- see that report for
+ *  the exact figure. This budget allows roughly 50% growth over the
+ *  2026-08-22 measurement -- a dependency bump, more form fields, more
  *  verification detail -- while staying well under half of what a visitor
  *  downloaded before tasks 6 and 7 moved these forms out of the operators'
  *  cockpit (183.65-189.53 KB gzip for the whole application; see those
@@ -162,7 +166,7 @@ function parseArgs(argv) {
   args.siteDir = path.resolve(args.siteDir || path.join(SITE_DIR, '_site'));
   if (!args.appDir) {
     throw new Error(
-      '--app-dir is required -- the two island pages this budget covers ' +
+      '--app-dir is required -- the island pages this budget covers ' +
         "cannot be weighed without the app's own built islands (D-25: a " +
         'run that silently skipped them would not be checking what it ' +
         'claims to check)'
@@ -174,8 +178,8 @@ function parseArgs(argv) {
 
 /** Merges the site's own build and the app's, addressed exactly the way
  *  `deploy.yml` and `publish-vitrine.yml` together publish them: the
- *  site's own files at the root, the app's (including its two island
- *  bundles) under `app/`. The same merge `check-a11y.mjs`'s own
+ *  site's own files at the root, the app's (including every island
+ *  bundle) under `app/`. The same merge `check-a11y.mjs`'s own
  *  `assembleTree` performs, for the identical reason -- both scripts need
  *  to resolve a page's real, prefixed references against one tree that
  *  matches the real deployment. */
@@ -215,7 +219,8 @@ async function discoverHtmlPages(root) {
  *  same fixture data, kept as its own small copy here for the identical
  *  reason `configuredPathPrefix` above is: two independent, single-purpose
  *  scripts, not a shared module. See that file's own comment for the full
- *  breakdown this formula encodes. */
+ *  breakdown this formula encodes, including `survey.njk`'s own one page
+ *  per event (phase 7 task 5). */
 function expectedPageCount(events) {
   const pastYears = new Set(
     events
@@ -224,7 +229,7 @@ function expectedPageCount(events) {
   );
   const FIXED_PAGES = 5;
   const FIXED_FACETS = 2;
-  return FIXED_PAGES + FIXED_FACETS + pastYears.size + events.length;
+  return FIXED_PAGES + FIXED_FACETS + pastYears.size + events.length + events.length;
 }
 
 /** A `<link rel="stylesheet" href="...">` tag's own `href` -- deliberately
@@ -235,10 +240,10 @@ function expectedPageCount(events) {
  *  `rel="stylesheet"` this pattern requires. */
 const STYLESHEET_HREF_RE = /<link[^>]*\brel=["']stylesheet["'][^>]*\bhref=["']([^"']+)["'][^>]*>/gi;
 
-/** A `<script ... src="...">...</script>` tag's own `src` -- the two
- *  island mount scripts (`signup.js`, `verify.js`) are the only script
- *  tags this project's templates emit with a `src` attribute at all (the
- *  structured-data block on an event page is an inline
+/** A `<script ... src="...">...</script>` tag's own `src` -- the three
+ *  island mount scripts (`signup.js`, `verify.js`, `survey.js`) are the
+ *  only script tags this project's templates emit with a `src` attribute
+ *  at all (the structured-data block on an event page is an inline
  *  `<script type="application/ld+json">` with no `src`, already counted
  *  as part of that page's own HTML weight). */
 const SCRIPT_SRC_RE = /<script[^>]*\bsrc=["']([^"']+)["'][^>]*><\/script>/gi;

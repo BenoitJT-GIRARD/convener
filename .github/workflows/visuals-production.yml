@@ -314,24 +314,6 @@ jobs:
       # is what tells an edition with only announcement texts (an archived
       # recording, no scheduled edition at all) apart from one with a real
       # banner to carry.
-      - name: Sync the share banner into the repository
-        run: |
-          set -e
-          rm -rf site/src/banners
-          mkdir -p site/src/banners
-          for dir in "${{ runner.temp }}"/production-visuals-out/*/; do
-            event_id=$(basename "$dir")
-            if [ -f "${dir}banner.png" ]; then
-              cp "${dir}banner.png" "site/src/banners/${event_id}.png"
-            fi
-          done
-          # Tidiness only -- `git add`, below, stages a removal correctly
-          # whether this directory is left empty or removed outright
-          # (confirmed by hand), so this line changes nothing about what
-          # gets committed. Removed rather than left empty so "zero
-          # scheduled editions" (D-13) leaves the working tree exactly as
-          # bare as a checkout that had never rendered one at all.
-          rmdir --ignore-fail-on-non-empty site/src/banners
       # `git add site/src/banners 2>/dev/null || true`: the one path this
       # repository has never committed anything under before this task
       # lands is not a valid pathspec at all (confirmed by hand -- see
@@ -342,27 +324,62 @@ jobs:
       # "nothing to commit" branch below report it. Every other shape --
       # a new file, a changed one, a previously-tracked one now deleted --
       # `git add` already handles the ordinary way.
-      - name: Commit the share banner
+      - name: Sync and commit the share banner
         env:
           GH_TOKEN: ${{ github.token }}
+        # Phase 7, task 2: on a rejected push, re-derive against the
+        # refreshed tip rather than `git pull --rebase`. `git reset --hard`
+        # would discard the local commit's own site/src/banners changes
+        # along with it, so the sync itself (`sync_banners` below) has to
+        # re-run on every retry too, not only the derivation command a
+        # plain data workflow would need -- but it is cheap: the already-
+        # rendered `production-visuals-out` this reads from lives under
+        # `${{ runner.temp }}`, outside the checkout `reset --hard`
+        # touches, so re-syncing never re-triggers the expensive browser
+        # render above it.
         run: |
           set -e
           git config user.name "convener-visuals"
           git config user.email "convener-visuals@users.noreply.github.com"
-          git add site/src/banners 2>/dev/null || true
+
+          sync_banners() {
+            rm -rf site/src/banners
+            mkdir -p site/src/banners
+            for dir in "${{ runner.temp }}"/production-visuals-out/*/; do
+              event_id=$(basename "$dir")
+              if [ -f "${dir}banner.png" ]; then
+                cp "${dir}banner.png" "site/src/banners/${event_id}.png"
+              fi
+            done
+            # Tidiness only -- `git add`, below, stages a removal
+            # correctly whether this directory is left empty or removed
+            # outright (confirmed by hand), so this line changes nothing
+            # about what gets committed. Removed rather than left empty
+            # so "zero scheduled editions" (D-13) leaves the working tree
+            # exactly as bare as a checkout that had never rendered one
+            # at all.
+            rmdir --ignore-fail-on-non-empty site/src/banners
+            git add site/src/banners 2>/dev/null || true
+          }
+
+          sync_banners
           if git diff --staged --quiet; then
             echo "nothing to commit -- the share banner already matches the current scheduled edition(s)"
             exit 0
           fi
           git commit -m "site: refresh the share banner for the current edition"
+
           for attempt in 1 2 3; do
             if git push; then
               gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
                 echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
-            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
-            git pull --rebase
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+            sync_banners
+            git commit -m "site: refresh the share banner for the current edition"
           done
           echo "::error::push failed after 3 attempts -- the share banner was not saved"
           exit 1

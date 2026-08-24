@@ -9,13 +9,14 @@ on:
 # ordinary, not exotic. That is a different race from the one the retry loop
 # below handles: this job and `publish-vitrine.yml` write disjoint subtrees
 # of example-showcase (`app/` here, the site's own root-level files there --
-# `index.html`, `style.css`, `fonts/`, `.nojekyll`, task 2), so a rebase
-# between them always replays cleanly and both pushes must land -- which is
-# exactly what that loop is for, and it is untouched. Two *deploy* runs are
-# not disjoint: both rewrite all of `app/`, so a rebase between them either
-# conflicts on `index.html` (different hashed asset names from the same
-# base, a red job) or replays cleanly and lets the *older* build silently
-# overwrite the newer one -- worse, because nothing reports it.
+# `index.html`, `style.css`, `fonts/`, `.nojekyll`, task 2), so re-deriving
+# against a push made by the other one always reproduces cleanly and both
+# pushes must land -- which is exactly what that loop (now re-deriving
+# rather than rebasing, phase 7 task 2) is for. Two *deploy* runs are not
+# disjoint: both rewrite all of `app/`, so racing here either conflicts on
+# `index.html` (different hashed asset names from the same base, a red job,
+# under a rebase) or lets the *older* build silently overwrite the newer
+# one -- worse, because nothing reports it.
 #
 # `cancel-in-progress: true` removes that case by construction rather than
 # serialising the two runs and hoping the order holds: once a newer commit
@@ -221,14 +222,19 @@ jobs:
           git config --global user.email "convener-publisher@users.noreply.github.com"
           git clone --depth 1 \
             "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
-          rm -rf /tmp/vit/app
-          mkdir -p /tmp/vit/app
-          cp -r app/dist/. /tmp/vit/app/
           cd /tmp/vit
+
           # --force: `git add` still honours the *target* repository's own
           # .gitignore, and a rule there matching a built asset name would
           # silently drop it from the deploy with no error.
-          git add --force app
+          refresh_app_subtree() {
+            rm -rf app
+            mkdir -p app
+            cp -r "$GITHUB_WORKSPACE/app/dist/." app/
+            git add --force app
+          }
+
+          refresh_app_subtree
           if git diff --staged --quiet; then
             echo "no changes"
             exit 0
@@ -240,15 +246,25 @@ jobs:
           # *commits* conflict-free, not the *push*. git push is
           # branch-atomic, not path-atomic: two runs can each clone before
           # the other pushes, and the loser's push is a plain
-          # non-fast-forward rejection. A rebase is safe
-          # here precisely because the subtrees never overlap, so replaying
-          # this commit on top of the other's can never conflict.
+          # non-fast-forward rejection.
+          #
+          # The retry re-derives rather than rebases, the same shape
+          # publish-vitrine.yml's own "Publish" step uses for the identical
+          # race (phase 7, task 2). A rebase would in fact replay cleanly
+          # here -- the two subtrees never overlap, so there is nothing for
+          # it to conflict on -- but it stays a second shape for a problem
+          # this repository solves one way everywhere else, and re-deriving
+          # costs nothing extra: `cp -r` over a freshly reset tree
+          # reproduces the identical commit on every attempt.
           for attempt in 1 2 3; do
             if git push; then
               exit 0
             fi
-            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
-            git pull --rebase
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest main and retrying"
+            git fetch origin main
+            git reset --hard origin/main
+            refresh_app_subtree
+            git commit -m "app: refresh build"
           done
           echo "::error::push failed after 3 attempts -- the build was not published"
           exit 1

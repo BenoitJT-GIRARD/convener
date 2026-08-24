@@ -391,21 +391,24 @@ independent policies, one per document, built from what that document
 actually loads rather than one policy loose enough to cover both:
 
 - `site/src/_data/csp.js` — every page Eleventy builds (the showcase, and
-  the registration and certificate-verification islands mounted on two of
-  its pages). `script-src 'self'`, `object-src 'none'`, `form-action
-  'self'`, and `connect-src 'self'` plus the signup relay's own origin
-  (`VITE_SIGNUP_RELAY_URL`, the same repository variable *Signup relay*
-  above already forwards into the application build — read here rather
-  than hand-typed a second time) when one is configured.
-- `app/scripts/csp.mjs` (injected into `app/index.html` by
-  `app/vite.config.ts`'s own `cspHtmlPlugin`) — the operators' cockpit
-  *and*, on the same document, the public post-event survey route
-  (`App.tsx`'s `SurveyRoute`), since both are the same client-routed
-  bundle. `script-src 'self'`, `object-src 'none'`, `form-action 'self'`,
-  and `connect-src 'self' https://api.github.com` plus the auth relay's
-  own origin (`VITE_AUTH_PROXY_URL`) and the signup relay's own origin
-  (`VITE_SIGNUP_RELAY_URL`), each admitted only once its own variable is
+  the registration, certificate-verification and post-event survey
+  islands mounted on three of its pages — the last moved here from the
+  cockpit by phase 7 task 5). `script-src 'self'`, `object-src 'none'`,
+  `form-action 'self'`, and `connect-src 'self'` plus the signup relay's
+  own origin (`VITE_SIGNUP_RELAY_URL`, the same repository variable
+  *Signup relay* above already forwards into the application build —
+  read here rather than hand-typed a second time) when one is
   configured.
+- `app/scripts/csp.mjs` (injected into `app/index.html` by
+  `app/vite.config.ts`'s own `cspHtmlPlugin`) — the operators' cockpit,
+  gated on sign-in, and nothing else. Phase 7 task 5 moved the last
+  public route this bundle carried (`/survey/:eventId`, the post-event
+  survey) onto the island above, and `connect-src` dropped the signup
+  relay's own origin as a direct consequence: nothing left in this
+  bundle posts to it. `script-src 'self'`, `object-src 'none'`,
+  `form-action 'self'`, and `connect-src 'self' https://api.github.com`
+  plus the auth relay's own origin (`VITE_AUTH_PROXY_URL`), admitted
+  only once its own variable is configured.
 
 The two differ because the documents genuinely differ, not by oversight:
 the showcase's pages never call the GitHub API or the authentication
@@ -1144,7 +1147,8 @@ apply to.
 **To verify:** with an event's `survey_enabled` set to `true` in
 `data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
 (`AdminOverride.tsx`, fix round 1's minor 9) — submit the survey form
-(`#/survey/<event id>`); *Handle survey response* runs, and
+(`/survey/<event id>/` on the vitrine, its own island since phase 7 task
+5); *Handle survey response* runs, and
 `data/events/<event id>/survey-responses.enc` gains one entry. Submitting
 again adds a second, independent entry — this is by design, not a defect;
 see `survey.py`'s own docstring. With `survey_enabled` left `false` (the
@@ -1570,7 +1574,7 @@ holds. See `tools/convener_ops/survey_invite.py`'s own module docstring,
 
 **The invitation carries no per-person token, on purpose.** Every matched
 attendee of the same event receives the exact same link
-(`#/survey/<event id>`, no query string), because a per-person token would
+(`/survey/<event id>/`, no query string), because a per-person token would
 be an identifier — the one thing `survey.py`'s own storage design refuses
 to let a stored response carry. The e-mail itself is an ordinary,
 personally-addressed message (`Dear <first name>,`, sent to the address on
@@ -1772,6 +1776,15 @@ the exact trade AF-1 of the security audit already named as this project's
 own recurring mistake: a credential that can do more than its job. A person
 reading a short checklist is the right size of solution for a change this
 infrequent.
+
+**Who runs this checklist is not a free choice.** D-28 maps the architect
+onto GitHub's own organisation-owner role, independent of Board
+membership, and a Board member onto repository `Write` and nothing more
+— the architect is the only account that actually holds the permission
+this checklist needs, so the architect is who runs it. This is also the
+bound that mapping puts on the security audit's write-access finding: not
+closed, but limited to however long it takes the architect to work
+through this checklist after someone's role changes.
 
 Three things the rule will not do:
 

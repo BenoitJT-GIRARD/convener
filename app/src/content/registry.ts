@@ -86,6 +86,10 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   'decisions/d-25': { file: 'decisions/d-25-loud-failure.md', anchor: null },
   'decisions/d-26': { file: 'decisions/d-26-verify-deployed-shape.md', anchor: null },
   'decisions/d-27': { file: 'decisions/d-27-pin-the-render-engine.md', anchor: null },
+  'decisions/d-28': {
+    file: 'decisions/d-28-architect-and-board-permissions.md',
+    anchor: null,
+  },
 
   // toolkit — emails
   'toolkit/emails/invitation': { file: 'toolkit/emails/invitation.md', anchor: null },

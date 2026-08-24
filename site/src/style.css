@@ -484,6 +484,95 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 .verify__details dd { display: inline; margin: 0; }
 .verify__checking { color: var(--ink-mute); }
 
+/* ── Post-event survey island (phase 7, task 5) ──────────────
+ * `app/src/islands/survey/SurveyForm.tsx`'s own class names -- plain,
+ * semantic strings, the same reasoning `.signup-form`'s own comment
+ * gives: this component renders inside a page that already loads this
+ * stylesheet, and pulling in the app's own Tailwind build here would leak
+ * site-wide. `.notice`/`.notice__eyebrow` (above) are reused as-is for
+ * the "not available", "not open" and "sent" states -- one box style for
+ * every one-screen message on this page, not a second one invented per
+ * state, the identical discipline `.signup-form`'s own states already
+ * follow. `.btn`/`.btn--primary` (below) are reused for the submit
+ * button, the same button style `.signup-form__fields` already uses. */
+.survey-form { max-width: 42rem; }
+.survey-form__status { color: var(--ink-mute); padding: .5rem 0 1rem; }
+.survey-form__fields { max-width: 32rem; }
+.survey-form__fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1.5rem;
+}
+.survey-form__legend {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: .6rem;
+  padding: 0;
+}
+.survey-form__options {
+  display: flex;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+}
+.survey-form__option {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .92rem;
+}
+.survey-form__field { display: block; margin-bottom: 1rem; }
+.survey-form__field > span {
+  display: block;
+  font-family: var(--ff-display);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: .3rem;
+}
+.survey-form__hint { font-size: .82rem; color: var(--ink-mute); margin: .2rem 0 .5rem; }
+.survey-form__textarea {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: .6rem .75rem;
+  font: inherit;
+  color: var(--ink);
+  resize: vertical;
+}
+.survey-form__textarea:focus {
+  outline: 0;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--turquoise-l);
+}
+.survey-form__counter {
+  display: block;
+  text-align: right;
+  font-size: .78rem;
+  color: var(--ink-faint);
+  margin-top: .3rem;
+}
+.survey-form__fields button[disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.survey-form__error {
+  /* `--purple`, not `--purple-d` -- the identical pairing rationale
+   * `.signup-form__error`'s own comment gives: this text sits directly on
+   * the turquoise field, and `--purple` on turquoise is the measured
+   * pairing (`data/brand.json`), not `--purple-d`. */
+  color: var(--purple);
+  font-weight: 700;
+  margin-top: .85rem;
+}
+
 /* Fix round 2: the "Discuss" pill an upcoming edition carries once
  * `forum_thread` is set -- reuses `.archive__action--alt`, the same pill
  * the past section below and the homepage archive already render, just

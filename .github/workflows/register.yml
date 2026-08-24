@@ -32,35 +32,39 @@ jobs:
           # self-inflicted Actions-minute cost, alongside this fix's path
           # filters. Reduces run time only; changes nothing this job checks.
           enable-cache: true
-      - name: Derive
-        working-directory: tools
-        run: uv run convener-register
-      - name: Commit
+      - name: Derive and commit
+        # Phase 7, task 2: on a rejected push, re-derive against the
+        # refreshed tip rather than `git pull --rebase` -- the same shape
+        # registration.yml's own retry loop uses, and for the identical
+        # reason. `docs/governance/register.md` is a generated file
+        # (this file's own header comment): two runs racing each other
+        # both rewrite it in full, so their diffs both touch the same
+        # lines and a rebase between them conflicts instead of applying.
+        # Discarding the local commit, fetching the tip and re-running
+        # `convener-register` against it is what keeps "the register is a
+        # function of the whole history" true after a race. The version
+        # of this step task 2 replaces rebased first and only then
+        # re-derived, which still risked the same conflict on the rebase
+        # itself before the re-derivation ever ran.
         run: |
           set -e
           git config user.name "convener-register"
           git config user.email "convener-register@users.noreply.github.com"
-          git add docs/governance/register.md
-          if git diff --staged --quiet; then
-            echo "nothing to commit"
-            exit 0
-          fi
-          git commit -m "docs: regenerate the decision register"
+
           for attempt in 1 2 3; do
+            (cd tools && uv run convener-register)
+            git add docs/governance/register.md
+            if git diff --staged --quiet; then
+              echo "nothing to commit"
+              exit 0
+            fi
+            git commit -m "docs: regenerate the decision register"
             if git push; then
               exit 0
             fi
-            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
-            git pull --rebase
-            # The rebase brought commits this register has never seen, and one
-            # of them may be a decision. Deriving again is what keeps "the
-            # register is a function of the history" true after a race; a plain
-            # retry would push a register that is already out of date.
-            (cd tools && uv run convener-register)
-            git add docs/governance/register.md
-            if ! git diff --staged --quiet; then
-              git commit --amend --no-edit
-            fi
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $GITHUB_REF_NAME and retrying"
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
           done
           echo "::error::push failed after 3 attempts -- the register was not saved"
           exit 1

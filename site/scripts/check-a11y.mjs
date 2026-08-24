@@ -2,10 +2,11 @@
  * criterion 4. Runs axe-core (Deque's rule engine, MIT-licensed, no
  * account, no third-party call at run time) against every page the
  * showcase actually generates, rendered in a real, JavaScript-executing
- * browser -- not a static-HTML sweep, which would report the two islands
- * (the registration form, the certificate-verification panel) as empty
- * `<div>`s and pass for the wrong reason (D-25: "a control that cannot
- * fail loudly is not a control").
+ * browser -- not a static-HTML sweep, which would report the three
+ * islands (the registration form, the certificate-verification panel,
+ * the post-event survey, added phase 7 task 5) as empty `<div>`s and pass
+ * for the wrong reason (D-25: "a control that cannot fail loudly is not a
+ * control").
  *
  * Zero cost, by construction
  * ---------------------------
@@ -29,25 +30,26 @@
  * la forme déployée, jamais à une forme locale commode") is exactly the
  * lesson phase 5's own screenshot rounds paid for: seven earlier passes,
  * all served at a bare `localhost` root, all green, on a site where every
- * relative path -- style sheet, fonts, both islands' own fetches -- would
+ * relative path -- style sheet, fonts, every island's own fetches -- would
  * have 404'd once actually published. This script reads that same
  * `PATH_PREFIX` from `.eleventy.js` (regex, not an import: it is a
  * top-level `const` in a CommonJS config file, not an exported value) and
  * serves the assembled tree under it, never at a bare root.
  *
- * The two islands
- * ----------------
+ * The three islands
+ * -------------------
  * `assembleTree` merges the site's own build with the *app's* build --
  * `app/dist` (the main SPA, skipped by the crawl below -- it is the
- * operators' cockpit, not a public page) plus its two island bundles
- * (`app/dist/islands/signup`, `app/dist/islands/verify`) and the static
- * files they fetch at runtime (`keys/events/*.pub`, `certificates.json`,
- * `keys/signing/index.json`) -- into one tree, at the one subtree
- * (`app/`) every real deployment already uses. `assertIslandsAreNotEmpty`
- * is the explicit guard: after the page has finished running its own
- * JavaScript, the two mount points (`#registration-form`,
- * `#verify-app`) must hold real content, not an empty `<div>` a checker
- * could shrug past.
+ * operators' cockpit, not a public page) plus its three island bundles
+ * (`app/dist/islands/signup`, `app/dist/islands/verify`,
+ * `app/dist/islands/survey`, added phase 7 task 5) and the static files
+ * they fetch at runtime (`keys/events/*.pub`, `certificates.json`,
+ * `keys/signing/index.json`, `survey-status.json`) -- into one tree, at
+ * the one subtree (`app/`) every real deployment already uses.
+ * `assertIslandsAreNotEmpty` is the explicit guard: after the page has
+ * finished running its own JavaScript, the three mount points
+ * (`#registration-form`, `#verify-app`, `#survey-form`) must hold real
+ * content, not an empty `<div>` a checker could shrug past.
  *
  * `a11y.yml` generates a throw-away `<event-id>.pub` per fixture event
  * with `convener_ops.eventkeys.generate()` -- a fresh, never-committed key
@@ -237,17 +239,20 @@ async function discoverHtmlPages(root) {
   return found.sort();
 }
 
-/** The exact number of HTML pages `site/src/event.njk`, `archives.njk`,
- *  `archives-year.njk` and `archives-filter.njk` together generate from
- *  `events.json`, computed the same way `site/src/_data/archive.js` does
- *  (distinct years among delivered/archived editions) -- so a crawler
- *  fed a stale or truncated build, or a future page nobody wired into the
- *  discovery walk above, is caught by a mismatched count rather than a
- *  silently-smaller passing run. Five fixed pages (home, archives index,
- *  propose, data, verify) plus two fixed facets (recordings, discussions,
- *  `archives-filter.njk`'s own front matter -- always generated, not
- *  data-derived) plus one page per distinct past year plus one page per
- *  event.
+/** The exact number of HTML pages `site/src/event.njk`, `survey.njk`,
+ *  `archives.njk`, `archives-year.njk` and `archives-filter.njk` together
+ *  generate from `events.json`, computed the same way
+ *  `site/src/_data/archive.js` does (distinct years among
+ *  delivered/archived editions) -- so a crawler fed a stale or truncated
+ *  build, or a future page nobody wired into the discovery walk above, is
+ *  caught by a mismatched count rather than a silently-smaller passing
+ *  run. Five fixed pages (home, archives index, propose, data, verify)
+ *  plus two fixed facets (recordings, discussions, `archives-filter.njk`'s
+ *  own front matter -- always generated, not data-derived) plus one page
+ *  per distinct past year plus one event page per event (`event.njk`)
+ *  plus one survey page per event (`survey.njk`, phase 7 task 5 -- one
+ *  static page per event, the same D-19 addressing `event.njk` already
+ *  uses).
  */
 function expectedPageCount(events) {
   const pastYears = new Set(
@@ -257,20 +262,21 @@ function expectedPageCount(events) {
   );
   const FIXED_PAGES = 5;
   const FIXED_FACETS = 2;
-  return FIXED_PAGES + FIXED_FACETS + pastYears.size + events.length;
+  return FIXED_PAGES + FIXED_FACETS + pastYears.size + events.length + events.length;
 }
 
 /** After the page has run its own JavaScript, a mount point this build's
- *  markup reserves for an island (`#registration-form`, `#verify-app`)
- *  must hold real content -- an empty one is exactly what a checker that
- *  only ever saw the server-rendered HTML would report as "nothing here,
- *  no violations, pass" (D-25). Returns `null` when the page carries no
- *  such mount point at all (every page except the one event page
- *  currently accepting registrations, and the verify page), which is not
- *  a failure -- most pages have no island to check. */
+ *  markup reserves for an island (`#registration-form`, `#verify-app`,
+ *  `#survey-form`) must hold real content -- an empty one is exactly what
+ *  a checker that only ever saw the server-rendered HTML would report as
+ *  "nothing here, no violations, pass" (D-25). Returns `null` when the
+ *  page carries no such mount point at all (every page except the one
+ *  event page currently accepting registrations, the verify page, and a
+ *  survey page), which is not a failure -- most pages have no island to
+ *  check. */
 async function emptyIslandMountIds(page) {
   return page.evaluate(() => {
-    const ids = ['registration-form', 'verify-app'];
+    const ids = ['registration-form', 'verify-app', 'survey-form'];
     const empty = [];
     for (const id of ids) {
       const el = document.getElementById(id);

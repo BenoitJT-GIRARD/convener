@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 import { decide, thresholdFor } from '../src/state/governance';
@@ -123,5 +125,69 @@ describe('the overdue wording, shared with the daily digest', () => {
     expect(l.days).toBe(c.days);
     expect(overdueText(l)).toBe(c.overdue_text);
     expect(waitingSince(l)).toBe(c.waiting_since);
+  });
+});
+
+/** Every underscore-prefixed key of the fixture is a prose comment
+ *  documenting a neighbouring block, not data either language reads -- see
+ *  the sibling comment in `tools/tests/test_governance_fixture.py`. */
+const topLevelCaseKeys = Object.keys(cases).filter(key => !key.startsWith('_'));
+
+function escapeForRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Every file under `dir` whose name matches `suffix`, read as one blob --
+ *  the same flat `readdirSync` walk `dates.test.ts`'s cast-site sweep uses,
+ *  narrowed to a suffix filter since neither `tools/tests/` nor
+ *  `app/tests/` nests test files in subdirectories. */
+function corpus(dir: string, suffix: string): string {
+  return readdirSync(dir)
+    .filter(name => name.endsWith(suffix))
+    .map(name => readFileSync(resolve(dir, name), 'utf-8'))
+    .join('\n');
+}
+
+/** Whether `key` is used as a fixture lookup somewhere in `text`: a quoted
+ *  subscript (`CASES["name"]`, the shape every Python reader of this
+ *  fixture uses) or a dotted property access (`cases.name`, the shape this
+ *  file and its TypeScript neighbours use). A bare, unquoted mention in
+ *  prose matches neither, so a comment that merely names a block does not
+ *  count as reading it. */
+function isReadSomewhere(key: string, text: string): boolean {
+  const escaped = escapeForRegExp(key);
+  const quoted = new RegExp(`(['"])${escaped}\\1`).test(text);
+  const dotted = new RegExp(`\\.${escaped}\\b`).test(text);
+  return quoted || dotted;
+}
+
+describe('every top-level fixture key is read by somebody -- entry 4 of the deferred-work register', () => {
+  // An empty key list would pass the check below vacuously.
+  it('is a real sweep: the fixture actually has top-level blocks to check', () => {
+    expect(topLevelCaseKeys.length).toBeGreaterThan(0);
+  });
+
+  it('every block is read by at least one test, in either language', () => {
+    // Neither this module nor `tools/tests/test_governance_fixture.py` used
+    // to assert full coverage of `governance-cases.json` -- only the named
+    // blocks each happened to already read. A block could be added and go
+    // unread on both sides indefinitely, which is exactly the drift D-14's
+    // shared fixture exists to prevent: it links the two implementations
+    // only for the cases somebody actually wired up.
+    //
+    // "Read by somebody" does not require both languages to read the same
+    // block -- some blocks describe a rule with no browser-side counterpart
+    // (the webhook-signature cases, for instance, exercised only on the
+    // Python side) -- only that at least one real test, in either
+    // language, actually looks the block up.
+    const toolsTests = resolve(__dirname, '../../tools/tests');
+    const text = [
+      corpus(toolsTests, '.py'),
+      corpus(__dirname, '.test.ts'),
+      corpus(__dirname, '.test.tsx'),
+    ].join('\n');
+
+    const unread = topLevelCaseKeys.filter(key => !isReadSomewhere(key, text));
+    expect(unread, `fixture key(s) read by nobody: ${JSON.stringify(unread)}`).toEqual([]);
   });
 });

@@ -171,15 +171,19 @@ def test_the_sync_step_regenerates_the_banner_directory_whole() -> None:
     accumulated into" discipline `convener-render-visuals`'s own `OUTPUT_DIR`
     handling already applies -- an edition no longer scheduled must lose
     its banner in the same run, not leave a stale file sitting at a live
-    public address."""
+    public address.
+
+    Phase 7, task 2 merged this file's own sync step into the commit
+    step below it (`sync_banners`, a shell function called once before
+    the retry loop and again on every re-derive, since `git reset --hard`
+    would otherwise discard the local commit's own banner files along
+    with it) -- the sync logic itself is unchanged, only where it lives."""
     sync_step = next(
-        s
-        for s in _JOB["steps"]
-        if s.get("name") == "Sync the share banner into the repository"
+        s for s in _JOB["steps"] if s.get("name") == "Sync and commit the share banner"
     )
     assert "if" not in sync_step, (
-        "the sync step must run even when nothing is scheduled (D-13) -- "
-        "that is exactly the run that has to clear a stale banner"
+        "the sync-and-commit step must run even when nothing is scheduled "
+        "(D-13) -- that is exactly the run that has to clear a stale banner"
     )
     assert "rm -rf site/src/banners" in sync_step["run"]
     assert "banner.png" in sync_step["run"]
@@ -190,9 +194,7 @@ def test_the_sync_step_only_carries_the_banner_format_not_square_or_print() -> N
     artefact-only, downloaded on demand -- only the one format a
     link-preview bot fetches unprompted is committed to a stable address."""
     sync_step = next(
-        s
-        for s in _JOB["steps"]
-        if s.get("name") == "Sync the share banner into the repository"
+        s for s in _JOB["steps"] if s.get("name") == "Sync and commit the share banner"
     )
     assert "square.png" not in sync_step["run"]
     assert "print.png" not in sync_step["run"]

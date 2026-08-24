@@ -123,9 +123,15 @@ The yearly meeting acts through that same door: a member whose objection the mee
 
 **Inactivity** is the other half. A member who has cast no ballot for the configured number of months stops counting toward the bar, so a Board of five that has really been four for a year stops needing four voices to agree.
 
-Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in [Operations — Inactivity](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#inactivity-g-09).
+Nothing about this happens on its own. The nightly job computes the proposal and prints one line per member; **no command applies it**. A person applies it, or nobody does, and the yearly meeting is what settles the question. The full description, including the three things the rule will not do, is in `docs/reference/operations.md` ("Inactivity").
 
 Inactive is not a departure and not a judgement. The seat is kept, the entry stays in the file with the day you joined intact, and coming back is one word changed back. A member re-seated through a nomination is reactivated in place rather than added a second time.
+
+## Being on the Board is not the same as owning the organisation
+
+A Board seat and a GitHub permission are different things, granted by different people. Being on the Board makes you eligible to vote; it never, on its own, changes what your GitHub account can do here.
+
+Two roles, on two separate GitHub scopes: the **architect** is the organisation's owner — independent of Board membership, able to add or remove anyone and change any repository setting — and a **Board member** holds repository **write**, and nothing more. Casting a ballot through the cockpit writes with your own signed-in token, so write is the floor the tool actually needs; it is not admin, and it is not a step toward it. Joining the Board does not grant it, and stepping back from the Board does not remove it — both are separate, manual acts by the architect. The full mapping, including why one person ultimately has to hold a role this wide, is [D-28](../decisions/d-28-architect-and-board-permissions.md).
 
 ## Publishing a recording: two permissions, and they are not alike
 
@@ -184,6 +190,6 @@ Where the record does not hold the day a clock would start from, **there is no d
 
 Both are known, accepted and dated. Neither is a defect to be rediscovered.
 
-**The Board is declared with five entries for four people, using first names rather than GitHub logins.** Until that is corrected at the September meeting, the bar is four out of four available voices — effective unanimity — and the app recognises only one of the five identifiers as a signed-in member. What has to change, and in what order, is written up in [Operations — after the September collaborators' meeting](https://github.com/example-instance/example-cockpit/blob/main/docs/reference/operations.md#after-the-september-collaborators-meeting). Do not fix it piecemeal beforehand.
+**The Board is declared with five entries for four people, using first names rather than GitHub logins.** Until that is corrected at the September meeting, the bar is four out of four available voices — effective unanimity — and the app recognises only one of the five identifiers as a signed-in member. What has to change, and in what order, is written up in `docs/reference/operations.md` ("After the September collaborators' meeting"). Do not fix it piecemeal beforehand.
 
 **No speaker on record has given publication consent.** All 31 have it empty or not yet answered, and none of them has been asked. Nothing may be published for any of them until they are asked and their answer is recorded — which is the gate working, not the gate being broken.

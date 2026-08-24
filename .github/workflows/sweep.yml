@@ -37,30 +37,40 @@ jobs:
           # self-inflicted Actions-minute cost, alongside this fix's path
           # filters. Reduces run time only; changes nothing this job checks.
           enable-cache: true
-      - name: Sweep
-        working-directory: tools
-        run: uv run convener-sweep
-      - name: Commit
+      - name: Sweep and commit
         env:
           GH_TOKEN: ${{ github.token }}
+        # Phase 7, task 2: on a rejected push, re-derive against the
+        # refreshed tip rather than `git pull --rebase` -- the same shape
+        # registration.yml's own retry loop uses. `convener-sweep` rewrites
+        # data/speakers.yml as a pure function of the current time and the
+        # file's own current content (sweep_speakers/expire_votes are both
+        # idempotent -- an already-swept event stays swept, an already-
+        # expired vote window stays expired), so re-running it against
+        # whatever another push just landed reproduces the correct result
+        # instead of replaying a diff over lines a rebase would conflict
+        # on.
         run: |
           set -e
           git config user.name "convener-sweep"
           git config user.email "convener-sweep@users.noreply.github.com"
-          git add data/speakers.yml
-          if git diff --staged --quiet; then
-            echo "nothing to commit"
-            exit 0
-          fi
-          git commit -m "data: sweep elapsed events and expired vote windows"
+
           for attempt in 1 2 3; do
+            (cd tools && uv run convener-sweep)
+            git add data/speakers.yml
+            if git diff --staged --quiet; then
+              echo "nothing to commit"
+              exit 0
+            fi
+            git commit -m "data: sweep elapsed events and expired vote windows"
             if git push; then
               gh workflow run publish-vitrine.yml --ref "$TARGET_BRANCH" ||
                 echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
               exit 0
             fi
-            echo "push rejected (attempt $attempt/3) -- rebasing onto latest and retrying"
-            git pull --rebase
+            echo "push rejected (attempt $attempt/3) -- re-deriving against the latest $TARGET_BRANCH and retrying"
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
           done
           echo "::error::push failed after 3 attempts -- sweep result was not saved"
           exit 1

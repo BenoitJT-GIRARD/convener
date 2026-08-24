@@ -1,6 +1,6 @@
 # Architecture decisions
 
-Why this system is shaped the way it is: twenty-seven decisions, each one a
+Why this system is shaped the way it is: twenty-eight decisions, each one a
 short record of the decision itself, what was rejected, and what it costs.
 Governance rules (who votes, what the bar is, what happens if nobody acts)
 are documented separately in [the Board's rules](../governance/board-rules.md)
@@ -28,6 +28,7 @@ decision rather than one long register.
 | [D-03 — Authentication: a GitHub App and the device flow](d-03-github-app-device-flow.md) | How does a volunteer sign in, and why not a personal access token? |
 | [D-04 — Concurrent writes are handled explicitly](d-04-concurrent-writes.md) | What stops two people editing the same record from silently overwriting each other? |
 | [D-19 — An event's identifier is its edition code, lower-cased](d-19-event-identifier.md) | Where does an event's ID come from, and why is there only one rule for it? |
+| [D-28 — The architect owns the organisation; a Board member writes the repository](d-28-architect-and-board-permissions.md) | Who actually holds GitHub access, and how does it change hands? |
 
 ## The meeting platform and registration
 

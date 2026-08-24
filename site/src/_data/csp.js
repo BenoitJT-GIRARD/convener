@@ -22,24 +22,28 @@
  *   already held the archive pages to that, and the audit's own search
  *   found the same true of every other page; `event.njk`'s JSON-LD block is
  *   `application/ld+json`, which `script-src` does not govern at all. The
- *   two islands (`event.njk`'s `signup.js`, `verify.njk`'s `verify.js`) are
- *   both loaded from this same origin.
+ *   three islands (`event.njk`'s `signup.js`, `verify.njk`'s `verify.js`,
+ *   `survey.njk`'s `survey.js`, added phase 7 task 5) are all loaded from
+ *   this same origin.
  * - `object-src 'none'`: no `<object>`/`<embed>`/`<applet>` anywhere in this
  *   project -- closes a legacy plugin vector at zero cost.
  * - `form-action 'self'`: no page under `site/` submits a `<form>` at all
- *   -- both islands talk to the relay through `fetch()`, never a form
+ *   -- every island talks to the relay through `fetch()`, never a form
  *   submission. `'self'` costs nothing today and stops an injected `<form>`
  *   from exfiltrating to a foreign origin if one is ever added by mistake.
  * - `connect-src 'self'`, plus the signup relay's own origin when
  *   `VITE_SIGNUP_RELAY_URL` is configured: the registration island
- *   (`app/src/islands/signup/SignupForm.tsx`) posts a registration straight
- *   to that address, from this same document (`event.njk` mounts it). Read
- *   from the identical repository variable `deploy.yml` already forwards
- *   into the *application* build (`app/vite.config.ts`'s own island
- *   entries) -- one configured address, never a second, hand-typed origin
- *   (D-14). An unset relay is D-13's ordinary absence (the form itself
- *   refuses to send, calmly -- see `SignupForm.tsx`'s own `relayUrl`
- *   comment), so `connect-src` simply omits an address nothing will ever
+ *   (`app/src/islands/signup/SignupForm.tsx`) posts a registration to that
+ *   address from `event.njk`, and the survey island
+ *   (`app/src/islands/survey/SurveyForm.tsx`, phase 7 task 5) posts a
+ *   response to that same worker's `/survey` route from `survey.njk` --
+ *   two islands, one configured origin, never a second one. Read from the
+ *   identical repository variable `deploy.yml` already forwards into the
+ *   *application* build (`app/vite.config.ts`'s own island entries) --
+ *   one configured address, never a second, hand-typed origin (D-14). An
+ *   unset relay is D-13's ordinary absence (either form refuses to send,
+ *   calmly -- see `SignupForm.tsx`'s own `relayUrl`/`surveyRelayUrl`
+ *   comments), so `connect-src` simply omits an address nothing will ever
  *   call rather than naming one.
  */
 
