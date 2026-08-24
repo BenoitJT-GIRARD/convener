@@ -21,8 +21,9 @@ produced it.
 
 ## A second route, not a second worker
 
-`app/src/survey/SurveyForm.tsx` — the post-event survey (phase 4 spec S:6,
-task 16) — encrypts a response in the browser exactly the way
+`app/src/islands/survey/SurveyForm.tsx` (moved here from `app/src/survey/`
+by phase 7 task 5) — the post-event survey (phase 4 spec S:6, task 16) —
+encrypts a response in the browser exactly the way
 `SignupForm.tsx` encrypts a registration (`app/src/survey/encrypt.ts` is the
 sibling of `app/src/signup/encrypt.ts`, same wire format), and POSTs it to
 `/survey` on this same worker rather than to a fourth worker. That is
@@ -63,7 +64,7 @@ the root `.gitignore`'s own comment): a bare, sorted list of event ids, no
 personal data, refreshed by `deploy.yml`'s "Commit survey status" step
 every time it changes.
 
-This is the relay's own layer, not the only one: `app/src/survey/
+This is the relay's own layer, not the only one: `app/src/islands/survey/
 SurveyForm.tsx` still fetches the deployed `survey-status.json` from
 example-showcase — a static page has no token and cannot read the Contents API
 any other way — and `convener-handle-survey-response` checks the authoritative
