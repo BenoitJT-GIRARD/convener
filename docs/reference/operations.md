@@ -1773,6 +1773,15 @@ own recurring mistake: a credential that can do more than its job. A person
 reading a short checklist is the right size of solution for a change this
 infrequent.
 
+**Who runs this checklist is not a free choice.** D-28 maps the architect
+onto GitHub's own organisation-owner role, independent of Board
+membership, and a Board member onto repository `Write` and nothing more
+— the architect is the only account that actually holds the permission
+this checklist needs, so the architect is who runs it. This is also the
+bound that mapping puts on the security audit's write-access finding: not
+closed, but limited to however long it takes the architect to work
+through this checklist after someone's role changes.
+
 Three things the rule will not do:
 
 - name anyone whose record cannot say when the silence began. Every

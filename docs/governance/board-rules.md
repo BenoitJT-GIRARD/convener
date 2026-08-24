@@ -127,6 +127,12 @@ Nothing about this happens on its own. The nightly job computes the proposal and
 
 Inactive is not a departure and not a judgement. The seat is kept, the entry stays in the file with the day you joined intact, and coming back is one word changed back. A member re-seated through a nomination is reactivated in place rather than added a second time.
 
+## Being on the Board is not the same as owning the organisation
+
+A Board seat and a GitHub permission are different things, granted by different people. Being on the Board makes you eligible to vote; it never, on its own, changes what your GitHub account can do here.
+
+Two roles, on two separate GitHub scopes: the **architect** is the organisation's owner — independent of Board membership, able to add or remove anyone and change any repository setting — and a **Board member** holds repository **write**, and nothing more. Casting a ballot through the cockpit writes with your own signed-in token, so write is the floor the tool actually needs; it is not admin, and it is not a step toward it. Joining the Board does not grant it, and stepping back from the Board does not remove it — both are separate, manual acts by the architect. The full mapping, including why one person ultimately has to hold a role this wide, is [D-28](../decisions/d-28-architect-and-board-permissions.md).
+
 ## Publishing a recording: two permissions, and they are not alike
 
 **Why there is a second gate at all.** The Board has already said yes to this speaker, so it is fair to ask what is left to decide. The answer is that the session and the recording are not the same object. A session is heard once, by the people who came, and then it is gone; nobody can be sent back to it, and nothing about it can be found by someone who was not there. A recording is the opposite in every respect. It sits under the series' name for as long as the channel exists, it is what a stranger finds first, and it goes on speaking for the speaker long after everyone who organised the day has moved on. We do not carry the same responsibility for the two. An hour that went a little wrong in the room is an hour that went a little wrong; the same hour published is a standing statement that we are content for it to represent us and the person who gave it. So the second gate is not a second opinion about the speaker — that question was settled — it is the first decision anyone has taken about the recording, which is a different thing, decided once, by people who have watched it.

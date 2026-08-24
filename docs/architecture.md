@@ -161,6 +161,20 @@ in the same vault. The point is not secrecy: it is that the person who
 set this system up stopping, at any time, changes nothing about anyone
 else's ability to keep running it.
 
+G-11 says the role is transferable; it does not say what a successor is
+actually handed. D-28 is that mapping onto GitHub's own permission model:
+the architect is the organisation **owner**, a role independent of Board
+membership, and a Board member holds repository **write**, and nothing
+more. Handover is manual and deliberate — promote, verify, step down —
+and D-28 states two things plainly rather than leaving them implicit: a
+single owner is a bus-factor risk (a second, rarely-used owner is the
+ordinary mitigation, a trade-off the maintainer decides), and an owner is
+inherently a trust root, able to rewrite any secret and add themselves
+anywhere. This is also the one free control this project has left over
+the write-access exposure the 2026-08-23 security audit found: it bounds
+how long an unused write grant stays live, without ever closing what a
+write grant can do.
+
 No code change is ever needed to connect, rotate or remove an external
 service — a secret is set or unset, never a line of code. Exactly which
 account to create, which secret to set it under, and how to confirm it is
