@@ -42,6 +42,10 @@ export interface InstanceIdentity {
   short_name: string;
   /** What the series is called. */
   series: string;
+  /** The display line the poster sets in heavy capitals above the talk's
+   *  own title -- two or three words, never a sentence. `tagline` is the
+   *  sentence; see `published.py::Identity` for why both exist. */
+  strapline: string;
   tagline: string;
   /** The forum's whole address, for an `href`. */
   forum: string;

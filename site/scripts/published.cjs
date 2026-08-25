@@ -112,6 +112,7 @@ const IDENTITY_FIELDS = [
   'organisation',
   'short_name',
   'series',
+  'strapline',
   'tagline',
   'forum',
   'contact',

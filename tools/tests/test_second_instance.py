@@ -76,23 +76,29 @@ What this module cannot see, stated rather than left to be found
 -----------------------------------------------------------------
 - **Anything that is not derivable from a declaration.** A needle is a
   value `config/instance.json` or the charter in force actually holds
-  (`instance_identity.needles`). Three things this instance owns are held
-  by neither, so nothing here can look for them: the series' **strapline**
-  ("Read together", hard-typed in `visual.py`), the **time
-  zone** and the **standing start time** (`Europe/Paris` and 12:30, in
-  `visual.py`, `governance.py` and forty-odd other places), and the
-  **names of the people** who run the series -- `docs/reference/contacts.md`
-  names four of them in a paragraph the cockpit publishes to every
-  instance, and `site/src/style.css` names the designer in a comment that
-  ships inside the showcase's own stylesheet. Each is recorded in
+  (`instance_identity.needles`). Two things this instance owns are held
+  by neither, so nothing here can look for them: the **time zone** and the
+  **standing start time** (`Europe/Paris` and 12:30, in `visual.py`,
+  `governance.py` and forty-odd other places), and the **names of the
+  people** who run the series -- `docs/reference/contacts.md` names four
+  of them in a paragraph the cockpit publishes to every instance, and
+  `site/src/style.css` names the designer in a comment that ships inside
+  the showcase's own stylesheet. Each is recorded in
   `docs/superpowers/inventaire-instance.md`; none can become a needle
-  until it becomes a declared value.
-- **Bytes.** `BINARY_SUFFIXES` skips images and fonts, and three of them
+  until it becomes a declared value. The series' **strapline** was a third
+  until phase 11 task 3 gave it a key: `visual.py` reads
+  `identity.strapline` now, and `needles` carries it, so the poster's own
+  hero line is swept like everything else on it.
+- **Bytes.** `BINARY_SUFFIXES` skips images and fonts, and two of them
   are real identity surfaces:
   `app/dist/handbook/assets/zoom-background.png` ships inside the bundle
   swept here and carries the first instance's mark, while
   `visuals/references/*.png` pin what `visual.py` renders. A second
-  instance's build regenerates none of them.
+  instance's build regenerates neither. What those references pin is no
+  longer this instance's *prose*, though -- phase 11 task 3 derived the
+  wordmark and the strapline, so the identity they carry is the palette
+  and the motif, which `data/brand.json` declares and a duplicate
+  replaces.
 - **The edition prefix.** `validate.py::EDITION_RE` fixes an edition code
   as `MRG-` and one to four digits -- an abbreviation of *this* series'
   name, in the product's own validator. The example instance therefore
@@ -668,21 +674,32 @@ def test_the_sweep_sees_what_the_deferred_register_accounts_for(
 ) -> None:
     """The deferred register, proved rather than trusted.
 
-    Run the same sweep with nothing allowed. It must find something --
-    otherwise an entry is being kept for a file that no longer reaches a
-    build, and the register has become a list of apologies for nothing --
-    and everything it finds must sit in an artefact some entry claims. The
-    first half is what fails the day an entry is removed without the file
-    being fixed; the second is what fails the day a *new* leak hides
-    behind an old entry's name.
+    Run the same sweep with nothing allowed. Everything it finds must sit
+    in an artefact some entry claims -- that is what fails the day a *new*
+    leak hides behind an old entry's name.
+
+    The other half is conditional on there being a claim to prove, and
+    phase 11 is why. While some entry named a built artefact, a sweep that
+    found *nothing* meant the entry was being kept for a file that no
+    longer reaches a build -- a list of apologies for nothing -- so this
+    asserted that it found something. No entry claims one now (task 2
+    pointed the demonstration at the example instance, task 3 derived the
+    poster's wordmark and its strapline), and with nothing claimed that
+    assertion would be demanding a leak in order to prove an exemption
+    that has no subject -- the exact opposite of what it is for, and it
+    would contradict `test_a_second_instances_build_carries_nothing_of_
+    this_one` outright. It comes back by itself the moment a
+    `carried_into` does, which is the state it was written for.
     """
     wanted = instance_identity.needles(ROOT)
     offending = _leaks(second_instance, wanted, {})
-    assert offending, (
-        "nothing in the build carries this instance's identity any more, "
-        "not even what the deferred register accounts for -- the entries "
-        "with a `carried_into` should lose it, or leave the register"
-    )
+    if any(entry.carried_into for entry in instance_identity.DEFERRED):
+        assert offending, (
+            "nothing in the build carries this instance's identity any "
+            "more, not even what the deferred register accounts for -- the "
+            "entries with a `carried_into` should lose it, or leave the "
+            "register"
+        )
     unclaimed = sorted(
         {
             relative
@@ -704,6 +721,12 @@ def test_every_deferred_entry_that_claims_a_build_reaches_it(
     A `carried_into` that matches nothing is a standing exemption for a
     leak that no longer exists -- it costs nothing today and blinds the
     sweep the day somebody reintroduces exactly that phrase.
+
+    No entry claims one since phase 11 task 3, so this asserts nothing
+    today. It is kept rather than deleted for the same reason the
+    machinery it exercises is: the next entry that needs a `carried_into`
+    should meet this on its way in, not after somebody notices the
+    exemption stopped matching.
     """
     wanted = instance_identity.needles(ROOT)
     texts = dict(second_instance.readable())

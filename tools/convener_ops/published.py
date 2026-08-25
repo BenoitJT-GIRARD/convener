@@ -98,6 +98,7 @@ IDENTITY_FIELDS: Final = (
     "organisation",
     "short_name",
     "series",
+    "strapline",
     "tagline",
     "forum",
     "contact",
@@ -309,11 +310,28 @@ class Identity:
     correspondent already knows. Collapsing them into one key would have
     rewritten the wording of e-mails that go to real people, which is not
     a decision a refactor gets to take.
+
+    `strapline` and `tagline` are two on purpose for the same reason, and
+    the distinction is a typographic one rather than a shade of meaning.
+    `tagline` is a sentence, with a full stop: the showcase's masthead
+    and feed description print it, and so does the flyer's own sub-line
+    (`brand_templates.py`). `strapline` is a display line -- two or three
+    words, set in heavy capitals across the poster's own hero band above
+    the talk's title (`visual.py::_series_html`). Setting a sentence
+    there wraps to three lines at 4vw and pushes the composition into the
+    ribbon, which is the failure D-08 already names; setting a strapline
+    in the feed's `<description>` says nothing a reader can act on. This
+    instance's two are "Read together" and "A community series
+    of online behavioural-science webinars." -- neither substitutes for
+    the other, and until phase 11 the first was typed into `visual.py`
+    with no key at all, which is why a second instance's poster carried
+    this one's motto (`docs/superpowers/inventaire-instance.md`).
     """
 
     organisation: str
     short_name: str
     series: str
+    strapline: str
     tagline: str
     forum: str
     contact: str

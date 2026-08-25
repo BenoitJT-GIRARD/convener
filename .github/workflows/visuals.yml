@@ -35,6 +35,17 @@ name: Visuals
 #   to do with this task, because a path filter has no finer grain than a
 #   file, and the alternative is silently not re-checking the one function
 #   in it that this task depends on.
+# - `config/instance.json` -- this instance's own declaration. Phase 11
+#   task 3 made the composition read it: the wordmark band is
+#   `identity.forum_host`, the hero band is `identity.strapline`, and two
+#   of the three "what to expect" rows name the forum. Editing any of
+#   those changes every rendered pixel of the top third of the poster, so
+#   leaving this out of the filter would let exactly the change this job
+#   exists to catch ship without the job running at all.
+# - `tools/convener_ops/published.py` -- the reader that turns that file into
+#   the values above, `forum_host` included (a derivation, not a declared
+#   key). Same argument as `brand.py` one line down: the file and the
+#   reader of it are two ways for the same render to change.
 # - `data/brand.json` -- this instance's own charter, which `visual.py`'s
 #   `_load_colours` and `ribbon.py`'s `_load_motif` both reach through
 #   `tools/convener_ops/brand.py`.
@@ -108,6 +119,8 @@ on:
       - 'tools/convener_ops/formats.py'
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
+      - 'config/instance.json'
+      - 'tools/convener_ops/published.py'
       - 'data/brand.json'
       - 'brand/convener/brand.json'
       - 'tools/convener_ops/brand.py'
@@ -128,6 +141,8 @@ on:
       - 'tools/convener_ops/formats.py'
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
+      - 'config/instance.json'
+      - 'tools/convener_ops/published.py'
       - 'data/brand.json'
       - 'brand/convener/brand.json'
       - 'tools/convener_ops/brand.py'
