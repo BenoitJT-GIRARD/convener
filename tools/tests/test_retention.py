@@ -38,7 +38,11 @@ import yaml
 from conftest import speaker
 
 from convener_ops import certificate, eventkeys
-from convener_ops.certificate import CertificateEntry, register_from_data, register_to_data
+from convener_ops.certificate import (
+    CertificateEntry,
+    register_from_data,
+    register_to_data,
+)
 from convener_ops.cli import erase_registration, record_destructions, retention_sweep
 from convener_ops.eventkeys import DecryptionError, decrypt, encrypt, generate
 from convener_ops.paths import repo_root

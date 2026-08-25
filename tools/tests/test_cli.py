@@ -2160,7 +2160,9 @@ def test_match_attendance_refuses_rather_than_leak_if_a_record_id_cannot_be_comp
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
     monkeypatch.delenv("CONVENER_MEETING_API_TOKEN", raising=False)
     monkeypatch.setenv("CONVENER_MATCHING_SALT", "s3cr3t-salt-value")
-    monkeypatch.setattr("convener_ops.cli.matching_code", lambda event_id, email, salt: None)
+    monkeypatch.setattr(
+        "convener_ops.cli.matching_code", lambda event_id, email, salt: None
+    )
 
     with pytest.raises(RuntimeError, match="matching_code returned None"):
         match_attendance()
@@ -2939,7 +2941,9 @@ def test_invite_survey_retries_a_failed_delivery_once_before_giving_up(
     monkeypatch.delenv("CONVENER_MATCHING_SALT", raising=False)
     _FlakySurveySmtpClient.attempts = 0
     _FlakySurveySmtpClient.sent = []
-    monkeypatch.setattr("convener_ops.confirmation.smtplib.SMTP", _FlakySurveySmtpClient)
+    monkeypatch.setattr(
+        "convener_ops.confirmation.smtplib.SMTP", _FlakySurveySmtpClient
+    )
 
     assert invite_survey() == 0
     assert "1 sent, 0 not sent" in capsys.readouterr().out

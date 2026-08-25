@@ -1,7 +1,7 @@
 [project]
 name = "convener-ops"
 version = "0.1.0"
-description = "Operational tooling for the TEC Monthly Reading Group"
+description = "Operational tooling for a seminar series run from its own repository"
 requires-python = ">=3.12"
 dependencies = [
   "pyyaml>=6.0.2",

@@ -916,7 +916,9 @@ def test_urllib_transport_sends_bearer_auth_and_accept_headers(
         captured["accept"] = request.get_header("Accept")
         return _FakeHTTPResponse(b'{"ok": true}')
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     result = _UrllibTransport().get_json("/conferences/1/calls", "tok123")
 
@@ -938,7 +940,9 @@ def test_urllib_transport_delete_uses_the_delete_method(
         captured["authorization"] = request.get_header("Authorization")
         return _FakeHTTPResponse(b"")
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     _UrllibTransport().delete("/conferences/1", "tok123")
 
@@ -954,7 +958,9 @@ def test_urllib_transport_maps_an_http_error_to_fcc_request_error(
             request.full_url, 401, "Unauthorized", Message(), None
         )
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     with pytest.raises(FCCRequestError, match="401"):
         _UrllibTransport().get_json("/conferences/1/calls", "tok")
@@ -966,7 +972,9 @@ def test_urllib_transport_maps_a_url_error_to_fcc_request_error(
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         raise urllib.error.URLError("connection refused")
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     with pytest.raises(FCCRequestError, match="failed"):
         _UrllibTransport().get_json("/conferences/1/calls", "tok")
@@ -978,7 +986,9 @@ def test_urllib_transport_maps_invalid_json_to_fcc_request_error(
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         return _FakeHTTPResponse(b"not json")
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     with pytest.raises(FCCRequestError, match="valid JSON"):
         _UrllibTransport().get_json("/conferences/1/calls", "tok")
@@ -1011,7 +1021,9 @@ def test_urllib_transport_head_sends_a_head_request_with_no_auth_header(
             },
         )
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
 
@@ -1035,7 +1047,9 @@ def test_urllib_transport_head_reads_no_body(monkeypatch: pytest.MonkeyPatch) ->
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         return _ExplodingBodyResponse(b"", status=200, headers={})
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
 
@@ -1048,7 +1062,9 @@ def test_urllib_transport_head_omits_a_header_the_response_never_sent(
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         return _FakeHTTPResponse(b"", status=200, headers={"Content-Type": "video/mp4"})
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     result = _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4")
 
@@ -1067,7 +1083,9 @@ def test_urllib_transport_head_is_none_on_a_404(
             request.full_url, 404, "Not Found", Message(), None
         )
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
 
@@ -1082,7 +1100,9 @@ def test_urllib_transport_head_is_none_on_a_non_2xx_status(
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         return _FakeHTTPResponse(b"", status=500, headers={})
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
 
@@ -1093,7 +1113,9 @@ def test_urllib_transport_head_is_none_on_a_network_error(
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         raise urllib.error.URLError("connection refused")
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
 
@@ -1110,7 +1132,9 @@ def test_urllib_transport_head_is_none_on_a_bad_status_line(
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         raise http.client.BadStatusLine("garbage status line")
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
 
@@ -1125,7 +1149,9 @@ def test_urllib_transport_head_is_none_on_a_malformed_url(
     def fake_request(*args: Any, **kwargs: Any) -> Any:
         raise ValueError("malformed URL")
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.Request", fake_request)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.Request", fake_request
+    )
 
     assert _UrllibTransport().head("https://cdn.example.org/rec/1.video.mp4") is None
 
@@ -1136,7 +1162,9 @@ def test_urllib_transport_head_is_none_and_never_opens_a_non_https_url(
     def fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
         raise AssertionError("a non-https URL must never be opened")
 
-    monkeypatch.setattr("convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        "convener_ops.platform_fcc.urllib.request.urlopen", fake_urlopen
+    )
 
     assert _UrllibTransport().head("http://cdn.example.org/rec/1.video.mp4") is None
 

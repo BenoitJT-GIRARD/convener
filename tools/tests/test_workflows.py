@@ -152,7 +152,8 @@ def test_deploy_workflow_survey_status_retry_re_derives_rather_than_rebases() ->
     assert 'git fetch origin "$GITHUB_REF_NAME"' in script
     assert 'git reset --hard "origin/$GITHUB_REF_NAME"' in script
     assert (
-        "uv run convener-survey-status-public-data" in script.split("for attempt", 1)[-1]
+        "uv run convener-survey-status-public-data"
+        in script.split("for attempt", 1)[-1]
     ), (
         "the retry loop must re-run the projection command on every "
         "attempt, not only build it once before the loop starts"
@@ -3045,7 +3046,9 @@ def test_invite_survey_workflow_records_only_when_something_was_sent() -> None:
     loaded = _invite_survey_workflow()
     steps = loaded["jobs"]["invite"]["steps"]
     record_step = next(
-        step for step in steps if "convener-record-survey-invitation" in step.get("run", "")
+        step
+        for step in steps
+        if "convener-record-survey-invitation" in step.get("run", "")
     )
     assert record_step.get("if") == "steps.invite.outputs.record == 'true'"
 

@@ -65,7 +65,12 @@ from convener_ops.certificate import (
 )
 from convener_ops.dispatch_alert import alert_message
 from convener_ops.governance import PARIS, paris_today
-from convener_ops.integrations import ABSENT, Integration, load_declaration, resolve_states
+from convener_ops.integrations import (
+    ABSENT,
+    Integration,
+    load_declaration,
+    resolve_states,
+)
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.paths import repo_root
 from convener_ops.platform import (
@@ -128,7 +133,8 @@ CONFIG_HEADER = "# Repo-wide config for the Convener app\n"
 #: survives task 15's retention sweep on registrations.enc, in the same
 #: directory, untouched.
 CERTIFICATES_HEADER = (
-    "# Certificate register -- no name, no address; see tools/convener_ops/certificate.py\n"
+    "# Certificate register -- no name, no address; "
+    "see tools/convener_ops/certificate.py\n"
 )
 #: The destruction registry (task 15) holds only an event id and a date --
 #: see tools/convener_ops/eventkeys.py's module docstring, "the destruction
@@ -3763,7 +3769,9 @@ def issue_certificates() -> int:
     # so it should deliver nothing (see that function's own docstring).
     _write_github_output(f"issued_ids={','.join(freshly_issued_ids)}\n")
 
-    refused_note = f", {refused_count} refused (revoked, use convener-reissue-certificate)"
+    refused_note = (
+        f", {refused_count} refused (revoked, use convener-reissue-certificate)"
+    )
     print(
         f"certificates for event {event_id}: {issued_count} issued, "
         f"{already_count} already on record"

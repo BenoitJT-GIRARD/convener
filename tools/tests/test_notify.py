@@ -1398,7 +1398,9 @@ def test_dry_run_prints_the_digest_and_writes_nothing(
 ) -> None:
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
-    monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest", "--dry-run"])
+    monkeypatch.setattr(
+        "convener_ops.cli.sys.argv", ["convener-notify-digest", "--dry-run"]
+    )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
 
@@ -1499,7 +1501,9 @@ def test_immediate_writes_a_body_for_a_lead_from_the_form(
     )
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-immediate"])
-    monkeypatch.setattr("convener_ops.cli._git_show", lambda _root, _revision: ("[]\n", ""))
+    monkeypatch.setattr(
+        "convener_ops.cli._git_show", lambda _root, _revision: ("[]\n", "")
+    )
     monkeypatch.setenv(THREAD_ENV, "42")
     monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
 
