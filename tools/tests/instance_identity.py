@@ -144,7 +144,15 @@ def needles(root: Path) -> dict[str, str]:
     Every field of the identity is here by enumeration, not by hand, and
     the reason is below in the code. Nothing about the *address* half is
     enumerable the same way -- `Published` derives four different shapes
-    from one string -- so those four stay written out.
+    from one string -- so those four stay written out, and so are the two
+    the edition prefix reaches an artefact as.
+
+    **Nothing written out here can go missing all the same.**
+    `test_second_instance.py::test_every_value_the_declaration_holds_is_
+    swept` reads the declaration itself and fails on any value no needle
+    covers, which is what turns the hand-written half of this dictionary
+    from a list somebody has to remember to extend into one the suite
+    extends for them.
 
     Deliberately absent, so that every needle below can be *proved* to
     match something in a real build rather than passing green by matching
@@ -166,11 +174,26 @@ def needles(root: Path) -> dict[str, str]:
     """
     address = published.load(root)
     identity = published.load_identity(root)
+    editions = published.load_edition_prefix(root)
     found = {
         "published_url": address.url,
         "origin": address.origin,
         "host": address.host,
         "path_prefix": address.path_prefix,
+        # The edition prefix, as the two forms that actually reach an
+        # artefact: `MRG-` in a code the showcase prints and the poster
+        # sets, `mrg-` in the event page's own address, in
+        # `keys/events/<id>.pub` and in a certificate's verification
+        # link (D-19). The declared value alone -- two letters, no
+        # separator -- is *not* a needle, and that is a decision rather
+        # than an omission: `contains` would match it on word boundaries,
+        # and a two-letter run bounded by punctuation is exactly what a
+        # minifier emits for an identifier. A needle that can fire on a
+        # coincidence is a needle somebody eventually widens an exemption
+        # for. Both forms below carry the separator the product itself
+        # adds, so neither can be an accident.
+        "edition_code_prefix": editions.code_prefix,
+        "event_id_prefix": editions.event_prefix,
     }
     # Every declared identity field, enumerated from the declaration's own
     # list rather than written out again here. Phase 11 task 3 is why: it

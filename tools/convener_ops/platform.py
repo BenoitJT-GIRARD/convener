@@ -45,10 +45,10 @@ was reading a file at all, not which file it was reading. So:
   codebase defines that mapping, and it cannot be implemented without one:
   `edition_code` is the only candidate consistent with existing convention
   (`app/src/state/consent.ts` already treats it as the event's public id,
-  `tools/convener_ops/validate.py::EDITION_RE` fixes its shape as `MRG-` followed
-  by digits), and it is what task 1's own tests already use (`mrg-042` for
-  `MRG-042`). `find_speaker` below is the one place this rule is written
-  down.
+  and `tools/convener_ops/validate.py` fixes its shape as the prefix this
+  instance declares followed by digits), and it is what task 1's own tests
+  already use (`mrg-042` for `MRG-042`). `find_speaker` below is the one
+  place this rule is written down.
 * **`instructions` lives in `data/config.yml`, not on the speaker record
   (R-6).** The cost of the alternative is real -- a `Speaker` field must
   also join the exhaustive field set, be classified in `consent.ts`,

@@ -20,6 +20,15 @@
 // source of the file that reads the declaration would be one indirection
 // further from the answer for no gain.
 //
+// There is deliberately no reader here for the declaration's third key,
+// `edition_prefix` (phase 11, task 4). This build never composes an
+// edition code: it prints the ones `src/_data/events.json` hands it, and
+// lower-cases them for the event page's own permalink (D-19). A reader
+// nothing called would be a third statement of a rule with two
+// consumers -- `tools/convener_ops/published.py` for the validator and the
+// jobs, `app/scripts/published.mjs` for the cockpit's own build, bound to
+// each other by `tools/tests/fixtures/edition-prefix.json`.
+//
 // Throws rather than defaulting: a build that cannot read this file must
 // stop. Every internal link the showcase emits is resolved against the
 // prefix below, and a missing one resolves to the *domain* root -- one

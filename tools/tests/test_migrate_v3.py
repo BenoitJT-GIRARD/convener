@@ -17,6 +17,7 @@ from typing import Any
 
 import pytest
 import yaml
+from conftest import EDITIONS
 from migrate_v3 import (
     _ascii,
     ballot_voters,
@@ -309,9 +310,14 @@ def test_the_migrated_data_passes_the_validator() -> None:
     )
     config = migrate_config(v2_config(), ballot_voters(speakers))
     logins = {m["login"] for m in config["board"]}
-    assert sorted(validate_speakers(speakers, logins)) == expected_v4_gap
     assert (
-        sorted(validate_speakers(migrate_speakers_v4(speakers), logins))
+        sorted(validate_speakers(speakers, logins, editions=EDITIONS))
+        == expected_v4_gap
+    )
+    assert (
+        sorted(
+            validate_speakers(migrate_speakers_v4(speakers), logins, editions=EDITIONS)
+        )
         == expected_v5_gap
     )
     # The config has gaps of the same kind, and they are named the same way.
@@ -330,7 +336,11 @@ def test_the_migrated_data_passes_the_validator() -> None:
         "config.yml: missing keys ['channels', 'eligibility_share', 'instructions']"
     ]
     assert (
-        validate_speakers(migrate_speakers_v5(migrate_speakers_v4(speakers)), logins)
+        validate_speakers(
+            migrate_speakers_v5(migrate_speakers_v4(speakers)),
+            logins,
+            editions=EDITIONS,
+        )
         == []
     )
 

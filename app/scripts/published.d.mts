@@ -14,3 +14,14 @@ export declare function published(): {
  *  browser side, and a second declaration of it here would be the copy the
  *  whole design refuses. */
 export declare function identity(): Record<string, string>;
+
+/** The prefix this instance numbers its editions under -- `config/
+ *  instance.json`'s own `edition_prefix`. A bare string rather than a
+ *  shape: it is one value, not a vocabulary. */
+export declare function editionPrefix(): string;
+
+/** Whether a value is a prefix this product will number editions under.
+ *  Exported so `tools/tests/fixtures/edition-prefix.json` can be answered
+ *  by both readers rather than by a comment claiming they agree; `unknown`
+ *  because refusing a non-string is part of what it decides. */
+export declare function isEditionPrefix(value: unknown): boolean;

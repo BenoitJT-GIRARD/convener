@@ -894,3 +894,163 @@ def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> 
         "makes would go to nobody"
     )
     assert repository, "the declared repository has no name half"
+
+
+# ------------------------------------------------------------------ #
+# 9 -- the prefix this instance numbers its editions under
+# ------------------------------------------------------------------ #
+
+
+def test_this_repository_declares_the_prefix_its_editions_are_numbered_under() -> None:
+    """Phase 11, task 4. `validate.py` used to fix an edition code as
+    `^MRG-\\d{1,4}$` -- the initials of *this* series, in the product's own
+    validator -- and the one sweep that compares two instances could never
+    catch it, because both instances were forced to write it.
+
+    The two derived forms are asserted beside the value because they are
+    what actually reaches a reader: the code the showcase prints and the
+    poster sets, and the event id (D-19) that is in the address of every
+    event page, in `keys/events/<id>.pub` and in a certificate's own
+    verification link."""
+    editions = published.load_edition_prefix()
+    assert editions.code_prefix == f"{editions.value}-"
+    assert editions.event_prefix == editions.code_prefix.lower()
+    assert editions.describes(f"{editions.code_prefix}05")
+    assert not editions.describes(f"{editions.event_prefix}05")
+    assert not editions.describes(f"{editions.code_prefix}00000")
+
+
+def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
+    """The freeze, seen from the repository rather than from the
+    validator: every edition this instance has assigned is numbered under
+    the prefix it declares.
+
+    That is what makes changing the declaration impossible in practice
+    rather than merely discouraged -- an edition code is in a published
+    address, on an issued certificate and in a key filename, so the day
+    the two disagree the file is wrong, not the editions."""
+    editions = published.load_edition_prefix()
+    speakers = yaml.safe_load(
+        (ROOT / "data" / "speakers.yml").read_text(encoding="utf-8")
+    )
+    assigned = [
+        entry["edition_code"]
+        for entry in speakers
+        if isinstance(entry, dict) and entry.get("edition_code")
+    ]
+    assert assigned, "this instance has assigned no edition at all"
+    assert [code for code in assigned if not editions.describes(code)] == []
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, "must be the prefix this instance numbers"),
+        ("", "must be the prefix this instance numbers"),
+        (7, "must be the prefix this instance numbers"),
+        (" MRG", "surrounding whitespace"),
+        ("MRG ", "surrounding whitespace"),
+        ("vw", "is not upper case"),
+        ("Vw", "is not upper case"),
+        ("1W", "does not start with an ASCII letter"),
+        ("TOOLONGABBREVIATION", "longer than 8 characters"),
+        ("MRG-", "other than ASCII capitals and digits"),
+        ("V.W", "other than ASCII capitals and digits"),
+        ("V_W", "other than ASCII capitals and digits"),
+        ("V W", "other than ASCII capitals and digits"),
+        ("ConvenerÉ", "other than ASCII capitals and digits"),
+    ],
+)
+def test_a_prefix_that_reads_plausibly_and_is_wrong_is_refused_at_declaration(
+    value: Any, expected: str
+) -> None:
+    """Each of these is a shape somebody would actually type, and each
+    fails somewhere nobody would look.
+
+    A lower-case prefix breaks the one identity D-19 rests on -- an event
+    id *is* the edition code lower-cased -- so `Vw-1` and `MRG-1` would be
+    two codes with one address, one `keys/events/mrg-1.pub` and one
+    `CONVENER_EVENT_KEY_MRG_1`. A prefix carrying its own separator collides two
+    editions on one repository secret, because `eventkeys.secret_name`
+    folds `.` and `-` to `_` and says itself that the fold is lossy. A
+    non-ASCII capital makes `str.lower()` a place where a URL path segment
+    quietly acquires a percent-encoding. None of those is visible in the
+    string, which is why the refusal is here and not where the value
+    lands."""
+    with pytest.raises(ValueError, match=expected):
+        published.edition_prefix_from_data(
+            {"v": published.DECLARATION_VERSION, published.EDITION_PREFIX_KEY: value}
+        )
+
+
+@pytest.mark.parametrize("value", ["MRG", "A", "MRG", "ABCDEFGH", "S2", "V0W9"])
+def test_a_prefix_a_duplicate_could_reasonably_want_is_accepted(value: str) -> None:
+    """The other half of the rule above. The refusals are narrow on
+    purpose: what is refused is a shape that breaks a URL, a filename or a
+    secret name, never a prefix somebody's series happens to want."""
+    editions = published.edition_prefix_from_data(
+        {"v": published.DECLARATION_VERSION, published.EDITION_PREFIX_KEY: value}
+    )
+    assert editions.value == value
+    assert editions.describes(f"{value}-1")
+
+
+def test_a_declaration_of_the_wrong_version_stops_before_the_prefix() -> None:
+    with pytest.raises(ValueError, match="not a supported format version"):
+        published.edition_prefix_from_data({"v": 99, "edition_prefix": "MRG"})
+
+
+def test_every_bundle_the_application_builds_carries_the_declared_prefix() -> None:
+    """All four configurations, and all four `define`s -- the same claim
+    `test_every_bundle_the_application_builds_carries_the_declared_
+    identity` makes, for the same reason.
+
+    `src/state/agenda.ts::nextEditionCode` composes the next edition code
+    inside a volunteer's browser, where no file can be read, and
+    `src/instance.ts::editionPrefix` throws rather than defaulting. A
+    configuration carrying the identity but not the prefix would build a
+    bundle that throws the moment somebody locks a date -- in exactly one
+    of the four, which is the shape that passes a test suite and ships
+    broken."""
+    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    editions = published.load_edition_prefix()
+    assert answer["editionPrefix"] == editions.value
+    assert set(answer["editionPrefixDefines"]) == {
+        "production",
+        "island-signup",
+        "island-verify",
+        "island-survey",
+    }
+    for mode, defined in answer["editionPrefixDefines"].items():
+        assert defined is not None, f"{mode} builds without the prefix define"
+        assert json.loads(defined) == editions.value, mode
+
+
+def test_this_side_of_the_prefix_boundary_reads_the_shared_cases() -> None:
+    """D-14's own discipline: one declaration, one reader per language,
+    and a worked example binding them rather than a comment claiming they
+    agree. `app/tests/edition-prefix.test.ts` reads this same fixture
+    against `app/scripts/published.mjs::isEditionPrefix`.
+
+    The showcase has no reader of this and needs none -- it prints the
+    codes `site/src/_data/events.json` hands it and never composes one --
+    so this boundary has two sides, not three."""
+    fixture = json.loads(
+        (ROOT / "tools" / "tests" / "fixtures" / "edition-prefix.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for case in fixture["cases"]:
+        value, accepted = case["value"], case["accepted"]
+        assert (published.EDITION_PREFIX_RE.match(value) is not None) is accepted, value
+        declaration = {
+            "v": published.DECLARATION_VERSION,
+            published.EDITION_PREFIX_KEY: value,
+        }
+        if accepted:
+            assert published.edition_prefix_from_data(declaration).value == value
+        else:
+            with pytest.raises(ValueError, match=published.EDITION_PREFIX_KEY):
+                published.edition_prefix_from_data(declaration)
+    assert any(case["accepted"] for case in fixture["cases"])
+    assert any(not case["accepted"] for case in fixture["cases"])

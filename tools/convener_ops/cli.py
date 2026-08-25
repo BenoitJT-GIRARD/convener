@@ -28,6 +28,7 @@ from convener_ops import (
     delivery,
     eventkeys,
     formats,
+    published,
     queue_watch,
     registration_routing,
     retention_liveness,
@@ -282,6 +283,22 @@ def validate() -> int:
     cfg, cfg_errors = _load(root / "data" / "config.yml")
     errors += cfg_errors
 
+    # The prefix this instance numbers its editions under (phase 11, task
+    # 4), read before anything is checked against it. Reported as one more
+    # error rather than raised: `convener-validate` is the command a duplicate
+    # runs first and its whole contract is to print what is wrong with
+    # this repository and exit 1, so answering the one defect it exists to
+    # name with a traceback -- and hiding every other error behind it --
+    # would be the wrong shape twice over.
+    editions: published.EditionPrefix | None = None
+    try:
+        editions = published.load_edition_prefix(root)
+    except ValueError as exc:
+        # Already names the file and the key it is about.
+        errors.append(str(exc))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"{published.INSTANCE_PATH.as_posix()}: {exc}")
+
     board_logins: set[str] = set()
     if isinstance(cfg, dict):
         board = cfg.get("board")
@@ -292,8 +309,8 @@ def validate() -> int:
                 if isinstance(m, dict) and isinstance(m.get("login"), str)
             }
 
-    if speakers is not None:
-        errors += validate_speakers(speakers, board_logins)
+    if speakers is not None and editions is not None:
+        errors += validate_speakers(speakers, board_logins, editions=editions)
     if cfg is not None:
         errors += validate_config(cfg)
 
@@ -5583,9 +5600,9 @@ def render_visuals() -> int:
     here, against every real scheduled edition's own `event_id`, before
     anything is written -- `formats.py`'s own docstring proves the
     function correct but never calls it against real data, and
-    `validate.py::EDITION_RE` bounds `edition_code`'s length but only in
-    the separate `convener-validate` command, which nothing requires this one
-    to run first. An edition whose id is long enough to bump
+    `validate.validate_speakers` bounds `edition_code`'s length but only
+    in the separate `convener-validate` command, which nothing requires this
+    one to run first. An edition whose id is long enough to bump
     `registration_code_modules` past the point where a printed A4 poster's
     QR module drops below `formats.SCANNABLE_QR_MODULE_MM` fails loudly
     (D-25) instead of shipping a poster nobody can scan.

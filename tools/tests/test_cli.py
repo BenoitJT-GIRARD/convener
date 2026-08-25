@@ -50,6 +50,7 @@ from convener_ops.cli import (
     validate,
 )
 from convener_ops.governance import paris_today
+from convener_ops.paths import repo_root
 from convener_ops.platform import (
     AttendanceRow,
     EventNotFoundError,
@@ -99,11 +100,22 @@ def test_load_valid_yaml_returns_data_and_no_errors(tmp_path: Path) -> None:
     assert errors == []
 
 
+#: The real declaration, copied into every scratch root below rather than
+#: re-typed. `convener-validate` reads `config/instance.json` for the prefix its
+#: editions are numbered under (phase 11, task 4), and a second hand-typed
+#: declaration here would be a second answer to what this instance is --
+#: the same choice `test_cli_render_visuals.py::_fake_root` already makes.
+_REAL_INSTANCE = (repo_root() / "config" / "instance.json").read_text(encoding="utf-8")
+
+
 def _write_data(tmp_path: Path, speakers: object, cfg: object) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     (data_dir / "speakers.yml").write_text(yaml.safe_dump(speakers), encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    config_dir = tmp_path / "config"
+    config_dir.mkdir(exist_ok=True)
+    (config_dir / "instance.json").write_text(_REAL_INSTANCE, encoding="utf-8")
 
 
 def test_validate_reports_ok_and_returns_0(

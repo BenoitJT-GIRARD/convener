@@ -83,6 +83,52 @@ export function repositoryUrl(): string {
   return `https://github.com/${instanceIdentity().repository}`;
 }
 
+let cachedEditionPrefix: string | null = null;
+
+/**
+ * The prefix this instance numbers its editions under -- `MRG`, so `MRG-05`
+ * and, lower-cased, the event id `/events/mrg-05/` (D-19).
+ *
+ * Phase 11, task 4. `state/agenda.ts::nextEditionCode` used to compose
+ * `MRG-${n}` from a literal, and `validate.py::EDITION_RE` fixed the same
+ * two letters on the other side of the language boundary -- the initials
+ * of the series that happens to run this repository, in the product's own
+ * code, so a duplicate's reading group numbered its sessions `MRG-1`.
+ *
+ * A separate define from the identity rather than a tenth field of it:
+ * everything in `InstanceIdentity` is prose somebody outside this project
+ * reads, checked the one way prose can be checked, while this is a token
+ * with a grammar (`scripts/published.mjs::editionPrefix`, mirroring
+ * `published.py::EDITION_PREFIX_RE`) that is refused at declaration.
+ *
+ * Throws rather than defaulting, for the reason `instanceIdentity` above
+ * does: the alternative to throwing is a cockpit quietly suggesting
+ * `undefined-6` as the next edition of a series, and an edition code is
+ * the one value in this repository that can never be corrected after the
+ * fact -- it is in a published address, on an issued certificate and in a
+ * key filename.
+ */
+export function editionPrefix(): string {
+  if (cachedEditionPrefix) return cachedEditionPrefix;
+  const raw = import.meta.env.VITE_INSTANCE_EDITION_PREFIX as string | undefined;
+  if (!raw) {
+    throw new Error(
+      'VITE_INSTANCE_EDITION_PREFIX is unset: this bundle was built without ' +
+        "vite.config.ts's own define, so it cannot say what this series " +
+        'numbers its editions (see config/instance.json)',
+    );
+  }
+  cachedEditionPrefix = raw;
+  return cachedEditionPrefix;
+}
+
+/** `MRG-` -- what an edition code starts with, separator included. The
+ *  hyphen is the product's, not the declaration's: see
+ *  `published.py::EditionPrefix.code_prefix`. */
+export function editionCodePrefix(): string {
+  return `${editionPrefix()}-`;
+}
+
 /** The organisation half of `repository` -- the GitHub organisation whose
  *  team membership decides who signs in as a Board member
  *  (`auth/role.ts`). One fact, not two: the repository the cockpit writes

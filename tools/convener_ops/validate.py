@@ -2,6 +2,15 @@
 
 Every function takes already-parsed data and returns a list of human-readable
 errors. Nothing here touches the filesystem — that belongs to cli.py.
+
+That rule is why `validate_speakers` is *handed* the edition prefix rather
+than reading it. Until phase 11 task 4 this module fixed an edition code as
+`^MRG-\\d{1,4}$` — the initials of the series that happens to run this
+repository, written into the product's own validator, where no sweep could
+ever find it: both instances were forced to write it, so the needle was
+present on both sides. The shape now comes from
+`published.EditionPrefix`, parsed from the one declaration by whoever calls
+this (`cli.py`, in the end).
 """
 
 from __future__ import annotations
@@ -11,6 +20,7 @@ from collections.abc import Collection
 from typing import Any
 
 from .governance import MINIMUM_ELIGIBLE
+from .published import EditionPrefix
 
 STATUSES = frozenset(
     {
@@ -174,21 +184,13 @@ NEEDS_SCHEDULE = frozenset({"scheduled", "delivered", "archived"})
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
-#: One to four digits -- "MRG-01" today, and "MRG-9999" is centuries of
-#: headroom at this project's own cadence (a handful of editions a year).
-#: Bounded (not just `\d+`) because an unbounded id can grow
-#: `registration_code_modules`'s own QR version past the point where
-#: `formats.qr_module_size_mm` drops below `formats.SCANNABLE_QR_MODULE_MM`
-#: -- verified directly: even nine digits (`mrg-999999999`,
-#: `test_formats.py`'s own stress case) still clears the floor, so four is
-#: a data-contract choice with room to spare, not a value picked to just
-#: barely pass. `cli.py::render_visuals` is the check that actually runs
-#: this arithmetic against a real edition before rendering; this bound is
-#: the second, cheaper layer that keeps a pathological id out of
-#: `data/speakers.yml` in the first place. Checked before narrowing: no
-#: other module or language parses this pattern (`grep`-confirmed) -- only
-#: this file's own `EDITION_RE.match` reads it.
-EDITION_RE = re.compile(r"^MRG-\d{1,4}$")
+#: An edition code that is well formed apart from the prefix it carries:
+#: something, a hyphen, and a run of digits. Not what a code *is* -- that
+#: is `EditionPrefix.pattern`, built from the one prefix this instance
+#: declares -- but what a code somebody meant as one looks like, so that a
+#: record numbered under another instance's prefix can be reported as the
+#: rename it is rather than as eight unrelated shape errors.
+_FOREIGN_EDITION_RE = re.compile(r"^(?P<prefix>[^\W_]+)-\d{1,4}$")
 LOGIN_RE = re.compile(r"^[a-zA-Z0-9-]+$")
 
 #: "no such setting", which is a different fact from "the setting is None".
@@ -433,14 +435,28 @@ def _validate_ballots(
 
 
 def validate_speakers(
-    speakers: Any, board_logins: Collection[str] = frozenset()
+    speakers: Any,
+    board_logins: Collection[str] = frozenset(),
+    *,
+    editions: EditionPrefix,
 ) -> list[str]:
+    """Every error `data/speakers.yml` holds, as plain sentences.
+
+    `editions` is the prefix `config/instance.json` declares and has no
+    default, deliberately. A default would be this instance's own value
+    living on in the product's validator under a different name -- which
+    is the defect phase 11 task 4 removed -- and it would be invisible:
+    every caller that forgot to pass one would go on numbering a reading
+    group's sessions `MRG-1` and pass. Keyword-only so that the two
+    collections above cannot be handed to it by position.
+    """
     if not isinstance(speakers, list):
         return ["speakers.yml: top-level must be a list"]
 
     errors: list[str] = []
     seen_ids: set[str] = set()
     seen_editions: set[str] = set()
+    renamed: dict[str, int] = {}
 
     for index, entry in enumerate(speakers):
         where = f"speakers[{index}]"
@@ -479,10 +495,15 @@ def validate_speakers(
 
         edition = entry.get("edition_code")
         if edition:
-            if not EDITION_RE.match(str(edition)):
+            if not editions.describes(str(edition)):
+                foreign = _FOREIGN_EDITION_RE.match(str(edition))
+                if foreign:
+                    renamed[foreign.group("prefix")] = (
+                        renamed.get(foreign.group("prefix"), 0) + 1
+                    )
                 errors.append(
-                    f"{where}: edition_code must match MRG-N (1-4 digits), "
-                    f"got {edition!r}"
+                    f"{where}: edition_code must match "
+                    f"{editions.code_prefix}N (1-4 digits), got {edition!r}"
                 )
             elif edition in seen_editions:
                 errors.append(f"{where}: duplicate edition_code {edition!r}")
@@ -611,6 +632,23 @@ def validate_speakers(
                 )
 
         errors.extend(_validate_ballots(entry, where, board_logins))
+
+    # The freeze, said once and in the right words. Every renumbered
+    # record above has already been reported as a shape error, which is
+    # true and is not the point: a whole file numbered under one other
+    # prefix is not eight typing mistakes, it is somebody having changed
+    # `config/instance.json` after this instance had already published
+    # editions -- and the reason that is refused is not the shape.
+    for prefix, count in sorted(renamed.items()):
+        errors.append(
+            f"speakers.yml: {count} edition_code(s) are numbered {prefix}- "
+            f"while config/instance.json declares edition_prefix "
+            f"{editions.value!r}. An edition code is in a published address "
+            f"(/events/{prefix.lower()}-1/), on every certificate issued for "
+            f"that event and in keys/events/{prefix.lower()}-1.pub, so an "
+            "edition already assigned is never renumbered: put the "
+            "declaration back, or leave the editions alone"
+        )
 
     return errors
 

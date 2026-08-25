@@ -372,7 +372,7 @@ def test_a_print_qr_that_would_be_unscannable_fails_the_whole_command(
     module size below `formats.SCANNABLE_QR_MODULE_MM`; this must fail the
     whole command (D-25) rather than ship an unscannable poster.
 
-    Deliberately bypasses `validate.py::EDITION_RE`'s own four-digit bound
+    Deliberately bypasses `validate_speakers`'s own four-digit bound
     (this fixture never calls `convener-validate`) to prove the render-time
     guard is load-bearing on its own, not merely a backstop for a check
     some other, unrelated command already ran."""

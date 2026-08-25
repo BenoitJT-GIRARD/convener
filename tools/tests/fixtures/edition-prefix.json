@@ -1,0 +1,21 @@
+{
+  "_comment": "The D-14 boundary between tools/convener_ops/published.py (Python, published.EDITION_PREFIX_RE) and app/scripts/published.mjs (Node, isEditionPrefix) -- the two readers of config/instance.json's own `edition_prefix`. The showcase has no reader of this key and needs none: it prints the edition codes site/src/_data/events.json hands it and never composes one, so this boundary has two sides rather than three. Both sides read the cases below and must return the same verdict for each, because a prefix accepted by the build and refused by the validator (or the other way round) is a repository that can be built and cannot be validated. Each rejected case is a shape somebody would actually type, and each of them fails somewhere nobody would look: a lower-case prefix breaks the one identity D-19 rests on -- an event id IS the edition code lower-cased -- so `Vw-1` and `MRG-1` would be two codes sharing one published address, one keys/events/mrg-1.pub and one CONVENER_EVENT_KEY_MRG_1; a prefix carrying its own separator collides two editions on one repository secret, because eventkeys.secret_name folds `.` and `-` to `_` and says itself that the fold is lossy; a non-ASCII capital makes str.lower() a place where a URL path segment quietly acquires a percent-encoding. Read by tools/tests/test_published.py and app/tests/edition-prefix.test.ts.",
+  "cases": [
+    { "value": "MRG", "accepted": true, "why": "this instance's own" },
+    { "value": "MRG", "accepted": true, "why": "the example instance's own" },
+    { "value": "A", "accepted": true, "why": "one letter is a prefix" },
+    { "value": "ABCDEFGH", "accepted": true, "why": "eight is the bound, not seven" },
+    { "value": "S2", "accepted": true, "why": "a digit after the first letter" },
+    { "value": "V0W9", "accepted": true, "why": "digits anywhere but first" },
+    { "value": "ABCDEFGHI", "accepted": false, "why": "nine is past the bound" },
+    { "value": "vw", "accepted": false, "why": "lower case breaks the D-19 round trip" },
+    { "value": "Vw", "accepted": false, "why": "mixed case, same reason" },
+    { "value": "1W", "accepted": false, "why": "a code is not a range of numbers" },
+    { "value": "MRG-", "accepted": false, "why": "the separator is the product's" },
+    { "value": "V.W", "accepted": false, "why": "secret_name folds `.` to `_`" },
+    { "value": "V_W", "accepted": false, "why": "an underscore is not a code separator" },
+    { "value": "V W", "accepted": false, "why": "a space is not a path segment" },
+    { "value": "ConvenerÉ", "accepted": false, "why": "non-ASCII lower-cases into a percent-encoding" },
+    { "value": "", "accepted": false, "why": "there is nothing to number an edition with" }
+  ]
+}

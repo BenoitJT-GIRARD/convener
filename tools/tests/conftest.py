@@ -8,6 +8,8 @@ from typing import Any, Final
 
 import pytest
 
+from convener_ops.published import EditionPrefix
+
 #: `scripts/` holds the one-shot migrations. They live outside the installed
 #: package (they are run once, not shipped) but are tested with it, so their
 #: directory joins the import path here rather than in each test module.
@@ -156,6 +158,20 @@ def nomination(**overrides: Any) -> dict[str, Any]:
     }
     base.update(overrides)
     return base
+
+
+#: The edition prefix these doubles are numbered under, and the one
+#: `validate_speakers` is handed unless a test is about the prefix itself.
+#:
+#: Written here rather than read from `config/instance.json`, and the
+#: difference matters: this suite tests the *validator*, so what it needs
+#: is a prefix, any prefix, held still. Reading the declaration would make
+#: every assertion below move the day the declaration moved, which is the
+#: property `tools/tests/test_second_instance.py` exists to check and the
+#: last thing a unit test should be quietly repeating. `MRG` is the one
+#: this repository happens to declare, so a fixture reading `MRG-07` still
+#: reads like the file it stands for.
+EDITIONS: Final = EditionPrefix(value="MRG")
 
 
 def speaker(**overrides: Any) -> dict[str, Any]:

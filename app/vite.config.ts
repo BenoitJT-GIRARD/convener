@@ -3,7 +3,7 @@ import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
 import { exampleInstance } from './scripts/example-instance.mjs';
-import { identity, published } from './scripts/published.mjs';
+import { editionPrefix, identity, published } from './scripts/published.mjs';
 
 /**
  * Phase 10, task 2: the address this project is published at, read once
@@ -70,9 +70,27 @@ const IDENTITY = identity();
  */
 const EXAMPLE = exampleInstance();
 
+/**
+ * Phase 11, task 4: the prefix this instance numbers its editions under,
+ * read from the same declaration and carried in the same way.
+ *
+ * `src/state/agenda.ts::nextEditionCode` composes the next edition code
+ * when a volunteer locks a date, and it used to compose it as `MRG-${n}` --
+ * the initials of the series that happens to run this repository, in the
+ * product's own source, so a duplicate's reading group numbered its
+ * sessions `MRG-1`. That code runs in a browser, which can read no file,
+ * so the value has to be substituted in at build time exactly as the
+ * address and the identity already are.
+ *
+ * A bare string rather than JSON, unlike the two above: this one is a
+ * single value, not a vocabulary that grows by a word.
+ */
+const EDITION_PREFIX = editionPrefix();
+
 const INSTANCE_DEFINE = {
   'import.meta.env.VITE_PUBLISHED_URL': JSON.stringify(PUBLISHED.url),
   'import.meta.env.VITE_INSTANCE_IDENTITY': JSON.stringify(JSON.stringify(IDENTITY)),
+  'import.meta.env.VITE_INSTANCE_EDITION_PREFIX': JSON.stringify(EDITION_PREFIX),
   'import.meta.env.VITE_EXAMPLE_INSTANCE': JSON.stringify(JSON.stringify(EXAMPLE)),
 };
 

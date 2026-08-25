@@ -20,6 +20,7 @@ from typing import Any
 
 import pytest
 import yaml
+from conftest import EDITIONS
 from migrate_v4 import (
     NEW_FIELDS,
     _ascii,
@@ -257,7 +258,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
             v3_speaker(id="spk-002", status="lead", edition_code="", date=""),
         ]
     )
-    assert validate_speakers(speakers, {"Anonymous"}) == [
+    assert validate_speakers(speakers, {"Anonymous"}, editions=EDITIONS) == [
         "speakers[0] (spk-001): missing survey_enabled",
         "speakers[1] (spk-002): missing survey_enabled",
     ]

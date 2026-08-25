@@ -99,11 +99,15 @@ What this module cannot see, stated rather than left to be found
   wordmark and the strapline, so the identity they carry is the palette
   and the motif, which `data/brand.json` declares and a duplicate
   replaces.
-- **The edition prefix.** `validate.py::EDITION_RE` fixes an edition code
-  as `MRG-` and one to four digits -- an abbreviation of *this* series'
-  name, in the product's own validator. The example instance therefore
-  numbers a reading group's sessions `MRG-1`, and no needle can catch that
-  because both instances are forced to write it.
+- **The edition prefix was a fourth until phase 11 task 4.**
+  `validate.py` fixed an edition code as `MRG-` and one to four digits --
+  an abbreviation of *this* series' name, in the product's own validator,
+  so the example instance numbered a reading group's sessions `MRG-1` and
+  no needle could catch it: both instances were forced to write it.
+  `config/instance.json` declares it now, and `needles` carries the two
+  forms it reaches an artefact as -- the code the showcase prints, and
+  the event id in every event page's address, in `keys/events/<id>.pub`
+  and in a certificate's verification link.
 - **Rows this instance's own history wrote.** `docs/governance/register.md`
   is inherited (above). It holds no identity today because it holds no
   rows; the day it holds some, a duplicate's handbook would publish this
@@ -118,6 +122,7 @@ What this module cannot see, stated rather than left to be found
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -130,7 +135,7 @@ from typing import Final, NoReturn
 import instance_identity
 import pytest
 
-from convener_ops import boundary
+from convener_ops import boundary, published
 from convener_ops.paths import repo_root
 
 ROOT = repo_root()
@@ -575,6 +580,60 @@ def test_the_example_instance_answers_every_path_an_instance_owns() -> None:
         "counterpart, and it now has one"
     )
     assert answered, "the example answers nothing at all"
+
+
+def _declared_values(data: object, path: str = "") -> Iterator[tuple[str, str]]:
+    """Every string a declaration actually declares, with the key that
+    holds it. `_comment` keys are prose about the file and not values of
+    it; `owner` is the boundary's own answer, the same word in every
+    instance's copy; `v` is a number."""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key.startswith("_") or key in ("owner", "v"):
+                continue
+            yield from _declared_values(value, f"{path}.{key}" if path else key)
+    elif isinstance(data, str):
+        yield path, data
+
+
+def test_every_value_the_declaration_holds_is_swept() -> None:
+    """A key nothing derives a needle from is a value a second instance's
+    build can carry with nothing looking for it.
+
+    Phase 11 task 3 is why this exists. `instance_identity.needles` was a
+    hand-typed dictionary of eight identity fields; task 3 added a ninth
+    (`strapline`, the poster's own hero line) and the sweep went on
+    passing green over a poster hard-typing this instance's motto, because
+    nobody thought to add the needle beside the key. That was fixed by
+    enumerating `published.IDENTITY_FIELDS` -- but the address half and,
+    from task 4, the edition prefix are still written out by hand, for
+    reasons those entries state. This is the clause that makes the
+    hand-written half safe: it reads the declaration rather than the
+    reader, so a *new key* fails here on the first run after it is added.
+
+    What it claims and what it does not. It says every declared string
+    participates in some needle -- the needle is the value, or the value
+    is part of one (`edition_prefix: MRG` inside the needle `MRG-`), or a
+    needle is part of it (a host inside an address). It does not claim the
+    needle is the best form of the value; that is
+    `test_every_needle_is_found_in_the_second_instances_own_output`'s job,
+    and it runs against a real build.
+    """
+    declaration = json.loads(
+        (ROOT / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    forms = set(instance_identity.needles(ROOT).values())
+    unswept = {
+        key: value
+        for key, value in _declared_values(declaration)
+        if not any(value in form or form in value for form in forms)
+    }
+    assert unswept == {}, (
+        "config/instance.json declares these values and no needle in "
+        "`instance_identity.needles` derives from any of them, so a second "
+        "instance's build could carry them and the sweep would pass: "
+        f"{unswept}"
+    )
 
 
 def test_the_two_instances_disagree_about_every_needle(

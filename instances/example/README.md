@@ -73,12 +73,19 @@ reason:
   duplicate inherits upstream's copy and its own next push replaces it, so
   an authored one here would be an authored copy of a generated file.
 
-## What it inherits that it should not
+## What it numbers its own editions
 
-`edition_code` is `MRG-N` in `data/speakers.yml` below because
-`tools/convener_ops/validate.py::EDITION_RE` fixes that shape — an abbreviation
-of *this* series' name, in the product's own validator. A reading group
-therefore numbers its sessions `MRG-1`. Found by phase 10 task 5 and
-recorded in this phase's own instance inventory under `docs/superpowers/`;
-whether the prefix is the product's or the instance's is not this file's
-decision to take.
+`config/instance.json` declares `edition_prefix: MRG`, and
+`data/speakers.yml` numbers the reading group's sessions `MRG-1`, `MRG-2`,
+`MRG-3`. The prefix is the instance's, not the product's: nothing in
+`tools/convener_ops/` or `app/src/` fixes one, and `validate_speakers` builds
+its pattern from whatever the declaration holds.
+
+It is also deliberately not `identity.short_name`, which is `TEC` here.
+The two have no reason to move together — a series can want one form in
+an e-mail subject and another in an identifier — and `short_name` is
+prose, which gets reworded. An edition code cannot be: it is in a
+published address (`/events/mrg-1/`), on every certificate issued for that
+event and in `keys/events/mrg-1.pub`, so it is declared once and then
+frozen. Changing it after an edition has been assigned makes every code
+already written fail validation, by name and with the reason.

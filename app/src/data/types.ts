@@ -362,7 +362,8 @@ export interface Speaker {
   /** Whether the recording may be published, and what became of it. */
   publication: Publication;
 
-  /** `MRG-N`, assigned when a confirmed record is scheduled. Empty for a
+  /** The instance's declared `edition_prefix`, a hyphen and 1-4 digits
+   *  (`AB-7`); assigned when a confirmed record is scheduled. Empty for a
    *  record that has not been scheduled. */
   edition_code: string;
   /** The slots put to the speaker, with their answers. Empty until the
@@ -444,7 +445,8 @@ export const SPEAKER_FIELDS = Object.keys(SPEAKER_FIELD_SET) as readonly (keyof 
 export interface Config {
   /** Current season number. */
   season: number;
-  /** The next `MRG-N` to assign. */
+  /** The next edition number to assign, under the prefix
+   *  `config/instance.json` declares. */
   vw_counter: number;
   /** Forbidden window around each scheduled date, in days. */
   overlap_window_days: number;

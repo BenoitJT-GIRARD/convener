@@ -155,3 +155,63 @@ export function identity() {
   out.forum_host = new URL(out.forum).host;
   return out;
 }
+
+/**
+ * The prefix this instance numbers its editions under -- the third part
+ * of the same declaration, read the same way.
+ * `tools/convener_ops/published.py::load_edition_prefix` is Python's reader of
+ * it, and `EDITION_PREFIX_RE` there is the same expression as below.
+ *
+ * The showcase has no reader of its own for this and needs none: it
+ * prints the edition codes `site/src/_data/events.json` hands it and
+ * never composes one. This build does compose one -- `src/state/agenda.
+ * ts::nextEditionCode` suggests the next code inside a volunteer's
+ * browser, where no file can be read -- so `vite.config.ts` carries the
+ * value into every bundle through its own `define`, exactly as it
+ * already does for the address and the identity.
+ *
+ * Upper case, ASCII, a letter first, at most eight characters and no
+ * separator of its own: an event id is the edition code lower-cased
+ * (D-19), so the case has to be fixed here for the two to stay one
+ * identifier, and `eventkeys.secret_name` folds any further `.` or `-`
+ * into `_`, which would give two editions one repository secret. See
+ * `published.py::EDITION_PREFIX_RE` for the whole argument, stated once
+ * against the place each restriction comes from.
+ */
+const EDITION_PREFIX_MAX_LENGTH = 8;
+const EDITION_PREFIX_RE = new RegExp(`^[A-Z][A-Z0-9]{0,${EDITION_PREFIX_MAX_LENGTH - 1}}$`);
+
+/** Whether `value` is a prefix this product will number editions under.
+ *  Exported so the boundary is a worked example rather than a claim:
+ *  `tools/tests/fixtures/edition-prefix.json` holds the cases and both
+ *  sides answer them -- `app/tests/edition-prefix.test.ts` here,
+ *  `tools/tests/test_published.py` against `EDITION_PREFIX_RE` there. A
+ *  prefix the build accepts and the validator refuses is a repository
+ *  that can be built and cannot be validated. */
+export function isEditionPrefix(value) {
+  return typeof value === 'string' && EDITION_PREFIX_RE.test(value);
+}
+
+export function editionPrefix() {
+  const declaration = JSON.parse(readFileSync(DECLARATION, 'utf8'));
+  if (declaration.v !== 1) {
+    throw new Error(`${NAMED} is not a supported format version`);
+  }
+  const value = declaration.edition_prefix;
+  if (typeof value !== 'string' || value === '') {
+    throw new Error(
+      `${NAMED}: edition_prefix must be the prefix this instance numbers its ` +
+        `editions under, got ${value} -- it is the first half of every edition ` +
+        'code, of every event page address and of every certificate issued under it'
+    );
+  }
+  if (!isEditionPrefix(value)) {
+    throw new Error(
+      `${NAMED}: edition_prefix must be ${EDITION_PREFIX_MAX_LENGTH} ASCII ` +
+        `capitals or digits at most, starting with a letter, got ${value} -- an ` +
+        'event id is the edition code lower-cased (D-19), and the product puts ' +
+        'the one hyphen an edition code has between this and the number'
+    );
+  }
+  return value;
+}

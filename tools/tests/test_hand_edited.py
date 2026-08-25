@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from conftest import EDITIONS
+
 from convener_ops.validate import validate_config, validate_speakers
 from convener_ops.yaml_safe import safe_load
 
@@ -46,7 +48,7 @@ def test_the_validator_names_the_fields_a_hand_edit_left_out() -> None:
     not the first line of it.
     """
     speakers = safe_load(SPEAKERS.read_text(encoding="utf-8"))
-    errors = validate_speakers(speakers, ["alice", "bob", "carol"])
+    errors = validate_speakers(speakers, ["alice", "bob", "carol"], editions=EDITIONS)
     joined = " | ".join(errors)
     assert "career_stage" in joined
     assert "publication" in joined
