@@ -1,0 +1,27 @@
+<!--
+  Convener — the mark, reconstructed as geometry.
+
+  Measured from convener-mark-colour-light.png (1254 x 1254), not traced:
+  every value below is a radius, a stroke width or an angle read off that
+  raster, then scaled so the outer edge lands at r=240 in a 512 box.
+
+    outer arc   axis radius 254.5  stroke 85   |  inner arc  axis radius 163  stroke 32
+    both open   320deg .. 400deg (an 81deg gap centred due east, y downwards)
+    dot         centre +209 x, -1 y from the mark's centre, radius 59
+
+  What this does NOT cover: the wordmark. "Convener" is set in a typeface, and
+  tracing letterforms out of a raster yields curves that are wobbly at the sizes
+  a vector is wanted for. Until a vector original exists, or the typeface is
+  identified and licensed, the wordmark stays raster and only the mark is here.
+
+  Colours: navy #012765 (14.23:1 on white), coral #fd6b52 (2.84 on white, 5.00
+  on navy — an accent on navy, never text on white). See README.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
+  <title id="t">Convener</title>
+  <g fill="none" stroke="#012765" stroke-linecap="butt">
+    <path d="M 413.54 388.19 A 205.66 205.66 0 1 1 413.54 123.81" stroke-width="68.69"/>
+    <path d="M 356.90 340.67 A 131.72 131.72 0 1 1 356.90 171.33" stroke-width="25.86"/>
+  </g>
+  <circle cx="424.89" cy="255.19" r="47.68" fill="#fd6b52"/>
+</svg>
