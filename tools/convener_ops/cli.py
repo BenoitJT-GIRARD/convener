@@ -5373,9 +5373,12 @@ def alert_secret_workflow_run() -> int:
 def _git_log(root: Path) -> tuple[str, str]:
     """The whole history in `register.LOG_FORMAT`, oldest commit first.
 
-    The one subprocess in this package, and it is why it lives in `cli`: the
-    rest of `convener_ops` stays a pure library that a test can drive without a
-    checkout. Fixed argv, no shell, no interpolated value -- there is nothing
+    One of the two places this package shells out, and it is why this one
+    lives in `cli`: the rest of `convener_ops` stays a pure library that a test
+    can drive without a checkout. (The other is
+    `derivation_guard._git`, which reads a repository's whole *history*
+    rather than a working tree -- there is no pure function to hand that
+    to.) Fixed argv, no shell, no interpolated value -- there is nothing
     here for a commit message to escape into, because no commit message is
     passed in; only read out.
     """

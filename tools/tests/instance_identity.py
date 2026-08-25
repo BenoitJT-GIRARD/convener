@@ -4,9 +4,15 @@ Two facts live here because two modules need exactly the same ones and a
 second copy of either would be the defect this whole phase exists to end:
 
 1. **The needles** -- every writable form of what `config/instance.json`
-   and the charter in force declare. `test_second_instance.py` sweeps a
+   and the charter in force declare. They are **not written here any
+   more**: phase 12 gave them a second reader outside the suite
+   (`convener_ops.derivation_guard`, which asks the same question of every
+   blob of every ref before a public push), and a derivation with two
+   readers belongs in the package. `convener_ops.needles` owns it; the names
+   are re-exported below so every reader of this module keeps working and
+   nobody has two places to look. `test_second_instance.py` sweeps a
    *build* for them; anything looking for "this instance's identity" in
-   text should derive it from here rather than from a literal.
+   text should derive it from there rather than from a literal.
 2. **The deferred register** -- the files that knowingly still carry this
    instance's identity, each with the phase that owns it.
    `test_published.py` uses it to exempt those files from its *source*
@@ -44,14 +50,26 @@ finding *nothing at all* is the outcome the phase was for.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Final
 
-from convener_ops import brand, published
+from convener_ops.needles import contains, forms, needles
+
+__all__ = [
+    "BINARY_SUFFIXES",
+    "DEFERRED",
+    "Deferred",
+    "allowance",
+    "allowed_for",
+    "claimed_by_any",
+    "contains",
+    "forms",
+    "literal_runs",
+    "needles",
+]
 
 #: Files whose bytes no text sweep can read. A `.png` carrying a wordmark
 #: is a real identity surface and this is exactly where that surface stops
@@ -68,13 +86,6 @@ BINARY_SUFFIXES: Final = frozenset(
 #: narrower exemption, which fails safe, while one that is too long simply
 #: stops matching and fails loudly.
 _LITERAL_EDGES: Final = "\"'`\n\r<>"
-
-#: A needle short enough that an accidental run of the same letters inside
-#: minified output is plausible is matched on word boundaries instead of
-#: as a bare substring. Only `identity.short_name` qualifies today, and
-#: the alternative -- dropping it from the sweep -- would drop the one
-#: form of an instance's name that its own templates use most.
-_WORD_BOUNDED = re.compile(r"^[A-Za-z0-9]{1,5}$")
 
 
 @dataclass(frozen=True)
@@ -136,106 +147,6 @@ DEFERRED: Final = (
         ),
     ),
 )
-
-
-def needles(root: Path) -> dict[str, str]:
-    """Every writable form of what one instance declares about itself.
-
-    Derived, never typed: the address and the identity from
-    `config/instance.json` through the reader that owns them, the palette
-    from the charter in force through `brand.source`. A needle nobody can
-    derive is a needle that goes stale the day the declaration moves.
-
-    Both derived forms of a declared value are here as well as the value
-    itself, because a copy does not have to be a copy of the whole thing
-    to be one: a page can write the origin without the path, a poster can
-    write the forum's registrable domain without the `www.`, and an
-    architecture note can write the repository's name without its owner.
-
-    Every field of the identity is here by enumeration, not by hand, and
-    the reason is below in the code. Nothing about the *address* half is
-    enumerable the same way -- `Published` derives four different shapes
-    from one string -- so those four stay written out, and so are the two
-    the edition prefix reaches an artefact as.
-
-    **Nothing written out here can go missing all the same.**
-    `test_second_instance.py::test_every_value_the_declaration_holds_is_
-    swept` reads the declaration itself and fails on any value no needle
-    covers, which is what turns the hand-written half of this dictionary
-    from a list somebody has to remember to extend into one the suite
-    extends for them.
-
-    Deliberately absent, so that every needle below can be *proved* to
-    match something in a real build rather than passing green by matching
-    nothing (`test_second_instance.py`):
-
-    - **`published.Published.publish_repository`.** It is where a build is
-      pushed, read by two workflows and by nothing that renders. Its two
-      halves are already needles (`host`, `path_prefix`).
-    - **`motif.ribbon_width_ratio`.** The templates multiply it by a
-      dimension and write the product, so the ratio itself never reaches
-      an artefact.
-    - **`typography`.** Both the product's default charter and this
-      instance's name the two faces the product ships and serves from its
-      own origin (D-17). A face is not an identity here; naming one that
-      is not shipped would build a page that silently falls back.
-    - **`black` and `white`.** Two colours in the charter's own palette
-      that are nobody's identity, and that appear in every stylesheet ever
-      written.
-    """
-    address = published.load(root)
-    identity = published.load_identity(root)
-    editions = published.load_edition_prefix(root)
-    found = {
-        "published_url": address.url,
-        "origin": address.origin,
-        "host": address.host,
-        "path_prefix": address.path_prefix,
-        # The edition prefix, as the two forms that actually reach an
-        # artefact: `MRG-` in a code the showcase prints and the poster
-        # sets, `mrg-` in the event page's own address, in
-        # `keys/events/<id>.pub` and in a certificate's verification
-        # link (D-19). The declared value alone -- two letters, no
-        # separator -- is *not* a needle, and that is a decision rather
-        # than an omission: `contains` would match it on word boundaries,
-        # and a two-letter run bounded by punctuation is exactly what a
-        # minifier emits for an identifier. A needle that can fire on a
-        # coincidence is a needle somebody eventually widens an exemption
-        # for. Both forms below carry the separator the product itself
-        # adds, so neither can be an accident.
-        "edition_code_prefix": editions.code_prefix,
-        "event_id_prefix": editions.event_prefix,
-    }
-    # Every declared identity field, enumerated from the declaration's own
-    # list rather than written out again here. Phase 11 task 3 is why: it
-    # added `strapline`, the poster's own hero line, and the eight fields
-    # below were a hand-typed dict -- so the new one was not a needle, and
-    # the sweep of a second instance's build passed green over a poster
-    # hard-typing this instance's motto. Found by breaking it on purpose
-    # and watching nothing fail. A field that a duplicate declares is a
-    # field a duplicate's artefacts print; there is no such thing as one
-    # this sweep should not look for.
-    found.update({name: getattr(identity, name) for name in published.IDENTITY_FIELDS})
-    found.update(
-        {
-            "forum_host": identity.forum_host,
-            "forum_domain": identity.forum_host.removeprefix("www."),
-            "repository_name": identity.repository.partition("/")[2],
-        }
-    )
-    for name, value in brand.colours(brand.load(root)).items():
-        if value in ("#ffffff", "#000000"):
-            continue
-        found[f"colour.{name}"] = value
-    return found
-
-
-def contains(text: str, needle: str) -> bool:
-    """Whether `text` writes `needle`, on word boundaries when the needle
-    is short enough for a coincidence to be plausible."""
-    if _WORD_BOUNDED.match(needle):
-        return re.search(rf"\b{re.escape(needle)}\b", text) is not None
-    return needle in text
 
 
 def literal_runs(text: str, values: Iterable[str]) -> frozenset[str]:

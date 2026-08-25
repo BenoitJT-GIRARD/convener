@@ -76,16 +76,31 @@ What this module cannot see, stated rather than left to be found
 -----------------------------------------------------------------
 - **Anything that is not derivable from a declaration.** A needle is a
   value `config/instance.json` or the charter in force actually holds
-  (`instance_identity.needles`). Two things this instance owns are held
-  by neither, so nothing here can look for them: the **time zone** and the
+  (`convener_ops.needles.needles`, which this module still reaches through
+  `instance_identity`). Two things this instance owns are held by
+  neither, so nothing here can look for them: the **time zone** and the
   **standing start time** (`Europe/Paris` and 12:30, in `visual.py`,
   `governance.py` and forty-odd other places), and the **names of the
-  people** who run the series -- `docs/reference/contacts.md` names four
-  of them in a paragraph the cockpit publishes to every instance, and
-  `site/src/style.css` names the designer in a comment that ships inside
-  the showcase's own stylesheet. Each is recorded in
+  people** who run the series -- `docs/reference/contacts.md` and
+  `docs/reference/operations.md` each name four of them, in paragraphs
+  the cockpit publishes to every instance. Each is recorded in
   `docs/superpowers/inventaire-instance.md`; none can become a needle
-  until it becomes a declared value. The series' **strapline** was a third
+  until it becomes a declared value.
+
+  `site/src/style.css` was a third until phase 12 task 2: it named the
+  designer in seven comments that shipped verbatim inside the showcase's
+  own stylesheet, and the charter's author asked on 2026-08-25 not to
+  have her charter offered as a product option. The comments now say
+  *the designer* and *the measured charter*, which is what they were
+  explaining in the first place; `data/brand.json` still names her,
+  because a record of whose charter it is belongs with the instance.
+  **This module never saw any of it** -- a name is not a declared value
+  and no sweep here could have found one, which is exactly what this
+  paragraph is for. `convener_ops.derivation_guard` can, by reading the
+  instance's own records rather than by knowing what a name is; see its
+  docstring for where that stops.
+
+  The series' **strapline** was another
   until phase 11 task 3 gave it a key: `visual.py` reads
   `identity.strapline` now, and `needles` carries it, so the poster's own
   hero line is swept like everything else on it.
