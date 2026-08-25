@@ -693,7 +693,7 @@ def _expect_html(forum_host: str) -> str:
 """
 
 
-def _registration_slot_html(event_id: str, *, dark: str) -> str:
+def _registration_slot_html(event_id: str, *, dark: str, root: Path) -> str:
     """The registration QR code, filling the fixed-size slot phase 6's
     task 2 reserved (the same `data-registration-code-slot` hook, the
     same "reserve the mount point before the next task fills it" pattern
@@ -708,7 +708,10 @@ def _registration_slot_html(event_id: str, *, dark: str) -> str:
     reading the surrounding `<svg>`'s own `<title>` (the plain URL,
     `registration_code_svg`'s own `title=` argument to segno) already
     provides."""
-    qr_svg = registration_code_svg(event_id, dark=dark)
+    # The same `root` the charter came from: the encoded address and the
+    # colours around it are one instance's, or the poster contradicts
+    # itself in a layer no text sweep can read.
+    qr_svg = registration_code_svg(event_id, dark=dark, root=root)
     return (
         '<div class="registration-code-slot" data-registration-code-slot>'
         f"{qr_svg}</div>"
@@ -1080,7 +1083,7 @@ def render_announcement(
     )
     ribbon_svg = _ribbon_overlay_svg(width, height, root)
     registration_slot = _registration_slot_html(
-        announcement.event_id, dark=colours["black"]
+        announcement.event_id, dark=colours["black"], root=root
     )
     safe_left_vw, safe_right_vw = _ribbon_safe_margins(width, height, root)
     safe_content_right_vw = _ribbon_content_right_margin(width, height, root)

@@ -174,4 +174,17 @@ def test_registration_code_svg_signature_has_no_url_or_link_parameter() -> None:
     import inspect
 
     parameters = inspect.signature(registration_code_svg).parameters
-    assert set(parameters) == {"event_id", "dark"}
+    assert set(parameters) == {"event_id", "dark", "root"}
+    # `root` is a directory, not an address. It says which instance's
+    # declaration the URL is *derived* from -- the same root
+    # `visual.render_announcement` already takes for the charter, so that a
+    # poster's colours and the address inside its QR come from one instance
+    # rather than two (phase 12, task 1). Nothing about it lets a caller
+    # choose the address itself, which is the property this test exists
+    # for, so the shape rule below is what carries the guard now and the
+    # set above is only what makes a reviewer look.
+    assert not any(
+        word in name.lower()
+        for name in parameters
+        for word in ("url", "link", "href", "base", "address")
+    )

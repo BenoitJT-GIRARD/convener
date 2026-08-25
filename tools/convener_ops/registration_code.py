@@ -63,6 +63,7 @@ element on that page already follows.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Final
 
 import segno
@@ -85,7 +86,7 @@ _QR_ERROR_LEVEL: Final = "m"
 QR_BORDER: Final = 4
 
 
-def registration_code_svg(event_id: str, *, dark: str) -> str:
+def registration_code_svg(event_id: str, *, dark: str, root: Path | None = None) -> str:
     """The registration QR code for `event_id`, as an embeddable
     `<svg>...</svg>` fragment -- encodes `registration.signup_url(event_id)`
     and nothing else (see the module docstring for why this function's own
@@ -103,8 +104,14 @@ def registration_code_svg(event_id: str, *, dark: str) -> str:
     would add here that the slot's own background does not already give
     it, and one fewer colour is one fewer place for a value not sourced
     from `data/brand.json` to appear.
+
+    `root` is threaded straight through to `signup_url` and means what
+    it means there: which instance's declaration the encoded address is
+    built from. The signature still takes an id and never a URL, which
+    is the property this module's own docstring rests on -- a root is
+    not an address, and no caller can smuggle a room link through one.
     """
-    url = signup_url(event_id)
+    url = signup_url(event_id, root=root)
     qr = segno.make(url, error=_QR_ERROR_LEVEL)
     return qr.svg_inline(
         border=QR_BORDER,
@@ -116,7 +123,7 @@ def registration_code_svg(event_id: str, *, dark: str) -> str:
     )
 
 
-def registration_code_modules(event_id: str) -> int:
+def registration_code_modules(event_id: str, *, root: Path | None = None) -> int:
     """The registration QR's own width, in modules, quiet zone included --
     the one number task 4's print derivation needs to work out the code's
     physical size once printed (`formats.qr_module_size_mm`), and the one
@@ -128,8 +135,13 @@ def registration_code_modules(event_id: str) -> int:
     a fixed physical slot has to divide the paper's own size by -- see that
     function's own docstring for why this matters at print resolution and
     not on a screen.
+
+    `root` means what it means in `registration_code_svg` above, and is
+    here for the same reason the two share an error level and a border:
+    they have to measure the same symbol. A root passed to one and not
+    the other would put the two back in a position to disagree.
     """
-    url = signup_url(event_id)
+    url = signup_url(event_id, root=root)
     qr = segno.make(url, error=_QR_ERROR_LEVEL)
     modules_across, _ = qr.symbol_size(border=QR_BORDER)
     return int(modules_across)

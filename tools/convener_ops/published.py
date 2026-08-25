@@ -65,6 +65,7 @@ __all__ = [
     "EDITION_PREFIX_MAX_LENGTH",
     "EDITION_PREFIX_RE",
     "EXAMPLE_INSTANCE_PATH",
+    "EXAMPLE_INSTANCE_ROOT",
     "IDENTITY_FIELDS",
     "IDENTITY_KEY",
     "INSTANCE_PATH",
@@ -100,6 +101,20 @@ INSTANCE_PATH: Final = Path("config") / "instance.json"
 #: from one that is still publishing the template's identity. See
 #: `unconfigured` below for what that comparison is and is not.
 EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
+
+#: The example instance's own root -- the tree the declaration above and
+#: `instances/example/data/brand.json` both sit under, at the same
+#: relative paths a real instance uses. Derived from the path above
+#: rather than spelled a second time: one of them moving has to move
+#: the other.
+#:
+#: Anything that has to render *as* the example -- rather than merely
+#: read one of its files -- takes this as its `root`. Phase 12 task 1
+#: is why it exists: `cli.render_visual_fixtures` renders the poster
+#: the committed reference images pin, and rendering it from this
+#: repository's own root made those images a frozen photograph of one
+#: real instance's charter, in a product-side directory.
+EXAMPLE_INSTANCE_ROOT: Final = EXAMPLE_INSTANCE_PATH.parent.parent
 
 #: `config/instance.json`'s own format version.
 DECLARATION_VERSION: Final = 1

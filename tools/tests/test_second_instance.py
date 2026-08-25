@@ -89,16 +89,23 @@ What this module cannot see, stated rather than left to be found
   until phase 11 task 3 gave it a key: `visual.py` reads
   `identity.strapline` now, and `needles` carries it, so the poster's own
   hero line is swept like everything else on it.
-- **Bytes.** `BINARY_SUFFIXES` skips images and fonts, and two of them
-  are real identity surfaces:
+- **Bytes.** `BINARY_SUFFIXES` skips images and fonts, and one of them
+  is still a real identity surface:
   `app/dist/handbook/assets/zoom-background.png` ships inside the bundle
-  swept here and carries the first instance's mark, while
-  `visuals/references/*.png` pin what `visual.py` renders. A second
-  instance's build regenerates neither. What those references pin is no
-  longer this instance's *prose*, though -- phase 11 task 3 derived the
-  wordmark and the strapline, so the identity they carry is the palette
-  and the motif, which `data/brand.json` declares and a duplicate
-  replaces.
+  swept here and carries the first instance's mark. A second instance's
+  build does not regenerate it.
+
+  `visuals/references/*.png` used to be a second, and are not any more.
+  They pin what `visual.py` renders, and phase 12 task 1 pointed the
+  render at `instances/example/`: the palette, the motif, the strapline,
+  the wordmark and the address inside the registration QR are the
+  example's now, so those three images carry nothing a duplicate would
+  have to replace. The blind spot has not moved -- nothing here can read a
+  PNG, and nothing here could have told you what those three held -- what
+  changed is that there is no longer anything in them to read. Proven
+  where it can be, on the pages they are rendered from, by
+  `test_cli_render_visual_fixtures.py::
+  test_no_value_of_the_instance_running_this_repository_reaches_the_page`.
 - **The edition prefix was a fourth until phase 11 task 4.**
   `validate.py` fixed an edition code as `MRG-` and one to four digits --
   an abbreviation of *this* series' name, in the product's own validator,

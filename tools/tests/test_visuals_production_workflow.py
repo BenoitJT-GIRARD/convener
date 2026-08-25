@@ -72,36 +72,87 @@ def test_data_speakers_yml_is_the_one_new_path_this_job_adds() -> None:
     assert "data/speakers.yml" in paths
 
 
+#: The *code* both jobs render through. A change to any of these changes
+#: what a real edition looks like and what visuals.yml's fixture looks
+#: like, so neither filter may drop one without the other.
+#:
+#: The declaration and the charter are deliberately not here. Until phase
+#: 12 task 1 they were: both jobs rendered this instance's, so both had to
+#: watch the same two files. visuals.yml renders `instances/example/`'s
+#: now, so the two jobs watch *different* declarations and *different*
+#: charters, and `test_the_two_jobs_watch_their_own_instances_files` below
+#: pins that difference rather than letting it read as a drop.
+_SHARED_COMPOSITION_PATHS = {
+    "tools/convener_ops/visual.py",
+    "tools/convener_ops/ribbon.py",
+    "tools/convener_ops/registration_code.py",
+    "tools/convener_ops/registration.py",
+    "tools/convener_ops/formats.py",
+    "tools/convener_ops/governance.py",
+    "tools/convener_ops/cli.py",
+    "tools/convener_ops/published.py",
+    "tools/convener_ops/brand.py",
+    "fonts/**",
+    "tools/uv.lock",
+    "visuals/**",
+}
+
+
 def test_every_composition_module_visuals_yml_names_is_named_here_too() -> None:
-    """Every file that can change what a *real* rendered edition looks
+    """Every *module* that can change what a real rendered edition looks
     like changes what visuals.yml's own fixture looks like too -- this
     pins that this job's own filter never drops one of those without also
     dropping it from visuals.yml (an unlikely but real drift: two lists,
     maintained by hand, in two different files)."""
-    shared_paths = {
-        "tools/convener_ops/visual.py",
-        "tools/convener_ops/ribbon.py",
-        "tools/convener_ops/registration_code.py",
-        "tools/convener_ops/formats.py",
-        "tools/convener_ops/governance.py",
-        "tools/convener_ops/cli.py",
-        "config/instance.json",
-        "tools/convener_ops/published.py",
-        "data/brand.json",
-        "brand/convener/brand.json",
-        "tools/convener_ops/brand.py",
-        "fonts/**",
-        "tools/uv.lock",
-        "visuals/**",
-    }
     this_paths = set(_TRIGGERS["push"]["paths"])
-    for path in shared_paths:
+    for path in _SHARED_COMPOSITION_PATHS:
         assert path in this_paths, (
             f"{path} is missing from visuals-production.yml's own filter"
         )
         assert f"'{path}'" in _VISUALS_WORKFLOW, (
             f"{path} is claimed to be shared with visuals.yml but is not "
             "in that file either"
+        )
+
+
+def test_the_two_jobs_watch_their_own_instances_files() -> None:
+    """The one asymmetry between the two filters, pinned so that it stays
+    a decision and cannot decay into an omission.
+
+    This job renders *real* editions, as the instance that runs this
+    repository, so it watches `config/instance.json` and
+    `data/brand.json`. visuals.yml renders a fixed fictional fixture as
+    `instances/example/`, so it watches that instance's two files instead
+    -- which is what stopped it going red for every duplicate that chose
+    its own colours and had them diffed against a committed image of
+    somebody else's poster (phase 12, task 1).
+
+    `brand/convener/brand.json`, the product's default charter, stays here
+    and only here: a duplicate that has written no `data/brand.json` falls
+    back to it for a real render, while the example always declares one of
+    its own."""
+    mine = set(_TRIGGERS["push"]["paths"])
+    production_only = (
+        "config/instance.json",
+        "data/brand.json",
+        "brand/convener/brand.json",
+    )
+    for path in production_only:
+        assert path in mine, f"{path} is missing from this job's own filter"
+        assert f"'{path}'" not in _VISUALS_WORKFLOW, (
+            f"{path} is back in visuals.yml, which renders the example "
+            "instance and cannot be affected by it"
+        )
+    for path in (
+        "instances/example/config/instance.json",
+        "instances/example/data/brand.json",
+    ):
+        assert f"'{path}'" in _VISUALS_WORKFLOW, (
+            f"{path} is missing from visuals.yml, which renders from it"
+        )
+        assert path not in mine, (
+            f"{path} is in this job's filter, which renders real editions "
+            "and never reads the example"
         )
 
 

@@ -105,6 +105,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
+from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
@@ -174,7 +175,7 @@ FILE_VERSION: Final = 1
 SIGNUP_BASE: Final = published.load().under("events/")
 
 
-def signup_url(event_id: str) -> str:
+def signup_url(event_id: str, *, root: Path | None = None) -> str:
     """The one link a participant follows to register for `event_id` --
     the address of that event's own public page
     (`site/src/event.njk`'s permalink, D-19), which carries this
@@ -189,8 +190,19 @@ def signup_url(event_id: str) -> str:
     `test_survey_invite.py` and `test_certificate.py` bind their own
     `_url` functions, so this exists to be that value rather than to be
     called from `cli.py`.
+
+    `root` names the repository whose declaration the address is built
+    from, and defaults to this one's -- `SIGNUP_BASE`, resolved once at
+    import. It exists for the one caller that renders *as a different
+    instance* inside this process: `visual.render_announcement` already
+    takes a `root` for the charter, and a poster wearing one instance's
+    colours under a QR code pointing at another instance's site is a
+    disagreement nothing else would catch -- a QR code is bytes, and no
+    text sweep reads it (`test_second_instance.py`, "Bytes"). Passing
+    the same root to both is what keeps the poster one thing.
     """
-    return f"{SIGNUP_BASE}{quote(event_id, safe='')}/"
+    base = SIGNUP_BASE if root is None else published.load(root).under("events/")
+    return f"{base}{quote(event_id, safe='')}/"
 
 
 @dataclass(frozen=True)

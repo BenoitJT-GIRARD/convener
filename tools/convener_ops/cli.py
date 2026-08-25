@@ -5478,18 +5478,48 @@ def render_visual_fixtures() -> int:
     this command reads `data/speakers.yml`, the clock, or the network: the
     same input always produces the same three pages, which is the entire
     point of a pinned regression fixture.
+
+    **And it renders as the example instance, never as this one** (phase 12,
+    task 1). `render_announcement` takes a `root` to read the charter and
+    the declaration from; this command used to hand it `repo_root()`, so
+    the three committed reference images were a frozen photograph of
+    whichever instance ran the repository -- its palette, its ribbon, its
+    strapline, its wordmark -- sitting in `visuals/`, which is the
+    product's. Two things follow from handing it `instances/example/`
+    instead, and both are the point rather than a side effect:
+
+    - **the images carry no real instance's identity.** They pin what
+      `visual.py` *renders* -- the geometry, the glyph shapes, the QR
+      modules, the ribbon's stroke against its ground -- and an invented
+      charter pins all of that exactly as well as a real one. The
+      designer of this instance's charter declined to have it ship with
+      the product; this is the byte-level half of honouring that.
+    - **the check stops failing for every duplicate.** `visuals.yml` fires
+      on the charter's own path, so before this change a duplicate that
+      chose its own colours rendered them against images of somebody
+      else's and went red on its first push, with nothing wrong.
+
+    The fonts still come from `root / "fonts"`: they are the product's,
+    self-hosted and served by it (D-17), and `instances/example/` holds no
+    copy of them precisely because a face is not an identity here.
     """
     if len(sys.argv) != 2:
         print("usage: convener-render-visual-fixtures OUTPUT_DIR", file=sys.stderr)
         return 1
     root = repo_root()
+    # The charter and the declaration the fixture is rendered from -- the
+    # example instance's, never this repository's own. See the docstring.
+    charter = root / published.EXAMPLE_INSTANCE_ROOT
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
 
     manifest: list[dict[str, Any]] = []
     for fmt in formats.FORMATS:
         html = visual.render_announcement(
-            visual.FIXTURE_ANNOUNCEMENT, width=fmt.width, height=fmt.height, root=root
+            visual.FIXTURE_ANNOUNCEMENT,
+            width=fmt.width,
+            height=fmt.height,
+            root=charter,
         )
         filename = f"{fmt.name}.html"
         (out / filename).write_text(html, encoding="utf-8")

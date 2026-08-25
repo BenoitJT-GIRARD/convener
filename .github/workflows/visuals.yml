@@ -35,27 +35,50 @@ name: Visuals
 #   to do with this task, because a path filter has no finer grain than a
 #   file, and the alternative is silently not re-checking the one function
 #   in it that this task depends on.
-# - `config/instance.json` -- this instance's own declaration. Phase 11
-#   task 3 made the composition read it: the wordmark band is
-#   `identity.forum_host`, the hero band is `identity.strapline`, and two
-#   of the three "what to expect" rows name the forum. Editing any of
-#   those changes every rendered pixel of the top third of the poster, so
-#   leaving this out of the filter would let exactly the change this job
-#   exists to catch ship without the job running at all.
+# - `instances/example/config/instance.json` -- the declaration the
+#   fixture is rendered from. Phase 11 task 3 made the composition read
+#   one: the wordmark band is `identity.forum_host`, the hero band is
+#   `identity.strapline`, and two of the three "what to expect" rows name
+#   the forum. Editing any of those changes every rendered pixel of the
+#   top third of the poster, so leaving this out of the filter would let
+#   exactly the change this job exists to catch ship without the job
+#   running at all.
+#
+#   The *example's* declaration, and not `config/instance.json`, since
+#   phase 12 task 1: the committed reference images used to be a frozen
+#   photograph of whichever instance ran this repository -- its palette,
+#   its ribbon, its strapline, its wordmark, and its published address
+#   inside the QR code -- sitting in `visuals/`, which is the product's.
+#   They are the example's now, and two things follow. The images carry no
+#   real instance's identity, which is the byte-level half of a charter
+#   staying with its instance; and this job stops going red for a
+#   duplicate that has done nothing but choose its own colours, which it
+#   did before, on the first push, against images of somebody else's
+#   poster.
 # - `tools/convener_ops/published.py` -- the reader that turns that file into
 #   the values above, `forum_host` included (a derivation, not a declared
-#   key). Same argument as `brand.py` one line down: the file and the
+#   key). Same argument as `brand.py` two lines down: the file and the
 #   reader of it are two ways for the same render to change.
-# - `data/brand.json` -- this instance's own charter, which `visual.py`'s
-#   `_load_colours` and `ribbon.py`'s `_load_motif` both reach through
-#   `tools/convener_ops/brand.py`.
-# - `brand/convener/brand.json` -- the product's own charter, which that
-#   same reader takes instead when an instance has written none. It
-#   changes nothing for *this* instance, which has its own; it is here so
-#   that a duplicate rendering with the default gets re-checked when the
-#   default moves, rather than the filter being right only for us.
-# - `tools/convener_ops/brand.py` -- the reader itself: which of those two
-#   files is in force, and the refusal when no `motif` is declared.
+# - `tools/convener_ops/registration.py` -- `signup_url`, which is what the
+#   registration QR encodes. Its modules are pixels this job compares like
+#   any others, and they are the one part of the composition no text sweep
+#   anywhere in this repository can read.
+# - `instances/example/data/brand.json` -- the charter the fixture is
+#   rendered from, reached through `tools/convener_ops/brand.py` by
+#   `visual.py`'s `_load_colours` and `ribbon.py`'s `_load_motif`. The
+#   example's, for the reason two entries up.
+# - `tools/convener_ops/brand.py` -- the reader itself: which charter is in
+#   force, and the refusal when no `motif` is declared.
+#
+# Deliberately absent, and each is a decision rather than an omission:
+# `config/instance.json` and `data/brand.json`, this instance's own
+# declaration and charter, which this job has not rendered since phase 12
+# task 1 -- reacting to them would be running a comparison whose result
+# cannot change. `visuals-production.yml` carries both, and must: that job
+# renders *real* editions, as this instance. And `brand/convener/
+# brand.json`, the product's default charter, which the example never
+# falls back to because it declares one of its own -- and which carries no
+# `motif` by design, so nothing could render a poster from it anyway.
 # - `fonts/**` -- the self-hosted web fonts every rendered glyph comes from.
 # - `tools/uv.lock` -- pins `segno` (the QR renderer) among everything
 #   else Python depends on; a version bump there can change rendered
@@ -119,10 +142,10 @@ on:
       - 'tools/convener_ops/formats.py'
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
-      - 'config/instance.json'
+      - 'instances/example/config/instance.json'
       - 'tools/convener_ops/published.py'
-      - 'data/brand.json'
-      - 'brand/convener/brand.json'
+      - 'tools/convener_ops/registration.py'
+      - 'instances/example/data/brand.json'
       - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
@@ -141,10 +164,10 @@ on:
       - 'tools/convener_ops/formats.py'
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
-      - 'config/instance.json'
+      - 'instances/example/config/instance.json'
       - 'tools/convener_ops/published.py'
-      - 'data/brand.json'
-      - 'brand/convener/brand.json'
+      - 'tools/convener_ops/registration.py'
+      - 'instances/example/data/brand.json'
       - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'

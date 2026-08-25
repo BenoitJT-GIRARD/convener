@@ -164,10 +164,10 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/formats.py",
         "tools/convener_ops/governance.py",
         "tools/convener_ops/cli.py",
-        "config/instance.json",
+        "instances/example/config/instance.json",
         "tools/convener_ops/published.py",
-        "data/brand.json",
-        "brand/convener/brand.json",
+        "tools/convener_ops/registration.py",
+        "instances/example/data/brand.json",
         "tools/convener_ops/brand.py",
         "fonts/**",
         "tools/uv.lock",
@@ -189,6 +189,27 @@ def test_the_path_filter_never_reacts_to_real_speaker_data() -> None:
     why it is absent, and a bare `in` check would trip over its own
     explanation."""
     assert not any("speakers.yml" in path for path in _TRIGGERS["push"]["paths"])
+
+
+def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
+    """Phase 12, task 1. The fixture is rendered from `instances/example/`,
+    so this instance's own declaration and charter change nothing this job
+    could compare -- and naming them would do worse than waste a run. It
+    is what made this check go red for a duplicate that had done nothing
+    but choose its own colours: the job rendered them and diffed them
+    against a committed image of somebody else's poster.
+
+    Checked against the *parsed* path list rather than a substring, for
+    the reason the test above gives: the two entries that are here name
+    the same two files under `instances/example/`, and a bare `in` check
+    would match those and pass for the wrong reason. `visuals-production.
+    yml` carries the real pair and must -- that job renders real editions,
+    as this instance (`test_visuals_production_workflow.py`)."""
+    paths = _TRIGGERS["push"]["paths"]
+    assert "config/instance.json" not in paths
+    assert "data/brand.json" not in paths
+    assert "instances/example/config/instance.json" in paths
+    assert "instances/example/data/brand.json" in paths
 
 
 def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:

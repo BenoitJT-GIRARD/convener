@@ -12,9 +12,15 @@ from pathlib import Path
 
 import pytest
 
+from convener_ops import brand, published
 from convener_ops.cli import render_visual_fixtures
 from convener_ops.formats import FORMATS
+from convener_ops.paths import repo_root
+from convener_ops.registration import signup_url
 from convener_ops.visual import FIXTURE_ANNOUNCEMENT
+
+ROOT = repo_root()
+EXAMPLE = ROOT / published.EXAMPLE_INSTANCE_ROOT
 
 
 def _run(out: Path, monkeypatch: pytest.MonkeyPatch) -> int:
@@ -96,3 +102,94 @@ def test_wrong_argument_count_fails_with_a_usage_message(
     assert exit_code == 1
     assert "usage" in err.lower()
     assert not (tmp_path / "manifest.json").exists()
+
+
+# ------------------------------------------------------------------ #
+# Whose poster the committed reference images are (phase 12, task 1)
+# ------------------------------------------------------------------ #
+
+
+def test_the_fixture_is_rendered_as_the_example_instance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The three committed reference images are bytes, and no text sweep
+    in this repository can read them -- `test_second_instance.py` says so
+    by name. So the claim that they carry no real instance's identity has
+    to be made here, on the pages they are rendered from, one value at a
+    time and each read from the example's own files rather than typed.
+
+    Every layer of the composition that carries an identity at all: the
+    palette, the motif, the hero band, the wordmark band, and the address
+    encoded in the registration QR."""
+    out = tmp_path / "fixtures"
+    _run(out, monkeypatch)
+    page = (out / "print.html").read_text(encoding="utf-8")
+
+    theirs = published.load_identity(EXAMPLE)
+    assert theirs.strapline.upper() in page.upper()
+    assert theirs.forum_host in page
+    assert signup_url(FIXTURE_ANNOUNCEMENT.event_id, root=EXAMPLE) in page
+
+    colours = brand.colours(brand.load(EXAMPLE))
+    assert colours["purple"] in page
+    assert brand.motif(EXAMPLE)["ribbon_stroke"] in page
+
+
+def test_no_value_of_the_instance_running_this_repository_reaches_the_page(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The other half, and the one that would actually catch a
+    regression: the same five values, read from *this* repository's own
+    declaration and charter, must be absent. Derived rather than written
+    out, so the day this instance changes a colour or its forum the check
+    still looks for the right string.
+
+    Both halves are needed. The first alone would pass for a page that
+    happened to carry both instances; this one alone would pass for a
+    blank page."""
+    out = tmp_path / "fixtures"
+    _run(out, monkeypatch)
+    page = (out / "print.html").read_text(encoding="utf-8")
+
+    ours = published.load_identity(ROOT)
+    assert ours.strapline.upper() not in page.upper()
+    assert ours.forum_host not in page
+    assert ours.organisation not in page
+    assert signup_url(FIXTURE_ANNOUNCEMENT.event_id) not in page
+    assert published.load(ROOT).host not in page
+
+    assert brand.colours(brand.load(ROOT))["purple"] not in page
+    assert brand.motif(ROOT)["ribbon_stroke"] not in page
+
+
+def test_the_two_charters_this_test_compares_are_actually_different() -> None:
+    """Guards the pair above. If the example ever adopted this instance's
+    palette or its forum, both tests would still pass and neither would
+    mean anything -- the second would be asserting the absence of a string
+    the first had just found."""
+    assert (
+        brand.colours(brand.load(EXAMPLE))["purple"]
+        != brand.colours(brand.load(ROOT))["purple"]
+    )
+    assert published.load_identity(EXAMPLE).forum_host != (
+        published.load_identity(ROOT).forum_host
+    )
+    assert published.load_identity(EXAMPLE).strapline != (
+        published.load_identity(ROOT).strapline
+    )
+
+
+def test_the_fonts_still_come_from_the_product_and_not_the_example(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one thing that is deliberately *not* taken from the example:
+    the self-hosted faces are the product's, served by it (D-17), and
+    `instances/example/` holds no copy of them precisely because a face is
+    not an identity here. A render that started reading them from the
+    example's tree would find nothing and fall back silently."""
+    out = tmp_path / "fixtures"
+    _run(out, monkeypatch)
+    assert not (EXAMPLE / "fonts").exists()
+    copied = {path.name for path in (out / "fonts").glob("*.woff2")}
+    assert copied == {path.name for path in (ROOT / "fonts").glob("*.woff2")}
+    assert copied
