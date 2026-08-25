@@ -900,8 +900,8 @@ def test_publish_vitrine_site_ships_nojekyll() -> None:
 #: this project does not administer -- so this scans every workflow file
 #: rather than naming the ones known to commit today. A hardcoded list is
 #: what let `deploy.yml` through the first time: it copied
-#: `publish-vitrine.yml`'s push step, including its stale
-#: `forum.example.test` address, and the list here named only
+#: `publish-vitrine.yml`'s push step, including its stale address on
+#: this organisation's own domain, and the list here named only
 #: `candidate-form.yml` and `publish-vitrine.yml`, so nothing caught it.
 #: A scan covers a workflow nobody has written yet, which a list never can.
 WORKFLOWS_DIR = Path(".github/workflows")
@@ -910,7 +910,7 @@ WORKFLOWS_DIR = Path(".github/workflows")
 #: syntax only -- `user\.email\s+"..."`, a double-quoted literal directly
 #: after `user.email` -- because that is the shape the defect it was built
 #: to catch happened to take (`deploy.yml` copying `publish-vitrine.yml`'s
-#: push step, stale `@forum.example.test` address and all). An unquoted
+#: push step, stale off-domain address and all). An unquoted
 #: address, a single-quoted one, an identity set through an
 #: `actions/github-script` object literal instead of `git config`, or one
 #: assigned through a `GIT_AUTHOR_EMAIL`/`GIT_COMMITTER_EMAIL` environment
@@ -1038,12 +1038,12 @@ def test_automated_commit_identity_pairs_a_name_with_its_address(
 # rebase would do.
 # ------------------------------------------------------------------ #
 
-_FOREIGN_ADDRESS = "convener-publisher@forum.example.test"
+_FOREIGN_ADDRESS = "publisher@example.invalid"
 
 #: Escaped once, reused everywhere below: the address's domain contains a
 #: literal `.`, a regex metacharacter `pytest.raises(match=...)` would
 #: otherwise interpret rather than match.
-_FOREIGN_DOMAIN_PATTERN = re.escape("forum.example.test")
+_FOREIGN_DOMAIN_PATTERN = re.escape("example.invalid")
 
 
 def test_evasion_1_unquoted_address_is_still_caught() -> None:

@@ -165,7 +165,7 @@ def _speaker(**overrides: Any) -> dict[str, Any]:
     uses for `ManualPlatform`."""
     base: dict[str, Any] = {
         "edition_code": "MRG-901",
-        "zoom_link": "https://join.freeconferencecall.com/example-instance",
+        "zoom_link": "https://join.freeconferencecall.com/example-room",
         "youtube_url": "",
     }
     base.update(overrides)

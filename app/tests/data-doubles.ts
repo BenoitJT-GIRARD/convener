@@ -54,8 +54,8 @@ export function config(overrides: Partial<Config> = {}): Config {
     // build a malformed file, which only isolates the channels block if
     // this is the last key serialised (see `types.ts::Config.channels`).
     channels: [
-      { key: 'forum', label: 'The Example Collective forum' },
-      { key: 'linkedin_page', label: 'TEC LinkedIn page' },
+      { key: 'forum', label: 'Community forum' },
+      { key: 'linkedin_page', label: 'Team LinkedIn page' },
     ],
     ...overrides,
   };

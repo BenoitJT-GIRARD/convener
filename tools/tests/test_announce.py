@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from conftest import speaker
 
+from convener_ops import published
 from convener_ops.announce import (
     forum_announcement,
     mailing_list_message,
@@ -149,9 +150,13 @@ class TestNetworkPost:
 
 class TestMailingListMessage:
     def test_addresses_a_reader_who_does_not_know_the_series(self) -> None:
+        # The declared values, never their spelling: this message is
+        # rendered for whichever instance runs the repository, and a
+        # literal here would pass for one of them and fail for the rest.
+        identity = published.load_identity(ROOT)
         text = mailing_list_message(_row(), root=ROOT)
-        assert "The Example Collective" in text
-        assert "forum.example.test" in text
+        assert identity.organisation in text
+        assert identity.forum_host in text
 
     def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
         text = mailing_list_message(_row(), root=ROOT)

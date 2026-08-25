@@ -71,9 +71,9 @@ _LITERAL_EDGES: Final = "\"'`\n\r<>"
 
 #: A needle short enough that an accidental run of the same letters inside
 #: minified output is plausible is matched on word boundaries instead of
-#: as a bare substring. Only the short name qualifies today ("TEC"), and
+#: as a bare substring. Only `identity.short_name` qualifies today, and
 #: the alternative -- dropping it from the sweep -- would drop the one
-#: form of this instance's name that its own templates use most.
+#: form of an instance's name that its own templates use most.
 _WORD_BOUNDED = re.compile(r"^[A-Za-z0-9]{1,5}$")
 
 

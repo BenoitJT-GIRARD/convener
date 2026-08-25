@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { gh, GitHubError } from '../src/github/client';
+import { instanceIdentity } from '../src/instance';
 
 describe('gh', () => {
   beforeEach(() => {
@@ -15,7 +16,12 @@ describe('gh', () => {
     const out = await gh('/contents/foo.yml', { token: 'tok', method: 'GET' });
     expect(out).toEqual({ hello: 'world' });
     const [url, opts] = fetchSpy.mock.calls[0];
-    expect(url).toBe('https://api.github.com/repos/example-instance/example-cockpit/contents/foo.yml');
+    // The declared repository, not this one's name: `client.ts` composes
+    // the address from `instanceIdentity().repository`, so a literal here
+    // would pin the test to whoever happens to run this repository today.
+    expect(url).toBe(
+      `https://api.github.com/repos/${instanceIdentity().repository}/contents/foo.yml`,
+    );
     expect(opts.headers.Authorization).toBe('Bearer tok');
   });
 

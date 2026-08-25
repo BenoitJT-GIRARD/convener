@@ -609,7 +609,7 @@ def test_the_live_config_proposes_nobody_while_joined_on_is_blank() -> None:
         board_min=5,
         board=[
             board_member(login=login, joined_on="")
-            for login in ("Anonymous", "Anonymous", "Anonymous", "Anonymous", "Anonymous")
+            for login in ("Anonymous", "brix", "cedar", "dune", "elm")
         ],
     )
     proposed, prompts = sweep_inactive_members(cfg, [], NOW)

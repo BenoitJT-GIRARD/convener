@@ -57,7 +57,7 @@ def test_a_list_of_any_length_is_accepted() -> None:
 
 
 def test_channels_must_be_a_list() -> None:
-    errors = validate_config(config(channels={"forum": "The Example Collective forum"}))
+    errors = validate_config(config(channels={"forum": "Community forum"}))
     assert any("channels must be a list" in e for e in errors)
 
 

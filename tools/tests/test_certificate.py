@@ -1112,7 +1112,16 @@ def test_verification_url_carries_the_token_after_the_fragment_not_before_it() -
 
 
 def test_organiser_is_a_non_empty_constant() -> None:
-    assert ORGANISER == "The Example Collective"
+    """Read back from the declaration itself rather than compared with
+    the name this instance happens to declare: `ORGANISER` is what a
+    stranger reads at the top of a certificate, and a literal here
+    would be a second place the name is written down -- exactly the
+    shape `config/instance.json` exists to end."""
+    declared = json.loads(
+        (repo_root() / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert declared["identity"]["organisation"] == ORGANISER
+    assert ORGANISER
 
 
 # ------------------------------------------------------------------ #

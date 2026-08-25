@@ -25,7 +25,7 @@ def v4_speaker(**overrides: Any) -> dict[str, Any]:
     migration -- same keys, same order, values shortened."""
     base: dict[str, Any] = {
         "id": "spk-001",
-        "name": "Anonymous",
+        "name": "Alba Quennell",
         "gender": "undisclosed",
         "career_stage": "undisclosed",
         "email": "Anonymous@example.ac.uk",
@@ -39,10 +39,10 @@ def v4_speaker(**overrides: Any) -> dict[str, Any]:
         "seed_questions": "",
         "conflicts_of_interest": "",
         "source": "organizer",
-        "proposed_by": "Anonymous",
+        "proposed_by": "Bram Oosterlin",
         "assigned_to": "",
         "links": [],
-        "host_1": "Anonymous",
+        "host_1": "Bram Oosterlin",
         "host_2": "",
         "status": "delivered",
         "selection": {
@@ -80,7 +80,7 @@ def v4_speaker(**overrides: Any) -> dict[str, Any]:
             "youtube_views_30d": None,
             "forum_replies": None,
         },
-        "notes": "TEC review: Y",
+        "notes": "second reading: Y",
     }
     base.update(overrides)
     return base
@@ -187,7 +187,7 @@ def test_main_writes_the_file_and_a_second_run_is_a_no_op(
 def test_a_dry_run_prints_the_diff_and_writes_nothing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    path = _write(tmp_path, [v4_speaker(name="Andre Anonymous Anonymous")])
+    path = _write(tmp_path, [v4_speaker(name="Cyra Adeyemo-Lund")])
     before = path.read_text(encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
 

@@ -187,7 +187,7 @@ def test_the_detector_finds_a_copy_when_there_is_one() -> None:
 
 def test_the_detector_leaves_a_shared_short_sentence_alone() -> None:
     """A form is not a notion. The sign-off two e-mails share is not a copy."""
-    sign_off = "Best regards, {{ host_1.name }} for The Example Collective team"
+    sign_off = "Best regards, {{ host_1.name }} for {{ instance.organisation }} team"
     assert len(normalise(sign_off)) < MIN_DUPLICATE_CHARS
     assert (
         duplicates(

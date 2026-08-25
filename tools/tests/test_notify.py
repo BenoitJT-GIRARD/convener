@@ -1086,12 +1086,12 @@ def test_a_partly_configured_environment_yields_no_channel(env: dict[str, str]) 
 @pytest.mark.parametrize(
     "mention",
     [
-        "example-instance/convener-board",
-        "@example-instance",
+        "ExampleOrg/example-board",
+        "@ExampleOrg",
         "@volunteer",
         "@/convener-board",
-        "@example-instance/",
-        "@example-instance/convener-board/extra",
+        "@ExampleOrg/",
+        "@ExampleOrg/example-board/extra",
         "",
         "   ",
     ],
@@ -1117,13 +1117,13 @@ def test_a_mention_that_is_not_a_team_handle_yields_no_channel(mention: str) -> 
 
 def test_a_mention_with_an_uppercase_organisation_still_builds_a_channel() -> None:
     """The real configuration will use a mixed-case organisation
-    (`The Example Collective`), not the all-lowercase fixture every other
+    (`ExampleOrg`), not the all-lowercase fixture every other
     positive test in this module uses -- so this pins that case directly
     rather than leaving it to be exercised only by the negative cases
     above."""
-    env = {THREAD_ENV: "42", MENTION_ENV: "@example-instance/convener-board"}
+    env = {THREAD_ENV: "42", MENTION_ENV: "@ExampleOrg/example-board"}
     assert resolve_channel(env) == Channel(
-        thread="42", mention="@example-instance/convener-board"
+        thread="42", mention="@ExampleOrg/example-board"
     )
 
 

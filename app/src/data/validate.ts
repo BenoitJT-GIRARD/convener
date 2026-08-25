@@ -238,7 +238,7 @@ function ticks(at: Cursor, raw: Record<string, unknown>, key: string): Record<st
  *  `tools/convener_ops/validate.py` applies, and it lived only there, so the
  *  browser could accept and write a file `convener-validate` then refuses.
  *  `checklist_assignee_cases` in `tools/tests/fixtures/governance-cases.json`
- *  is the two sides' shared statement of it. Refusing `Anonymous Dupont` here is
+ *  is the two sides' shared statement of it. Refusing `Alba Quennell` here is
  *  also what keeps a person's name out of a field the app puts on screen
  *  beside a line of work. */
 /** A GitHub login, as `LOGIN_RE` in `tools/convener_ops/validate.py` spells it. */

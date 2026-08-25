@@ -38,7 +38,7 @@ def v2_speaker(**overrides: Any) -> dict[str, Any]:
     migration -- same keys, same order, values shortened."""
     base: dict[str, Any] = {
         "id": "spk-001",
-        "name": "Anonymous",
+        "name": "Alba Quennell",
         "gender": "undisclosed",
         "email": "Anonymous@example.ac.uk",
         "affiliation": "University of Example",
@@ -47,12 +47,12 @@ def v2_speaker(**overrides: Any) -> dict[str, Any]:
         "abstract": "",
         "conflicts_of_interest": "",
         "source": "organizer",
-        "proposed_by": "Anonymous",
+        "proposed_by": "Bram Oosterlin",
         "links": [],
-        "host_1": "Anonymous",
+        "host_1": "Bram Oosterlin",
         "host_2": "",
         "status": "delivered",
-        "selection": {"votes_for": ["Anonymous", "Anonymous"], "decided_on": ""},
+        "selection": {"votes_for": ["brix", "cedar"], "decided_on": ""},
         "edition_code": "MRG-01",
         "date": "2025-02-05",
         "time": "",
@@ -66,7 +66,7 @@ def v2_speaker(**overrides: Any) -> dict[str, Any]:
             "youtube_views_30d": None,
             "forum_replies": None,
         },
-        "notes": "TEC review: Y",
+        "notes": "second reading: Y",
     }
     base.update(overrides)
     return base
@@ -91,14 +91,14 @@ def v2_config(**overrides: Any) -> dict[str, Any]:
 def test_votes_for_becomes_one_yes_ballot_per_voter() -> None:
     migrated = migrate_speaker(v2_speaker())
     ballots = migrated["selection"]["ballots"]
-    assert [b["voter"] for b in ballots] == ["Anonymous", "Anonymous"]
+    assert [b["voter"] for b in ballots] == ["brix", "cedar"]
     assert {b["value"] for b in ballots} == {"yes"}
     assert "votes_for" not in migrated["selection"]
 
 
 def test_a_ballot_takes_its_date_from_decided_on_when_there_is_one() -> None:
     migrated = migrate_speaker(
-        v2_speaker(selection={"votes_for": ["Anonymous"], "decided_on": "2025-01-31"})
+        v2_speaker(selection={"votes_for": ["brix"], "decided_on": "2025-01-31"})
     )
     assert migrated["selection"]["ballots"][0]["date"] == "2025-01-31"
     assert migrated["selection"]["decided_on"] == "2025-01-31"
@@ -135,7 +135,7 @@ def test_assigned_to_is_added_empty_and_proposed_by_is_left_alone() -> None:
     # it; it never derives one from the other.
     migrated = migrate_speaker(v2_speaker())
     assert migrated["assigned_to"] == ""
-    assert migrated["proposed_by"] == "Anonymous"
+    assert migrated["proposed_by"] == "Bram Oosterlin"
 
 
 def test_no_field_outside_the_migration_is_touched() -> None:
@@ -216,36 +216,36 @@ def test_people_who_actually_voted_join_the_board() -> None:
     # Their ballots have to belong to members, or every one of them is
     # invalid; nothing is merged, since two entries that turn out to be the
     # same person is a decision for the Board, not for a migration.
-    migrated = migrate_config(v2_config(), ["Anonymous", "Anonymous"])
-    assert [m["login"] for m in migrated["board"]] == ["Anonymous", "Anonymous", "Anonymous"]
+    migrated = migrate_config(v2_config(), ["brix", "cedar"])
+    assert [m["login"] for m in migrated["board"]] == ["Anonymous", "brix", "cedar"]
 
 
 def test_a_voter_already_declared_is_not_added_twice() -> None:
-    migrated = migrate_config(v2_config(board_members=["Anonymous"]), ["Anonymous"])
-    assert [m["login"] for m in migrated["board"]] == ["Anonymous"]
+    migrated = migrate_config(v2_config(board_members=["brix"]), ["brix"])
+    assert [m["login"] for m in migrated["board"]] == ["brix"]
 
 
 def test_ballot_voters_lists_each_voter_once_in_order_of_appearance() -> None:
     speakers = migrate_speakers(
         [
-            v2_speaker(selection={"votes_for": ["Anonymous", "Anonymous"], "decided_on": ""}),
+            v2_speaker(selection={"votes_for": ["brix", "cedar"], "decided_on": ""}),
             v2_speaker(
                 id="spk-002",
                 edition_code="MRG-02",
-                selection={"votes_for": ["Anonymous", "Anonymous"], "decided_on": ""},
+                selection={"votes_for": ["cedar", "elm"], "decided_on": ""},
             ),
         ]
     )
-    assert ballot_voters(speakers) == ["Anonymous", "Anonymous", "Anonymous"]
+    assert ballot_voters(speakers) == ["brix", "cedar", "elm"]
 
 
 def test_migrating_the_config_twice_changes_nothing() -> None:
-    once = migrate_config(v2_config(), ["Anonymous"])
-    twice = migrate_config(once, ["Anonymous", "Anonymous"])
+    once = migrate_config(v2_config(), ["brix"])
+    twice = migrate_config(once, ["brix", "cedar"])
     # Not even the second call's extra voter: an already-migrated board is
     # the Board's own record from then on, and no re-run may edit it.
     assert twice == once
-    assert [m["login"] for m in twice["board"]] == ["Anonymous", "Anonymous"]
+    assert [m["login"] for m in twice["board"]] == ["Anonymous", "brix"]
 
 
 # --- the two halves together ----------------------------------------------
@@ -301,7 +301,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
         [
             v2_speaker(
                 selection={
-                    "votes_for": ["Anonymous", "Anonymous", "Anonymous", "Anonymous"],
+                    "votes_for": ["brix", "cedar", "dune", "elm"],
                     "decided_on": "",
                 }
             ),
@@ -385,7 +385,7 @@ def test_a_dry_run_prints_the_diff_and_writes_nothing(
     data.mkdir()
     speakers_path = data / "speakers.yml"
     config_path = data / "config.yml"
-    before = yaml.safe_dump([v2_speaker(name="Andre Anonymous Anonymous")], sort_keys=False)
+    before = yaml.safe_dump([v2_speaker(name="Cyra Adeyemo-Lund")], sort_keys=False)
     speakers_path.write_text(before, encoding="utf-8")
     config_path.write_text(
         yaml.safe_dump(v2_config(), sort_keys=False), encoding="utf-8"

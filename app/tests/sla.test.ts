@@ -282,8 +282,8 @@ describe('the wording a volunteer reads', () => {
     // `proposed_by` is whoever submitted it -- neither may reach this wording,
     // and nor may the speaker or the hosts.
     const names = {
-      assigned_to: 'Anonymous', proposed_by: 'Anonymous',
-      host_1: 'Anonymous', host_2: 'Anonymous', name: 'Anonymous',
+      assigned_to: 'elm', proposed_by: 'Bram Oosterlin',
+      host_1: 'cedar', host_2: 'brix', name: 'Alba Quennell',
     };
     const late = [
       speaker('lead', {

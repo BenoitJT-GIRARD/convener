@@ -684,7 +684,7 @@ def test_the_survey_pages_notice_states_anonymity_retention_and_a_real_contact_a
     assert "cannot find your own answers" in normalised
     assert "destroyed together with the event" in normalised
     assert "90 days after the event" in normalised
-    assert "reading-group@example.test" in normalised
+    assert published.load_identity().contact in normalised
 
 
 def test_a_survey_page_carries_the_noscript_fallback_and_the_island_script(
@@ -773,9 +773,9 @@ def test_a_past_event_page_still_leads_with_the_recording_section(
 # -------------------------------------------------------------------------- #
 
 #: Not a real forum: only ever read back out of the scratch build below.
-_FIXTURE_ONLY_THREAD_URL = (
-    "https://forum.example.test/t/mrg-05-fixture-only-thread/999"
-)
+#: On a reserved domain (RFC 2606) rather than this instance's own, so
+#: that a fixture nobody resolves cannot be mistaken for a live thread.
+_FIXTURE_ONLY_THREAD_URL = "https://forum.example.test/t/mrg-05-fixture-only-thread/999"
 
 
 @pytest.fixture(scope="module")
@@ -2101,7 +2101,7 @@ def test_the_feed_description_agrees_with_the_event_pages_own_description(
 ) -> None:
     """Branch review (fix wave), minor 2: `feed.njk`'s fallback description
     for an edition with no `abstract` had drifted from `event.njk`'s
-    identical rule -- missing the closing " — a The Example Collective virtual
+    identical rule -- missing the closing " — a <organisation> virtual
     seminar." sentence -- while `feed.njk`'s own comment claimed the two
     "never state the description of the same edition two different ways".
     Confirmed on the real built output for MRG-04 before this fix: the

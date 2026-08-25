@@ -253,8 +253,8 @@ export const CONFIG: Config = {
     recording_after_delivery: 14,
   },
   channels: [
-    { key: 'forum', label: 'The Example Collective forum' },
-    { key: 'linkedin_page', label: "Page LinkedIn de l'équipe TEC" },
+    { key: 'forum', label: 'Community forum' },
+    { key: 'linkedin_page', label: "Page LinkedIn de l'équipe" },
     { key: 'posters-institutes', label: 'Affiches imprimées dans les instituts' },
   ],
 };

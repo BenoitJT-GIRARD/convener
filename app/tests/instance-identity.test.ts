@@ -3,9 +3,9 @@
  *
  * Phase 10, task 3. A hundred and fifty-six occurrences across sixty-six
  * files -- `docs/` (its own specs and plans aside), `site/src/`,
- * `app/src/`, `tools/convener_ops/` and the two publishing workflows -- said
- * "The Example Collective", "TEC", "forum.example.test" or
- * "reading-group@example.test" in prose the product ships: the e-mail a
+ * `app/src/`, `tools/convener_ops/` and the two publishing workflows -- wrote
+ * one instance's `organisation`, `short_name`, `forum_host` or `contact`
+ * out in full, in prose the product ships: the e-mail a
  * speaker is invited with, the certificate a participant is sent, the
  * masthead of the cockpit, the handbook a volunteer reads. They read
  * `{{ instance.* }}` now, resolved from `config/instance.json` -- one

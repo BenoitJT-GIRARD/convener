@@ -451,7 +451,7 @@ def test_this_repository_declares_who_runs_the_series() -> None:
     ("mutation", "expected"),
     [
         ({published.IDENTITY_KEY: None}, "must be an object"),
-        ({published.IDENTITY_KEY: "The Example Collective"}, "must be an object"),
+        ({published.IDENTITY_KEY: "a bare string"}, "must be an object"),
         ({"v": 99}, "not a supported format version"),
     ],
 )
