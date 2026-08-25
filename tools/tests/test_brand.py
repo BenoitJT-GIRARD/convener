@@ -1,11 +1,11 @@
 """The design tokens, and the guards that keep them derived from one file.
 
-`data/brand.json` measured Anonymous's own colours. Before this module existed,
-two implementations each carried their own hand-typed copy of them --
+`data/brand.json` measured the designer's own colours. Before this module
+existed, two implementations each carried their own hand-typed copy of them --
 `site/src/style.css` and `app/src/design/tokens.css` -- and the application
 had drifted to a reconstruction's palette without anyone deciding that on
-purpose: purple on turquoise measured 4.44 there, below AA, where Anonymous's
-own value gives 7.93, AAA (`docs/superpowers/deferred-work.md`, entry 1).
+purpose: purple on turquoise measured 4.44 there, below AA, where the
+measured charter gives 7.93, AAA (`docs/superpowers/deferred-work.md`, entry 1).
 `scripts/generate_brand_css.py` derives both from the brand file instead,
 and this module holds what makes that stick.
 
@@ -206,8 +206,8 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
 
 def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
     """The one number this whole task exists over. The reconstruction's
-    shipped value was 4.44, below AA for normal text; Anonymous's own colours
-    give 7.93, AAA. This pins the arithmetic to that fact directly, rather
+    shipped value was 4.44, below AA for normal text; the measured charter
+    gives 7.93, AAA. This pins the arithmetic to that fact directly, rather
     than through whatever `data/brand.json` currently claims.
     """
     computed = round(contrast_ratio("#012765", "#fecac1"), 2)

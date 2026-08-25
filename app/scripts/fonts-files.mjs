@@ -5,7 +5,7 @@
  * whole script against the real `fonts/` tree.
  *
  * `fonts/` at the repository root is the one committed copy of these files.
- * Anonymous's own faces (Akzidenz-Grotesk, Neue Machina) are commercial;
+ * The designer's own faces (Akzidenz-Grotesk, Neue Machina) are commercial;
  * Archivo and JetBrains Mono are the self-hosted substitutes D-17 requires
  * instead of a webfont request, which discloses every visitor's address.
  * `site/` already serves this same directory (`site/.eleventy.js`'s own

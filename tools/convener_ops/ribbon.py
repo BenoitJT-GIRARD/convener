@@ -1,12 +1,12 @@
-"""Anonymous's ribbon: one continuous meandering stroke, not four bare circles.
+"""The charter's ribbon: one continuous meandering stroke, not four circles.
 
 `data/brand.json::motif._ribbon` names the defect this module fixes: both
 announcement SVGs already in this repository stand in four bare `<circle>`
-elements for the purple stroke that runs through Anonymous's own poster
+elements for the purple stroke that runs through the designer's own poster
 (`docs/assets/example_and_template_initial_assets/announcement-template_initial.png`,
 gitignored -- it carries a real person's photograph, entry 9 of
 `docs/superpowers/deferred-work.md`). A poster built from circles does not
-read as hers, no matter how faithfully every other measurement passes.
+read as that mark, no matter how faithfully every other measurement passes.
 
 What the reference actually shows
 ----------------------------------
@@ -42,7 +42,7 @@ densely is what reads as a round curl instead of a kinked polygon.
 
 The path stays one continuous cubic-Bezier subpath -- a single `M`, only `C`
 after it, no `Z` -- exactly as the motif is described, even where the
-visible stroke leaves the frame. The gaps where Anonymous's stroke runs off
+visible stroke leaves the frame. The gaps where the designer's stroke runs off
 one edge and back in, and the long invisible span between the left motif and
 the right, are drawn as real cubic segments that happen to fall outside the
 canvas rectangle; each helper that draws one proves in its own docstring
@@ -437,7 +437,7 @@ _GAP_BULGE_FACTOR: Final = 0.25
 
 
 def ribbon_path(width: float, height: float) -> str:
-    """Anonymous's ribbon for a canvas of the given size, as an SVG path `d`.
+    """The charter's ribbon for a canvas of the given size, as an SVG path `d`.
 
     One `M`, only `C` after it, no `Z`: a single continuous cubic-Bezier
     stroke, exactly as `data/brand.json::motif._ribbon` describes it, not

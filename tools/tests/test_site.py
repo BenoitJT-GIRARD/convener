@@ -177,8 +177,8 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
     )
     assert "Archivo" in style and "JetBrains Mono" in style, (
         "style.css's @font-face block no longer names Archivo or JetBrains "
-        "Mono -- D-17's chosen substitutes for Anonymous's own commercially "
-        "licensed faces"
+        "Mono -- D-17's chosen substitutes for the designer's own "
+        "commercially licensed faces"
     )
 
 
@@ -2591,7 +2591,7 @@ _SITE_PROJECT_ROOT = ROOT / "site"
 #: tests prove the *pipeline* (a file present, a tag built, its bytes
 #: delivered), never the composition itself (`test_visual.py` and task 5's
 #: own pinned image comparison already own that). Fabricated bytes, never
-#: Anonymous's own identity or any real speaker's likeness -- there is
+#: this instance's own identity or any real speaker's likeness -- there is
 #: nothing here for P-4 or the "no personal data in the repository"
 #: constraint to say anything about.
 _MINIMAL_PNG_BYTES = base64.b64decode(

@@ -299,8 +299,12 @@ describe('the wording a volunteer reads', () => {
       const l = lateness(s, config, '2026-08-18');
       if (l.state !== 'overdue') throw new Error('expected an overdue step');
       const shown = `${l.step} | ${overdueText(l)} | ${waitingSince(l)}`;
-      for (const person of ['Anonymous', 'Anonymous', 'Anonymous', 'Anonymous', 'Anonymous',
-        'Anonymous', 'Anonymous', 'Anonymous']) {
+      // Derived from the fixture above, never typed out: a list of real
+      // people inside the very test that keeps people out of the interface
+      // would be the leak it guards against, and it would go stale the day
+      // the board changes. Every name this record actually carries is
+      // checked, and all of them are invented in this file.
+      for (const person of Object.values(names)) {
         expect(shown).not.toContain(person);
       }
     }

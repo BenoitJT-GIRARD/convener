@@ -1,13 +1,13 @@
 """Everything the charter derives: the design tokens and the two templates.
 
-`data/brand.json` measured Anonymous's own colours -- turquoise `#FECAC1`, cream
-`#F4F0F1`, purple `#012765` -- and the contrast each pairing gives. Both
+`data/brand.json` measured the designer's own colours -- turquoise `#FECAC1`,
+cream `#F4F0F1`, purple `#012765` -- and the contrast each pairing gives. Both
 implementations that draw the identity were still a hand-typed copy of that
 file: `site/src/style.css` and `app/src/design/tokens.css` each carried the
 same values retyped, and the application had drifted to a reconstruction's
 palette without anyone deciding that on purpose
 (`docs/superpowers/deferred-work.md`, entry 1). Purple on turquoise measured
-4.44 there, below AA; Anonymous's own value gives 7.93, AAA. One source of fact
+4.44 there, below AA; the measured charter gives 7.93, AAA. One source of fact
 and two hand-typed copies is exactly the shape that let that drift happen
 silently. This script closes it: the custom properties are generated, and
 `--check` makes the generation a fact about the repository rather than a
@@ -59,10 +59,10 @@ currently derives.
 
 Two colours the stylesheets need have no measurement to derive from at all:
 `--danger` and `--info` name states (a rejected token, a soft banner) that
-none of Anonymous's originals ever had reason to draw, so `data/brand.json` does
-not carry them and this script does not pretend it does -- they are named
-constants below, clearly marked as the one exception, rather than invented
-brand data.
+none of the designer's originals ever had reason to draw, so
+`data/brand.json` does not carry them and this script does not pretend it
+does -- they are named constants below, clearly marked as the one exception,
+rather than invented brand data.
 
 What a marker guards, and what it cannot
 -----------------------------------------
@@ -146,7 +146,7 @@ COMMAND: Final = "uv run python ../scripts/generate_brand_css.py"
 _BEGIN: Final = "/* BEGIN GENERATED TOKENS -- scripts/generate_brand_css.py */"
 _END: Final = "/* END GENERATED TOKENS -- edit data/brand.json, not this block */"
 
-#: No original Anonymous drew ever needed a rejection colour or a soft
+#: No original the designer drew ever needed a rejection colour or a soft
 #: informational one, so `data/brand.json` does not carry either -- these are
 #: the one deliberate exception to "every colour comes from the brand file".
 _DANGER: Final = "#9b2226"
@@ -202,8 +202,8 @@ def _splice(current: str, inner: str) -> str:
 
 
 #: `site/src/style.css`'s tokens. Names and values match the file as it
-#: stood before this script existed -- task 2 already restored Anonymous's own
-#: values by hand -- plus `--white`/`--white-rgb`, added here because
+#: stood before this script existed -- task 2 already restored the charter's
+#: measured values by hand -- plus `--white`/`--white-rgb`, added here because
 #: `#fff` was hand-typed more than a dozen times below the block for plain
 #: white text and borders, and a value `data/brand.json` carries cannot be
 #: one this stylesheet retypes either. `--danger`/`--info` joined in a later
@@ -234,9 +234,9 @@ _SITE_ROOT_TEMPLATE: Final = """\
   --purple-d:     {purple_hover};
   --purple-l:     {purple_tint};
 
-  /* No data/brand.json equivalent: no original Anonymous drew ever needed a
-   * rejection colour or a soft informational one. Measured against this
-   * file's own --surface (cream), the certificate-verification panel's
+  /* No data/brand.json equivalent: no original the designer drew ever
+   * needed a rejection colour or a soft informational one. Measured against
+   * this file's own --surface (cream), the certificate-verification panel's
    * ground: see data/brand.json's contrast._comment for both numbers. */
   --danger:       {danger};
   --info:         {info};
@@ -304,8 +304,8 @@ _APP_ROOT_TEMPLATE: Final = """\
   --accent-soft:   {purple_tint};
   --border:        {rule};
   --border-strong: {rule_strong};
-  /* No data/brand.json equivalent: no original Anonymous drew ever needed a
-   * rejection colour or a soft informational one. */
+  /* No data/brand.json equivalent: no original the designer drew ever
+   * needed a rejection colour or a soft informational one. */
   --danger:        {danger};
   --info:          {info};
   --select:        {select};

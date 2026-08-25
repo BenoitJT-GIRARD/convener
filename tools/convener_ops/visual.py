@@ -1,8 +1,8 @@
 """The announcement composition: a page, not a hand-drawn SVG (P-3).
 
 `docs/assets/example_and_template_initial_assets/announcement-template_initial.png`
-(gitignored -- entry 9 of `docs/superpowers/deferred-work.md`) is Anonymous's own
-template. Reading it pixel by pixel, top to bottom: a cream band carrying the
+(gitignored -- entry 9 of `docs/superpowers/deferred-work.md`) is the designer's
+own template. Reading it pixel by pixel, top to bottom: a cream band carrying the
 wordmark; the series title in heavy purple caps on turquoise; a two-line
 invitation to the discussion; a second cream band carrying the talk's own
 title; a purple date line; a "WHAT TO EXPECT?" block; a white, tilted
@@ -100,14 +100,14 @@ and `ribbon_stroke_width` (task 1's own module) are called with this
 composition's exact canvas size and painted as the last element in the
 document, so it always sits on top -- exactly what the reference shows:
 the purple stroke crosses over the lower "WHAT TO EXPECT?" text near the
-left edge in Anonymous's own poster, not behind it.
+left edge in the designer's own poster, not behind it.
 
 Why a safe area, and why derived rather than hand-typed
 ---------------------------------------------------------
 The ribbon still runs off every edge and still passes behind the bands --
 it keeps its full gesture, exactly as above. What it must never do is pass
 *through* the words this page sets: the reference's own content sits inside
-margins the ribbon lives outside of on both sides, nothing she sets ever
+margins the ribbon lives outside of on both sides, nothing it sets ever
 crosses the stroke. `_ribbon_safe_margins` computes the same two margins
 for this composition by reading `ribbon.waypoints` -- the loop centres, the
 left tail's own fitted bulge, the points where the stroke crosses each
@@ -880,8 +880,8 @@ def _ribbon_content_right_margin(width: float, height: float, root: Path) -> flo
 def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
     """The ribbon, painted last so it sits on top of everything else --
     exactly what the reference shows (task 1's own stroke crosses over the
-    "WHAT TO EXPECT?" text near the left edge in Anonymous's own poster, not
-    behind it). Colour and width both come from task 1's own reader
+    "WHAT TO EXPECT?" text near the left edge in the designer's own poster,
+    not behind it). Colour and width both come from task 1's own reader
     functions, never hand-typed here."""
     d = ribbon_path(width, height)
     colour = ribbon_stroke_colour(root)

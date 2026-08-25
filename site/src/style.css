@@ -8,13 +8,13 @@
  * generated from it, and scripts/generate_brand_css.py --check fails on a
  * stylesheet that has drifted.
  *
- * The palette is Anonymous's own, read out of her originals rather than out of
- * the *_test_dev.svg reconstruction that this stylesheet used until now. That
- * reconstruction had shifted the purple, darkened the turquoise ground, and
- * replaced her warm neutrals with cold slate — and the darkening cost real
- * accessibility: purple on turquoise measured 4.44:1, below AA for normal
- * text, where her own value gives 7.93:1. Going back to her art is the more
- * accessible choice here, not a trade against it.
+ * The palette is the designer's own, read out of the originals rather than
+ * out of the *_test_dev.svg reconstruction that this stylesheet used until
+ * now. That reconstruction had shifted the purple, darkened the turquoise
+ * ground, and replaced the warm neutrals with cold slate — and the darkening
+ * cost real accessibility: purple on turquoise measured 4.44:1, below AA for
+ * normal text, where the measured charter gives 7.93:1. Going back to the
+ * originals is the more accessible choice here, not a trade against it.
  *
  * Editorial information architecture, hairlines instead of card chrome,
  * past webinars as a TOC-style index with Watch + Discuss actions.
@@ -29,10 +29,11 @@
  * application's own copy step (app/scripts/copy-fonts.mjs) rather than a
  * second, separately committed set.
  *
- * Archivo stands in for Anonymous's Akzidenz-Grotesk and Neue Machina, both of
- * which are commercial licences and cannot ship on a zero-cost public site.
- * One variable file covers every weight the site uses, which is also why
- * display and body are the same family here where her originals used two.
+ * Archivo stands in for the designer's Akzidenz-Grotesk and Neue Machina,
+ * both of which are commercial licences and cannot ship on a zero-cost
+ * public site. One variable file covers every weight the site uses, which
+ * is also why display and body are the same family here where the
+ * originals used two.
  * See data/brand.json for the full reasoning.
  *
  * Fix round 4 (the path-prefix defect): the three `url(...)` references
@@ -101,9 +102,9 @@
   --purple-d:     #011f51;
   --purple-l:     #d8dde7;
 
-  /* No data/brand.json equivalent: no original Anonymous drew ever needed a
-   * rejection colour or a soft informational one. Measured against this
-   * file's own --surface (cream), the certificate-verification panel's
+  /* No data/brand.json equivalent: no original the designer drew ever
+   * needed a rejection colour or a soft informational one. Measured against
+   * this file's own --surface (cream), the certificate-verification panel's
    * ground: see data/brand.json's contrast._comment for both numbers. */
   --danger:       #9b2226;
   --info:         #4a6c75;
@@ -205,7 +206,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 
 /* ── Masthead ─────────────────────────────────────────────── */
 /* The identity band -- cream, full-bleed, the same role the logo band
- * carries at the top of Anonymous's own composition. Everything below it is
+ * carries at the top of the designer's own composition. Everything below it is
  * the turquoise field (D-18); this is the one place it is interrupted
  * before the page even begins its content. */
 .masthead {
@@ -217,7 +218,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   /* Same motif as .hero__loops / .coda__loops, extended to the one piece
    * of chrome every page shares (D-18's "other pages" have no hero of
    * their own yet). Deliberately allowed to run past the masthead's own
-   * bottom edge into the field below -- Anonymous's own loop crosses from
+   * bottom edge into the field below -- the designer's own loop crosses from
    * the cream band into the turquoise the same way, and .masthead has no
    * overflow:hidden of its own so it can. Kept to the left and low so it
    * does not compete with .hero__loops, which already owns the top-right
@@ -333,7 +334,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 .hero__title {
   /* Purple, not ink: brand.json names purple for "headlines... the
-   * dominant colour, not an accent", and Anonymous's own headline is solid
+   * dominant colour, not an accent", and the designer's own headline is solid
    * purple on the turquoise field -- matches purple_on_turquoise, 7.93. */
   font-family: var(--ff-display);
   font-weight: 900;
@@ -673,7 +674,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
   position: relative;
 }
 .section__head {
-  /* A cream band, full-bleed, the same role Anonymous's own "title" band
+  /* A cream band, full-bleed, the same role the designer's own "title" band
    * plays mid-composition -- a labelled divider crossing the turquoise
    * field. `.section` is both the outer section and the width-limiting
    * container on one element (merged in the markup), so there is no

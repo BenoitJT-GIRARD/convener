@@ -1,4 +1,4 @@
-"""Anonymous's ribbon: pin the properties that make it hers, not the bytes.
+"""The charter's ribbon: pin what makes it that ribbon, not the bytes.
 
 A path string that happens to equal a stored literal would pass for a wrong
 ribbon and fail for a better one -- see `ribbon.py`'s own docstring for the

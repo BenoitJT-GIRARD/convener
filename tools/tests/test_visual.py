@@ -584,8 +584,8 @@ def test_the_safe_area_is_not_the_whole_canvas() -> None:
     all. Both margins must leave a real content strip -- this project's
     reference poster leaves roughly 72% of the width for content; this only
     checks that *some* substantial majority remains, not that exact figure,
-    since this fix's own margins are deliberately more conservative than
-    hers (see the module docstring)."""
+    since this fix's own margins are deliberately more conservative than the
+    reference's (see the module docstring)."""
     left_vw, right_vw = _ribbon_safe_margins(_W, _H, ROOT)
     assert left_vw + right_vw < 50.0
 
