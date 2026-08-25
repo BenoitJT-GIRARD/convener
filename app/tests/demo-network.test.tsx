@@ -72,10 +72,14 @@
  *   added to a screen would have the browser contact a third party in demo
  *   mode, and no request primitive appears anywhere in the source. The
  *   cockpit renders no such element today. The control for that class is
- *   the policy, not a sweep -- and the policy this application ships has
- *   no `default-src` and no `img-src`, so at the time of writing there is
- *   nothing holding it. Named here because that is worth more than an
- *   implied coverage this file does not have.
+ *   the policy, not a sweep -- and when this file was written the policy
+ *   this application ships had no `default-src` and no `img-src`, so
+ *   nothing at all was holding it. That gap was the reason this paragraph
+ *   existed, and phase 11 closed it: `scripts/csp.mjs` now emits
+ *   `default-src 'none'` with `img-src 'self'` beside it, so the browser
+ *   refuses that portrait rather than fetching it. This paragraph stays
+ *   because the *sweep* still cannot see such an element -- what changed
+ *   is that something else can.
  *
  * - **Reachability.** "Unreachable in demo mode" is not something a static
  *   check decides; a call sits behind conditions, callbacks and a router.

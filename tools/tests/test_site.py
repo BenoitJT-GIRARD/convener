@@ -202,6 +202,34 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
 #: directive introduces it or why.
 _META_IGNORED_CSP_DIRECTIVES = ("frame-ancestors", "report-uri", "report-to", "sandbox")
 
+#: Every directive this showcase's policy must name, and the sources each
+#: one may admit -- phase 11, task 5 step 0. Before it the policy named
+#: `script-src`, `connect-src`, `object-src` and `form-action` and nothing
+#: else, on the reasoning, written in `csp.js`'s own header, that those
+#: four "work by `<meta>`". They do; so do these. The specification says a
+#: `<meta>` delivery ignores exactly `frame-ancestors`, `report-uri` and
+#: `sandbox` (see `_META_IGNORED_CSP_DIRECTIVES` below), so the omission
+#: had no reason behind it at all, and its cost was that an image, a
+#: frame, a font, a stylesheet, a media file or a worker was admitted from
+#: any origin whatever. `default-src 'none'` is what closes the classes
+#: nobody enumerated; the four `'self'` entries are what this build
+#: actually loads (one stylesheet, three woff2 faces, three island
+#: bundles, and the favicon a browser asks for by itself); `base-uri`
+#: falls back to nothing, so it is named rather than left out.
+#: `connect-src` is deliberately absent here: its value depends on
+#: whether a relay is configured, and the two tests that own that
+#: question are directly above and below.
+_CSP_EXPECTED_SOURCES = {
+    "default-src": "'none'",
+    "script-src": "'self'",
+    "style-src": "'self'",
+    "img-src": "'self'",
+    "font-src": "'self'",
+    "base-uri": "'none'",
+    "object-src": "'none'",
+    "form-action": "'self'",
+}
+
 _CSP_META_RE = re.compile(
     r'<meta http-equiv="Content-Security-Policy" content="([^"]*)">'
 )
@@ -219,7 +247,16 @@ def test_every_page_carries_the_content_security_policy_this_project_ships(
     `object-src 'none'` (no plugin embed anywhere), `form-action 'self'`
     (no page under `site/` submits a form) and `connect-src 'self'` with
     no relay origin appended -- this fixture is built with
-    `VITE_SIGNUP_RELAY_URL` unset, D-13's ordinary state."""
+    `VITE_SIGNUP_RELAY_URL` unset, D-13's ordinary state.
+
+    And, since phase 11, the five directives whose absence nobody had
+    examined. Until then this policy named four source lists and no
+    fallback, so an image, a frame, a font, a stylesheet or a media file
+    was admitted from *any origin at all* -- on every page a stranger
+    loads, including the three that carry an island handling somebody's
+    registration, certificate lookup or survey answer. See
+    `_CSP_EXPECTED_SOURCES` for what each one is justified by.
+    """
     checked = 0
     for path in built_site.rglob("*.html"):
         page = path.read_text(encoding="utf-8")
@@ -233,6 +270,22 @@ def test_every_page_carries_the_content_security_policy_this_project_ships(
         assert "object-src 'none'" in content, path
         assert "form-action 'self'" in content, path
         assert "connect-src 'self'" in content, path
+        emitted: dict[str, str] = {}
+        for part in content.split("; "):
+            name, _, sources = part.partition(" ")
+            emitted[name] = sources
+        assert emitted.keys() >= _CSP_EXPECTED_SOURCES.keys(), (
+            f"{path.relative_to(built_site).as_posix()}'s CSP names "
+            f"{sorted(emitted)}, and leaves "
+            f"{sorted(_CSP_EXPECTED_SOURCES.keys() - emitted.keys())} to "
+            "the browser's own default, which is to allow it from anywhere"
+        )
+        for directive, sources in _CSP_EXPECTED_SOURCES.items():
+            assert emitted[directive] == sources, (
+                f"{path.relative_to(built_site).as_posix()}'s CSP admits "
+                f"{directive} from {emitted[directive]!r} rather than "
+                f"{sources!r}"
+            )
         assert "workers.dev" not in content, (
             f"{path.relative_to(built_site).as_posix()} names a relay "
             "origin though VITE_SIGNUP_RELAY_URL was never set for this "

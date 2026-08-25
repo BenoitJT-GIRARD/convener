@@ -34,6 +34,34 @@ describe('cspMetaContent', () => {
     expect(content).toContain("form-action 'self'");
   });
 
+  it('leaves no class of subresource to the browser\'s own default', () => {
+    // The defect phase 11 found: four directives, not one of them a
+    // fallback, so an image, a frame, a font, a stylesheet, a media file
+    // or a worker was admitted from any origin at all -- on a document
+    // whose demonstration a stranger drives. Held as a property of the
+    // policy rather than as a list of nine expected strings: what matters
+    // is that nothing is left to the browser's own default, which is
+    // "allow", and that nothing but `connect-src` names a host.
+    const directives = new Map(
+      cspMetaContent({}).split('; ').map(part => {
+        const [name, ...sources] = part.split(' ');
+        return [name, sources.join(' ')] as const;
+      }),
+    );
+    expect(directives.get('default-src')).toBe("'none'");
+    for (const name of ['script-src', 'style-src', 'img-src', 'font-src']) {
+      expect(directives.get(name), `${name} is not named`).toBe("'self'");
+    }
+    // Neither of these two falls back to `default-src`, so neither is
+    // covered by it however strict it is.
+    expect(directives.get('base-uri')).toBe("'none'");
+    expect(directives.get('form-action')).toBe("'self'");
+    for (const [name, sources] of directives) {
+      if (name === 'connect-src') continue;
+      expect(sources, `${name} admits ${sources}`).toMatch(/^'(self|none)'$/);
+    }
+  });
+
   it('admits GitHub\'s own API and nothing else when no relay is configured', () => {
     // D-13: a missing auth proxy is an ordinary state -- sign-in falls
     // back to a personal access token. connect-src must not name an
@@ -46,8 +74,13 @@ describe('cspMetaContent', () => {
   it('adds the auth relay\'s own origin once VITE_AUTH_PROXY_URL is configured', () => {
     const content = cspMetaContent({ VITE_AUTH_PROXY_URL: 'https://auth.example.workers.dev' });
     expect(content).toBe(
-      "script-src 'self'; " +
+      "default-src 'none'; " +
+        "script-src 'self'; " +
+        "style-src 'self'; " +
+        "img-src 'self'; " +
+        "font-src 'self'; " +
         "connect-src 'self' https://api.github.com https://auth.example.workers.dev; " +
+        "base-uri 'none'; " +
         "object-src 'none'; " +
         "form-action 'self'",
     );
@@ -65,8 +98,13 @@ describe('cspMetaContent', () => {
     });
     expect(content).not.toContain('signup.example.workers.dev');
     expect(content).toBe(
-      "script-src 'self'; " +
+      "default-src 'none'; " +
+        "script-src 'self'; " +
+        "style-src 'self'; " +
+        "img-src 'self'; " +
+        "font-src 'self'; " +
         "connect-src 'self' https://api.github.com https://auth.example.workers.dev; " +
+        "base-uri 'none'; " +
         "object-src 'none'; " +
         "form-action 'self'",
     );

@@ -418,9 +418,11 @@ ruled out a third-party static host.
 
 The one thing this project *can* still ship is a Content-Security-Policy
 carried by a `<meta http-equiv>` tag in each page's own `<head>` — the one
-mechanism available with no server behind it. Two directives that would
-otherwise belong in the same policy do not survive that delivery
-mechanism, by the CSP specification itself, not by an oversight here:
+mechanism available with no server behind it. Exactly three directives
+that would otherwise belong in the same policy do not survive that
+delivery mechanism, by the CSP specification itself and not by an
+oversight here — four tokens, since the reporting one is spelled two
+ways:
 
 - `frame-ancestors` is **ignored outright** when set by `<meta>` — nothing
   in this project can stop the showcase or the cockpit being framed by
@@ -439,15 +441,29 @@ delivery ignores'` both fail the build the moment one of those four tokens
 reaches either policy, so this stays true by construction, not only by
 this paragraph.
 
-**What does work by `<meta>`, and is what this project ships:**
-`script-src`, `connect-src`, `object-src` and `form-action`. Two
-independent policies, one per document, built from what that document
+**What does work by `<meta>` is everything else.** Those three are the
+whole of the exception the specification names; `default-src`, `img-src`,
+`style-src`, `font-src` and `base-uri` are delivered by a `<meta>` tag
+exactly as `script-src` is. This section used to say instead that
+“what does work by `<meta>`” *is* `script-src`, `connect-src`,
+`object-src` and `form-action`, which read as the reason those four were
+the whole of both policies — and it was not a reason. Neither policy had
+a `default-src` or an `img-src`, so an image, a frame, a font, a
+stylesheet, a media file or a worker was admitted from **any origin at
+all**, on the public showcase and in the cockpit alike. Phase 11 closed
+that; what each policy now names, and what each name is justified by, is
+written beside the directive in the two files themselves.
+
+Two independent policies, one per document, built from what that document
 actually loads rather than one policy loose enough to cover both:
 
 - `site/src/_data/csp.js` — every page Eleventy builds (the showcase, and
   the registration, certificate-verification and post-event survey
   islands mounted on three of its pages — the last moved here from the
-  cockpit by phase 7 task 5). `script-src 'self'`, `object-src 'none'`,
+  cockpit by phase 7 task 5). `default-src 'none'` with `script-src`,
+  `style-src`, `img-src` and `font-src` all `'self'` — one stylesheet,
+  three self-hosted woff2 faces and three island bundles are the whole of
+  what these pages load — plus `base-uri 'none'`, `object-src 'none'`,
   `form-action 'self'`, and `connect-src 'self'` plus the signup relay's
   own origin (`VITE_SIGNUP_RELAY_URL`, the same repository variable
   *Signup relay* above already forwards into the application build —
@@ -459,10 +475,14 @@ actually loads rather than one policy loose enough to cover both:
   public route this bundle carried (`/survey/:eventId`, the post-event
   survey) onto the island above, and `connect-src` dropped the signup
   relay's own origin as a direct consequence: nothing left in this
-  bundle posts to it. `script-src 'self'`, `object-src 'none'`,
-  `form-action 'self'`, and `connect-src 'self' https://api.github.com`
-  plus the auth relay's own origin (`VITE_AUTH_PROXY_URL`), admitted
-  only once its own variable is configured.
+  bundle posts to it. `default-src 'none'` with `script-src`,
+  `style-src`, `img-src` and `font-src` all `'self'` — one module
+  script, one stylesheet, three woff2 faces and one SVG favicon are the
+  whole of what this document loads — plus `base-uri 'none'`,
+  `object-src 'none'`, `form-action 'self'`, and
+  `connect-src 'self' https://api.github.com` plus the auth relay's own
+  origin (`VITE_AUTH_PROXY_URL`), admitted only once its own variable is
+  configured.
 
 The two differ because the documents genuinely differ, not by oversight:
 the showcase's pages never call the GitHub API or the authentication
