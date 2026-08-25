@@ -30,6 +30,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | What each screen of the app is for | `docs/reference/the-workspace.md` |
 | Live speaker & event data | `data/speakers.yml` |
 | External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
+| Which paths belong to this series rather than to the code | `config/boundary.yml`, and each `config/` file's own `owner:` key |
 
 ## 2 · Doctrine in the handbook, state in the app
 

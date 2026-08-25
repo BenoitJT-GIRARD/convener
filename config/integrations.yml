@@ -55,6 +55,17 @@
 # across rows -- makes both consumers' `absent_is_normal` a structural fact
 # `convener-check-config` and its tests can see, not only a sentence a future
 # edit could silently stop being true under.
+# Product, and the only file in `config/` that is. Every row below is a
+# mirror of a module under `tools/convener_ops/`: the secret names the code
+# reads, and the degradation the code actually implements when they are
+# unset. A duplicate cannot change a row here and have it mean anything --
+# the behaviour it describes lives in Python, not in this file -- so
+# changing one would be changing the product, which is the definition
+# `config/boundary.yml` gives. What *is* the instance's is whether each
+# secret is set, and that lives in the repository's own Actions secrets,
+# never in a tracked file.
+owner: product
+
 integrations:
   - name: auth_proxy
     label: Authentication relay
