@@ -35,11 +35,12 @@
  *  declaration's own, and renaming them on the way in would be a second
  *  spelling of each. */
 export interface InstanceIdentity {
-  /** "The Example Collective" -- the name a stranger is told. */
+  /** The organisation's full name -- what a stranger is told. */
   organisation: string;
-  /** "TEC" -- the name a correspondent who already knows is told. */
+  /** Its abbreviation -- what a correspondent who already knows is told,
+   *  and the form that reads naturally in a subject line. */
   short_name: string;
-  /** "Monthly Reading Group". */
+  /** What the series is called. */
   series: string;
   tagline: string;
   /** The forum's whole address, for an `href`. */
