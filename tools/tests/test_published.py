@@ -668,14 +668,32 @@ _LITERAL_IDENTITY_FILES = (
     Path(".github/CODEOWNERS"),
 )
 
+#: Files that hold this instance's identity because something *generated*
+#: them from the declaration. Not a second copy in the sense this module
+#: refuses -- nothing here is authored, and
+#: `scripts/generate_brand_css.py --check` fails the build the moment one
+#: of them stops agreeing with `config/instance.json`. Checked below all
+#: the same, rather than exempted: a generated file nobody compares is a
+#: hand-written one with better manners.
+_DERIVED_IDENTITY_FILES = (
+    Path("docs/assets/announcement-template.svg"),
+    Path("docs/assets/flyer-template.svg"),
+)
+
 #: Files that still name this organisation and are somebody else's task,
 #: each with the phase that owns it. Not a general exemption: adding a
 #: path here is a decision, and the reason is beside it.
 _IDENTITY_DEFERRED = {
-    # Phase 10 task 4: the brand. Both are files a collaborator downloads.
-    Path("docs/assets/announcement-template.svg"): "phase 10 task 4 (brand)",
-    Path("docs/assets/flyer-template.svg"): "phase 10 task 4 (brand)",
-    Path("tools/convener_ops/visual.py"): "phase 10 task 4 (brand)",
+    # Phase 11, with the example instance and the reference renders.
+    # Phase 10 task 4 looked at this one and left it deliberately: the
+    # poster's wordmark sets `www.<accent>The</accent>Behaviour<accent>
+    # Forum.org</accent>`, a two-tone treatment *of one organisation's
+    # own name* that no derivation reproduces, and its hero line
+    # ("Read together") is a strapline `config/instance.json`
+    # has no key for. Both are identity work, not charter work, and
+    # `visuals/references/*.png` pin what this module renders, so the two
+    # move together or not at all.
+    Path("tools/convener_ops/visual.py"): "phase 11 (the poster's own wordmark)",
     # Phase 11: the example instance. `demo.ts` *is* an instance, in code.
     Path("app/src/data/demo.ts"): "phase 11 (the example instance)",
     Path("site/src/_data/events.json"): "phase 11 (the example instance)",
@@ -708,6 +726,7 @@ def test_no_source_file_writes_this_instances_identity_a_second_time() -> None:
         identity.forum_host,
     )
     allowed = {path.as_posix() for path in _LITERAL_IDENTITY_FILES}
+    allowed |= {path.as_posix() for path in _DERIVED_IDENTITY_FILES}
     allowed |= {path.as_posix() for path in _IDENTITY_DEFERRED}
     allowed.add(published.INSTANCE_PATH.as_posix())
     instance_boundary = boundary.load()
@@ -756,6 +775,29 @@ def test_the_identity_sweep_would_see_a_second_copy_if_there_were_one() -> None:
     assert _IDENTITY_DEFERRED, "the deferred list is empty -- widen the sweep"
     for path, reason in _IDENTITY_DEFERRED.items():
         assert (ROOT / path).exists(), f"{path.as_posix()} ({reason}) is gone"
+
+
+def test_the_generated_templates_carry_the_identity_the_declaration_names() -> None:
+    """The exemption above, checked rather than merely granted.
+
+    These two files are what a collaborator downloads, so the identity
+    travelling outward is whatever they say. They are generated from
+    `config/instance.json` (phase 10, task 4) and
+    `scripts/generate_brand_css.py --check` refuses them the moment they
+    stop being what it derives -- this is the assertion that the
+    derivation is of *this* declaration and not of a literal somebody
+    typed and forgot.
+    """
+    identity = published.load_identity()
+    for path in _DERIVED_IDENTITY_FILES:
+        text = (ROOT / path).read_text(encoding="utf-8")
+        assert identity.forum_host in text, (
+            f"{path.as_posix()} no longer names the forum this instance "
+            f"declares ({identity.forum_host})"
+        )
+        assert identity.series.upper() in text, (
+            f"{path.as_posix()} no longer names this series ({identity.series})"
+        )
 
 
 def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> None:

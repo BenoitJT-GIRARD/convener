@@ -35,8 +35,16 @@ name: Visuals
 #   to do with this task, because a path filter has no finer grain than a
 #   file, and the alternative is silently not re-checking the one function
 #   in it that this task depends on.
-# - `data/brand.json` -- the one source of fact `visual.py`'s own
-#   `_load_colours` and `ribbon.py`'s own `_load_motif` each read directly.
+# - `data/brand.json` -- this instance's own charter, which `visual.py`'s
+#   `_load_colours` and `ribbon.py`'s `_load_motif` both reach through
+#   `tools/convener_ops/brand.py`.
+# - `brand/convener/brand.json` -- the product's own charter, which that
+#   same reader takes instead when an instance has written none. It
+#   changes nothing for *this* instance, which has its own; it is here so
+#   that a duplicate rendering with the default gets re-checked when the
+#   default moves, rather than the filter being right only for us.
+# - `tools/convener_ops/brand.py` -- the reader itself: which of those two
+#   files is in force, and the refusal when no `motif` is declared.
 # - `fonts/**` -- the self-hosted web fonts every rendered glyph comes from.
 # - `tools/uv.lock` -- pins `segno` (the QR renderer) among everything
 #   else Python depends on; a version bump there can change rendered
@@ -101,6 +109,8 @@ on:
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
       - 'data/brand.json'
+      - 'brand/convener/brand.json'
+      - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'visuals/**'
@@ -119,6 +129,8 @@ on:
       - 'tools/convener_ops/governance.py'
       - 'tools/convener_ops/cli.py'
       - 'data/brand.json'
+      - 'brand/convener/brand.json'
+      - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'visuals/**'

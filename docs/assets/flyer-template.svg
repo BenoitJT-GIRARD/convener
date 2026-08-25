@@ -1,49 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 2100 2970" font-family="Archivo, 'Segoe UI', Arial, Helvetica, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm"
+     viewBox="0 0 2100 2970" font-family="Archivo, 'Segoe UI', Arial, Helvetica, sans-serif">
   <title>TEC Monthly Reading Group — event flyer</title>
-  <desc>A4 portrait flyer (210x297 mm) for printing and for attaching to an
-  email. Edit the text in any SVG editor (Inkscape, Figma, Illustrator, a
-  browser plus a text editor), then export to PDF or PNG at 300 dpi.
-  Everything inside id="variable" changes for each event; everything inside
-  id="fixed" is the series identity and stays put.</desc>
+  <desc>A4 portrait flyer (210x297 mm) for printing and for
+  attaching to an email. Edit the text in any SVG editor (Inkscape, Figma,
+  Illustrator, a browser plus a text editor), then export to PDF or PNG at
+  300 dpi. Everything inside id="variable" changes for each event;
+  everything inside id="fixed" is the series identity and stays put.</desc>
 
-  <!-- Palette: the same tokens as the app (app/src/design/tokens.css).
-       turquoise #3FB1C2 · deep purple #3D2D7C · cream #F4F1E6 -->
+  <!-- Generated, not drawn: scripts/generate_brand_css.py writes this file
+  from data/brand.json (the colours and the motif) and config/instance.json
+  (the names). Change one of those, run that command, and commit what it
+  writes; an edit made here is overwritten, and the check fails until it
+  is. Once you have downloaded a copy it is yours, of course: edit that as
+  freely as you like. -->
   <g id="fixed">
-    <rect width="2100" height="2970" fill="#3FB1C2"/>
-    <rect y="0" width="2100" height="290" fill="#F4F1E6"/>
-    <rect y="700" width="2100" height="470" fill="#F4F1E6"/>
-    <rect y="2760" width="2100" height="210" fill="#F4F1E6"/>
+    <rect width="2100" height="2970" fill="#fecac1"/>
+    <rect y="0" width="2100" height="290" fill="#f4f0f1"/>
+    <rect y="700" width="2100" height="470" fill="#f4f0f1"/>
+    <rect y="2760" width="2100" height="210" fill="#f4f0f1"/>
 
-    <!-- Decorative loops, bled off the edges. They carry no text: move or
-         delete them freely. -->
-    <g fill="none" stroke="#3D2D7C" stroke-width="26">
+    <!-- Decorative loops, bled off the edges, in the charter's own motif
+         colour and at its own stroke weight, each placed clear of every
+         word on the page. They carry no text: move or delete them. -->
+    <g fill="none" stroke="#012765" stroke-width="50.4">
       <path d="M210 300 C 60 420, 60 640, 210 760 C 360 880, 360 1100, 210 1220"/>
-      <circle cx="1960" cy="480" r="180"/>
+      <circle cx="2060" cy="470" r="180"/>
       <circle cx="60" cy="2500" r="170"/>
     </g>
 
     <!-- Wordmark: three squares and a link, drawn rather than embedded. -->
     <g transform="translate(250 92)">
-      <rect x="0" y="10" width="44" height="44" fill="#3FB1C2"/>
-      <rect x="58" y="0" width="44" height="44" fill="#3FB1C2"/>
-      <rect x="10" y="72" width="44" height="44" fill="#3FB1C2"/>
-      <rect x="76" y="62" width="44" height="44" fill="#3FB1C2"/>
-      <path d="M30 30 C 78 20, 106 44, 100 82" fill="none" stroke="#3D2D7C" stroke-width="9"/>
-      <circle cx="27" cy="33" r="12" fill="none" stroke="#3D2D7C" stroke-width="9"/>
-      <circle cx="100" cy="80" r="12" fill="none" stroke="#3D2D7C" stroke-width="9"/>
+      <rect x="0" y="10" width="44" height="44" fill="#fecac1"/>
+      <rect x="58" y="0" width="44" height="44" fill="#fecac1"/>
+      <rect x="10" y="72" width="44" height="44" fill="#fecac1"/>
+      <rect x="76" y="62" width="44" height="44" fill="#fecac1"/>
+      <path d="M30 30 C 78 20, 106 44, 100 82" fill="none"
+            stroke="#012765" stroke-width="9"/>
+      <circle cx="27" cy="33" r="12" fill="none"
+              stroke="#012765" stroke-width="9"/>
+      <circle cx="100" cy="80" r="12" fill="none"
+              stroke="#012765" stroke-width="9"/>
     </g>
-    <text x="420" y="196" font-size="98" font-weight="500" fill="#3D2D7C">www.<tspan fill="#3FB1C2">TheBehaviour</tspan>Forum.org</text>
-    <rect x="420" y="228" width="1180" height="7" fill="#3D2D7C"/>
+    <text x="420" y="196" font-size="98" font-weight="500"
+          fill="#012765">forum.example.test</text>
+    <rect x="420" y="228" width="1180" height="7" fill="#012765"/>
 
-    <text x="1050" y="430" text-anchor="middle" font-size="106" font-weight="900" fill="#3D2D7C" letter-spacing="2">READ TOGETHER</text>
-    <text x="1050" y="530" text-anchor="middle" font-size="50" fill="#0f172a">An online seminar, free and open to everyone.</text>
-    <text x="1050" y="600" text-anchor="middle" font-size="50" font-weight="700" fill="#0f172a">Join the discussion at forum.example.test</text>
+    <text x="1050" y="430" text-anchor="middle" font-size="106"
+          font-weight="900" letter-spacing="2"
+          fill="#012765">MONTHLY READING GROUP</text>
+    <text x="1050" y="530" text-anchor="middle" font-size="50"
+          fill="#000000">An invented series, shipped as this product's own worked example.</text>
+    <text x="1050" y="600" text-anchor="middle" font-size="50"
+          font-weight="700"
+          fill="#000000">Join the discussion at forum.example.test</text>
   </g>
 
   <g id="variable">
     <!-- TALK TITLE. Up to three lines, split by hand — SVG does not wrap
          text. A short title: use one line and raise the font-size to 96. -->
-    <text text-anchor="middle" font-size="80" font-weight="700" fill="#3D2D7C">
+    <text text-anchor="middle" font-size="80" font-weight="700"
+          fill="#012765">
       <tspan x="1050" y="840">{{speaker.title}}</tspan>
       <tspan x="1050" y="940"></tspan>
       <tspan x="1050" y="1040"></tspan>
@@ -51,43 +67,59 @@
 
     <!-- DATE AND TIME. The app holds {{speaker.date}} as 2026-11-12 and
          {{speaker.time}} as 12:30; write them out the way they are said. -->
-    <text x="1050" y="1290" text-anchor="middle" font-size="76" font-weight="700" fill="#3D2D7C">{{speaker.date}} at {{speaker.time}} (CET)</text>
+    <text x="1050" y="1290" text-anchor="middle" font-size="76"
+          font-weight="700"
+          fill="#012765">{{speaker.date}} at {{speaker.time}} (CET)</text>
 
     <!-- SPEAKER PHOTO. Replace this frame with the photo: in Inkscape,
-         File &gt; Import, then send the image behind this white frame. Keep the
-         tilt. No photo yet? Leave the frame; it reads as a placeholder. -->
+         File &gt; Import, then send the image behind this white frame. Keep
+         the tilt. No photo yet? Leave the frame; it reads as unfinished. -->
     <g transform="rotate(4 1520 1900)">
       <rect x="1250" y="1440" width="700" height="810" fill="#ffffff"/>
-      <rect x="1288" y="1478" width="624" height="624" fill="#d6e5e7"/>
-      <text x="1600" y="1800" text-anchor="middle" font-size="44" fill="#475569">speaker photo</text>
-      <text x="1912" y="2180" text-anchor="end" font-size="56" font-weight="800" fill="#0f172a">{{speaker.name}}</text>
-      <text x="1912" y="2226" text-anchor="end" font-size="34" fill="#0f172a">{{speaker.affiliation}}</text>
+      <rect x="1288" y="1478" width="624" height="624"
+            fill="#fedad4"/>
+      <text x="1600" y="1800" text-anchor="middle" font-size="44"
+            fill="#794658">speaker photo</text>
+      <text x="1912" y="2180" text-anchor="end" font-size="56"
+            font-weight="800" fill="#522f3c">{{speaker.name}}</text>
+      <text x="1912" y="2226" text-anchor="end" font-size="34"
+            fill="#522f3c">{{speaker.affiliation}}</text>
     </g>
 
     <!-- EDITION CODE. The series number this event carries in the data. -->
-    <text x="1050" y="2900" text-anchor="middle" font-size="40" font-weight="700" fill="#3D2D7C">{{speaker.edition_code}}</text>
+    <text x="1050" y="2900" text-anchor="middle" font-size="40"
+          font-weight="700" fill="#012765">{{speaker.edition_code}}</text>
   </g>
 
   <g id="fixed-what-to-expect">
-    <text x="230" y="1470" font-size="62" font-weight="800" fill="#0f172a">WHAT TO EXPECT?</text>
-    <text font-size="50" fill="#0f172a">
-      <tspan x="300" y="1590" font-weight="800" fill="#3D2D7C">BEFORE: </tspan><tspan>Ask your</tspan>
+    <text x="230" y="1470" font-size="62" font-weight="800"
+          fill="#000000">WHAT TO EXPECT?</text>
+    <text font-size="50" fill="#000000">
+      <tspan x="300" y="1590" font-weight="800"
+             fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
       <tspan x="300" y="1652">questions to the speaker</tspan>
-      <tspan x="300" y="1714">on the forum</tspan>
-      <tspan x="300" y="1846" font-weight="800" fill="#3D2D7C">D-DAY: </tspan><tspan>Presentation</tspan>
+      <tspan x="300" y="1714">at forum.example.test</tspan>
+      <tspan x="300" y="1846" font-weight="800"
+             fill="#012765">D-DAY: </tspan><tspan>Presentation</tspan>
       <tspan x="300" y="1908">followed by a discussion</tspan>
       <tspan x="300" y="1970">with the audience</tspan>
-      <tspan x="300" y="2102" font-weight="800" fill="#3D2D7C">AFTER: </tspan><tspan>Continue the</tspan>
+      <tspan x="300" y="2102" font-weight="800"
+             fill="#012765">AFTER: </tspan><tspan>Continue the</tspan>
       <tspan x="300" y="2164">discussion and connect</tspan>
       <tspan x="300" y="2226">with peers</tspan>
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
          offline generator, then drop it over this square. -->
-    <text x="300" y="2360" font-size="56" font-weight="800" fill="#0f172a">REGISTER HERE</text>
+    <text x="300" y="2360" font-size="56" font-weight="800"
+          fill="#000000">REGISTER HERE</text>
     <rect x="300" y="2400" width="360" height="340" fill="#ffffff"/>
-    <rect x="330" y="2430" width="300" height="280" fill="none" stroke="#94a3b8" stroke-width="5" stroke-dasharray="18 14"/>
-    <text x="480" y="2595" text-anchor="middle" font-size="40" fill="#475569">QR code</text>
-    <text x="1050" y="2830" text-anchor="middle" font-size="46" fill="#0f172a">Free · online · everyone welcome — register at forum.example.test</text>
+    <rect x="330" y="2430" width="300" height="280" fill="none"
+          stroke="#b18f9b" stroke-width="5" stroke-dasharray="18 14"/>
+    <text x="480" y="2595" text-anchor="middle" font-size="40"
+          fill="#794658">QR code</text>
+    <text x="1050" y="2830" text-anchor="middle" font-size="46"
+          fill="#000000">Free · online · everyone welcome — register
+      at forum.example.test</text>
   </g>
 </svg>

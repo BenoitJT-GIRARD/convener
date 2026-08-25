@@ -47,26 +47,32 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 import pytest
 from generate_brand_css import (
     _BEGIN,
     _END,
+    ANNOUNCEMENT_SVG_PATH,
     APP_TOKENS_CSS_PATH,
     BRAND_PATH,
     COMMAND,
+    FLYER_SVG_PATH,
     SITE_CSS_PATH,
-    contrast_ratio,
-    hex_to_rgb,
     load_brand,
     main,
-    relative_luminance,
     render_app_tokens_css,
     render_site_css,
+)
+
+from convener_ops import brand, brand_templates, published, ribbon
+from convener_ops.brand import (
+    contrast_ratio,
+    hex_to_rgb,
+    relative_luminance,
     rgb_triplet,
     rgba,
 )
-
 from convener_ops.paths import repo_root
 
 ROOT = repo_root()
@@ -89,6 +95,10 @@ _GUARDED_FILES = (
     Path("site") / "src" / "index.njk",
     Path("app") / "src" / "design" / "tokens.css",
     Path("app") / "src" / "auth" / "Login.tsx",
+    # Phase 10 task 4: the two files a collaborator downloads. They carried
+    # all three of these values until they stopped being drawn by hand.
+    ANNOUNCEMENT_SVG_PATH,
+    FLYER_SVG_PATH,
 )
 
 #: The reconstruction's own three values, exactly as they shipped: the
@@ -320,19 +330,65 @@ def _marked_stub() -> str:
     return f":root {{\n{_BEGIN}\n{_END}\n}}\n"
 
 
+def _copy(root: Path, rel: Path) -> None:
+    """One committed file, copied into a throw-away repository."""
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        (ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8", newline=""
+    )
+
+
+def _skeleton(root: Path) -> None:
+    """Everything a generation run reads except the instance's own charter:
+    the product's default charter, the instance declaration the two
+    templates take their names from, and a marked-but-empty stylesheet for
+    each of the two spliced targets.
+    """
+    _copy(root, brand.DEFAULT_PATH)
+    _copy(root, published.INSTANCE_PATH)
+    for rel in (SITE_CSS_PATH, APP_TOKENS_CSS_PATH):
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_marked_stub(), encoding="utf-8", newline="")
+
+
+def _write_json(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data), encoding="utf-8", newline="")
+
+
+#: A motif that is manifestly nobody's: enough for a build to complete,
+#: and impossible to mistake for a mark somebody drew.
+_SYNTHETIC_STROKE = "#123456"
+_SYNTHETIC_DOTS = "#654321"
+_SYNTHETIC_MOTIF: dict[str, Any] = {
+    "ribbon_stroke": _SYNTHETIC_STROKE,
+    "ribbon_width_ratio": 0.02,
+    "logo_dots": _SYNTHETIC_DOTS,
+}
+
+
 @pytest.fixture
 def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A repository holding `data/brand.json` and marked-but-empty
-    stylesheets for both generated targets.
+    """A repository holding this instance's own `data/brand.json`, the
+    product's default charter beside it, and marked-but-empty stylesheets
+    for both spliced targets.
     """
-    (tmp_path / "data").mkdir(parents=True)
-    (tmp_path / "data" / "brand.json").write_text(
-        (ROOT / BRAND_PATH).read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    for rel in (SITE_CSS_PATH, APP_TOKENS_CSS_PATH):
-        path = tmp_path / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(_marked_stub(), encoding="utf-8")
+    _skeleton(tmp_path)
+    _copy(tmp_path, BRAND_PATH)
+    monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
+    return tmp_path
+
+
+@pytest.fixture
+def default_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A duplicate that has chosen nothing: no `data/brand.json` at all.
+
+    The state phase 10 asks the product to survive -- and the state in
+    which `motif` has to refuse rather than substitute.
+    """
+    _skeleton(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     return tmp_path
 
@@ -410,8 +466,12 @@ def test_brand_json_changed_without_regenerating_makes_check_fail(
     assert main([]) == 0
     brand_path = fake_repo / BRAND_PATH
     data = json.loads(brand_path.read_text(encoding="utf-8"))
-    data["colour"]["purple"] = "#000000"
-    brand_path.write_text(json.dumps(data), encoding="utf-8")
+    # `purple_tint` and not `purple`, deliberately: no pairing in the
+    # `contrast` table names it, so the run reaches the file comparison
+    # this test is about rather than stopping one step earlier at the
+    # contrast gate, which has mutations of its own below.
+    data["derived"]["purple_tint"] = "#000000"
+    _write_json(brand_path, data)
     assert main(["--check"]) == 1
 
 
@@ -438,3 +498,397 @@ def test_the_terminal_output_is_ascii(
     main(["--check"])
     captured = capsys.readouterr()
     (captured.out + captured.err).encode("ascii")
+
+
+# --------------------------------------------------------------------------
+# Phase 10 task 4: one charter, a product default, and a mark that refuses
+# --------------------------------------------------------------------------
+
+
+def _charter(rel: Path) -> dict[str, Any]:
+    return dict(json.loads((ROOT / rel).read_text(encoding="utf-8")))
+
+
+def _charter_colours(rel: Path) -> dict[str, str]:
+    return _all_brand_colours(_charter(rel))
+
+
+def test_the_product_ships_a_charter_of_its_own() -> None:
+    """The palette a duplicate that has chosen nothing builds with."""
+    assert (ROOT / brand.DEFAULT_PATH).is_file()
+    assert brand.source(ROOT) == brand.INSTANCE_PATH, (
+        "this instance has values of its own and must still build from them"
+    )
+
+
+def test_the_default_charter_names_the_same_tokens_as_this_instances() -> None:
+    """The *system* is the product's, and a default answering a different
+    set of names would be no default for this system at all -- every
+    template that reads a colour reads it by name.
+    """
+    assert sorted(_charter_colours(brand.DEFAULT_PATH)) == sorted(
+        _charter_colours(BRAND_PATH)
+    )
+
+
+def test_the_default_charter_carries_the_same_contrast_obligations() -> None:
+    """The pairings belong to the composition, not to a palette: a default
+    recording fewer of them would be measured against less.
+    """
+
+    def pairings(rel: Path) -> list[str]:
+        return sorted(k for k in _charter(rel)["contrast"] if not k.startswith("_"))
+
+    assert pairings(brand.DEFAULT_PATH) == pairings(BRAND_PATH)
+
+
+def test_every_contrast_the_default_charter_claims_recomputes_and_clears_aa() -> None:
+    """The whole reason a default palette is allowed to exist. D-16 was an
+    *invented* palette that measured worse than the one it replaced; this
+    is the parade, held here as well as at the command.
+    """
+    default = _charter(brand.DEFAULT_PATH)
+    assert brand.contrast_problems(default, named="default") == []
+    colours = _all_brand_colours(default)
+    for name, stored in default["contrast"].items():
+        if name.startswith("_"):
+            continue
+        fg, _, bg = name.rpartition("_on_")
+        assert round(contrast_ratio(colours[fg], colours[bg]), 2) == stored
+        assert stored >= brand.AA_NORMAL_TEXT, f"{name} is {stored}, below AA"
+
+
+def test_the_default_charter_carries_no_motif() -> None:
+    """The one section with no default, and its absence is the decision."""
+    assert brand.MOTIF_KEY not in _charter(brand.DEFAULT_PATH)
+
+
+def test_the_default_palette_is_not_this_instances_wearing_a_new_name() -> None:
+    """A "default" shipping this organisation's own colours would make the
+    acceptance criterion true only for duplicates that remember to
+    configure something.
+    """
+    default = _charter_colours(brand.DEFAULT_PATH)
+    instance = _charter_colours(BRAND_PATH)
+    shared = {
+        name for name in default if default[name].lower() == instance[name].lower()
+    }
+    assert shared == {"white", "black"}, (
+        "only the two achromatic ends may coincide; everything else has to "
+        f"be the product's own, and these are shared: {sorted(shared)}"
+    )
+
+
+def test_the_charter_in_force_is_the_instances_when_it_has_one(
+    fake_repo: Path,
+) -> None:
+    assert brand.source(fake_repo) == brand.INSTANCE_PATH
+    assert brand.colours(brand.load(fake_repo)) == _charter_colours(BRAND_PATH)
+
+
+def test_the_charter_in_force_is_the_products_when_the_instance_has_none(
+    default_repo: Path,
+) -> None:
+    assert brand.source(default_repo) == brand.DEFAULT_PATH
+    assert brand.colours(brand.load(default_repo)) == _charter_colours(
+        brand.DEFAULT_PATH
+    )
+
+
+# --------------------------------------------------------------------------
+# `motif` refuses
+# --------------------------------------------------------------------------
+
+
+def test_a_duplicate_with_no_charter_at_all_is_refused_a_motif(
+    default_repo: Path,
+) -> None:
+    """S-4: what has no safe default must refuse. The message names the
+    section, the file to put it in, and every field it needs -- a build
+    that stops without saying which of those is missing costs an
+    afternoon.
+    """
+    with pytest.raises(brand.MissingMotifError) as raised:
+        brand.motif(default_repo)
+    message = str(raised.value)
+    assert brand.MOTIF_KEY in message
+    assert brand.INSTANCE_PATH.as_posix() in message
+    for field in brand.MOTIF_FIELDS:
+        assert field in message
+
+
+def test_a_charter_whose_motif_is_incomplete_is_refused_by_the_missing_field(
+    fake_repo: Path,
+) -> None:
+    """Half a motif is not a motif: a ribbon with no colour of its own
+    would be drawn in whatever the surrounding ink happens to be.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    del data[brand.MOTIF_KEY]["logo_dots"]
+    _write_json(fake_repo / BRAND_PATH, data)
+    with pytest.raises(brand.MissingMotifError, match="logo_dots"):
+        brand.motif(fake_repo)
+
+
+def test_a_charter_whose_motif_is_not_an_object_is_refused(fake_repo: Path) -> None:
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data[brand.MOTIF_KEY] = "the usual one"
+    _write_json(fake_repo / BRAND_PATH, data)
+    with pytest.raises(brand.MissingMotifError, match="ribbon_stroke"):
+        brand.motif(fake_repo)
+
+
+def test_the_ribbon_reads_the_charter_rather_than_carrying_a_default(
+    default_repo: Path,
+) -> None:
+    """The generated posters stop as well, not only the downloadable
+    templates: `ribbon.py` is the other thing that draws the mark.
+    """
+    with pytest.raises(brand.MissingMotifError):
+        ribbon.ribbon_stroke_colour(default_repo)
+    with pytest.raises(brand.MissingMotifError):
+        ribbon.ribbon_width_ratio(default_repo)
+
+
+def test_the_command_refuses_a_duplicate_with_no_mark_and_says_what_is_missing(
+    default_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Driven, not read: build a second instance that supplies no motif
+    and watch the build stop.
+
+    And the other half of the same run: the two stylesheets are still
+    derived, from the product's own charter, and its contrasts still clear
+    AA. The palette appears; the mark does not.
+    """
+    assert main([]) == 1
+    captured = capsys.readouterr()
+    assert brand.MOTIF_KEY in captured.err
+    assert brand.INSTANCE_PATH.as_posix() in captured.err
+    assert ANNOUNCEMENT_SVG_PATH.as_posix() in captured.err
+    assert not (default_repo / ANNOUNCEMENT_SVG_PATH).exists(), (
+        "a refused template must not be half-written"
+    )
+    assert "clears AA" in captured.out
+    written = (default_repo / SITE_CSS_PATH).read_text(encoding="utf-8")
+    assert _charter_colours(brand.DEFAULT_PATH)["turquoise"] in written
+    assert _charter_colours(BRAND_PATH)["turquoise"] not in written
+
+
+def test_a_duplicate_that_brings_only_its_own_mark_builds_completely(
+    default_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The complement: the one thing a duplicate must supply is its mark,
+    and once it has, the product's own palette carries the rest.
+    """
+    charter = _charter(brand.DEFAULT_PATH)
+    charter[brand.MOTIF_KEY] = _SYNTHETIC_MOTIF
+    _write_json(default_repo / BRAND_PATH, charter)
+
+    assert main([]) == 0
+    capsys.readouterr()
+    assert main(["--check"]) == 0
+    assert "clears AA" in capsys.readouterr().out
+    svg = (default_repo / ANNOUNCEMENT_SVG_PATH).read_text(encoding="utf-8")
+    assert _SYNTHETIC_STROKE in svg
+    assert _SYNTHETIC_DOTS in svg
+    assert _charter_colours(BRAND_PATH)["purple"] not in svg
+
+
+# --------------------------------------------------------------------------
+# A palette that does not clear AA does not build
+# --------------------------------------------------------------------------
+
+
+def test_a_palette_whose_measurement_no_longer_recomputes_does_not_build(
+    fake_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data["contrast"]["purple_on_turquoise"] = 21.0
+    _write_json(fake_repo / BRAND_PATH, data)
+    assert main([]) == 1
+    assert "computes to" in capsys.readouterr().err
+
+
+def test_a_measurement_of_a_colour_that_does_not_exist_does_not_build(
+    fake_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A pairing naming a token nothing declares. Reported rather than
+    raising a `KeyError` out of the command: the two halves of the name
+    are how a reader finds which colour was renamed or dropped.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data["contrast"]["saffron_on_cream"] = 4.6
+    _write_json(fake_repo / BRAND_PATH, data)
+    assert main([]) == 1
+    assert "names no such colour" in capsys.readouterr().err
+
+
+def test_a_palette_that_measures_below_aa_does_not_build(
+    fake_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The clause the whole default rests on, and not a hypothetical:
+    darkening the ground under dark text is exactly the move D-16 was
+    decided over. The ratios below are honest -- every one recomputes from
+    the colours beside it, so the *only* thing wrong with this palette is
+    that secondary text on its ground measures 2.93. That is not a file to
+    regenerate; it is a palette that must not ship.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data["colour"]["turquoise"] = "#3fb1c2"
+    data["contrast"].update(
+        {
+            "purple_on_turquoise": 5.02,
+            "black_on_turquoise": 8.28,
+            "ink_on_turquoise": 4.52,
+            "ink_muted_on_turquoise": 2.93,
+            "turquoise_on_purple": 5.02,
+        }
+    )
+    _write_json(fake_repo / BRAND_PATH, data)
+    assert main([]) == 1
+    err = capsys.readouterr().err
+    assert "below the 4.5" in err
+    assert "does not build" in err
+
+
+# --------------------------------------------------------------------------
+# The two files a collaborator downloads
+# --------------------------------------------------------------------------
+
+_TEMPLATES = (ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH)
+_RENDERERS = {
+    ANNOUNCEMENT_SVG_PATH: brand_templates.render_announcement_template,
+    FLYER_SVG_PATH: brand_templates.render_flyer_template,
+}
+
+
+@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+def test_the_committed_template_is_what_the_charter_derives(rel: Path) -> None:
+    committed = (ROOT / rel).read_text(encoding="utf-8")
+    assert committed == _RENDERERS[rel](ROOT), (
+        f"{rel.as_posix()} is not what the charter derives; run `{COMMAND}`"
+    )
+
+
+@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+def test_the_committed_template_parses_as_xml(rel: Path) -> None:
+    """Found by rendering one in a browser rather than by reading it: `--`
+    anywhere inside an XML comment makes the whole document unparseable,
+    and this project writes `--` for an em dash everywhere. Chrome drew an
+    error page instead of a poster. A parser is cheaper than a browser, so
+    the guard is a parser.
+    """
+    ElementTree.parse(ROOT / rel)
+
+
+@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+def test_no_colour_in_a_template_comes_from_anywhere_but_the_charter(
+    rel: Path,
+) -> None:
+    """The defect these two files carried for months: `#3D2D7C`,
+    `#3FB1C2`, `#F4F1E6` and four greys from no charter at all, in the
+    files a collaborator downloads. Every hex in them is now a value the
+    charter names.
+    """
+    charter = load_brand(ROOT)
+    allowed = {value.lower() for value in _all_brand_colours(charter).values()}
+    allowed |= {
+        str(value).lower()
+        for key, value in charter[brand.MOTIF_KEY].items()
+        if not key.startswith("_") and str(value).startswith("#")
+    }
+    found = {
+        match.lower()
+        for match in re.findall(
+            r"#[0-9a-fA-F]{6}", (ROOT / rel).read_text(encoding="utf-8")
+        )
+    }
+    assert found, "a template that names no colour is not being checked"
+    assert found <= allowed, f"{rel.as_posix()} draws in {sorted(found - allowed)}"
+
+
+@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+def test_a_template_says_it_is_generated(rel: Path) -> None:
+    assert "generate_brand_css.py" in (ROOT / rel).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+def test_a_template_reaches_out_to_nothing(rel: Path) -> None:
+    """The property `app/tests/visual-kit.test.tsx` holds from the other
+    side, restated where the generator lives so that a change to the
+    generator fails in the generator's own suite: an SVG that fetches a
+    font or an image is the shared-account dependency again, one request
+    further away. The one URL allowed is the SVG namespace, which is an
+    identifier and never fetched.
+    """
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    assert "base64" not in text
+    assert "@import" not in text
+    for reach in ('href="http', 'src="http', "url(http", "url('http"):
+        assert reach not in text
+    assert (ROOT / rel).stat().st_size < 30_000
+
+
+def test_the_templates_name_the_instance_the_declaration_names(
+    default_repo: Path,
+) -> None:
+    """The other half of what these files carry outward. A second
+    instance's templates say who *it* is, and nothing of the first.
+    """
+    charter = _charter(brand.DEFAULT_PATH)
+    charter[brand.MOTIF_KEY] = _SYNTHETIC_MOTIF
+    _write_json(default_repo / BRAND_PATH, charter)
+
+    ours = published.load_identity(default_repo)
+    declaration = json.loads(
+        (default_repo / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    declaration["identity"] = {
+        **declaration["identity"],
+        "organisation": "AnotherPlace",
+        "short_name": "AP",
+        "series": "Reading Group",
+        "forum": "https://forum.example.org",
+    }
+    _write_json(default_repo / published.INSTANCE_PATH, declaration)
+
+    svg = brand_templates.render_announcement_template(default_repo)
+    assert "AP Reading Group" in svg
+    assert "READING GROUP" in svg
+    assert "forum.example.org" in svg
+    assert ours.organisation not in svg
+    assert ours.forum_host not in svg
+
+
+def test_a_template_refuses_a_palette_whose_own_pairings_fail_aa(
+    fake_repo: Path,
+) -> None:
+    """The pairings these two files create are not all in the charter's
+    table -- a caption on a frame, a label beside a QR slot -- and it was
+    exactly an unlisted pairing that let one line be set in the page's own
+    ground colour, at 1.00, in every poster ever downloaded. So the
+    renderer measures its own, whatever palette it is handed.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    data["colour"]["cream"] = data["colour"]["purple"]
+    data["contrast"] = {"_comment": "emptied so the palette gate is not what bites"}
+    _write_json(fake_repo / BRAND_PATH, data)
+    with pytest.raises(ValueError, match=r"below the 4\.5"):
+        brand_templates.render_announcement_template(fake_repo)
+
+
+def test_every_pairing_the_templates_draw_clears_aa_in_both_charters() -> None:
+    """Both palettes against the same list, so neither is legible by luck."""
+    for rel in (BRAND_PATH, brand.DEFAULT_PATH):
+        problems = brand_templates._legibility_problems(
+            _charter_colours(rel), named=rel.as_posix()
+        )
+        assert problems == []
+
+
+def test_the_legibility_list_would_notice_a_pairing_that_failed() -> None:
+    """A list that matched nothing would pass for free."""
+    assert brand_templates._LEGIBILITY
+    flat = dict.fromkeys(_charter_colours(BRAND_PATH), "#fecac1")
+    problems = brand_templates._legibility_problems(flat, named="a flat palette")
+    assert len(problems) == len(brand_templates._LEGIBILITY)

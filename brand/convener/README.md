@@ -17,7 +17,7 @@ tool *does*, which every scheduling tool does.
 It is built from circles and arcs, so it holds at the sizes that decide whether a
 mark works: a browser tab, an avatar.
 
-## The four files
+## The files
 
 | file | what it is |
 |---|---|
@@ -25,6 +25,7 @@ mark works: a browser tab, an avatar.
 | `convener-mark-mono.svg` | the mark in a single ink, dot included |
 | `convener-banner.svg` | mark and wordmark side by side |
 | `convener-banner-mono.svg` | the same, single ink |
+| `brand.json` | the product's own charter — the palette a duplicate builds with when it has chosen none |
 
 **There are no light and dark variants, and no rasters.** There is nothing to
 keep in step, because there is only one file per shape.
@@ -52,17 +53,46 @@ Measured from the original artwork, WCAG 2.1 relative luminance.
 
 | | value | on white | on navy |
 |---|---|---|---|
-| navy | `#012765` | **14.23** | — |
+| navy | `#012765` | **14.19** | — |
 | coral | `#fd6b52` | 2.84 | **5.00** |
+
+Navy read **14.23** here until phase 10 recomputed it with the repository's own
+WCAG 2.1 arithmetic (`tools/convener_ops/brand.py`), which gives 14.194. Nothing
+turns on the difference — it clears AAA either way — but a measurement nobody
+rechecks is exactly what D-16 was decided over, so the figure the build asserts
+and the figure written here are the same one.
 
 **The role those numbers impose:** coral is an accent **on the ink**, never text
 on white — 2.84 is below AA at any size. Navy on white clears AAA with room.
 
 This is the same shape of constraint `data/brand.json` records for the other
-palette here, so these values can enter the system without bending it — but
-**they are not declared anywhere yet.** Until they are, and until
-`generate_brand_css.py --check` holds them, this is a measurement in a README,
-not a rule the build enforces.
+palette here, so these values entered the system without bending it. **They are
+declared now**, in `brand.json` beside this file, and
+`generate_brand_css.py --check` recomputes every pairing in it on every run and
+fails the build if one drops below AA. It is no longer a measurement in a
+README; it is a rule.
+
+## The charter beside this file
+
+`brand.json` is what `tools/convener_ops/brand.py` reads when an instance has written
+no `data/brand.json` of its own — so a fresh duplicate builds a finished-looking
+site rather than a grey one. Two of its values are the two above; every other
+token is derived from them by one stated rule, and `brand.json`'s own
+`derived._derivation` gives it: **the product's own hues, at the lightness the
+system measures each role at.** The neutrals come from navy and coral in equal
+parts, which are near enough to opposite that their blend is this palette's own
+grey.
+
+Two consequences worth knowing before using it:
+
+- **The token names are the system's, not this palette's.** `purple` is the
+  navy, `turquoise` is a coral field. They name positions in the composition,
+  never hues — see `brand.json`'s own `_names`.
+- **It carries no `motif`, and that absence is the decision.** The ribbon and
+  the logo's dots are a signature; the build refuses rather than lending a
+  duplicate somebody else's mark. The mark in this directory is the *product's*,
+  which is a different thing from a default an instance would inherit by
+  forgetting.
 
 ## Two things that were decided rather than defaulted
 

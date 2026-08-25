@@ -123,6 +123,8 @@ on:
       - 'docs/toolkit/mailing-list-announce.md'
       - 'docs/toolkit/recording-announce.md'
       - 'data/brand.json'
+      - 'brand/convener/brand.json'
+      - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'visuals/**'

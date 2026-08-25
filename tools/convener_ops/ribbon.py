@@ -52,25 +52,37 @@ nothing stray crosses the visible page at any aspect ratio.
 
 from __future__ import annotations
 
-import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
-#: The one source of fact for the stroke's colour and width ratio.
-BRAND_PATH: Final = Path("data") / "brand.json"
+from . import brand
+
+#: Where the stroke's colour and width ratio are written down. Kept under
+#: this name for the call sites that still quote it; `brand.py` is what
+#: decides which file is read, and there is no default for the section
+#: this module needs -- see `_load_motif`.
+BRAND_PATH: Final = brand.INSTANCE_PATH
 
 Point = tuple[float, float]
 
 
 def _load_motif(root: Path) -> dict[str, Any]:
-    """`data/brand.json::motif`, parsed. `root` matches
-    `generate_brand_css.load_brand`'s own convention: threaded in from
-    `repo_root()` at the call site rather than resolved here, so a test can
-    point it at a fixture without touching the environment."""
-    brand = json.loads((root / BRAND_PATH).read_text(encoding="utf-8"))
-    return dict(brand["motif"])
+    """The charter's `motif`, or a refusal.
+
+    `root` matches `generate_brand_css.load_brand`'s own convention:
+    threaded in from `repo_root()` at the call site rather than resolved
+    here, so a test can point it at a fixture without touching the
+    environment.
+
+    **There is no default motif**, so this raises `brand.MissingMotifError`
+    rather than returning something for a duplicate that has configured
+    no mark of its own. The ribbon and the logo's dots are a signature:
+    everything that draws them stops here, and is told what is missing
+    and where to put it (phase 10, S-4).
+    """
+    return brand.motif(root)
 
 
 def ribbon_stroke_colour(root: Path) -> str:

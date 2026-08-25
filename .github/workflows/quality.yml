@@ -236,14 +236,23 @@ jobs:
         # files in the tree, so it would be satisfied by the shallow clone the
         # other jobs take; it runs here because this is the job that has `uv`.
         run: uv run python ../scripts/generate_schema_doc.py --check
-      - name: Brand tokens
+      - name: Brand tokens and templates
         working-directory: tools
         # site/src/style.css, app/src/design/tokens.css and tokens.ts each
         # carried data/brand.json's colours retyped by hand -- the shape
         # that let the application drift to a reconstruction's palette
         # unnoticed (docs/superpowers/deferred-work.md, entry 1). Same
         # assertion-only run as the schema check above: writes nothing,
-        # fails if a committed file is not what the brand file derives.
+        # fails if a committed file is not what the charter derives.
+        #
+        # Phase 10 task 4 gave it two more things to fail on. It now also
+        # derives the two SVG templates a collaborator downloads
+        # (docs/assets/), which had drifted onto the same discarded
+        # palette where no check could see them; and it recomputes every
+        # contrast the charter records, refusing a palette that measures
+        # below WCAG AA rather than only one that disagrees with a file.
+        # That last clause is what lets the product ship a default palette
+        # at all, so it has to run here and not only in pytest.
         run: uv run python ../scripts/generate_brand_css.py --check
 
   # Phase 8, task 2: the former `typescript`, `site` and `spelling` jobs.
