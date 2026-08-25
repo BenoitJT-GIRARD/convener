@@ -25,13 +25,20 @@
  * which is the only thing this script is asking about.
  */
 
-const { publishedAddress } = require('./published.cjs');
+const { publishedAddress, identity } = require('./published.cjs');
 
 const noop = () => {};
+// `addGlobalData` is recorded rather than dropped: `site.*` is composed in
+// `.eleventy.js` itself (phase 10 task 3), so what the real, committed
+// config hands every template is only observable by watching it register
+// it. Everything else genuinely has no bearing on the returned object.
+const globals = {};
 const stub = {
   addPassthroughCopy: noop,
   addFilter: noop,
-  addGlobalData: noop,
+  addGlobalData: (name, value) => {
+    globals[name] = typeof value === 'function' ? value() : value;
+  },
   addTransform: noop,
 };
 
@@ -41,5 +48,13 @@ console.log(
   JSON.stringify({
     reader: publishedAddress(),
     eleventyPathPrefix: resolved.pathPrefix,
+    // Phase 10, task 3: who this side thinks runs the series, and what
+    // `.eleventy.js` -- the real, committed config, called here the way
+    // Eleventy calls it -- actually registers as the global `site`. Same
+    // distinction as `eleventyPathPrefix` above: a reader
+    // that agreed with the declaration while the templates were fed
+    // something else would look exactly like this passing.
+    identity: identity(),
+    siteData: globals.site,
   })
 );

@@ -3,10 +3,12 @@
  *
  * The application knew about two places -- a LinkedIn post and a forum
  * announcement -- and the checklist the volunteers actually keep runs to
- * seven: the The Example Collective forum, the TEC LinkedIn page, personal
- * LinkedIn accounts, the TEATIME mailing list, institute newsletters and
- * internal messaging, the RISC newsletter, and printed posters in the
- * institutes.
+ * seven: the community forum, the series' own professional-network page,
+ * personal accounts on it, a research-network mailing list, institute
+ * newsletters and internal messaging, a second newsletter, and printed
+ * posters in the institutes. Which seven they are by name is the
+ * instance's own answer, in `data/config.yml`'s `channels` -- naming them
+ * here would be a copy of that list, in a comment nothing checks.
  *
  * **They are configuration, not a constant.** Whether those are still the
  * right seven cannot be confirmed without asking the collaborators, and

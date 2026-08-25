@@ -7,6 +7,14 @@ import {
 } from '../state/consent';
 import { dateLine } from '../state/derived';
 import type { Speaker } from '../data/types';
+// Phase 10, task 3: `docs/toolkit/`'s templates used to write the
+// organisation's name, the series' title, its forum and its contact
+// address out in full. They read them as `{{ instance.* }}` now,
+// resolved from the one declaration through the reader below --
+// an extension of a vocabulary this renderer already had, not a second
+// engine beside it. `published.py::Identity.namespace` composes the
+// identical map for `announce.py`'s own renderer.
+import { instanceIdentity } from '../instance';
 
 export interface SubstitutionContext {
   speaker?: Speaker;
@@ -77,6 +85,12 @@ function signupLink(editionCode: string): string {
 }
 
 interface Resolved {
+  /** Who runs this series and what it is called -- the organisation's name,
+   *  its short form, the series' title, its forum, the address a
+   *  participant writes to. Present in every context, with or without a
+   *  speaker: it is a property of the instance, not of a record, which is
+   *  why `substituteWithoutSpeaker` below resolves it too. */
+  instance?: Record<string, string>;
   /** What this repository publishes, composed from the field classification
    *  in `state/consent.ts` rather than restated in prose. A template that
    *  tells a speaker what would go online reads it from here, so the message
@@ -103,6 +117,7 @@ interface Resolved {
 
 function buildContext(ctx: SubstitutionContext): Resolved {
   const r: Resolved = {
+    instance: { ...instanceIdentity() },
     consent: {
       published_always: publishedAlwaysWording(),
       published_on_consent: publishedOnConsentWording(),
@@ -242,25 +257,37 @@ export function substitute(text: string, ctx: SubstitutionContext): string {
     .replace(/\n{3,}/g, '\n\n');
 }
 
-/** The `{{ consent.… }}` group, and only it. */
-const CONSENT_ONLY = /\{\{\s*consent\.(\w+)\s*\}\}/g;
+/** The two groups that do not depend on a speaker, and only those. */
+const WITHOUT_SPEAKER = /\{\{\s*(consent|instance)\.(\w+)\s*\}\}/g;
 
 /**
- * Resolve what the classification composes, with no speaker in hand.
+ * Resolve everything that does not depend on a speaker.
  *
  * `substitute` is given a speaker at the point of action and leaves the raw
  * `{{ speaker.name }}` placeholders alone everywhere else, so that the
  * Templates screen shows a volunteer a template rather than a page of missing
- * markers. The `consent.…` group does not depend on a speaker -- it is read
- * off `state/consent.ts` -- and one of its phrases is a sentence a host reads
- * out loud. A host reading the intro script on the Templates screen must see
- * the sentence, not the token: a placeholder in the middle of spoken prose is
- * either read aloud or improvised around, and both are worse than the drift
- * this replaced.
+ * markers. Two groups are not like that. The `consent.…` group is read off
+ * `state/consent.ts`, and one of its phrases is a sentence a host reads out
+ * loud: a host reading the intro script on the Templates screen must see the
+ * sentence, not the token, because a placeholder in the middle of spoken
+ * prose is either read aloud or improvised around, and both are worse than
+ * the drift this replaced. The `instance.…` group (phase 10, task 3) is the
+ * same argument made about a different constant: the organisation's own name
+ * is not a field of any record, it is the same on every page, and a
+ * volunteer reading a template to decide whether to send it must see whose
+ * name is on it.
+ *
+ * Anything else is left exactly as it was found -- an unknown leaf included,
+ * so that a token this renderer does not have still reaches `substitute`'s
+ * own `«missing: …»` marker at the point of action rather than being
+ * silently swallowed here.
  */
-export function substituteConsent(text: string): string {
-  const resolved = buildContext({}).consent!;
-  return text.replace(CONSENT_ONLY, (whole, leaf: string) =>
-    leaf in resolved ? resolved[leaf as keyof typeof resolved] : whole,
-  );
+export function substituteWithoutSpeaker(text: string): string {
+  const resolved = buildContext({});
+  return text.replace(WITHOUT_SPEAKER, (whole, group: string, leaf: string) => {
+    const values = resolved[group as 'consent' | 'instance'] as
+      | Record<string, string>
+      | undefined;
+    return values && leaf in values ? values[leaf] : whole;
+  });
 }

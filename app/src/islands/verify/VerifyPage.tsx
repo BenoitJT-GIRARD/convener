@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { instanceIdentity } from '../../instance';
 import { useEffect, useState } from 'react';
 import { verify } from '../../verify/verify';
 import type { VerifyResult } from '../../verify/verify';
@@ -127,7 +128,13 @@ import type { LookupResult } from '../../verify/register';
  * is no payload in scope for it to read one from.
  */
 
-const CONTACT_EMAIL = 'reading-group@example.test';
+// The address a participant writes to about their own data. Phase 10,
+// task 3: declared once in `config/instance.json` and carried into this
+// bundle by `vite.config.ts`'s own define, because this runs in a
+// participant's browser. A duplicate that left this literal here would
+// send its own participants' data-protection requests to the previous
+// instance's inbox.
+const contactEmail = () => instanceIdentity().contact;
 
 type Tone = 'primary' | 'accent' | 'danger' | 'info';
 
@@ -182,7 +189,7 @@ function CertificateDetails({ cert }: { cert: DisplayCertificate }) {
       </div>
       <div>
         <dt>Organiser: </dt>
-        <dd>The Example Collective</dd>
+        <dd>{instanceIdentity().organisation}</dd>
       </div>
       <div>
         <dt>Certificate identifier: </dt>
@@ -217,7 +224,8 @@ function Revoked({ cert }: { cert: DisplayCertificate }) {
     <Panel tone="accent" title="Certificate revoked">
       <p>
         This certificate&apos;s signature is genuine -- it really was issued to the person
-        named below -- but The Example Collective has since revoked it. A revoked certificate
+        named below -- but {instanceIdentity().organisation} has since revoked it. A revoked
+        certificate
         should not be relied on to attest attendance.
       </p>
       <CertificateDetails cert={cert} />
@@ -236,7 +244,7 @@ function NotVerifiable() {
       </p>
       <p>
         If you believe this certificate is genuine, contact{' '}
-        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
       </p>
     </Panel>
   );
@@ -257,7 +265,7 @@ function CannotCheckSignature() {
         We could not load the signing keys we publish, so we could not check whether this
         certificate&apos;s signature is genuine. This is not a sign that anything is wrong
         with it -- please try again shortly, or contact{' '}
-        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> if this persists.
+        <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a> if this persists.
       </p>
     </Panel>
   );
@@ -288,7 +296,7 @@ function StateUnknown({
           ? 'We could not reach our register just now to confirm whether it is still current or has since been revoked.'
           : "This certificate does not carry an identifier we can look up, so we cannot confirm whether it is still current or has since been revoked."}{' '}
         This is not a sign that the certificate is invalid -- please try again shortly, or
-        contact <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        contact <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
       </p>
       <CertificateDetails cert={cert} />
     </Panel>
@@ -311,7 +319,7 @@ function NotInRegister({ cert }: { cert: DisplayCertificate }) {
         below. We read our register successfully, but it does not currently list this
         certificate&apos;s identifier. This can happen briefly right after issuance and is not
         a sign that anything is wrong -- if it persists, contact{' '}
-        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
       </p>
       <CertificateDetails cert={cert} />
     </Panel>

@@ -10,11 +10,11 @@ they conclude that the series is defunct, and they do not propose again.*
 
 ---
 
-**Subject:** Thank you — we have your proposal for the TEC Workshop Series
+**Subject:** Thank you — we have your proposal for the {{ instance.short_name }} {{ instance.series }}
 
 Dear {{ proposed_by.name }},
 
-Thank you for proposing {{ speaker.name }} for The Example Collective Virtual
+Thank you for proposing {{ speaker.name }} for {{ instance.organisation }} Virtual
 Workshop Series. Your proposal has reached us and is on the list the editorial
 board reads.
 
@@ -46,7 +46,7 @@ most of our speakers come from.
 Best regards,
 
 {{ host_1.name }}
-*for The Example Collective team*
+*for {{ instance.organisation }} team*
 
 ---
 

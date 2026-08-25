@@ -12,7 +12,7 @@
  * defect, the same failure this project's iCalendar leak guard had while
  * blind to line folding.
  *
- * The forbidden prefix is derived from `REPO_URL` -- the one constant every
+ * The forbidden prefix is derived from `repoUrl()` -- the one reader every
  * *legitimate* link to this repository already goes through
  * (`content/fetch.ts`'s edit link, `content/transclude.ts`'s attribution
  * line) -- rather than a second, hand-typed copy of the same private
@@ -35,15 +35,15 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CONTENT_REGISTRY, REPO_URL } from '../src/content/registry';
+import { CONTENT_REGISTRY, repoUrl } from '../src/content/registry';
 import { copyHandbook } from '../scripts/handbook-registry.mjs';
 
 const DOCS = resolve(__dirname, '../../docs');
 const REGISTRY_SOURCE = readFileSync(resolve(__dirname, '../src/content/registry.ts'), 'utf-8');
 
 /** The private repository's own blob-link prefix -- the shape every one of
- *  the twelve dead links took (`${REPO_URL}/blob/main/docs/...`). */
-const PRIVATE_BLOB_PREFIX = `${REPO_URL}/blob/`;
+ *  the twelve dead links took (`${repoUrl()}/blob/main/docs/...`). */
+const PRIVATE_BLOB_PREFIX = `${repoUrl()}/blob/`;
 
 function page(file: string): string {
   return readFileSync(resolve(DOCS, file), 'utf-8');

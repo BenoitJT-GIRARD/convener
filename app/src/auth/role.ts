@@ -1,8 +1,14 @@
 import type { Config } from '../data/types';
 import { isBoardMember } from '../state/board';
 import { parisToday } from '../state/derived';
+import { organisationLogin } from '../instance';
 
-const ORG = 'The Example Collective';
+/** The GitHub team whose membership this check reads. The *slug* is the
+ *  product's -- every duplicate creates a team by this name, and
+ *  `docs/reference/operations.md` says so -- while the organisation it
+ *  belongs to is the instance's, taken from the one repository name
+ *  `config/instance.json` declares. Two facts, each in the place that
+ *  owns it. */
 const TEAM = 'editorial-board';
 
 /**
@@ -20,7 +26,7 @@ export async function detectRole(
 ): Promise<'board' | 'organizer'> {
   try {
     const r = await fetch(
-      `https://api.github.com/orgs/${ORG}/teams/${TEAM}/memberships/${login}`,
+      `https://api.github.com/orgs/${organisationLogin()}/teams/${TEAM}/memberships/${login}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

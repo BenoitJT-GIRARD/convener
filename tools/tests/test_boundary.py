@@ -133,12 +133,19 @@ def test_this_repository_declares_a_boundary_that_reads() -> None:
     """The anchors, so that nothing below can pass over an empty set.
 
     Four paths named on purpose: the records, the keys, the published
-    derivative and the series' own identity. They are asserted as
+    derivative and the decision register. They are asserted as
     *membership*, never as the whole list -- a test that restated the list
     would be the second copy this whole design exists to refuse.
+
+    `site/src/_data/site.json` was the fourth of these until phase 10 task
+    3, which folded its four keys into `config/instance.json`'s own
+    `identity` and left `site/.eleventy.js` composing them. The file
+    entry went with the file, and nothing under `site/` is the instance's
+    now -- so the anchor moved to `docs/governance/register.md`, the one
+    path here that a scheduled job rewrites rather than a person.
     """
     declared = load().instance_paths
-    for owned in ("data/", "keys/", "public-data/", "site/src/_data/site.json"):
+    for owned in ("data/", "keys/", "public-data/", "docs/governance/register.md"):
         assert owned in declared, f"{owned} is no longer declared: {declared}"
 
 
@@ -415,6 +422,107 @@ def test_a_kept_entry_that_cannot_be_read_stops(kept: Any, expected: str) -> Non
 
 
 # ------------------------------------------------------------------ #
+# `regenerated:` -- the paths upstream's own runs also write
+# ------------------------------------------------------------------ #
+
+
+def test_every_regenerated_path_is_told_to_git_how_to_merge() -> None:
+    """The clause `regenerated:` exists to make checkable.
+
+    Declaring a path the instance's says upstream will not *edit* it. It
+    cannot say upstream will not *run*: upstream is itself a running
+    instance, and `.github/workflows/register.yml` rewrites
+    `docs/governance/register.md` in full from the commit history on every
+    push, on both sides of any merge. Both renderings are correct, they
+    are entirely different, and they touch the same lines -- a conflict on
+    every merge, for ever, whose only correct resolution is "mine".
+
+    `.gitattributes` is where that resolution is written down. This is
+    what stops the declaration and the attribute drifting apart: a path
+    declared `regenerated:` and never given `merge=ours` is a promise
+    nobody kept, and it would only be discovered by somebody else, a year
+    later, in their own repository.
+    """
+    declared = load().regenerated_paths
+    assert declared, "no path is declared regenerated -- the clause is dead"
+    attributes = (ROOT / boundary.GIT_ATTRIBUTES_PATH).read_text(encoding="utf-8")
+    lines = [
+        line.split("#", 1)[0].split()
+        for line in attributes.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    for path in declared:
+        matching = [parts for parts in lines if parts and parts[0] == path]
+        assert matching, (
+            f"{path} is declared regenerated: in "
+            f"{boundary.DECLARATION_PATH.as_posix()} but "
+            f"{boundary.GIT_ATTRIBUTES_PATH.as_posix()} says nothing about "
+            "it -- every merge in every duplicate will conflict on it"
+        )
+        assert any(
+            boundary.REGENERATED_MERGE_ATTRIBUTE in parts for parts in matching
+        ), f"{path} has git attributes but not {boundary.REGENERATED_MERGE_ATTRIBUTE!r}"
+
+
+def test_the_register_is_the_regenerated_path_this_task_found() -> None:
+    """The anchor, so the clause above cannot pass over an empty set or a
+    set somebody quietly widened. One path today, and it is the one phase
+    10 task 1 found and task 3 ruled on."""
+    assert load().regenerated_paths == ("docs/governance/register.md",)
+    assert (ROOT / "docs" / "governance" / "register.md").is_file()
+
+
+def test_a_directory_cannot_be_declared_regenerated() -> None:
+    """`merge=ours` is an attribute of a file. A directory declared
+    regenerated would be a promise `.gitattributes` cannot be held to
+    entry by entry, so it is refused rather than approximated."""
+    with pytest.raises(ValueError, match="regenerated: names"):
+        declaration_from_data(
+            {
+                "owner": PRODUCT,
+                "v": boundary.DECLARATION_VERSION,
+                "instance": [
+                    {
+                        "path": "public-data/",
+                        "reason": "the published derivative",
+                        "regenerated": True,
+                    }
+                ],
+            }
+        )
+
+
+def test_a_regenerated_flag_that_is_not_a_flag_is_refused() -> None:
+    with pytest.raises(ValueError, match="must be true or false"):
+        declaration_from_data(
+            {
+                "owner": PRODUCT,
+                "v": boundary.DECLARATION_VERSION,
+                "instance": [
+                    {
+                        "path": "data/x.md",
+                        "reason": "a record",
+                        "regenerated": "yes",
+                    }
+                ],
+            }
+        )
+
+
+def test_a_path_nobody_declared_regenerated_is_not() -> None:
+    """The default, asserted rather than assumed: the flag is off unless
+    the declaration turns it on."""
+    (entry,) = declaration_from_data(
+        {
+            "owner": PRODUCT,
+            "v": boundary.DECLARATION_VERSION,
+            "instance": [{"path": "data/", "reason": "the records"}],
+        }
+    )
+    assert entry.regenerated is False
+
+
+# ------------------------------------------------------------------ #
 # Clause 2 -- no instance path holds code
 # ------------------------------------------------------------------ #
 
@@ -426,7 +534,7 @@ def test_the_walk_sees_the_files_this_repository_really_holds() -> None:
     assert "data/config.yml" in found
     assert "data/brand.json" in found
     assert "config/registration-lanes.yml" in found
-    assert "site/src/_data/site.json" in found
+    assert "docs/governance/register.md" in found
     assert "data/schema.md" not in found, "a kept file is the product's"
     assert "keys/signing/README.md" not in found
     assert "config/integrations.yml" not in found

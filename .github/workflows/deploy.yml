@@ -49,7 +49,7 @@ on:
 # Three other workflows push to main, so two "Deploy app" runs overlapping is
 # ordinary, not exotic. That is a different race from the one the retry loop
 # below handles: this job and `publish-vitrine.yml` write disjoint subtrees
-# of example-showcase (`app/` here, the site's own root-level files there --
+# of the published repository (`app/` here, the site's own root-level files there --
 # `index.html`, `style.css`, `fonts/`, `.nojekyll`, task 2), so re-deriving
 # against a push made by the other one always reproduces cleanly and both
 # pushes must land -- which is exactly what that loop (now re-deriving
@@ -91,7 +91,7 @@ jobs:
           version: '0.5.x'
       # Task 13 (certificate verification page): `certificates.json`, part
       # of the app's own `public/` -- so it ships inside `app/dist/` and
-      # `deploy.yml`'s existing "Push to example-showcase" step below carries it
+      # `deploy.yml`'s existing "Push to the published repository" step below carries it
       # into the showcase for free, with no second, separate write into
       # that repo's `app/` subtree to race against this workflow's own
       # wholesale refresh of it. Needs no secret: `convener-certificates-public-data`
@@ -135,14 +135,14 @@ jobs:
       # services/signup-relay reads this exact file, at this exact path,
       # through the GitHub Contents API against this repository (the same
       # credential and the same call shape it already uses for
-      # keys/events/<id>.pub), because checking a deployed example-showcase URL
+      # keys/events/<id>.pub), because checking a deployed public URL
       # made the relay's answer depend on a deployment that was never
       # wired up, and made "the switch is on" true at a build-to-live lag
       # the relay has no business inheriting. `.gitignore` carries a
       # deliberate exception for this one file (see its own comment) --
       # every other file `public-data/` collects stays generated-only.
       #
-      # This step must stay before "Build" and "Push to example-showcase"
+      # This step must stay before "Build" and "Push to the published repository"
       # below -- load-bearing, not incidental: the retry loop's own
       # `git reset --hard` can only ever discard *this* step's own
       # commit, never a build that has not happened yet. Moving this step
@@ -254,11 +254,11 @@ jobs:
       # survey status" just above, and for the identical reason: this
       # commits `public-data/agenda-internal.ics` back to *this*
       # repository over the checkout's own `GITHUB_TOKEN` (`contents:
-      # write`, already granted above), never into the `example-showcase`
-      # clone the "Push to example-showcase" step further down builds --
+      # write`, already granted above), never into the published
+      # repository's clone the "Push to the published repository" step further down builds --
       # `.gitignore` and `.gitattributes` both carry a deliberate, named
       # exception for this one path (see their own comments), and nothing
-      # in `app/scripts/` or in the "Push to example-showcase" step below ever
+      # in `app/scripts/` or in the "Push to the published repository" step below ever
       # names it, which is what keeps this feed off both published
       # bundles. `tools/tests/test_agenda.py` sweeps every copy script and
       # every workflow's own push step to prove that absence holds, not
@@ -304,7 +304,7 @@ jobs:
           VITE_GITHUB_APP_CLIENT_ID: ${{ vars.VITE_GITHUB_APP_CLIENT_ID }}
           VITE_SIGNUP_RELAY_URL: ${{ vars.VITE_SIGNUP_RELAY_URL }}
         run: npm run build
-      - name: Push to example-showcase
+      - name: Push to the published repository
         env:
           DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}
         run: |
@@ -315,8 +315,24 @@ jobs:
           fi
           git config --global user.name "convener-publisher"
           git config --global user.email "convener-publisher@users.noreply.github.com"
+          # Where the built output is pushed. Derived from
+          # `config/instance.json`'s own `published_url`, never named here:
+          # GitHub Pages serves a project repository at
+          # `https://<owner>.github.io/<repository>/` and nowhere else, so
+          # the address a visitor sees and the repository this push writes
+          # into are one fact, not two. Before phase 10 task 3 they were
+          # two, and changing the declared address moved every public URL
+          # while still publishing into the previous instance's repository.
+          # Read through the Python reader that owns the derivation
+          # (`published.Published.publish_repository`, which refuses rather
+          # than guessing for an address that is not a Pages one) -- the
+          # same `uv run --project tools python -c` shape
+          # `publish-vitrine.yml`'s own room-link guard already uses, rather
+          # than a fourth parser written in shell.
+          target="$(uv run --project tools python -c \
+            'from convener_ops.published import load; print(load().publish_repository)')"
           git clone --depth 1 \
-            "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
+            "https://x-access-token:${DEPLOY_TOKEN}@github.com/${target}.git" /tmp/vit
           cd /tmp/vit
 
           # --force: `git add` still honours the *target* repository's own
@@ -335,7 +351,7 @@ jobs:
             exit 0
           fi
           git commit -m "app: refresh build"
-          # This job and Publish vitrine both clone example-showcase fresh and
+          # This job and Publish vitrine both clone the published repository fresh and
           # each only ever stages its own disjoint subtree (app/ here, the
           # site's own root-level files there) -- but that makes the
           # *commits* conflict-free, not the *push*. git push is

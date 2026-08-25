@@ -31,6 +31,19 @@
 # place: `test_boundary.py` refuses a `config/` path named in the list
 # below, so the two can never disagree.
 #
+# What used to be here and is not any more
+# ----------------------------------------
+# `site/src/_data/site.json` was an entry in the list below: four keys --
+# the series' title, its tagline, its forum, its proposal form -- read by
+# the showcase's build through Eleventy's global-data convention. Phase 10
+# task 3 folded all four into `config/instance.json`'s own `identity`,
+# alongside the organisation's name, and `site/.eleventy.js` composes them
+# from there for every template. The file entry went with the file. That is S-2 applied
+# to this declaration itself: leaving four identity keys in `site/` and
+# putting the rest in `config/` would have given one notion two homes and
+# a duplicate two files to edit before its first build. Nothing under
+# `site/` is the instance's now.
+#
 # `config/instance.json` is JSON rather than YAML for a reason that is not
 # taste: phase 10 task 2 made it the one declaration of this project's
 # published address, and Python, the application's build and the showcase's
@@ -83,6 +96,20 @@ instance:
           page depends on. It is product documentation that happens to live
           where the keys go, so that an operator opening the directory meets
           it. Upstream maintains it; an instance never edits it.
+  - path: docs/governance/register.md
+    regenerated: true
+    reason: >-
+      The decision register: a total re-rendering of this repository's own
+      commit history, written by .github/workflows/register.yml on every
+      push (tools/convener_ops/register.py, cli.py::register) and never by hand
+      -- the file's own preamble says so, and convener-register --check fails
+      the build if anybody tries. It sits under docs/ because it is written
+      for a volunteer to read and because two handbook pages link to it and
+      the cockpit publishes it, all of which would break if it moved; it is
+      the instance's because its every row is this series' own governance,
+      and upstream ships it filled in with rows a duplicate has no reason
+      to inherit. It is the one entry here that upstream's own runs also
+      write, which is what regenerated: above is for.
   - path: public-data/
     reason: >-
       Everything the instance publishes about itself, derived from data/ by
@@ -90,13 +117,3 @@ instance:
       .github/workflows/deploy.yml. Upstream ships no content here at all --
       the directory is empty in a fresh clone, and .gitignore's own
       exceptions name the three files a running instance commits into it.
-  - path: site/src/_data/site.json
-    reason: >-
-      The series' identity as the public site states it: its title, its
-      tagline, the address of its forum and of its proposal form. Four keys,
-      all of the instance's, in a file the product's build reads by Eleventy's
-      global-data convention -- which is why it sits inside site/ and cannot
-      simply be moved out of it. A file entry rather than a directory one for
-      exactly that reason: everything else under site/src/_data/ is product
-      code or a build fixture (events.json, overwritten in CI from
-      public-data/events-public.json -- see publish-vitrine.yml).

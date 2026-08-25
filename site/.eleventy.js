@@ -25,11 +25,64 @@
 // showcase's side of a boundary Python and the application build read
 // from their own (D-14). The names stay: everything below this line uses
 // them exactly as before.
-const { publishedAddress } = require('./scripts/published.cjs');
+const { publishedAddress, identity } = require('./scripts/published.cjs');
 
 const PUBLISHED = publishedAddress();
 
 const PATH_PREFIX = PUBLISHED.pathPrefix;
+
+// Who runs this series, read from `config/instance.json` through the same
+// `scripts/published.cjs` this file already reads the published address
+// from.
+//
+// This was `src/_data/site.json` until phase 10 task 3: four hand-typed
+// keys -- the series' title, its tagline, its forum, its proposal form --
+// declared an instance path by `config/boundary.yml`. Clean as far as it
+// went, and still a second home for the same notion, with the
+// organisation's name written out in eighty-five other places and nothing
+// holding the two together. There is one declaration now.
+//
+// Composed here rather than in a `src/_data/site.js` for a reason a first
+// attempt found the hard way: several suites copy `src/` to a scratch
+// directory and build it with `--input=<tmp>/src`, at which point a data
+// file's own relative `require('../../scripts/published.cjs')` resolves
+// against the copy and there is nothing there. This file is loaded from
+// `site/` whatever `--input` says, so this is the one place the
+// derivation can live and still be the same derivation in every build.
+// Three of these values never pass through a template at all -- the
+// sentence every event page's meta description ends on, and the two
+// calendar headers below -- so they would have needed reading here in any
+// case.
+const IDENTITY = identity();
+
+/** Everything a template reads as `site.*`. `title` is composed, not
+ *  declared: it was "TEC Monthly Reading Group", which is exactly
+ *  `short_name` and `series` with a space between them, and declaring it
+ *  as well would have been a third way to spell one fact. */
+const SITE = {
+  title: `${IDENTITY.short_name} ${IDENTITY.series}`,
+  tagline: IDENTITY.tagline,
+  // The forum: the whole address where a link is wanted, the bare host
+  // where a sentence names it.
+  forum: IDENTITY.forum,
+  forumHost: IDENTITY.forum_host,
+  // The proposal form `src/propose.njk` sends people to -- the same form
+  // `tools/convener_ops/proposal.py`'s webhook receives from.
+  applyForm: IDENTITY.proposal_form,
+  // The organisation itself: the masthead, the footer's "run by
+  // volunteers from", every event page's `Organization` structured data,
+  // and the address a participant writes to about their own data.
+  organisation: IDENTITY.organisation,
+  shortName: IDENTITY.short_name,
+  series: IDENTITY.series,
+  contact: IDENTITY.contact,
+  // The two repositories `src/publish-readme.njk` names on the published
+  // site's own landing page: the one this build is pushed into (derived
+  // from the address it is served at) and the one it is built from.
+  publishRepository: PUBLISHED.publishRepository,
+  publishRepositoryName: PUBLISHED.publishRepository.split('/')[1],
+  repository: IDENTITY.repository,
+};
 
 // Phase 5, task 10: structured event data, share metadata, the sitemap and
 // the feed all need this project's real, *absolute* published address --
@@ -123,7 +176,7 @@ function parisStandingStart(isoDate) {
 
 // Fix wave (branch review, minor 2): the fallback description for an
 // edition that carries no `abstract` yet -- the speaker's name, optionally
-// `, affiliation`, then " — a The Example Collective virtual seminar." -- has to
+// `, affiliation`, then " — a <organisation> virtual seminar." -- has to
 // read the same way in three places about the same edition: event.njk's
 // own `<meta name="description">`/Open Graph/Twitter Card metadata
 // (`eleventyComputed.pageDescription`), its JSON-LD `description`, and
@@ -141,7 +194,7 @@ function eventDescriptionFallback(event) {
   if (event.speaker_affiliation) {
     description = `${description}, ${event.speaker_affiliation}`;
   }
-  return `${description} — a The Example Collective virtual seminar.`;
+  return `${description} — a ${IDENTITY.organisation} virtual seminar.`;
 }
 
 // `path` is root-relative and unprefixed -- exactly `| url`'s own input
@@ -235,7 +288,7 @@ const SEMINAR_DURATION_MINUTES = 90;
 // an earlier one. Applied to every free-text property value this feed
 // writes (SUMMARY, DESCRIPTION, LOCATION): `eventDescriptionFallback`'s
 // own fallback text already contains a comma ("<speaker>, <affiliation>
-// — a The Example Collective virtual seminar."), which an unescaped ICS file
+// — a <organisation> virtual seminar."), which an unescaped ICS file
 // would misparse as the start of a second property.
 //
 // Mechanical and RFC-mandated, unlike `parisStandingStart`: there is no
@@ -372,9 +425,9 @@ function agendaCalendar(events) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//example-instance//Monthly Reading Group//EN',
+    `PRODID:-//${IDENTITY.organisation}//${IDENTITY.series}//EN`,
     'CALSCALE:GREGORIAN',
-    'X-WR-CALNAME:The Example Collective Monthly Reading Group',
+    `X-WR-CALNAME:${IDENTITY.organisation} ${IDENTITY.series}`,
     ...scheduled.map(agendaVevent),
     'END:VCALENDAR',
   ];
@@ -382,6 +435,11 @@ function agendaCalendar(events) {
 }
 
 module.exports = function (cfg) {
+  // `site.*`, for every template. Config global data rather than a
+  // `src/_data/` file -- see `SITE`'s own comment above for why that is
+  // not a matter of taste here.
+  cfg.addGlobalData('site', () => SITE);
+
   cfg.addPassthroughCopy('src/style.css');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
   // at runtime: the phase 5 specification forbids any third-party dependency,
@@ -411,12 +469,18 @@ module.exports = function (cfg) {
   // that lives only there is destroyed by the first publish. A public
   // repository whose landing page is a bare file listing explains nothing.
   //
-  // Kept outside `src/` deliberately: `templateFormats` includes `md`, so a
-  // `README.md` under `src/` would be rendered as a page at `/README/`
-  // instead of landing at the root as a file. The ignore file is stored
-  // under a neutral name for the same reason -- a real `.gitignore` here
-  // would apply to this build's own directory.
-  cfg.addPassthroughCopy({ 'publish/README.md': 'README.md' });
+  // The ignore file is stored under a neutral name because a real
+  // `.gitignore` here would apply to this build's own directory.
+  //
+  // The front page itself is no longer a passthrough copy: phase 10 task 3
+  // made it `src/publish-readme.njk`, a template with `permalink:
+  // "/README.md"`, because it names the organisation and both repositories
+  // and those are the instance's, declared once in `config/instance.json`.
+  // A passthrough copy renders nothing, so a `{{ }}` in it would have been
+  // published verbatim -- the exact failure `docs/toolkit/index.md` warns
+  // about. A `.njk` under `src/` is fine where a `.md` was not: only `md`
+  // is in `templateFormats` as a page-producing extension whose permalink
+  // would have landed at `/README/`.
   cfg.addPassthroughCopy({ 'publish/gitignore-for-vitrine': '.gitignore' });
   // Task 9 (phase 6): the share banner(s) `visuals-production.yml` commits
   // under `src/banners/`. A plain string, anchored to this project's own

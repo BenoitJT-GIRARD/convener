@@ -58,13 +58,13 @@ recording starts and stops", and is not repeated here.*
 > yourselves on mute until then. Over to {{ host_2.name }}, who is going to
 > say a word about who we are.
 
-## Slide 3 — The Example Collective and the series (Host 2)
+## Slide 3 — {{ instance.organisation }} and the series (Host 2)
 
 *Derived from the [editorial line](../governance/editorial-line.md) — the
 series is described there, and if the two ever disagree, that page is right.*
 
 > Welcome, everyone, and thank you for joining us. This is a seminar of
-> **The Example Collective Monthly Reading Group** — a community series on
+> **{{ instance.organisation }} {{ instance.series }}** — a community series on
 > behavioural science. Our idea is simple: a talk is the start of a
 > conversation, not the end. There is a discussion thread on our forum before
 > and after every talk, and the Q&A today is a real discussion. If you have

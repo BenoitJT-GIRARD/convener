@@ -1163,12 +1163,31 @@ def test_the_toolkit_page_field_list_matches_the_signed_payload() -> None:
 def test_the_toolkit_page_prints_the_organiser_constant() -> None:
     """The organiser's name is document furniture, never a signed field
     (`signing.sign` would refuse a payload that tried to include it) --
-    but it must still appear on the page, printed from `ORGANISER`, not
-    hand-typed a second time somewhere this test cannot see."""
+    but it must still appear on the page, and it must get there from the
+    one declaration rather than being hand-typed a second time somewhere
+    this test cannot see.
+
+    Phase 10, task 3: the page carries `{{ instance.organisation }}` now,
+    and `ORGANISER` reads the same key of the same file. So this asserts
+    both halves -- that the token is on the page, and that rendering it
+    produces exactly the name the generated document prints. A page that
+    had gone back to a literal would fail the first; a token that resolved
+    to something else would fail the second.
+    """
     text = (repo_root() / "docs" / "toolkit" / "certificate.md").read_text(
         encoding="utf-8"
     )
-    assert ORGANISER in text
+    token = "{{ instance.organisation }}"
+    assert token in text, (
+        "docs/toolkit/certificate.md no longer names the organiser through "
+        "the substitution vocabulary -- a literal here is a name a duplicate "
+        "has to find and edit by hand"
+    )
+    assert ORGANISER not in text, (
+        "the organiser's name is written out in the page as well as "
+        "substituted into it -- one of the two will be stale"
+    )
+    assert published.load_identity().namespace["organisation"] == ORGANISER
 
 
 # ------------------------------------------------------------------ #

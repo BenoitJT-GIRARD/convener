@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { fetchContent, editUrlFor, handbookUrl } from './fetch';
-import { substitute, substituteConsent, type SubstitutionContext } from './render';
+import { substitute, substituteWithoutSpeaker, type SubstitutionContext } from './render';
 import { useAuth } from '../auth/AuthContext';
 import { isDemoMode } from '../data/demo';
 
@@ -40,7 +40,7 @@ export function InlineContent({ contentKey, ctx, variant = 'inline' }: Props) {
   if (err) return <p className="text-danger text-sm">{err}</p>;
   if (text === null) return <p className="text-ink-muted text-sm">Loading content…</p>;
 
-  const rendered = ctx ? substitute(text, ctx) : substituteConsent(text);
+  const rendered = ctx ? substitute(text, ctx) : substituteWithoutSpeaker(text);
   const wrapperCls = variant === 'page' ? 'prose prose-page' : 'prose prose-inline';
   const editUrl = editUrlFor(contentKey);
   const showEdit = !!editUrl && !isDemoMode();

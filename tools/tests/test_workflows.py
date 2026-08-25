@@ -774,7 +774,9 @@ def test_publish_vitrine_builds_the_site_before_pushing() -> None:
     assert names.index("Refresh site data") < names.index("Build site"), (
         "the site must build from the refreshed data, not the committed fixture"
     )
-    assert names.index("Build site") < names.index("Push to example-showcase"), (
+    assert names.index("Build site") < names.index(
+        "Push to the published repository"
+    ), (
         "the build must run before the push step, or it publishes "
         "whatever site/_site last held"
     )

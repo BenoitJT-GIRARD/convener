@@ -32,8 +32,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { CONTENT_REGISTRY } from '../src/content/registry';
 import { substitute } from '../src/content/render';
 import { PHASES, itemByKey } from '../src/state/phases';
-import type { Speaker } from '../src/data/types';
-import { speaker as double } from './data-doubles';
+import { filledSpeaker as invented } from './data-doubles';
 // The rule the build actually applies, so the sweep below covers exactly the
 // pages a volunteer can open and no more.
 import { walk } from '../scripts/handbook-files.mjs';
@@ -58,48 +57,6 @@ function page(relative: string): string {
 
 function source(key: string): string {
   return page(CONTENT_REGISTRY[key].file);
-}
-
-/** A record with every field filled, so that a token left unresolved can only
- *  be a token the renderer does not know -- never a blank on the record.
- *
- *  `status` and `publication` carry the publication gate wide open --
- *  `archived`, consent `granted`, an approval and no standing objection --
- *  so that `{{ public.… }}` (`state/consent.ts::toPublicFields`) resolves
- *  every field too. A page drafted to be posted somewhere public reads that
- *  vocabulary rather than `{{ speaker.… }}` precisely so an unconsented
- *  field renders as this same missing marker instead of leaking; a double
- *  standing in for "every field filled" has to open the gate as much as it
- *  fills every field, or this sweep would flag every such page as broken. */
-function invented(): Speaker {
-  return double({
-    id: 'sp-x',
-    name: 'Wren Ashgrove',
-    email: 'wren@example.org',
-    affiliation: 'Institute of Invented Things',
-    country: 'Estonia',
-    title: 'Counting what nobody counted',
-    abstract: 'An abstract about counting what nobody counted.',
-    bio: 'Wren studies things nobody has counted.',
-    proposed_by: 'Robin Wexford',
-    edition_code: 'MRG-999',
-    date: '2026-11-12',
-    time: '12:30',
-    zoom_link: 'https://zoom.example.org/j/999',
-    youtube_url: 'https://youtu.be/invented',
-    forum_thread: 'https://forum.example.org/t/999',
-    host_1: 'alice',
-    host_2: 'bob',
-    status: 'archived',
-    publication: {
-      consent: 'granted',
-      approved_by: 'alice',
-      approved_on: '2026-11-01',
-      objections: [],
-      outcome: 'published',
-    },
-    metrics: { registrations: 120, live_peak: 64, youtube_views_30d: 300, forum_replies: 12 },
-  });
 }
 
 let servedPages: string[];

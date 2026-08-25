@@ -114,6 +114,7 @@ from email.message import EmailMessage
 from email.utils import formatdate
 from typing import Any, Final, Protocol
 
+from . import published
 from .platform import EventNotFoundError, Platform, Room, find_speaker
 from .registration import Registration
 
@@ -274,16 +275,31 @@ _NO_CODE_FALLBACK: Final = (
 )
 
 #: The organisation's own contact address -- not invented for this
-#: message: it is the same address `app/src/signup/SignupForm.tsx` already
-#: names on the registration page itself ("To access, correct or erase
-#: your data before that date, write to..."), so the confirmation's rights
-#: notice and the page a participant read before registering agree on
-#: where to write. `test_confirmation.py` pins the two literals together
-#: (D-14) so a future change to one is not a silent disagreement with the
-#: other. Also set as the `Reply-To` header on every delivered message
-#: (`_SmtpTransport.send`), so "reply to this message" is true regardless
-#: of what `CONVENER_SMTP_FROM` happens to be.
-CONTACT_EMAIL: Final = "reading-group@example.test"
+#: message: it is the same address the registration page itself names
+#: ("To access, correct or erase your data before that date, write
+#: to...", `app/src/islands/signup/SignupForm.tsx`), so the
+#: confirmation's rights notice and the page a participant read before
+#: registering agree on where to write. Also set as the `Reply-To`
+#: header on every delivered message (`_SmtpTransport.send`), so "reply
+#: to this message" is true regardless of what `CONVENER_SMTP_FROM` happens
+#: to be.
+#:
+#: Phase 10, task 3: both sides used to hold the literal, bound to each
+#: other by `test_confirmation.py` -- a binding that could say the two
+#: copies still agreed, never that there was one. Both now read
+#: `config/instance.json`, this side through `published.load_identity()`
+#: and the browser's through `vite.config.ts`'s own define. It is the
+#: address of whoever runs this series, and a duplicate's participants
+#: must not be sent to this one.
+CONTACT_EMAIL: Final = published.load_identity().contact
+
+#: How every message this project sends signs itself off. The
+#: organisation's name is the instance's, declared once in
+#: `config/instance.json`: a duplicate that left the literal here would
+#: sign its own e-mails with the previous instance's name. Composed at
+#: import, the same shape `registration.SIGNUP_BASE` already uses for the
+#: address half of the same declaration.
+SIGN_OFF: Final = f"{published.load_identity().organisation} team"
 
 _DATA_PROTECTION = (
     "Data protection. We hold your name, e-mail address and institution "
@@ -369,7 +385,7 @@ def compose(
     lines.append(_RIGHTS_NOTICE)
     lines.append("")
     lines.append("Best regards,")
-    lines.append("The Example Collective team")
+    lines.append(SIGN_OFF)
 
     return Confirmation(
         to=registration.email, subject=subject, body="\n".join(lines) + "\n"

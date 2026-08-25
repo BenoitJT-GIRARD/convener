@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { cspMetaContent } from './scripts/csp.mjs';
-import { published } from './scripts/published.mjs';
+import { identity, published } from './scripts/published.mjs';
 
 /**
  * Phase 10, task 2: the address this project is published at, read once
@@ -29,8 +29,27 @@ import { published } from './scripts/published.mjs';
  */
 const PUBLISHED = published();
 
-const PUBLISHED_DEFINE = {
+/**
+ * Phase 10, task 3: who runs this series, read from the same declaration
+ * and carried into the bundle the same way.
+ *
+ * `src/content/render.ts` resolves the `{{ instance.* }}` namespace that
+ * `docs/toolkit/`'s templates are written in, and the cockpit's own
+ * chrome (`components/Layout.tsx`, `auth/Login.tsx`) names the
+ * organisation too. All of that runs in a volunteer's browser, where no
+ * file can be read, so the identity has to be substituted in at build
+ * time exactly as the published address already is.
+ *
+ * One `define`, holding the whole object as JSON, rather than one per
+ * field: Vite's `define` is a textual replacement, and eight of them
+ * would be eight things to remember to add to four configurations the
+ * next time the vocabulary grows by a word.
+ */
+const IDENTITY = identity();
+
+const INSTANCE_DEFINE = {
   'import.meta.env.VITE_PUBLISHED_URL': JSON.stringify(PUBLISHED.url),
+  'import.meta.env.VITE_INSTANCE_IDENTITY': JSON.stringify(JSON.stringify(IDENTITY)),
 };
 
 /**
@@ -137,7 +156,7 @@ function islandSignupConfig() {
   return {
     plugins: [react()],
     base: PUBLISHED.appBase,
-    define: PUBLISHED_DEFINE,
+    define: INSTANCE_DEFINE,
     build: {
       outDir: 'dist/islands/signup',
       emptyOutDir: true,
@@ -181,7 +200,7 @@ function islandVerifyConfig() {
   return {
     plugins: [react()],
     base: PUBLISHED.appBase,
-    define: PUBLISHED_DEFINE,
+    define: INSTANCE_DEFINE,
     build: {
       outDir: 'dist/islands/verify',
       emptyOutDir: true,
@@ -225,7 +244,7 @@ function islandSurveyConfig() {
   return {
     plugins: [react()],
     base: PUBLISHED.appBase,
-    define: PUBLISHED_DEFINE,
+    define: INSTANCE_DEFINE,
     build: {
       outDir: 'dist/islands/survey',
       emptyOutDir: true,
@@ -252,7 +271,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), cspHtmlPlugin()],
     base: PUBLISHED.appBase,
-    define: PUBLISHED_DEFINE,
+    define: INSTANCE_DEFINE,
     build: { outDir: 'dist' },
     test: {
       environment: 'jsdom',

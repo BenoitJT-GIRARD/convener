@@ -4,7 +4,7 @@
 
 ---
 
-**Subject:** Your TEC talk on {{ speaker.date }} — a few details
+**Subject:** Your {{ instance.short_name }} talk on {{ speaker.date }} — a few details
 
 Dear {{ speaker.first_name }},
 
@@ -16,7 +16,7 @@ To prepare the announcement, could you please send us:
 - a short **abstract** (a paragraph);
 - a short **bio** (a few sentences), and a photo if you are happy to share one.
 
-We will post the announcement on The Example Collective and on LinkedIn, and the discussion will start there ahead of the talk.
+We will post the announcement on {{ instance.organisation }} and on LinkedIn, and the discussion will start there ahead of the talk.
 
 A couple of practical points: everyone — including you and the hosts — registers via the Zoom link (we will send it shortly), and we will suggest a short tech check a couple of weeks before.
 

@@ -1,4 +1,12 @@
-"""The one address this project is published at, read from the instance.
+"""What this particular instance is, read from its own declaration.
+
+Two things, one file, one reader per language. The address this project
+is published at came first (phase 10, task 2) and the rest of its
+identity followed (task 3): the name of the organisation running the
+series, what the series is called, the forum it discusses on, and the
+address a participant writes to about their own data. Both halves are
+in `config/instance.json`, both are read here, and neither is written
+down anywhere else.
 
 Every public address this repository emits is a suffix of a single value:
 the registration page a participant follows, the survey page an attendee
@@ -50,11 +58,16 @@ from .paths import repo_root
 
 __all__ = [
     "DECLARATION_VERSION",
+    "IDENTITY_FIELDS",
+    "IDENTITY_KEY",
     "INSTANCE_PATH",
     "PUBLISHED_URL_KEY",
+    "Identity",
     "Published",
     "from_data",
+    "identity_from_data",
     "load",
+    "load_identity",
 ]
 
 #: The instance's own declaration, relative to a repository root. In
@@ -65,8 +78,29 @@ INSTANCE_PATH: Final = Path("config") / "instance.json"
 #: `config/instance.json`'s own format version.
 DECLARATION_VERSION: Final = 1
 
-#: The key the whole of this module is about.
+#: The key the first half of this module is about.
 PUBLISHED_URL_KEY: Final = "published_url"
+
+#: The key the second half is about -- an object, not a string, because
+#: its fields are read together or not at all: a template that names the
+#: organisation almost always names the series in the next line.
+IDENTITY_KEY: Final = "identity"
+
+#: Every field `identity` has to carry, in the order `Identity` declares
+#: them. Enumerated once, here, and used both to build the object and to
+#: refuse a declaration that is missing one -- a duplicate that deletes a
+#: key it thinks it does not need must be told so at the first command it
+#: runs, not by a template rendering the word "None" into an e-mail.
+IDENTITY_FIELDS: Final = (
+    "organisation",
+    "short_name",
+    "series",
+    "tagline",
+    "forum",
+    "contact",
+    "proposal_form",
+    "repository",
+)
 
 
 @dataclass(frozen=True)
@@ -114,6 +148,42 @@ class Published:
         asset URLs is resolved against. A path, not an absolute URL,
         because that is what Vite's own `base` option means."""
         return f"{self.path_prefix}app/"
+
+    @property
+    def publish_repository(self) -> str:
+        """`owner/repository` -- the repository the built site is pushed
+        into, derived from the address it is served at.
+
+        Not a second declaration, and deliberately not one. GitHub Pages
+        serves a project repository at `https://<owner>.github.io/<repo>/`
+        and at no other shape of address, so the published address *is*
+        the push target written differently. Before this, the two
+        publishing workflows cloned the target in hard text: changing
+        `published_url` moved every address a visitor sees and left the
+        push where it was, so a duplicate would have published its own
+        site into the previous instance's repository -- worse than either
+        half being wrong alone.
+
+        Refuses rather than guessing when the host is not a `github.io`
+        one. A custom domain says nothing whatever about which repository
+        serves it, and there is no safe default for "push a whole site
+        somewhere" (S-4). The owner is taken from the host as GitHub
+        itself lower-cases it; a clone URL is case-insensitive on that
+        segment, so nothing here has to know the organisation's own
+        capitalisation.
+        """
+        suffix = ".github.io"
+        host = self.host
+        segments = [part for part in self.path_prefix.split("/") if part]
+        if not host.endswith(suffix) or len(host) <= len(suffix) or len(segments) != 1:
+            raise ValueError(
+                f"{INSTANCE_PATH.as_posix()}: {self.url!r} is not a GitHub "
+                "Pages project address "
+                "(https://<owner>.github.io/<repository>/), so the repository "
+                "the built site is pushed into cannot be derived from it -- "
+                "and there is no safe guess for where to push a whole site"
+            )
+        return f"{host[: -len(suffix)]}/{segments[0]}"
 
     def under(self, path: str) -> str:
         """This address with `path` appended -- `path` relative to the
@@ -180,6 +250,115 @@ def from_data(data: Any) -> Published:
 
 def load(root: Path | None = None) -> Published:
     """The published address as this repository declares it."""
+    return from_data(_declaration(root))
+
+
+@dataclass(frozen=True)
+class Identity:
+    """Who runs this series, and what it is called.
+
+    Every field is prose an outside person reads: the name at the top of
+    a public page, the sign-off of an e-mail to a speaker, the address a
+    participant writes to about their own data. Frozen, and every field
+    required -- see `IDENTITY_FIELDS` for why a missing one is refused
+    rather than defaulted.
+
+    `organisation` and `short_name` are both here on purpose. The
+    templates use each where the other would read wrong: the full name
+    where a stranger is being told who is writing, the short one where a
+    correspondent already knows. Collapsing them into one key would have
+    rewritten the wording of e-mails that go to real people, which is not
+    a decision a refactor gets to take.
+    """
+
+    organisation: str
+    short_name: str
+    series: str
+    tagline: str
+    forum: str
+    contact: str
+    proposal_form: str
+    repository: str
+
+    @property
+    def forum_host(self) -> str:
+        """`www.example.org` -- the forum's address as prose names it,
+        with no scheme. Templates print the bare host inside a sentence
+        and link the whole address; deriving one from the other is what
+        keeps a duplicate from having to write its forum down twice."""
+        return urlsplit(self.forum).netloc
+
+    @property
+    def namespace(self) -> dict[str, str]:
+        """The `{{ instance.* }}` vocabulary, exactly as both rendering
+        engines resolve it -- `tools/convener_ops/announce.py::_render` here,
+        `app/src/content/render.ts::substitute` on the other side of the
+        language boundary. Composed here rather than in each caller so
+        that adding a field is one edit and not four."""
+        values = {name: getattr(self, name) for name in IDENTITY_FIELDS}
+        values["forum_host"] = self.forum_host
+        return values
+
+
+def identity_from_data(data: Any) -> Identity:
+    """Parse an already JSON-loaded `config/instance.json`.
+
+    Refuses, rather than repairs, for the same reason `from_data` above
+    does: what this half of the declaration carries goes out under an
+    organisation's name, to people who did not choose to receive a
+    placeholder. A missing field is named, with the file it belongs in --
+    `«missing: instance.contact»` reaching a participant is the failure
+    this refusal exists to prevent, and it would reach them silently.
+    """
+    named = INSTANCE_PATH.as_posix()
+    if not isinstance(data, dict) or data.get("v") != DECLARATION_VERSION:
+        raise ValueError(f"{named} is not a supported format version")
+    raw = data.get(IDENTITY_KEY)
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"{named}: {IDENTITY_KEY} must be an object naming the "
+            f"organisation running this series, got {raw!r}"
+        )
+    values: dict[str, str] = {}
+    for field in IDENTITY_FIELDS:
+        value = raw.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{named}: {IDENTITY_KEY}.{field} must be a non-empty string, "
+                f"got {value!r} -- every field here is printed to somebody "
+                "outside this project, so there is nothing safe to put in its "
+                "place"
+            )
+        if value != value.strip():
+            raise ValueError(
+                f"{named}: {IDENTITY_KEY}.{field} has surrounding whitespace"
+            )
+        values[field] = value
+    forum = urlsplit(values["forum"])
+    if forum.scheme not in ("https", "http") or not forum.netloc:
+        raise ValueError(
+            f"{named}: {IDENTITY_KEY}.forum must be the forum's own address, "
+            f"got {values['forum']!r} -- templates print its host inside a "
+            "sentence and link the whole of it, so a bare name resolves to "
+            "neither"
+        )
+    owner, _, name = values["repository"].partition("/")
+    if not owner or not name or "/" in name:
+        raise ValueError(
+            f"{named}: {IDENTITY_KEY}.repository must be `owner/name`, got "
+            f"{values['repository']!r}"
+        )
+    return Identity(**values)
+
+
+def load_identity(root: Path | None = None) -> Identity:
+    """This instance's identity as this repository declares it."""
+    return identity_from_data(_declaration(root))
+
+
+def _declaration(root: Path | None) -> Any:
+    """`config/instance.json`, parsed. One reader for both halves: two
+    would be two `json.loads` of one path in one language, which is the
+    copy this whole design refuses wearing a smaller hat."""
     base = root if root is not None else repo_root()
-    text = (base / INSTANCE_PATH).read_text(encoding="utf-8")
-    return from_data(json.loads(text))
+    return json.loads((base / INSTANCE_PATH).read_text(encoding="utf-8"))

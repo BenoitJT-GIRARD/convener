@@ -85,10 +85,17 @@ from .visual import STANDING_START_LOCAL
 #: or one a human mistyped, never fail outright.
 _DEFAULT_DURATION_MINUTES: Final = 90
 
+#: Who runs this series -- read once, used for the calendar name a
+#: subscriber sees and for the `PRODID` every emitted calendar carries.
+_IDENTITY: Final = published.load_identity()
+
 #: The one-line calendar name a subscribing client shows (`X-WR-CALNAME`, a
 #: de facto standard every major client reads, though it is not part of
-#: RFC 5545 itself).
-_CALENDAR_NAME: Final = "The Example Collective internal agenda"
+#: RFC 5545 itself). The organisation is the instance's, read from
+#: `config/instance.json` like the UID domain below -- a subscriber sees
+#: this string in their own calendar list, so a duplicate whose internal
+#: agenda announced somebody else would be an odd thing to explain.
+_CALENDAR_NAME: Final = f"{_IDENTITY.organisation} internal agenda"
 
 #: The right-hand side of every `UID` this module mints. RFC 5545 §3.8.4.7
 #: asks for a globally unique identifier and recommends the address-like
@@ -306,7 +313,7 @@ def build_internal_calendar(speakers: Sequence[Any], config: Any) -> str:
     header = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//example-instance//Monthly Reading Group (internal)//EN",
+        f"PRODID:-//{_IDENTITY.organisation}//{_IDENTITY.series} (internal)//EN",
         "CALSCALE:GREGORIAN",
         f"X-WR-CALNAME:{_escape_text(_CALENDAR_NAME)}",
     ]

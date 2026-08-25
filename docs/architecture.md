@@ -1,7 +1,10 @@
 # Architecture
 
-The Example Collective's Monthly Reading Group is a volunteer-run series of
-academic webinars. This system is its operational workspace: finding a
+This project runs a volunteer-run series of academic webinars. Which
+series, under whose name, is the instance's own answer and lives in
+`config/instance.json`; everything below describes the system, which is
+the same whoever runs it. This system is the series' operational
+workspace: finding a
 speaker, running the editorial board's approval process, preparing and
 hosting a webinar, taking registrations, and — afterwards — matching
 attendance and issuing a signed certificate. It also serves the public
@@ -47,17 +50,24 @@ either.
 | `docs/` | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
 
 Continuous integration in this repository builds both applications and
-pushes the *output* to `example-showcase`'s root — the same GitHub Pages
-setting ("branch `main`, folder root") already serves it, so nothing needs
-configuring there beyond that. Once published, the showcase and the
-cockpit are reachable at:
+pushes the *output* to the published repository's root — the same GitHub
+Pages setting ("branch `main`, folder root") already serves it, so nothing
+needs configuring there beyond that. Which repository that is, is derived
+from the address itself rather than named twice
+(`published.Published.publish_repository`). Once published, the showcase
+and the cockpit are reachable at:
 
 ```
-https://example-instance.github.io/example-showcase/          the showcase
-https://example-instance.github.io/example-showcase/events/<id>/   one page per event
-https://example-instance.github.io/example-showcase/app/       the cockpit
-https://example-instance.github.io/example-showcase/verify/    certificate verification
+https://<owner>.github.io/<repository>/               the showcase
+https://<owner>.github.io/<repository>/events/<id>/   one page per event
+https://<owner>.github.io/<repository>/app/           the cockpit
+https://<owner>.github.io/<repository>/verify/        certificate verification
 ```
+
+One declaration decides all four: `config/instance.json`. Both halves of
+the address above come out of it, and so does the repository the two
+publishing workflows push into — see *Operations* for how an operator sets
+that up.
 
 ## What this series owns, and what anybody duplicating it would keep
 
@@ -207,10 +217,15 @@ working, for every integration this system has, is documented in
 ## Contributing
 
 ```bash
-cd app && npm install && npm run dev     # http://localhost:5173/example-showcase/app/
-cd site && npm install && npm start      # http://localhost:8080/example-showcase/
+cd app && npm install && npm run dev     # localhost, under <repository>/app/
+cd site && npm install && npm start      # localhost, under <repository>/
 cd tools && uv sync
 ```
+
+Both dev servers serve under the path prefix `config/instance.json`'s own
+`published_url` gives, never at a bare root: D-26 exists because a build
+served at a bare `localhost` root passed every local check while the
+deployed shape was broken.
 
 Each of `app/`, `site/` and `tools/` carries its own tests, and `services/`
 holds one small Cloudflare Worker per folder with its own. A pull request

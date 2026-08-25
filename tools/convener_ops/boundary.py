@@ -75,6 +75,14 @@ CONFIG_READERS: Final[dict[str, Callable[[str], Any]]] = {
 #: `config/boundary.yml`'s own format version.
 DECLARATION_VERSION: Final = 1
 
+#: Where git is told how to merge a path, and the attribute that has to be
+#: on a `regenerated:` one. See `Handed.regenerated` for the argument;
+#: `tools/tests/test_boundary.py` holds the two together, so declaring a
+#: path regenerated and forgetting the attribute is a failing test rather
+#: than a field of conflicts in somebody else's repository a year later.
+GIT_ATTRIBUTES_PATH: Final = Path(".gitattributes")
+REGENERATED_MERGE_ATTRIBUTE: Final = "merge=ours"
+
 #: The two answers, and the only two. A third would mean a path nobody has
 #: decided about, which is the state this module exists to make impossible.
 INSTANCE: Final = "instance"
@@ -128,11 +136,32 @@ class Handed:
     exist yet (an instance's own event keys, its published data), which is
     exactly what a fresh duplicate has, whereas a file entry names
     something that is in this repository right now.
+
+    `regenerated` marks the harder case, and it is a statement about
+    *upstream* rather than about the instance. Ownership says upstream will
+    not edit a path; it cannot say upstream will not *run* — and upstream
+    is itself a running instance, whose own scheduled jobs rewrite some of
+    these paths on every push. `docs/governance/register.md` is the one
+    that bites: it is a total re-rendering of one repository's own commit
+    history, so upstream's copy and a duplicate's copy are both correct,
+    entirely different, and rewritten on both sides between any two merges.
+    Git sees two sides that changed the same lines and raises a conflict
+    with no correct resolution except "mine", every time, for ever.
+
+    So the declaration says so, and `.gitattributes` gives that path
+    `merge=ours` -- git's own answer to a generated file both sides
+    regenerate. It is not free: a `merge=ours` driver has to be configured
+    once per clone (`git config merge.ours.driver true`), and a clone that
+    has not done so falls back to exactly the conflict it has today, which
+    is the right way round for a mechanism to fail. Naming the property
+    here rather than only in `.gitattributes` is what lets a test refuse a
+    path declared regenerated and never given the attribute.
     """
 
     path: str
     reason: str
     kept: tuple[Kept, ...] = ()
+    regenerated: bool = False
 
     @property
     def is_directory(self) -> bool:
@@ -169,6 +198,14 @@ class Boundary:
         if any(entry.covers(name) for entry in self.handed):
             return INSTANCE
         return PRODUCT
+
+    @property
+    def regenerated_paths(self) -> tuple[str, ...]:
+        """Every instance path a scheduled job rewrites in full, upstream's
+        own runs included -- see `Handed.regenerated`. Sorted, computed,
+        and the input to the `.gitattributes` check in
+        `tools/tests/test_boundary.py`."""
+        return tuple(sorted(entry.path for entry in self.handed if entry.regenerated))
 
     @property
     def instance_paths(self) -> tuple[str, ...]:
@@ -265,11 +302,24 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
                 "files state their own owner in their own `owner:` key. "
                 "Naming it here too would make one fact two places."
             )
+        regenerated = item.get("regenerated", False)
+        if not isinstance(regenerated, bool):
+            raise ValueError(
+                f"{named}: {path}'s regenerated: must be true or false, got "
+                f"{regenerated!r}"
+            )
+        if regenerated and path.endswith("/"):
+            raise ValueError(
+                f"{named}: {path!r} is a directory, and regenerated: names "
+                "one file git is told how to merge -- a directory has no "
+                "merge attribute of its own"
+            )
         entries.append(
             Handed(
                 path=path,
                 reason=_reason(item.get("reason"), path),
                 kept=_kept_from(item.get("kept"), path),
+                regenerated=regenerated,
             )
         )
     for entry in entries:

@@ -25,7 +25,7 @@ because neither one is a fact about the attendee that needs attesting.*
 
 ---
 
-**The Example Collective**
+**{{ instance.organisation }}**
 
 ## Certificate of attendance
 

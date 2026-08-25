@@ -41,7 +41,7 @@ Answer the survey here: [the survey link for this event]
 It takes about two minutes.
 
 Best regards,
-The Example Collective team
+{{ instance.organisation }} team
 
 ---
 

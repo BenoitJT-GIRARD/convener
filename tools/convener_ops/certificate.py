@@ -405,12 +405,18 @@ __all__ = [
 ]
 
 #: The organisation's own name, printed on the document as spec S:7's
-#: "organisateur". A module constant, not a `data/config.yml` key: it does
-#: not vary between events (ruling 8), so a config key here would buy a
-#: TypeScript ripple -- `types.ts`, `validate.ts`, `CONFIG_KEYS`,
-#: `readConfig`, every hand-built `Config` literal in the app's tests, a
-#: regenerated `schema.md` -- for a value that is, in fact, a constant.
-ORGANISER: Final = "The Example Collective"
+#: "organisateur". Not a `data/config.yml` key: it does not vary between
+#: events (ruling 8), so a config key here would buy a TypeScript ripple
+#: -- `types.ts`, `validate.ts`, `CONFIG_KEYS`, `readConfig`, every
+#: hand-built `Config` literal in the app's tests, a regenerated
+#: `schema.md` -- for a value that does not vary.
+#:
+#: Phase 10, task 3: it does not vary between *events*, and it does vary
+#: between *instances* -- it is the name a stranger reads at the top of a
+#: certificate that is meant to stand for years. It comes from
+#: `config/instance.json` now, the one place this repository says whose
+#: series this is.
+ORGANISER: Final = published.load_identity().organisation
 
 #: The base of every certificate's verification address -- see the module
 #: docstring's "verification address" section for the full route shape and

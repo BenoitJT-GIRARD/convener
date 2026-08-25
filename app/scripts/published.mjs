@@ -81,3 +81,57 @@ export function published() {
     appBase: `${parsed.pathname}app/`,
   };
 }
+
+/**
+ * Who runs this series, and what it is called -- the other half of the
+ * same declaration, read the same way.
+ * `tools/convener_ops/published.py::load_identity` is Python's reader of it
+ * and `site/scripts/published.cjs::identity` the showcase's.
+ *
+ * `vite.config.ts` injects the result into every bundle through Vite's
+ * own `define`, for the reason it already injects the published address:
+ * `src/content/render.ts` resolves the `{{ instance.* }}` namespace
+ * inside a volunteer's browser, where no file can be read at all, and
+ * the same names appear in the cockpit's own chrome.
+ *
+ * The checks mirror `published.py::identity_from_data` clause for
+ * clause. Every field is prose somebody outside this project reads, so a
+ * missing one stops the build rather than shipping the word "undefined"
+ * into an e-mail a speaker is about to be sent.
+ */
+const IDENTITY_FIELDS = [
+  'organisation',
+  'short_name',
+  'series',
+  'tagline',
+  'forum',
+  'contact',
+  'proposal_form',
+  'repository',
+];
+
+export function identity() {
+  const declaration = JSON.parse(readFileSync(DECLARATION, 'utf8'));
+  if (declaration.v !== 1) {
+    throw new Error(`${NAMED} is not a supported format version`);
+  }
+  const raw = declaration.identity;
+  if (raw === null || typeof raw !== 'object') {
+    throw new Error(`${NAMED}: identity must be an object naming this instance`);
+  }
+  const out = {};
+  for (const field of IDENTITY_FIELDS) {
+    const value = raw[field];
+    if (typeof value !== 'string' || value.trim() !== value || value === '') {
+      throw new Error(
+        `${NAMED}: identity.${field} must be a non-empty string, got ${value} -- ` +
+          'every field here is printed to somebody outside this project'
+      );
+    }
+    out[field] = value;
+  }
+  /** `www.example.org` -- the forum's address as prose names it, with no
+   *  scheme, derived so a duplicate never writes its forum down twice. */
+  out.forum_host = new URL(out.forum).host;
+  return out;
+}

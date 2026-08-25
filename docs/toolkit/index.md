@@ -21,7 +21,23 @@ record's own field names, reached through the object that holds them:
   `{{ proposed_by.name }}`;
 - what the series publishes — `{{ consent.published_always }}` and
   `{{ consent.published_on_consent }}`, composed from the publication gate
-  itself so that no message can promise something the gate would not do.
+  itself so that no message can promise something the gate would not do;
+- who is writing — `{{ instance.organisation }}` (the name a stranger is
+  told), `{{ instance.short_name }}` (the abbreviation, for somebody who
+  already knows — the form that reads naturally in a subject line),
+  `{{ instance.series }}`,
+  `{{ instance.forum_host }}` and `{{ instance.contact }}`. These are the
+  only ones that do not come from a record: they come from
+  `config/instance.json`, the one file that says whose series this is, and
+  they are therefore the same on every page. They resolve on the Templates
+  screen with no speaker in hand, exactly as the `consent.…` group does, so
+  what you read there is what a speaker would receive.
+
+**Never type the organisation's name, the series' title, the forum's address
+or the contact address into a template.** They are the instance's, not this
+handbook's, and a duplicate of this repository runs a different series under
+a different name. Writing one out by hand is how, a year from now, half the
+messages say one thing and half say another.
 
 A page drafted to be **posted somewhere public** — a forum announcement, a
 LinkedIn post, a mailing list message, a recording announcement — reads a
@@ -95,7 +111,7 @@ here to fill them in.
 - [Forum post — announce](forum-post-announce.md)
 - [Forum post — discussion summary](forum-post-summary.md)
 - [LinkedIn post](linkedin-post.md)
-- [Mailing list / newsletter message](mailing-list-announce.md) — for TEATIME, institute newsletters and internal messaging, and the RISC newsletter
+- [Mailing list / newsletter message](mailing-list-announce.md) — for every mailing list and newsletter the series announces on; which ones those are is the Board's own list of channels, kept in `data/config.yml` and shown on each speaker's promotion checklist, not written out here
 - [Recording announcement](recording-announce.md) — once the recording is actually published, for every channel the seminar was announced on
 - [Intro scripts](intro-scripts.md) — what the hosts say over the opening slides
 - [Run of show](run-of-show.md) — the session slide by slide, and the split between the two hosts

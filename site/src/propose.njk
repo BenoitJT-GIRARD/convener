@@ -2,7 +2,10 @@
 layout: layout.njk
 permalink: "/propose/"
 pageTitle: "Propose a speaker"
-pageDescription: "Propose yourself, or someone whose work you admire, to speak at a The Example Collective virtual workshop."
+eleventyComputed:
+  # See `archives.njk` for why this is computed rather than a plain
+  # front-matter string.
+  pageDescription: "Propose yourself, or someone whose work you admire, to speak in the {{ site.title }}."
 ---
 {#
   The public entry point to the proposal pipeline `tools/convener_ops/
@@ -47,7 +50,7 @@ pageDescription: "Propose yourself, or someone whose work you admire, to speak a
       It is hosted on Tally, a third-party form service &mdash; the only
       part of this process that is. Questions about a proposal, or a
       request to withdraw one, go to
-      <a href="mailto:reading-group@example.test">reading-group@example.test</a>.
+      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
     </p>
   </div>
 

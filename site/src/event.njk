@@ -122,7 +122,7 @@ eleventyComputed:
   "eventStatus": "https://schema.org/EventScheduled",
   "description": eventDescription,
   "location": { "@type": "VirtualLocation", "url": eventUrl },
-  "organizer": { "@type": "Organization", "name": "The Example Collective", "url": site.forum },
+  "organizer": { "@type": "Organization", "name": site.organisation, "url": site.forum },
   "performer": { "@type": "Person", "name": event.speaker_name, "affiliation": speakerAffiliation },
   "potentialAction": registerAction,
   "subjectOf": recording
@@ -224,7 +224,7 @@ eleventyComputed:
     </p>
     <p>
       To access, correct or erase your data before that date, write to
-      <a href="mailto:reading-group@example.test">reading-group@example.test</a>.
+      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
       Read the full
       {# Fix round 4: this used to link the private source repository
          directly (D-15), which returns GitHub's own 404 to a public
@@ -266,7 +266,7 @@ eleventyComputed:
   <noscript>
     <p class="notice">
       Registering needs JavaScript enabled. If you cannot enable it, write to
-      <a href="mailto:reading-group@example.test">reading-group@example.test</a>
+      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>
       and we will register you by hand.
     </p>
   </noscript>

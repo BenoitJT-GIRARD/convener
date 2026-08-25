@@ -9,7 +9,7 @@ question rather than its answer.*
 
 ---
 
-**Subject:** Thank you for your TEC talk!
+**Subject:** Thank you for your {{ instance.short_name }} talk!
 
 Dear {{ speaker.first_name }},
 
@@ -17,11 +17,11 @@ Thank you so much for your talk — we, and the audience, really enjoyed it. The
 
 We are summarising the discussion on the forum, and we will send you the link. We also recorded the session, as we do for every seminar; we will write to you separately to ask whether we may publish that recording, and it stays unpublished unless you tell us we may.
 
-It was a real pleasure to host you. We hope to stay in touch, and the conversation can continue any time on The Example Collective.
+It was a real pleasure to host you. We hope to stay in touch, and the conversation can continue any time on {{ instance.organisation }}.
 
 Warm regards,
 {{ host_1.name }}
-*for The Example Collective team*
+*for {{ instance.organisation }} team*
 
 ---
 

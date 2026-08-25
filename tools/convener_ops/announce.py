@@ -85,6 +85,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Final
 
+from .published import load_identity
 from .registration import signup_url
 from .visual import date_line
 
@@ -216,6 +217,27 @@ def _template(root: Path, name: str) -> str:
     return (root / TOOLKIT_DIR / name).read_text(encoding="utf-8")
 
 
+def _instance_namespace(root: Path) -> dict[str, str]:
+    """The `{{ instance.* }}` fields every template below reads: who runs
+    this series, what it is called, its forum, the address a participant
+    writes to.
+
+    Phase 10, task 3. These four pages used to write the organisation's
+    name and its forum out in full -- which is exactly the shape this
+    module's own "one prose, not two" section objects to, one level up:
+    the words were in one file, and the *identity* in that file was a copy
+    of an identity written out eighty-five more times. `published.py::
+    Identity.namespace` composes this map, and `render.ts` resolves the
+    identical names on the other side of the language boundary, so a
+    duplicate that edits `config/instance.json` once changes both.
+
+    Read from `root`, like `_template` above and for the same reason: a
+    function handed its own inputs is the one every test in this module
+    already calls against a real checkout.
+    """
+    return load_identity(root).namespace
+
+
 def _event_id(row: Mapping[str, Any]) -> str:
     """`row["id"]` is `to_public`'s own rendering of `edition_code`, cased
     exactly as typed in `data/speakers.yml` -- R-5 (`platform.find_speaker`)
@@ -271,7 +293,10 @@ def _public_namespace(row: Mapping[str, Any]) -> dict[str, str]:
 def forum_announcement(row: Mapping[str, Any], *, root: Path) -> str:
     """`docs/toolkit/forum-post-announce.md`, filled in from `row`."""
     text = _template(root, "forum-post-announce.md")
-    return _render(text, {"speaker": _speaker_namespace(row)})
+    return _render(
+        text,
+        {"speaker": _speaker_namespace(row), "instance": _instance_namespace(root)},
+    )
 
 
 def network_post(row: Mapping[str, Any], *, root: Path) -> str:
@@ -281,13 +306,19 @@ def network_post(row: Mapping[str, Any], *, root: Path) -> str:
     template's own filename is the one place that choice is written down
     (`docs/toolkit/linkedin-post.md`'s own module comment)."""
     text = _template(root, "linkedin-post.md")
-    return _render(text, {"speaker": _speaker_namespace(row)})
+    return _render(
+        text,
+        {"speaker": _speaker_namespace(row), "instance": _instance_namespace(root)},
+    )
 
 
 def mailing_list_message(row: Mapping[str, Any], *, root: Path) -> str:
     """`docs/toolkit/mailing-list-announce.md`, filled in from `row`."""
     text = _template(root, "mailing-list-announce.md")
-    return _render(text, {"speaker": _speaker_namespace(row)})
+    return _render(
+        text,
+        {"speaker": _speaker_namespace(row), "instance": _instance_namespace(root)},
+    )
 
 
 def recording_announcement(row: Mapping[str, Any], *, root: Path) -> str | None:
@@ -300,4 +331,4 @@ def recording_announcement(row: Mapping[str, Any], *, root: Path) -> str | None:
     if not public["youtube_url"]:
         return None
     text = _template(root, "recording-announce.md")
-    return _render(text, {"public": public})
+    return _render(text, {"public": public, "instance": _instance_namespace(root)})

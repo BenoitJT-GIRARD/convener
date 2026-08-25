@@ -60,6 +60,8 @@ function publishedAddress() {
         'from it is built by appending, so a missing slash quietly eats a path segment'
     );
   }
+  const suffix = '.github.io';
+  const segments = parsed.pathname.split('/').filter(Boolean);
   return {
     // The whole address, trailing slash included.
     url,
@@ -69,7 +71,77 @@ function publishedAddress() {
     // `/repository/` -- Eleventy's own `pathPrefix` takes exactly this
     // shape, leading and trailing slash included.
     pathPrefix: parsed.pathname,
+    // `owner/repository` -- where the built site is pushed, derived rather
+    // than declared. GitHub Pages serves a project repository at
+    // `https://<owner>.github.io/<repository>/` and nowhere else, so the
+    // address is the push target spelled differently. Mirrors
+    // `published.py::Published.publish_repository`, refusal included: a
+    // custom domain says nothing about which repository serves it, and
+    // there is no safe guess for where to push a whole site.
+    get publishRepository() {
+      if (!parsed.host.endsWith(suffix) || parsed.host.length <= suffix.length || segments.length !== 1) {
+        throw new Error(
+          `${NAMED}: ${url} is not a GitHub Pages project address ` +
+            '(https://<owner>.github.io/<repository>/), so the repository the ' +
+            'built site is pushed into cannot be derived from it'
+        );
+      }
+      return `${parsed.host.slice(0, -suffix.length)}/${segments[0]}`;
+    },
   };
 }
 
-module.exports = { publishedAddress };
+// Who runs this series, and what it is called -- the other half of the
+// same declaration, read the same way. `tools/convener_ops/published.py::
+// load_identity` is Python's reader of it and `app/scripts/published.mjs::
+// identity` the application build's.
+//
+// `site/.eleventy.js` is this side's one consumer: the four keys the
+// showcase's templates read as `site.*` used to be a file of their own
+// (`site/src/_data/site.json`), which was clean and was still a second
+// home for the same notion -- the series' title there, the organisation's
+// name in eighty-five other places, free to disagree the day either
+// moved. There is one now, and this is how the showcase reaches it.
+//
+// The checks mirror `published.py::identity_from_data` clause for clause.
+// Every field is prose somebody outside this project reads, so a missing
+// one stops the build rather than rendering the word "undefined" onto a
+// public page.
+const IDENTITY_FIELDS = [
+  'organisation',
+  'short_name',
+  'series',
+  'tagline',
+  'forum',
+  'contact',
+  'proposal_form',
+  'repository',
+];
+
+function identity() {
+  const declaration = JSON.parse(readFileSync(DECLARATION, 'utf8'));
+  if (declaration.v !== 1) {
+    throw new Error(`${NAMED} is not a supported format version`);
+  }
+  const raw = declaration.identity;
+  if (raw === null || typeof raw !== 'object') {
+    throw new Error(`${NAMED}: identity must be an object naming this instance`);
+  }
+  const out = {};
+  for (const field of IDENTITY_FIELDS) {
+    const value = raw[field];
+    if (typeof value !== 'string' || value.trim() !== value || value === '') {
+      throw new Error(
+        `${NAMED}: identity.${field} must be a non-empty string, got ${value} -- ` +
+          'every field here is printed to somebody outside this project'
+      );
+    }
+    out[field] = value;
+  }
+  // `www.example.org` -- the forum's address as prose names it, with no
+  // scheme, derived so a duplicate never writes its forum down twice.
+  out.forum_host = new URL(out.forum).host;
+  return out;
+}
+
+module.exports = { publishedAddress, identity };

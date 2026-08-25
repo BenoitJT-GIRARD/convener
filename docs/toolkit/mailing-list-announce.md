@@ -1,19 +1,23 @@
 # Mailing list / newsletter message — Announce
 
-*For the TEATIME mailing list, an institute's own newsletter or internal
-messaging, and the RISC newsletter — the plain-text channels reaching people
-who did not ask about this particular talk. Sent around T-14, alongside the
+*For every mailing list and newsletter the series announces on — an
+institute's own newsletter, internal messaging, a research network's list.
+These are the plain-text channels reaching people
+who did not ask about this particular talk. Which ones they are is the
+Board's own list of channels (`data/config.yml`), shown on each speaker's
+promotion lines, rather than three names written out here. Sent around
+T-14, alongside the
 LinkedIn post. Whoever edits an institute's newsletter or sends to a list
 does not need workspace access: send them this message once it is filled in,
 or paste it into whatever they ask for.*
 
 ---
 
-**Subject:** The Example Collective — {{ speaker.title }}
+**Subject:** {{ instance.organisation }} — {{ speaker.title }}
 
 Hello,
 
-The Example Collective's next virtual seminar is {{ speaker.when }}, online and
+{{ instance.organisation }}'s next virtual seminar is {{ speaker.when }}, online and
 free to attend.
 
 {{ speaker.name }} ({{ speaker.affiliation }}) will present:
@@ -26,12 +30,12 @@ Register here: {{ speaker.signup_link }}
 
 Questions can be posted ahead of time on the forum thread: {{ speaker.forum_thread? }}
 
-The Example Collective is a virtual seminar series in behavioural science, held
+{{ instance.organisation }} is a virtual seminar series in behavioural science, held
 roughly monthly and open to anyone. Past talks and recordings are at
-forum.example.test.
+{{ instance.forum_host }}.
 
 Best regards,
-The Example Collective team
+{{ instance.organisation }} team
 
 ---
 

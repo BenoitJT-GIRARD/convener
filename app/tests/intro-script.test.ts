@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { CONTENT_REGISTRY } from '../src/content/registry';
-import { substitute, substituteConsent } from '../src/content/render';
+import { substitute, substituteWithoutSpeaker } from '../src/content/render';
 import { spokenRecordingNotice } from '../src/state/consent';
 import type { Speaker } from '../src/data/types';
 import { speaker as double } from './data-doubles';
@@ -164,7 +164,7 @@ describe('the spoken consent notice is not prose anybody typed', () => {
     // The Templates screen shows this page with no record selected. A host who
     // opens it there must see the sentence: a placeholder in the middle of
     // spoken prose is either read out or improvised around.
-    const out = substituteConsent(source(SCRIPT_KEY));
+    const out = substituteWithoutSpeaker(source(SCRIPT_KEY));
     expect(out).toContain(spokenRecordingNotice());
     expect(out).not.toContain('{{ consent.spoken_recording }}');
     // And only that group: the speaker's own fields stay as placeholders.
@@ -172,6 +172,6 @@ describe('the spoken consent notice is not prose anybody typed', () => {
   });
 
   it('leaves a consent token nobody composes exactly as it found it', () => {
-    expect(substituteConsent('{{ consent.invented }}')).toBe('{{ consent.invented }}');
+    expect(substituteWithoutSpeaker('{{ consent.invented }}')).toBe('{{ consent.invented }}');
   });
 });

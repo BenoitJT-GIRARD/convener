@@ -1,3 +1,5 @@
+import { repositoryUrl } from '../instance';
+
 export interface ContentEntry {
   /** path under `docs/` in the repo */
   file: string;
@@ -5,9 +7,16 @@ export interface ContentEntry {
   anchor: string | null;
 }
 
-/** The repository the handbook is kept in. Both the "edit this page" link and
- *  the attribution line under an included passage are built from it. */
-export const REPO_URL = 'https://github.com/example-instance/example-cockpit';
+/** The repository the handbook is kept in. Both the "edit this page" link
+ *  and the attribution line under an included passage are built from it.
+ *
+ *  Phase 10, task 3: `owner/name` is the instance's, declared once in
+ *  `config/instance.json` and reaching this bundle through
+ *  `vite.config.ts`'s own define. A duplicate's "edit this page" link used
+ *  to send its volunteers to *this* organisation's repository, where they
+ *  have no write access and where the page they were reading is not the
+ *  page they would be editing. */
+export const repoUrl = repositoryUrl;
 
 export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
   // governance

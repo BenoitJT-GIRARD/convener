@@ -612,14 +612,27 @@ _SIGNUP_FORM = (
 
 
 def test_the_contact_email_matches_the_signup_pages_own_notice() -> None:
-    """`SignupForm.tsx` already names a concrete address for "access,
-    correct or erase your data" before anyone registers; the confirmation
-    email's own rights notice must name the same one, not a second address
-    nobody chose to keep in step."""
+    """`SignupForm.tsx` names a concrete address for "access, correct or
+    erase your data" before anyone registers; the confirmation e-mail's
+    own rights notice names the same one.
+
+    Until phase 10 task 3 both sides held the literal and this test bound
+    them to each other -- which could say the two copies still agreed,
+    never that there was one. Both now read `config/instance.json`, so
+    what is asserted here is that neither has gone back to writing it out:
+    the registration form reads the identity, and no e-mail address
+    appears in its source at all.
+    """
     source = _SIGNUP_FORM.read_text(encoding="utf-8")
-    match = re.search(r"CONTACT_EMAIL = '([^']+)'", source)
-    assert match is not None, "SignupForm.tsx no longer declares CONTACT_EMAIL"
-    assert match.group(1) == CONTACT_EMAIL
+    assert "instanceIdentity().contact" in source, (
+        "SignupForm.tsx no longer reads the contact address from the "
+        "instance's own declaration"
+    )
+    literals = re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", source)
+    assert literals == [], (
+        f"SignupForm.tsx writes an e-mail address out again: {literals}"
+    )
+    assert published.load_identity().contact == CONTACT_EMAIL
 
 
 def test_the_retention_window_is_the_same_number_everywhere() -> None:

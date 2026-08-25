@@ -283,7 +283,7 @@ def compose(
         "It takes about two minutes.",
         "",
         "Best regards,",
-        "The Example Collective team",
+        confirmation.SIGN_OFF,
     ]
     return confirmation.Confirmation(
         to=registration.email, subject=subject, body="\n".join(lines) + "\n"

@@ -11,7 +11,7 @@ to send is the consent request, not this one.*
 
 ---
 
-**Subject:** Your TEC talk is now online
+**Subject:** Your {{ instance.short_name }} talk is now online
 
 Dear {{ speaker.first_name }},
 
@@ -38,7 +38,7 @@ Thank you again for speaking in the series.
 Warm regards,
 
 {{ host_1.name }}
-*for The Example Collective team*
+*for {{ instance.organisation }} team*
 
 ---
 

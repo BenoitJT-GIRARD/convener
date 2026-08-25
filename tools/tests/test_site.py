@@ -832,15 +832,21 @@ def test_an_upcoming_event_page_shows_the_discuss_link_when_a_thread_is_set(
 
 
 def test_the_event_pages_contact_address_matches_confirmations_own_constant() -> None:
-    """The same D-14 binding `test_confirmation.py::test_the_contact_
-    email_matches_the_signup_pages_own_notice` already holds against
-    `SignupForm.tsx`, held here against `event.njk`'s own copy: phase 4
-    already settled a real contact address, and it must never become a
-    second, driftable copy typed by hand a third place."""
+    """Phase 4 settled one contact address, and no template writes it out.
+
+    This used to bind `event.njk`'s own literal to `confirmation.py`'s.
+    Phase 10 task 3 removed the literal: the template names `site.contact`,
+    which `.eleventy.js` derives from `config/instance.json`. So both
+    halves are asserted -- the template names it rather than spelling it,
+    and the *built* page carries the address `confirmation.py` sends from.
+    """
     source = _EVENT_TEMPLATE.read_text(encoding="utf-8")
-    match = re.search(r"mailto:([^\"]+)", source)
-    assert match is not None, "event.njk no longer names a contact address"
-    assert match.group(1) == CONTACT_EMAIL
+    matches = re.findall(r"mailto:([^\"]+)", source)
+    assert matches, "event.njk no longer names a contact address"
+    assert set(matches) == {"{{ site.contact }}"}, (
+        f"event.njk writes a contact address out rather than naming it: "
+        f"{sorted(set(matches))}"
+    )
 
 
 # -------------------------------------------------------------------------- #
@@ -857,7 +863,7 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 # `tools/convener_ops/proposal.py` already implements (a Tally form, its
 # webhook verified and turned into a candidate lead) -- not a new
 # mechanism, so this section proves the page links to the one already
-# configured (`site.json`'s own `applyForm`), and that the home page's own
+# configured (the declaration's own `proposal_form`), and that the home page's own
 # two CTAs now go through it rather than around it.
 #
 # The data page cites phase 4's own data-protection record rather than
@@ -872,7 +878,15 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 # against a scratch destination.
 # -------------------------------------------------------------------------- #
 
-_SITE_JSON = SITE_SRC / "_data" / "site.json"
+#: What `site/.eleventy.js` hands every template as `site`. Composed
+#: here from the one declaration rather than read out of a file, because
+#: as of phase 10 task 3 there is no file to read: the four keys that used
+#: to be `site/src/_data/site.json` are `config/instance.json`'s own
+#: `identity`, and the data file derives them.
+#: `test_published.py::test_the_showcase_feeds_its_templates_the_declared_
+#: identity` holds this composition against what the real, committed data
+#: file actually emits, so the `title` line below cannot quietly become a
+#: second way of spelling it.
 _LAYOUT_TEMPLATE = SITE_SRC / "_includes" / "layout.njk"
 _DONNEES_TEMPLATE = SITE_SRC / "donnees.njk"
 _REGISTRY_TS = ROOT / "app" / "src" / "content" / "registry.ts"
@@ -881,12 +895,16 @@ _HANDBOOK_REGISTRY_MJS = ROOT / "app" / "scripts" / "handbook-registry.mjs"
 
 
 def _site_config() -> dict[str, Any]:
-    config = json.loads(_SITE_JSON.read_text(encoding="utf-8"))
-    assert isinstance(config, dict), (
-        f"{_SITE_JSON.name} is a {type(config).__name__}, not the JSON "
-        "object Eleventy reads as `site.*` in every template"
-    )
-    return config
+    identity = published.load_identity()
+    return {
+        "title": f"{identity.short_name} {identity.series}",
+        "tagline": identity.tagline,
+        "forum": identity.forum,
+        "forumHost": identity.forum_host,
+        "applyForm": identity.proposal_form,
+        "organisation": identity.organisation,
+        "contact": identity.contact,
+    }
 
 
 def _past_events() -> list[dict[str, Any]]:
@@ -1274,12 +1292,37 @@ def test_propose_page_names_the_shared_contact_address(built_site: Path) -> None
 
 
 def test_the_data_pages_contact_address_matches_confirmations_own_constant() -> None:
-    """The same D-14-style binding held above for `event.njk` -- one
-    address, never a second, driftable copy typed by hand a third place."""
+    """The same thing held above for `event.njk`: one address, named
+    rather than spelled, in every template that offers it."""
     source = _DONNEES_TEMPLATE.read_text(encoding="utf-8")
     matches = re.findall(r"mailto:([^\"]+)", source)
     assert matches, "donnees.njk no longer names a contact address"
-    assert all(m == CONTACT_EMAIL for m in matches)
+    assert set(matches) == {"{{ site.contact }}"}, (
+        f"donnees.njk writes a contact address out rather than naming it: "
+        f"{sorted(set(matches))}"
+    )
+
+
+def test_every_built_page_that_offers_the_contact_address_gives_the_real_one(
+    built_site: Path,
+) -> None:
+    """The other half: a template that names `site.contact` and a build
+    that resolves it to something else would pass every assertion above.
+    Read off the built HTML, which is what a participant sees."""
+    pages = [
+        p
+        for p in sorted(built_site.rglob("*.html"))
+        if "mailto:" in p.read_text(encoding="utf-8")
+    ]
+    assert pages, "no built page offers a contact address at all"
+    for page in pages:
+        addresses = set(
+            re.findall(r"mailto:([^\"]+)", page.read_text(encoding="utf-8"))
+        )
+        assert addresses == {CONTACT_EMAIL}, (
+            f"{page.relative_to(built_site).as_posix()} offers {addresses}, "
+            f"not the one address this instance declares ({CONTACT_EMAIL})"
+        )
 
 
 def test_the_data_page_never_restates_the_retention_figure() -> None:

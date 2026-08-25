@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { instanceIdentity } from '../../instance';
 import { encryptRegistration, importEventPublicKey } from '../../signup/encrypt';
 import type { Registration } from '../../signup/encrypt';
 
@@ -77,7 +78,13 @@ function relayUrl(): string | undefined {
   return import.meta.env.VITE_SIGNUP_RELAY_URL as string | undefined;
 }
 
-const CONTACT_EMAIL = 'reading-group@example.test';
+// The address a participant writes to about their own data. Phase 10,
+// task 3: declared once in `config/instance.json` and carried into this
+// bundle by `vite.config.ts`'s own define, because this runs in a
+// participant's browser. A duplicate that left this literal here would
+// send its own participants' data-protection requests to the previous
+// instance's inbox.
+const contactEmail = () => instanceIdentity().contact;
 
 // Mirrors `tools/convener_ops/registration.py::_MAX_FIELD_LENGTH` (Important 1,
 // branch review). Bound here too, not only server-side: before this, a
@@ -349,7 +356,7 @@ export function SignupForm({ eventId }: { eventId?: string }) {
             We could not retrieve the encryption key this event needs before anything can
             be sent. We never send registration details unencrypted, so nothing has been
             sent. Please try again later, or contact{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+            <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
           </p>
         </div>
       )}

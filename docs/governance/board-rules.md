@@ -4,6 +4,8 @@ You have just joined the Editorial Board. This page is the whole of what binds y
 
 It describes the rules **as the application actually applies them**. Where a number appears here, it is the number the code computes; where a rule says "never", nothing in the repository can produce the case.
 
+**What this page is not.** It holds no name and no count. Every rule below is written against *the Board*, whoever that is: the members, their joining days and their absences are in `data/config.yml`, edited from the cockpit's own Board screen, and a series run by somebody else has a different Board and the same rules. That separation is the point — a rule that named a member would have to be rewritten every time one joined, and a page that carried a headcount would be wrong the day after the yearly meeting. Where the current Board's own composition is unusual enough to change how a rule *feels*, that is said on [The Editorial Board](editorial-board.md), next to the composition itself.
+
 ## Three things that never happen on their own
 
 Start with these, because they are what makes the rest safe to read.
@@ -185,11 +187,3 @@ Four steps have a target time: a decision on a suggested speaker (14 days), a fo
 **Nothing happens when one passes.** It produces a line of text and a place in a sort order. It parks nothing, refuses nothing and writes nothing. And the sentence is always about the piece of work — *"Board decision is 3 days overdue"* — never about a person: there is no room in the wording for a name, so none can appear there.
 
 Where the record does not hold the day a clock would start from, **there is no deadline** rather than a guessed one, and those items sort last instead of first.
-
-## Two temporary states, so nothing here misleads you
-
-Both are known, accepted and dated. Neither is a defect to be rediscovered.
-
-**The Board is declared with five entries for four people, using first names rather than GitHub logins.** Until that is corrected at the September meeting, the bar is four out of four available voices — effective unanimity — and the app recognises only one of the five identifiers as a signed-in member. What has to change, and in what order, is written up in `docs/reference/operations.md` ("After the September collaborators' meeting"). Do not fix it piecemeal beforehand.
-
-**No speaker on record has given publication consent.** All 31 have it empty or not yet answered, and none of them has been asked. Nothing may be published for any of them until they are asked and their answer is recorded — which is the gate working, not the gate being broken.

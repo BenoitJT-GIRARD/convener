@@ -22,7 +22,7 @@ Every webinar is run by **two Event Hosts**, working as a pair from preparation 
 How they split the work is up to them — two equal hosts, or one main host and a second. The usual split on the day:
 
 - **One** introduces the speaker, runs the questions, and closes the session.
-- **The other** introduces The Example Collective and the series, and keeps an eye on the chat and forum for questions.
+- **The other** introduces {{ instance.organisation }} and the series, and keeps an eye on the chat and forum for questions.
 
 Two named Event Hosts — never a vague "the team" — is what keeps a webinar from being forgotten.
 

@@ -39,13 +39,35 @@ What this module does **not** cover, stated rather than left to be found:
   on. `test_site.py` covers today's instance at the built-page level
   (`test_no_built_page_emits_a_root_relative_link_without_the_prefix`,
   `test_the_governance_record_link_resolves_to_the_published_handbook`).
-- **`docs/`.** The handbook names this organisation's address in prose,
-  which is task 3's substitution work, not an address a build derives.
-- **Where the build *pushes*.** `deploy.yml` and `publish-vitrine.yml`
-  clone a named repository, and that name is not derived from anything.
-  Changing `published_url` alone therefore moves every address a visitor
-  ever sees while leaving the push target where it was -- a real gap,
-  named here so that nobody reads clause 4 as covering more than it does.
+- **`docs/superpowers/`.** The specs, the plans and the phase reports are
+  this project's own record of its own decisions, quoting the address as
+  it stood when each was written. Nothing builds them and nothing ships
+  them. The rest of `docs/` *is* swept, as of task 3.
+
+Task 3 added the second half of the same declaration -- who runs this
+series -- and closed the gap this module used to name:
+
+5. **The identity reads, or nothing runs**, on the same refuse-rather-than-
+   repair terms as the address.
+6. **Both builds resolve the declared identity**, again by running the real
+   configurations: what `.eleventy.js` hands every template as `site.*`,
+   and what `vite.config.ts` defines into all four bundles.
+7. **The push target is derived from the published address**, so changing
+   one address moves the public URLs *and* the repository they are pushed
+   into. It used to move only the first, which is worse than either being
+   wrong alone.
+8. **The identity sweep**: no file writes the organisation's name, its
+   contact address or its forum a second time, with every exemption
+   either checked against the declaration (the relays, `CODEOWNERS`) or
+   named with the phase that owns it.
+
+What clause 8 does **not** yet sweep, stated rather than left to be found:
+the series' *title* and the organisation's *short name*. "Monthly Reading Group
+Series" is at present also this product's own name -- `convener_ops`,
+`convener-register`, `example-cockpit` -- and "TEC" is still in the brand tokens
+and the two downloadable SVG templates (phase 10 task 4) and in the demo
+instance (phase 11). Sweeping either today would fail for a reason task 3
+cannot fix, so each is left to the phase that renames it.
 """
 
 from __future__ import annotations
@@ -55,8 +77,10 @@ import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
+import yaml
 
 from convener_ops import (
     agenda,
@@ -74,6 +98,25 @@ _MINIMAL: dict[str, Any] = {
     "owner": boundary.INSTANCE,
     "v": published.DECLARATION_VERSION,
     published.PUBLISHED_URL_KEY: "https://example.test/somewhere/",
+}
+
+#: A second instance's identity, manifestly synthetic: no real name, no
+#: real address. Every field `IDENTITY_FIELDS` names, so a field added to
+#: the declaration and not here fails loudly rather than being skipped.
+_OTHER_IDENTITY: dict[str, Any] = {
+    "organisation": "The Example Collective",
+    "short_name": "TEC",
+    "series": "Monthly Reading Group",
+    "tagline": "A made-up series, for a test.",
+    "forum": "https://forum.example.test",
+    "contact": "hello@example.test",
+    "proposal_form": "https://forms.example.test/propose",
+    "repository": "example-collective/reading-group",
+}
+
+_MINIMAL_IDENTITY: dict[str, Any] = {
+    "v": published.DECLARATION_VERSION,
+    published.IDENTITY_KEY: _OTHER_IDENTITY,
 }
 
 
@@ -253,10 +296,14 @@ _DEPLOYED_ORIGIN_FILES = (
     Path("services/signup-relay/wrangler.toml"),
 )
 
-#: `docs/` is task 3's: the handbook names this organisation's address in
-#: prose a substitution engine will carry, not in an address a build
-#: derives. Everything else this repository tracks is swept.
-_UNSWEPT = ("docs/",)
+#: This project's own record of its own decisions. Every spec, plan and
+#: phase report quotes the state of the world at the moment it was
+#: written, including addresses and names that have since moved; nothing
+#: builds them, nothing ships them, and rewriting them would be rewriting
+#: history rather than code. The rest of `docs/` is swept -- it was
+#: exempt in full until task 3 carried the handbook onto the substitution
+#: vocabulary.
+_UNSWEPT = ("docs/superpowers/",)
 
 _BINARY_SUFFIXES = frozenset(
     {".png", ".jpg", ".jpeg", ".ico", ".pdf", ".woff2", ".woff", ".ttf"}
@@ -373,3 +420,372 @@ def test_no_build_configuration_reads_the_address_out_of_another_readers_source(
             "reader for that side of the boundary instead of scraping "
             "another reader's source"
         )
+
+
+# ------------------------------------------------------------------ #
+# 5 -- who runs this series, read from the same declaration
+# ------------------------------------------------------------------ #
+
+
+def test_this_repository_declares_who_runs_the_series() -> None:
+    identity = published.load_identity()
+    for field in published.IDENTITY_FIELDS:
+        assert getattr(identity, field), f"identity.{field} is empty"
+    assert identity.namespace["forum_host"] == urlsplit(identity.forum).netloc
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    [
+        ({published.IDENTITY_KEY: None}, "must be an object"),
+        ({published.IDENTITY_KEY: "The Example Collective"}, "must be an object"),
+        ({"v": 99}, "not a supported format version"),
+    ],
+)
+def test_an_identity_that_cannot_be_read_stops_rather_than_guesses(
+    mutation: dict[str, Any], expected: str
+) -> None:
+    """Every field here is printed to somebody outside this project -- the
+    name at the top of a public page, the sign-off of an e-mail to a
+    speaker, the address a participant writes to about their own data.
+    There is nothing safe to substitute for one, so a declaration that
+    cannot be read stops the process."""
+    with pytest.raises(ValueError, match=expected):
+        published.identity_from_data({**_MINIMAL_IDENTITY, **mutation})
+
+
+@pytest.mark.parametrize("field", published.IDENTITY_FIELDS)
+def test_every_identity_field_is_required_by_name(field: str) -> None:
+    """Not "the object is there" but "this field is there", one at a time
+    and named in the message. A duplicate deleting a key it thinks it does
+    not need must be told which one at the first command it runs, not by a
+    participant receiving an e-mail signed by nobody."""
+    without = {k: v for k, v in _OTHER_IDENTITY.items() if k != field}
+    with pytest.raises(ValueError, match=f"identity.{field}"):
+        published.identity_from_data(
+            {**_MINIMAL_IDENTITY, published.IDENTITY_KEY: without}
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected"),
+    [
+        ("organisation", "", "must be a non-empty string"),
+        ("organisation", "  padded  ", "surrounding whitespace"),
+        ("contact", 42, "must be a non-empty string"),
+        ("forum", "forum.example.test", "must be the forum's own address"),
+        ("forum", "https://", "must be the forum's own address"),
+        ("repository", "example-cockpit", "must be `owner/name`"),
+        ("repository", "a/b/c", "must be `owner/name`"),
+    ],
+)
+def test_an_identity_field_that_reads_plausibly_and_is_wrong_is_refused(
+    field: str, value: Any, expected: str
+) -> None:
+    """Each of these is a shape somebody would actually type. A forum
+    written as a bare name links to nothing and prints as neither a host
+    nor an address; a repository without its owner names a repository
+    inside whatever organisation the API call happens to default to."""
+    broken = {**_OTHER_IDENTITY, field: value}
+    with pytest.raises(ValueError, match=expected):
+        published.identity_from_data(
+            {**_MINIMAL_IDENTITY, published.IDENTITY_KEY: broken}
+        )
+
+
+def test_the_substitution_vocabulary_is_the_declaration_plus_one_derived_name() -> None:
+    """`{{ instance.* }}`, as both rendering engines resolve it. Asserted
+    as the whole set rather than as membership: a name in one engine and
+    not the other is exactly the drift D-14 exists to refuse, and the
+    cheapest way to see it is to pin what the map contains."""
+    identity = published.identity_from_data(_MINIMAL_IDENTITY)
+    assert set(identity.namespace) == set(published.IDENTITY_FIELDS) | {"forum_host"}
+    assert identity.namespace["forum_host"] == "forum.example.test"
+
+
+# ------------------------------------------------------------------ #
+# 6 -- what the two builds actually resolve, identity included
+# ------------------------------------------------------------------ #
+
+
+def test_the_showcase_feeds_its_templates_the_declared_identity() -> None:
+    """The real, committed `.eleventy.js`, called with a stub that records
+    what it registers as global data. `site.*` is what every template
+    reads, so this is the value a visitor sees in the masthead, in the
+    footer, in `og:site_name` and in every `mailto:` on the site.
+
+    The composition is pinned here rather than restated: `title` is
+    `short_name` and `series` with a space between them, and
+    `tools/tests/test_site.py::_site_config` builds the same map to check
+    the built pages against. Two spellings of that would be the copy this
+    whole module exists to refuse.
+    """
+    answer = _node_json(
+        ROOT / "site" / "scripts" / "print-published.cjs", ROOT / "site"
+    )
+    identity = published.load_identity()
+    assert answer["identity"] == identity.namespace | {
+        "forum_host": identity.forum_host
+    }
+    site = answer["siteData"]
+    assert site["title"] == f"{identity.short_name} {identity.series}"
+    assert site["tagline"] == identity.tagline
+    assert site["forum"] == identity.forum
+    assert site["forumHost"] == identity.forum_host
+    assert site["applyForm"] == identity.proposal_form
+    assert site["organisation"] == identity.organisation
+    assert site["contact"] == identity.contact
+    assert site["repository"] == identity.repository
+    assert site["publishRepository"] == published.load().publish_repository
+
+
+def test_every_bundle_the_application_builds_carries_the_declared_identity() -> None:
+    """All four configurations, and all four `define`s.
+
+    `src/content/render.ts` resolves `{{ instance.* }}` inside a
+    volunteer's browser and `src/instance.ts` throws when the define is
+    absent, so a configuration that carried the address but not the
+    identity would build a bundle that fails on its first render -- and
+    would do it in exactly one of the four, which is the shape that passes
+    a test suite and ships broken.
+    """
+    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    identity = published.load_identity()
+    assert set(answer["identityDefines"]) == {
+        "production",
+        "island-signup",
+        "island-verify",
+        "island-survey",
+    }
+    for mode, defined in answer["identityDefines"].items():
+        assert defined is not None, f"{mode} builds without the identity define"
+        assert json.loads(json.loads(defined)) == identity.namespace, mode
+
+
+# ------------------------------------------------------------------ #
+# 7 -- where the build pushes, derived from where it is served
+# ------------------------------------------------------------------ #
+
+
+def test_the_push_target_is_derived_from_the_published_address() -> None:
+    """GitHub Pages serves a project repository at
+    `https://<owner>.github.io/<repository>/` and at no other shape of
+    address, so the two are one fact. The owner is compared
+    case-insensitively on purpose: GitHub lower-cases it in the host and a
+    clone URL does not care, so nothing here has to know the
+    organisation's own capitalisation."""
+    address = published.load()
+    owner, _, repository = address.publish_repository.partition("/")
+    assert address.host == f"{owner}.github.io"
+    assert address.path_prefix == f"/{repository}/"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.test/",
+        "https://example.test/somewhere/",
+        "https://example-collective.github.io/",
+        "https://example-collective.github.io/one/two/",
+        "https://github.io/repository/",
+    ],
+)
+def test_the_push_target_refuses_an_address_it_cannot_derive_one_from(
+    url: str,
+) -> None:
+    """S-4, applied to the largest thing in this repository that could be
+    put in the wrong place. A custom domain says nothing whatever about
+    which repository serves it; a bare `github.io` root and a two-segment
+    path are not project-page shapes either. There is no safe default for
+    "push a whole site somewhere", so each of these stops."""
+    with pytest.raises(ValueError, match="not a GitHub Pages project address"):
+        _ = published.Published(url=url).publish_repository
+
+
+def _push_step_scripts() -> dict[Path, str]:
+    """The `run:` block of each workflow's own push step, found by the
+    secret it reads rather than by its `name:` -- the same rule
+    `tools/tests/test_workflows.py` already applies, so a rename of a step
+    does not silently stop either module checking it."""
+    found: dict[Path, str] = {}
+    for name, job in (
+        (Path(".github/workflows/deploy.yml"), "build"),
+        (Path(".github/workflows/publish-vitrine.yml"), "publish"),
+    ):
+        workflow = yaml.safe_load((ROOT / name).read_text(encoding="utf-8"))
+        for step in workflow["jobs"][job]["steps"]:
+            env = step.get("env", {})
+            if any("VITRINE_DEPLOY_TOKEN" in str(value) for value in env.values()):
+                found[name] = str(step["run"])
+                break
+        else:  # pragma: no cover - the assertion below is the report
+            raise AssertionError(f"{name.as_posix()} has no push step to read")
+    return found
+
+
+def test_both_publishing_workflows_read_the_push_target_rather_than_naming_it() -> None:
+    """The gap this module used to name, closed.
+
+    Both workflows cloned `<organisation>/<repository>` in hard text, so
+    changing `published_url` moved every address a visitor sees and left
+    the push where it was -- a duplicate publishing its own site into the
+    previous instance's repository, which is worse than either half being
+    wrong on its own. Asserted on the `run:` block each one actually
+    executes: it must reach the derivation, and it must not spell the
+    answer out.
+    """
+    target = published.load().publish_repository
+    for name, script in _push_step_scripts().items():
+        assert "publish_repository" in script, (
+            f"{name.as_posix()}'s push step does not read the derived push "
+            "target -- naming it there is how the address and the repository "
+            "start disagreeing"
+        )
+        assert "${target}" in script, f"{name.as_posix()} never uses what it read"
+        assert target not in script, (
+            f"{name.as_posix()} writes the push target out as well as deriving it"
+        )
+
+
+# ------------------------------------------------------------------ #
+# 8 -- the identity sweep: nowhere written twice
+# ------------------------------------------------------------------ #
+
+#: Files that must hold this instance's identity as a literal because they
+#: are read by something that cannot reach the declaration, and that are
+#: therefore *checked* against it below rather than merely exempted.
+#:
+#: - the two relays' `wrangler.toml` and their Worker sources: a Worker
+#:   deploys from its own package and never sees this repository, exactly
+#:   the argument task 2 already made and proved for `ALLOWED_ORIGIN`;
+#: - `.github/CODEOWNERS`: GitHub reads it verbatim, with no expansion of
+#:   any kind, before any of this project's own code runs.
+_LITERAL_IDENTITY_FILES = (
+    Path("services/auth-proxy/wrangler.toml"),
+    Path("services/signup-relay/wrangler.toml"),
+    Path("services/signup-relay/src/index.js"),
+    Path("services/form-relay/src/index.js"),
+    Path(".github/CODEOWNERS"),
+)
+
+#: Files that still name this organisation and are somebody else's task,
+#: each with the phase that owns it. Not a general exemption: adding a
+#: path here is a decision, and the reason is beside it.
+_IDENTITY_DEFERRED = {
+    # Phase 10 task 4: the brand. Both are files a collaborator downloads.
+    Path("docs/assets/announcement-template.svg"): "phase 10 task 4 (brand)",
+    Path("docs/assets/flyer-template.svg"): "phase 10 task 4 (brand)",
+    Path("tools/convener_ops/visual.py"): "phase 10 task 4 (brand)",
+    # Phase 11: the example instance. `demo.ts` *is* an instance, in code.
+    Path("app/src/data/demo.ts"): "phase 11 (the example instance)",
+    Path("site/src/_data/events.json"): "phase 11 (the example instance)",
+    # The spell-checker's own dictionary: a list of words, not prose.
+    Path("project-words.txt"): "the cspell dictionary",
+}
+
+#: Test trees. A fixture naming this organisation is a fixture of *this*
+#: instance, and the check that actually matters for behaviour is task 5's
+#: build of a second instance and sweep of its output -- not the absence
+#: of a string from a test double.
+_IDENTITY_UNSWEPT_TREES = ("tools/tests/", "app/tests/", "services/")
+
+
+def test_no_source_file_writes_this_instances_identity_a_second_time() -> None:
+    """The clause that makes "one declaration" a fact for the identity
+    the way `test_no_source_file_writes_the_published_address_a_second_
+    time` already does for the address.
+
+    The organisation's name, its contact address and its forum -- in both
+    the form a link takes and the form a sentence takes. Not the series'
+    title and not the short name: see this module's own docstring for the
+    two phases that still own those.
+    """
+    identity = published.load_identity()
+    needles = (
+        identity.organisation,
+        identity.contact,
+        identity.forum,
+        identity.forum_host,
+    )
+    allowed = {path.as_posix() for path in _LITERAL_IDENTITY_FILES}
+    allowed |= {path.as_posix() for path in _IDENTITY_DEFERRED}
+    allowed.add(published.INSTANCE_PATH.as_posix())
+    instance_boundary = boundary.load()
+
+    offending: list[tuple[str, str]] = []
+    for name in _tracked_files():
+        if name.startswith(_UNSWEPT) or name.startswith(_IDENTITY_UNSWEPT_TREES):
+            continue
+        if name in allowed:
+            continue
+        # The instance's own records are where its own identity belongs.
+        if instance_boundary.owner_of(name) == boundary.INSTANCE:
+            continue
+        path = ROOT / name
+        if path.suffix.lower() in _BINARY_SUFFIXES or not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for needle in needles:
+            if needle in text:
+                offending.append((name, needle))
+                break
+
+    assert offending == [], (
+        "these files write this instance's own identity a second time, which "
+        f"config/instance.json exists to make impossible: {offending}"
+    )
+
+
+def test_the_identity_sweep_would_see_a_second_copy_if_there_were_one() -> None:
+    """A sweep that matched nothing would pass for free. Each needle is
+    found where a copy legitimately is, rather than trusted for coming
+    back empty."""
+    identity = published.load_identity()
+    found = {
+        needle: [
+            name
+            for name in (path.as_posix() for path in _LITERAL_IDENTITY_FILES)
+            if needle in (ROOT / name).read_text(encoding="utf-8")
+        ]
+        for needle in (identity.organisation, identity.forum_host)
+    }
+    assert found[identity.organisation], "the organisation needle matches nothing"
+    assert _IDENTITY_DEFERRED, "the deferred list is empty -- widen the sweep"
+    for path, reason in _IDENTITY_DEFERRED.items():
+        assert (ROOT / path).exists(), f"{path.as_posix()} ({reason}) is gone"
+
+
+def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> None:
+    """The exemption above, checked rather than merely granted -- the same
+    discipline `test_the_relays_deploy_the_address_this_project_is_
+    published_at` already holds for `ALLOWED_ORIGIN`.
+
+    Each of these files is read by something that cannot reach
+    `config/instance.json`: a Worker deploys from its own package, and
+    GitHub reads `CODEOWNERS` verbatim before any code of this project's
+    runs. So the copy has to exist. What must not happen is that it
+    drifts, and a copy nothing compares is a copy that will.
+    """
+    identity = published.load_identity()
+    owner, _, repository = identity.repository.partition("/")
+
+    for path in (
+        Path("services/signup-relay/src/index.js"),
+        Path("services/form-relay/src/index.js"),
+    ):
+        text = (ROOT / path).read_text(encoding="utf-8")
+        assert identity.repository in text, (
+            f"{path.as_posix()} no longer names the repository this cockpit "
+            f"writes to ({identity.repository})"
+        )
+
+    codeowners = (ROOT / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
+    assert f"@{owner}/editorial-board" in codeowners, (
+        ".github/CODEOWNERS names a team outside the organisation "
+        f"config/instance.json declares ({owner}) -- every review request it "
+        "makes would go to nobody"
+    )
+    assert repository, "the declared repository has no name half"

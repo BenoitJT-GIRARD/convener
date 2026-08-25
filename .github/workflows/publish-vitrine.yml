@@ -48,10 +48,10 @@ name: Publish vitrine
 #
 # Phase 5, task 2: renamed from "Publish vitrine data" -- P-1 moved the
 # showcase's own templates (`index.njk`, `layout.njk`, `style.css`,
-# `.eleventy.js`, fonts) from `example-showcase` into this repository's own
+# `.eleventy.js`, fonts) from the published repository into this repository's own
 # `site/`, so that repository holds no source any more (D-15: private
 # source, public artefact). This job used to copy one generated data file
-# into a checkout of `example-showcase`; it now builds the whole site here and
+# into a checkout of the published repository; it now builds the whole site here and
 # pushes the built output to that repository's root, which is exactly
 # what its already-active GitHub Pages setting ("branch main, folder
 # root") serves -- the same root `deploy.yml` already publishes `app/`
@@ -177,7 +177,7 @@ jobs:
             echo "::error::refusing to publish -- a room link reached the built site"
             exit 1
           fi
-      - name: Push to example-showcase
+      - name: Push to the published repository
         env:
           DEPLOY_TOKEN: ${{ secrets.VITRINE_DEPLOY_TOKEN }}
         run: |
@@ -188,8 +188,24 @@ jobs:
           fi
           git config --global user.name "convener-publisher"
           git config --global user.email "convener-publisher@users.noreply.github.com"
+          # Where the built output is pushed. Derived from
+          # `config/instance.json`'s own `published_url`, never named here:
+          # GitHub Pages serves a project repository at
+          # `https://<owner>.github.io/<repository>/` and nowhere else, so
+          # the address a visitor sees and the repository this push writes
+          # into are one fact, not two. Before phase 10 task 3 they were
+          # two, and changing the declared address moved every public URL
+          # while still publishing into the previous instance's repository.
+          # Read through the Python reader that owns the derivation
+          # (`published.Published.publish_repository`, which refuses rather
+          # than guessing for an address that is not a Pages one) -- the
+          # same `uv run --project tools python -c` shape the room-link
+          # guard above already uses, rather than a fourth parser written
+          # in shell.
+          target="$(uv run --project tools python -c \
+            'from convener_ops.published import load; print(load().publish_repository)')"
           git clone --depth 1 \
-            "https://x-access-token:${DEPLOY_TOKEN}@github.com/example-instance/example-showcase.git" /tmp/vit
+            "https://x-access-token:${DEPLOY_TOKEN}@github.com/${target}.git" /tmp/vit
           SITE_OUTPUT="$GITHUB_WORKSPACE/site/_site"
 
           # D-25 (fix round 1): "a control that cannot fail loudly is not a
@@ -243,7 +259,7 @@ jobs:
             exit 0
           fi
           git commit -m "site: refresh published build"
-          # This job and Deploy app both clone example-showcase fresh and each
+          # This job and Deploy app both clone the published repository fresh and each
           # only ever stages its own disjoint subtree (the site's own
           # root-level files here, app/ there) -- but that makes the
           # *commits* conflict-free, not the *push*. git push is

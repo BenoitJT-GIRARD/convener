@@ -22,7 +22,7 @@
 import { fileURLToPath } from 'node:url';
 import { loadConfigFromFile } from 'vite';
 
-import { published } from './published.mjs';
+import { identity, published } from './published.mjs';
 
 /** The real, committed configuration file, as an OS path -- `fileURLToPath`
  *  rather than `new URL(...).pathname`, which keeps a leading slash before
@@ -39,11 +39,21 @@ const MODES = ['production', 'island-signup', 'island-verify', 'island-survey'];
 
 const bases = {};
 const defines = {};
+const identityDefines = {};
 for (const mode of MODES) {
   const loaded = await loadConfigFromFile({ command: 'build', mode }, CONFIG);
   if (!loaded) throw new Error(`vite.config.ts did not load for mode ${mode}`);
   bases[mode] = loaded.config.base;
   defines[mode] = loaded.config.define?.['import.meta.env.VITE_PUBLISHED_URL'];
+  // Phase 10, task 3: the identity define, read the same way and for the
+  // same reason. `src/content/render.ts` resolves `{{ instance.* }}` in a
+  // volunteer's browser and the cockpit's chrome names the organisation,
+  // so a configuration that carried the address but not the identity
+  // would build four bundles that throw on their first render.
+  identityDefines[mode] =
+    loaded.config.define?.['import.meta.env.VITE_INSTANCE_IDENTITY'];
 }
 
-console.log(JSON.stringify({ reader: published(), bases, defines }));
+console.log(
+  JSON.stringify({ reader: published(), identity: identity(), bases, defines, identityDefines }),
+);
