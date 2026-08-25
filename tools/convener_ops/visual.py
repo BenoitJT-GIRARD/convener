@@ -44,6 +44,57 @@ not: two independent readers of one JSON source, which is what D-16 asks
 for), but because a third name for the same colour would be one more thing
 to keep in step by hand.
 
+Every *name* below comes from `config/instance.json`, through
+`published.load_identity` -- the same reader `announce.py` and the two
+generated SVG templates already use, never a fourth. Three of this page's
+fixed parts were this instance's own prose until phase 11: the wordmark
+band, the hero band's strapline, and two of the three "what to expect"
+rows. A poster is the artefact a duplicate prints and pins to a wall, so
+each of the three was this instance's name arriving in another
+organisation's building.
+
+The wordmark: derived plainly, not refused and not reconstructed
+------------------------------------------------------------------
+The band sets `identity.forum_host` -- one colour, lower case, exactly as
+`identity.forum` declares it. It used to set
+`www.<span class="accent">The</span>Behaviour<span
+class="accent2">Forum.org</span>`, and three options were weighed against
+the code rather than in the abstract:
+
+- **Derive the treatment.** There is nothing to derive from. Splitting a
+  host into an accented part and an unaccented one is a decision about
+  one name -- here, accenting the English definite article inside a
+  domain -- and no rule over an arbitrary `forum_host` reproduces it.
+  Re-casing is the same: the band used to set the host in camel case,
+  which is a typographic reading of a name, and DNS holds no capitals to
+  read one back out of.
+- **Refuse to render.** S-4 refuses what has no safe default, and phase
+  10 applied it to a *value* that might be missing. Nothing is missing
+  here: `identity.forum` is required, is refused while it still carries a
+  placeholder, and is parsed before `forum_host` exists at all
+  (`published.identity_from_data`). What has no safe default is a
+  flourish, not a fact -- and a poster that refuses to render costs a
+  collaborator the whole artefact, where a build that refuses to publish
+  costs a maintainer one message. D-13's own shape applies: the
+  unconfigured extra degrades visibly instead of stopping everything.
+- **Render it plainly.** Taken, and it is not a new decision so much as
+  the one this project already made: `brand_templates.py` writes exactly
+  this wordmark into `docs/assets/announcement-template.svg` and
+  `flyer-template.svg` -- the two files a collaborator downloads -- as
+  `<text ... fill="{purple}">{forum_host}</text>`, plain and lower case,
+  derived from this same declaration. Two renderings of one poster
+  disagreeing about their own wordmark is precisely the second source
+  this project keeps deleting. `data/brand.json`'s own `_roles` agrees
+  independently: "purple: Headlines, ribbon, wordmark. The dominant
+  colour, **not an accent**."
+
+What is actually lost is one word: `.accent2` resolved to `var(--purple)`,
+which is the colour `.wordmark-text` already inherits, so the "two-tone"
+treatment rendered as a single turquoise `The` in an otherwise purple
+line -- not two colours meeting. The device to its left (`_WORDMARK_LOGO_SVG`)
+is untouched: it is the charter's, drawn from `motif`, and it carries no
+name.
+
 The ribbon itself is never redrawn here. `ribbon_path`, `ribbon_stroke_colour`
 and `ribbon_stroke_width` (task 1's own module) are called with this
 composition's exact canvas size and painted as the last element in the
@@ -218,6 +269,7 @@ from typing import Final
 
 from . import brand
 from .governance import PARIS
+from .published import load_identity
 from .registration_code import registration_code_svg
 from .ribbon import (
     ribbon_path,
@@ -579,36 +631,64 @@ _WORDMARK_LOGO_SVG: Final = """\
 </svg>
 """
 
-_WORDMARK_HTML: Final = f"""\
+
+def _wordmark_html(forum_host: str) -> str:
+    """The top cream band: the device, then the forum's own address.
+
+    Plain, one colour, and lower case -- see the module docstring's "The
+    wordmark: derived plainly, not refused and not reconstructed" for the
+    argument, and `brand_templates.py` for the two downloadable templates
+    that already set this exact wordmark exactly this way.
+    """
+    return f"""\
 <div class="band band--wordmark">
   {_WORDMARK_LOGO_SVG}
-  <p class="wordmark-text">www.<span class="accent">The</span>Behaviour<span
-    class="accent2">Forum.org</span></p>
+  <p class="wordmark-text">{html.escape(forum_host)}</p>
 </div>
 """
 
-_SERIES_HTML: Final = """\
+
+def _series_html(strapline: str, forum_host: str) -> str:
+    """The hero band: the series' own strapline, and where to discuss it.
+
+    `strapline` is `config/instance.json`'s own key (phase 11), not a
+    motto typed here: until it existed, a duplicate's posters announced
+    *this* series' motto above *its* talks. `published.Identity`'s own
+    docstring records why it is not `tagline` -- that one is a sentence,
+    and a sentence set at `4vw` in heavy capitals wraps to three lines
+    and walks the composition into the ribbon.
+    """
+    return f"""\
 <section class="hero">
-  <h1>Read together</h1>
+  <h1>{html.escape(strapline)}</h1>
   <p>Join the discussion before and after the talk at<br>
-  <strong>forum.example.test</strong></p>
+  <strong>{html.escape(forum_host)}</strong></p>
 </section>
 """
 
-#: Fixed boilerplate (`render_announcement`'s own brief: "Fixed: ... the
-#: `WHAT TO EXPECT?` block"). Read against the reference critically before
-#: keeping it verbatim, as the task brief asks -- this text carries no
-#: edition-specific fact (no date, no name, no hard-typed zone), so nothing
-#: about it needed correcting the way the date line did.
-_EXPECT_HTML: Final = """\
+
+def _expect_html(forum_host: str) -> str:
+    """Fixed boilerplate (`render_announcement`'s own brief: "Fixed: ...
+    the `WHAT TO EXPECT?` block"), with the one thing in it that is not
+    the product's read from the declaration.
+
+    The three rows carry no edition-specific fact -- no date, no name, no
+    hard-typed zone -- so none of them needed correcting the way the date
+    line did. Two of them named a forum, though, and named it in a
+    *third* spelling: the bare registrable domain, where the wordmark
+    band above set `www.` and camel case. One host, written once, spelled
+    the way `identity.forum` declares it.
+    """
+    host = html.escape(forum_host)
+    return f"""\
 <div class="expect">
   <h2>What to expect?</h2>
   <p class="expect__row"><strong>Before:</strong> Ask your questions to the
-    speaker at forum.example.test</p>
+    speaker at {host}</p>
   <p class="expect__row"><strong>D-Day:</strong> Presentation followed by a
     discussion with the audience</p>
   <p class="expect__row"><strong>After:</strong> Continue the discussion and
-    connect with peers at forum.example.test</p>
+    connect with peers at {host}</p>
 </div>
 """
 
@@ -826,11 +906,11 @@ def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
 # being the *least* essential to a share-preview thumbnail glimpsed in a
 # feed, never studied the way a poster on an institute wall is:
 #
-# - `_SERIES_HTML` ("READ TOGETHER" plus the two-line invitation)
-#   restates, at length, exactly what the wordmark band immediately above
-#   it already names -- the one line of brand identity a share preview
-#   needs, not a second, larger repetition of it.
-# - `_EXPECT_HTML` (the three "before/D-Day/after" rows) explains a process
+# - `_series_html` (the strapline in capitals, plus the two-line
+#   invitation) restates, at length, exactly what the wordmark band
+#   immediately above it already names -- the one line of brand identity a
+#   share preview needs, not a second, larger repetition of it.
+# - `_expect_html` (the three "before/D-Day/after" rows) explains a process
 #   to someone who has decided to attend and is reading for a minute, not
 #   someone deciding whether to click through a link preview.
 #
@@ -966,13 +1046,14 @@ def render_announcement(
         raise ValueError("width and height must both be positive")
 
     colours = _load_colours(root)
+    identity = load_identity(root)
     safe_title = html.escape(announcement.title) if announcement.title else "Talk title"
     title_size = _num(_title_font_size(announcement.title or "Talk title"))
     when = date_line(announcement.talk_date)
     doc_title = html.escape(
-        f"Read together — {announcement.title}"
+        f"{identity.strapline} — {announcement.title}"
         if announcement.title
-        else "Read together"
+        else identity.strapline
     )
     wide = is_wide(width, height)
     frame = _frame_html(
@@ -1014,6 +1095,7 @@ def render_announcement(
       <p>Register<br>here</p>
       {registration_slot}
     </div>"""
+    wordmark = _wordmark_html(identity.forum_host)
     if wide:
         # See the module's own "The wide derivation" section: the series
         # hero and the "what to expect" copy are dropped outright, not
@@ -1033,7 +1115,7 @@ def render_announcement(
         # mechanism and why it lives on a sibling rather than on
         # `.band--talk-title` itself.
         body = f"""\
-    {_WORDMARK_HTML}
+    {wordmark}
     <div class="wide-heading">
       <div class="wide-title-row">
         <div class="band--talk-title__backdrop" aria-hidden="true"></div>
@@ -1046,13 +1128,13 @@ def render_announcement(
     {ribbon_svg}"""
     else:
         body = f"""\
-    {_WORDMARK_HTML}
-    {_SERIES_HTML}
+    {wordmark}
+    {_series_html(identity.strapline, identity.forum_host)}
 {title_band}
     <p class="date-line">{when}</p>
     <div class="content">
       <div class="expect-col">
-        {_EXPECT_HTML}
+        {_expect_html(identity.forum_host)}
       </div>
       <div class="frame-wrap">{frame}</div>
     </div>
@@ -1112,8 +1194,6 @@ def render_announcement(
     border-bottom: 0.18vmin solid var(--purple);
     padding-bottom: 0.4vmin;
   }}
-  .wordmark-text .accent {{ color: var(--turquoise-d); }}
-  .wordmark-text .accent2 {{ color: var(--purple); }}
 
   .hero {{ flex: 0 0 auto; padding: 1.4vmin var(--safe-r) 1vmin var(--safe-l); }}
   .hero h1 {{

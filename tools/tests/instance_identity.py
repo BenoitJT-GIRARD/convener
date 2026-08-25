@@ -27,6 +27,19 @@ deferred *source* actually contains. What is left is still swept. The
 blind spot is therefore one known phrase in one named artefact, not a
 file, and it closes by itself the day the source stops carrying the
 phrase.
+
+**No entry claims a built artefact today, and that is a result rather
+than a simplification.** Phase 11 closed the last two that did: task 2
+pointed the demonstration at `instances/example/` and task 3 derived the
+poster's wordmark and strapline from the declaration. The machinery below
+(`carried_into`, `allowance`, `literal_runs`, `allowed_for`,
+`claimed_by_any`) stays exactly as it was -- it is what an entry has to
+say for itself the next time one is needed, and
+`test_second_instance.py::test_the_sweep_sees_what_the_deferred_register_
+accounts_for` still holds it to that the moment one appears. What changed
+is the arithmetic that test does: with nothing claimed, "the sweep must
+find what the register accounts for" has no subject, and the sweep
+finding *nothing at all* is the outcome the phase was for.
 """
 
 from __future__ import annotations
@@ -88,46 +101,28 @@ class Deferred:
 #: file again the moment its entry is removed.
 DEFERRED: Final = (
     Deferred(
-        path=Path("tools/convener_ops/visual.py"),
-        owner="phase 11 (the poster's own wordmark)",
-        reason=(
-            "Phase 10 task 4 looked at this one and left it deliberately: "
-            "the poster's wordmark sets `www.<accent>The</accent>Behaviour"
-            "<accent>Forum.org</accent>`, a two-tone treatment *of one "
-            "organisation's own name* that no derivation reproduces, and "
-            "its hero line ('Read together') is a strapline "
-            "`config/instance.json` has no key for. Both are identity "
-            "work, not charter work, and `visuals/references/*.png` pin "
-            "what this module renders, so the two move together or not at "
-            "all. Task 5 confirmed the consequence rather than inferring "
-            "it: a second instance's own posters carry the first "
-            "instance's forum three times."
-        ),
-        carried_into=("posters/*.html",),
-    ),
-    Deferred(
-        path=Path("app/src/data/demo.ts"),
-        owner="phase 11 (the example instance)",
-        reason=(
-            "`demo.ts` *is* an instance, in code -- its promotion channels "
-            "name this organisation's forum and its LinkedIn page, and "
-            "they are compiled into the cockpit's own bundle, so a second "
-            "instance ships them too."
-        ),
-        carried_into=("app/dist/assets/*.js",),
-    ),
-    Deferred(
         path=Path("site/src/_data/events.json"),
         owner="phase 11 (the example instance)",
         reason=(
             "The showcase's committed build fixture: a copy of "
             "`public-data/events-public.json`, refreshed by "
             "`publish-vitrine.yml` before every real build. It carries "
-            "this instance's speakers rather than its name, which is why "
-            "no needle here matches it -- and a second instance's build "
-            "regenerates it from its own `data/speakers.yml` before "
-            "Eleventy ever reads it, which is why it reaches nothing "
-            "built."
+            "this instance's identity and not only its speakers, which is "
+            "why the entry is load-bearing rather than a courtesy: two of "
+            "the source sweep's four needles match it -- `identity.forum` "
+            "and `identity.forum_host`, twice each, inside the two "
+            "`forum_thread` values that two of its five records hold -- "
+            "and its ids and thread slugs carry the edition prefix in both "
+            "cases besides. Remove the entry and the source sweep names "
+            "this file and that needle. What it reaches is nothing "
+            "*built*, which is the separate claim `carried_into` makes: a "
+            "second instance's build regenerates it from that instance's "
+            "own `data/speakers.yml` before Eleventy ever reads it. Until "
+            'phase 11 task 8 this reason said the opposite -- "no needle '
+            'here matches it" -- which was false the day it was written; '
+            "an exemption justified by a fact that is not true is an "
+            "exemption the next reader deletes, and the sweep then fails "
+            "for a reason nobody was warned about."
         ),
     ),
     Deferred(
@@ -157,6 +152,19 @@ def needles(root: Path) -> dict[str, str]:
     write the forum's registrable domain without the `www.`, and an
     architecture note can write the repository's name without its owner.
 
+    Every field of the identity is here by enumeration, not by hand, and
+    the reason is below in the code. Nothing about the *address* half is
+    enumerable the same way -- `Published` derives four different shapes
+    from one string -- so those four stay written out, and so are the two
+    the edition prefix reaches an artefact as.
+
+    **Nothing written out here can go missing all the same.**
+    `test_second_instance.py::test_every_value_the_declaration_holds_is_
+    swept` reads the declaration itself and fails on any value no needle
+    covers, which is what turns the hand-written half of this dictionary
+    from a list somebody has to remember to extend into one the suite
+    extends for them.
+
     Deliberately absent, so that every needle below can be *proved* to
     match something in a real build rather than passing green by matching
     nothing (`test_second_instance.py`):
@@ -177,23 +185,44 @@ def needles(root: Path) -> dict[str, str]:
     """
     address = published.load(root)
     identity = published.load_identity(root)
+    editions = published.load_edition_prefix(root)
     found = {
         "published_url": address.url,
         "origin": address.origin,
         "host": address.host,
         "path_prefix": address.path_prefix,
-        "organisation": identity.organisation,
-        "short_name": identity.short_name,
-        "series": identity.series,
-        "tagline": identity.tagline,
-        "forum": identity.forum,
-        "forum_host": identity.forum_host,
-        "forum_domain": identity.forum_host.removeprefix("www."),
-        "contact": identity.contact,
-        "proposal_form": identity.proposal_form,
-        "repository": identity.repository,
-        "repository_name": identity.repository.partition("/")[2],
+        # The edition prefix, as the two forms that actually reach an
+        # artefact: `MRG-` in a code the showcase prints and the poster
+        # sets, `mrg-` in the event page's own address, in
+        # `keys/events/<id>.pub` and in a certificate's verification
+        # link (D-19). The declared value alone -- two letters, no
+        # separator -- is *not* a needle, and that is a decision rather
+        # than an omission: `contains` would match it on word boundaries,
+        # and a two-letter run bounded by punctuation is exactly what a
+        # minifier emits for an identifier. A needle that can fire on a
+        # coincidence is a needle somebody eventually widens an exemption
+        # for. Both forms below carry the separator the product itself
+        # adds, so neither can be an accident.
+        "edition_code_prefix": editions.code_prefix,
+        "event_id_prefix": editions.event_prefix,
     }
+    # Every declared identity field, enumerated from the declaration's own
+    # list rather than written out again here. Phase 11 task 3 is why: it
+    # added `strapline`, the poster's own hero line, and the eight fields
+    # below were a hand-typed dict -- so the new one was not a needle, and
+    # the sweep of a second instance's build passed green over a poster
+    # hard-typing this instance's motto. Found by breaking it on purpose
+    # and watching nothing fail. A field that a duplicate declares is a
+    # field a duplicate's artefacts print; there is no such thing as one
+    # this sweep should not look for.
+    found.update({name: getattr(identity, name) for name in published.IDENTITY_FIELDS})
+    found.update(
+        {
+            "forum_host": identity.forum_host,
+            "forum_domain": identity.forum_host.removeprefix("www."),
+            "repository_name": identity.repository.partition("/")[2],
+        }
+    )
     for name, value in brand.colours(brand.load(root)).items():
         if value in ("#ffffff", "#000000"):
             continue

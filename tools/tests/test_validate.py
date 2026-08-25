@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import board_member, config, speaker
+from conftest import EDITIONS, board_member, config, speaker
 
+from convener_ops.published import EditionPrefix
 from convener_ops.validate import board_target_report, validate_config, validate_speakers
 
 CASES = json.loads(
@@ -17,11 +18,11 @@ CASES = json.loads(
 
 
 def test_a_minimal_lead_is_valid() -> None:
-    assert validate_speakers([speaker()]) == []
+    assert validate_speakers([speaker()], editions=EDITIONS) == []
 
 
 def test_top_level_must_be_a_list() -> None:
-    errors = validate_speakers({"id": "spk-001"})
+    errors = validate_speakers({"id": "spk-001"}, editions=EDITIONS)
     assert errors == ["speakers.yml: top-level must be a list"]
 
 
@@ -33,24 +34,26 @@ def test_config_top_level_must_be_a_mapping() -> None:
 
 
 def test_a_non_mapping_entry_in_speakers_is_rejected_not_skipped() -> None:
-    errors = validate_speakers(["not-a-mapping", speaker()])
+    errors = validate_speakers(["not-a-mapping", speaker()], editions=EDITIONS)
     assert any(e == "speakers[0]: not a mapping" for e in errors)
 
 
 def test_duplicate_id_is_rejected() -> None:
-    errors = validate_speakers([speaker(), speaker(name="Grace Hopper")])
+    errors = validate_speakers(
+        [speaker(), speaker(name="Grace Hopper")], editions=EDITIONS
+    )
     assert any("duplicate id 'spk-001'" in e for e in errors)
 
 
 def test_a_missing_id_is_reported() -> None:
     s = speaker()
     del s["id"]
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("missing id" in e for e in errors)
 
 
 def test_unknown_status_is_rejected() -> None:
-    errors = validate_speakers([speaker(status="bogus-status")])
+    errors = validate_speakers([speaker(status="bogus-status")], editions=EDITIONS)
     assert any("invalid status 'bogus-status'" in e for e in errors)
 
 
@@ -58,17 +61,17 @@ def test_unknown_status_is_rejected() -> None:
 def test_a_missing_required_field_is_reported(key: str) -> None:
     s = speaker()
     del s[key]
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any(f"missing {key}" in e for e in errors)
 
 
 def test_an_invalid_gender_is_reported() -> None:
-    errors = validate_speakers([speaker(gender="not-a-gender")])
+    errors = validate_speakers([speaker(gender="not-a-gender")], editions=EDITIONS)
     assert any("invalid gender 'not-a-gender'" in e for e in errors)
 
 
 def test_scheduled_requires_edition_date_and_two_hosts() -> None:
-    errors = validate_speakers([speaker(status="scheduled")])
+    errors = validate_speakers([speaker(status="scheduled")], editions=EDITIONS)
     joined = " | ".join(errors)
     assert "requires edition_code" in joined
     assert "requires date" in joined
@@ -86,43 +89,104 @@ def test_duplicate_edition_code_is_rejected() -> None:
         [
             speaker(id="spk-001", date="2026-01-08", **common),
             speaker(id="spk-002", date="2026-02-12", **common),
-        ]
+        ],
+        editions=EDITIONS,
     )
     assert any("duplicate edition_code 'MRG-01'" in e for e in errors)
 
 
 def test_malformed_date_and_time_are_rejected() -> None:
-    errors = validate_speakers([speaker(date="08/01/2026", time="12h30")])
+    errors = validate_speakers(
+        [speaker(date="08/01/2026", time="12h30")], editions=EDITIONS
+    )
     joined = " | ".join(errors)
     assert "date must be YYYY-MM-DD" in joined
     assert "time must be HH:MM" in joined
 
 
 def test_a_malformed_edition_code_is_reported() -> None:
-    errors = validate_speakers([speaker(edition_code="5")])
+    errors = validate_speakers([speaker(edition_code="5")], editions=EDITIONS)
     assert any("edition_code must match MRG-N" in e for e in errors)
 
 
 def test_an_edition_code_past_four_digits_is_rejected() -> None:
-    """`EDITION_RE` bounds the digit run at four (`MRG-9999`) rather than
-    accepting `\\d+` unboundedly: an unbounded id can grow
+    """`EditionPrefix.pattern` bounds the digit run at four (`MRG-9999`)
+    rather than leaving it unbounded: an unbounded id can grow
     `registration_code_modules`'s own QR version past the point where a
     printed poster's QR module drops below the scannable floor
     (`formats.SCANNABLE_QR_MODULE_MM`) -- `cli.py::render_visuals` is the
     check that runs that arithmetic for real, but a record this malformed
     should never pass `convener-validate` in the first place."""
-    errors = validate_speakers([speaker(edition_code="MRG-99999")])
+    errors = validate_speakers([speaker(edition_code="MRG-99999")], editions=EDITIONS)
     assert any("edition_code must match MRG-N" in e for e in errors)
 
 
 def test_a_four_digit_edition_code_is_still_accepted() -> None:
-    errors = validate_speakers([speaker(edition_code="MRG-9999")])
+    errors = validate_speakers([speaker(edition_code="MRG-9999")], editions=EDITIONS)
     assert not any("edition_code must match MRG-N" in e for e in errors)
+
+
+def test_the_edition_pattern_follows_the_declaration() -> None:
+    """Phase 11, task 4: the shape is no longer the product's.
+
+    `EDITION_RE` used to fix `MRG-` and one to four digits here -- the
+    initials of the series that happens to run this repository, in the
+    product's own validator, which is why a duplicate running a reading
+    group numbered its sessions `MRG-1`. The pattern is built from whatever
+    `config/instance.json` declares now, so the same record is valid under
+    one instance and refused under another."""
+    reading_group = EditionPrefix(value="MRG")
+    assert (
+        validate_speakers([speaker(edition_code="MRG-1")], editions=reading_group) == []
+    )
+    assert any(
+        "edition_code must match MRG-N" in error
+        for error in validate_speakers(
+            [speaker(edition_code="MRG-1")], editions=reading_group
+        )
+    )
+
+
+def test_an_edition_already_assigned_stops_the_prefix_being_changed() -> None:
+    """The freeze, and where it actually bites.
+
+    An edition code is not a label that can be reworded: it is in a
+    published address (`/events/mrg-05/`, D-19), on every certificate issued
+    for that event, and in `keys/events/mrg-05.pub` together with the
+    repository secret derived from it. Nothing renumbers those.
+
+    So there is no separate guard -- there is the derivation, read from
+    the other end. A declaration moved after editions were assigned makes
+    every one of them fail against the pattern built from it, and this is
+    the clause that says *why* rather than reporting five unrelated shape
+    errors: a whole file numbered under one other prefix is not five
+    typing mistakes."""
+    assigned = [
+        speaker(id="spk-001", edition_code="MRG-1"),
+        speaker(id="spk-002", edition_code="MRG-2"),
+    ]
+    errors = validate_speakers(assigned, editions=EditionPrefix(value="RG"))
+    renames = [error for error in errors if "never renumbered" in error]
+    assert len(renames) == 1, errors
+    assert "2 edition_code(s) are numbered MRG-" in renames[0]
+    assert "declares edition_prefix 'RG'" in renames[0]
+    assert "/events/mrg-1/" in renames[0]
+    assert "keys/events/mrg-1.pub" in renames[0]
+
+
+def test_a_code_that_is_simply_malformed_is_not_reported_as_a_rename() -> None:
+    """The other half of the clause above. `5` is a record somebody typed
+    wrongly, not a repository whose declaration moved, and telling its
+    author that an edition is never renumbered would send them to the
+    wrong file."""
+    errors = validate_speakers([speaker(edition_code="5")], editions=EDITIONS)
+    assert not any("never renumbered" in error for error in errors)
+    assert any("edition_code must match MRG-N" in error for error in errors)
 
 
 @pytest.mark.parametrize("key", ["host_1", "host_2"])
 def test_a_non_string_host_is_reported(key: str) -> None:
-    errors = validate_speakers([speaker(**{key: 123})])
+    errors = validate_speakers([speaker(**{key: 123})], editions=EDITIONS)
     assert any(f"{key} must be a string" in e for e in errors)
 
 

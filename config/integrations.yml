@@ -1,9 +1,23 @@
 # Every external dependency the *application code* (tools/convener_ops and
 # app/src) reads at runtime, and what happens without it. Absent is a normal
-# state: the feature degrades visibly, nothing breaks -- with one exception,
-# event_keys below, which declares `absent_is_normal: false` rather than
-# relying on its absent_behaviour text alone: a boolean `convener-check-config`
-# can act on, not only a paragraph a reader might skip.
+# state for most of them: the feature degrades visibly, nothing breaks --
+# with three exceptions, event_keys, retention_token and
+# certificate_fingerprint below, each of which declares
+# `absent_is_normal: false` rather than relying on its absent_behaviour text
+# alone: a boolean `convener-check-config` can act on, not only a paragraph a
+# reader might skip.
+#
+# That sentence read "with one exception, event_keys" until phase 11 task 8,
+# by which time two more rows had declared themselves the same way -- true
+# when it was written, and quietly false for two phases. The rows themselves
+# were pinned as data all along (test_integrations.py::test_exactly_these_
+# three_rows_declare_themselves_an_exception); what nothing read was the
+# count in this paragraph, which is exactly why nothing noticed. It is read
+# now, by test_integrations.py::test_this_declarations_own_header_names_
+# every_exception, which fails naming the row a fourth exception would add.
+# tools/convener_ops/integrations.py carried the same wrong sentence in its
+# module docstring and in Integration.absent_is_normal's own comment; task 5
+# corrected the first, task 8 the second and this one.
 #
 # This deliberately excludes secrets that only CI ever reads (a workflow
 # step's `env:`, never something convener-check-config's own process sees) --

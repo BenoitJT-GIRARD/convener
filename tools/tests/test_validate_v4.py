@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import speaker
+from conftest import EDITIONS, speaker
 
 from convener_ops.validate import DATE_ANSWERS, SPEAKER_TEXT_V4, validate_speakers
 
@@ -49,14 +49,14 @@ def _slot(**overrides: Any) -> dict[str, Any]:
 
 
 def test_a_whole_record_is_accepted() -> None:
-    assert validate_speakers([speaker()], BOARD) == []
+    assert validate_speakers([speaker()], BOARD, editions=EDITIONS) == []
 
 
 @pytest.mark.parametrize("field", NEW_FIELDS)
 def test_a_record_that_leaves_out_a_new_field_is_reported(field: str) -> None:
     entry = speaker()
     del entry[field]
-    errors = validate_speakers([entry], BOARD)
+    errors = validate_speakers([entry], BOARD, editions=EDITIONS)
     assert [e for e in errors if f"missing {field}" in e], errors
     # Named by id, so the line points at a record and not at an offset into
     # a 1700-line file.
@@ -65,12 +65,14 @@ def test_a_record_that_leaves_out_a_new_field_is_reported(field: str) -> None:
 
 @pytest.mark.parametrize("field", SPEAKER_TEXT_V4)
 def test_an_empty_value_is_an_answer_and_not_a_missing_field(field: str) -> None:
-    assert validate_speakers([speaker(**{field: ""})], BOARD) == []
+    assert validate_speakers([speaker(**{field: ""})], BOARD, editions=EDITIONS) == []
 
 
 @pytest.mark.parametrize("field", SPEAKER_TEXT_V4)
 def test_a_new_field_that_is_not_text_is_reported(field: str) -> None:
-    errors = validate_speakers([speaker(**{field: ["a list"]})], BOARD)
+    errors = validate_speakers(
+        [speaker(**{field: ["a list"]})], BOARD, editions=EDITIONS
+    )
     assert [e for e in errors if f"{field} must be a string" in e], errors
 
 
@@ -84,7 +86,7 @@ def test_every_missing_field_is_listed_at_once() -> None:
     entry = speaker()
     for field in NEW_FIELDS:
         del entry[field]
-    joined = " | ".join(validate_speakers([entry], BOARD))
+    joined = " | ".join(validate_speakers([entry], BOARD, editions=EDITIONS))
     for field in NEW_FIELDS:
         assert f"missing {field}" in joined
 
@@ -97,9 +99,11 @@ def test_a_new_field_left_empty_is_not_confused_with_one_left_out() -> None:
     record with the keys removed is not.
     """
     blank = speaker(photo_url="", bio="", linkedin="", seed_questions="")
-    assert validate_speakers([blank], BOARD) == []
+    assert validate_speakers([blank], BOARD, editions=EDITIONS) == []
     stripped = {k: v for k, v in blank.items() if k not in SPEAKER_TEXT_V4}
-    assert len(validate_speakers([stripped], BOARD)) == len(SPEAKER_TEXT_V4)
+    assert len(validate_speakers([stripped], BOARD, editions=EDITIONS)) == len(
+        SPEAKER_TEXT_V4
+    )
 
 
 class TestCandidateDates:
@@ -113,46 +117,55 @@ class TestCandidateDates:
                 _slot(date="2026-06-15", answer=""),
             ]
         )
-        assert validate_speakers([entry], BOARD) == []
+        assert validate_speakers([entry], BOARD, editions=EDITIONS) == []
 
     def test_an_empty_list_is_a_speaker_nobody_has_written_to_yet(self) -> None:
-        assert validate_speakers([speaker(candidate_dates=[])], BOARD) == []
+        assert (
+            validate_speakers([speaker(candidate_dates=[])], BOARD, editions=EDITIONS)
+            == []
+        )
 
     def test_a_slot_that_is_not_a_list_is_reported(self) -> None:
         entry = speaker(candidate_dates="the 1st or the 8th")
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("candidate_dates: must be a list" in e for e in errors), errors
 
     def test_a_slot_typed_as_one_line_of_prose_is_reported(self) -> None:
         # What a hand edit produces: the day written out instead of a
         # mapping of the three things a slot is.
         entry = speaker(candidate_dates=["Monday the 1st, midday"])
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("candidate_dates[0]: not a mapping" in e for e in errors), errors
 
     @pytest.mark.parametrize("key", ["date", "time", "answer"])
     def test_a_slot_missing_a_key_is_reported_with_that_key(self, key: str) -> None:
         slot = _slot()
         del slot[key]
-        errors = validate_speakers([speaker(candidate_dates=[slot])], BOARD)
+        errors = validate_speakers(
+            [speaker(candidate_dates=[slot])], BOARD, editions=EDITIONS
+        )
         assert any(f"missing keys ['{key}']" in e for e in errors), errors
 
     def test_a_slot_with_no_day_is_not_a_proposal(self) -> None:
-        errors = validate_speakers([speaker(candidate_dates=[_slot(date="")])], BOARD)
+        errors = validate_speakers(
+            [speaker(candidate_dates=[_slot(date="")])], BOARD, editions=EDITIONS
+        )
         assert any("date must be YYYY-MM-DD" in e for e in errors), errors
 
     def test_a_bare_time_that_yaml_read_as_a_number_is_reported(self) -> None:
         # `12:30` unquoted is the integer 750 under stock resolvers. The
         # loader keeps it text (yaml_safe.py); if a hand edit ever gets one
         # past that, it is caught here rather than compared against a string.
-        errors = validate_speakers([speaker(candidate_dates=[_slot(time=750)])], BOARD)
+        errors = validate_speakers(
+            [speaker(candidate_dates=[_slot(time=750)])], BOARD, editions=EDITIONS
+        )
         assert any("time must be HH:MM" in e for e in errors), errors
 
     def test_there_is_no_word_for_probably(self) -> None:
         assert frozenset({"accepted", "declined", ""}) == DATE_ANSWERS
         assert "pending" not in DATE_ANSWERS
         entry = speaker(candidate_dates=[_slot(answer="maybe")])
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("invalid answer 'maybe'" in e for e in errors), errors
 
     def test_the_same_slot_offered_twice_reads_as_two_answers_to_one_question(
@@ -164,7 +177,7 @@ class TestCandidateDates:
                 _slot(answer="declined"),
             ]
         )
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("duplicate date" in e for e in errors), errors
 
     def test_one_day_at_two_hours_is_one_question_asked_twice(self) -> None:
@@ -176,7 +189,7 @@ class TestCandidateDates:
         entry = speaker(
             candidate_dates=[_slot(time="12:30"), _slot(time="18:00")],
         )
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("duplicate date '2026-06-01'" in e for e in errors), errors
 
     @pytest.mark.parametrize(
@@ -191,7 +204,9 @@ class TestCandidateDates:
         `data/validate.ts` and `state/dates.ts`, so a reader that started
         keying on the hour again would fail on one side or the other.
         """
-        errors = validate_speakers([speaker(candidate_dates=case["slots"])], BOARD)
+        errors = validate_speakers(
+            [speaker(candidate_dates=case["slots"])], BOARD, editions=EDITIONS
+        )
         if case["valid"]:
             assert errors == [], errors
         else:
@@ -201,7 +216,7 @@ class TestCandidateDates:
         entry = speaker(
             candidate_dates=[_slot(), _slot(date="2026-06-08", answer="yes")]
         )
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("candidate_dates[1]" in e for e in errors), errors
         assert not any("candidate_dates[0]" in e for e in errors), errors
 
@@ -218,11 +233,13 @@ class TestChecklist:
     """
 
     def test_an_empty_checklist_is_the_normal_state(self) -> None:
-        assert validate_speakers([speaker(checklist={})], BOARD) == []
+        assert (
+            validate_speakers([speaker(checklist={})], BOARD, editions=EDITIONS) == []
+        )
 
     def test_a_named_owner_is_accepted(self) -> None:
         entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}})
-        assert validate_speakers([entry], BOARD) == []
+        assert validate_speakers([entry], BOARD, editions=EDITIONS) == []
 
     def test_an_item_owner_is_not_checked_against_the_board(self) -> None:
         # `assigned_to` has to be a sitting board member; an item owner does
@@ -235,42 +252,44 @@ class TestChecklist:
             checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}},
         )
         assert "Anonymous" not in BOARD
-        assert validate_speakers([entry], BOARD) == []
+        assert validate_speakers([entry], BOARD, editions=EDITIONS) == []
 
     def test_a_blank_owner_is_an_answer(self) -> None:
         entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": ""}})
-        assert validate_speakers([entry], BOARD) == []
+        assert validate_speakers([entry], BOARD, editions=EDITIONS) == []
 
     def test_a_missing_checklist_is_reported(self) -> None:
         entry = speaker()
         del entry["checklist"]
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("missing checklist" in e for e in errors), errors
 
     def test_a_checklist_that_is_not_a_mapping_is_reported(self) -> None:
-        errors = validate_speakers([speaker(checklist=["Anonymous"])], BOARD)
+        errors = validate_speakers(
+            [speaker(checklist=["Anonymous"])], BOARD, editions=EDITIONS
+        )
         assert any("checklist: must be a mapping" in e for e in errors), errors
 
     def test_a_bare_name_where_a_block_belongs_is_reported(self) -> None:
         entry = speaker(checklist={"scheduled/T-30/visuals": "Anonymous"})
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("not a mapping" in e for e in errors), errors
 
     def test_a_line_with_no_owner_key_at_all_is_reported(self) -> None:
         entry = speaker(checklist={"scheduled/T-30/visuals": {}})
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("missing assignee" in e for e in errors), errors
 
     def test_a_key_this_app_does_not_use_is_reported(self) -> None:
         entry = speaker(
             checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous", "due": "soon"}}
         )
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("unknown keys ['due']" in e for e in errors), errors
 
     def test_an_owner_that_is_not_a_login_is_reported(self) -> None:
         entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": "e mma"}})
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("invalid assignee" in e for e in errors), errors
 
     def test_the_line_that_is_wrong_is_named(self) -> None:
@@ -280,7 +299,7 @@ class TestChecklist:
                 "scheduled/T-21/linkedin": {"assignee": 7},
             }
         )
-        errors = validate_speakers([entry], BOARD)
+        errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("'scheduled/T-21/linkedin'" in e for e in errors), errors
         assert not any("'scheduled/T-30/visuals'" in e for e in errors), errors
 
@@ -299,7 +318,7 @@ def test_the_shared_assignee_cases_read_the_same_way_here(
     same cases through both of those.
     """
     entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": case["login"]}})
-    errors = validate_speakers([entry], BOARD)
+    errors = validate_speakers([entry], BOARD, editions=EDITIONS)
     if case["valid"]:
         assert errors == [], errors
     else:

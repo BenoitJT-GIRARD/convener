@@ -3,7 +3,7 @@
 | Word | What it means |
 |---|---|
 | **Convener** | The short name this project carries throughout its own code — `convener-register`, `convener_ops`. The series' own title and the repositories this instance runs from are the instance's, and are in `config/instance.json`. |
-| **MRG-NN** | A webinar's number, e.g. `MRG-07`. |
+| **Edition code** | A webinar's number: the prefix this instance declares in `config/instance.json` (`edition_prefix`), a hyphen, and up to four digits. Lower-cased it is the event id, which is what appears in the address of the event's own page (D-19). |
 | **Contributor** | Anyone helping out. |
 | **Event Host** | One of the **two** volunteers who run a webinar together — preparing and hosting it. |
 | **Editorial Board** | The small group that validates speakers and steers the series. |

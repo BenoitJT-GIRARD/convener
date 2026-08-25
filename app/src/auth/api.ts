@@ -1,3 +1,5 @@
+import { request } from '../net/request';
+
 /** Validate a token against GitHub's API.
  *
  * Returns `null` both when the token is rejected (a normal, expected
@@ -8,7 +10,7 @@
 export async function validateToken(token: string): Promise<{ login: string } | null> {
   let r: Response;
   try {
-    r = await fetch('https://api.github.com/user', {
+    r = await request('https://api.github.com/user', {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
     });
   } catch {

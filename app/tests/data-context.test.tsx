@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { DataProvider, useData } from '../src/data/DataContext';
-import { DEMO_SPEAKERS } from '../src/data/demo';
+import { demoSpeakers } from '../src/data/demo';
 import { configYaml, speakersYaml } from './data-doubles';
 import { dataEdit, identifier } from '../src/state/decisions';
 
@@ -33,7 +33,7 @@ describe('DataProvider (demo mode)', () => {
   it('loads the demo dataset without any network access', async () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.speakers).toHaveLength(DEMO_SPEAKERS.length);
+    expect(result.current.speakers).toHaveLength(demoSpeakers().length);
     expect(result.current.config?.season).toBe(2026);
   });
 

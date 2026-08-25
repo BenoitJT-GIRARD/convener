@@ -316,6 +316,75 @@ export function dataEdit(entity: Identifier, edit: Edit): Subject {
   return `data: ${entity} ${editPart(edit)}` as Subject;
 }
 
+/**
+ * The subject for a commit that settles one of this instance's own
+ * settings.
+ *
+ * A different domain, deliberately. `data:` is the register's prefix and
+ * `commit_format.py` reads every one of those lines back as an act on a
+ * *record* -- a ballot, a nomination, a recording. Changing
+ * `config/queue-drain.yml`'s alarm threshold is none of those: it is not
+ * about a person, there is nobody it could name, and writing it as a
+ * decision would put a line in the governance register that records no
+ * decision. `validate_messages` leaves an ordinary commit alone precisely
+ * so that this one can be ordinary.
+ *
+ * It goes through this module all the same, and for the reason `dataEdit`
+ * does: `Subject` is what `mutate` and `putFile` demand, so a subject
+ * assembled at a call site does not compile, and the shape of the two
+ * identifiers it carries is asked here rather than hoped for. A settings
+ * commit names the file and the key and nothing else -- **never the
+ * value**. A commit subject is permanent and unrewritable, and these
+ * numbers are exactly the ones an operator may want to correct without the
+ * old one following the repository around for ever; the value is in the
+ * diff, as `lock-date`'s date is.
+ */
+export function configEdit(file: SettingsFile, key: SettingKey): Subject {
+  return `config: set ${key} in ${file}` as Subject;
+}
+
+declare const settingsFileBrand: unique symbol;
+declare const settingKeyBrand: unique symbol;
+
+/** A file under `config/`, as the declaration names it. */
+export type SettingsFile = string & { readonly [settingsFileBrand]: true };
+
+/** A top-level key of one of those files. */
+export type SettingKey = string & { readonly [settingKeyBrand]: true };
+
+/** `config/<name>.<yml|json>` -- nothing outside that directory, and no
+ *  path traversal, because the string reaches the Contents API as a path. */
+const SETTINGS_FILE_SRC = 'config/[A-Za-z0-9][A-Za-z0-9._-]*\\.(?:yml|json)';
+
+/** A YAML key as these files spell one: lower case, words joined by
+ *  underscores. Narrow on purpose -- it is interpolated into the pattern
+ *  `settings/edit.ts` builds to find the line it replaces, so a character
+ *  with a meaning in a regular expression must not be able to reach it. */
+const SETTING_KEY_SRC = '[a-z][a-z0-9_]*';
+
+/** The only way to obtain a `SettingsFile`. */
+export function settingsFile(value: string): SettingsFile {
+  if (!new RegExp(`^${SETTINGS_FILE_SRC}$`).test(value)) {
+    throw new DecisionRejected(
+      `"${value}" is not a file in config/. This screen settles the declarations ` +
+        'in that directory and nothing else.',
+    );
+  }
+  return value as SettingsFile;
+}
+
+/** The only way to obtain a `SettingKey`. */
+export function settingKey(value: string): SettingKey {
+  if (!new RegExp(`^${SETTING_KEY_SRC}$`).test(value)) {
+    throw new DecisionRejected(
+      `"${value}" is not a setting name. A settings commit names the key that ` +
+        'moved -- lower case, words joined by underscores -- never what was ' +
+        'written into it.',
+    );
+  }
+  return value as SettingKey;
+}
+
 /** The exact line to commit. The `Decision` type admits nothing malformed, so
  *  this is total: every value it can be given produces a line
  *  `parse_decision` reads back to that same value. */
@@ -354,7 +423,12 @@ export function isSubject(line: string): line is Subject {
     `^data: ${TOKEN_SRC} (?:admin edit|update post-archive metrics|set ${KEY_SRC}|` +
       `runbook ${KEY_SRC}=(?:true|false)|owner for ${KEY_SRC}|owner cleared on ${KEY_SRC})$`,
   );
-  return decision.test(line) || edit.test(line);
+  // The settings screen's own domain, built from the same two patterns
+  // `settingKey` and `settingsFile` check at construction rather than a
+  // third spelling of them: a line this accepts is a line that could have
+  // been constructed.
+  const settings = new RegExp(`^config: set ${SETTING_KEY_SRC} in ${SETTINGS_FILE_SRC}$`);
+  return decision.test(line) || edit.test(line) || settings.test(line);
 }
 
 /**

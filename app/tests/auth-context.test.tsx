@@ -17,7 +17,15 @@ describe('AuthProvider', () => {
   it('starts in demo mode when the demo flag is set', () => {
     localStorage.setItem('convener.demo', '1');
     const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
-    expect(result.current).toMatchObject({ token: 'demo', login: 'demo', ready: true });
+    // `example-alba` since phase 11 task 2: demo mode signs the visitor in
+    // as a member of the example instance's own board, because a login that
+    // board does not hold is refused by every transition (see
+    // `src/data/demo.ts`'s own `DEMO_USER`).
+    expect(result.current).toMatchObject({
+      token: 'demo',
+      login: 'example-alba',
+      ready: true,
+    });
   });
 
   it('validates a stored legacy token on mount and clears it if invalid', async () => {

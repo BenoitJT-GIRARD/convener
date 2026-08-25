@@ -60,7 +60,7 @@ given" — and is well formed.
 | `publication.approved_on` | string | YYYY-MM-DD of that approval. |
 | `publication.objections` | list&lt;PublicationObjection&gt; | Objections raised during the objection window. An unresolved one blocks publication. |
 | `publication.outcome` | enum | Where the record ended up. `published` is written in exactly one place, the gated archiving transition, so it cannot coexist with a refused consent, a standing objection, a missing approval, or an objection window that has not run. Empty while undecided. One of `published`, `withheld` or empty. |
-| `edition_code` | string | `MRG-N`, assigned when a confirmed record is scheduled. Empty for a record that has not been scheduled. |
+| `edition_code` | string | The instance's declared `edition_prefix`, a hyphen and 1-4 digits (`AB-7`); assigned when a confirmed record is scheduled. Empty for a record that has not been scheduled. |
 | `candidate_dates` | list&lt;CandidateDate&gt; | The slots put to the speaker, with their answers. Empty until the invitation goes out; it stays populated after the lock-in, because which dates were offered and which were refused is the record of how the chosen one was chosen. |
 | `date` | string | YYYY-MM-DD of the talk, frozen at scheduling. |
 | `time` | string | HH:MM, Paris local time, frozen at scheduling. |
@@ -159,7 +159,7 @@ One mapping, with the keys below.
 | Field | Type | Notes |
 |---|---|---|
 | `season` | number | Current season number. |
-| `vw_counter` | number | The next `MRG-N` to assign. |
+| `vw_counter` | number | The next edition number to assign, under the prefix `config/instance.json` declares. |
 | `overlap_window_days` | number | Forbidden window around each scheduled date, in days. |
 | `seminar_duration_minutes` | number | How long a seminar runs, in minutes. |
 | `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`: above zero, at most one. Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |

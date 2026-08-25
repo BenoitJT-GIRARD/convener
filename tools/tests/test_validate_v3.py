@@ -8,7 +8,15 @@ task's decision 2, which is not itself in the brief's table.
 
 from __future__ import annotations
 
-from conftest import ballot, board_member, config, nomination, objection, speaker
+from conftest import (
+    EDITIONS,
+    ballot,
+    board_member,
+    config,
+    nomination,
+    objection,
+    speaker,
+)
 
 from convener_ops.validate import validate_config, validate_speakers
 
@@ -21,7 +29,7 @@ def test_ballot_with_unknown_value_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"})
+    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
     assert any("invalid ballot value" in e for e in errors)
 
 
@@ -33,7 +41,7 @@ def test_recused_ballot_without_coi_reason_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"})
+    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
     assert any("recusal requires coi_reason" in e for e in errors)
 
 
@@ -45,7 +53,7 @@ def test_two_ballots_from_the_same_voter_on_a_lead_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"a"})
+    errors = validate_speakers([s], board_logins={"a"}, editions=EDITIONS)
     assert any("duplicate ballot" in e for e in errors)
 
 
@@ -57,7 +65,7 @@ def test_ballot_from_a_login_absent_from_the_board_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"})
+    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
     assert any("ballot from a non-member" in e for e in errors)
 
 
@@ -69,7 +77,7 @@ def test_a_selection_with_no_ballots_list_is_not_a_ballot_error() -> None:
     # this validator's job to invent a threshold-affecting default for a
     # field it cannot see.
     s = speaker(selection={"opened_on": "", "decided_on": ""})
-    errors = validate_speakers([s], board_logins={"Anonymous"})
+    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
     assert not any("ballot" in e for e in errors)
 
 
@@ -81,12 +89,12 @@ def test_a_non_mapping_ballot_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"})
+    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
     assert any("not a mapping" in e for e in errors)
 
 
 def test_unknown_career_stage_is_rejected() -> None:
-    errors = validate_speakers([speaker(career_stage="professor")])
+    errors = validate_speakers([speaker(career_stage="professor")], editions=EDITIONS)
     assert any("invalid career_stage" in e for e in errors)
 
 
@@ -100,7 +108,7 @@ def test_unknown_publication_consent_is_rejected() -> None:
             "outcome": "",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("invalid publication consent" in e for e in errors)
 
 
@@ -143,7 +151,7 @@ def test_valid_config_and_speakers_produce_no_errors() -> None:
             "decided_on": "",
         }
     )
-    assert validate_speakers([s], board_logins=board_logins) == []
+    assert validate_speakers([s], board_logins=board_logins, editions=EDITIONS) == []
     assert validate_config(config()) == []
 
 
@@ -308,7 +316,7 @@ def test_publication_approved_on_must_be_a_date() -> None:
             "outcome": "",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("approved_on must be YYYY-MM-DD" in e for e in errors)
 
 
@@ -322,7 +330,7 @@ def test_publication_outcome_must_be_valid() -> None:
             "outcome": "bogus",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("invalid publication outcome" in e for e in errors)
 
 
@@ -336,7 +344,7 @@ def test_publication_objection_member_must_look_like_a_login() -> None:
             "outcome": "",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("invalid objection member" in e for e in errors)
 
 
@@ -355,7 +363,7 @@ def test_refused_consent_with_published_outcome_is_rejected() -> None:
             "outcome": "published",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("refused consent cannot have outcome published" in e for e in errors)
 
 
@@ -367,13 +375,13 @@ def test_ballot_date_must_be_a_date() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"})
+    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
     assert any("date must be YYYY-MM-DD" in e for e in errors)
 
 
 def test_selection_opened_on_must_be_a_date() -> None:
     s = speaker(selection={"ballots": [], "opened_on": "not-a-date", "decided_on": ""})
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("opened_on must be YYYY-MM-DD" in e for e in errors)
 
 
@@ -397,7 +405,7 @@ def test_ballot_from_non_member_fires_even_when_board_is_empty() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins=frozenset())
+    errors = validate_speakers([s], board_logins=frozenset(), editions=EDITIONS)
     assert any("ballot from a non-member" in e for e in errors)
 
 
@@ -409,7 +417,7 @@ def test_selection_decided_on_must_be_a_date() -> None:
     # (scripts/migrate_v3.py, Task 5): a malformed value here would
     # propagate into every ballot it touches, not stay in one field.
     s = speaker(selection={"ballots": [], "opened_on": "", "decided_on": "not-a-date"})
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("decided_on must be YYYY-MM-DD" in e for e in errors)
 
 
@@ -461,7 +469,7 @@ def test_nomination_entry_must_be_a_mapping() -> None:
 
 def test_publication_must_be_a_mapping() -> None:
     s = speaker(publication="not-a-mapping")
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any(".publication: not a mapping" in e for e in errors)
 
 
@@ -492,25 +500,38 @@ def test_assigned_to_must_be_present_and_a_string() -> None:
     # board member owns the lead yet. A missing one is an unmigrated record.
     s = speaker()
     del s["assigned_to"]
-    assert any("assigned_to must be a string" in e for e in validate_speakers([s]))
+    assert any(
+        "assigned_to must be a string" in e
+        for e in validate_speakers([s], editions=EDITIONS)
+    )
 
 
 def test_assigned_to_must_name_a_board_member_when_set() -> None:
     errors = validate_speakers(
-        [speaker(assigned_to="someone-else")], board_logins={"Anonymous"}
+        [speaker(assigned_to="someone-else")],
+        board_logins={"Anonymous"},
+        editions=EDITIONS,
     )
     assert any("assigned_to is not a board member" in e for e in errors)
 
 
 def test_an_empty_assigned_to_is_accepted() -> None:
-    assert validate_speakers([speaker(assigned_to="")], {"Anonymous"}) == []
+    assert (
+        validate_speakers([speaker(assigned_to="")], {"Anonymous"}, editions=EDITIONS)
+        == []
+    )
 
 
 def test_proposed_by_is_never_checked_against_the_board() -> None:
     # It is the submitter's self-reported name, often someone outside the
     # team entirely - checking it against the board would reject the public
     # form's own leads.
-    assert validate_speakers([speaker(proposed_by="A Passer-By")], {"Anonymous"}) == []
+    assert (
+        validate_speakers(
+            [speaker(proposed_by="A Passer-By")], {"Anonymous"}, editions=EDITIONS
+        )
+        == []
+    )
 
 
 def test_a_speaker_without_career_stage_is_rejected() -> None:
@@ -518,13 +539,18 @@ def test_a_speaker_without_career_stage_is_rejected() -> None:
     # was a legacy state; after it, absence means a field was dropped.
     s = speaker()
     del s["career_stage"]
-    assert any("invalid career_stage" in e for e in validate_speakers([s]))
+    assert any(
+        "invalid career_stage" in e for e in validate_speakers([s], editions=EDITIONS)
+    )
 
 
 def test_a_speaker_without_a_publication_block_is_rejected() -> None:
     s = speaker()
     del s["publication"]
-    assert any(".publication: not a mapping" in e for e in validate_speakers([s]))
+    assert any(
+        ".publication: not a mapping" in e
+        for e in validate_speakers([s], editions=EDITIONS)
+    )
 
 
 def test_a_board_member_without_a_status_is_rejected() -> None:
@@ -547,7 +573,7 @@ def test_published_recording_with_no_approval_is_rejected() -> None:
             "outcome": "published",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("has no approval on record" in e for e in errors)
 
 
@@ -568,7 +594,7 @@ def test_published_recording_with_a_standing_objection_is_rejected() -> None:
             "outcome": "published",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("has a standing objection" in e for e in errors)
 
 
@@ -589,7 +615,7 @@ def test_a_resolved_objection_does_not_trip_the_published_check() -> None:
             "outcome": "published",
         }
     )
-    assert validate_speakers([s]) == []
+    assert validate_speakers([s], editions=EDITIONS) == []
 
 
 def test_a_malformed_resolved_on_is_reported() -> None:
@@ -609,5 +635,5 @@ def test_a_malformed_resolved_on_is_reported() -> None:
             "outcome": "",
         }
     )
-    errors = validate_speakers([s])
+    errors = validate_speakers([s], editions=EDITIONS)
     assert any("resolved_on must be YYYY-MM-DD" in e for e in errors)

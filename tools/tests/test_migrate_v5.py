@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 import yaml
+from conftest import EDITIONS
 from migrate_v5 import NEW_FIELDS, _ascii, main, migrate_speaker, migrate_speakers
 
 from convener_ops.cli import SPEAKERS_HEADER, dump_speakers
@@ -153,7 +154,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
             v4_speaker(id="spk-002", status="lead", edition_code="", date=""),
         ]
     )
-    assert validate_speakers(speakers, {"Anonymous"}) == []
+    assert validate_speakers(speakers, {"Anonymous"}, editions=EDITIONS) == []
 
 
 # --- the script as it is actually run -------------------------------------

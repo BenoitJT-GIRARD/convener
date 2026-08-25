@@ -85,6 +85,8 @@ def test_every_composition_module_visuals_yml_names_is_named_here_too() -> None:
         "tools/convener_ops/formats.py",
         "tools/convener_ops/governance.py",
         "tools/convener_ops/cli.py",
+        "config/instance.json",
+        "tools/convener_ops/published.py",
         "data/brand.json",
         "brand/convener/brand.json",
         "tools/convener_ops/brand.py",

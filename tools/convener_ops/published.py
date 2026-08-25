@@ -1,12 +1,13 @@
 """What this particular instance is, read from its own declaration.
 
-Two things, one file, one reader per language. The address this project
+Three things, one file, one reader per language. The address this project
 is published at came first (phase 10, task 2) and the rest of its
 identity followed (task 3): the name of the organisation running the
 series, what the series is called, the forum it discusses on, and the
-address a participant writes to about their own data. Both halves are
-in `config/instance.json`, both are read here, and neither is written
-down anywhere else.
+address a participant writes to about their own data. Phase 11 task 4
+added the third, the prefix its editions are numbered under. All three
+are in `config/instance.json`, all three are read here, and none of them
+is written down anywhere else.
 
 Every public address this repository emits is a suffix of a single value:
 the registration page a participant follows, the survey page an attendee
@@ -49,6 +50,7 @@ dead public link, published, in a document nobody can recall.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -59,24 +61,45 @@ from .paths import repo_root
 __all__ = [
     "DECLARATION_VERSION",
     "DEGRADABLE_FIELDS",
+    "EDITION_PREFIX_KEY",
+    "EDITION_PREFIX_MAX_LENGTH",
+    "EDITION_PREFIX_RE",
+    "EXAMPLE_INSTANCE_PATH",
     "IDENTITY_FIELDS",
     "IDENTITY_KEY",
     "INSTANCE_PATH",
     "PLACEHOLDER_MARKER",
     "PUBLISHED_URL_KEY",
+    "EditionPrefix",
     "Identity",
     "Published",
+    "declared_values",
+    "edition_prefix_from_data",
     "from_data",
     "identity_from_data",
     "is_placeholder",
     "load",
+    "load_edition_prefix",
     "load_identity",
+    "unconfigured",
+    "unconfigured_from_data",
 ]
 
 #: The instance's own declaration, relative to a repository root. In
 #: `config/` rather than beside it, and stating its own `owner:` the way
 #: every other file in that directory does -- see `boundary.py`.
 INSTANCE_PATH: Final = Path("config") / "instance.json"
+
+#: The declaration the *product* ships, as its own worked example --
+#: `instances/example/`'s copy of the file above, at the same relative
+#: path the boundary gives it. Product-owned: upstream ships it, upstream
+#: maintains it, and `test_second_instance.py` already lays it into this
+#: repository's own hole on every run.
+#:
+#: Read here for one purpose: telling an instance that has been configured
+#: from one that is still publishing the template's identity. See
+#: `unconfigured` below for what that comparison is and is not.
+EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
 
 #: `config/instance.json`'s own format version.
 DECLARATION_VERSION: Final = 1
@@ -89,6 +112,66 @@ PUBLISHED_URL_KEY: Final = "published_url"
 #: organisation almost always names the series in the next line.
 IDENTITY_KEY: Final = "identity"
 
+#: The key the third part is about: the prefix this instance numbers its
+#: editions under. `MRG-05` here, `MRG` being the initials of *Virtual
+#: Workshop*, which is this series' name and nobody else's.
+#:
+#: **Its own key, beside `identity` rather than inside it.** Everything
+#: under `identity` is prose, checked the one uniform way prose can be
+#: checked -- a non-empty string, no surrounding whitespace, no
+#: placeholder -- and rendered wherever a template asks for it. A prefix
+#: is not prose: it is a token with a grammar, fixed by the three places
+#: it ends up in, and the shape it may take is the whole of what this
+#: declaration has to say about it. `published_url` is the precedent, not
+#: `organisation`: one declared string, refused unless it is the right
+#: shape, with several derived forms taken off it (`origin`, `host`,
+#: `path_prefix`, `app_base`) rather than declared a second time.
+#:
+#: **And not derived from `short_name` either.** The two must be free to
+#: differ: a series can want "TEC" in an e-mail subject and something else
+#: in an identifier, and deriving one from the other ties two decisions
+#: that have no reason to move together. Worse, `short_name` is prose and
+#: prose gets reworded -- and this value cannot be reworded, see
+#: `EditionPrefix` below for the three places that make it permanent.
+EDITION_PREFIX_KEY: Final = "edition_prefix"
+
+#: How long a declared prefix may be. Nothing downstream breaks at nine:
+#: `eventkeys._EVENT_ID_MAX_LENGTH` and the signup relay's own
+#: `EVENT_ID_RE` both stop at 64 characters, and `formats.
+#: qr_module_size_mm` still clears `formats.SCANNABLE_QR_MODULE_MM` at
+#: that full length (measured, not assumed: 0.456mm against a 0.4mm
+#: floor). This is a data-contract choice with room to spare, exactly as
+#: `EditionPrefix.pattern`'s own four digits are -- an *abbreviation* is
+#: what goes in front of an edition number, and a prefix long enough to be
+#: a sentence is a sign the wrong value was declared, which is cheaper to
+#: say here than to discover in a published address.
+EDITION_PREFIX_MAX_LENGTH: Final = 8
+
+#: What a declared prefix may be made of: ASCII capitals and digits,
+#: starting with a capital. Each restriction is one of the three places
+#: the prefix ends up, refused here rather than where it lands.
+#:
+#: * **Upper case, and ASCII.** An edition code is stored upper-cased and
+#:   an event id *is* that code lower-cased (D-19), so the pair only
+#:   round-trips while the declaration fixes the case. Allowing `Vw`
+#:   would make `Vw-1` and `MRG-1` two codes with one URL, one
+#:   `keys/events/mrg-1.pub` and one `CONVENER_EVENT_KEY_MRG_1`; allowing a
+#:   non-ASCII capital would make `str.lower()` a place where a URL path
+#:   segment quietly acquires a percent-encoding.
+#: * **No `-`, `.` or `_` inside it.** The product puts exactly one `-`
+#:   between the prefix and the number. `eventkeys.secret_name` folds `.`
+#:   and `-` to `_` before uppercasing, and says itself that the fold is
+#:   lossy: a prefix carrying a second separator would make `A-B-1` and
+#:   `A.B.1` the same repository secret, and the operator would find out
+#:   when a certificate failed to verify.
+#: * **A letter first.** `commit_format._TOKEN`, which `eventkeys` reuses
+#:   as its event-id shape, already requires an alphanumeric first
+#:   character; requiring a letter is what keeps `<prefix>-<n>` readable
+#:   as a code rather than as a range of numbers.
+EDITION_PREFIX_RE: Final = re.compile(
+    rf"^[A-Z][A-Z0-9]{{0,{EDITION_PREFIX_MAX_LENGTH - 1}}}$"
+)
+
 #: Every field `identity` has to carry, in the order `Identity` declares
 #: them. Enumerated once, here, and used both to build the object and to
 #: refuse a declaration that is missing one -- a duplicate that deletes a
@@ -98,6 +181,7 @@ IDENTITY_FIELDS: Final = (
     "organisation",
     "short_name",
     "series",
+    "strapline",
     "tagline",
     "forum",
     "contact",
@@ -309,11 +393,28 @@ class Identity:
     correspondent already knows. Collapsing them into one key would have
     rewritten the wording of e-mails that go to real people, which is not
     a decision a refactor gets to take.
+
+    `strapline` and `tagline` are two on purpose for the same reason, and
+    the distinction is a typographic one rather than a shade of meaning.
+    `tagline` is a sentence, with a full stop: the showcase's masthead
+    and feed description print it, and so does the flyer's own sub-line
+    (`brand_templates.py`). `strapline` is a display line -- two or three
+    words, set in heavy capitals across the poster's own hero band above
+    the talk's title (`visual.py::_series_html`). Setting a sentence
+    there wraps to three lines at 4vw and pushes the composition into the
+    ribbon, which is the failure D-08 already names; setting a strapline
+    in the feed's `<description>` says nothing a reader can act on. This
+    instance's two are "Read together" and "A community series
+    of online behavioural-science webinars." -- neither substitutes for
+    the other, and until phase 11 the first was typed into `visual.py`
+    with no key at all, which is why a second instance's poster carried
+    this one's motto (`docs/superpowers/inventaire-instance.md`).
     """
 
     organisation: str
     short_name: str
     series: str
+    strapline: str
     tagline: str
     forum: str
     contact: str
@@ -416,6 +517,243 @@ def identity_from_data(data: Any) -> Identity:
 def load_identity(root: Path | None = None) -> Identity:
     """This instance's identity as this repository declares it."""
     return identity_from_data(_declaration(root))
+
+
+@dataclass(frozen=True)
+class EditionPrefix:
+    """The prefix this instance numbers its editions under, and the forms
+    the rest of the repository actually uses.
+
+    **Declared once and then permanent.** An edition code is not a label
+    that can be reworded later; it is a primary key that has already left
+    the building by the time anybody could want to change it:
+
+    * it is **in a published URL** -- `site/src/event.njk`'s permalink is
+      `/events/<event id>/`, and an event id is the edition code
+      lower-cased (D-19), so `MRG-05` is `/events/mrg-05/` for as long as
+      the address exists;
+    * it is **on an issued certificate** -- `certificate.py` binds the
+      event id into the token a holder is given and into the verification
+      link printed beside it, and a certificate is meant to stand for
+      years;
+    * it is **in a key filename** -- `keys/events/<event id>.pub`, and in
+      the `CONVENER_EVENT_KEY_<ID>` repository secret `eventkeys.secret_name`
+      derives from the same id.
+
+    So a duplicate declares its own before its first edition, and after
+    that the declaration and the editions already assigned hold each
+    other in place: `validate.validate_speakers` builds its pattern from
+    this value, so moving the value makes every code already written fail
+    by name, and it says why rather than only that. That is the freeze --
+    not a second mechanism beside the derivation, the derivation itself
+    read from the other end.
+
+    Frozen and computed for the reason `Published` is: a `code_prefix`
+    that could be set apart from the `value` it comes from would be a
+    second copy with extra steps.
+    """
+
+    value: str
+
+    @property
+    def code_prefix(self) -> str:
+        """`MRG-` -- what an edition code starts with, separator included.
+        The `-` belongs to the product, not to the declaration: it is what
+        makes the number legible, and an instance that could choose it
+        could choose one `eventkeys.secret_name` folds."""
+        return f"{self.value}-"
+
+    @property
+    def event_prefix(self) -> str:
+        """`mrg-` -- what an event id starts with, which is the code
+        prefix lower-cased (D-19). The form that reaches a URL, a key
+        filename and a certificate's verification link."""
+        return self.code_prefix.lower()
+
+    @property
+    def pattern(self) -> re.Pattern[str]:
+        """The whole shape of an edition code under this prefix: the
+        prefix, a hyphen, and one to four digits.
+
+        Four digits is `validate.py`'s own long-standing bound and stays
+        there in spirit: "MRG-9999" is centuries of headroom at a handful
+        of editions a year, and an unbounded id is one more thing that
+        can only be found out by printing it."""
+        return re.compile(rf"^{re.escape(self.value)}-\d{{1,4}}$")
+
+    def describes(self, code: str) -> bool:
+        """Whether `code` is an edition code of *this* instance."""
+        return self.pattern.match(code) is not None
+
+
+def edition_prefix_from_data(data: Any) -> EditionPrefix:
+    """Parse an already JSON-loaded `config/instance.json`.
+
+    Refuses, rather than repairs, and refuses **at declaration** rather
+    than where the value lands. Every shape below is one that reads
+    perfectly well as a string and then fails somewhere a person cannot
+    see: a lower-case prefix breaks the round trip between an edition code
+    and its event id, a prefix carrying its own separator collides two
+    editions on one repository secret, and a prefix that is not a prefix
+    at all -- a whole series title, say -- is only visible as a mistake
+    once it is in an address somebody has published.
+    """
+    named = INSTANCE_PATH.as_posix()
+    if not isinstance(data, dict) or data.get("v") != DECLARATION_VERSION:
+        raise ValueError(f"{named} is not a supported format version")
+    raw = data.get(EDITION_PREFIX_KEY)
+    if not isinstance(raw, str) or not raw:
+        raise ValueError(
+            f"{named}: {EDITION_PREFIX_KEY} must be the prefix this instance "
+            f"numbers its editions under, got {raw!r} -- it is the first half "
+            "of every edition code, of every event page's address and of "
+            "every certificate issued under it, and there is nothing to "
+            "number an edition with in its absence"
+        )
+    if EDITION_PREFIX_RE.match(raw):
+        return EditionPrefix(value=raw)
+    if raw != raw.strip():
+        wrong = "has surrounding whitespace"
+    elif raw != raw.upper():
+        wrong = (
+            "is not upper case -- an event id is the edition code "
+            "lower-cased (D-19), so the two only stay one identifier while "
+            f"the case is fixed here; write {raw.upper()!r}"
+        )
+    elif not raw[0].isascii() or not raw[0].isalpha():
+        wrong = (
+            "does not start with an ASCII letter -- an edition code is read "
+            "aloud, typed off a printed certificate and resolved as a URL "
+            "path segment"
+        )
+    elif len(raw) > EDITION_PREFIX_MAX_LENGTH:
+        wrong = (
+            f"is longer than {EDITION_PREFIX_MAX_LENGTH} characters -- what "
+            "goes in front of an edition number is an abbreviation, not a "
+            "name"
+        )
+    else:
+        wrong = (
+            "carries something other than ASCII capitals and digits -- the "
+            "product puts the one `-` an edition code has between this and "
+            "the number, and `eventkeys.secret_name` folds any further `.` "
+            "or `-` into `_`, which would give two editions one repository "
+            "secret"
+        )
+    raise ValueError(f"{named}: {EDITION_PREFIX_KEY} {wrong}, got {raw!r}")
+
+
+def load_edition_prefix(root: Path | None = None) -> EditionPrefix:
+    """The edition prefix as this repository declares it."""
+    return edition_prefix_from_data(_declaration(root))
+
+
+def declared_values(data: Any) -> dict[str, str]:
+    """Every value one declaration carries about *who* is publishing,
+    under the name the declaration itself gives it.
+
+    Eleven: the address, the edition prefix, and the nine fields of
+    `identity`. Read raw rather than through `from_data`,
+    `identity_from_data` and `edition_prefix_from_data`, and that is the
+    one place in this module where raw is right -- the question this feeds
+    is "is this still somebody else's value", which is a question about
+    the text somebody typed, and it has to stay answerable for a
+    declaration those three would refuse. A non-string is simply not a
+    value anybody typed, so it is left out rather than coerced.
+
+    The names are the declaration's own, dotted where the declaration
+    nests (`identity.organisation`), because they are printed to a person
+    who then has to go and edit that key.
+    """
+    values: dict[str, str] = {}
+    if not isinstance(data, dict):
+        return values
+    for key in (PUBLISHED_URL_KEY, EDITION_PREFIX_KEY):
+        value = data.get(key)
+        if isinstance(value, str) and value:
+            values[key] = value
+    raw = data.get(IDENTITY_KEY)
+    if isinstance(raw, dict):
+        for field in IDENTITY_FIELDS:
+            value = raw.get(field)
+            if isinstance(value, str) and value:
+                values[f"{IDENTITY_KEY}.{field}"] = value
+    return values
+
+
+def unconfigured_from_data(data: Any, example: Any) -> tuple[str, ...]:
+    """Which of `data`'s declared values are still `example`'s.
+
+    Sorted, and named rather than counted: a banner that says "this
+    instance is not configured" and cannot say *what* is not configured
+    sends its reader looking through a file; one that names
+    `identity.contact` sends them to a line.
+    """
+    ours = declared_values(data)
+    theirs = declared_values(example)
+    return tuple(
+        sorted(name for name, value in ours.items() if theirs.get(name) == value)
+    )
+
+
+def unconfigured(root: Path | None = None) -> tuple[str, ...]:
+    """Which declared values this instance has not made its own.
+
+    **What "not configured" means here, mechanically.** A duplicate is
+    unconfigured exactly while its declaration still carries a value the
+    product ships in `instances/example/config/instance.json` -- the
+    invented instance this repository already builds itself as on every
+    run of `tools/tests/test_second_instance.py`. Every value in that file
+    is unmistakably synthetic and reserved: `.test` is RFC 2606's, no
+    registry will ever delegate it, `example-instance.github.io` is a name
+    nobody is asked to register, and "The Example Collective" is nobody.
+    So a match is never a coincidence, and this cannot fire on an instance
+    that has been configured.
+
+    **Value by value, not file against file.** The dangerous state is the
+    half-done one: a duplicate that renames the organisation and forgets
+    the address publishes at somebody else's prefix while every page reads
+    as its own. Comparing the two declarations whole would call that
+    configured.
+
+    **Not the placeholder marker, and that is a decision.** `REPLACE` is
+    how this repository writes a value nobody has filled in, and it is
+    already handled -- twice, in opposite directions, both of them right.
+    In the eight identity fields there is nothing to print instead, so
+    `identity_from_data` refuses the declaration outright and no build
+    exists to carry a banner. In `proposal_form`, the one field with a
+    fallback, D-13 makes the absence an ordinary state that degrades at
+    the point of use: `/propose/` offers the contact address instead of a
+    dead link, and it says so on the page where it matters. A banner
+    across every page of a working site because one optional form is not
+    open yet is a banner somebody deletes within the week, and it would
+    take the real warning with it. So the marker decides nothing here.
+
+    **The charter is not in this set either.** `data/brand.json` is the
+    instance's too, and a duplicate that keeps the example's palette has
+    kept a palette -- it has not published somebody else's name, address
+    or contact, which is the whole of what this warns about.
+
+    Raises rather than reporting "configured" when the example cannot be
+    read: with nothing to compare against, nothing can be *proved* about
+    this declaration, and a check that answers "fine" when it could not
+    run is D-25's own definition of not being a check. The application's
+    build already depends on that directory outright
+    (`app/scripts/example-instance.mjs`, which throws for the same reason),
+    so this adds no failure a duplicate did not already have.
+    """
+    base = root if root is not None else repo_root()
+    example_path = base / EXAMPLE_INSTANCE_PATH
+    try:
+        example = json.loads(example_path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise ValueError(
+            f"{EXAMPLE_INSTANCE_PATH.as_posix()} cannot be read ({error}), so "
+            "there is nothing to tell this instance's declaration apart from "
+            "the example the product ships -- restore it rather than publish a "
+            "page that cannot say whether it is configured"
+        ) from error
+    return unconfigured_from_data(_declaration(root), example)
 
 
 def _declaration(root: Path | None) -> Any:

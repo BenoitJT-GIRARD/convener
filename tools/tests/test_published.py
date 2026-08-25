@@ -894,3 +894,318 @@ def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> 
         "makes would go to nobody"
     )
     assert repository, "the declared repository has no name half"
+
+
+# ------------------------------------------------------------------ #
+# 9 -- the prefix this instance numbers its editions under
+# ------------------------------------------------------------------ #
+
+
+def test_this_repository_declares_the_prefix_its_editions_are_numbered_under() -> None:
+    """Phase 11, task 4. `validate.py` used to fix an edition code as
+    `^MRG-\\d{1,4}$` -- the initials of *this* series, in the product's own
+    validator -- and the one sweep that compares two instances could never
+    catch it, because both instances were forced to write it.
+
+    The two derived forms are asserted beside the value because they are
+    what actually reaches a reader: the code the showcase prints and the
+    poster sets, and the event id (D-19) that is in the address of every
+    event page, in `keys/events/<id>.pub` and in a certificate's own
+    verification link."""
+    editions = published.load_edition_prefix()
+    assert editions.code_prefix == f"{editions.value}-"
+    assert editions.event_prefix == editions.code_prefix.lower()
+    assert editions.describes(f"{editions.code_prefix}05")
+    assert not editions.describes(f"{editions.event_prefix}05")
+    assert not editions.describes(f"{editions.code_prefix}00000")
+
+
+def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
+    """The freeze, seen from the repository rather than from the
+    validator: every edition this instance has assigned is numbered under
+    the prefix it declares.
+
+    That is what makes changing the declaration impossible in practice
+    rather than merely discouraged -- an edition code is in a published
+    address, on an issued certificate and in a key filename, so the day
+    the two disagree the file is wrong, not the editions."""
+    editions = published.load_edition_prefix()
+    speakers = yaml.safe_load(
+        (ROOT / "data" / "speakers.yml").read_text(encoding="utf-8")
+    )
+    assigned = [
+        entry["edition_code"]
+        for entry in speakers
+        if isinstance(entry, dict) and entry.get("edition_code")
+    ]
+    assert assigned, "this instance has assigned no edition at all"
+    assert [code for code in assigned if not editions.describes(code)] == []
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, "must be the prefix this instance numbers"),
+        ("", "must be the prefix this instance numbers"),
+        (7, "must be the prefix this instance numbers"),
+        (" MRG", "surrounding whitespace"),
+        ("MRG ", "surrounding whitespace"),
+        ("vw", "is not upper case"),
+        ("Vw", "is not upper case"),
+        ("1W", "does not start with an ASCII letter"),
+        ("TOOLONGABBREVIATION", "longer than 8 characters"),
+        ("MRG-", "other than ASCII capitals and digits"),
+        ("V.W", "other than ASCII capitals and digits"),
+        ("V_W", "other than ASCII capitals and digits"),
+        ("V W", "other than ASCII capitals and digits"),
+        ("ConvenerÉ", "other than ASCII capitals and digits"),
+    ],
+)
+def test_a_prefix_that_reads_plausibly_and_is_wrong_is_refused_at_declaration(
+    value: Any, expected: str
+) -> None:
+    """Each of these is a shape somebody would actually type, and each
+    fails somewhere nobody would look.
+
+    A lower-case prefix breaks the one identity D-19 rests on -- an event
+    id *is* the edition code lower-cased -- so `Vw-1` and `MRG-1` would be
+    two codes with one address, one `keys/events/mrg-1.pub` and one
+    `CONVENER_EVENT_KEY_MRG_1`. A prefix carrying its own separator collides two
+    editions on one repository secret, because `eventkeys.secret_name`
+    folds `.` and `-` to `_` and says itself that the fold is lossy. A
+    non-ASCII capital makes `str.lower()` a place where a URL path segment
+    quietly acquires a percent-encoding. None of those is visible in the
+    string, which is why the refusal is here and not where the value
+    lands."""
+    with pytest.raises(ValueError, match=expected):
+        published.edition_prefix_from_data(
+            {"v": published.DECLARATION_VERSION, published.EDITION_PREFIX_KEY: value}
+        )
+
+
+@pytest.mark.parametrize("value", ["MRG", "A", "MRG", "ABCDEFGH", "S2", "V0W9"])
+def test_a_prefix_a_duplicate_could_reasonably_want_is_accepted(value: str) -> None:
+    """The other half of the rule above. The refusals are narrow on
+    purpose: what is refused is a shape that breaks a URL, a filename or a
+    secret name, never a prefix somebody's series happens to want."""
+    editions = published.edition_prefix_from_data(
+        {"v": published.DECLARATION_VERSION, published.EDITION_PREFIX_KEY: value}
+    )
+    assert editions.value == value
+    assert editions.describes(f"{value}-1")
+
+
+def test_a_declaration_of_the_wrong_version_stops_before_the_prefix() -> None:
+    with pytest.raises(ValueError, match="not a supported format version"):
+        published.edition_prefix_from_data({"v": 99, "edition_prefix": "MRG"})
+
+
+def test_every_bundle_the_application_builds_carries_the_declared_prefix() -> None:
+    """All four configurations, and all four `define`s -- the same claim
+    `test_every_bundle_the_application_builds_carries_the_declared_
+    identity` makes, for the same reason.
+
+    `src/state/agenda.ts::nextEditionCode` composes the next edition code
+    inside a volunteer's browser, where no file can be read, and
+    `src/instance.ts::editionPrefix` throws rather than defaulting. A
+    configuration carrying the identity but not the prefix would build a
+    bundle that throws the moment somebody locks a date -- in exactly one
+    of the four, which is the shape that passes a test suite and ships
+    broken."""
+    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    editions = published.load_edition_prefix()
+    assert answer["editionPrefix"] == editions.value
+    assert set(answer["editionPrefixDefines"]) == {
+        "production",
+        "island-signup",
+        "island-verify",
+        "island-survey",
+    }
+    for mode, defined in answer["editionPrefixDefines"].items():
+        assert defined is not None, f"{mode} builds without the prefix define"
+        assert json.loads(defined) == editions.value, mode
+
+
+def test_this_side_of_the_prefix_boundary_reads_the_shared_cases() -> None:
+    """D-14's own discipline: one declaration, one reader per language,
+    and a worked example binding them rather than a comment claiming they
+    agree. `app/tests/edition-prefix.test.ts` reads this same fixture
+    against `app/scripts/published.mjs::isEditionPrefix`.
+
+    The showcase has no reader of this and needs none -- it prints the
+    codes `site/src/_data/events.json` hands it and never composes one --
+    so this boundary has two sides, not three."""
+    fixture = json.loads(
+        (ROOT / "tools" / "tests" / "fixtures" / "edition-prefix.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for case in fixture["cases"]:
+        value, accepted = case["value"], case["accepted"]
+        assert (published.EDITION_PREFIX_RE.match(value) is not None) is accepted, value
+        declaration = {
+            "v": published.DECLARATION_VERSION,
+            published.EDITION_PREFIX_KEY: value,
+        }
+        if accepted:
+            assert published.edition_prefix_from_data(declaration).value == value
+        else:
+            with pytest.raises(ValueError, match=published.EDITION_PREFIX_KEY):
+                published.edition_prefix_from_data(declaration)
+    assert any(case["accepted"] for case in fixture["cases"])
+    assert any(not case["accepted"] for case in fixture["cases"])
+
+
+# ------------------------------------------------------------------ #
+# 9 -- a duplicate that has not been configured says so
+# ------------------------------------------------------------------ #
+
+
+def _laid_out(root: Path, declaration: dict[str, Any]) -> Path:
+    """A scratch repository root holding a declaration and the example the
+    product ships beside it -- the two files `published.unconfigured`
+    reads, and nothing else."""
+    (root / published.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
+    (root / published.INSTANCE_PATH).write_text(
+        json.dumps(declaration), encoding="utf-8", newline="\n"
+    )
+    example = root / published.EXAMPLE_INSTANCE_PATH
+    example.parent.mkdir(parents=True, exist_ok=True)
+    example.write_text(
+        (ROOT / published.EXAMPLE_INSTANCE_PATH).read_text(encoding="utf-8"),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return root
+
+
+def _example_declaration() -> dict[str, Any]:
+    loaded = json.loads(
+        (ROOT / published.EXAMPLE_INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def test_this_repository_has_been_configured() -> None:
+    """The control that makes every other case here mean something: this
+    instance shares no declared value with the example, so the banner is
+    silent on the site people actually read."""
+    assert published.unconfigured() == ()
+
+
+def test_the_declaration_names_every_value_that_says_who_is_publishing() -> None:
+    """Eleven, enumerated from the declaration's own lists rather than
+    written out again: the address, the edition prefix and each identity
+    field. A field added to `IDENTITY_FIELDS` and not to this comparison
+    would be a field a duplicate could leave as the example's without
+    anything noticing -- which is exactly how `strapline` slipped past the
+    second-instance sweep until task 3."""
+    values = published.declared_values(_example_declaration())
+    assert set(values) == {
+        published.PUBLISHED_URL_KEY,
+        published.EDITION_PREFIX_KEY,
+    } | {f"{published.IDENTITY_KEY}.{field}" for field in published.IDENTITY_FIELDS}
+
+
+def test_a_deployment_of_the_example_itself_is_unconfigured_in_every_value(
+    tmp_path: Path,
+) -> None:
+    """What a duplicate deployed before it was configured actually looks
+    like, and what `tools/tests/test_second_instance.py` builds on every
+    run: `instances/example/`'s own declaration, sitting in `config/`."""
+    root = _laid_out(tmp_path, _example_declaration())
+    assert published.unconfigured(root) == tuple(
+        sorted(published.declared_values(_example_declaration()))
+    )
+
+
+def test_a_half_configured_duplicate_is_still_unconfigured(tmp_path: Path) -> None:
+    """The dangerous state, and the reason this compares value by value
+    rather than file against file: somebody who renames the organisation
+    and forgets the address publishes at a prefix that is not theirs while
+    every page reads as their own. A whole-file comparison calls that
+    configured."""
+    declaration = _example_declaration()
+    declaration[published.IDENTITY_KEY]["organisation"] = "A Real Society"
+    root = _laid_out(tmp_path, declaration)
+    remaining = published.unconfigured(root)
+    assert f"{published.IDENTITY_KEY}.organisation" not in remaining
+    assert published.PUBLISHED_URL_KEY in remaining
+    assert f"{published.IDENTITY_KEY}.contact" in remaining
+
+
+def test_a_placeholder_in_a_degradable_field_is_not_this_warning(
+    tmp_path: Path,
+) -> None:
+    """`REPLACE` decides nothing here, and that is a decision.
+
+    This repository has declared `proposal_form: https://tally.so/r/
+    REPLACE` since before the declaration existed, and D-13 makes that an
+    ordinary state that degrades at the point of use -- `/propose/` offers
+    the contact address instead of a dead link, and says so on the page
+    where it matters. A banner across every page of a working site because
+    one optional form is not open yet is a banner somebody deletes within
+    the week, and it would take the real warning with it.
+
+    In the other eight identity fields the marker never reaches a build at
+    all: `identity_from_data` refuses the declaration outright, so there
+    would be no page to carry a banner. The marker is therefore already
+    handled twice, in opposite directions, and both of them are right.
+    """
+    declaration = json.loads(
+        (ROOT / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert published.is_placeholder(
+        declaration[published.IDENTITY_KEY]["proposal_form"]
+    ), "this instance no longer ships the placeholder this test is about"
+    assert published.unconfigured(_laid_out(tmp_path, declaration)) == ()
+
+
+def test_an_example_that_cannot_be_read_stops_rather_than_reporting_configured(
+    tmp_path: Path,
+) -> None:
+    """D-25 at the one place it is easiest to get backwards. With nothing
+    to compare against, nothing can be *proved* about this declaration --
+    and a check that answers "configured" when it could not run is not a
+    check. The application's build already depends on that directory
+    outright (`app/scripts/example-instance.mjs`), so this adds no failure
+    a duplicate did not already have."""
+    root = _laid_out(tmp_path, _example_declaration())
+    (root / published.EXAMPLE_INSTANCE_PATH).unlink()
+    with pytest.raises(ValueError, match="cannot be read"):
+        published.unconfigured(root)
+
+
+def test_the_showcase_tells_its_templates_whether_this_instance_is_configured() -> None:
+    """The real, committed `.eleventy.js`, called with a stub -- so this is
+    the value `_includes/layout.njk` actually tests before deciding whether
+    to publish the banner, not a reading of the file that computes it."""
+    answer = _node_json(
+        ROOT / "site" / "scripts" / "print-published.cjs", ROOT / "site"
+    )
+    assert answer["siteData"]["unconfigured"] == list(published.unconfigured())
+
+
+def test_every_bundle_the_application_builds_carries_the_unconfigured_verdict() -> None:
+    """All four configurations, and all four `define`s.
+
+    Named separately from the identity define for a reason the other three
+    do not have: the ordinary answer here is the *empty* list, so a
+    configuration that had quietly lost this define would be
+    indistinguishable from a configured instance, and the warning would
+    fall silent precisely where the build was broken. `src/instance.ts`
+    therefore throws on an absent define and the value travels as JSON --
+    `"[]"` is a value, an absent define is not.
+    """
+    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    assert answer["unconfigured"] == list(published.unconfigured())
+    assert set(answer["unconfiguredDefines"]) == {
+        "production",
+        "island-signup",
+        "island-verify",
+        "island-survey",
+    }
+    for mode, defined in answer["unconfiguredDefines"].items():
+        assert defined is not None, f"{mode} builds without the verdict define"
+        assert json.loads(json.loads(defined)) == list(published.unconfigured()), mode

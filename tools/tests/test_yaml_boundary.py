@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import EDITIONS
 
 from convener_ops.cli import CONFIG_HEADER, SPEAKERS_HEADER, dump_config, dump_speakers
 from convener_ops.validate import validate_config, validate_speakers
@@ -77,7 +78,7 @@ def test_both_fixtures_carry_the_header_the_two_languages_agree_on() -> None:
 
 def test_the_validator_accepts_what_the_browser_actually_writes() -> None:
     assert validate_config(_config()) == []
-    assert validate_speakers(_speakers(), _board_logins()) == []
+    assert validate_speakers(_speakers(), _board_logins(), editions=EDITIONS) == []
 
 
 @pytest.mark.parametrize(

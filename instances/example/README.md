@@ -34,6 +34,18 @@ example instance a visitor can click through and the fixture `convener`'s
 own test suite runs against. It is not a test double written for a
 demonstration; it is what a duplicate looks like on the day it is made.
 
+**Being what "not configured" is measured against.** Phase 11 task 6 makes
+the declaration here the thing every instance's own declaration is compared
+with, value by value: while any of the eleven values in
+`config/instance.json` is still one of these, the showcase prints a band
+above its masthead on every page and the cockpit prints one above its
+sign-in screen, naming the keys still to fill in
+(`tools/convener_ops/published.py::unconfigured`, and one reader per language
+beside it). That is why every value here has to stay invented and reserved
+rather than merely plausible: a value somebody could genuinely declare
+would make the warning fire on an instance that had been configured, and a
+warning that shows when it should not is deleted within a week.
+
 ## Everything here is invented, and it can be checked
 
 No real person, no real organisation, no real institution, no real
@@ -73,12 +85,19 @@ reason:
   duplicate inherits upstream's copy and its own next push replaces it, so
   an authored one here would be an authored copy of a generated file.
 
-## What it inherits that it should not
+## What it numbers its own editions
 
-`edition_code` is `MRG-N` in `data/speakers.yml` below because
-`tools/convener_ops/validate.py::EDITION_RE` fixes that shape — an abbreviation
-of *this* series' name, in the product's own validator. A reading group
-therefore numbers its sessions `MRG-1`. Found by phase 10 task 5 and
-recorded in this phase's own instance inventory under `docs/superpowers/`;
-whether the prefix is the product's or the instance's is not this file's
-decision to take.
+`config/instance.json` declares `edition_prefix: MRG`, and
+`data/speakers.yml` numbers the reading group's sessions `MRG-1`, `MRG-2`,
+`MRG-3`. The prefix is the instance's, not the product's: nothing in
+`tools/convener_ops/` or `app/src/` fixes one, and `validate_speakers` builds
+its pattern from whatever the declaration holds.
+
+It is also deliberately not `identity.short_name`, which is `TEC` here.
+The two have no reason to move together — a series can want one form in
+an e-mail subject and another in an identifier — and `short_name` is
+prose, which gets reworded. An edition code cannot be: it is in a
+published address (`/events/mrg-1/`), on every certificate issued for that
+event and in `keys/events/mrg-1.pub`, so it is declared once and then
+frozen. Changing it after an edition has been assigned makes every code
+already written fail validation, by name and with the reason.

@@ -26,6 +26,13 @@ from convener_ops.visual import render_announcement
 
 _REAL_ROOT = repo_root()
 _REAL_BRAND = (_REAL_ROOT / "data" / "brand.json").read_text(encoding="utf-8")
+#: Phase 11 task 3: the composition reads the instance's own declaration
+#: too, for the wordmark, the strapline and the forum the "what to expect"
+#: rows name. Copied from the real repository for the same reason
+#: `data/brand.json` above is -- a second, hand-typed identity here would
+#: be a second answer to "what does this instance call itself", free to
+#: drift from the file every other reader in this project reads.
+_REAL_INSTANCE = (_REAL_ROOT / "config" / "instance.json").read_text(encoding="utf-8")
 
 
 def _scheduled(**overrides: Any) -> dict[str, Any]:
@@ -42,9 +49,10 @@ def _scheduled(**overrides: Any) -> dict[str, Any]:
 
 def _fake_root(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
     """A repository root a test can point `convener_ops.cli.repo_root` at:
-    real `data/brand.json` (small, stable, non-personal -- copied rather
-    than re-typed, the same choice `test_visual.py`'s own `ROOT =
-    repo_root()` makes by reading it from the real repository directly),
+    real `data/brand.json` and real `config/instance.json` (both small,
+    stable and non-personal -- copied rather than re-typed, the same
+    choice `test_visual.py`'s own `ROOT = repo_root()` makes by reading
+    them from the real repository directly),
     a placeholder `fonts/` (only the *presence* of a `.woff2` is ever
     checked, never its bytes -- `render_visual_fixtures`'s own tests make
     the identical choice), and the `speakers` given, serialised through
@@ -56,6 +64,8 @@ def _fake_root(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
         yaml.safe_dump(speakers, sort_keys=False), encoding="utf-8"
     )
     (tmp_path / "data" / "brand.json").write_text(_REAL_BRAND, encoding="utf-8")
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "instance.json").write_text(_REAL_INSTANCE, encoding="utf-8")
     fonts = tmp_path / "fonts"
     fonts.mkdir()
     (fonts / "placeholder.woff2").write_bytes(b"not a real font, presence only")
@@ -362,7 +372,7 @@ def test_a_print_qr_that_would_be_unscannable_fails_the_whole_command(
     module size below `formats.SCANNABLE_QR_MODULE_MM`; this must fail the
     whole command (D-25) rather than ship an unscannable poster.
 
-    Deliberately bypasses `validate.py::EDITION_RE`'s own four-digit bound
+    Deliberately bypasses `validate_speakers`'s own four-digit bound
     (this fixture never calls `convener-validate`) to prove the render-time
     guard is load-bearing on its own, not merely a backstop for a check
     some other, unrelated command already ran."""

@@ -202,6 +202,34 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
 #: directive introduces it or why.
 _META_IGNORED_CSP_DIRECTIVES = ("frame-ancestors", "report-uri", "report-to", "sandbox")
 
+#: Every directive this showcase's policy must name, and the sources each
+#: one may admit -- phase 11, task 5 step 0. Before it the policy named
+#: `script-src`, `connect-src`, `object-src` and `form-action` and nothing
+#: else, on the reasoning, written in `csp.js`'s own header, that those
+#: four "work by `<meta>`". They do; so do these. The specification says a
+#: `<meta>` delivery ignores exactly `frame-ancestors`, `report-uri` and
+#: `sandbox` (see `_META_IGNORED_CSP_DIRECTIVES` below), so the omission
+#: had no reason behind it at all, and its cost was that an image, a
+#: frame, a font, a stylesheet, a media file or a worker was admitted from
+#: any origin whatever. `default-src 'none'` is what closes the classes
+#: nobody enumerated; the four `'self'` entries are what this build
+#: actually loads (one stylesheet, three woff2 faces, three island
+#: bundles, and the favicon a browser asks for by itself); `base-uri`
+#: falls back to nothing, so it is named rather than left out.
+#: `connect-src` is deliberately absent here: its value depends on
+#: whether a relay is configured, and the two tests that own that
+#: question are directly above and below.
+_CSP_EXPECTED_SOURCES = {
+    "default-src": "'none'",
+    "script-src": "'self'",
+    "style-src": "'self'",
+    "img-src": "'self'",
+    "font-src": "'self'",
+    "base-uri": "'none'",
+    "object-src": "'none'",
+    "form-action": "'self'",
+}
+
 _CSP_META_RE = re.compile(
     r'<meta http-equiv="Content-Security-Policy" content="([^"]*)">'
 )
@@ -219,7 +247,16 @@ def test_every_page_carries_the_content_security_policy_this_project_ships(
     `object-src 'none'` (no plugin embed anywhere), `form-action 'self'`
     (no page under `site/` submits a form) and `connect-src 'self'` with
     no relay origin appended -- this fixture is built with
-    `VITE_SIGNUP_RELAY_URL` unset, D-13's ordinary state."""
+    `VITE_SIGNUP_RELAY_URL` unset, D-13's ordinary state.
+
+    And, since phase 11, the five directives whose absence nobody had
+    examined. Until then this policy named four source lists and no
+    fallback, so an image, a frame, a font, a stylesheet or a media file
+    was admitted from *any origin at all* -- on every page a stranger
+    loads, including the three that carry an island handling somebody's
+    registration, certificate lookup or survey answer. See
+    `_CSP_EXPECTED_SOURCES` for what each one is justified by.
+    """
     checked = 0
     for path in built_site.rglob("*.html"):
         page = path.read_text(encoding="utf-8")
@@ -233,6 +270,22 @@ def test_every_page_carries_the_content_security_policy_this_project_ships(
         assert "object-src 'none'" in content, path
         assert "form-action 'self'" in content, path
         assert "connect-src 'self'" in content, path
+        emitted: dict[str, str] = {}
+        for part in content.split("; "):
+            name, _, sources = part.partition(" ")
+            emitted[name] = sources
+        assert emitted.keys() >= _CSP_EXPECTED_SOURCES.keys(), (
+            f"{path.relative_to(built_site).as_posix()}'s CSP names "
+            f"{sorted(emitted)}, and leaves "
+            f"{sorted(_CSP_EXPECTED_SOURCES.keys() - emitted.keys())} to "
+            "the browser's own default, which is to allow it from anywhere"
+        )
+        for directive, sources in _CSP_EXPECTED_SOURCES.items():
+            assert emitted[directive] == sources, (
+                f"{path.relative_to(built_site).as_posix()}'s CSP admits "
+                f"{directive} from {emitted[directive]!r} rather than "
+                f"{sources!r}"
+            )
         assert "workers.dev" not in content, (
             f"{path.relative_to(built_site).as_posix()} names a relay "
             "origin though VITE_SIGNUP_RELAY_URL was never set for this "
@@ -2577,6 +2630,17 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
     shutil.copy2(
         ROOT / "config" / "instance.json", scratch_root / "config" / "instance.json"
     )
+    # Phase 11, task 6: and `.eleventy.js` now also reads the declaration
+    # the *product* ships, to decide whether this instance is still
+    # publishing the example's identity. Same reasoning one paragraph up,
+    # one file further out: a tree carrying the declaration but not the
+    # example it is compared against cannot answer the question, so the
+    # build refuses rather than reporting "configured" -- which is the
+    # answer that would have made the banner go quiet exactly where it was
+    # needed (D-25).
+    example = scratch_root / published.EXAMPLE_INSTANCE_PATH
+    example.parent.mkdir(parents=True)
+    shutil.copy2(ROOT / published.EXAMPLE_INSTANCE_PATH, example)
     banners_dir = scratch_site / "src" / "banners"
     banners_dir.mkdir(parents=True, exist_ok=True)
     (banners_dir / f"{_the_one_scheduled_event_id()}.png").write_bytes(
@@ -2773,4 +2837,43 @@ def test_the_build_emits_the_published_repositorys_own_readme(
     )
     assert (built_site / ".gitignore").is_file(), (
         "the build wrote no .gitignore for the published repository"
+    )
+
+
+def test_no_page_of_a_configured_instance_carries_the_unconfigured_banner(
+    built_site: Path,
+) -> None:
+    """The half of phase 11 task 6 that decides whether the other half
+    survives: a banner that shows when it should not is deleted within a
+    week, and it takes the real warning with it.
+
+    This instance shares no declared value with the example the product
+    ships (`test_published.py::test_this_repository_has_been_configured`),
+    so `site.unconfigured` is empty here and `_includes/layout.njk` emits
+    nothing at all -- not a hidden element, not an empty band, no markup.
+    Asserted on the built pages rather than on the template, because what
+    a visitor gets is the build.
+
+    `tools/tests/test_second_instance.py::test_the_second_instances_
+    showcase_says_it_has_not_been_configured` is the same claim made the
+    other way round, on a build that *is* unconfigured. Neither half means
+    anything without the other.
+    """
+    pages = sorted(built_site.rglob("*.html"))
+    assert len(pages) > 5, f"the showcase built almost no pages: {pages}"
+    # The band's own class names, not the bare word: a future page about
+    # configuring a duplicate could legitimately write "unconfigured" in
+    # its prose, and a check that failed on that is a check somebody
+    # loosens rather than reads.
+    shouting = [
+        page.relative_to(built_site).as_posix()
+        for page in pages
+        if any(
+            marker in page.read_text(encoding="utf-8")
+            for marker in ('class="unconfigured"', "unconfigured__eyebrow")
+        )
+    ]
+    assert shouting == [], (
+        "these pages warn that this instance has not been configured, and "
+        f"it has: {shouting[:10]}"
     )

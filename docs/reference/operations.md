@@ -418,9 +418,11 @@ ruled out a third-party static host.
 
 The one thing this project *can* still ship is a Content-Security-Policy
 carried by a `<meta http-equiv>` tag in each page's own `<head>` — the one
-mechanism available with no server behind it. Two directives that would
-otherwise belong in the same policy do not survive that delivery
-mechanism, by the CSP specification itself, not by an oversight here:
+mechanism available with no server behind it. Exactly three directives
+that would otherwise belong in the same policy do not survive that
+delivery mechanism, by the CSP specification itself and not by an
+oversight here — four tokens, since the reporting one is spelled two
+ways:
 
 - `frame-ancestors` is **ignored outright** when set by `<meta>` — nothing
   in this project can stop the showcase or the cockpit being framed by
@@ -439,15 +441,29 @@ delivery ignores'` both fail the build the moment one of those four tokens
 reaches either policy, so this stays true by construction, not only by
 this paragraph.
 
-**What does work by `<meta>`, and is what this project ships:**
-`script-src`, `connect-src`, `object-src` and `form-action`. Two
-independent policies, one per document, built from what that document
+**What does work by `<meta>` is everything else.** Those three are the
+whole of the exception the specification names; `default-src`, `img-src`,
+`style-src`, `font-src` and `base-uri` are delivered by a `<meta>` tag
+exactly as `script-src` is. This section used to say instead that
+“what does work by `<meta>`” *is* `script-src`, `connect-src`,
+`object-src` and `form-action`, which read as the reason those four were
+the whole of both policies — and it was not a reason. Neither policy had
+a `default-src` or an `img-src`, so an image, a frame, a font, a
+stylesheet, a media file or a worker was admitted from **any origin at
+all**, on the public showcase and in the cockpit alike. Phase 11 closed
+that; what each policy now names, and what each name is justified by, is
+written beside the directive in the two files themselves.
+
+Two independent policies, one per document, built from what that document
 actually loads rather than one policy loose enough to cover both:
 
 - `site/src/_data/csp.js` — every page Eleventy builds (the showcase, and
   the registration, certificate-verification and post-event survey
   islands mounted on three of its pages — the last moved here from the
-  cockpit by phase 7 task 5). `script-src 'self'`, `object-src 'none'`,
+  cockpit by phase 7 task 5). `default-src 'none'` with `script-src`,
+  `style-src`, `img-src` and `font-src` all `'self'` — one stylesheet,
+  three self-hosted woff2 faces and three island bundles are the whole of
+  what these pages load — plus `base-uri 'none'`, `object-src 'none'`,
   `form-action 'self'`, and `connect-src 'self'` plus the signup relay's
   own origin (`VITE_SIGNUP_RELAY_URL`, the same repository variable
   *Signup relay* above already forwards into the application build —
@@ -459,15 +475,42 @@ actually loads rather than one policy loose enough to cover both:
   public route this bundle carried (`/survey/:eventId`, the post-event
   survey) onto the island above, and `connect-src` dropped the signup
   relay's own origin as a direct consequence: nothing left in this
-  bundle posts to it. `script-src 'self'`, `object-src 'none'`,
-  `form-action 'self'`, and `connect-src 'self' https://api.github.com`
-  plus the auth relay's own origin (`VITE_AUTH_PROXY_URL`), admitted
-  only once its own variable is configured.
+  bundle posts to it. `default-src 'none'` with `script-src`,
+  `style-src`, `img-src` and `font-src` all `'self'` — one module
+  script, one stylesheet, three woff2 faces and one SVG favicon are the
+  whole of what this document loads — plus `base-uri 'none'`,
+  `object-src 'none'`, `form-action 'self'`, and
+  `connect-src 'self' https://api.github.com` plus the auth relay's own
+  origin (`VITE_AUTH_PROXY_URL`), admitted only once its own variable is
+  configured.
 
 The two differ because the documents genuinely differ, not by oversight:
 the showcase's pages never call the GitHub API or the authentication
 relay, and the cockpit's own device sign-in and Contents-API calls have
 no business in a policy served to an anonymous visitor of the showcase.
+
+**The cockpit's development server carries a third, and it is deliberately
+not the one that ships.** Vite runs `transformIndexHtml` for the
+development server as well as for a build, so `npm run dev` was being
+served the policy above — and `script-src 'self'` refuses
+`@vitejs/plugin-react`'s React Refresh preamble, which is an *inline*
+script the plugin writes into every served document. The cockpit's
+development server therefore rendered a blank page from the day the audit
+added the policy (2026-08-23) until phase 11 found it; the published
+artefact was never affected, which is exactly why nobody met it. The
+obvious remedy — not injecting the policy in development at all — was
+rejected: it takes the policy out of the one environment where a
+violation is actually read, so a developer would watch a third-party
+image load in development and have it refused in production, where
+nobody has a console open. `app/scripts/csp.mjs::devCspMetaContent`
+derives a development-only policy from the shipped one instead, adding
+`'unsafe-inline'` to `script-src` and `style-src` and nothing else — an
+external script, a third-party image, a third-party font and a
+connection to an origin the policy does not name are all still refused,
+in front of the person who introduced them. `app/tests/csp.test.ts` holds both halves against the
+real, committed configuration: the development document's own policy
+admits the scripts that document actually contains, and the built
+document carries neither an inline script nor an `'unsafe-inline'`.
 
 **To verify:** build both `site/` and `app/`, serve the result under the
 path prefix `config/instance.json` declares (D-26 — a bare `localhost`
@@ -1986,6 +2029,78 @@ in both directions rather than only on bad news:
 - `convener-validate`, as a `Note:` line printed alongside its verdict. It does
   not add to the errors and does not change the exit code; a target that
   could fail a run would be a rule wearing a softer word.
+
+## Settling the thresholds, and where the cockpit refuses
+
+The cockpit's **Settings** screen is where the numbers in `config/` are
+changed. It exists to *validate*, not to host: a file accepts whatever is
+written into it and nothing looks at the value until a scheduled job runs on
+it, whereas the screen computes each bound from the declarations it is
+derived from and refuses at the point of entry, naming the bound and where
+it comes from.
+
+**One pair is coupled, and today it leaves exactly one legal value.**
+`config/queue-drain.yml`'s `alarm_after_hours` is bounded on both sides:
+
+- its **floor** is twice the drain's own cron period in
+  `.github/workflows/sweep-and-notify.yml` (48 hours today) — an alarm that
+  fires before a healthy drain has had its chance is an alarm people learn
+  to ignore;
+- its **ceiling** is `config/registration-lanes.yml`'s `queue_beyond_hours`
+  minus the same margin (96 − 48 = 48 today) — later than that and the Board
+  is told about a registration as its seminar begins.
+
+Those two meet at 48, so raising `queue_beyond_hours` is the only thing that
+buys the alarm any room, and lowering it towards its own floor makes the pair
+impossible. The screen says so before anybody needs it, and refuses either
+end. Editing the files by hand still works and is still checked, but only
+later, by `tools/tests/test_queue_watch.py`.
+
+**When a saved value starts being read is not "on save", and it differs per
+value.** `.github/workflows/deploy.yml` ignores `config/**`, so a commit here
+starts nothing at all:
+
+| value | read by | live from |
+|---|---|---|
+| `alarm_after_hours`, all of `config/actions-budget.yml` | *Sweep and notify the board* | its next run |
+| `config/queue-drain.yml`'s `max_silent_days` | *Retention liveness watchdog* | its next run |
+| `queue_beyond_hours` | the signup relay, through `public-data/registration-routing.json` | the next run of *Deploy app*, which regenerates and commits that file |
+
+Until *Deploy app* runs, a registration is routed on the threshold already
+published in `public-data/registration-routing.json`. Run that workflow by
+hand (`workflow_dispatch`) if the change is urgent; nothing is lost either
+way, because a stale threshold only routes a registration to the wrong
+*lane*.
+
+**`config/instance.json` is reported there and never edited there.** The
+address, the identity and the edition prefix are compiled into the built
+cockpit and the built showcase, so a change takes effect at the next deploy
+and not before — and the screen doing the editing is running on the previous
+build. The edition prefix is frozen besides: it is in published addresses, on
+issued certificates and in key filenames.
+
+**A duplicate that has not edited it says so, on its own pages.** Every value
+in `instances/example/config/instance.json` is invented and reserved — `.test`
+addresses no registry will ever delegate (RFC 2606), a GitHub Pages host nobody
+is asked to register, an organisation that does not exist — so a declaration
+still
+carrying one of them cannot be a coincidence. While any is left, the showcase
+prints a band above its masthead on every page and the cockpit prints one
+above its sign-in screen, both naming the exact keys still to fill in. Edit
+them and rebuild, and the band disappears with no switch to find: nothing
+turns it off but configuring the instance. `identity.proposal_form` is
+deliberately not one of the triggers — a proposal form nobody has opened yet
+is an ordinary state that degrades on `/propose/` itself, and a permanent
+warning about it would be a warning people learn to ignore.
+
+**The screen never accepts a secret**, and cannot: the cockpit is a static
+bundle that writes with the signed-in person's own token, so a token able to
+write a repository secret would be a right every Board member held. What it
+does instead is *report* — for each row of `config/integrations.yml`, whether
+the names it declares exist among this repository's Actions secrets and
+variables, and what the code does without them. Names only; no endpoint
+returns a secret's value, and the screen asks for none. Set them where this
+document says: **Settings → Secrets and variables → Actions**.
 
 ## What the Actions runs cost, and the alarm before the budget runs out
 

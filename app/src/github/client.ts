@@ -1,4 +1,5 @@
 import { instanceIdentity } from '../instance';
+import { request } from '../net/request';
 // The repository this cockpit reads and writes. `owner/name` is the
 // instance's, declared once in `config/instance.json` and carried into
 // this bundle by `vite.config.ts`'s own define -- a duplicate that left
@@ -13,7 +14,7 @@ export class GitHubError extends Error {
 
 export async function gh(path: string, opts: RequestInit & { token: string }) {
   const { token, headers, ...rest } = opts;
-  const r = await fetch(`https://api.github.com/repos/${repo()}${path}`, {
+  const r = await request(`https://api.github.com/repos/${repo()}${path}`, {
     ...rest,
     headers: {
       Authorization: `Bearer ${token}`,

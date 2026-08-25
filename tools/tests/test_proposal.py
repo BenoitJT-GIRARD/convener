@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import board_member, config, speaker
+from conftest import EDITIONS, board_member, config, speaker
 
 from convener_ops.proposal import (
     CAREER_STAGE_ORDER,
@@ -302,7 +302,12 @@ def test_a_form_lead_is_written_in_the_v3_shape() -> None:
     assert lead["selection"] == {"ballots": [], "opened_on": TODAY, "decided_on": ""}
     assert lead["career_stage"] == "undisclosed"
     assert lead["publication"]["consent"] == ""
-    assert validate_speakers([lead], {m["login"] for m in config()["board"]}) == []
+    assert (
+        validate_speakers(
+            [lead], {m["login"] for m in config()["board"]}, editions=EDITIONS
+        )
+        == []
+    )
 
 
 def test_a_form_lead_opens_its_vote_window_so_it_can_expire() -> None:

@@ -78,6 +78,7 @@ Segoe
 shellcheck
 Anonymous
 STARTTLS
+strapline
 stylesheet
 tagline
 The Example Collective

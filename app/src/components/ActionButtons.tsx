@@ -10,7 +10,7 @@ import {
 } from '../state/transitions';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
-import { nextEditionCode } from '../state/agenda';
+import { editionCodePrefix, nextEditionCode } from '../state/agenda';
 import { DateRejected, answerDate, proposeDates } from '../state/dates';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';
@@ -517,7 +517,7 @@ function CandidateDates({
             <span className="text-xs font-mono uppercase text-ink-muted">&#8470;</span>
             <input
               type="text"
-              placeholder="MRG-N"
+              placeholder={`${editionCodePrefix()}N`}
               value={edition}
               onChange={e => setEdition(e.target.value)}
               className="px-2 py-1 text-sm font-mono w-20"

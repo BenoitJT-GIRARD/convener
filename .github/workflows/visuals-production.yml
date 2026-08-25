@@ -72,6 +72,15 @@ name: Visuals production
 # and none of the four was a dependency of this workflow before this
 # command had a consumer in it.
 #
+# Phase 11 task 3 adds `config/instance.json` and
+# `tools/convener_ops/published.py`, and this pair *is* shared with visuals.yml
+# for once: the composition reads the instance's own declaration now (the
+# wordmark band is `identity.forum_host`, the hero band is
+# `identity.strapline`, two of the "what to expect" rows name the forum),
+# so editing either the declaration or the reader that derives
+# `forum_host` from it changes every rendered edition and the pinned
+# fixture alike.
+#
 # Branch review, fix round 1: `tools/convener_ops/public_data.py` is in this
 # list too, and deliberately *not* in visuals.yml's -- re-derived from what
 # each job's own render actually calls, not copied across the two.
@@ -122,6 +131,8 @@ on:
       - 'docs/toolkit/linkedin-post.md'
       - 'docs/toolkit/mailing-list-announce.md'
       - 'docs/toolkit/recording-announce.md'
+      - 'config/instance.json'
+      - 'tools/convener_ops/published.py'
       - 'data/brand.json'
       - 'brand/convener/brand.json'
       - 'tools/convener_ops/brand.py'

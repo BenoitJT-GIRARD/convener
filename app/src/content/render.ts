@@ -15,6 +15,12 @@ import type { Speaker } from '../data/types';
 // engine beside it. `published.py::Identity.namespace` composes the
 // identical map for `announce.py`'s own renderer.
 import { instanceIdentity } from '../instance';
+// Phase 11, task 8: a `speaker.` token is a field of the record on
+// screen, and in demo mode every record on screen is the example
+// instance's. `signupBase` below is the one address composed from a
+// record, so it is the one this distinction reaches.
+import { isDemoMode } from '../data/demo';
+import { examplePublishedUrl } from '../settings/example';
 
 export interface SubstitutionContext {
   speaker?: Speaker;
@@ -54,8 +60,20 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  * comment) -- registration left that route for an island mounted on the
  * public event page, so this now points at that page's own address
  * instead.
+ *
+ * Phase 11, task 8: the example instance's own address in demo mode, for
+ * the reason `state/agenda.ts::editionCodePrefix` carries in full. A
+ * `speaker.` token is a field of the record on screen, and every record
+ * on screen in a demonstration belongs to `instances/example/` -- so this
+ * instance's published root, composed with that instance's own edition
+ * code, printed an address neither instance serves (`events/mrg-1/` under
+ * a root that has never held it) as *the* registration link of a draft
+ * the demonstration offers a Copy button for. `{{ instance.* }}` stays
+ * this instance's on purpose, and is a different question: it says who
+ * built the bundle, which is exactly what the masthead above it says too.
  */
 function signupBase(): string {
+  if (isDemoMode()) return `${examplePublishedUrl()}events/`;
   const published = import.meta.env.VITE_PUBLISHED_URL as string | undefined;
   if (!published) {
     throw new Error(

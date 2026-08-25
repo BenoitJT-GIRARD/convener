@@ -76,28 +76,38 @@ What this module cannot see, stated rather than left to be found
 -----------------------------------------------------------------
 - **Anything that is not derivable from a declaration.** A needle is a
   value `config/instance.json` or the charter in force actually holds
-  (`instance_identity.needles`). Three things this instance owns are held
-  by neither, so nothing here can look for them: the series' **strapline**
-  ("Read together", hard-typed in `visual.py`), the **time
-  zone** and the **standing start time** (`Europe/Paris` and 12:30, in
-  `visual.py`, `governance.py` and forty-odd other places), and the
-  **names of the people** who run the series -- `docs/reference/contacts.md`
-  names four of them in a paragraph the cockpit publishes to every
-  instance, and `site/src/style.css` names the designer in a comment that
-  ships inside the showcase's own stylesheet. Each is recorded in
+  (`instance_identity.needles`). Two things this instance owns are held
+  by neither, so nothing here can look for them: the **time zone** and the
+  **standing start time** (`Europe/Paris` and 12:30, in `visual.py`,
+  `governance.py` and forty-odd other places), and the **names of the
+  people** who run the series -- `docs/reference/contacts.md` names four
+  of them in a paragraph the cockpit publishes to every instance, and
+  `site/src/style.css` names the designer in a comment that ships inside
+  the showcase's own stylesheet. Each is recorded in
   `docs/superpowers/inventaire-instance.md`; none can become a needle
-  until it becomes a declared value.
-- **Bytes.** `BINARY_SUFFIXES` skips images and fonts, and three of them
+  until it becomes a declared value. The series' **strapline** was a third
+  until phase 11 task 3 gave it a key: `visual.py` reads
+  `identity.strapline` now, and `needles` carries it, so the poster's own
+  hero line is swept like everything else on it.
+- **Bytes.** `BINARY_SUFFIXES` skips images and fonts, and two of them
   are real identity surfaces:
   `app/dist/handbook/assets/zoom-background.png` ships inside the bundle
   swept here and carries the first instance's mark, while
   `visuals/references/*.png` pin what `visual.py` renders. A second
-  instance's build regenerates none of them.
-- **The edition prefix.** `validate.py::EDITION_RE` fixes an edition code
-  as `MRG-` and one to four digits -- an abbreviation of *this* series'
-  name, in the product's own validator. The example instance therefore
-  numbers a reading group's sessions `MRG-1`, and no needle can catch that
-  because both instances are forced to write it.
+  instance's build regenerates neither. What those references pin is no
+  longer this instance's *prose*, though -- phase 11 task 3 derived the
+  wordmark and the strapline, so the identity they carry is the palette
+  and the motif, which `data/brand.json` declares and a duplicate
+  replaces.
+- **The edition prefix was a fourth until phase 11 task 4.**
+  `validate.py` fixed an edition code as `MRG-` and one to four digits --
+  an abbreviation of *this* series' name, in the product's own validator,
+  so the example instance numbered a reading group's sessions `MRG-1` and
+  no needle could catch it: both instances were forced to write it.
+  `config/instance.json` declares it now, and `needles` carries the two
+  forms it reaches an artefact as -- the code the showcase prints, and
+  the event id in every event page's address, in `keys/events/<id>.pub`
+  and in a certificate's verification link.
 - **Rows this instance's own history wrote.** `docs/governance/register.md`
   is inherited (above). It holds no identity today because it holds no
   rows; the day it holds some, a duplicate's handbook would publish this
@@ -112,6 +122,7 @@ What this module cannot see, stated rather than left to be found
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -124,7 +135,7 @@ from typing import Final, NoReturn
 import instance_identity
 import pytest
 
-from convener_ops import boundary
+from convener_ops import boundary, published
 from convener_ops.paths import repo_root
 
 ROOT = repo_root()
@@ -571,6 +582,60 @@ def test_the_example_instance_answers_every_path_an_instance_owns() -> None:
     assert answered, "the example answers nothing at all"
 
 
+def _declared_values(data: object, path: str = "") -> Iterator[tuple[str, str]]:
+    """Every string a declaration actually declares, with the key that
+    holds it. `_comment` keys are prose about the file and not values of
+    it; `owner` is the boundary's own answer, the same word in every
+    instance's copy; `v` is a number."""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key.startswith("_") or key in ("owner", "v"):
+                continue
+            yield from _declared_values(value, f"{path}.{key}" if path else key)
+    elif isinstance(data, str):
+        yield path, data
+
+
+def test_every_value_the_declaration_holds_is_swept() -> None:
+    """A key nothing derives a needle from is a value a second instance's
+    build can carry with nothing looking for it.
+
+    Phase 11 task 3 is why this exists. `instance_identity.needles` was a
+    hand-typed dictionary of eight identity fields; task 3 added a ninth
+    (`strapline`, the poster's own hero line) and the sweep went on
+    passing green over a poster hard-typing this instance's motto, because
+    nobody thought to add the needle beside the key. That was fixed by
+    enumerating `published.IDENTITY_FIELDS` -- but the address half and,
+    from task 4, the edition prefix are still written out by hand, for
+    reasons those entries state. This is the clause that makes the
+    hand-written half safe: it reads the declaration rather than the
+    reader, so a *new key* fails here on the first run after it is added.
+
+    What it claims and what it does not. It says every declared string
+    participates in some needle -- the needle is the value, or the value
+    is part of one (`edition_prefix: MRG` inside the needle `MRG-`), or a
+    needle is part of it (a host inside an address). It does not claim the
+    needle is the best form of the value; that is
+    `test_every_needle_is_found_in_the_second_instances_own_output`'s job,
+    and it runs against a real build.
+    """
+    declaration = json.loads(
+        (ROOT / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    forms = set(instance_identity.needles(ROOT).values())
+    unswept = {
+        key: value
+        for key, value in _declared_values(declaration)
+        if not any(value in form or form in value for form in forms)
+    }
+    assert unswept == {}, (
+        "config/instance.json declares these values and no needle in "
+        "`instance_identity.needles` derives from any of them, so a second "
+        "instance's build could carry them and the sweep would pass: "
+        f"{unswept}"
+    )
+
+
 def test_the_two_instances_disagree_about_every_needle(
     second_instance_tree: Path,
 ) -> None:
@@ -668,21 +733,32 @@ def test_the_sweep_sees_what_the_deferred_register_accounts_for(
 ) -> None:
     """The deferred register, proved rather than trusted.
 
-    Run the same sweep with nothing allowed. It must find something --
-    otherwise an entry is being kept for a file that no longer reaches a
-    build, and the register has become a list of apologies for nothing --
-    and everything it finds must sit in an artefact some entry claims. The
-    first half is what fails the day an entry is removed without the file
-    being fixed; the second is what fails the day a *new* leak hides
-    behind an old entry's name.
+    Run the same sweep with nothing allowed. Everything it finds must sit
+    in an artefact some entry claims -- that is what fails the day a *new*
+    leak hides behind an old entry's name.
+
+    The other half is conditional on there being a claim to prove, and
+    phase 11 is why. While some entry named a built artefact, a sweep that
+    found *nothing* meant the entry was being kept for a file that no
+    longer reaches a build -- a list of apologies for nothing -- so this
+    asserted that it found something. No entry claims one now (task 2
+    pointed the demonstration at the example instance, task 3 derived the
+    poster's wordmark and its strapline), and with nothing claimed that
+    assertion would be demanding a leak in order to prove an exemption
+    that has no subject -- the exact opposite of what it is for, and it
+    would contradict `test_a_second_instances_build_carries_nothing_of_
+    this_one` outright. It comes back by itself the moment a
+    `carried_into` does, which is the state it was written for.
     """
     wanted = instance_identity.needles(ROOT)
     offending = _leaks(second_instance, wanted, {})
-    assert offending, (
-        "nothing in the build carries this instance's identity any more, "
-        "not even what the deferred register accounts for -- the entries "
-        "with a `carried_into` should lose it, or leave the register"
-    )
+    if any(entry.carried_into for entry in instance_identity.DEFERRED):
+        assert offending, (
+            "nothing in the build carries this instance's identity any "
+            "more, not even what the deferred register accounts for -- the "
+            "entries with a `carried_into` should lose it, or leave the "
+            "register"
+        )
     unclaimed = sorted(
         {
             relative
@@ -704,6 +780,12 @@ def test_every_deferred_entry_that_claims_a_build_reaches_it(
     A `carried_into` that matches nothing is a standing exemption for a
     leak that no longer exists -- it costs nothing today and blinds the
     sweep the day somebody reintroduces exactly that phrase.
+
+    No entry claims one since phase 11 task 3, so this asserts nothing
+    today. It is kept rather than deleted for the same reason the
+    machinery it exercises is: the next entry that needs a `carried_into`
+    should meet this on its way in, not after somebody notices the
+    exemption stopped matching.
     """
     wanted = instance_identity.needles(ROOT)
     texts = dict(second_instance.readable())
@@ -792,3 +874,92 @@ def test_the_second_instances_showcase_offers_its_own_proposal_form(
         f"the second instance's propose page does not link its own form ({form})"
     )
     assert "The proposal form is not published yet." not in text
+
+
+# ------------------------------------------------------------------ #
+# 5 -- a duplicate that has not been configured says so, out loud
+# ------------------------------------------------------------------ #
+
+
+def test_this_tree_is_what_an_unconfigured_duplicate_looks_like(
+    second_instance_tree: Path,
+) -> None:
+    """The premise the two tests below rest on, checked rather than
+    assumed -- and checked on the laid-out tree, which needs no toolchain,
+    so it is proved on every machine whether or not anything can be built
+    here.
+
+    `_lay_out` copies `instances/example/`'s files into the holes the
+    boundary leaves, so the declaration this build is made from *is* the
+    example's, value for value -- which is precisely the state a duplicate
+    is in on the day it is made and before anybody has edited anything.
+    The demonstration is therefore not a special build with a warning
+    switched on for effect: it is the unconfigured state, and the warning
+    is the one any duplicate would get.
+    """
+    example = json.loads(
+        (ROOT / published.EXAMPLE_INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert published.unconfigured(second_instance_tree) == tuple(
+        sorted(published.declared_values(example))
+    ), (
+        "the tree this module builds no longer declares the example's own "
+        "values, so it is not the unconfigured state any more"
+    )
+
+
+def test_the_second_instances_showcase_says_it_has_not_been_configured(
+    second_instance: Built,
+) -> None:
+    """The banner the inventory (S 5) asks for, on a build rather than in
+    a template: "pour qu'un duplicata non configure le dise, fort, plutot
+    que de publier silencieusement l'identite du gabarit".
+
+    Every page, not one: `_includes/layout.njk` is the one piece of chrome
+    the whole showcase shares, and a warning on the home page alone is a
+    warning anybody arriving by a direct link never sees. And the keys are
+    named on the page, so what a reader is told is which line to go and
+    edit rather than that something, somewhere, is wrong.
+    """
+    pages = [
+        (relative, text)
+        for relative, text in second_instance.readable()
+        if relative.startswith("site/_site/") and relative.endswith(".html")
+    ]
+    assert len(pages) > 5, f"the second instance built almost no pages: {pages}"
+    silent = [
+        relative for relative, text in pages if "unconfigured__eyebrow" not in text
+    ]
+    assert silent == [], (
+        "these pages of an unconfigured duplicate publish the example's "
+        f"identity without saying so: {silent[:10]}"
+    )
+    named = published.unconfigured(second_instance.root)
+    for relative, text in pages:
+        for key in named:
+            assert key in text, f"{relative} does not name {key}"
+
+
+def test_the_second_instances_cockpit_says_it_too(second_instance: Built) -> None:
+    """The other half of what a visitor can reach without installing
+    anything, and the half that is behind a sign-in for everybody except a
+    visitor: `auth/Login.tsx` is the screen somebody with no GitHub account
+    lands on, and it carries the same band as the cockpit itself.
+
+    Read out of the built bundle rather than out of the source, because
+    what is being asked is whether the *define* survived into it: the
+    ordinary value of that define is the empty list, so a bundle that lost
+    it would render nothing and look exactly like a configured instance.
+    """
+    bundles = [
+        (relative, text)
+        for relative, text in second_instance.readable()
+        if relative.startswith("app/dist/") and relative.endswith(".js")
+    ]
+    assert bundles, "the second instance built no application bundle"
+    carrying = [relative for relative, text in bundles if "Not configured" in text]
+    assert carrying, (
+        "no bundle of an unconfigured duplicate's cockpit carries the "
+        "warning -- vite.config.ts's own VITE_INSTANCE_UNCONFIGURED define, "
+        "or the component that reads it, has stopped reaching the build"
+    )

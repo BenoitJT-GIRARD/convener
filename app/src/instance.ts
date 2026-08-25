@@ -42,6 +42,10 @@ export interface InstanceIdentity {
   short_name: string;
   /** What the series is called. */
   series: string;
+  /** The display line the poster sets in heavy capitals above the talk's
+   *  own title -- two or three words, never a sentence. `tagline` is the
+   *  sentence; see `published.py::Identity` for why both exist. */
+  strapline: string;
   tagline: string;
   /** The forum's whole address, for an `href`. */
   forum: string;
@@ -79,10 +83,95 @@ export function repositoryUrl(): string {
   return `https://github.com/${instanceIdentity().repository}`;
 }
 
+let cachedEditionPrefix: string | null = null;
+
+/**
+ * The prefix this instance numbers its editions under -- `MRG`, so `MRG-05`
+ * and, lower-cased, the event id `/events/mrg-05/` (D-19).
+ *
+ * Phase 11, task 4. `state/agenda.ts::nextEditionCode` used to compose
+ * `MRG-${n}` from a literal, and `validate.py::EDITION_RE` fixed the same
+ * two letters on the other side of the language boundary -- the initials
+ * of the series that happens to run this repository, in the product's own
+ * code, so a duplicate's reading group numbered its sessions `MRG-1`.
+ *
+ * A separate define from the identity rather than a tenth field of it:
+ * everything in `InstanceIdentity` is prose somebody outside this project
+ * reads, checked the one way prose can be checked, while this is a token
+ * with a grammar (`scripts/published.mjs::editionPrefix`, mirroring
+ * `published.py::EDITION_PREFIX_RE`) that is refused at declaration.
+ *
+ * Throws rather than defaulting, for the reason `instanceIdentity` above
+ * does: the alternative to throwing is a cockpit quietly suggesting
+ * `undefined-6` as the next edition of a series, and an edition code is
+ * the one value in this repository that can never be corrected after the
+ * fact -- it is in a published address, on an issued certificate and in a
+ * key filename.
+ *
+ * The `MRG-` form an edition code actually starts with is deliberately
+ * *not* here, and that absence is the correction phase 11's own bilan
+ * asked for: composing it needs the prefix of the instance whose records
+ * are on screen, which in demo mode is the example's and not this one's
+ * (`state/agenda.ts::editionCodePrefix`). A second function here
+ * returning this instance's prefix with a hyphen on it would be a trap
+ * the next call site walks into.
+ */
+export function editionPrefix(): string {
+  if (cachedEditionPrefix) return cachedEditionPrefix;
+  const raw = import.meta.env.VITE_INSTANCE_EDITION_PREFIX as string | undefined;
+  if (!raw) {
+    throw new Error(
+      'VITE_INSTANCE_EDITION_PREFIX is unset: this bundle was built without ' +
+        "vite.config.ts's own define, so it cannot say what this series " +
+        'numbers its editions (see config/instance.json)',
+    );
+  }
+  cachedEditionPrefix = raw;
+  return cachedEditionPrefix;
+}
+
 /** The organisation half of `repository` -- the GitHub organisation whose
  *  team membership decides who signs in as a Board member
  *  (`auth/role.ts`). One fact, not two: the repository the cockpit writes
  *  to and the organisation it belongs to cannot be different organisations. */
 export function organisationLogin(): string {
   return instanceIdentity().repository.split('/')[0];
+}
+
+let cachedUnconfigured: string[] | null = null;
+
+/**
+ * Which of this instance's declared values are still the ones the product
+ * ships in `instances/example/config/instance.json` -- empty for an
+ * instance somebody has configured, and the names of the offending keys
+ * for one nobody has.
+ *
+ * Phase 11, task 6. The first thing anybody does with a template is
+ * deploy it before configuring it, and until this the result was a public
+ * cockpit whose masthead named the example collective, whose footer
+ * linked its invented forum and whose every check stayed green -- a
+ * declaration that belongs to somebody else is still a perfectly valid
+ * declaration. `scripts/published.mjs::unconfigured` is this build's
+ * reader of it; `tools/convener_ops/published.py::unconfigured` states the
+ * whole rule and why the `REPLACE` marker is deliberately no part of it.
+ *
+ * Throws when the define is absent, for the reason `instanceIdentity`
+ * above does and then one more: the ordinary answer here is the empty
+ * list, so a bundle built without the define would look exactly like a
+ * configured instance and this warning would fall silent precisely when
+ * the build was broken. `vite.config.ts` therefore carries the value as
+ * JSON -- `'[]'` is a value, an absent define is not (D-25).
+ */
+export function unconfiguredFields(): string[] {
+  if (cachedUnconfigured) return cachedUnconfigured;
+  const raw = import.meta.env.VITE_INSTANCE_UNCONFIGURED as string | undefined;
+  if (!raw) {
+    throw new Error(
+      'VITE_INSTANCE_UNCONFIGURED is unset: this bundle was built without ' +
+        "vite.config.ts's own define, so it cannot say whether this instance " +
+        'has been configured (see config/instance.json)',
+    );
+  }
+  cachedUnconfigured = JSON.parse(raw) as string[];
+  return cachedUnconfigured;
 }

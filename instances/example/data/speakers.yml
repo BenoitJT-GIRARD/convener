@@ -9,11 +9,12 @@
 # `example-`. That combination is what makes a record unmistakably
 # synthetic even if a name it invents happens to be somebody's somewhere.
 #
-# `edition_code` is `MRG-N` because the product's own validator fixes that
-# shape (`tools/convener_ops/validate.py::EDITION_RE`) -- a series called
-# something other than a Monthly Reading Group still numbers its editions MRG-1.
-# That is a finding of phase 10 task 5, not a choice of this file's: see
-# this phase's own instance inventory under `docs/superpowers/`.
+# `edition_code` is `MRG-N`: this instance's own prefix, declared once in
+# `../config/instance.json` as `edition_prefix` and written nowhere else.
+# It is deliberately not `identity.short_name` (`TEC`) -- the two are free
+# to differ, which is the whole reason the prefix has a key of its own --
+# and `validate.validate_speakers` builds its pattern from the declaration
+# rather than fixing one shape for every instance there will ever be.
 #
 # Five records, chosen to exercise states rather than to be plausible: a
 # delivered edition with a recording and a granted consent, a delivered one

@@ -167,6 +167,42 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   padding-right: var(--gutter);
 }
 
+/* ── Not configured (phase 11, task 6) ────────────
+ * The band an unconfigured duplicate publishes above its own masthead --
+ * `_includes/layout.njk` emits it only while `site.unconfigured` is not
+ * empty, so a configured instance carries neither the markup nor a
+ * reserved strip of page.
+ *
+ * Cream ground with a --danger rule, not a --danger ground: this is the
+ * one band that has to be readable before anything else on the page, and
+ * --danger measures 7.00 against --surface (AA needs 4.5) where white on
+ * --danger would have been the same colour doing less work. --ink for the
+ * sentence itself (10.12 on the same ground) so the eyebrow is what
+ * carries the alarm, exactly as .notice__eyebrow already does. */
+.unconfigured {
+  background: var(--surface);
+  border-bottom: 6px solid var(--danger);
+}
+.unconfigured__inner {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.unconfigured__inner p { max-width: 78ch; }
+.unconfigured__eyebrow {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin-bottom: .5rem;
+}
+.unconfigured__keys {
+  font-family: var(--ff-mono);
+  font-size: .82rem;
+  word-break: break-word;
+}
+
 /* ── Masthead ─────────────────────────────────────────────── */
 /* The identity band -- cream, full-bleed, the same role the logo band
  * carries at the top of Anonymous's own composition. Everything below it is

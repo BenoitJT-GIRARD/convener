@@ -150,6 +150,76 @@ def test_exactly_these_three_rows_declare_themselves_an_exception() -> None:
     assert exceptions == ["event_keys", "retention_token", "certificate_fingerprint"]
 
 
+#: How this file's own opening paragraph spells a count. Only the range a
+#: ten-row declaration can reach; a count past it fails by KeyError, which
+#: is the right failure -- a declaration with eleven exceptions needs the
+#: sentence rewritten, not a longer table.
+_COUNT_WORDS = {
+    1: "one",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+}
+
+
+def _opening_paragraph(text: str) -> str:
+    """The declaration's first comment paragraph -- every `#` line before
+    the first bare `#`. That paragraph is the sentence this test is about;
+    the ones after it discuss individual rows by name, including rows whose
+    absence *is* ordinary, so sweeping the whole header would be sweeping
+    the wrong thing."""
+    lines: list[str] = []
+    for line in text.splitlines():
+        if line.strip() in ("#", ""):
+            break
+        assert line.startswith("#"), "the declaration does not open with a comment"
+        lines.append(line.lstrip("#").strip())
+    return " ".join(lines)
+
+
+def test_this_declarations_own_header_names_every_exception() -> None:
+    """The half of the row above that nothing was reading.
+
+    `absent_is_normal` has been pinned as data since task 15. The sentence
+    at the top of `config/integrations.yml` that *describes* it was not,
+    and it said "with one exception, event_keys" for two phases after the
+    second and third rows were added -- through a task that corrected the
+    identical sentence in `integrations.py`'s docstring and left this one,
+    the more authoritative of the two and the one the cockpit's settings
+    screen reads and ships into the demonstration.
+
+    Nothing here transcribes the answer: the names and the count both come
+    out of the declaration this paragraph is the header of, so a fourth
+    exception fails this test by name rather than making the sentence
+    quietly wrong again.
+    """
+    path = repo_root() / "config" / "integrations.yml"
+    declaration = load_declaration(path)
+    opening = _opening_paragraph(path.read_text(encoding="utf-8"))
+
+    exceptions = [i.name for i in declaration if not i.absent_is_normal]
+    ordinary = [i.name for i in declaration if i.absent_is_normal]
+    assert exceptions and ordinary, "a declaration with only one kind of row"
+
+    assert f"{_COUNT_WORDS[len(exceptions)]} exception" in opening, (
+        f"the header does not count the {len(exceptions)} rows that declare "
+        f"`absent_is_normal: false`: {opening!r}"
+    )
+    for name in exceptions:
+        assert name in opening, f"the header does not name the exception {name}"
+    for name in ordinary:
+        assert name not in opening, (
+            f"the header names {name} among the exceptions, but that row's "
+            "absence is an ordinary state"
+        )
+
+
 def test_email_transport_is_absent_when_only_the_port_is_missing() -> None:
     """The port is resolved through the same generic `secrets` list as its
     four siblings -- nothing in `resolve_states` singles it out -- so an

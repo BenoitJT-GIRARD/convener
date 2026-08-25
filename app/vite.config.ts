@@ -1,8 +1,15 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { cspMetaContent } from './scripts/csp.mjs';
-import { identity, published } from './scripts/published.mjs';
+import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
+import { exampleInstance } from './scripts/example-instance.mjs';
+import { exampleSettings } from './scripts/example-settings.mjs';
+import {
+  editionPrefix,
+  identity,
+  published,
+  unconfigured,
+} from './scripts/published.mjs';
 
 /**
  * Phase 10, task 2: the address this project is published at, read once
@@ -47,9 +54,100 @@ const PUBLISHED = published();
  */
 const IDENTITY = identity();
 
+/**
+ * Phase 11, task 2: the instance the *demonstration* shows, read from
+ * `instances/example/` and carried into the bundle the same way again.
+ *
+ * `src/data/demo.ts` used to be an instance written in code -- five
+ * invented speaker records, an invented board, and two promotion channels
+ * naming this organisation's own forum and LinkedIn page, compiled into
+ * the cockpit so that a duplicate shipped them too. The example instance
+ * already existed and was already exercised on every run of the Python
+ * suite; this is what makes the cockpit consume it rather than invent a
+ * third set of fictional data. See `scripts/example-instance.mjs` for why
+ * the two files travel as text and are parsed by the application's own
+ * reader, and why they are not published into `dist/` and fetched.
+ *
+ * Declared for all four configurations along with the two above, for the
+ * identical reason: no island references it today, and `define` only ever
+ * substitutes a token a bundle actually contains -- but a value present in
+ * one configuration and absent from another is exactly the shape that
+ * passes a test suite and ships broken.
+ */
+const EXAMPLE = exampleInstance();
+
+/**
+ * Phase 11, task 4: the prefix this instance numbers its editions under,
+ * read from the same declaration and carried in the same way.
+ *
+ * `src/state/agenda.ts::nextEditionCode` composes the next edition code
+ * when a volunteer locks a date, and it used to compose it as `MRG-${n}` --
+ * the initials of the series that happens to run this repository, in the
+ * product's own source, so a duplicate's reading group numbered its
+ * sessions `MRG-1`. That code runs in a browser, which can read no file,
+ * so the value has to be substituted in at build time exactly as the
+ * address and the identity already are.
+ *
+ * A bare string rather than JSON, unlike the two above: this one is a
+ * single value, not a vocabulary that grows by a word.
+ */
+/**
+ * Phase 11, task 5: the six declarations the settings screen reads, for the
+ * demonstration only.
+ *
+ * Signed in, that screen reads `config/` and the drain's workflow straight
+ * out of the repository through the Contents API. A demonstration has no
+ * repository and may read nothing but the origin that served it
+ * (`src/net/request.ts`), so the example instance's four `config/` files
+ * and the product's two travel in the bundle instead -- as text, parsed by
+ * the application's own reader, exactly as `EXAMPLE` above carries the
+ * example's data.
+ *
+ * Declared for all four configurations along with the rest, for the same
+ * reason: no island references it and `define` only substitutes a token a
+ * bundle actually contains, but a value present in one configuration and
+ * absent from another is the shape that passes a test suite and ships
+ * broken.
+ */
+const EXAMPLE_SETTINGS = exampleSettings();
+
+const EDITION_PREFIX = editionPrefix();
+
+/**
+ * Phase 11, task 6: which of this instance's declared values are still
+ * the ones the product ships in `instances/example/config/instance.json`,
+ * carried into the bundle the same way as everything above it.
+ *
+ * Empty for an instance somebody has configured, and the names of the
+ * offending keys for one nobody has. `src/components/UnconfiguredBanner.
+ * tsx` prints them above the sign-in screen and above the cockpit itself,
+ * because the first thing anybody does with a template is deploy it
+ * before configuring it -- and a cockpit built from somebody else's
+ * declaration is a cockpit whose masthead names the wrong organisation
+ * while every check stays green.
+ *
+ * Declared for all four configurations along with the rest, for the same
+ * reason: no island references it and `define` only substitutes a token a
+ * bundle actually contains, but a value present in one configuration and
+ * absent from another is the shape that passes a test suite and ships
+ * broken.
+ *
+ * JSON rather than the bare string `VITE_INSTANCE_EDITION_PREFIX` is,
+ * and for a reason that is the whole point of the warning: the ordinary
+ * answer here is *empty*, so a bundle built without this define would be
+ * indistinguishable from a configured instance and the banner would go
+ * quiet exactly when the build was broken. `'[]'` is a value; an absent
+ * define is not, and `src/instance.ts` throws on it (D-25).
+ */
+const UNCONFIGURED = unconfigured();
+
 const INSTANCE_DEFINE = {
   'import.meta.env.VITE_PUBLISHED_URL': JSON.stringify(PUBLISHED.url),
   'import.meta.env.VITE_INSTANCE_IDENTITY': JSON.stringify(JSON.stringify(IDENTITY)),
+  'import.meta.env.VITE_INSTANCE_EDITION_PREFIX': JSON.stringify(EDITION_PREFIX),
+  'import.meta.env.VITE_EXAMPLE_INSTANCE': JSON.stringify(JSON.stringify(EXAMPLE)),
+  'import.meta.env.VITE_EXAMPLE_SETTINGS': JSON.stringify(JSON.stringify(EXAMPLE_SETTINGS)),
+  'import.meta.env.VITE_INSTANCE_UNCONFIGURED': JSON.stringify(JSON.stringify(UNCONFIGURED)),
 };
 
 /**
@@ -77,13 +175,28 @@ const INSTANCE_DEFINE = {
 function cspHtmlPlugin(): Plugin {
   return {
     name: 'convener-csp-meta',
-    transformIndexHtml() {
+    // `ctx.server` is set when this hook runs for the development server
+    // and absent on a build -- the one fact that tells the two apart from
+    // inside the hook, and read here rather than kept as plugin state so
+    // that nothing has to stay in step with a `configResolved`.
+    //
+    // Phase 11: this used to inject the shipped policy in both, and
+    // `script-src 'self'` refuses `@vitejs/plugin-react`'s inline React
+    // Refresh preamble -- so `npm run dev` served a blank page from the
+    // day the policy landed (2026-08-23) until this. `apply: 'build'`
+    // would have fixed the page by removing the policy from the only
+    // place a violation is actually looked at; see `scripts/csp.mjs`'s own
+    // "The development server needs two of these loosened" for why the
+    // development server carries a policy of its own instead.
+    transformIndexHtml(_html, ctx) {
       return [
         {
           tag: 'meta',
           attrs: {
             'http-equiv': 'Content-Security-Policy',
-            content: cspMetaContent(process.env),
+            content: ctx.server
+              ? devCspMetaContent(process.env)
+              : cspMetaContent(process.env),
           },
           injectTo: 'head-prepend',
         },
@@ -300,6 +413,17 @@ export default defineConfig(({ mode }) => {
           'src/data/**',
           'src/github/**',
           'src/auth/**',
+          // Phase 11 task 1: the one door out of this bundle. Pure logic
+          // the demo-mode promise rests on, exactly as directly as
+          // `verify/register.ts` rests on the certificate promise.
+          'src/net/**',
+          // Phase 11 task 5: the bounds a settings field refuses on, the
+          // reader of the boundary declaration, and the surgical edit that
+          // keeps a config file's own argument for itself. Pure logic a
+          // promise rests on, in the same class -- a bound computed
+          // differently here from the one the scheduled job enforces is
+          // the whole defect that screen exists to prevent.
+          'src/settings/**',
           'src/signup/encrypt.ts',
           'src/survey/encrypt.ts',
           'src/verify/verify.ts',

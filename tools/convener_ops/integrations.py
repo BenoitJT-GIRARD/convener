@@ -1,13 +1,25 @@
 """External integrations: what they need, and what happens without them.
 
-An integration with no secret set is *absent*. For every integration but
-one, that is a normal state -- never an error, and nothing in this module
-raises because a secret is missing. The one exception is declared, not
-hard-coded here: `absent_is_normal: false` in `config/integrations.yml`
-(carried on `Integration` below) marks a row whose absence is not a
-harmless fallback. `event_keys` is that row today -- see
-`tools/convener_ops/eventkeys.py` for why -- and `cli.py::render_check` is what
-turns the flag into the operator-facing text.
+An integration with no secret set is *absent*. For most integrations that
+is a normal state -- never an error, and nothing in this module raises
+because a secret is missing. The exceptions are declared, not hard-coded
+here: `absent_is_normal: false` in `config/integrations.yml` (carried on
+`Integration` below) marks a row whose absence is not a harmless fallback,
+and `cli.py::render_check` is what turns the flag into the operator-facing
+text.
+
+**Three rows carry it today**, not one -- `event_keys` (see
+`tools/convener_ops/eventkeys.py`), `retention_token` and
+`certificate_fingerprint`. This paragraph used to say "the one exception ...
+`event_keys` is that row today", which was true when it was written and had
+quietly stopped being so; phase 11 task 5 corrected it while counting the
+rows for the cockpit's settings screen, and left the same sentence standing
+in the declaration's own header and in `Integration.absent_is_normal`'s
+comment below -- the first of those being the more authoritative of the two,
+and the one the settings screen reads and ships into the demonstration. Task
+8 corrected both. Nothing read the count, which is exactly why nothing
+noticed; `tools/tests/test_integrations.py` reads it against that header
+now.
 """
 
 from __future__ import annotations
@@ -29,9 +41,10 @@ class Integration:
     label: str
     secrets: list[str]
     absent_behaviour: str
-    #: True for every row but one. See the module docstring; the exception
-    #: is data, not a name checked against a hard-coded list, so a future
-    #: integration with the same property declares itself the same way.
+    #: True for every row but three. See the module docstring; which rows
+    #: those are is data, not a name checked against a hard-coded list, so
+    #: a future integration with the same property declares itself the
+    #: same way.
     absent_is_normal: bool = True
     state: str = ABSENT
     missing: list[str] = field(default_factory=list)

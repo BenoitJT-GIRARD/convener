@@ -2,6 +2,7 @@ import type { Config } from '../data/types';
 import { isBoardMember } from '../state/board';
 import { parisToday } from '../state/derived';
 import { organisationLogin } from '../instance';
+import { request } from '../net/request';
 
 /** The GitHub team whose membership this check reads. The *slug* is the
  *  product's -- every duplicate creates a team by this name, and
@@ -25,7 +26,7 @@ export async function detectRole(
   config: Config | null,
 ): Promise<'board' | 'organizer'> {
   try {
-    const r = await fetch(
+    const r = await request(
       `https://api.github.com/orgs/${organisationLogin()}/teams/${TEAM}/memberships/${login}`,
       {
         headers: {

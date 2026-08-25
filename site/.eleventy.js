@@ -25,7 +25,12 @@
 // showcase's side of a boundary Python and the application build read
 // from their own (D-14). The names stay: everything below this line uses
 // them exactly as before.
-const { publishedAddress, identity, isPlaceholder } = require('./scripts/published.cjs');
+const {
+  publishedAddress,
+  identity,
+  isPlaceholder,
+  unconfigured,
+} = require('./scripts/published.cjs');
 
 const PUBLISHED = publishedAddress();
 
@@ -93,6 +98,21 @@ const SITE = {
   publishRepository: PUBLISHED.publishRepository,
   publishRepositoryName: PUBLISHED.publishRepository.split('/')[1],
   repository: IDENTITY.repository,
+  // Phase 11, task 6: which declared values this instance has not made
+  // its own yet -- empty for an instance that has been configured, and
+  // the names of the offending keys for one that has not. `_includes/
+  // layout.njk` prints a banner across every page while it is not empty.
+  //
+  // The first thing anybody does with a template is deploy it before
+  // configuring it, and until this the result was a public showcase
+  // announcing the example collective's name, address and contact
+  // address as though they were the duplicate's own -- silently, with
+  // every check green, because a declaration that is somebody else's is
+  // still a perfectly valid declaration. `scripts/published.cjs::
+  // unconfigured` is the showcase's reader of that; `tools/convener_ops/
+  // published.py::unconfigured` states the whole rule and why the
+  // `REPLACE` marker is deliberately not part of it.
+  unconfigured: unconfigured(),
 };
 
 // Phase 5, task 10: structured event data, share metadata, the sitemap and

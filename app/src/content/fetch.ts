@@ -1,3 +1,4 @@
+import { request } from '../net/request';
 import { CONTENT_REGISTRY, repoUrl } from './registry';
 import { expandIncludes, sectionOf } from './transclude';
 
@@ -83,7 +84,7 @@ async function loadFile(file: string): Promise<string> {
   const url = `${BASE}/handbook/${file}`;
   let r: Response;
   try {
-    r = await fetch(url);
+    r = await request(url);
   } catch (e) {
     console.error(e);
     throw new Error('Could not load this content. Check your connection and try again.', {

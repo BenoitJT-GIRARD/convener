@@ -12,6 +12,7 @@ import { Diversity } from './screens/Diversity';
 import { Consent } from './screens/Consent';
 import { Handbook } from './screens/Handbook';
 import { Templates } from './screens/Templates';
+import { Settings } from './screens/Settings';
 import { SpeakerPage } from './screens/SpeakerPage';
 import { NewSpeaker } from './screens/NewSpeaker';
 
@@ -39,6 +40,7 @@ function Shell() {
           <Route path="consent" element={<Consent />} />
           <Route path="handbook" element={<Handbook />} />
           <Route path="templates" element={<Templates />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="speakers/new" element={<NewSpeaker />} />
           <Route path="speakers/:id" element={<SpeakerPage />} />
         </Route>
