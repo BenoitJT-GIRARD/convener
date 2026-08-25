@@ -54,7 +54,14 @@ export function Layout() {
           <div className="max-w-content mx-auto flex items-center justify-between flex-wrap gap-2">
             <span>
               <strong className="font-display tracking-wide uppercase text-xs mr-2">Demo</strong>
-              Data is mocked. Edits stay in this tab and don&rsquo;t persist.
+              {/* Which invented records these are, not just that they are
+                  invented: the masthead above names whoever runs this
+                  cockpit, while every record on screen belongs to the
+                  example instance this product ships (`instances/example/`,
+                  read by `data/demo.ts`). Saying "data is mocked" left a
+                  visitor to guess why the two disagree. */}
+              These are the example instance&rsquo;s records, not this series&rsquo;.
+              Edits stay in this tab and are never saved.
             </span>
             <button
               onClick={exitDemo}
@@ -90,8 +97,15 @@ export function Layout() {
       <footer className="border-t border-border mt-16">
         <div className="max-w-content mx-auto px-6 py-6 flex items-center justify-between text-xs text-ink-muted flex-wrap gap-2">
           <p>
+            {/* Where the records on screen actually come from. In demo mode
+                that is not this repository's own `data/`: it is the example
+                instance the product ships, and saying otherwise would send
+                a curious visitor to look for these five people in a file
+                that has never held them. */}
             <em>Operational workspace</em> &middot; data lives in{' '}
-            <code className="text-ink">data/speakers.yml</code>
+            <code className="text-ink">
+              {demo ? 'instances/example/data/' : 'data/speakers.yml'}
+            </code>
           </p>
           <a
             href={instance.forum}

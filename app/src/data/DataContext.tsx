@@ -12,7 +12,7 @@ import {
   withSpeakersHeader,
   withConfigHeader,
 } from './yaml';
-import { isDemoMode, DEMO_SPEAKERS, DEMO_CONFIG } from './demo';
+import { isDemoMode, demoSpeakers, demoConfig } from './demo';
 import type { Speaker, Config } from './types';
 import type { Subject } from '../state/decisions';
 
@@ -63,22 +63,30 @@ interface Ctx extends State {
 
 const C = createContext<Ctx | null>(null);
 
-const DEMO_STATE: State = {
-  loading: false,
-  error: null,
-  saveError: null,
-  speakers: [...DEMO_SPEAKERS],
-  config: { ...DEMO_CONFIG },
-  spkSha: 'demo',
-  cfgSha: 'demo',
-};
+/** The example instance, as this context's own state.
+ *
+ *  A function rather than a constant since phase 11 task 2: the two
+ *  documents behind it are parsed on first use rather than at module load
+ *  (see `./demo.ts`), and a fresh copy per call is what lets `reload()`
+ *  put back what an edit in this tab changed. */
+function demoState(): State {
+  return {
+    loading: false,
+    error: null,
+    saveError: null,
+    speakers: [...demoSpeakers()],
+    config: { ...demoConfig() },
+    spkSha: 'demo',
+    cfgSha: 'demo',
+  };
+}
 
 /** The synchronous half of loading: demo mode resolves immediately (no
  *  network), and having no token yet has nothing to load. Only the real
  *  GitHub read is genuinely asynchronous, so it's the only part that runs
  *  from inside the effect below. */
 function initialState(token: string | null): State {
-  if (isDemoMode()) return DEMO_STATE;
+  if (isDemoMode()) return demoState();
   return {
     loading: !!token,
     error: null,
@@ -169,7 +177,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   async function reload() {
     if (!token) return;
     if (isDemoMode()) {
-      setS(DEMO_STATE);
+      setS(demoState());
       return;
     }
     setS(p => ({ ...p, loading: true, error: null }));

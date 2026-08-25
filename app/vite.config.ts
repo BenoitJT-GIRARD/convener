@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { cspMetaContent } from './scripts/csp.mjs';
+import { exampleInstance } from './scripts/example-instance.mjs';
 import { identity, published } from './scripts/published.mjs';
 
 /**
@@ -47,9 +48,32 @@ const PUBLISHED = published();
  */
 const IDENTITY = identity();
 
+/**
+ * Phase 11, task 2: the instance the *demonstration* shows, read from
+ * `instances/example/` and carried into the bundle the same way again.
+ *
+ * `src/data/demo.ts` used to be an instance written in code -- five
+ * invented speaker records, an invented board, and two promotion channels
+ * naming this organisation's own forum and LinkedIn page, compiled into
+ * the cockpit so that a duplicate shipped them too. The example instance
+ * already existed and was already exercised on every run of the Python
+ * suite; this is what makes the cockpit consume it rather than invent a
+ * third set of fictional data. See `scripts/example-instance.mjs` for why
+ * the two files travel as text and are parsed by the application's own
+ * reader, and why they are not published into `dist/` and fetched.
+ *
+ * Declared for all four configurations along with the two above, for the
+ * identical reason: no island references it today, and `define` only ever
+ * substitutes a token a bundle actually contains -- but a value present in
+ * one configuration and absent from another is exactly the shape that
+ * passes a test suite and ships broken.
+ */
+const EXAMPLE = exampleInstance();
+
 const INSTANCE_DEFINE = {
   'import.meta.env.VITE_PUBLISHED_URL': JSON.stringify(PUBLISHED.url),
   'import.meta.env.VITE_INSTANCE_IDENTITY': JSON.stringify(JSON.stringify(IDENTITY)),
+  'import.meta.env.VITE_EXAMPLE_INSTANCE': JSON.stringify(JSON.stringify(EXAMPLE)),
 };
 
 /**

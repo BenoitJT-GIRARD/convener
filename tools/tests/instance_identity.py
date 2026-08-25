@@ -106,17 +106,6 @@ DEFERRED: Final = (
         carried_into=("posters/*.html",),
     ),
     Deferred(
-        path=Path("app/src/data/demo.ts"),
-        owner="phase 11 (the example instance)",
-        reason=(
-            "`demo.ts` *is* an instance, in code -- its promotion channels "
-            "name this organisation's forum and its LinkedIn page, and "
-            "they are compiled into the cockpit's own bundle, so a second "
-            "instance ships them too."
-        ),
-        carried_into=("app/dist/assets/*.js",),
-    ),
-    Deferred(
         path=Path("site/src/_data/events.json"),
         owner="phase 11 (the example instance)",
         reason=(
