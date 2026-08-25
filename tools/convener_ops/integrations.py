@@ -13,8 +13,13 @@ text.
 `certificate_fingerprint`. This paragraph used to say "the one exception ...
 `event_keys` is that row today", which was true when it was written and had
 quietly stopped being so; phase 11 task 5 corrected it while counting the
-rows for the cockpit's settings screen. Nothing here reads the count, which
-is exactly why nothing noticed.
+rows for the cockpit's settings screen, and left the same sentence standing
+in the declaration's own header and in `Integration.absent_is_normal`'s
+comment below -- the first of those being the more authoritative of the two,
+and the one the settings screen reads and ships into the demonstration. Task
+8 corrected both. Nothing read the count, which is exactly why nothing
+noticed; `tools/tests/test_integrations.py` reads it against that header
+now.
 """
 
 from __future__ import annotations
@@ -36,9 +41,10 @@ class Integration:
     label: str
     secrets: list[str]
     absent_behaviour: str
-    #: True for every row but one. See the module docstring; the exception
-    #: is data, not a name checked against a hard-coded list, so a future
-    #: integration with the same property declares itself the same way.
+    #: True for every row but three. See the module docstring; which rows
+    #: those are is data, not a name checked against a hard-coded list, so
+    #: a future integration with the same property declares itself the
+    #: same way.
     absent_is_normal: bool = True
     state: str = ABSENT
     missing: list[str] = field(default_factory=list)

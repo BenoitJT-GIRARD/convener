@@ -107,11 +107,22 @@ DEFERRED: Final = (
             "The showcase's committed build fixture: a copy of "
             "`public-data/events-public.json`, refreshed by "
             "`publish-vitrine.yml` before every real build. It carries "
-            "this instance's speakers rather than its name, which is why "
-            "no needle here matches it -- and a second instance's build "
-            "regenerates it from its own `data/speakers.yml` before "
-            "Eleventy ever reads it, which is why it reaches nothing "
-            "built."
+            "this instance's identity and not only its speakers, which is "
+            "why the entry is load-bearing rather than a courtesy: two of "
+            "the source sweep's four needles match it -- `identity.forum` "
+            "and `identity.forum_host`, twice each, inside the two "
+            "`forum_thread` values that two of its five records hold -- "
+            "and its ids and thread slugs carry the edition prefix in both "
+            "cases besides. Remove the entry and the source sweep names "
+            "this file and that needle. What it reaches is nothing "
+            "*built*, which is the separate claim `carried_into` makes: a "
+            "second instance's build regenerates it from that instance's "
+            "own `data/speakers.yml` before Eleventy ever reads it. Until "
+            'phase 11 task 8 this reason said the opposite -- "no needle '
+            'here matches it" -- which was false the day it was written; '
+            "an exemption justified by a fact that is not true is an "
+            "exemption the next reader deletes, and the sweep then fails "
+            "for a reason nobody was warned about."
         ),
     ),
     Deferred(
