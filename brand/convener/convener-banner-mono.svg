@@ -1,32 +1,31 @@
-<!--
-  Convener - the mark and wordmark together, as vectors.
+<!-- cspell:ignore currentColor color
+  Convener — the mark and the wordmark, one ink.
 
-  The mark is geometry measured off convener-mark-colour-light.png and overlays
-  that raster exactly; see convener-mark.svg for the numbers.
+  **One file for every surface.** The ink is `currentColor`, so it takes the
+  colour of whatever it is placed in — set `color: #fff` on a dark ground and it
+  turns white, with no second file to keep in step.
 
-  The wordmark is NOT the face in the raster, and that face was not identified.
-  The only Archivo axis pair whose width-to-cap-height ratio matches it is weight
-  800 at width 80 - a condensed heavy the logo visibly is not, so a metric
-  coincidence rather than a match. Two options were rejected: tracing letterforms
-  out of a raster, which yields the wobbly curves a vector exists to avoid; and
-  building a publicly redistributed product's identity on an unidentified,
-  unlicensed face.
+  The navy default is a `svg:root` rule, not a `color` attribute, and the
+  difference is the whole point: an attribute would win over inheritance and the
+  mark would stay navy on a dark ground. `svg:root` matches only when this file
+  is the document — opened on its own, or loaded through `<img>`. Inlined into a
+  page, it does not match, and inheritance decides.
 
-  So the wordmark is set in Archivo at weight 400, width 100, converted to
-  outlines. That is the face and the weight data/brand.json already declares as
-  `body`, the repository already ships it under the SIL Open Font License 1.1
-  (fonts/, Archivo-LICENSE.txt), and the glyphs here are paths - no font is
-  needed at render time.
+  The mark is measured, not traced: radii, stroke widths and one 81° opening read
+  off the original raster and rebuilt as two arcs and a circle. It overlaid that
+  raster exactly.
 
-  It reads about 9% wider than the raster version (1333px against 1223px at the
-  same 210px cap height) because Archivo is a grotesque and the raster's face is
-  geometric. That difference is deliberate: matching it would mean condensing
-  Archivo to imitate a face this project has decided not to use.
+  The wordmark is Archivo at weight 400, converted to outlines — the face and
+  weight `data/brand.json` declares as `body`, shipped here under the SIL Open
+  Font License 1.1 (`fonts/`, `Archivo-LICENSE.txt`). It is **not** the face of
+  the original raster, which was never identified; see README.md for why
+  imitating it was the wrong trade.
 
-  navy #012765 - coral #fd6b52. See README.md for the measured contrasts.
+  Coral #fd6b52 is an accent on the ink, never text on white — 2.84:1 there.
+  Navy #012765 on white is 14.23:1. README.md carries both measurements.
 -->
-<!-- cspell:ignore currentColor -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2304 724" role="img" aria-labelledby="t">
+  <style>svg:root { color: #012765 }</style>
   <title id="t">Convener</title>
   <g fill="none" stroke="currentColor" stroke-linecap="butt">
     <path d="M 559.36 469.72 A 151.24 151.24 0 1 1 559.36 275.28" stroke-width="50.51"/>
