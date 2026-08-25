@@ -2,3 +2,4 @@
  * it typed. The script itself stays plain ESM -- see handbook-files.d.mts
  * for why. */
 export declare function cspMetaContent(env: Record<string, string | undefined>): string;
+export declare function devCspMetaContent(env: Record<string, string | undefined>): string;

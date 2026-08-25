@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { cspMetaContent } from './scripts/csp.mjs';
+import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
 import { exampleInstance } from './scripts/example-instance.mjs';
 import { identity, published } from './scripts/published.mjs';
 
@@ -101,13 +101,28 @@ const INSTANCE_DEFINE = {
 function cspHtmlPlugin(): Plugin {
   return {
     name: 'convener-csp-meta',
-    transformIndexHtml() {
+    // `ctx.server` is set when this hook runs for the development server
+    // and absent on a build -- the one fact that tells the two apart from
+    // inside the hook, and read here rather than kept as plugin state so
+    // that nothing has to stay in step with a `configResolved`.
+    //
+    // Phase 11: this used to inject the shipped policy in both, and
+    // `script-src 'self'` refuses `@vitejs/plugin-react`'s inline React
+    // Refresh preamble -- so `npm run dev` served a blank page from the
+    // day the policy landed (2026-08-23) until this. `apply: 'build'`
+    // would have fixed the page by removing the policy from the only
+    // place a violation is actually looked at; see `scripts/csp.mjs`'s own
+    // "The development server needs two of these loosened" for why the
+    // development server carries a policy of its own instead.
+    transformIndexHtml(_html, ctx) {
       return [
         {
           tag: 'meta',
           attrs: {
             'http-equiv': 'Content-Security-Policy',
-            content: cspMetaContent(process.env),
+            content: ctx.server
+              ? devCspMetaContent(process.env)
+              : cspMetaContent(process.env),
           },
           injectTo: 'head-prepend',
         },

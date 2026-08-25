@@ -489,6 +489,29 @@ the showcase's pages never call the GitHub API or the authentication
 relay, and the cockpit's own device sign-in and Contents-API calls have
 no business in a policy served to an anonymous visitor of the showcase.
 
+**The cockpit's development server carries a third, and it is deliberately
+not the one that ships.** Vite runs `transformIndexHtml` for the
+development server as well as for a build, so `npm run dev` was being
+served the policy above — and `script-src 'self'` refuses
+`@vitejs/plugin-react`'s React Refresh preamble, which is an *inline*
+script the plugin writes into every served document. The cockpit's
+development server therefore rendered a blank page from the day the audit
+added the policy (2026-08-23) until phase 11 found it; the published
+artefact was never affected, which is exactly why nobody met it. The
+obvious remedy — not injecting the policy in development at all — was
+rejected: it takes the policy out of the one environment where a
+violation is actually read, so a developer would watch a third-party
+image load in development and have it refused in production, where
+nobody has a console open. `app/scripts/csp.mjs::devCspMetaContent`
+derives a development-only policy from the shipped one instead, adding
+`'unsafe-inline'` to `script-src` and `style-src` and nothing else — an
+external script, a third-party image, a third-party font and a
+connection to an origin the policy does not name are all still refused,
+in front of the person who introduced them. `app/tests/csp.test.ts` holds both halves against the
+real, committed configuration: the development document's own policy
+admits the scripts that document actually contains, and the built
+document carries neither an inline script nor an `'unsafe-inline'`.
+
 **To verify:** build both `site/` and `app/`, serve the result under the
 path prefix `config/instance.json` declares (D-26 — a bare `localhost`
 root hides the path-prefix

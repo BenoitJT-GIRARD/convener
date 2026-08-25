@@ -105,6 +105,35 @@
  *   speaker) is a React-controlled submit that never navigates the
  *   document; `'self'` is a safe, zero-cost default against the day one
  *   does by mistake. Not covered by `default-src` either.
+ *
+ * The development server needs two of these loosened, and only two
+ * ---------------------------------------------------------------------
+ * `transformIndexHtml` runs on the development server as well as on a
+ * build, so this same policy was being injected into the document `npm
+ * run dev` serves -- and `script-src 'self'` refuses
+ * `@vitejs/plugin-react`'s own React Refresh preamble, which is an
+ * *inline* module script the plugin writes into the head. The console
+ * said so in as many words ("Executing inline script violates the
+ * following Content Security Policy directive 'script-src 'self''"), the
+ * plugin then said "@vitejs/plugin-react can't detect preamble", and the
+ * page rendered nothing at all. Since the 2026-08-23 audit added the
+ * policy, `npm run dev` has served a blank page. The shipped artefact was
+ * never affected, which is why it went unnoticed.
+ *
+ * The obvious remedy is `apply: 'build'` on the plugin, and it does work.
+ * It is also the wrong one: it takes the policy out of the one
+ * environment where a violation is *seen*. A developer who adds an
+ * `<img src="https://third-party.example/...">` to a screen would watch
+ * it load in development and have it refused in production, where nobody
+ * is reading a console -- which is the exact class of defect the audit
+ * that introduced this policy was about (`tests/demo-network.test.tsx`
+ * had already written down that a third-party `<img>` was held by
+ * nothing). So the development server carries a policy of its own,
+ * derived from the shipped one by `devCspMetaContent` below rather than
+ * written out a second time, loosening exactly the directives Vite's own
+ * development server requires and no others -- so `img-src`, `font-src`,
+ * `connect-src`, `default-src`, `base-uri`, `object-src` and
+ * `form-action` all still bite while a developer is looking.
  */
 
 const GITHUB_API_ORIGIN = 'https://api.github.com';
@@ -136,4 +165,55 @@ export function cspMetaContent(env) {
     "object-src 'none'",
     "form-action 'self'",
   ].join('; ');
+}
+
+/**
+ * What the development server has to be admitted that the published
+ * document does not, directive by directive, with the thing that needs it
+ * named beside each. Nothing here reaches a built artefact: `vite.config.
+ * ts`'s own `cspHtmlPlugin` reads it only when `transformIndexHtml` is
+ * called with a `server` in its context, and `app/tests/csp.test.ts`
+ * asserts on the real built HTML that it did not.
+ *
+ * - `script-src 'unsafe-inline'`: `@vitejs/plugin-react`'s React Refresh
+ *   preamble, an inline module script the plugin injects into every
+ *   served document. A hash would be narrower and was rejected: the
+ *   preamble's text contains this build's own base path, so the hash
+ *   would change with `config/instance.json` and again with any version
+ *   bump of the plugin, and the failure it produces -- a blank page with
+ *   one console line -- is exactly the one this is fixing.
+ * - `style-src 'unsafe-inline'`: in development Vite serves each CSS
+ *   import as a module that injects a `<style>` element at run time,
+ *   rather than as the one built stylesheet the published document links.
+ *
+ * `connect-src` is deliberately *not* here, and that was checked rather
+ * than assumed: the hot-reload socket is `ws://` on the same host, which
+ * `'self'` already matches (CSP Level 3), and a browser driven at the
+ * real development server logs `[vite] connected.` under the policy
+ * above.
+ */
+const DEVELOPMENT_ONLY = {
+  'script-src': "'unsafe-inline'",
+  'style-src': "'unsafe-inline'",
+};
+
+/**
+ * The policy the development server's own document carries: the shipped
+ * one, with `DEVELOPMENT_ONLY`'s additions folded into the directives it
+ * names.
+ *
+ * Derived from `cspMetaContent` rather than written out again, for the
+ * reason this project derives everything else: a second list would be a
+ * second policy, free to stop agreeing with the one that ships the day
+ * somebody adds a directive to only one of them.
+ */
+export function devCspMetaContent(env) {
+  return cspMetaContent(env)
+    .split('; ')
+    .map((directive) => {
+      const name = directive.split(' ')[0];
+      const extra = DEVELOPMENT_ONLY[name];
+      return extra ? `${directive} ${extra}` : directive;
+    })
+    .join('; ');
 }
