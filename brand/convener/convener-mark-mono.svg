@@ -17,6 +17,7 @@
   Colours: navy #012765 (14.23:1 on white), coral #fd6b52 (2.84 on white, 5.00
   on navy — an accent on navy, never text on white). See README.md.
 -->
+<!-- cspell:ignore currentColor -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
   <title id="t">Convener</title>
   <g fill="none" stroke="currentColor" stroke-linecap="butt">

@@ -49,12 +49,17 @@ Named `convener-<layout>-<treatment>-<background>.png`.
 `light` or `dark`. **None is transparent** — pick the file whose background
 matches the surface it sits on.
 
-The `banner-mono-*` and the `stacked-*` files carry the strapline
-*PLAN · HOST · SHARE*; the rest do not. **The bare lockups are the stronger
-ones** and should lead.
+The `banner-mono-*` and the `stacked-*` files carry the line
+*PLAN · HOST · SHARE* beneath the wordmark; the rest do not. **The bare ones are
+stronger** and should lead.
 
-**There is no `mark-mono`.** It is what a favicon and a small avatar want. With a
-single ink plus one dot it is a trivial derivation — see below.
+**There is no raster `mark-mono`** — but `convener-mark-mono.svg` is exactly
+that, and it inherits `currentColor`, so it takes the colour of whatever it sits
+in rather than needing one file per surface.
+
+**At 16 px the inner arc thins to a hairline.** It is still legible, but a true
+16 px favicon would be better served by a variant with a heavier inner stroke, or
+by the outer arc and the dot alone. Rendered and looked at, not assumed.
 
 ## What is still missing
 
