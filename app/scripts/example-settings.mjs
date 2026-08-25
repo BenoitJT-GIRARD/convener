@@ -1,0 +1,106 @@
+/**
+ * The example instance's own settings, on their way into the
+ * demonstration.
+ *
+ * Phase 11, task 5. The settings screen reads six files: the two in
+ * `config/` the *product* owns (`boundary.yml`, which says what an instance
+ * owns, and `integrations.yml`, which says what every external dependency
+ * is for) and the four that instance owns. Signed in, it reads all six from
+ * the repository through `github/contents.ts`. In demo mode it cannot: a
+ * demonstration reads only from the origin that served it
+ * (`src/net/request.ts`), and it has no repository at all.
+ *
+ * So the demonstration reads the example instance instead -- the same one
+ * `src/data/demo.ts` already shows, the one
+ * `tools/tests/test_second_instance.py` lays into this repository's own
+ * holes on every run. Its four `config/` files are in
+ * `instances/example/config/`; the two product files are this
+ * repository's own, because they are the product's and a duplicate does not
+ * have its own copy of them.
+ *
+ * Read as bytes, never parsed here -- exactly as `example-instance.mjs`
+ * reads the example's data. `src/settings/declaration.ts` parses them, the
+ * very reader the signed-in path parses the real files with, so the
+ * demonstration exercises the code the cockpit actually runs rather than a
+ * shape somebody laid out to look like it.
+ *
+ * The one exception is the drain's schedule, and the exception is
+ * deliberate. `.github/workflows/sweep-and-notify.yml` is fifty-four
+ * kilobytes and carries every step of the daily job; what the bounds need
+ * out of it is its `on:` block. This module converts that one subtree from
+ * YAML to JSON and carries it -- a change of format, not a reading of
+ * meaning. Which cron shapes may be put a number on, and what number, stays
+ * where it belongs: `src/settings/bounds.ts::drainPeriodHours`, pinned to
+ * `registration_routing.drain_period_hours` by
+ * `tools/tests/fixtures/instance-settings.json`.
+ *
+ * Throws rather than defaulting, the same rule `published.mjs` and
+ * `example-instance.mjs` both follow: a build that cannot read the example
+ * cannot demonstrate it, and the alternative to stopping is a settings
+ * screen whose every bound reads `undefined`.
+ */
+
+import { readFileSync } from 'node:fs';
+import yaml from 'js-yaml';
+
+/** This repository's own root, from this file's location -- the app's build
+ *  runs with `app/` as its working directory, so a path relative to the
+ *  process is not the same thing. */
+const ROOT = new URL('../../', import.meta.url);
+
+/** The two files in `config/` the product owns. Not taken from
+ *  `instances/example/`, which does not hold them and must not: they are
+ *  the product's, and a duplicate inherits them rather than writing its
+ *  own. */
+const PRODUCT_FILES = ['config/boundary.yml', 'config/integrations.yml'];
+
+/** The four the instance owns, read from the example's own copies. Named by
+ *  their `config/` path, which is where they sit in the tree the screen
+ *  describes -- `instances/example/` is where this build finds them, not
+ *  what they are. */
+const INSTANCE_FILES = [
+  'config/actions-budget.yml',
+  'config/instance.json',
+  'config/queue-drain.yml',
+  'config/registration-lanes.yml',
+];
+
+const DRAIN_WORKFLOW = '.github/workflows/sweep-and-notify.yml';
+
+function read(relative, named) {
+  const text = readFileSync(new URL(relative, ROOT), 'utf8');
+  if (text.trim() === '') {
+    throw new Error(`${named} is empty -- the demonstration would have no ${named} to show`);
+  }
+  return text;
+}
+
+/**
+ * The whole of what the demonstration's settings screen reads, as text.
+ *
+ * All six files, always, and in one call: they are one repository's answer
+ * to one question, and a build that carried the boundary of one and the
+ * thresholds of another would be describing an instance nobody has.
+ */
+export function exampleSettings() {
+  const files = {};
+  for (const name of PRODUCT_FILES) files[name] = read(name, name);
+  for (const name of INSTANCE_FILES) {
+    files[name] = read(`instances/example/${name}`, `instances/example/${name}`);
+  }
+
+  const workflow = yaml.load(read(DRAIN_WORKFLOW, DRAIN_WORKFLOW));
+  // `on:` resolves to the string key under this reader and to the boolean
+  // `true` under PyYAML's YAML-1.1 resolver; `drainSchedule` in
+  // `src/settings/bounds.ts` reads both, so what is carried here is the
+  // whole `on:` block under whichever key it was found, and nothing here
+  // decides anything about it.
+  const triggers = workflow?.on ?? workflow?.true;
+  if (triggers === undefined) {
+    throw new Error(
+      `${DRAIN_WORKFLOW} declares no \`on:\` block, so the demonstration has ` +
+        "no drain cadence to derive the queue alarm's bounds from",
+    );
+  }
+  return { files, drainTriggers: { on: triggers } };
+}

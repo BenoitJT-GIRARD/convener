@@ -3,6 +3,7 @@ import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
 import { exampleInstance } from './scripts/example-instance.mjs';
+import { exampleSettings } from './scripts/example-settings.mjs';
 import { editionPrefix, identity, published } from './scripts/published.mjs';
 
 /**
@@ -85,6 +86,26 @@ const EXAMPLE = exampleInstance();
  * A bare string rather than JSON, unlike the two above: this one is a
  * single value, not a vocabulary that grows by a word.
  */
+/**
+ * Phase 11, task 5: the six declarations the settings screen reads, for the
+ * demonstration only.
+ *
+ * Signed in, that screen reads `config/` and the drain's workflow straight
+ * out of the repository through the Contents API. A demonstration has no
+ * repository and may read nothing but the origin that served it
+ * (`src/net/request.ts`), so the example instance's four `config/` files
+ * and the product's two travel in the bundle instead -- as text, parsed by
+ * the application's own reader, exactly as `EXAMPLE` above carries the
+ * example's data.
+ *
+ * Declared for all four configurations along with the rest, for the same
+ * reason: no island references it and `define` only substitutes a token a
+ * bundle actually contains, but a value present in one configuration and
+ * absent from another is the shape that passes a test suite and ships
+ * broken.
+ */
+const EXAMPLE_SETTINGS = exampleSettings();
+
 const EDITION_PREFIX = editionPrefix();
 
 const INSTANCE_DEFINE = {
@@ -92,6 +113,7 @@ const INSTANCE_DEFINE = {
   'import.meta.env.VITE_INSTANCE_IDENTITY': JSON.stringify(JSON.stringify(IDENTITY)),
   'import.meta.env.VITE_INSTANCE_EDITION_PREFIX': JSON.stringify(EDITION_PREFIX),
   'import.meta.env.VITE_EXAMPLE_INSTANCE': JSON.stringify(JSON.stringify(EXAMPLE)),
+  'import.meta.env.VITE_EXAMPLE_SETTINGS': JSON.stringify(JSON.stringify(EXAMPLE_SETTINGS)),
 };
 
 /**
@@ -361,6 +383,13 @@ export default defineConfig(({ mode }) => {
           // the demo-mode promise rests on, exactly as directly as
           // `verify/register.ts` rests on the certificate promise.
           'src/net/**',
+          // Phase 11 task 5: the bounds a settings field refuses on, the
+          // reader of the boundary declaration, and the surgical edit that
+          // keeps a config file's own argument for itself. Pure logic a
+          // promise rests on, in the same class -- a bound computed
+          // differently here from the one the scheduled job enforces is
+          // the whole defect that screen exists to prevent.
+          'src/settings/**',
           'src/signup/encrypt.ts',
           'src/survey/encrypt.ts',
           'src/verify/verify.ts',

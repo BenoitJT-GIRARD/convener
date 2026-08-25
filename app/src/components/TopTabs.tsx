@@ -10,6 +10,7 @@ const LINKS = [
   { to: '/consent', label: 'Consent' },
   { to: '/handbook', label: 'Handbook' },
   { to: '/templates', label: 'Templates' },
+  { to: '/settings', label: 'Settings' },
 ];
 
 export function TopTabs() {

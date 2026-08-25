@@ -1,13 +1,20 @@
 """External integrations: what they need, and what happens without them.
 
-An integration with no secret set is *absent*. For every integration but
-one, that is a normal state -- never an error, and nothing in this module
-raises because a secret is missing. The one exception is declared, not
-hard-coded here: `absent_is_normal: false` in `config/integrations.yml`
-(carried on `Integration` below) marks a row whose absence is not a
-harmless fallback. `event_keys` is that row today -- see
-`tools/convener_ops/eventkeys.py` for why -- and `cli.py::render_check` is what
-turns the flag into the operator-facing text.
+An integration with no secret set is *absent*. For most integrations that
+is a normal state -- never an error, and nothing in this module raises
+because a secret is missing. The exceptions are declared, not hard-coded
+here: `absent_is_normal: false` in `config/integrations.yml` (carried on
+`Integration` below) marks a row whose absence is not a harmless fallback,
+and `cli.py::render_check` is what turns the flag into the operator-facing
+text.
+
+**Three rows carry it today**, not one -- `event_keys` (see
+`tools/convener_ops/eventkeys.py`), `retention_token` and
+`certificate_fingerprint`. This paragraph used to say "the one exception ...
+`event_keys` is that row today", which was true when it was written and had
+quietly stopped being so; phase 11 task 5 corrected it while counting the
+rows for the cockpit's settings screen. Nothing here reads the count, which
+is exactly why nothing noticed.
 """
 
 from __future__ import annotations

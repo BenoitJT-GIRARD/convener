@@ -221,7 +221,7 @@ describe('the grammar of decision commits', () => {
     expect(message).not.toMatch(/regex|token|TOKEN|\/\^/);
   });
 
-  it('is the only place in the app a `data:` subject is assembled', () => {
+  it('is the only place in the app a `data:` or `config:` subject is assembled', () => {
     // The eight ad-hoc template literals this replaced were not caught by
     // anything: none of them opened with an act phrase, so `_claimed_kind`
     // returned nothing and `convener-check-commits` passed them in silence. One
@@ -244,14 +244,20 @@ describe('the grammar of decision commits', () => {
         .map((text, i) => ({ file: f, line: i + 1, text }))
         // Code, not the comments that quote a subject to explain it.
         .filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l.text))
-        // Any quote, and no space required: the defect is a `data:` subject
+        // Any quote, and no space required: the defect is a subject
         // assembled outside this module, not the one spelling of it the
         // guard was first written against. A backtick-only pattern let
         // `'data: add lead ' + fields.name` through, and a split template
         // (`` `data:` `` then the rest) with it.
-        .filter(l => /[`'"]data:/.test(l.text)),
+        //
+        // `config:` joined `data:` in phase 11 task 5, when the settings
+        // screen gained a domain of its own: those commits change a
+        // threshold in `config/`, name no record and no person, and are
+        // deliberately not decisions -- but they are still permanent
+        // subjects, so they are assembled in exactly one place too.
+        .filter(l => /[`'"](?:data|config):/.test(l.text)),
     );
-    expect(subjects.map(s => `${s.file}:${s.line}`)).toHaveLength(2);
+    expect(subjects.map(s => `${s.file}:${s.line}`)).toHaveLength(3);
     for (const s of subjects) expect(s.file).toMatch(/decisions\.ts$/);
   });
 

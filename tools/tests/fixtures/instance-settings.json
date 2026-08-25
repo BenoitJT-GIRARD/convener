@@ -1,0 +1,331 @@
+{
+  "_comment": "The D-14 boundary between the arithmetic that decides an instance threshold in Python -- registration_routing.drain_period_hours, registration_routing.floor_hours, queue_watch.alarm_bounds, queue_watch.silence_floor_days, and the three closed-shape parsers beside them -- and the copy of it the cockpit's settings screen runs in a volunteer's browser (app/src/settings/bounds.ts). The browser needs it because a file accepts a value nothing looks at until the next scheduled run, while a form computes the bound as somebody types and refuses; a form that computed a *different* bound from the one the tooling enforces would be worse than no form at all, so the two answer the cases below and must agree on every one. Read by tools/tests/test_instance_settings.py and app/tests/settings-bounds.test.ts.",
+
+  "drain_cadence": {
+    "_comment": "What a schedule block means, in hours. Only `schedule:` counts -- `push:` and `workflow_dispatch:` can start the same job and neither is a cadence. `hours: null` is a refusal: the shape is one this arithmetic will not put a number on, and refusing is the whole point, because a floor built on a guessed cadence is a floor that lets a registration miss its own seminar.",
+    "cases": [
+      { "schedule": [{ "cron": "0 5 * * *" }], "hours": 24, "why": "sweep-and-notify.yml's own cron today" },
+      { "schedule": [{ "cron": "30 23 * * *" }], "hours": 24, "why": "any fixed minute and hour, every day" },
+      { "schedule": [{ "cron": "  0 5 * * *  " }], "hours": 24, "why": "surrounding whitespace is not a different schedule" },
+      { "schedule": [], "hours": null, "why": "nothing guarantees the drain runs at all" },
+      { "schedule": [{ "cron": "0 5 * * *" }, { "cron": "0 17 * * *" }], "hours": null, "why": "the worst-case gap between two schedules is not a thing to guess at" },
+      { "schedule": [{ "cron": "0 */6 * * *" }], "hours": null, "why": "a step is not a fixed hour" },
+      { "schedule": [{ "cron": "0 5 * * 1" }], "hours": null, "why": "a day-of-week restriction makes the period a week, sometimes" },
+      { "schedule": [{ "cron": "0 5,17 * * *" }], "hours": null, "why": "a list of hours is two schedules written as one" },
+      { "schedule": [{ "cron": "0 5 1 * *" }], "hours": null, "why": "a day-of-month restriction is monthly, not daily" },
+      { "schedule": [{ "cron": "" }], "hours": null, "why": "an empty cron schedules nothing" },
+      { "schedule": [{ "not_cron": "0 5 * * *" }], "hours": null, "why": "an entry with no cron: key" }
+    ]
+  },
+
+  "bounds": {
+    "_comment": "The floor and the ceiling on config/queue-drain.yml's alarm_after_hours, from the drain's own period and from config/registration-lanes.yml's queue_beyond_hours. The floor is MISSED_DRAINS_COVERED periods: a drain that has not happened yet is not evidence of anything. The ceiling is queue_beyond_hours minus those same two periods: one is spent before the clock starts (the age is measured from the first drain that *observed* the entry) and one has to be left after the alarm, or the operator hears about a registration as its seminar begins. lane_floor is the same two periods seen from the other file. The two can meet -- with this repository's settings they do -- and they can cross, which is a finding rather than a broken test.",
+    "cases": [
+      {
+        "period_hours": 24,
+        "queue_beyond_hours": 96,
+        "alarm_floor": 48,
+        "alarm_ceiling": 48,
+        "lane_floor": 48,
+        "silence_floor_days": 2,
+        "why": "this repository today: the two meet at 48, so exactly one value is legal and nothing in the file says so"
+      },
+      {
+        "period_hours": 24,
+        "queue_beyond_hours": 168,
+        "alarm_floor": 48,
+        "alarm_ceiling": 120,
+        "lane_floor": 48,
+        "silence_floor_days": 2,
+        "why": "a series announcing a week ahead has a range to choose inside"
+      },
+      {
+        "period_hours": 24,
+        "queue_beyond_hours": 72,
+        "alarm_floor": 48,
+        "alarm_ceiling": 24,
+        "lane_floor": 48,
+        "silence_floor_days": 2,
+        "why": "crossed: the lane threshold is cut so close to the cadence that no alarm can both wait for a healthy drain and leave anybody time to act"
+      },
+      {
+        "period_hours": 12,
+        "queue_beyond_hours": 96,
+        "alarm_floor": 24,
+        "alarm_ceiling": 72,
+        "lane_floor": 24,
+        "silence_floor_days": 1,
+        "why": "a drain twice a day: every bound halves, and the silence floor rounds up rather than falling below a day"
+      },
+      {
+        "period_hours": 1,
+        "queue_beyond_hours": 96,
+        "alarm_floor": 2,
+        "alarm_ceiling": 94,
+        "lane_floor": 2,
+        "silence_floor_days": 1,
+        "why": "an hourly drain: two hours of margin, and a silence floor that must not become nought days"
+      }
+    ]
+  },
+
+  "edited": {
+    "_comment": "The closed set of settings the cockpit's form offers, and the minimum each file's own reader puts on each of them. It is a set rather than a discovery because the readers are closed shapes: queue_watch.thresholds_from_data, registration_routing.threshold_from_data and actions_usage.budget_from_data each refuse, by name, any key they do not know, so a key the form invented would be a value written into a file the next scheduled run stops on rather than works from. `least` is that reader's own minimum, driven against it rather than trusted; warn_at_share has none because its interval is ]0, 1] and the lower end is open, which is `kind: share`.",
+    "keys": [
+      { "file": "config/queue-drain.yml", "key": "alarm_after_hours", "kind": "whole", "least": 1 },
+      { "file": "config/queue-drain.yml", "key": "max_silent_days", "kind": "whole", "least": 1 },
+      { "file": "config/registration-lanes.yml", "key": "queue_beyond_hours", "kind": "whole", "least": 1 },
+      { "file": "config/actions-budget.yml", "key": "monthly_minutes", "kind": "whole", "least": 1 },
+      { "file": "config/actions-budget.yml", "key": "window_days", "kind": "whole", "least": 1 },
+      { "file": "config/actions-budget.yml", "key": "warn_at_share", "kind": "share", "least": null },
+      { "file": "config/actions-budget.yml", "key": "submissions_per_day", "kind": "whole", "least": 1 },
+      { "file": "config/actions-budget.yml", "key": "max_runs", "kind": "whole", "least": 1 },
+      { "file": "config/actions-budget.yml", "key": "max_silent_days", "kind": "whole", "least": 0 }
+    ]
+  },
+
+  "instance_paths": {
+    "_comment": "Every path this repository's declaration hands to the instance, from both of its halves -- config/boundary.yml's own list, plus each file in config/ whose header says `owner: instance`. Both readers derive it (boundary.Boundary.instance_paths on the Python side, declaration.instancePaths in the browser) and both are checked against this line, so a path that appeared on one side only fails here rather than becoming a settings screen offering to edit a file upstream owns. Adding a file to config/, or an entry to the declaration, means editing this line in the same commit -- a deliberate speed bump on a boundary change.",
+    "paths": [
+      "config/actions-budget.yml",
+      "config/instance.json",
+      "config/queue-drain.yml",
+      "config/registration-lanes.yml",
+      "data/",
+      "docs/governance/register.md",
+      "keys/",
+      "public-data/"
+    ]
+  },
+
+  "settings": {
+    "_comment": "One typed value, judged. `context` is what the rest of the repository held when it was typed; `accepted` is whether it may be written; `bound` names which end refused it, and is the word both sides expect to find in the refusal they show, so a message that said only `invalid` would fail here. Every coupled key carries a case one below its floor and one above its ceiling, because those two are the whole reason this screen exists.",
+    "cases": [
+      {
+        "file": "config/queue-drain.yml",
+        "key": "alarm_after_hours",
+        "value": 48,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "the only value today's settings admit"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "alarm_after_hours",
+        "value": 47,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "one hour below twice the drain's period: the alarm fires before a healthy drain has had its chance"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "alarm_after_hours",
+        "value": 49,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "ceiling",
+        "why": "one hour above queue_beyond_hours minus two periods: the board hears about a registration after its seminar has begun"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "alarm_after_hours",
+        "value": 96,
+        "context": { "period_hours": 24, "queue_beyond_hours": 168, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "inside the range a longer lane threshold buys"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "alarm_after_hours",
+        "value": 121,
+        "context": { "period_hours": 24, "queue_beyond_hours": 168, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "ceiling",
+        "why": "past the ceiling a longer lane threshold buys, which moves rather than disappearing"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "alarm_after_hours",
+        "value": 0,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "a threshold of nought is not a threshold; the parser refuses it before the bound does"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "max_silent_days",
+        "value": 2,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "one missed day absorbs a late schedule, two in a row is a signal"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "max_silent_days",
+        "value": 1,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "a record that must move every day calls a single dropped schedule a dead drain"
+      },
+      {
+        "file": "config/queue-drain.yml",
+        "key": "max_silent_days",
+        "value": 7,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "only floored, never pinned -- there is a real choice in this file even today"
+      },
+      {
+        "file": "config/registration-lanes.yml",
+        "key": "queue_beyond_hours",
+        "value": 96,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "two full days above the lane's own floor, deliberately"
+      },
+      {
+        "file": "config/registration-lanes.yml",
+        "key": "queue_beyond_hours",
+        "value": 95,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "coupling",
+        "why": "the other end of the same coupling, seen from this file: it takes alarm_after_hours' ceiling below the 48 already written next door"
+      },
+      {
+        "file": "config/registration-lanes.yml",
+        "key": "queue_beyond_hours",
+        "value": 47,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 24 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "below twice the drain's period a far-lane registrant whose drain was dropped never gets their link"
+      },
+      {
+        "file": "config/registration-lanes.yml",
+        "key": "queue_beyond_hours",
+        "value": 168,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "raising it is what buys the alarm slack"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "monthly_minutes",
+        "value": 2000,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "the free monthly allowance this organisation is on"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "monthly_minutes",
+        "value": 0,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "an allowance of nought makes every projection an alarm"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "warn_at_share",
+        "value": 0.75,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "three quarters leaves a week of the month to react in"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "warn_at_share",
+        "value": 1,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "the interval is ]0, 1], so the whole allowance is a legal warning point"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "warn_at_share",
+        "value": 1.25,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "ceiling",
+        "why": "a warning past the whole allowance is a warning that arrives after the bill"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "warn_at_share",
+        "value": 0,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "warning at nought is warning always, which is warning never"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "max_silent_days",
+        "value": 0,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "this file's own tolerance is floored at nought, not at the drain's cadence: nothing derives it from a cron"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "max_silent_days",
+        "value": -1,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "a tolerance below nought is not a tolerance"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "window_days",
+        "value": 7,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "a week, because what has to be visible is a rate"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "submissions_per_day",
+        "value": 20,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "the phase-8 audit's own burst figure"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "max_runs",
+        "value": 200,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": true,
+        "bound": null,
+        "why": "a week of scheduled runs plus a busy week of pushes"
+      },
+      {
+        "file": "config/actions-budget.yml",
+        "key": "max_runs",
+        "value": 0,
+        "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
+        "accepted": false,
+        "bound": "floor",
+        "why": "a collector allowed nought runs reports nothing and says so every day"
+      }
+    ]
+  }
+}

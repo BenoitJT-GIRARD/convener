@@ -2030,6 +2030,64 @@ in both directions rather than only on bad news:
   not add to the errors and does not change the exit code; a target that
   could fail a run would be a rule wearing a softer word.
 
+## Settling the thresholds, and where the cockpit refuses
+
+The cockpit's **Settings** screen is where the numbers in `config/` are
+changed. It exists to *validate*, not to host: a file accepts whatever is
+written into it and nothing looks at the value until a scheduled job runs on
+it, whereas the screen computes each bound from the declarations it is
+derived from and refuses at the point of entry, naming the bound and where
+it comes from.
+
+**One pair is coupled, and today it leaves exactly one legal value.**
+`config/queue-drain.yml`'s `alarm_after_hours` is bounded on both sides:
+
+- its **floor** is twice the drain's own cron period in
+  `.github/workflows/sweep-and-notify.yml` (48 hours today) — an alarm that
+  fires before a healthy drain has had its chance is an alarm people learn
+  to ignore;
+- its **ceiling** is `config/registration-lanes.yml`'s `queue_beyond_hours`
+  minus the same margin (96 − 48 = 48 today) — later than that and the Board
+  is told about a registration as its seminar begins.
+
+Those two meet at 48, so raising `queue_beyond_hours` is the only thing that
+buys the alarm any room, and lowering it towards its own floor makes the pair
+impossible. The screen says so before anybody needs it, and refuses either
+end. Editing the files by hand still works and is still checked, but only
+later, by `tools/tests/test_queue_watch.py`.
+
+**When a saved value starts being read is not "on save", and it differs per
+value.** `.github/workflows/deploy.yml` ignores `config/**`, so a commit here
+starts nothing at all:
+
+| value | read by | live from |
+|---|---|---|
+| `alarm_after_hours`, all of `config/actions-budget.yml` | *Sweep and notify the board* | its next run |
+| `config/queue-drain.yml`'s `max_silent_days` | *Retention liveness watchdog* | its next run |
+| `queue_beyond_hours` | the signup relay, through `public-data/registration-routing.json` | the next run of *Deploy app*, which regenerates and commits that file |
+
+Until *Deploy app* runs, a registration is routed on the threshold already
+published in `public-data/registration-routing.json`. Run that workflow by
+hand (`workflow_dispatch`) if the change is urgent; nothing is lost either
+way, because a stale threshold only routes a registration to the wrong
+*lane*.
+
+**`config/instance.json` is reported there and never edited there.** The
+address, the identity and the edition prefix are compiled into the built
+cockpit and the built showcase, so a change takes effect at the next deploy
+and not before — and the screen doing the editing is running on the previous
+build. The edition prefix is frozen besides: it is in published addresses, on
+issued certificates and in key filenames.
+
+**The screen never accepts a secret**, and cannot: the cockpit is a static
+bundle that writes with the signed-in person's own token, so a token able to
+write a repository secret would be a right every Board member held. What it
+does instead is *report* — for each row of `config/integrations.yml`, whether
+the names it declares exist among this repository's Actions secrets and
+variables, and what the code does without them. Names only; no endpoint
+returns a secret's value, and the screen asks for none. Set them where this
+document says: **Settings → Secrets and variables → Actions**.
+
 ## What the Actions runs cost, and the alarm before the budget runs out
 
 Every minute figure written down anywhere in this project is a
