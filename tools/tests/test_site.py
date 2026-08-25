@@ -374,7 +374,8 @@ def test_content_security_policys_connect_src_admits_the_configured_signup_relay
     assert match is not None
     content = match.group(1).replace("&#39;", "'")
     assert (
-        "connect-src 'self' https://convener-signup-relay.example.workers.dev" in content
+        "connect-src 'self' https://convener-signup-relay.example.workers.dev"
+        in content
     ), (
         "the registration island posts straight to the configured signup "
         "relay from this document -- connect-src must admit it or a real "
@@ -398,7 +399,8 @@ def test_the_survey_pages_connect_src_also_admits_the_configured_signup_relay(
     assert match is not None
     content = match.group(1).replace("&#39;", "'")
     assert (
-        "connect-src 'self' https://convener-signup-relay.example.workers.dev" in content
+        "connect-src 'self' https://convener-signup-relay.example.workers.dev"
+        in content
     ), (
         "the survey island posts straight to the configured signup relay "
         "from this document -- connect-src must admit it or a real survey "

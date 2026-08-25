@@ -205,7 +205,9 @@ def test_the_commit_step_uses_a_distinct_bot_identity() -> None:
     makes the commit log say which job produced a given commit without
     opening it."""
     assert 'git config user.name "convener-visuals"' in _WORKFLOW
-    assert 'git config user.email "convener-visuals@users.noreply.github.com"' in _WORKFLOW
+    assert (
+        'git config user.email "convener-visuals@users.noreply.github.com"' in _WORKFLOW
+    )
 
 
 def test_the_commit_step_dispatches_publish_vitrine_after_a_successful_push() -> None:
