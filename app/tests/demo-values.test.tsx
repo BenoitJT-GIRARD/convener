@@ -59,8 +59,8 @@ const EXAMPLE = declaration('instances/example/config/instance.json');
 const EXAMPLE_COUNTER = (
   yaml.load(
     readFileSync(resolve(ROOT, 'instances', 'example', 'data', 'config.yml'), 'utf8'),
-  ) as { vw_counter: number }
-).vw_counter;
+  ) as { next_edition_number: number }
+).next_edition_number;
 
 /** An assertion is only worth making about a value the two instances
  *  actually declare differently. */
@@ -110,7 +110,7 @@ describe('the edition code the demonstration offers', () => {
     disagree('edition_prefix');
     inDemo();
     expect(editionCodePrefix()).toBe(`${EXAMPLE.edition_prefix}-`);
-    expect(nextEditionCode(demoSpeakers(), demoConfig().vw_counter)).toBe(
+    expect(nextEditionCode(demoSpeakers(), demoConfig().next_edition_number)).toBe(
       `${EXAMPLE.edition_prefix}-${EXAMPLE_COUNTER}`,
     );
   });
@@ -118,7 +118,7 @@ describe('the edition code the demonstration offers', () => {
   it('carries nothing of the instance that built the bundle', () => {
     disagree('edition_prefix');
     inDemo();
-    const offered = nextEditionCode(demoSpeakers(), demoConfig().vw_counter);
+    const offered = nextEditionCode(demoSpeakers(), demoConfig().next_edition_number);
     expect(offered.startsWith(`${THIS_INSTANCE.edition_prefix}-`)).toBe(false);
   });
 
@@ -130,7 +130,7 @@ describe('the edition code the demonstration offers', () => {
       .map(s => s.edition_code)
       .filter(Boolean);
     expect(used.length).toBeGreaterThan(0);
-    expect(used).not.toContain(nextEditionCode(demoSpeakers(), demoConfig().vw_counter));
+    expect(used).not.toContain(nextEditionCode(demoSpeakers(), demoConfig().next_edition_number));
   });
 
   it('is still this instance own outside the demonstration', () => {

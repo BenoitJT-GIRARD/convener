@@ -159,7 +159,7 @@ One mapping, with the keys below.
 | Field | Type | Notes |
 |---|---|---|
 | `season` | number | Current season number. |
-| `vw_counter` | number | The next edition number to assign, under the prefix `config/instance.json` declares. |
+| `next_edition_number` | number | The next edition number to assign, under the prefix `config/instance.json` declares. |
 | `overlap_window_days` | number | Forbidden window around each scheduled date, in days. |
 | `seminar_duration_minutes` | number | How long a seminar runs, in minutes. |
 | `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`: above zero, at most one. Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |

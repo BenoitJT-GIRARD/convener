@@ -215,7 +215,7 @@ export const SPEAKERS: Speaker[] = [
 
 export const CONFIG: Config = {
   season: 2026,
-  vw_counter: 12,
+  next_edition_number: 12,
   overlap_window_days: 7,
   seminar_duration_minutes: 90,
   eligibility_share: 0.6666666666666666,

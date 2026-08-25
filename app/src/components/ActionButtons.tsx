@@ -525,7 +525,7 @@ function CandidateDates({
           </label>
           <button
             type="button"
-            onClick={() => config && setEdition(nextEditionCode(speakers, config.vw_counter))}
+            onClick={() => config && setEdition(nextEditionCode(speakers, config.next_edition_number))}
             className="text-xs text-primary-hover underline"
           >
             suggest

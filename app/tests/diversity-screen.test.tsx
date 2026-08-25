@@ -161,7 +161,7 @@ describe('Diversity screen', () => {
     const speakers = allUndisclosed(24);
     for (const s of speakers) s.selection.opened_on = parisToday();
     const config: Config = {
-      season: 2026, vw_counter: 1, overlap_window_days: 7, seminar_duration_minutes: 90,
+      season: 2026, next_edition_number: 1, overlap_window_days: 7, seminar_duration_minutes: 90,
       eligibility_share: 0.6666666666666666,
       board: [{ login: 'alice', joined_on: '2024-01-01', status: 'active', unavailable_until: '' }],
       nominations: [], board_min: 3, board_max: 9, vote_window_days: 10,

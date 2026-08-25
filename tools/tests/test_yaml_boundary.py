@@ -294,7 +294,7 @@ def test_the_config_fixture_carries_every_window_the_two_languages_read() -> Non
     cfg = _config()
     for key in (
         "season",
-        "vw_counter",
+        "next_edition_number",
         "overlap_window_days",
         "seminar_duration_minutes",
         "board_min",

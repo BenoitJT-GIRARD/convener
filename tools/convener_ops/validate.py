@@ -90,7 +90,7 @@ BOARD_STATUSES = frozenset({"active", "inactive"})
 CONFIG_REQUIRED = frozenset(
     {
         "season",
-        "vw_counter",
+        "next_edition_number",
         "overlap_window_days",
         "seminar_duration_minutes",
         "board",
@@ -167,7 +167,7 @@ SLA_DAYS_KEYS = frozenset(
 CONFIG_INTS = (
     *(
         "season",
-        "vw_counter",
+        "next_edition_number",
         "overlap_window_days",
         "seminar_duration_minutes",
         "board_min",

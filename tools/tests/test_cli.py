@@ -257,7 +257,7 @@ def test_sweep_rewrites_the_file_and_keeps_the_header(
     assert "spk-001: scheduled -> delivered" in out
 
     text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
-    assert text.startswith("# Speakers (unified schema v5")
+    assert text.startswith("# Speakers (unified schema v6")
     assert "status: delivered" in text
 
 

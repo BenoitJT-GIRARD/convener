@@ -8,7 +8,7 @@
 # fictional board has no better figure to offer and inventing one would
 # suggest a threshold is identity when it is a rule.
 season: 2026
-vw_counter: 4
+next_edition_number: 4
 overlap_window_days: 7
 board:
 - login: example-alba

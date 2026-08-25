@@ -604,7 +604,7 @@ function readSlaDays(at: Cursor, value: unknown): Config['sla_days'] {
 }
 
 const CONFIG_KEYS = [
-  'season', 'vw_counter', 'overlap_window_days', 'seminar_duration_minutes',
+  'season', 'next_edition_number', 'overlap_window_days', 'seminar_duration_minutes',
   'eligibility_share', 'board', 'nominations', 'board_min', 'board_max',
   'vote_window_days', 'objection_window_working_days', 'inactivity_months',
   'balance_window_months', 'view_count_window_days', 'instructions', 'sla_days',
@@ -628,7 +628,7 @@ export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
   keys(at, raw, CONFIG_KEYS);
   return {
     season: whole(at, raw, 'season'),
-    vw_counter: whole(at, raw, 'vw_counter'),
+    next_edition_number: whole(at, raw, 'next_edition_number'),
     overlap_window_days: whole(at, raw, 'overlap_window_days'),
     seminar_duration_minutes: whole(at, raw, 'seminar_duration_minutes'),
     eligibility_share: share(at, raw, 'eligibility_share'),

@@ -75,7 +75,7 @@ def v2_speaker(**overrides: Any) -> dict[str, Any]:
 def v2_config(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "season": 2026,
-        "vw_counter": 5,
+        "next_edition_number": 5,
         "vote_threshold": 3,
         "overlap_window_days": 7,
         "board_members": ["Anonymous"],

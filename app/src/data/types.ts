@@ -447,7 +447,7 @@ export interface Config {
   season: number;
   /** The next edition number to assign, under the prefix
    *  `config/instance.json` declares. */
-  vw_counter: number;
+  next_edition_number: number;
   /** Forbidden window around each scheduled date, in days. */
   overlap_window_days: number;
   /** How long a seminar runs, in minutes. */

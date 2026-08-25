@@ -10,7 +10,7 @@ import type { Config, Speaker } from '../src/data/types';
 import { speaker as double } from './data-doubles';
 
 const config: Config = {
-  season: 2026, vw_counter: 5, overlap_window_days: 7,
+  season: 2026, next_edition_number: 5, overlap_window_days: 7,
   seminar_duration_minutes: 90, eligibility_share: 0.6666666666666666, board: [], nominations: [],
   board_min: 3, board_max: 9, vote_window_days: 14,
   objection_window_working_days: 5, inactivity_months: 6,

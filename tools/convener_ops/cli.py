@@ -121,7 +121,7 @@ from convener_ops.yaml_safe import safe_load as yaml_safe_load
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
 #: same two strings: it is the browser's half of this file format, and the
 #: YAML-boundary fixture is written by one side and read by the other.
-SPEAKERS_HEADER = "# Speakers (unified schema v5 — see docs/reference/schema.md)\n"
+SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/reference/schema.md)\n"
 CONFIG_HEADER = "# Repo-wide config for the Convener app\n"
 #: certificates.yml holds no name and no address by construction -- see
 #: tools/convener_ops/certificate.py's module docstring for why this file

@@ -29,7 +29,7 @@ function member(login: string): BoardMember {
 function config(overrides: Partial<Config> = {}): Config {
   return {
     season: 2026,
-    vw_counter: 6,
+    next_edition_number: 6,
     overlap_window_days: 7,
     seminar_duration_minutes: 90,
     eligibility_share: 0.6666666666666666,

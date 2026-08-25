@@ -53,9 +53,9 @@ describe('DataProvider (demo mode)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vw_counter: 5 }), SUBJECT);
+      await result.current.mutateConfig(current => ({ ...current, next_edition_number: 5 }), SUBJECT);
     });
-    expect(result.current.config?.vw_counter).toBe(5);
+    expect(result.current.config?.next_edition_number).toBe(5);
   });
 
   it('useData throws when used outside a provider', () => {
@@ -306,11 +306,11 @@ describe('DataProvider (real GitHub backend)', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 7 }), SUBJECT);
+      ok = await result.current.mutateConfig(current => ({ ...current, next_edition_number: 7 }), SUBJECT);
     });
     expect(ok).toBe(true);
     expect(result.current.cfgSha).toBe('newcfgsha');
-    expect(result.current.config?.vw_counter).toBe(7);
+    expect(result.current.config?.next_edition_number).toBe(7);
   });
 
   it('mutateSpeakers PUTs the serialized YAML computed from current, and updates the sha', async () => {
@@ -516,7 +516,7 @@ describe('DataProvider (real GitHub backend)', () => {
 
     let ok: boolean | undefined;
     await act(async () => {
-      ok = await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), SUBJECT);
+      ok = await result.current.mutateConfig(current => ({ ...current, next_edition_number: 9 }), SUBJECT);
     });
 
     expect(ok).toBe(false);
@@ -545,7 +545,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     await act(async () => {
-      await result.current.mutateConfig(current => ({ ...current, vw_counter: 9 }), SUBJECT);
+      await result.current.mutateConfig(current => ({ ...current, next_edition_number: 9 }), SUBJECT);
     });
     expect(result.current.saveError).not.toBeNull();
     act(() => result.current.clearSaveError());
