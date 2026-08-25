@@ -1,5 +1,5 @@
 <!--
-  Convener - the full lockup, as vectors.
+  Convener - the mark and wordmark together, as vectors.
 
   The mark is geometry measured off convener-mark-colour-light.png and overlays
   that raster exactly; see convener-mark.svg for the numbers.
@@ -18,13 +18,14 @@
   (fonts/, Archivo-LICENSE.txt), and the glyphs here are paths - no font is
   needed at render time.
 
-  It reads about 9% wider than the raster lockup (1333px against 1223px at the
+  It reads about 9% wider than the raster version (1333px against 1223px at the
   same 210px cap height) because Archivo is a grotesque and the raster's face is
   geometric. That difference is deliberate: matching it would mean condensing
   Archivo to imitate a face this project has decided not to use.
 
   navy #012765 - coral #fd6b52. See README.md for the measured contrasts.
 -->
+<!-- cspell:ignore currentColor -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2304 724" role="img" aria-labelledby="t">
   <title id="t">Convener</title>
   <g fill="none" stroke="currentColor" stroke-linecap="butt">

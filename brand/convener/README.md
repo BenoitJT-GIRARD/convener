@@ -96,4 +96,4 @@ same cap height) because Archivo is a grotesque and the raster's face is
 geometric. **Matching it would mean condensing Archivo to imitate a face this
 project has decided not to use**, which is the wrong trade.
 
-The raster lockups stay for now. Compare them and pick which leads.
+The raster versions stay for now. Compare them and pick which leads.
