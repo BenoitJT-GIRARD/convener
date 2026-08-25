@@ -68,7 +68,32 @@ declared source with measured contrast. A PNG derives from nothing: it cannot be
 recoloured by rule for a dark surface, and it is sharp only at the sizes it was
 exported at.
 
-That mattered before; it matters **more** now, because the mark has become simple
-enough that the vector form is a handful of arcs and a circle. `convener-mark.svg`
-in this directory is that reconstruction — see its own header for what was
-measured and what it does not cover.
+## The vectors
+
+| file | what it is |
+|---|---|
+| `convener-mark.svg` | the mark, navy and coral |
+| `convener-mark-mono.svg` | the mark, `currentColor` — takes the colour of whatever it sits in |
+| `convener-banner.svg` | mark and wordmark, navy and coral |
+| `convener-banner-mono.svg` | the same, `currentColor` |
+
+**The mark is measured, not traced** — radii, stroke widths and one 81° opening
+read off the raster and rebuilt as two arcs and a circle. It overlays the PNG
+exactly; that was rendered and looked at, not assumed.
+
+**The wordmark is not the face in the raster, and that face was not identified.**
+The only Archivo axis pair whose proportions match it is weight 800 at width 80 —
+a condensed heavy the logo visibly is not, so a coincidence rather than a match.
+Two alternatives were rejected: tracing letterforms out of a raster gives exactly
+the wobbly curves a vector exists to avoid, and building a publicly redistributed
+product's identity on an unidentified, unlicensed face is a liability.
+
+So the wordmark is **Archivo at weight 400** — the face and weight
+`data/brand.json` already declares as `body`, already shipped here under the SIL
+Open Font License 1.1 — converted to outlines, so no font is needed at render
+time. It reads about 9 % wider than the raster (1333 px against 1223 px at the
+same cap height) because Archivo is a grotesque and the raster's face is
+geometric. **Matching it would mean condensing Archivo to imitate a face this
+project has decided not to use**, which is the wrong trade.
+
+The raster lockups stay for now. Compare them and pick which leads.
