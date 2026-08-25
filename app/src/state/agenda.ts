@@ -1,5 +1,7 @@
 import type { Speaker } from '../data/types';
-import { editionCodePrefix } from '../instance';
+import { isDemoMode } from '../data/demo';
+import { editionPrefix } from '../instance';
+import { exampleEditionPrefix } from '../settings/example';
 
 export interface OverlapHit {
   speaker: Speaker;
@@ -28,7 +30,31 @@ export function findOverlaps(
 }
 
 /**
- * The next edition code to offer, under the prefix *this* instance
+ * `MRG-` -- what an edition code starts with, separator included, for the
+ * instance whose records are on screen. The hyphen is the product's, not
+ * the declaration's: see `published.py::EditionPrefix.code_prefix`.
+ *
+ * Here rather than beside `editionPrefix` in `../instance.ts`, and that
+ * is the whole correction. `instance.ts` answers one question -- what
+ * does the instance that *built this bundle* declare -- and in demo mode
+ * that is the wrong instance to ask. The demonstration shows
+ * `instances/example/`: its records, its board, its counter. A prefix
+ * taken from the build therefore offered `MRG-4` for a series numbered
+ * `MRG-1`, `MRG-2`, `MRG-3` -- a code belonging to neither instance, on
+ * the first control a visitor touches on a screen that invites them to
+ * number an edition. The demo band did not cover it either: it says
+ * where the *records* come from, not where an offered code comes from.
+ *
+ * Nothing new is carried to fix it. The example's own declaration is
+ * already in this bundle for the settings screen, and
+ * `settings/example.ts` is the one reader of it.
+ */
+export function editionCodePrefix(): string {
+  return `${isDemoMode() ? exampleEditionPrefix() : editionPrefix()}-`;
+}
+
+/**
+ * The next edition code to offer, under the prefix the instance on screen
  * declares (`config/instance.json::edition_prefix`, phase 11 task 4).
  *
  * The two letters used to be written here, so every duplicate of this

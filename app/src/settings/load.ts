@@ -39,6 +39,7 @@ import yaml from 'js-yaml';
 import { gh } from '../github/client';
 import { getFile } from '../github/contents';
 import { isDemoMode } from '../data/demo';
+import { exampleSettings } from './example';
 import {
   BOUNDARY_PATH,
   CONFIG_DIR,
@@ -180,26 +181,6 @@ function documentFrom(files: Record<string, string>, workflow: unknown): Setting
     integrations,
     ...cadenceFrom(workflow),
   };
-}
-
-/** The example instance's settings, exactly as `vite.config.ts`'s own
- *  `define` put them into this bundle (`scripts/example-settings.mjs` is
- *  what read them). */
-interface ExampleSettings {
-  files: Record<string, string>;
-  drainTriggers: unknown;
-}
-
-function exampleSettings(): ExampleSettings {
-  const raw = import.meta.env.VITE_EXAMPLE_SETTINGS as string | undefined;
-  if (!raw) {
-    throw new Error(
-      'VITE_EXAMPLE_SETTINGS is unset: this bundle was built without ' +
-        "vite.config.ts's own define, so the demonstration has no settings to " +
-        'show (see instances/example/config/)',
-    );
-  }
-  return JSON.parse(raw) as ExampleSettings;
 }
 
 /**

@@ -10,8 +10,7 @@ import {
 } from '../state/transitions';
 import { useData } from '../data/DataContext';
 import { useAuth } from '../auth/AuthContext';
-import { nextEditionCode } from '../state/agenda';
-import { editionCodePrefix } from '../instance';
+import { editionCodePrefix, nextEditionCode } from '../state/agenda';
 import { DateRejected, answerDate, proposeDates } from '../state/dates';
 import { activeBoard } from '../state/board';
 import { decide, type Outcome } from '../state/governance';

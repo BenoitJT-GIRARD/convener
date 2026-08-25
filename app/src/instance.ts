@@ -107,6 +107,14 @@ let cachedEditionPrefix: string | null = null;
  * the one value in this repository that can never be corrected after the
  * fact -- it is in a published address, on an issued certificate and in a
  * key filename.
+ *
+ * The `MRG-` form an edition code actually starts with is deliberately
+ * *not* here, and that absence is the correction phase 11's own bilan
+ * asked for: composing it needs the prefix of the instance whose records
+ * are on screen, which in demo mode is the example's and not this one's
+ * (`state/agenda.ts::editionCodePrefix`). A second function here
+ * returning this instance's prefix with a hyphen on it would be a trap
+ * the next call site walks into.
  */
 export function editionPrefix(): string {
   if (cachedEditionPrefix) return cachedEditionPrefix;
@@ -120,13 +128,6 @@ export function editionPrefix(): string {
   }
   cachedEditionPrefix = raw;
   return cachedEditionPrefix;
-}
-
-/** `MRG-` -- what an edition code starts with, separator included. The
- *  hyphen is the product's, not the declaration's: see
- *  `published.py::EditionPrefix.code_prefix`. */
-export function editionCodePrefix(): string {
-  return `${editionPrefix()}-`;
 }
 
 /** The organisation half of `repository` -- the GitHub organisation whose
