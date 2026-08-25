@@ -5,6 +5,8 @@
  * github.com, and come back signed in.
  */
 
+import { request } from '../net/request';
+
 export interface DeviceCode {
   device_code: string;
   user_code: string;
@@ -35,7 +37,7 @@ interface PollOptions {
 async function postJson(url: string, body: unknown): Promise<Record<string, unknown>> {
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await request(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(body),

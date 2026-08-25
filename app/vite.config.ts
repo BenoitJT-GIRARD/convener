@@ -300,6 +300,10 @@ export default defineConfig(({ mode }) => {
           'src/data/**',
           'src/github/**',
           'src/auth/**',
+          // Phase 11 task 1: the one door out of this bundle. Pure logic
+          // the demo-mode promise rests on, exactly as directly as
+          // `verify/register.ts` rests on the certificate promise.
+          'src/net/**',
           'src/signup/encrypt.ts',
           'src/survey/encrypt.ts',
           'src/verify/verify.ts',
