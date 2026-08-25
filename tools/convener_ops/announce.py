@@ -226,7 +226,8 @@ def _instance_namespace(root: Path) -> dict[str, str]:
     name and its forum out in full -- which is exactly the shape this
     module's own "one prose, not two" section objects to, one level up:
     the words were in one file, and the *identity* in that file was a copy
-    of an identity written out eighty-five more times. `published.py::
+    of an identity written out a hundred and fifty more times.
+    `published.py::
     Identity.namespace` composes this map, and `render.ts` resolves the
     identical names on the other side of the language boundary, so a
     duplicate that edits `config/instance.json` once changes both.

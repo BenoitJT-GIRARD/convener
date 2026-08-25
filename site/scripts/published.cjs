@@ -100,8 +100,9 @@ function publishedAddress() {
 // showcase's templates read as `site.*` used to be a file of their own
 // (`site/src/_data/site.json`), which was clean and was still a second
 // home for the same notion -- the series' title there, the organisation's
-// name in eighty-five other places, free to disagree the day either
-// moved. There is one now, and this is how the showcase reaches it.
+// name in a hundred and fifty other places, free to disagree the day
+// either moved. There is one now, and this is how the showcase reaches
+// it.
 //
 // The checks mirror `published.py::identity_from_data` clause for clause.
 // Every field is prose somebody outside this project reads, so a missing

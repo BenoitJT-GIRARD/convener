@@ -1,7 +1,9 @@
 /**
  * Whose series this is, and whether anything still assumes it is this one.
  *
- * Phase 10, task 3. Eighty-five occurrences across thirty-seven files said
+ * Phase 10, task 3. A hundred and fifty-six occurrences across sixty-six
+ * files -- `docs/` (its own specs and plans aside), `site/src/`,
+ * `app/src/`, `tools/convener_ops/` and the two publishing workflows -- said
  * "The Example Collective", "TEC", "forum.example.test" or
  * "reading-group@example.test" in prose the product ships: the e-mail a
  * speaker is invited with, the certificate a participant is sent, the

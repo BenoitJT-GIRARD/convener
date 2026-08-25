@@ -13,7 +13,10 @@
  * Phase 10, task 3. Before it, the organisation's name, the series' title,
  * the forum and the contact address were typed out in the cockpit's chrome,
  * in three islands, in the content registry's repository URL and in the
- * role check's organisation -- and eighty-five more times across `docs/`.
+ * role check's organisation -- a hundred and fifty-six times in all,
+ * across sixty-six files, counted over `docs/` (its own specs and plans
+ * aside), `site/src/`, `app/src/`, `tools/convener_ops/` and the two
+ * publishing workflows.
  * None of them is the product's: a duplicate of this repository runs a
  * different series for a different organisation, and every one of those
  * strings would have had to be found and edited by hand.

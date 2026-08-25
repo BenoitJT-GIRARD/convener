@@ -39,8 +39,9 @@ const PATH_PREFIX = PUBLISHED.pathPrefix;
 // keys -- the series' title, its tagline, its forum, its proposal form --
 // declared an instance path by `config/boundary.yml`. Clean as far as it
 // went, and still a second home for the same notion, with the
-// organisation's name written out in eighty-five other places and nothing
-// holding the two together. There is one declaration now.
+// organisation's name written out a hundred and fifty other times across
+// this repository's shipped prose, and nothing holding the two together.
+// There is one declaration now.
 //
 // Composed here rather than in a `src/_data/site.js` for a reason a first
 // attempt found the hard way: several suites copy `src/` to a scratch
