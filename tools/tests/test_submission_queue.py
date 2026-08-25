@@ -686,7 +686,8 @@ def test_the_drain_writes_the_response_the_ledger_and_the_clear_list(
     stamp = f"m1-{uuid.uuid4()}"
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(root))
     monkeypatch.setenv(
-        "CONVENER_QUEUE_DIR", str(_queue(tmp_path, **{stamp: _envelope(_EVENT, public_pem)}))
+        "CONVENER_QUEUE_DIR",
+        str(_queue(tmp_path, **{stamp: _envelope(_EVENT, public_pem)})),
     )
     clear_file = tmp_path / "clear.txt"
     monkeypatch.setenv("CONVENER_QUEUE_CLEAR_FILE", str(clear_file))

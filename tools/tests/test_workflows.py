@@ -3667,7 +3667,8 @@ def test_a_commented_out_secret_reference_is_not_detected() -> None:
     not merely one more case."""
     probe = safe_load(
         "jobs:\n  a:\n    steps:\n"
-        "      # reads secrets.CONVENER_SIGNING_KEY further down in a sibling workflow\n"
+        "      # reads secrets.CONVENER_SIGNING_KEY further down in a sibling"
+        " workflow\n"
         "      - run: echo hi\n"
     )
     assert _secret_references(probe["jobs"]) == set()

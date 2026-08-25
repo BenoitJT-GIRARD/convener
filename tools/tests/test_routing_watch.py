@@ -597,8 +597,8 @@ def test_the_channel_is_never_visible_beyond_the_step_that_composes() -> None:
     assert isinstance(workflow, dict)
     assert "CONVENER_NOTIFY_THREAD" not in workflow["jobs"]["daily"].get("env", {})
     step = _daily_step("Check that registrations can still be queued")
-    assert step["env"]["CONVENER_NOTIFY_THREAD"] == "${{ secrets.CONVENER_NOTIFY_THREAD }}"
-    assert step["env"]["CONVENER_NOTIFY_MENTION"] == "${{ secrets.CONVENER_NOTIFY_MENTION }}"
+    for name in ("CONVENER_NOTIFY_THREAD", "CONVENER_NOTIFY_MENTION"):
+        assert step["env"][name] == "${{ secrets." + name + " }}"
 
 
 def test_the_finding_turns_the_daily_job_red_on_its_own() -> None:

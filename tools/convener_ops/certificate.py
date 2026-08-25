@@ -196,8 +196,8 @@ certificate for the rest of that certificate's life -- which is exactly
 why the rounding rule above is written down rather than left as whatever
 `duration_seconds / 3600` happens to produce.
 
-`CONVENER_MATCHING_SALT`'s absence is ordinary for `matching_code`, and is not ordinary here
-------------------------------------------------------------------------------------------
+`CONVENER_MATCHING_SALT` is an ordinary absence for `matching_code`, and not here
+--------------------------------------------------------------------------------
 `registration.matching_code` already documents its own salt as an
 ordinary D-13 absence: without it, no code is derived, and spec S:5's
 cascade (exact address, then normalised name) still finds the same
