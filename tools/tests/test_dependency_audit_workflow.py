@@ -4,7 +4,7 @@ that happened to pass -- `app/`'s own tree was never audited at all, and
 it is the larger one: `react-router`/`react-router-dom` and `js-yaml` are
 `app/package.json` `dependencies`, not `devDependencies`, so they ship in
 the built application bundle the operators' cockpit serves at
-`/example-showcase/app/` behind its login screen, and the three relay services
+its own published base behind its login screen, and the three relay services
 under `services/` had never been audited either. "The audit runs in one
 place" is exactly the shape D-25 names: a control positioned so it could
 not fail on the surface that mattered.

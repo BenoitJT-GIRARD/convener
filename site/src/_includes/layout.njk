@@ -96,8 +96,8 @@
   <div class="container masthead__inner">
     <a href="{{ '/' | url }}" class="masthead__brand unstyled">
       <span class="masthead__brand-mark">No.</span>
-      <span class="masthead__brand-name">The Example Collective</span>
-      <span class="masthead__brand-sub">Monthly Reading Group</span>
+      <span class="masthead__brand-name">{{ site.organisation }}</span>
+      <span class="masthead__brand-sub">{{ site.series }}</span>
     </a>
     <a href="{{ '/app/' | url }}" class="masthead__access unstyled">Organizer access</a>
   </div>
@@ -108,7 +108,7 @@
 <footer class="colophon">
   <div class="container colophon__inner">
     <p class="colophon__credit">
-      <em>Run by volunteers from</em> <a href="{{ site.forum }}">The Example Collective</a> <em>&middot; A community of behavioural-science researchers.</em>
+      <em>Run by volunteers from</em> <a href="{{ site.forum }}">{{ site.organisation }}</a> <em>&middot; A community of behavioural-science researchers.</em>
     </p>
     <nav class="colophon__nav">
       <a href="{{ '/archives/' | url }}" class="unstyled">Archives</a>

@@ -24,7 +24,7 @@ coming along.
 
 - [ ] Speaker told the promotion is starting — before anything is posted
 - [ ] LinkedIn post published
-- [ ] Mailing list / newsletter message sent — TEATIME, institute newsletters and internal messaging, and RISC
+- [ ] Mailing list / newsletter message sent — to every mailing-list and newsletter channel on the speaker's own promotion lines (the Board's list, in `data/config.yml`)
 
 ### T-14 days
 

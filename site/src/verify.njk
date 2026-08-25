@@ -9,7 +9,10 @@ layout: layout.njk
 # change both together.
 permalink: "/verify/"
 pageTitle: "Verify a certificate"
-pageDescription: "Confirm a The Example Collective attendance certificate using the identifier printed on it -- no account needed."
+eleventyComputed:
+  # See `archives.njk` for why this is computed rather than a plain
+  # front-matter string.
+  pageDescription: "Confirm an attendance certificate issued by {{ site.organisation }}, using the identifier printed on it -- no account needed."
 ---
 
 <section class="hero">
@@ -22,7 +25,7 @@ pageDescription: "Confirm a The Example Collective attendance certificate using 
     <p class="hero__eyebrow">Certificate of attendance</p>
     <h1 class="hero__title">Check a certificate.</h1>
     <p class="hero__lede">
-      Follow the link or scan the code printed on a The Example Collective certificate to confirm
+      Follow the link or scan the code printed on a certificate issued by {{ site.organisation }} to confirm
       it here &mdash; entirely offline, with no account, and without sending us anything but
       the identifier already printed on it.
     </p>
@@ -53,7 +56,7 @@ pageDescription: "Confirm a The Example Collective attendance certificate using 
   <noscript>
     <p class="notice">
       Checking a certificate needs JavaScript enabled. If you cannot enable it, write to
-      <a href="mailto:reading-group@example.test">reading-group@example.test</a> with the
+      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a> with the
       certificate identifier and we will check it by hand.
     </p>
   </noscript>

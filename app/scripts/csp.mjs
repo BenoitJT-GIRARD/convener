@@ -1,6 +1,6 @@
 /**
  * This project's Content-Security-Policy for `app/index.html` -- the
- * operators' cockpit, every route under `/example-showcase/app/`, gated on
+ * operators' cockpit, every route under the app's own published base, gated on
  * sign-in behind `App.tsx`'s own `Shell`. Injected into the built HTML by
  * `vite.config.ts`'s own `cspHtmlPlugin`, via `transformIndexHtml` --
  * `<meta http-equiv>` is the only mechanism available at all: GitHub Pages

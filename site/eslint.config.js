@@ -31,7 +31,13 @@ module.exports = [
   // the `.mjs` extension gives the block below for the opposite case), but
   // one that (unlike `.eleventy.js` above) actually reads a file and
   // reports to the console, so it needs the Node globals the bare
-  // CommonJS block does not declare.
+  // CommonJS block does not declare. Phase 10 task 2 added two more under
+  // the same override -- `published.cjs`, this package's own reader of
+  // `config/instance.json`, and `print-published.cjs`, which prints what
+  // that reader and the real `.eleventy.js` resolve for the Python suite
+  // to compare -- and `URL` with them, the parser `published.cjs` uses to
+  // take the declared address apart rather than doing it with a regular
+  // expression.
   {
     files: ['scripts/*.cjs'],
     languageOptions: {
@@ -43,6 +49,7 @@ module.exports = [
         __dirname: 'readonly',
         process: 'readonly',
         console: 'readonly',
+        URL: 'readonly',
       },
     },
     rules: {

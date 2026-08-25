@@ -1,46 +1,109 @@
 // Fix round 4 (the path-prefix defect): GitHub Pages serves this project's
-// build output at <https://example-instance.github.io/example-showcase/>, not at
-// a bare domain root -- there is no CNAME and no custom domain
-// (`publish-vitrine.yml`'s own "already-active GitHub Pages setting" is
-// "branch main, folder root" on the *example-showcase* repository, so the
-// address is this repository's own name). Every template used to write its
-// internal links as a bare `/foo`, which resolves to the *domain* root, one
-// path segment short of where the site actually lives -- invisible on a
-// developer's own `localhost` build, total once published.
+// build output one path segment below a bare domain root -- there is no
+// CNAME and no custom domain (`publish-vitrine.yml`'s own "already-active
+// GitHub Pages setting" is "branch main, folder root" on the published
+// repository, so the address is that repository's own name). Every
+// template used to write its internal links as a bare `/foo`, which
+// resolves to the *domain* root, one path segment short of where the site
+// actually lives -- invisible on a developer's own `localhost` build,
+// total once published.
 //
 // `pathPrefix` is Eleventy's own mechanism for exactly this: every call to
 // the built-in `url` filter (`{{ '/foo' | url }}`) resolves against it, so
-// this is the one place that address is written down for every template in
-// this project -- see each `.njk` file's own `| url` filter calls, and
-// `style.css`'s `@font-face` block, which needs no prefix at all because a
-// relative `url('fonts/...')` inside a stylesheet already resolves against
-// the stylesheet's own address, at any prefix.
+// this is where that address reaches every template in this project -- see
+// each `.njk` file's own `| url` filter calls, and `style.css`'s
+// `@font-face` block, which needs no prefix at all because a relative
+// `url('fonts/...')` inside a stylesheet already resolves against the
+// stylesheet's own address, at any prefix.
 //
-// A hand-typed literal, the same D-14 discipline `tools/convener_ops/
-// registration.py::SIGNUP_BASE` and `tools/convener_ops/certificate.py::
-// VERIFICATION_BASE` already use for this identical address, rather than an
-// import across the Python/JavaScript boundary this project does not build
-// tooling to cross -- bound to those two constants, and to
-// `app/vite.config.ts`'s own published `base`, by
-// `tools/tests/test_site.py::
-// test_the_path_prefix_agrees_with_the_addresses_python_already_pins`, so
-// the four cannot silently drift apart. Change all four together.
-const PATH_PREFIX = '/example-showcase/';
+// Phase 10, task 2: both constants below used to be hand-typed literals,
+// bound to `tools/convener_ops/registration.py::SIGNUP_BASE`, to
+// `certificate.py::VERIFICATION_BASE` and to `app/vite.config.ts`'s own
+// `base` by tests that could say the copies still agreed but never that
+// there was one. They are now read from `config/instance.json`, the
+// instance's own declaration, through `scripts/published.cjs` -- the
+// showcase's side of a boundary Python and the application build read
+// from their own (D-14). The names stay: everything below this line uses
+// them exactly as before.
+const { publishedAddress, identity, isPlaceholder } = require('./scripts/published.cjs');
+
+const PUBLISHED = publishedAddress();
+
+const PATH_PREFIX = PUBLISHED.pathPrefix;
+
+// Who runs this series, read from `config/instance.json` through the same
+// `scripts/published.cjs` this file already reads the published address
+// from.
+//
+// This was `src/_data/site.json` until phase 10 task 3: four hand-typed
+// keys -- the series' title, its tagline, its forum, its proposal form --
+// declared an instance path by `config/boundary.yml`. Clean as far as it
+// went, and still a second home for the same notion, with the
+// organisation's name written out a hundred and fifty other times across
+// this repository's shipped prose, and nothing holding the two together.
+// There is one declaration now.
+//
+// Composed here rather than in a `src/_data/site.js` for a reason a first
+// attempt found the hard way: several suites copy `src/` to a scratch
+// directory and build it with `--input=<tmp>/src`, at which point a data
+// file's own relative `require('../../scripts/published.cjs')` resolves
+// against the copy and there is nothing there. This file is loaded from
+// `site/` whatever `--input` says, so this is the one place the
+// derivation can live and still be the same derivation in every build.
+// Three of these values never pass through a template at all -- the
+// sentence every event page's meta description ends on, and the two
+// calendar headers below -- so they would have needed reading here in any
+// case.
+const IDENTITY = identity();
+
+/** Everything a template reads as `site.*`. `title` is composed, not
+ *  declared: it was "TEC Monthly Reading Group", which is exactly
+ *  `short_name` and `series` with a space between them, and declaring it
+ *  as well would have been a third way to spell one fact. */
+const SITE = {
+  title: `${IDENTITY.short_name} ${IDENTITY.series}`,
+  tagline: IDENTITY.tagline,
+  // The forum: the whole address where a link is wanted, the bare host
+  // where a sentence names it.
+  forum: IDENTITY.forum,
+  forumHost: IDENTITY.forum_host,
+  // The proposal form `src/propose.njk` sends people to -- the same form
+  // `tools/convener_ops/proposal.py`'s webhook receives from.
+  //
+  // Empty while the declaration still carries a placeholder instead of an
+  // address, and `propose.njk` renders the page's other half when it is:
+  // a duplicate has not built its form before its first publish, and this
+  // instance had not built one at all -- `identity.proposal_form` was
+  // `https://forms.example.test/propose`, published as that page's one call to
+  // action (phase 10 bilan, section 7.2). Mirrors
+  // `published.py::Identity.proposal_form_url`, and
+  // `test_published.py::test_the_showcase_feeds_its_templates_the_declared_
+  // identity` compares this value against that one.
+  applyForm: isPlaceholder(IDENTITY.proposal_form) ? '' : IDENTITY.proposal_form,
+  // The organisation itself: the masthead, the footer's "run by
+  // volunteers from", every event page's `Organization` structured data,
+  // and the address a participant writes to about their own data.
+  organisation: IDENTITY.organisation,
+  shortName: IDENTITY.short_name,
+  series: IDENTITY.series,
+  contact: IDENTITY.contact,
+  // The two repositories `src/publish-readme.njk` names on the published
+  // site's own landing page: the one this build is pushed into (derived
+  // from the address it is served at) and the one it is built from.
+  publishRepository: PUBLISHED.publishRepository,
+  publishRepositoryName: PUBLISHED.publishRepository.split('/')[1],
+  repository: IDENTITY.repository,
+};
 
 // Phase 5, task 10: structured event data, share metadata, the sitemap and
 // the feed all need this project's real, *absolute* published address --
 // a root-relative link, even one already carrying PATH_PREFIX, is nonsense
 // outside a browser that already has this page open: a search engine's
 // crawler, a link-preview bot and an RSS reader all resolve a URL against a
-// document of their own, not this one. `SITE_ORIGIN` is the one place this
-// project's public host is written down on the JavaScript side -- the same
-// D-14 discipline PATH_PREFIX above already follows, and for the identical
-// reason (a JavaScript config cannot import a Python constant) -- bound to
-// `registration.SIGNUP_BASE` and `certificate.VERIFICATION_BASE`, which
-// already carry this exact host, by `tools/tests/test_site.py::
-// test_absolute_urls_share_the_one_origin_this_project_already_pins`.
-// Change all three together.
-const SITE_ORIGIN = 'https://example-instance.github.io';
+// document of their own, not this one. The origin and the prefix come out
+// of the one declaration together, which is why they cannot disagree about
+// which deployment they describe.
+const SITE_ORIGIN = PUBLISHED.origin;
 
 // Fix round 1: the series' one standing start time, Europe/Paris *local*
 // -- what a recurring seminar series means by "the seminar starts at
@@ -124,7 +187,7 @@ function parisStandingStart(isoDate) {
 
 // Fix wave (branch review, minor 2): the fallback description for an
 // edition that carries no `abstract` yet -- the speaker's name, optionally
-// `, affiliation`, then " — a The Example Collective virtual seminar." -- has to
+// `, affiliation`, then " — a <organisation> virtual seminar." -- has to
 // read the same way in three places about the same edition: event.njk's
 // own `<meta name="description">`/Open Graph/Twitter Card metadata
 // (`eleventyComputed.pageDescription`), its JSON-LD `description`, and
@@ -142,7 +205,7 @@ function eventDescriptionFallback(event) {
   if (event.speaker_affiliation) {
     description = `${description}, ${event.speaker_affiliation}`;
   }
-  return `${description} — a The Example Collective virtual seminar.`;
+  return `${description} — a ${IDENTITY.organisation} virtual seminar.`;
 }
 
 // `path` is root-relative and unprefixed -- exactly `| url`'s own input
@@ -236,7 +299,7 @@ const SEMINAR_DURATION_MINUTES = 90;
 // an earlier one. Applied to every free-text property value this feed
 // writes (SUMMARY, DESCRIPTION, LOCATION): `eventDescriptionFallback`'s
 // own fallback text already contains a comma ("<speaker>, <affiliation>
-// — a The Example Collective virtual seminar."), which an unescaped ICS file
+// — a <organisation> virtual seminar."), which an unescaped ICS file
 // would misparse as the start of a second property.
 //
 // Mechanical and RFC-mandated, unlike `parisStandingStart`: there is no
@@ -373,9 +436,9 @@ function agendaCalendar(events) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//example-instance//Monthly Reading Group//EN',
+    `PRODID:-//${IDENTITY.organisation}//${IDENTITY.series}//EN`,
     'CALSCALE:GREGORIAN',
-    'X-WR-CALNAME:The Example Collective Monthly Reading Group',
+    `X-WR-CALNAME:${IDENTITY.organisation} ${IDENTITY.series}`,
     ...scheduled.map(agendaVevent),
     'END:VCALENDAR',
   ];
@@ -383,6 +446,11 @@ function agendaCalendar(events) {
 }
 
 module.exports = function (cfg) {
+  // `site.*`, for every template. Config global data rather than a
+  // `src/_data/` file -- see `SITE`'s own comment above for why that is
+  // not a matter of taste here.
+  cfg.addGlobalData('site', () => SITE);
+
   cfg.addPassthroughCopy('src/style.css');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
   // at runtime: the phase 5 specification forbids any third-party dependency,
@@ -412,12 +480,18 @@ module.exports = function (cfg) {
   // that lives only there is destroyed by the first publish. A public
   // repository whose landing page is a bare file listing explains nothing.
   //
-  // Kept outside `src/` deliberately: `templateFormats` includes `md`, so a
-  // `README.md` under `src/` would be rendered as a page at `/README/`
-  // instead of landing at the root as a file. The ignore file is stored
-  // under a neutral name for the same reason -- a real `.gitignore` here
-  // would apply to this build's own directory.
-  cfg.addPassthroughCopy({ 'publish/README.md': 'README.md' });
+  // The ignore file is stored under a neutral name because a real
+  // `.gitignore` here would apply to this build's own directory.
+  //
+  // The front page itself is no longer a passthrough copy: phase 10 task 3
+  // made it `src/publish-readme.njk`, a template with `permalink:
+  // "/README.md"`, because it names the organisation and both repositories
+  // and those are the instance's, declared once in `config/instance.json`.
+  // A passthrough copy renders nothing, so a `{{ }}` in it would have been
+  // published verbatim -- the exact failure `docs/toolkit/index.md` warns
+  // about. A `.njk` under `src/` is fine where a `.md` was not: only `md`
+  // is in `templateFormats` as a page-producing extension whose permalink
+  // would have landed at `/README/`.
   cfg.addPassthroughCopy({ 'publish/gitignore-for-vitrine': '.gitignore' });
   // Task 9 (phase 6): the share banner(s) `visuals-production.yml` commits
   // under `src/banners/`. A plain string, anchored to this project's own

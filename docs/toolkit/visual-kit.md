@@ -39,8 +39,23 @@ Any of these works, and none of them costs anything:
 
 Each file has two groups. Everything in `id="variable"` is yours to edit for
 this event; everything in `id="fixed"` is the series identity — the wordmark,
-the turquoise and cream bands, the decorative loops, the *what to expect*
-block — and stays as it is, so two events in a row look like the same series.
+the coloured field and its cream bands, the decorative loops, the *what to
+expect* block — and stays as it is, so two events in a row look like the same
+series.
+
+**Your downloaded copy is yours: change anything in it.** What the paragraph
+above is about is the file *in the repository*, and that one is not edited by
+hand at all any more. It is generated from the visual identity
+(`data/brand.json`) and from this series' own declaration
+(`config/instance.json`), so every colour in it is the charter's and every name
+in it is this series'. To change one, change one of those two files and run
+`uv run python ../scripts/generate_brand_css.py` from `tools/`; the same
+command's `--check` fails the build if a template stops agreeing with them.
+
+That is also how they stopped carrying a palette nobody had chosen. Both files
+had drifted onto colours the project measured and rejected in 2026 — including
+one line set in the page's own background colour, and therefore invisible in
+every poster anybody ever downloaded.
 
 The variable parts are written as the same placeholders the message templates
 use, so you can copy the values straight out of the event page in the app:

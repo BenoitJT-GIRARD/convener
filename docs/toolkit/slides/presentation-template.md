@@ -39,7 +39,7 @@ built from too.
 
 Up before the session starts, while people arrive.
 
-- **The Example Collective Monthly Reading Group** — the series name, large.
+- **{{ instance.organisation }} {{ instance.series }}** — the series name, large.
 - **{{ speaker.title }}** — today's title.
 - **{{ speaker.name }}, {{ speaker.affiliation }}** and their photo.
 - *We start at {{ speaker.time }}* — so a person arriving at 12:22 knows
@@ -53,7 +53,7 @@ Up before the session starts, while people arrive.
 Little on it: the series name and the two hosts' names. The words carry this
 slide, not the slide.
 
-### 3 — The Example Collective and the series
+### 3 — {{ instance.organisation }} and the series
 
 One slide, four or five words each: what the series is, that a talk starts a
 conversation, the forum, and how to ask a question (chat or forum). No

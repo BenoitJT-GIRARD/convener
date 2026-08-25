@@ -42,6 +42,6 @@ Everything above is the whole procedure; it is complete without this section, an
 
 A prompt that works:
 
-> Here are my notes from the discussion after a scientific webinar. Turn them into a short summary in British English, to post on The Example Collective as a reply under the post that announced the talk. Say the talk is now on YouTube at {{ speaker.youtube_url }}. Group the questions into three or four themes rather than listing them; do not name anyone who asked a question; do not add anything that is not in my notes. Make it read like a forum post: give the context, be tactful, keep it short.
+> Here are my notes from the discussion after a scientific webinar. Turn them into a short summary in British English, to post on {{ instance.organisation }} as a reply under the post that announced the talk. Say the talk is now on YouTube at {{ speaker.youtube_url }}. Group the questions into three or four themes rather than listing them; do not name anyone who asked a question; do not add anything that is not in my notes. Make it read like a forum post: give the context, be tactful, keep it short.
 
 Whatever comes back is a draft and not the post. Read it against your notes, cut what you cannot vouch for, and run the checks above — including showing it to the speaker.

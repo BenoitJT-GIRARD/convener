@@ -19,6 +19,7 @@ import re
 from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.eventkeys import RETENTION_DAYS
 from convener_ops.paths import repo_root
+from convener_ops.published import load_identity
 
 ROOT = repo_root()
 PAGE = ROOT / "docs" / "governance" / "traitement-donnees.md"
@@ -53,6 +54,15 @@ def test_the_retention_window_matches_the_constant_the_code_uses() -> None:
 
 
 def test_the_contact_address_matches_confirmation_pys_own_constant() -> None:
+    """One address, and this page reaches it the way every other page the
+    cockpit renders does.
+
+    Phase 10, task 3: the literal here became `{{ instance.contact }}`,
+    resolved by `render.ts::substituteWithoutSpeaker` when the cockpit
+    renders this record -- the surface a Board member actually reads it
+    on. So the assertion is that the token is what the page carries, and
+    that it resolves to the address `confirmation.py` sends from.
+    """
     text = _page()
     match = _CONTACT.search(text)
     assert match is not None, (
@@ -60,7 +70,11 @@ def test_the_contact_address_matches_confirmation_pys_own_constant() -> None:
         "this test reads; it can drift from confirmation.CONTACT_EMAIL "
         "again without this failing."
     )
-    assert match.group(1) == CONTACT_EMAIL
+    assert match.group(1) == "{{ instance.contact }}", (
+        f"{PAGE.as_posix()} writes the contact address out rather than "
+        "naming it -- a duplicate would send its own participants here"
+    )
+    assert load_identity().namespace["contact"] == CONTACT_EMAIL
 
 
 def test_the_record_names_every_field_spec_4_asks_for() -> None:

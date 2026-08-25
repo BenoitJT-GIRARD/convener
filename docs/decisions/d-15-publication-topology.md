@@ -31,11 +31,16 @@ public account.
 **Addresses:**
 
 ```
-example-instance.github.io/example-showcase/                the showcase
-example-instance.github.io/example-showcase/events/<id>/     one page per event
-example-instance.github.io/example-showcase/app/             the cockpit
-example-instance.github.io/example-showcase/verify/          certificate verification
+<owner>.github.io/<repository>/                the showcase
+<owner>.github.io/<repository>/events/<id>/    one page per event
+<owner>.github.io/<repository>/app/            the cockpit
+<owner>.github.io/<repository>/verify/         certificate verification
 ```
+
+The two halves come from `config/instance.json`'s `published_url` and are
+written down nowhere else — including the repository this build pushes
+into, which is derived from that same address
+(`published.Published.publish_repository`) rather than named beside it.
 
 ## Rejected
 

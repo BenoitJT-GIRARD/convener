@@ -12,7 +12,8 @@ name: Accessibility
 # every page axe-core (Deque's rule engine, MIT-licensed, no account, no
 # third-party call at run time) can reach in a real, JavaScript-executing
 # browser. D-26: checked at the address and in the topology it will
-# actually be served at (`/example-showcase/`), never a bare `localhost` root
+# actually be served at (`config/instance.json`'s own published path
+# prefix, read by the checker itself), never a bare `localhost` root
 # -- see `site/scripts/check-a11y.mjs`'s own module comment for the full
 # reasoning, including why the two islands are covered here at all
 # rather than left entirely to the manual pass (a checker that only ever
@@ -50,6 +51,10 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      # Phase 10, task 2: both builds resolve their published
+      # address from here, and D-26 is about checking at the address
+      # a build is actually served under.
+      - 'config/instance.json'
       - 'app/**'
       - 'tools/convener_ops/**'
       - 'tools/pyproject.toml'
@@ -65,6 +70,10 @@ on:
     # two copies together.
     paths:
       - 'site/**'
+      # Phase 10, task 2: both builds resolve their published
+      # address from here, and D-26 is about checking at the address
+      # a build is actually served under.
+      - 'config/instance.json'
       - 'app/**'
       - 'tools/convener_ops/**'
       - 'tools/pyproject.toml'

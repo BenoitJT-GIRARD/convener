@@ -22,7 +22,7 @@ Two feeds, two audiences:
   `.gitignore` carries a deliberate, named exception for that one path (the
   same shape `!public-data/survey-status.json` already has) so
   `.github/workflows/deploy.yml`'s own "Commit internal agenda" step can
-  commit it back to this repository -- never to `example-showcase`. Nothing in
+  commit it back to this repository -- never to the published one. Nothing in
   this repository's build ever copies `public-data/agenda-internal.ics` into
   `app/public/` or `site/src/_data/` (unlike `certificates-public.json` and
   `survey-status.json`, which each have exactly that copy step,
@@ -71,6 +71,7 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Final
 
+from . import published
 from .governance import PARIS
 from .notify import Deadline, due_date
 from .registration import signup_url
@@ -84,10 +85,26 @@ from .visual import STANDING_START_LOCAL
 #: or one a human mistyped, never fail outright.
 _DEFAULT_DURATION_MINUTES: Final = 90
 
+#: Who runs this series -- read once, used for the calendar name a
+#: subscriber sees and for the `PRODID` every emitted calendar carries.
+_IDENTITY: Final = published.load_identity()
+
 #: The one-line calendar name a subscribing client shows (`X-WR-CALNAME`, a
 #: de facto standard every major client reads, though it is not part of
-#: RFC 5545 itself).
-_CALENDAR_NAME: Final = "The Example Collective internal agenda"
+#: RFC 5545 itself). The organisation is the instance's, read from
+#: `config/instance.json` like the UID domain below -- a subscriber sees
+#: this string in their own calendar list, so a duplicate whose internal
+#: agenda announced somebody else would be an odd thing to explain.
+_CALENDAR_NAME: Final = f"{_IDENTITY.organisation} internal agenda"
+
+#: The right-hand side of every `UID` this module mints. RFC 5545 §3.8.4.7
+#: asks for a globally unique identifier and recommends the address-like
+#: form used below, whose domain part must be one the producer controls --
+#: so it is this instance's own published host, read from
+#: `config/instance.json` like every other published address in this
+#: repository, and not a value a duplicate would have to remember to
+#: change. Nothing ever resolves it: it is a name, not an address.
+_UID_DOMAIN: Final = published.load().host
 
 #: RFC 5545 §3.1: a content line SHOULD be folded at this many octets.
 _FOLD_LIMIT: Final = 75
@@ -240,7 +257,7 @@ def _deadline_vevent(deadline: Deadline, speaker_id: str) -> str:
     """
     due_compact = deadline.due.replace("-", "")
     dtstamp = f"{due_compact}T000000Z"
-    uid = f"{speaker_id}-{_slug(deadline.step)}@example-instance.github.io"
+    uid = f"{speaker_id}-{_slug(deadline.step)}@{_UID_DOMAIN}"
     summary = _escape_text(f"{deadline.step} due \u2014 {speaker_id}")
     return _fold_all(
         [
@@ -296,7 +313,7 @@ def build_internal_calendar(speakers: Sequence[Any], config: Any) -> str:
     header = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//example-instance//Monthly Reading Group (internal)//EN",
+        f"PRODID:-//{_IDENTITY.organisation}//{_IDENTITY.series} (internal)//EN",
         "CALSCALE:GREGORIAN",
         f"X-WR-CALNAME:{_escape_text(_CALENDAR_NAME)}",
     ]

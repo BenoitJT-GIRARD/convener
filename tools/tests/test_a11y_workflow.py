@@ -7,8 +7,8 @@ Three things a passing job could still be wrong about, each with its own
 test below:
 
 * it could be pointed at the wrong address -- checked at a bare
-  `localhost` root rather than the `/example-showcase/` prefix GitHub Pages
-  actually serves this project under (D-26);
+  `localhost` root rather than the path prefix GitHub Pages actually
+  serves this project under (D-26);
 * it could be looking at a handful of pages rather than everything the
   site generates -- a hand-typed URL list would pass forever even after a
   page nobody added to it stopped being checked;
@@ -40,26 +40,21 @@ _PACKAGE_JSON = (_ROOT / "site" / "package.json").read_text(encoding="utf-8")
 
 def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
     """D-26: "on vérifie à la forme déployée, jamais à une forme locale
-    commode." `site/.eleventy.js`'s own `PATH_PREFIX` is the one place
-    this project's published address prefix is written down -- a second,
-    hand-typed `/example-showcase/` here could drift from it exactly the way
-    the site's own templates once could (fixed by that same constant and
-    `tools/tests/test_site.py::test_the_path_prefix_agrees_with_the_
-    addresses_python_already_pins`). This asserts the checker extracts
-    the value with the identical regex shape that test module already
-    uses for the same file, rather than restating the address itself.
+    commode." `config/instance.json` is the one place this project's
+    published address is written down -- a second, hand-typed prefix here
+    could drift from it exactly the way the site's own templates once
+    could. Phase 10 task 2 replaced this checker's own regular expression
+    over `.eleventy.js` with the same reader the build itself uses, so
+    what is asserted here is that the checker asks the declaration rather
+    than any intermediary. That the value actually agrees is
+    `test_published.py`'s own job, from a real run of both.
     """
-    assert "PATH_PREFIX\\s*=\\s*'([^']+)'" in _CHECKER, (
-        "check-a11y.mjs no longer reads PATH_PREFIX out of site/.eleventy.js -- "
-        "it must derive the served prefix from that one source, never restate it"
+    assert "from './published.cjs'" in _CHECKER, (
+        "check-a11y.mjs no longer reads the published address through "
+        "site/scripts/published.cjs -- it must derive the served prefix from "
+        "config/instance.json, never restate it"
     )
-    # The literal address still appears in this file's own module comment
-    # (explaining *why* the prefix matters) -- but never as a fallback
-    # default a missing PATH_PREFIX could quietly resolve to.
-    assert (
-        "'/example-showcase/'"
-        not in _CHECKER.split("configuredPathPrefix")[1].split("\n\n", 1)[0]
-    ), "a literal prefix must never stand in for the value read from .eleventy.js"
+    assert "publishedAddress().pathPrefix" in _CHECKER
 
 
 def test_the_checker_discovers_pages_by_walking_the_build_not_a_fixed_list() -> None:

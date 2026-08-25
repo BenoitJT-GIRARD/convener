@@ -24,7 +24,7 @@ name: Visuals production
 #
 # Deliberately its own workflow, not a step folded into
 # publish-vitrine.yml's own job: that job's own "wipe everything under
-# example-showcase's root except .git and app/, then copy site/_site over it
+# the published repository's root except .git and app/, then copy site/_site over it
 # whole" step (see that file's own `refresh_published_site`) would delete
 # anything a second publisher wrote there on its very next run -- there is
 # no path under that repository's root a step added here could write to
@@ -123,6 +123,8 @@ on:
       - 'docs/toolkit/mailing-list-announce.md'
       - 'docs/toolkit/recording-announce.md'
       - 'data/brand.json'
+      - 'brand/convener/brand.json'
+      - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'visuals/**'

@@ -6,15 +6,15 @@
 
 ## Variant 1 — speaker not yet on the forum
 
-**Subject:** Your TEC talk is announced!
+**Subject:** Your {{ instance.short_name }} talk is announced!
 
 Dear {{ speaker.first_name }},
 
-Thank you for all the information. We have just posted the details of your talk on The Example Collective: {{ speaker.forum_thread }}
+Thank you for all the information. We have just posted the details of your talk on {{ instance.organisation }}: {{ speaker.forum_thread }}
 
 A similar post is scheduled on LinkedIn for [the day the LinkedIn post goes out]. Please also sign up for your own talk (Zoom link: {{ speaker.zoom_link }}).
 
-Could you confirm whether you are already registered on The Example Collective (forum.example.test)? The idea of our series is to foster discussion both before and after the talk, so it would be great if you could start engaging with participants ahead of the day.
+Could you confirm whether you are already registered on {{ instance.organisation }} ({{ instance.forum_host }})? The idea of our series is to foster discussion both before and after the talk, so it would be great if you could start engaging with participants ahead of the day.
 
 Looking forward to your talk, and to getting to know you!
 
@@ -25,11 +25,11 @@ Best regards,
 
 ## Variant 2 — speaker already registered on the forum
 
-**Subject:** Your TEC talk is announced!
+**Subject:** Your {{ instance.short_name }} talk is announced!
 
 Dear {{ speaker.first_name }},
 
-Thank you for all the information. We have just posted the details of your talk on The Example Collective: {{ speaker.forum_thread }}
+Thank you for all the information. We have just posted the details of your talk on {{ instance.organisation }}: {{ speaker.forum_thread }}
 
 A similar post is scheduled on LinkedIn for [the day the LinkedIn post goes out]. Please also don't forget to sign up for your own talk: {{ speaker.zoom_link }}
 
@@ -39,4 +39,4 @@ Looking forward to your talk and the discussions!
 
 Best regards,
 {{ host_1.name }}
-*and The Example Collective team*
+*and {{ instance.organisation }} team*

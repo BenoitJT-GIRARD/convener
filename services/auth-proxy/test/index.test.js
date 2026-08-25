@@ -1,7 +1,40 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { handle } from '../src/index.js';
 
-const env = { ALLOWED_ORIGIN: 'https://example-instance.github.io' };
+// Phase 10, task 2: the origin this worker answers CORS preflights for
+// is the one address `config/instance.json` declares this project is
+// published at. A Worker can read none of that -- it runs on Cloudflare
+// with no repository in reach -- so the deployed value lives in this
+// package's own `wrangler.toml` and reaches `handle` as
+// `env.ALLOWED_ORIGIN`; what a test can hold is that the value shipped
+// for deployment is the address the project is actually published at.
+// See `services/signup-relay/test/index.test.js`'s own copy of this
+// block for the reasoning in full, including why the one TOML line is
+// matched rather than parsed.
+const DECLARED_ORIGIN = new URL(
+  JSON.parse(
+    readFileSync(new URL('../../../config/instance.json', import.meta.url), 'utf-8'),
+  ).published_url,
+).origin;
+
+const WRANGLER = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf-8');
+const DEPLOYED_ORIGIN_MATCH = /^ALLOWED_ORIGIN\s*=\s*"([^"]+)"/m.exec(WRANGLER);
+if (!DEPLOYED_ORIGIN_MATCH) {
+  throw new Error(
+    'wrangler.toml no longer declares ALLOWED_ORIGIN -- this worker would ' +
+      'deploy answering CORS preflights for nothing at all',
+  );
+}
+const ALLOWED_ORIGIN = DEPLOYED_ORIGIN_MATCH[1];
+
+describe('the deployed origin is the address this project is published at', () => {
+  it('matches config/instance.json', () => {
+    expect(ALLOWED_ORIGIN).toBe(DECLARED_ORIGIN);
+  });
+});
+
+const env = { ALLOWED_ORIGIN };
 
 function post(path, body = {}, origin = env.ALLOWED_ORIGIN) {
   return new Request(`https://relay.example${path}`, {
@@ -84,21 +117,28 @@ describe('auth proxy', () => {
     const trackedEnv = {
       get ALLOWED_ORIGIN() {
         reads += 1;
-        return 'https://example-instance.github.io';
+        return ALLOWED_ORIGIN;
       },
     };
     const res = await handle(
-      post('/login/device/code', { client_id: 'Iv1.x' }, 'https://example-instance.github.io'),
+      post('/login/device/code', { client_id: 'Iv1.x' }, ALLOWED_ORIGIN),
       trackedEnv,
     );
     expect(res.status).toBe(200);
-    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://example-instance.github.io');
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED_ORIGIN);
     expect(reads).toBeGreaterThanOrEqual(2);
   });
 
   it('refuses an origin that differs from config only by case or a trailing slash', async () => {
+    // The host upper-cased, not the whole URL: a scheme is case-insensitive
+    // by RFC 3986 and upper-casing it too would test a second thing. Built
+    // from the configured origin by string surgery rather than through
+    // `new URL`, whose host setter lower-cases what it is given -- and
+    // built rather than typed, so this case follows the declared address
+    // like every other one in this file.
+    const { protocol, host } = new URL(ALLOWED_ORIGIN);
     const upper = await handle(
-      post('/login/device/code', {}, 'https://THE EXAMPLE COLLECTIVE.github.io'),
+      post('/login/device/code', {}, `${protocol}//${host.toUpperCase()}`),
       env,
     );
     expect(upper.status).toBe(403);

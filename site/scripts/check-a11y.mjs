@@ -23,18 +23,18 @@
  *
  * D-26: served at the address it will actually be served at
  * -------------------------------------------------------------
- * GitHub Pages serves this project's build under `/example-showcase/`, not a
- * bare domain root (no CNAME, no custom domain) -- `site/.eleventy.js`'s
- * own `PATH_PREFIX` is the one place that is written down, and every
- * template's `| url` filter call resolves against it. D-26 ("on vérifie à
- * la forme déployée, jamais à une forme locale commode") is exactly the
- * lesson phase 5's own screenshot rounds paid for: seven earlier passes,
- * all served at a bare `localhost` root, all green, on a site where every
- * relative path -- style sheet, fonts, every island's own fetches -- would
- * have 404'd once actually published. This script reads that same
- * `PATH_PREFIX` from `.eleventy.js` (regex, not an import: it is a
- * top-level `const` in a CommonJS config file, not an exported value) and
- * serves the assembled tree under it, never at a bare root.
+ * GitHub Pages serves this project's build one path segment below a bare
+ * domain root (no CNAME, no custom domain) -- `config/instance.json` is
+ * the one place that address is written down, and every template's
+ * `| url` filter call resolves against the prefix `.eleventy.js` derives
+ * from it. D-26 ("on vérifie à la forme déployée, jamais à une forme
+ * locale commode") is exactly the lesson phase 5's own screenshot rounds
+ * paid for: seven earlier passes, all served at a bare `localhost` root,
+ * all green, on a site where every relative path -- style sheet, fonts,
+ * every island's own fetches -- would have 404'd once actually published.
+ * This script reads that same declaration, through the same
+ * `scripts/published.cjs` the build itself uses, and serves the assembled
+ * tree under the prefix it names, never at a bare root.
  *
  * The three islands
  * -------------------
@@ -73,12 +73,16 @@
 
 import { createServer } from 'node:http';
 import { readFile, readdir, mkdtemp, rm, mkdir, cp } from 'node:fs/promises';
-import { existsSync, statSync, readFileSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import puppeteer from 'puppeteer-core';
+// The instance's own published address, read through the same module
+// `.eleventy.js` reads it through -- so this checker serves the tree at the
+// address the build itself was configured for, and cannot drift from it.
+import { publishedAddress } from './published.cjs';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -122,22 +126,6 @@ const WCAG_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21aa'];
  *  rather than pulling in the rest of `best-practice` to get it. */
 const EXTRA_RULES = ['heading-order'];
 
-/** `site/.eleventy.js`'s own `PATH_PREFIX` -- read from source, not
- *  retyped, for the identical reason `tools/tests/test_site.py`'s own
- *  `_configured_path_prefix` gives: every assertion downstream that
- *  expects a prefixed address must fail immediately if this drifts,
- *  rather than silently checking against the wrong prefix. */
-function configuredPathPrefix() {
-  const text = readFileSync(path.join(SITE_DIR, '.eleventy.js'), 'utf8');
-  const match = /PATH_PREFIX\s*=\s*'([^']+)'/.exec(text);
-  if (!match) {
-    throw new Error(
-      'site/.eleventy.js no longer defines PATH_PREFIX -- this checker would ' +
-        'otherwise serve the build at the wrong address and pass for the wrong reason'
-    );
-  }
-  return match[1];
-}
 
 function parseArgs(argv) {
   const args = { chrome: process.env.CHROME_PATH };
@@ -454,15 +442,15 @@ async function main() {
     );
   }
 
-  const prefix = configuredPathPrefix(); // e.g. '/example-showcase/'
+  const prefix = publishedAddress().pathPrefix;
   const events = JSON.parse(
     await readFile(path.join(SITE_DIR, 'src', '_data', 'events.json'), 'utf8')
   );
   const expected = expectedPageCount(events);
 
   const scratch = await assembleTree(args);
-  // The prefix names exactly one path segment in this project
-  // (`/example-showcase/`); serving the scratch directory's *parent* under
+  // The prefix names exactly one path segment in this project; serving
+  // the scratch directory's *parent* under
   // that name reproduces the real deployment without copying the tree a
   // second time -- a symlink would do the same, but Windows requires a
   // privilege this checker should not need to ask for.

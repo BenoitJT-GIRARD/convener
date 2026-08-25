@@ -1,0 +1,74 @@
+{
+  "_comment": "The example instance's own visual identity -- the same file `data/brand.json` is for the instance that runs this repository, written for one that does not exist. It exists so that a second-instance build exercises the charter the way it exercises the names: `brand.load` reads this file rather than `brand/convener/brand.json`, `generate_brand_css.py` derives two stylesheets and two downloadable templates from it, and every colour of the first instance is then absent from all four.",
+  "_why_not_the_product_default": "An instance with no `data/brand.json` at all is a legal state -- `brand.source` falls back to `brand/convener/brand.json` and the product's own palette ships. It is not the state this file is for. The default deliberately carries no `motif`, so `brand.motif` refuses and `generate_brand_css.py` stops before it writes either downloadable template: a build with no charter produces no poster, which is the whole of phase 10 task 4's decision and is proven where it belongs (`test_brand.py`). A second instance whose build stopped there would leave the two files a collaborator actually downloads out of the sweep, which is exactly where the first instance's forum address was found invisible against its own ground. So this instance chooses colours, as a real one would.",
+  "_synthetic": "Chosen for this example, and nobody's identity: a moss green and a warm gold, at the luminances the system measures for each role, so the twelve pairings below land where the roles need them rather than where a hue happened to fall. `motif` is a stroke colour, a width ratio and a dot colour -- three values, no drawing -- and these three are this example's, not a copy of anybody's.",
+
+  "colour": {
+    "purple": "#0a4a2a",
+    "turquoise": "#e8ca6f",
+    "cream": "#f7f2e4",
+    "ink": "#2f3a34",
+    "ink_muted": "#4a5a52",
+    "rule": "#cbc3ac",
+    "white": "#ffffff",
+    "black": "#000000",
+
+    "_roles": {
+      "purple": "Headlines, ribbon, wordmark. The dominant colour, not an accent.",
+      "turquoise": "A ground. Never a text colour on white or cream -- the token names are the product's, and they describe the role, not the hue.",
+      "cream": "Full-width horizontal bands laid across the ground.",
+      "ink": "Primary text.",
+      "ink_muted": "Secondary text.",
+      "rule": "Rules, borders, dividers. Never text.",
+      "black": "Body copy on the ground.",
+      "white": "Inside photographic frames only. Not a ground."
+    }
+  },
+
+  "derived": {
+    "_comment": "Values no chosen colour supplies, needed because the web has states and links. Each clears AA on cream and on white.",
+    "ink_faint": "#5c6d64",
+    "turquoise_text": "#8b5520",
+    "turquoise_tint": "#f0e4c2",
+    "purple_hover": "#07351e",
+    "purple_tint": "#d4e0d8",
+    "rule_strong": "#a3997c"
+  },
+
+  "contrast": {
+    "_comment": "Measured, WCAG 2.1 relative luminance, and recomputed by `brand.contrast_problems` at every run of `generate_brand_css.py` -- a claim here that no longer recomputes, or one that recomputes below 4.5, stops this instance's build exactly as it stops the other one's. The names are the product's, one per pairing the shipped stylesheets and the two downloadable templates actually draw.",
+    "purple_on_turquoise": 6.47,
+    "black_on_turquoise": 13.11,
+    "ink_on_turquoise": 7.38,
+    "purple_on_cream": 9.27,
+    "ink_on_cream": 10.57,
+    "ink_muted_on_turquoise": 4.56,
+    "ink_faint_on_cream": 4.91,
+    "turquoise_text_on_white": 6.14,
+    "white_on_purple": 10.37,
+    "turquoise_text_on_cream": 5.49,
+    "ink_muted_on_cream": 6.53,
+    "turquoise_on_purple": 6.47
+  },
+
+  "typography": {
+    "display": "Archivo",
+    "display_weight": 800,
+    "body": "Archivo",
+    "body_weight": 400,
+    "mono": "JetBrains Mono",
+    "fallback": ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "system-ui", "sans-serif"],
+    "licence": "SIL Open Font License 1.1",
+    "self_hosted": true,
+    "_faces": "The two faces the product ships under `fonts/` and serves from its own origin (D-17). An instance naming a face nobody ships would build a page that silently falls back, so this example names the shipped ones rather than inventing a third."
+  },
+
+  "motif": {
+    "ribbon_stroke": "#0a4a2a",
+    "ribbon_width_ratio": 0.03,
+    "logo_dots": "#e8ca6f",
+    "_motif": "The section with no product default (`brand.motif` raises rather than substituting), so an example instance has to answer it the way a real duplicate does: a stroke colour, how wide that stroke is as a fraction of the composition's shorter side, and the colour of the wordmark's dots."
+  },
+
+  "layout": {}
+}

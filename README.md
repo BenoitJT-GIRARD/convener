@@ -1,4 +1,4 @@
-# The Example Collective — Monthly Reading Group
+# Monthly Reading Group
 
 The operational workspace for our community webinar series, from finding a
 speaker to certifying attendance — and the source of the public showcase
@@ -27,7 +27,7 @@ and when it stops being readable, and how to take this project over.
 ```bash
 cd app
 npm install
-npm run dev           # http://localhost:5173/example-showcase/app/
+npm run dev           # served under the base config/instance.json declares
 ```
 
 You'll be prompted for a GitHub fine-grained PAT scoped to this repository
@@ -47,7 +47,7 @@ The public showcase is a separate, static project — no sign-in, no secret:
 ```bash
 cd site
 npm install
-npm start             # http://localhost:8080/example-showcase/
+npm start             # served under the prefix config/instance.json declares
 ```
 
 Validate data:
@@ -82,7 +82,7 @@ authority.
 - **State machine.** Status changes are a consequence of explicit gestures (vote, send invitation, log reply, lock date). The free-form status field is gone (except a board-only admin override).
 - **Two personas.** Active organizer and board member, served at parity. The inbox adapts to the role.
 - **Handbook content rendered inline.** Each runbook step links to the relevant Markdown chunk (template email, instructions) which renders next to the action. No back-and-forth with a separate doc site.
-- **The showcase is generated, not hand-built.** [`example-showcase`](https://github.com/example-instance/example-showcase) holds no source of its own — continuous integration here builds `site/` and `app/` and pushes the output to its root.
+- **The showcase is generated, not hand-built.** The published repository holds no source of its own — continuous integration here builds `site/` and `app/` and pushes the output to its root.
 
 See [`docs/architecture.md`](docs/architecture.md) for how these pieces
 fit together, the diagram of where personal data goes, and the handover

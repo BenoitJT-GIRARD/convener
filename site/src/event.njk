@@ -122,7 +122,7 @@ eleventyComputed:
   "eventStatus": "https://schema.org/EventScheduled",
   "description": eventDescription,
   "location": { "@type": "VirtualLocation", "url": eventUrl },
-  "organizer": { "@type": "Organization", "name": "The Example Collective", "url": site.forum },
+  "organizer": { "@type": "Organization", "name": site.organisation, "url": site.forum },
   "performer": { "@type": "Person", "name": event.speaker_name, "affiliation": speakerAffiliation },
   "potentialAction": registerAction,
   "subjectOf": recording
@@ -224,19 +224,21 @@ eleventyComputed:
     </p>
     <p>
       To access, correct or erase your data before that date, write to
-      <a href="mailto:reading-group@example.test">reading-group@example.test</a>.
+      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
       Read the full
-      {# Fix round 4: this used to link example-cockpit directly -- the
-         *private* source repository (D-15), which returns GitHub's own
-         404 to a public visitor. `donnees.njk` already links the same
-         record at its published handbook address; this now matches it
-         exactly, rather than stating a second, disagreeing answer to the
-         same question. `tools/tests/test_site.py::
+      {# Fix round 4: this used to link the private source repository
+         directly (D-15), which returns GitHub's own 404 to a public
+         visitor. `donnees.njk` already linked the same record at its
+         published handbook address; this matches it exactly, rather than
+         stating a second, disagreeing answer to the same question.
+         Phase 10 task 2: the address itself is no longer typed here at
+         all -- `absoluteUrl` (site/.eleventy.js) builds it from
+         `config/instance.json`, so a duplicate publishing under its own
+         address gets its own link with nothing to edit here.
+         `tools/tests/test_site.py::
          test_the_governance_record_link_agrees_on_every_page_that_makes_
-         it` reads both templates and pins them equal, built from the same
-         two constants `donnees.njk`'s own link is, so this cannot drift
-         back to a private-repo address unnoticed. #}
-      <a href="https://example-instance.github.io/example-showcase/app/handbook/governance/traitement-donnees.md">data-protection record</a>
+         it` reads both templates and pins them equal. #}
+      <a href="{{ '/app/handbook/governance/traitement-donnees.md' | absoluteUrl }}">data-protection record</a>
       for what we hold, why, and for how long.
     </p>
   </div>
@@ -264,7 +266,7 @@ eleventyComputed:
   <noscript>
     <p class="notice">
       Registering needs JavaScript enabled. If you cannot enable it, write to
-      <a href="mailto:reading-group@example.test">reading-group@example.test</a>
+      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>
       and we will register you by hand.
     </p>
   </noscript>

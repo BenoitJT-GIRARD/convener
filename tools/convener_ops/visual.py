@@ -211,12 +211,12 @@ The variable parts, and how each is handled
 from __future__ import annotations
 
 import html
-import json
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Any, Final
+from typing import Final
 
+from . import brand
 from .governance import PARIS
 from .registration_code import registration_code_svg
 from .ribbon import (
@@ -241,8 +241,10 @@ __all__ = [
 
 #: Same convention as `ribbon.BRAND_PATH`: relative to the repository root,
 #: threaded in by the caller rather than resolved from this file's own
-#: location.
-BRAND_PATH: Final = Path("data") / "brand.json"
+#: location. Which file is actually read is `brand.py`'s answer, not this
+#: module's -- an instance that has written no values of its own builds
+#: with the product's charter instead.
+BRAND_PATH: Final = brand.INSTANCE_PATH
 
 #: This project's one standing start time, Europe/Paris local. The
 #: JavaScript twin of this exact constant is
@@ -342,16 +344,17 @@ def date_line(talk_date: date) -> str:
 
 def _load_colours(root: Path) -> dict[str, str]:
     """Every named colour this composition uses, `colour` and `derived`
-    merged -- the same two sections and the same "skip an underscore-led
-    commentary key" rule `generate_brand_css._colours` applies, read
-    independently rather than imported (see the module docstring)."""
-    brand: dict[str, Any] = json.loads((root / BRAND_PATH).read_text(encoding="utf-8"))
-    merged: dict[str, str] = {}
-    for section in ("colour", "derived"):
-        for key, value in brand[section].items():
-            if not key.startswith("_"):
-                merged[key] = str(value)
-    return merged
+    merged -- read through `convener_ops.brand`, which is the one thing that
+    decides *which* charter is in force (the instance's own values, or the
+    product's default when a duplicate has not written any).
+
+    Still not an import of `scripts/generate_brand_css.py`, which is the
+    boundary the module docstring above is about: that script lives
+    outside the installed package. `brand.py` is inside it, and it exists
+    precisely so that this module and that script cannot answer "which
+    file holds the colours" differently.
+    """
+    return brand.colours(brand.load(root))
 
 
 #: The generated block's own variable names

@@ -45,6 +45,7 @@ from convener_ops import (
     certificate,
     confirmation,
     platform_fcc,
+    published,
     registration,
     signing,
     survey_invite,
@@ -59,9 +60,13 @@ VITE_CONFIG = Path("app/vite.config.ts")
 APP_TSX = Path("app/src/App.tsx")
 
 #: The base path the brief names verbatim: the app is served from the
-#: public vitrine repo, under its own `app/` subtree, not from the private
-#: cockpit repo's own Pages site (which cannot exist on the free plan).
-EXPECTED_BASE_PATH = "/example-showcase/app/"
+#: public showcase repository, under its own `app/` subtree, not from the
+#: private cockpit repo's own Pages site (which cannot exist on the free
+#: plan). Phase 10, task 2: derived from `config/instance.json` rather
+#: than typed here, so this module pins the *shape* of the address
+#: (`<published prefix>app/`) and never becomes a second statement of
+#: what that prefix is.
+EXPECTED_BASE_PATH = published.load().app_base
 
 
 def _load_workflow() -> dict[str, Any]:
@@ -156,27 +161,36 @@ def test_deploy_workflow_survey_status_retry_re_derives_rather_than_rebases() ->
 
 
 def test_vite_config_base_path_targets_the_vitrine_app_subtree() -> None:
+    """Phase 10, task 2: `base` is no longer a literal in this file, so
+    what is checked here is that it is *derived* -- from the declaration,
+    through the same reader the build runs. That it resolves to
+    `EXPECTED_BASE_PATH` is checked by actually loading all four
+    configurations, in `test_published.py`: a source text agreeing with a
+    value proves nothing about what a build does with it.
+    """
     config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
-    assert f"base: '{EXPECTED_BASE_PATH}'" in config, (
-        f"{VITE_CONFIG.as_posix()} does not set base to {EXPECTED_BASE_PATH!r}; "
-        "a build off this config would ship broken asset URLs once served "
-        "from the vitrine's app/ subtree."
+    assert "from './scripts/published.mjs'" in config, (
+        f"{VITE_CONFIG.as_posix()} no longer reads the published address "
+        "from config/instance.json; a build off this config would ship "
+        "asset URLs nothing derives, at an address nothing declares."
     )
+    assert "base: PUBLISHED.appBase" in config
 
 
 def test_vite_config_base_no_longer_points_at_the_private_repo() -> None:
     config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
     assert "/example-cockpit/" not in config, (
         f"{VITE_CONFIG.as_posix()} still references /example-cockpit/; a bundle "
-        "built from it would 404 every asset once served from example-showcase."
+        "built from it would 404 every asset once served from the public "
+        "showcase."
     )
 
 
 def test_all_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
     """Fix round 4 (the path-prefix defect): `islandSignupConfig` and
     `islandVerifyConfig` used to set `base: '/app/'`, deliberately distinct
-    from the main config's own `base: '/example-showcase/app/'`
-    (`EXPECTED_BASE_PATH`, above), on the reasoning that the *site* pages
+    from the main config's own published base (`EXPECTED_BASE_PATH`,
+    above), on the reasoning that the *site* pages
     hosting these islands already addressed
     the app's assets root-relative to the site's own root. That reasoning
     assumed the site's own root-relative links already landed at wherever
@@ -186,28 +200,30 @@ def test_all_islands_share_the_apps_published_base_not_a_divergent_one() -> None
     test_no_built_page_emits_a_root_relative_link_without_the_prefix` now
     closes on the site's own side. Every island publishes into, and is
     addressed from, the exact same `example-showcase` `app/` subtree the main
-    app does (`deploy.yml`'s single "Push to example-showcase" step carries all
-    of them, `islandSurveyConfig` added by phase 7 task 5), so all four
-    configs must now read the identical value -- a stray `'/app/'`
-    reappearing on any island is exactly the regression this guards.
+    app does (`deploy.yml`'s single push step carries all of them,
+    `islandSurveyConfig` added by phase 7 task 5), so all four configs
+    must read the identical value -- a stray `'/app/'` reappearing on any
+    island is exactly the regression this guards. Phase 10, task 2 made
+    "identical" structural rather than textual: all four now name one
+    derived expression, and none of them names an address at all.
     """
     config = (ROOT / VITE_CONFIG).read_text(encoding="utf-8")
     # Block comments stripped first: this file's own explanatory comments
-    # quote `base: '/example-showcase/app/'` by way of describing the fix, which
+    # quote `base: PUBLISHED.appBase` by way of describing the fix, which
     # would otherwise inflate this count without a fifth real config.
     code_only = re.sub(r"/\*.*?\*/", "", config, flags=re.DOTALL)
-    base_literals = re.findall(r"base:\s*'([^']*)'", code_only)
-    assert len(base_literals) == 4, (
-        f"expected exactly 4 `base:` literals in {VITE_CONFIG.as_posix()} "
+    bases = re.findall(r"base:\s*([^,\n]+)", code_only)
+    assert len(bases) == 4, (
+        f"expected exactly 4 `base:` entries in {VITE_CONFIG.as_posix()} "
         "(main app, island-signup, island-verify, island-survey), found "
-        f"{base_literals!r}"
+        f"{bases!r}"
     )
-    assert set(base_literals) == {EXPECTED_BASE_PATH}, (
-        f"{VITE_CONFIG.as_posix()}'s four `base:` literals are "
-        f"{base_literals!r}, not all {EXPECTED_BASE_PATH!r} -- an island "
-        "publishing under a different base than the main app 404s its own "
-        "fetches (event keys, the certificate register, signing keys) once "
-        "served from the vitrine's real, single app/ subtree"
+    assert set(bases) == {"PUBLISHED.appBase"}, (
+        f"{VITE_CONFIG.as_posix()}'s four `base:` entries are {bases!r}, "
+        "not all the one derived value -- an island publishing under a "
+        "different base than the main app 404s its own fetches (event keys, "
+        "the certificate register, signing keys) once served from the real, "
+        "single app/ subtree they share"
     )
 
 
@@ -695,7 +711,7 @@ def test_publish_vitrine_no_longer_builds_the_certificates_public_data() -> None
 
 def test_publish_vitrine_push_step_no_longer_copies_certificates_data() -> None:
     """Minor 5 (fix round 1, task 13): confirmed independently, at
-    <https://example-instance.github.io/example-showcase/> and verified
+    at the address `config/instance.json` declares, and verified
     against the showcase checkout itself, that no Eleventy template reads
     `src/_data/certificates.json` -- `grep -rn certificates src/` there is
     empty. The write survived three fix rounds because it made the three
@@ -758,7 +774,9 @@ def test_publish_vitrine_builds_the_site_before_pushing() -> None:
     assert names.index("Refresh site data") < names.index("Build site"), (
         "the site must build from the refreshed data, not the committed fixture"
     )
-    assert names.index("Build site") < names.index("Push to example-showcase"), (
+    assert names.index("Build site") < names.index(
+        "Push to the published repository"
+    ), (
         "the build must run before the push step, or it publishes "
         "whatever site/_site last held"
     )

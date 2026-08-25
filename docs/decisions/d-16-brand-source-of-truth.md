@@ -40,3 +40,34 @@ surface free to hold its own copy of the palette.
 Nothing may hard-code a colour that already has an entry in `brand.json`. A
 deliberately retouched on-screen variant is still allowed — but only if it
 is declared as a variant and measured, not simply arrived at by accident.
+
+## Amended — the one file is the *instance's*, and the product ships a default
+
+Separating the instance from the code changed which file this decision is
+about, and nothing else about it. `data/brand.json` still holds this series'
+own values, unchanged, and every implementation still reads it. What is new is
+that the file is now **optional**: it belongs to the instance, and a duplicate
+that has not chosen colours yet has none. `tools/convener_ops/brand.py` is the one
+reader, and it takes the product's own charter — `brand/convener/brand.json` —
+whenever the instance has written nothing, so a fresh duplicate builds a
+finished-looking site rather than a grey one. Whole file or whole file, never a
+merge of the two: ownership here is a property of a file.
+
+Shipping a default palette at all is only safe because of what this decision
+was decided over. An *invented* palette that measured worse than the one it
+replaced is exactly what happened before; so the generator now recomputes every
+contrast the charter records, on every run, and **a palette measuring below AA
+does not build**. The default is the product's own navy and coral, derived to
+the lightness the system measures each role at, and it clears the same table.
+
+**One section has no default and refuses instead.** `motif` — the ribbon's
+stroke, its width ratio, the logo's dots — is a signature rather than a colour.
+The build stops and names what is missing rather than lending a duplicate
+another organisation's mark. A default that leaks when you forget it is not a
+default.
+
+The two templates a collaborator downloads (`docs/assets/*.svg`) are derived
+from the charter now as well, so "nothing may hard-code a colour" finally holds
+for the files that leave the repository. They had drifted onto the very palette
+this decision rejected, and one line in them was set in the page's own
+background colour: 1.00:1, invisible, in every poster ever downloaded.

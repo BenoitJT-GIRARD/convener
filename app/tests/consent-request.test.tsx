@@ -22,7 +22,7 @@ import { DataProvider } from '../src/data/DataContext';
 import { Layout } from '../src/components/Layout';
 import { Consent } from '../src/screens/Consent';
 import { CONTENT_REGISTRY } from '../src/content/registry';
-import { substitute } from '../src/content/render';
+import { substitute, substituteWithoutSpeaker } from '../src/content/render';
 import {
   CONSENT_ASKABLE_FROM,
   FIELD_WORDING,
@@ -42,6 +42,14 @@ import { config as configDouble, speaker as double } from './data-doubles';
 const MESSAGE_KEY = 'toolkit/emails/consent-request';
 
 const MESSAGE_PATH = resolve(__dirname, '../../docs', CONTENT_REGISTRY[MESSAGE_KEY].file);
+
+/** This instance, read from the one file that declares it -- never retyped
+ *  here, or this suite would pass on the day the declaration changed and
+ *  the template did not. */
+const declaredIdentity = () =>
+  JSON.parse(
+    readFileSync(resolve(__dirname, '../../config/instance.json'), 'utf-8'),
+  ).identity as Record<string, string>;
 
 /** The template as it actually sits in the repository. */
 function messageSource(): string {
@@ -350,9 +358,17 @@ describe('the message asking for permission', () => {
   });
 
   it('says where, not just what', () => {
+    // Phase 10, task 3: the forum's own address is the instance's, so the
+    // template names it rather than spelling it. Both halves are asserted --
+    // the token is there, and it resolves to the address this instance
+    // declares. A duplicate sending this message must name its own forum,
+    // not the one that happened to write the template.
     const prose = messageSource().replace(/\s+/g, ' ');
-    expect(prose).toContain('forum.example.test');
+    expect(prose).toContain('{{ instance.forum_host }}');
     expect(prose).toMatch(/YouTube channel/);
+    expect(substituteWithoutSpeaker('{{ instance.forum_host }}')).toBe(
+      new URL(declaredIdentity().forum).host,
+    );
   });
 
   it('renders on the row through the real template, addressed to the real speaker', async () => {

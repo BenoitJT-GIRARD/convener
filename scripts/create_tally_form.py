@@ -111,12 +111,15 @@ from convener_ops.proposal import (
     LABEL_PROPOSED_BY,
     LABEL_TITLE,
 )
+from convener_ops.published import load_identity
 
 #: The form's name in Tally, and the idempotency key: `sync_form` finds the
 #: existing form by this exact name (`GET /forms` has no filter-by-name
 #: parameter, so it is found by paging through every form and comparing) and
 #: updates it in place rather than creating a second one.
-FORM_TITLE: Final = "Propose a speaker for The Example Collective"
+#: The form a proposer lands on names whoever runs the series. Read
+#: from `config/instance.json` like every other public name.
+FORM_TITLE: Final = f"Propose a speaker for {load_identity().organisation}"
 
 #: `api.tally.so`, the one host this script ever talks to.
 API_BASE: Final = "https://api.tally.so"

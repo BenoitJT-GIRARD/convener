@@ -1,8 +1,12 @@
-/* TEC Monthly Reading Group — public vitrine
+/* The public showcase's stylesheet
  *
- * Every value below comes from data/brand.json in example-cockpit, which is the
- * one source of fact for this identity and carries the reasoning for each
- * token. Do not introduce a colour here that is not in that file.
+ * Every value below comes from the charter in force -- data/brand.json if
+ * this instance has chosen its colours, brand/convener/brand.json if it has
+ * not (tools/convener_ops/brand.py::source) -- which is the one source of fact
+ * for the identity and carries the reasoning for each token. Do not
+ * introduce a colour here that is not in that file: the block below is
+ * generated from it, and scripts/generate_brand_css.py --check fails on a
+ * stylesheet that has drifted.
  *
  * The palette is Anonymous's own, read out of her originals rather than out of
  * the *_test_dev.svg reconstruction that this stylesheet used until now. That
@@ -29,17 +33,17 @@
  * which are commercial licences and cannot ship on a zero-cost public site.
  * One variable file covers every weight the site uses, which is also why
  * display and body are the same family here where her originals used two.
- * See data/brand.json in example-cockpit for the full reasoning.
+ * See data/brand.json for the full reasoning.
  *
  * Fix round 4 (the path-prefix defect): the three `url(...)` references
  * below are deliberately relative (`fonts/...`, no leading slash), not
  * `| url`-filtered like an `href`/`src` in a template. A relative URL
  * inside a stylesheet resolves against *the stylesheet's own address*, not
  * the page that loads it -- so `fonts/archivo-....woff2` finds
- * `/example-showcase/fonts/...` from a stylesheet served at
- * `/example-showcase/style.css`, and finds `/fonts/...` from one served at a
- * bare localhost root, with no `pathPrefix` (`.eleventy.js`) to configure
- * and nothing here that could disagree with it. */
+ * `<prefix>fonts/...` from a stylesheet served at `<prefix>style.css`, and
+ * finds `/fonts/...` from one served at a bare localhost root, whatever
+ * the prefix is, with no `pathPrefix` (`.eleventy.js`) to configure and
+ * nothing here that could disagree with it. */
 @font-face {
   font-family: 'Archivo';
   font-style: normal;

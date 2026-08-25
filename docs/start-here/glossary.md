@@ -2,7 +2,7 @@
 
 | Word | What it means |
 |---|---|
-| **Convener** | Monthly Reading Group — our webinar series. |
+| **Convener** | The short name this project carries throughout its own code — `convener-register`, `convener_ops`. The series' own title and the repositories this instance runs from are the instance's, and are in `config/instance.json`. |
 | **MRG-NN** | A webinar's number, e.g. `MRG-07`. |
 | **Contributor** | Anyone helping out. |
 | **Event Host** | One of the **two** volunteers who run a webinar together — preparing and hosting it. |
@@ -15,4 +15,4 @@
 | **Recusal** | A Board member standing aside from one vote because of a conflict of interest, with a written reason. They leave the count for that vote. |
 | **Nomination** | A proposal that a Contributor joins the Editorial Board, sponsored by a member. It carries after seven days without an objection. |
 | **Deferred** | A nomination somebody objected to in writing. Not a refusal: the yearly meeting decides. |
-| **The forum** | The Example Collective (forum.example.test) — where discussion happens before and after each talk. |
+| **The forum** | {{ instance.organisation }} ({{ instance.forum_host }}) — where discussion happens before and after each talk. |

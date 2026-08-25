@@ -126,7 +126,7 @@ touched by this deadline.
   the registration and every survey answer for that event together, not one
   answer on its own.
 
-Write to `reading-group@example.test` for any of the above — the same
+Write to `{{ instance.contact }}` for any of the above — the same
 address the confirmation email and the event page's own notice both name.
 
 ## Measures

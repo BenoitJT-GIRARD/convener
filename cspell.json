@@ -23,6 +23,7 @@
     "README.md",
     "INFORMATION-ARCHITECTURE.md",
     "services/*/README.md",
+    "instances/*/README.md",
     "site/**/*.njk",
     "site/README.md",
     ".github/workflows/**"

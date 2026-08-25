@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
+from convener_ops import published
 from convener_ops.attendance import MatchedAttendee
 from convener_ops.certificate import (
     _CERTIFICATE_ID_RE,
@@ -1162,12 +1163,31 @@ def test_the_toolkit_page_field_list_matches_the_signed_payload() -> None:
 def test_the_toolkit_page_prints_the_organiser_constant() -> None:
     """The organiser's name is document furniture, never a signed field
     (`signing.sign` would refuse a payload that tried to include it) --
-    but it must still appear on the page, printed from `ORGANISER`, not
-    hand-typed a second time somewhere this test cannot see."""
+    but it must still appear on the page, and it must get there from the
+    one declaration rather than being hand-typed a second time somewhere
+    this test cannot see.
+
+    Phase 10, task 3: the page carries `{{ instance.organisation }}` now,
+    and `ORGANISER` reads the same key of the same file. So this asserts
+    both halves -- that the token is on the page, and that rendering it
+    produces exactly the name the generated document prints. A page that
+    had gone back to a literal would fail the first; a token that resolved
+    to something else would fail the second.
+    """
     text = (repo_root() / "docs" / "toolkit" / "certificate.md").read_text(
         encoding="utf-8"
     )
-    assert ORGANISER in text
+    token = "{{ instance.organisation }}"
+    assert token in text, (
+        "docs/toolkit/certificate.md no longer names the organiser through "
+        "the substitution vocabulary -- a literal here is a name a duplicate "
+        "has to find and edit by hand"
+    )
+    assert ORGANISER not in text, (
+        "the organiser's name is written out in the page as well as "
+        "substituted into it -- one of the two will be stale"
+    )
+    assert published.load_identity().namespace["organisation"] == ORGANISER
 
 
 # ------------------------------------------------------------------ #
@@ -1187,7 +1207,11 @@ def test_the_shared_fixture_states_match_this_modules_own_constants() -> None:
 
 
 def test_the_shared_fixture_base_matches_this_modules_own_constant() -> None:
-    assert _FIXTURE["verification_base"] == VERIFICATION_BASE
+    """Phase 10 task 2: the fixture states the *path* -- `verify/#/`,
+    which is the product's own route plus the fragment that keeps a
+    holder's name out of every request -- and the root comes from
+    `config/instance.json`, the one place it is written down."""
+    assert published.load().under(_FIXTURE["verification_path"]) == VERIFICATION_BASE
 
 
 def test_the_shared_fixtures_token_genuinely_verifies() -> None:
@@ -1207,10 +1231,9 @@ def test_the_shared_fixtures_url_is_reproducible_from_this_modules_own_function(
     None
 ):
     example = _FIXTURE["signed_example"]
-    assert (
-        verification_url(example["identifier"], example["token"])
-        == example["verification_url"]
-    )
+    assert verification_url(
+        example["identifier"], example["token"]
+    ) == published.load().under(example["verification_url_path"])
 
 
 def test_the_shared_fixtures_projection_example_has_no_fingerprint_either() -> None:
@@ -1283,7 +1306,6 @@ def test_the_shared_fixtures_integer_duration_example_genuinely_verifies() -> No
     assert result.valid
     assert result.payload == example["payload_decoded"]
     assert example["payload_decoded"]["duration_hours"] == 2.0
-    assert (
-        verification_url(example["identifier"], example["token"])
-        == example["verification_url"]
-    )
+    assert verification_url(
+        example["identifier"], example["token"]
+    ) == published.load().under(example["verification_url_path"])

@@ -2,7 +2,13 @@
 layout: layout.njk
 permalink: "/archives/"
 pageTitle: "Archive"
-pageDescription: "Every seminar The Example Collective has hosted, with its recording and discussion thread where one exists."
+eleventyComputed:
+  # Named through `site.*` rather than typed out: the organisation is
+  # the instance's, declared once in `config/instance.json`. A plain
+  # front-matter string is not rendered as a template, so the value
+  # has to be computed for the substitution to actually happen --
+  # `event.njk` above already uses this mechanism for the same two keys.
+  pageDescription: "Every seminar {{ site.organisation }} has hosted, with its recording and discussion thread where one exists."
 ---
 {% from "archive-list.njk" import archiveList %}
 {% from "archive-filters.njk" import archiveFilters %}
@@ -12,7 +18,7 @@ pageDescription: "Every seminar The Example Collective has hosted, with its reco
     <p class="hero__eyebrow">Archive</p>
     <h1 class="hero__title">Past editions.</h1>
     <p class="hero__lede">
-      Every seminar The Example Collective has hosted, with its recording and
+      Every seminar {{ site.organisation }} has hosted, with its recording and
       discussion thread where one exists. Browse by year, or jump to what
       you can watch or join today &mdash; every option below is a plain
       page, so this works with JavaScript off.

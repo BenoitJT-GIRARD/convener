@@ -1,0 +1,58 @@
+# The example instance's own governance configuration -- the same file
+# `data/config.yml` is for the instance that runs this repository, written
+# for one that does not exist.
+#
+# Every login below is prefixed `example-`: these are not accounts anybody
+# is asked to register, and nothing in a second-instance build ever calls
+# GitHub with one. The thresholds are the product's own defaults, because a
+# fictional board has no better figure to offer and inventing one would
+# suggest a threshold is identity when it is a rule.
+season: 2026
+vw_counter: 4
+overlap_window_days: 7
+board:
+- login: example-alba
+  joined_on: '2025-01-13'
+  status: active
+  unavailable_until: ''
+- login: example-brix
+  joined_on: '2025-01-13'
+  status: active
+  unavailable_until: ''
+- login: example-cedar
+  joined_on: '2025-04-07'
+  status: active
+  unavailable_until: ''
+- login: example-dune
+  joined_on: '2025-09-01'
+  status: active
+  unavailable_until: ''
+- login: example-elm
+  joined_on: '2026-02-16'
+  status: active
+  unavailable_until: ''
+seminar_duration_minutes: 90
+# See `data/config.yml`'s own comment on this value: 0.6666666666666666 is
+# the closest float64 below exactly two thirds, and rounding it up refuses
+# somebody present for exactly two thirds of a session.
+eligibility_share: 0.6666666666666666
+nominations: []
+board_min: 5
+board_max: 9
+vote_window_days: 14
+objection_window_working_days: 3
+inactivity_months: 12
+balance_window_months: 24
+view_count_window_days: 30
+instructions: ''
+sla_days:
+  invitation_follow_up: 30
+  summary_after_delivery: 7
+  recording_after_delivery: 14
+channels:
+- key: forum
+  label: The Example Collective forum
+- key: mailing_list
+  label: Reading-group mailing list
+- key: posters
+  label: Printed posters in the departments

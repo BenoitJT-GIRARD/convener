@@ -67,11 +67,11 @@ unreadable. It is never published, and it is only ever decrypted
 automatically, to record your registration and to issue your certificate.
 
 To see, correct, withdraw or erase your data before then, or for any other
-question, reply to this message or write to reading-group@example.test —
+question, reply to this message or write to {{ instance.contact }} —
 the same address the registration page itself names for this right.
 
 Best regards,
-The Example Collective team
+{{ instance.organisation }} team
 
 ---
 

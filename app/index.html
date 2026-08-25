@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TEC · Workshop Series</title>
+    <!-- The organiser cockpit's own name, in the product's words. The
+         instance's own is set from `config/instance.json` the moment
+         `src/main.tsx` runs (`document.title`): this file is a static
+         document Vite serves before any script has run, so a `{{ }}` here
+         would be published verbatim and an env placeholder would need a
+         `.env` this project deliberately does not carry. -->
+    <title>Workshop cockpit</title>
     <!-- Fonts are self-hosted from /fonts/ -- see the @font-face block in
          src/design/tokens.css. This head used to preconnect to Google's
          font CDN and load a stylesheet from it, on pages that carry a

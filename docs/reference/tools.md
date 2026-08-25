@@ -8,7 +8,7 @@ Every tool the series uses, and how to get access.
 | **LinkedIn** | Announcement posts | Ask the organisers |
 | **The meeting platform** | Hosting the webinar and recording it | The organisation's own account — see `docs/reference/operations.md` |
 | **The video channel** | Publishing the recordings | The organisation's own account — see `docs/reference/operations.md` |
-| **The forum** | Discussion before and after each talk | forum.example.test |
+| **The forum** | Discussion before and after each talk | {{ instance.forum_host }} |
 
 !!! tip "Everyone registers"
     Everyone signs up through the registration link — organisers and the speaker included.

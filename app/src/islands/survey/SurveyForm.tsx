@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { instanceIdentity } from '../../instance';
 import { encryptSurveyResponse, importEventPublicKey } from '../../survey/encrypt';
 import type { SurveyResponse } from '../../survey/encrypt';
 import { surveyStatusUrl } from '../../survey/surveyStatus';
@@ -74,7 +75,13 @@ function surveyRelayUrl(): string | undefined {
   return `${base.replace(/\/$/, '')}/survey`;
 }
 
-const CONTACT_EMAIL = 'reading-group@example.test';
+// The address a participant writes to about their own data. Phase 10,
+// task 3: declared once in `config/instance.json` and carried into this
+// bundle by `vite.config.ts`'s own define, because this runs in a
+// participant's browser. A duplicate that left this literal here would
+// send its own participants' data-protection requests to the previous
+// instance's inbox.
+const contactEmail = () => instanceIdentity().contact;
 
 // R-37 (phase 4, fix round 1): the page-level layer of the switch
 // enforcement. `'closed'` means the key loaded fine but this event's
@@ -292,7 +299,7 @@ export function SurveyForm({ eventId }: { eventId?: string }) {
           <p>
             We could not retrieve what this event needs before anything can be sent. We
             never send answers unencrypted, so nothing has been sent. Please try again
-            later, or contact <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+            later, or contact <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
           </p>
         </div>
       )}

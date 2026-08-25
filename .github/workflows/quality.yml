@@ -113,7 +113,13 @@ jobs:
     runs-on: ubuntu-latest
     # Minor 2 (fix round 1, task 16): closes the project-wide gap
     # test_workflows.py::test_every_job_declares_a_timeout now guards.
-    timeout-minutes: 10
+    #
+    # 12, not 10, since phase 10 task 5: this job now also installs
+    # `app/`'s own `node_modules` and runs a whole second-instance build
+    # inside `pytest` (see the "Install app" step below). Raised rather
+    # than left to run close to the edge -- a timeout that trips on a slow
+    # runner is a red build that says nothing about the code.
+    timeout-minutes: 12
     permissions:
       contents: read
     steps:
@@ -151,13 +157,38 @@ jobs:
       # Python and Node tooling in one job is already this pipeline's own
       # idiom (`publish-vitrine.yml`, `deploy.yml`), not a pattern
       # introduced here.
+      #
+      # Phase 10, task 5 added the second install below for the same
+      # reason. `tests/test_second_instance.py` builds this repository as
+      # a *different* instance -- all four bundles, the showcase, the
+      # handbook copy, the generated templates, the published feeds and
+      # the posters -- and sweeps what comes out for anything of this
+      # instance's. That is the acceptance criterion the whole of phase 10
+      # rests on (spec § 6), so it has to run on every change rather than
+      # only where somebody remembers to look; the build itself takes
+      # about ten seconds once `node_modules` is there, and it makes no
+      # network call of any kind.
+      #
+      # Phase 10, task 7: these two steps are now load-bearing rather than
+      # convenient. `tests/test_second_instance.py::_toolchain_absent`
+      # skips a missing toolchain on a developer's machine and *fails* it
+      # here, because `CI` is set -- so deleting, renaming or reordering
+      # either install below turns this job red by name instead of turning
+      # the acceptance criterion into a row of skips inside a green suite
+      # (D-25, and the defect `docs/superpowers/phase-10-bilan.md` § 4.3
+      # found).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: site/package-lock.json
+          cache-dependency-path: |
+            site/package-lock.json
+            app/package-lock.json
       - name: Install site (for tests/test_site.py's own build)
         working-directory: site
+        run: npm ci
+      - name: Install app (for tests/test_second_instance.py's own build)
+        working-directory: app
         run: npm ci
       - name: Lint
         working-directory: tools
@@ -236,14 +267,23 @@ jobs:
         # files in the tree, so it would be satisfied by the shallow clone the
         # other jobs take; it runs here because this is the job that has `uv`.
         run: uv run python ../scripts/generate_schema_doc.py --check
-      - name: Brand tokens
+      - name: Brand tokens and templates
         working-directory: tools
         # site/src/style.css, app/src/design/tokens.css and tokens.ts each
         # carried data/brand.json's colours retyped by hand -- the shape
         # that let the application drift to a reconstruction's palette
         # unnoticed (docs/superpowers/deferred-work.md, entry 1). Same
         # assertion-only run as the schema check above: writes nothing,
-        # fails if a committed file is not what the brand file derives.
+        # fails if a committed file is not what the charter derives.
+        #
+        # Phase 10 task 4 gave it two more things to fail on. It now also
+        # derives the two SVG templates a collaborator downloads
+        # (docs/assets/), which had drifted onto the same discarded
+        # palette where no check could see them; and it recomputes every
+        # contrast the charter records, refusing a palette that measures
+        # below WCAG AA rather than only one that disagrees with a file.
+        # That last clause is what lets the product ship a default palette
+        # at all, so it has to run here and not only in pytest.
         run: uv run python ../scripts/generate_brand_css.py --check
 
   # Phase 8, task 2: the former `typescript`, `site` and `spelling` jobs.
@@ -292,7 +332,7 @@ jobs:
       # larger surface: `react-router`/`react-router-dom` and `js-yaml` are
       # `dependencies`, not `devDependencies`, so they ship in the built
       # `dist/assets/index-*.js` the operators' cockpit serves at
-      # `/example-showcase/app/` behind its login screen (App.tsx's `Login`/
+      # its own published base behind its login screen (App.tsx's `Login`/
       # `useAuth` gate) -- bounded (never reached by a visitor who only
       # loads a public showcase page or one of the two islands, both of
       # which import neither package), but real. `--omit=dev` is the gate:
@@ -343,14 +383,16 @@ jobs:
       # site/eslint.config.js, the same minimal, plugin-free flat config
       # services/auth-proxy's own already uses -- Eleventy's own CommonJS
       # config file, plus (task 11) the accessibility checker's own ES
-      # module, (task 12) the performance-budget checker's own, and (fix
+      # module, (task 12) the performance-budget checker's own, (fix
       # round 1, phase 6 task 7) the shared Paris-offset fixture's own
-      # CommonJS check script, each under its own scoped override in that
+      # CommonJS check script, and (phase 10 task 2) this package's reader
+      # of `config/instance.json` and the script that prints what it and
+      # `.eleventy.js` resolve, each under its own scoped override in that
       # same config file.
       - name: Lint site
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
-        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs
+        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/published.cjs scripts/print-published.cjs
       # Task 12: the same quality chain phase 1 already holds Python to
       # (`uv run pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
       # axe-core, puppeteer-core) had never been audited before this task.

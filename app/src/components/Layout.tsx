@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useRole } from '../auth/useRole';
 import { useData } from '../data/DataContext';
 import { isDemoMode, exitDemoMode } from '../data/demo';
+import { instanceIdentity } from '../instance';
 
 function exitDemo() {
   exitDemoMode();
@@ -11,6 +12,7 @@ function exitDemo() {
 }
 
 export function Layout() {
+  const instance = instanceIdentity();
   const demo = isDemoMode();
   const { login, signOut } = useAuth();
   const role = useRole();
@@ -22,10 +24,10 @@ export function Layout() {
           <Link to="/" className="flex items-baseline gap-2 no-underline">
             <span className="font-mono text-sm opacity-85">No.</span>
             <span className="font-display font-extrabold tracking-wider uppercase text-sm">
-              The Example Collective
+              {instance.organisation}
             </span>
             <span className="font-display font-medium text-sm opacity-90 tracking-wide">
-              Monthly Reading Group
+              {instance.series}
             </span>
             <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-accent/40 border border-white/30">
               Organizer
@@ -92,10 +94,10 @@ export function Layout() {
             <code className="text-ink">data/speakers.yml</code>
           </p>
           <a
-            href="https://forum.example.test"
+            href={instance.forum}
             className="font-mono text-[11px] tracking-wider uppercase hover:text-accent"
           >
-            forum.example.test →
+            {instance.forum_host} →
           </a>
         </div>
       </footer>

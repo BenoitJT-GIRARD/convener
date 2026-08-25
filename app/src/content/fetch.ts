@@ -1,4 +1,4 @@
-import { CONTENT_REGISTRY, REPO_URL } from './registry';
+import { CONTENT_REGISTRY, repoUrl } from './registry';
 import { expandIncludes, sectionOf } from './transclude';
 
 /** Rendered text, by content key: what a screen asks for. */
@@ -10,13 +10,13 @@ const cache = new Map<string, string>();
  *  key is what keeps transclusion from turning one page into six requests. */
 const rawCache = new Map<string, string>();
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-const REPO_EDIT_URL = `${REPO_URL}/edit/main/docs`;
+
 
 /** GitHub web-editor URL for the markdown file behind a content key, or null. */
 export function editUrlFor(key: string): string | null {
   const entry = CONTENT_REGISTRY[key];
   if (!entry) return null;
-  return `${REPO_EDIT_URL}/${entry.file}`;
+  return `${repoUrl()}/edit/main/docs/${entry.file}`;
 }
 
 /** Anything with a scheme we are willing to send a volunteer to. */
@@ -50,7 +50,7 @@ export function isSafeHref(href: string): boolean {
  * Handbook files are written to be read in the repository, so their links are
  * relative to the file: `../assets/flyer-template.svg` from
  * `toolkit/visual-kit.md`. Rendered in the app the browser would resolve that
- * against the *route* — `/example-showcase/app/` — and hand the volunteer
+ * against the *route* — the app's own published base — and hand the volunteer
  * a 404. Resolving it against the file's own directory instead, under the same
  * `handbook/` path the content was fetched from, makes the download link in
  * the handbook the download link in the app, with one file on disk behind

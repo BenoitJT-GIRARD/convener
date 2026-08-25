@@ -54,7 +54,7 @@ Three pages cover the day between them:
 ## Hosting well
 
 - **Start on time.**
-- Online talks can feel flat for a speaker — make the discussion feel rich. **Never end with "No more questions? Then we stop."** Instead: *"We still have great questions, but we are out of time — the conversation can carry on at The Example Collective."*
+- Online talks can feel flat for a speaker — make the discussion feel rich. **Never end with "No more questions? Then we stop."** Instead: *"We still have great questions, but we are out of time — the conversation can carry on at {{ instance.organisation }}."*
 - Close by thanking the speaker and the audience, and announce the next session if you can.
 
 ---

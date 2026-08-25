@@ -108,7 +108,7 @@ from hashlib import sha256
 from typing import Any, Final
 from urllib.parse import quote
 
-from . import eventkeys
+from . import eventkeys, published
 
 #: `registrations.enc`'s own format version -- the file-level analogue of
 #: `eventkeys.WIRE_VERSION`, in case the file's shape (not the envelope
@@ -164,7 +164,14 @@ FILE_VERSION: Final = 1
 #: permalink expression. Unlike `certificate.VERIFICATION_BASE`, dropping
 #: the fragment here is safe: `signup_url` carries only an event id, never
 #: a name.
-SIGNUP_BASE: Final = "https://example-instance.github.io/example-showcase/events/"
+#:
+#: **Phase 10, task 2:** the host and prefix used to be typed in here, and
+#: bound by test to the same address written out in eleven other files.
+#: They now come from `config/instance.json` through `published.load()` --
+#: one declaration, read from each side of the language boundary (D-14).
+#: `events/` stays here: that segment is the *product's* own route shape,
+#: inherited by every duplicate, not something an instance configures.
+SIGNUP_BASE: Final = published.load().under("events/")
 
 
 def signup_url(event_id: str) -> str:

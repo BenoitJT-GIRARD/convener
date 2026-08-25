@@ -11,7 +11,7 @@ is to collect the corrections whilst they are still free.*
 
 ---
 
-**Subject:** We are starting to announce your TEC talk on {{ speaker.date }}
+**Subject:** We are starting to announce your {{ instance.short_name }} talk on {{ speaker.date }}
 
 Dear {{ speaker.first_name }},
 
@@ -33,13 +33,13 @@ tell us and we will change it. A shorter abstract, a different title, an
 affiliation you have since left — all of that is easy today and awkward once
 the posts are live.
 
-**Where it goes.** The announcement is posted on The Example Collective, on
+**Where it goes.** The announcement is posted on {{ instance.organisation }}, on
 LinkedIn, and through the mailing lists and institute newsletters our
 volunteers reach. The full list is the one the series keeps in the workspace,
 and it grows; if there is somewhere you would rather we did not post, say so.
 
 **Two things that help more than anything else.** Please register on
-The Example Collective (forum.example.test) and sign up to your own talk.
+{{ instance.organisation }} ({{ instance.forum_host }}) and sign up to your own talk.
 The series is built on a discussion before and after each seminar, and a
 speaker who is not in the thread of their own seminar cannot answer anyone in
 it. It takes a couple of minutes and it is the single thing that makes the
@@ -51,7 +51,7 @@ and you are very welcome to repost them. There is no obligation at all.
 Looking forward to it,
 
 {{ host_1.name }}
-*for The Example Collective team*
+*for {{ instance.organisation }} team*
 
 ---
 

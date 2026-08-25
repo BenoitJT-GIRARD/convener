@@ -11,18 +11,18 @@ repository would actually publish cannot drift apart.*
 
 ---
 
-**Subject:** May we publish the recording of your TEC talk?
+**Subject:** May we publish the recording of your {{ instance.short_name }} talk?
 
 Dear {{ speaker.first_name }},
 
 Thank you again for your talk, *{{ speaker.title }}*, given on
-{{ speaker.date }} in The Example Collective Monthly Reading Group. We recorded
+{{ speaker.date }} in {{ instance.organisation }} {{ instance.series }}. We recorded
 the session, as we do for every seminar, and we are writing to ask whether we
 may publish that recording. We have not published it, and we will not unless
 you tell us we may.
 
 **What we would publish, if you agree.** On our public events feed at
-forum.example.test, and on our YouTube channel:
+{{ instance.forum_host }}, and on our YouTube channel:
 {{ consent.published_on_consent }}. Nothing else about you would go out. Your
 e-mail address is never published, and neither is anything we hold internally
 about how the seminar was organised.
@@ -48,7 +48,7 @@ Either answer is genuinely useful to us, and a short reply is all we need.
 Warm regards,
 
 {{ host_1.name }}
-*for The Example Collective team*
+*for {{ instance.organisation }} team*
 
 ---
 

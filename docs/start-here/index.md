@@ -1,6 +1,6 @@
 # Start here
 
-**You want to help run the Monthly Reading Group? Welcome — this page is all you need to begin.**
+**You want to help run the {{ instance.series }}? Welcome — this page is all you need to begin.**
 
 ## The series in three lines
 

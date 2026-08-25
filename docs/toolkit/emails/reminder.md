@@ -4,7 +4,7 @@
 
 ---
 
-**Subject:** See you on {{ speaker.date }} — TEC webinar
+**Subject:** See you on {{ speaker.date }} — {{ instance.short_name }} webinar
 
 Dear {{ speaker.first_name }},
 

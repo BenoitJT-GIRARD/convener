@@ -375,6 +375,7 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
+from . import published
 from .attendance import MatchedAttendee
 from .registration import normalize_email
 from .signing import sign
@@ -404,12 +405,18 @@ __all__ = [
 ]
 
 #: The organisation's own name, printed on the document as spec S:7's
-#: "organisateur". A module constant, not a `data/config.yml` key: it does
-#: not vary between events (ruling 8), so a config key here would buy a
-#: TypeScript ripple -- `types.ts`, `validate.ts`, `CONFIG_KEYS`,
-#: `readConfig`, every hand-built `Config` literal in the app's tests, a
-#: regenerated `schema.md` -- for a value that is, in fact, a constant.
-ORGANISER: Final = "The Example Collective"
+#: "organisateur". Not a `data/config.yml` key: it does not vary between
+#: events (ruling 8), so a config key here would buy a TypeScript ripple
+#: -- `types.ts`, `validate.ts`, `CONFIG_KEYS`, `readConfig`, every
+#: hand-built `Config` literal in the app's tests, a regenerated
+#: `schema.md` -- for a value that does not vary.
+#:
+#: Phase 10, task 3: it does not vary between *events*, and it does vary
+#: between *instances* -- it is the name a stranger reads at the top of a
+#: certificate that is meant to stand for years. It comes from
+#: `config/instance.json` now, the one place this repository says whose
+#: series this is.
+ORGANISER: Final = published.load_identity().organisation
 
 #: The base of every certificate's verification address -- see the module
 #: docstring's "verification address" section for the full route shape and
@@ -425,7 +432,18 @@ ORGANISER: Final = "The Example Collective"
 #: task 6 moved `registration.SIGNUP_BASE`, would silently lose that
 #: property; see the module docstring's "verification address" section and
 #: `test_verification_url_carries_the_token_after_the_fragment_not_before_it`.
-VERIFICATION_BASE: Final = "https://example-instance.github.io/example-showcase/verify/#/"
+#:
+#: **Phase 10, task 2:** the host and prefix now come from
+#: `config/instance.json` through `published.load()`, the one declaration
+#: every published address in this repository is built from. The value for
+#: this instance is byte-identical to the literal it replaces -- a
+#: certificate already delivered carries this address printed on it, and
+#: changing an address that has already gone out is a maintainer's call,
+#: not a refactor's. `verify/` is the product's own route
+#: (`site/src/verify.njk`'s permalink) and `#/` is the privacy property
+#: above, so both stay written here: neither is anything an instance
+#: configures.
+VERIFICATION_BASE: Final = f"{published.load().under('verify/')}#/"
 
 #: `certificates.yml`'s own format version -- the file-level analogue of
 #: `registration.FILE_VERSION`.

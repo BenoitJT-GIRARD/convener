@@ -1,0 +1,17 @@
+# What the example instance allows itself of its host organisation's Actions
+# minutes. The product's own reader is `tools/convener_ops/actions_usage.py`; the
+# shape and the meaning of every key are that module's, and this file exists
+# only because `owner: instance` in `config/actions-budget.yml` means a
+# second instance has to bring its own rather than inherit one.
+#
+# The numbers are the free tier's, unchanged: a fictional organisation has
+# no better figure to offer, and inventing a different one would suggest
+# these are identity when they are a budget.
+owner: instance
+v: 1
+monthly_minutes: 2000
+window_days: 7
+warn_at_share: 0.75
+submissions_per_day: 20
+max_runs: 200
+max_silent_days: 2

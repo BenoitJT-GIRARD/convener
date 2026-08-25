@@ -107,6 +107,13 @@ still holds.
    suffix (the worker's only route is its root) — any other path 404s and
    the submission is silently lost — and set the same signing secret in
    Tally that is set below as `TALLY_WEBHOOK_SECRET`.
+4. Write the published form's own address into `config/instance.json` as
+   `identity.proposal_form`. This is the half a reader sees: the showcase's
+   `/propose/` page links it, and it is the only way a visitor reaches the
+   form the three steps above just built. Until it is written, that page
+   says the form is not open yet and offers the contact address instead —
+   a placeholder (`REPLACE`) is read as *not configured*, never published
+   as a link (`published.py::Identity.proposal_form_url`).
 
 **Secrets to set:**
 - Wrangler secret `TALLY_WEBHOOK_SECRET` on the worker — set with
@@ -294,8 +301,11 @@ surfaces are published, not an optional integration.
 Pages will not serve a private repository without a paid plan, which the
 project's no-cost constraint rules out.
 
-Pages is instead enabled on the separate, public
-`example-instance/example-showcase` repository: Settings → Pages → Source =
+Pages is instead enabled on the separate, public repository the built
+site is pushed into — `config/instance.json`'s `published_url` says which
+one, and nothing names it a second time
+(`published.Published.publish_repository` derives it, and both publishing
+workflows read that): Settings → Pages → Source =
 *Deploy from a branch*, branch `main`, folder `/ (root)`. Before phase 5,
 `example-showcase` held the showcase's own Eleventy templates directly, and
 that repository's own `build.yml` published them to a `gh-pages` branch —
@@ -319,15 +329,20 @@ what the other last wrote; each simply refuses to touch it.
 Once published, the four public addresses are:
 
 ```
-https://example-instance.github.io/example-showcase/               the showcase
-https://example-instance.github.io/example-showcase/events/<id>/   one page per event
-https://example-instance.github.io/example-showcase/app/           the cockpit
-https://example-instance.github.io/example-showcase/verify/        certificate verification
+https://<owner>.github.io/<repository>/               the showcase
+https://<owner>.github.io/<repository>/events/<id>/   one page per event
+https://<owner>.github.io/<repository>/app/           the cockpit
+https://<owner>.github.io/<repository>/verify/        certificate verification
 ```
 
-Every path either build emits carries that `/example-showcase/` prefix baked
-in at build time — `site/.eleventy.js`'s own `PATH_PREFIX` and
-`SITE_ORIGIN` constants for the showcase, `app/vite.config.ts`'s own
+`<owner>` and `<repository>` are not a placeholder anybody fills in by
+hand: they are the two halves of `config/instance.json`'s own
+`published_url`, which is where this project says once what address it is
+published at.
+
+Every path either build emits carries that prefix baked in at build time
+— `site/.eleventy.js` reads it through `site/scripts/published.cjs` for
+the showcase, `app/vite.config.ts`'s own
 `base` for the application — bound by `tools/tests/test_site.py` to the
 same two addresses `tools/convener_ops/registration.py::SIGNUP_BASE` and
 `tools/convener_ops/certificate.py::VERIFICATION_BASE` already pin, so the
@@ -454,8 +469,9 @@ the showcase's pages never call the GitHub API or the authentication
 relay, and the cockpit's own device sign-in and Contents-API calls have
 no business in a policy served to an anonymous visitor of the showcase.
 
-**To verify:** build both `site/` and `app/`, serve the result under
-`/example-showcase/` (D-26 — a bare `localhost` root hides the path-prefix
+**To verify:** build both `site/` and `app/`, serve the result under the
+path prefix `config/instance.json` declares (D-26 — a bare `localhost`
+root hides the path-prefix
 class of defect this project has already paid for once), and read a real
 browser's console on every page. `site/scripts/check-a11y.mjs` already
 does the first two steps for every page this project publishes, in a
@@ -712,8 +728,13 @@ delivery mechanism.
 
 1. Open an issue in this repository to serve as the standing notification
    thread (for example *Board notifications*), and note its number.
-2. Create an organisation team for the editorial board (for example
-   `@example-instance/editorial`) and add the Board members to it. A team,
+2. Create an organisation team for the editorial board and add the Board
+   members to it. Name it `editorial-board`: that slug is the one
+   `app/src/auth/role.ts` asks GitHub about when it decides who signs in
+   as a Board member, so a team under any other name leaves every member
+   falling back to `data/config.yml` alone. The organisation is your own
+   (`config/instance.json`'s `identity.repository`), so the handle reads
+   `@<your-organisation>/editorial-board`. A team,
    never a person: the channel must keep working when any one volunteer
    stops reading.
 3. Ask each member to watch the thread, so GitHub emails them its comments.
@@ -1818,8 +1839,9 @@ repository still needs to know they exist and where they live.
   this signature first, before it ever sends the dispatch this workflow
   reads.
 - **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
-  scoped to the separate `example-instance/example-showcase` repository
-  (contents: read & write only), that both *Publish vitrine*
+  scoped to the separate published repository (contents: read & write
+  only) — `config/instance.json`'s `published_url` says which one — that
+  both *Publish vitrine*
   (`.github/workflows/publish-vitrine.yml`) and *Deploy app*
   (`.github/workflows/deploy.yml`) use to push into it — the built
   showcase at that repository's root, and the built cockpit application

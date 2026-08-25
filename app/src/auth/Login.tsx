@@ -5,12 +5,14 @@ import { activateDemoMode } from '../data/demo';
 import { authEnv, availableStrategy } from './strategy';
 import { requestDeviceCode, pollForToken, DeviceFlowError } from './device';
 import type { DeviceCode } from './device';
+import { instanceIdentity } from '../instance';
 
 function realSleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function Shell({ children }: { children: ReactNode }) {
+  const instance = instanceIdentity();
   function enterDemo() {
     activateDemoMode();
     window.location.reload();
@@ -37,10 +39,10 @@ function Shell({ children }: { children: ReactNode }) {
         <div className="max-w-content mx-auto px-6 py-3 flex items-baseline gap-2">
           <span className="font-mono text-sm opacity-85">No.</span>
           <span className="font-display font-extrabold tracking-wider uppercase text-sm">
-            The Example Collective
+            {instance.organisation}
           </span>
           <span className="font-display font-medium text-sm opacity-90 tracking-wide">
-            Monthly Reading Group
+            {instance.series}
           </span>
           <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-accent/40 border border-white/30">
             Organizer
@@ -80,6 +82,7 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 function TokenPanel() {
+  const [owner, repository] = instanceIdentity().repository.split('/');
   const { signIn } = useAuth();
   const [token, setToken] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -103,7 +106,7 @@ function TokenPanel() {
       <p className="text-ink-muted mb-8 max-w-prose">
         Sign-in with a short code is not configured yet, so this instance uses a personal
         access token. You need a fine-grained personal access token with read/write access
-        to the <code className="font-mono text-ink">example-cockpit</code> repository.
+        to the <code className="font-mono text-ink">{repository}</code> repository.
       </p>
 
       <details className="mb-8 text-sm border-l-2 border-primary pl-4">
@@ -124,8 +127,8 @@ function TokenPanel() {
             .
           </li>
           <li>
-            Resource owner: <code className="font-mono text-ink">The Example Collective</code>.
-            Repository access: only <code className="font-mono text-ink">example-cockpit</code>.
+            Resource owner: <code className="font-mono text-ink">{owner}</code>. Repository
+            access: only <code className="font-mono text-ink">{repository}</code>.
           </li>
           <li>
             Permissions: <em>Contents: read &amp; write</em>, <em>Issues: read &amp; write</em>.

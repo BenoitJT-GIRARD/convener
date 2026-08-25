@@ -27,5 +27,5 @@ repos:
     rev: v10.0.1
     hooks:
       - id: cspell
-        files: ^(docs|README|INFORMATION-ARCHITECTURE).*\.md$
+        files: ^(docs|instances|README|INFORMATION-ARCHITECTURE).*\.md$
         exclude: ^docs/superpowers/

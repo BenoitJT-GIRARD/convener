@@ -33,7 +33,7 @@
  * decoration, it is the difference between reading a copy and reading the
  * source.
  */
-import { CONTENT_REGISTRY, REPO_URL } from './registry';
+import { CONTENT_REGISTRY, repoUrl } from './registry';
 
 /** A whole line that is nothing but an include: `{{> some/key }}`. */
 export const INCLUDE_RE = /^[ \t]*\{\{>\s*([A-Za-z0-9/_-]+)\s*\}\}[ \t]*$/gm;
@@ -122,7 +122,7 @@ export function sectionOf(text: string, anchor: string): Section | null {
 export function sourceUrl(key: string): string {
   const entry = CONTENT_REGISTRY[key];
   if (!entry) return '';
-  return `${REPO_URL}/blob/main/docs/${entry.file}${entry.anchor ? `#${entry.anchor}` : ''}`;
+  return `${repoUrl()}/blob/main/docs/${entry.file}${entry.anchor ? `#${entry.anchor}` : ''}`;
 }
 
 /** The one line that turns a copy into a quotation. */

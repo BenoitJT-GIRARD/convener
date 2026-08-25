@@ -4,11 +4,11 @@
 
 ---
 
-**Subject:** Suggest a speaker — The Example Collective Workshop Series
+**Subject:** Suggest a speaker — {{ instance.organisation }} {{ instance.series }}
 
 Dear {{ speaker.first_name }},
 
-The Example Collective runs a community **Monthly Reading Group** — online seminars on behavioural science, with discussion before and after each talk. This season we are especially interested in **[the themes this season is looking for — see the editorial line]**.
+{{ instance.organisation }} runs a community **{{ instance.series }}** — online seminars on behavioural science, with discussion before and after each talk. This season we are especially interested in **[the themes this season is looking for — see the editorial line]**.
 
 We would love suggestions from your group. If you know of someone — a colleague, a postdoc, a PhD student — whose work would resonate with our community, you (or they) can propose them here: [the address of the proposal form]
 
@@ -18,4 +18,4 @@ Thank you for helping the community grow!
 
 Best regards,
 {{ host_1.name }}
-*for The Example Collective team*
+*for {{ instance.organisation }} team*

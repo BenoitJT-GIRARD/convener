@@ -8,7 +8,7 @@ One thing is not filled in for you, on purpose: the sentence saying why this tal
 
 ---
 
-🔬 Next **The Example Collective Monthly Reading Group**!
+🔬 Next in the **{{ instance.organisation }} {{ instance.series }}**!
 
 We are hosting **{{ speaker.name }}** ({{ speaker.affiliation }}) for a talk on:
 
@@ -19,7 +19,7 @@ We are hosting **{{ speaker.name }}** ({{ speaker.affiliation }}) for a talk on:
 [One line, in your own words, on why this talk matters. Written by hand — the record holds no such sentence.]
 
 Register here 👉 {{ speaker.signup_link }}
-Join the discussion on The Example Collective 👉 {{ speaker.forum_thread? }}
+Join the discussion on {{ instance.organisation }} 👉 {{ speaker.forum_thread? }}
 
 \#BehaviouralScience #Neuroscience #Webinar #OpenScience
 

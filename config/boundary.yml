@@ -1,0 +1,132 @@
+# Which paths belong to the instance, and which belong to the product.
+#
+# This repository is meant to be duplicated. For a duplicate, an update is a
+# **merge**: it succeeds when upstream's commits and the instance's commits
+# never touch the same file, and it fails into a field of conflicts otherwise
+# -- at which point people stop updating. So "instance" cannot stay an
+# intention. It is a set of paths, and this file is where that set is written
+# down once.
+#
+# The default is the product
+# --------------------------
+# Everything not named below belongs to the product: upstream writes it,
+# upstream updates it, and a duplicate that edits it is forking rather than
+# tracking. The list below is the exception, deliberately short, and it is
+# read -- `tools/convener_ops/boundary.py` parses this file and
+# `tools/tests/test_boundary.py` holds the repository against what it says.
+# Nothing restates it in prose; `INFORMATION-ARCHITECTURE.md` names this file
+# as the home of the notion rather than copying the list, for the reason that
+# document's own first rule gives.
+#
+# Ownership is a property of a *file*, not of a value
+# ---------------------------------------------------
+# Because a merge is a file-level event. A file holding one instance-owned
+# value is an instance file even when its other values would have made
+# perfectly good product defaults: upstream cannot ship half a file. That is
+# the rule that settles `config/`, and each file there states its own answer
+# in its own header rather than being listed again here -- see `owner:` in
+# `config/actions-budget.yml`, `config/instance.json`,
+# `config/integrations.yml`, `config/queue-drain.yml`,
+# `config/registration-lanes.yml`, and in this file itself. One fact, one
+# place: `test_boundary.py` refuses a `config/` path named in the list
+# below, so the two can never disagree.
+#
+# What used to be here and is not any more
+# ----------------------------------------
+# `site/src/_data/site.json` was an entry in the list below: four keys --
+# the series' title, its tagline, its forum, its proposal form -- read by
+# the showcase's build through Eleventy's global-data convention. Phase 10
+# task 3 folded all four into `config/instance.json`'s own `identity`,
+# alongside the organisation's name, and `site/.eleventy.js` composes them
+# from there for every template. The file entry went with the file. That is S-2 applied
+# to this declaration itself: leaving four identity keys in `site/` and
+# putting the rest in `config/` would have given one notion two homes and
+# a duplicate two files to edit before its first build. Nothing under
+# `site/` is the instance's now.
+#
+# `config/instance.json` is JSON rather than YAML for a reason that is not
+# taste: phase 10 task 2 made it the one declaration of this project's
+# published address, and Python, the application's build and the showcase's
+# build all read it. JSON is the only format all three parse without a
+# dependency `site/` and `services/` do not have. `boundary.py` reads both
+# formats for exactly this file's sake, so that a format nobody enumerated
+# cannot become a file in this directory whose owner nothing ever asks
+# for.
+#
+# `instances/example/` is the product's, and looks exactly like it is not
+# ---------------------------------------------------------------------
+# That directory holds one file for each path named below, at the same
+# relative path -- an invented instance's `instance.json`, `brand.json`,
+# `config.yml`, `speakers.yml`. It is still the product's, by the default
+# above: upstream ships it and upstream maintains it, and nothing reads it
+# at run time. `tools/tests/test_second_instance.py` copies this
+# repository, deletes everything the list below hands to the instance,
+# lays those files into the holes, builds the result and refuses anything
+# of this instance in the output. So the list below is not only a
+# statement about merges any more -- a path carrying identity that nobody
+# declared here survives that deletion, and the sweep finds it.
+#
+# `kept:` -- the product's own files inside a directory the instance owns
+# ----------------------------------------------------------------------
+# Two directories hand their *contents* to the instance while still carrying
+# one file upstream owns and maintains. Naming them here is not an escape
+# hatch: each entry is a file that exists, is tracked, and is checked, and
+# each one is a candidate for being moved somewhere unambiguous later. What
+# is not allowed is an entry nobody can justify, which is why the reason sits
+# beside the path rather than in a document.
+owner: product
+v: 1
+
+instance:
+  - path: data/
+    reason: >-
+      The instance's own records and its governance configuration: the board
+      and its thresholds (config.yml), the speakers and events (speakers.yml),
+      the visual identity's measured values (brand.json), and every ledger the
+      scheduled jobs write back (actions-usage.yml, retention-last-run.yml,
+      queue-watch.yml, queue-ledger.yml, survey-invitations.yml,
+      event-key-destructions.yml). None of it is a value upstream could ship
+      correctly for anybody else.
+    kept:
+      - path: data/schema.md
+        reason: >-
+          A three-line stub pointing a reader at docs/reference/schema.md,
+          which scripts/generate_schema_doc.py derives from
+          app/src/data/types.ts. It describes the product's model, not this
+          instance's records, and no duplicate has any reason to edit it.
+  - path: keys/
+    reason: >-
+      The instance's cryptographic material: the published public half of each
+      event key (keys/events/, tools/convener_ops/eventkeys.py) and of each
+      certificate signing key (keys/signing/, tools/convener_ops/signing.py). Both
+      directories are empty of keys in this repository today and stay empty in
+      a fresh duplicate -- generating one is an operator's act, never
+      upstream's.
+    kept:
+      - path: keys/signing/README.md
+        reason: >-
+          The wire format and the directory's contract, which the verification
+          page depends on. It is product documentation that happens to live
+          where the keys go, so that an operator opening the directory meets
+          it. Upstream maintains it; an instance never edits it.
+  - path: docs/governance/register.md
+    regenerated: true
+    reason: >-
+      The decision register: a total re-rendering of this repository's own
+      commit history, written by .github/workflows/register.yml on every
+      push (tools/convener_ops/register.py, cli.py::register) and never by hand
+      -- the file's own preamble says so, and convener-register --check fails
+      the build if anybody tries. It sits under docs/ because it is written
+      for a volunteer to read and because two handbook pages link to it and
+      the cockpit publishes it, all of which would break if it moved; it is
+      the instance's because its every row is this series' own governance,
+      and upstream ships it filled in with rows a duplicate has no reason
+      to inherit. It is the one entry here that upstream's own runs also
+      write, which is what regenerated: above is for.
+  - path: public-data/
+    reason: >-
+      Everything the instance publishes about itself, derived from data/ by
+      the product's own commands and committed by
+      .github/workflows/deploy.yml. Upstream ships no content here at all --
+      the directory is empty in a fresh clone, and .gitignore's own
+      exceptions name the three files a running instance commits into it.

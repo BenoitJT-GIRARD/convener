@@ -1,6 +1,6 @@
-# Monthly Reading Group — Handbook
+# Handbook
 
-Welcome. This handbook holds everything our volunteers need to run The Example Collective's online webinars — and it is the **one place** we keep it. If it is not written here, it is not official.
+Welcome. This handbook holds everything our volunteers need to run the series' online webinars — and it is the **one place** we keep it. If it is not written here, it is not official.
 
 ## Where to go
 

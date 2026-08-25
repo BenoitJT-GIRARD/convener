@@ -33,7 +33,7 @@ browser's own "print to PDF" if you would rather keep a PDF copy.
 Identifier: [the certificate's identifier]
 
 Best regards,
-The Example Collective team
+{{ instance.organisation }} team
 
 ---
 

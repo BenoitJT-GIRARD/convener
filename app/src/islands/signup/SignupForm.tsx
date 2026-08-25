@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { instanceIdentity } from '../../instance';
 import { encryptRegistration, importEventPublicKey } from '../../signup/encrypt';
 import type { Registration } from '../../signup/encrypt';
 
@@ -50,18 +51,19 @@ import type { Registration } from '../../signup/encrypt';
 // `keys/events/`, and still ships inside the app's own build output --
 // see that script's own comment for why a missing file here is a normal
 // state, not a build failure. `base` for this island's own Vite build
-// (`app/vite.config.ts`, `mode === 'island-signup'`) is
-// `/example-showcase/app/`, the same value the main app build uses -- Fix round
-// 4 correction: this used to read `/app/`, deliberately distinct, on the
+// (`app/vite.config.ts`, `mode === 'island-signup'`) is the app's own
+// published base, the same value the main app build uses -- Fix round 4
+// correction: this used to read `/app/`, deliberately distinct, on the
 // reasoning that this bundle runs on a page served by the *site*, whose
 // own templates already addressed the app's assets root-relative to the
 // site's own root. That reasoning assumed the site's own root-relative
 // links already landed at wherever GitHub Pages resolves this project's
 // published root to; they did not, since there is no CNAME and no custom
-// domain, so that root is one path segment (`/example-showcase/`) below the
-// domain root a bare `/foo` actually addresses -- see
-// `app/vite.config.ts`'s own comment on `islandSignupConfig` for the fix
-// this island shares with every template in `site/`.
+// domain, so that root is one path segment below the domain root a bare
+// `/foo` actually addresses -- see `app/vite.config.ts`'s own comment on
+// `islandSignupConfig` for the fix this island shares with every template
+// in `site/`, and `config/instance.json` for where that one path segment
+// is now declared.
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
 // A missing relay is a normal state (D-13), the same idiom `auth/strategy.ts`
@@ -76,7 +78,13 @@ function relayUrl(): string | undefined {
   return import.meta.env.VITE_SIGNUP_RELAY_URL as string | undefined;
 }
 
-const CONTACT_EMAIL = 'reading-group@example.test';
+// The address a participant writes to about their own data. Phase 10,
+// task 3: declared once in `config/instance.json` and carried into this
+// bundle by `vite.config.ts`'s own define, because this runs in a
+// participant's browser. A duplicate that left this literal here would
+// send its own participants' data-protection requests to the previous
+// instance's inbox.
+const contactEmail = () => instanceIdentity().contact;
 
 // Mirrors `tools/convener_ops/registration.py::_MAX_FIELD_LENGTH` (Important 1,
 // branch review). Bound here too, not only server-side: before this, a
@@ -348,7 +356,7 @@ export function SignupForm({ eventId }: { eventId?: string }) {
             We could not retrieve the encryption key this event needs before anything can
             be sent. We never send registration details unencrypted, so nothing has been
             sent. Please try again later, or contact{' '}
-            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+            <a href={`mailto:${contactEmail()}`}>{contactEmail()}</a>.
           </p>
         </div>
       )}

@@ -174,7 +174,7 @@ from typing import Final, Protocol
 import segno
 
 from .certificate import ORGANISER, verification_url
-from .confirmation import CONTACT_EMAIL, SmtpConfig, smtp_config_from_env
+from .confirmation import CONTACT_EMAIL, SIGN_OFF, SmtpConfig, smtp_config_from_env
 from .registration import Registration
 
 __all__ = [
@@ -412,7 +412,7 @@ def compose(
         f"Identifier: {identifier}",
         "",
         "Best regards,",
-        "The Example Collective team",
+        SIGN_OFF,
     ]
     return Delivery(
         to=registration.email,

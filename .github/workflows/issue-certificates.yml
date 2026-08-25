@@ -174,7 +174,7 @@ jobs:
               # never on the no-op branch above. deploy.yml is what
               # regenerates app/dist/certificates.json from
               # data/events/*/certificates.yml and pushes it into
-              # example-showcase/app/ -- see that workflow's own "Build public
+              # the published repository's own app/ -- see that workflow's own "Build public
               # data" step; it is the one file the verification page
               # actually fetches (Critical 1, fix round 1, task 13). A
               # failure here does not fail this job: the certificates

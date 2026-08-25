@@ -1,12 +1,12 @@
 # Forum post — Announce
 
-*Posted in the Events, Meetings & Training category on forum.example.test. It can be scheduled in advance — see [Preparing the webinar](../workflow/2-preparation.md).*
+*Posted in the Events, Meetings & Training category on {{ instance.forum_host }}. It can be scheduled in advance — see [Preparing the webinar](../workflow/2-preparation.md).*
 
 ---
 
-**Title:** Monthly Reading Group {{ speaker.edition_code }}: {{ speaker.title }}
+**Title:** {{ instance.series }} {{ speaker.edition_code }}: {{ speaker.title }}
 
-Don't miss the next Example Collective Webinar! As usual, we host a stellar speaker presenting their work at our standing time of 12:30 Paris time on a Thursday — so everyone can join.
+Don't miss the next {{ instance.organisation }} webinar! As usual, we host a stellar speaker presenting their work at our standing time of 12:30 Paris time on a Thursday — so everyone can join.
 
 In our next session we host **{{ speaker.name }}** ({{ speaker.affiliation }}), who will present:
 

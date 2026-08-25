@@ -13,6 +13,7 @@ from convener_ops.announce import (
 )
 from convener_ops.paths import repo_root
 from convener_ops.public_data import to_public
+from convener_ops.registration import signup_url
 
 #: Fix round 1: every function below now renders the real, committed
 #: `docs/toolkit/*.md` page -- the same file `app/src/content/render.ts`
@@ -80,7 +81,7 @@ class TestForumAnnouncement:
 
     def test_points_at_the_event_page_never_the_room(self) -> None:
         text = forum_announcement(_row(), root=ROOT)
-        assert "https://example-instance.github.io/example-showcase/events/mrg-77/" in text
+        assert signup_url("mrg-77") in text
 
     def test_never_carries_a_room_link_even_if_one_reached_the_row(self) -> None:
         # `to_public` never maps a column to `zoom_link`, so a real row never
@@ -109,7 +110,7 @@ class TestNetworkPost:
         assert "Ada Lovelace" in text
         assert "Analytical Engines Institute" in text
         assert "On analytical engines" in text
-        assert "https://example-instance.github.io/example-showcase/events/mrg-77/" in text
+        assert signup_url("mrg-77") in text
         assert "CEST" in text
 
     def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
@@ -159,7 +160,7 @@ class TestMailingListMessage:
     def test_carries_the_real_facts_and_registration_link(self) -> None:
         text = mailing_list_message(_row(), root=ROOT)
         assert "Ada Lovelace" in text
-        assert "https://example-instance.github.io/example-showcase/events/mrg-77/" in text
+        assert signup_url("mrg-77") in text
 
     def test_states_the_real_paris_offset_summer(self) -> None:
         assert "CEST" in mailing_list_message(_row(date="2026-04-02"), root=ROOT)

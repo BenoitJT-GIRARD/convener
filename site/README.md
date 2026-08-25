@@ -1,6 +1,7 @@
 # site
 
-Source of the public showcase (The Example Collective Monthly Reading Group). Built with
+Source of the public showcase. Which series, under whose name, is in
+`config/instance.json` and nowhere else. Built with
 [Eleventy](https://www.11ty.dev/) and pushed, built, to the public `example-showcase`
 repository's root by `.github/workflows/publish-vitrine.yml` — see D-15 in
 `docs/superpowers/specs/2026-08-18-convener-cadrage-decisions.md`. `example-showcase` itself
@@ -10,8 +11,11 @@ holds no source: every byte there is reproducible from this directory.
 overwritten from `public-data/events-public.json` (`uv run convener-public-data`,
 `tools/`) before every build; a local edit is not preserved.
 
-`src/_data/site.json` is genuine source: the showcase's own static configuration
-(title, tagline, external links).
+`site.*` is derived, not written down here: `.eleventy.js` composes it --
+title, tagline, the forum, the proposal form, the organisation's own name
+-- from `config/instance.json`, the one file that says whose series this
+is. It replaced a hand-typed `src/_data/site.json` in phase 10 task 3, for
+the reasons that file's own successor comment gives.
 
 Fonts are self-hosted, from `../fonts/` at the repository root -- shared with
 `app/`'s own copy step (`app/scripts/copy-fonts.mjs`) rather than a second,
@@ -26,6 +30,7 @@ npm install
 npm start
 ```
 
-Then open <http://localhost:8080/example-showcase/>. The dev server honours the
+Then open `http://localhost:8080` plus the path prefix
+`config/instance.json` declares. The dev server honours the
 same path prefix the published site is served under, so a bare root only
 redirects there.

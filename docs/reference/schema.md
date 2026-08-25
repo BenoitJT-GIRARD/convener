@@ -236,10 +236,22 @@ that repeats a key, or that holds a channel with no label stops the file being
 read at all, with a message naming the entry — a broken list must not read as a
 deliberately empty one.
 
-The `board` entries are used as a fallback when the GitHub team API call (for
-role detection) fails or returns no membership information. The authoritative
-source is the organisation's `editorial-board` team; the config is a safety
-net.
+The `board` entries and the organisation's `editorial-board` team answer two
+different questions, and neither is derived from the other. **This list is who
+votes**: every count in the app — the eligible Board, the two-thirds bar, an
+absence, an inactivity proposal — is computed from it, and from nothing else.
+**The team is who gets in**: `detectRole` asks GitHub whether a signed-in
+person is on it, and an answer from GitHub wins over this list, which is read
+only when the call fails or cannot be made at all (demo mode, no network).
+
+That split is deliberate. A GitHub team has no `joined_on`, no
+`unavailable_until` and no `status`, so it cannot hold a governance record; a
+file the cockpit writes with a signed-in volunteer's own token cannot be the
+access control, because everyone who could edit it is already inside. What
+nothing enforces is that the two agree — a member removed from the team but
+left `active` here still counts toward the bar they can no longer reach the
+app to meet. Comparing them needs a call to GitHub, so it is an operator's
+check and not a test; see `docs/governance/editorial-board.md`.
 
 ## History
 
