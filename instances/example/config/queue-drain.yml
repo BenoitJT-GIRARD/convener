@@ -1,0 +1,9 @@
+# When the example instance's submission queue is late enough to be a
+# problem. Read by `tools/convener_ops/queue_watch.py`; bounded by
+# `registration-lanes.yml` beside it, which is why the two are edited
+# together and why the settings page phase 11 plans is the right home for
+# both (see `docs/superpowers/inventaire-instance.md`, stage 2).
+owner: instance
+v: 1
+alarm_after_hours: 48
+max_silent_days: 2

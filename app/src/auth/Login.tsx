@@ -106,7 +106,7 @@ function TokenPanel() {
       <p className="text-ink-muted mb-8 max-w-prose">
         Sign-in with a short code is not configured yet, so this instance uses a personal
         access token. You need a fine-grained personal access token with read/write access
-        to the <code className="font-mono text-ink">example-cockpit</code> repository.
+        to the <code className="font-mono text-ink">{repository}</code> repository.
       </p>
 
       <details className="mb-8 text-sm border-l-2 border-primary pl-4">

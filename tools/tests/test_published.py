@@ -33,10 +33,15 @@ Then the sweep: no file outside the declaration writes the address again.
 
 What this module does **not** cover, stated rather than left to be found:
 
-- **The published output itself.** Nothing here builds the site and reads
-  the emitted HTML for a second instance's address; that is task 5's own
-  build sweep, and it is the acceptance criterion the whole phase rests
-  on. `test_site.py` covers today's instance at the built-page level
+- **The published output itself.** Nothing here builds anything and
+  reads what came out. `test_second_instance.py` does, as of task 5: it
+  builds this whole repository as a *different* instance and sweeps the
+  showcase, all four bundles, the handbook copied into them, the
+  generated templates, the published feeds and the posters. That is the
+  acceptance criterion the whole phase rests on, and it is a different
+  claim from this module's -- a source can be clean while what a reader
+  receives is not. `test_site.py` covers today's instance at the
+  built-page level besides
   (`test_no_built_page_emits_a_root_relative_link_without_the_prefix`,
   `test_the_governance_record_link_resolves_to_the_published_handbook`).
 - **`docs/superpowers/`.** The specs, the plans and the phase reports are
@@ -61,13 +66,20 @@ series -- and closed the gap this module used to name:
    either checked against the declaration (the relays, `CODEOWNERS`) or
    named with the phase that owns it.
 
-What clause 8 does **not** yet sweep, stated rather than left to be found:
+What clause 8 does **not** sweep, stated rather than left to be found:
 the series' *title* and the organisation's *short name*. "Monthly Reading Group
 Series" is at present also this product's own name -- `convener_ops`,
-`convener-register`, `example-cockpit` -- and "TEC" is still in the brand tokens
-and the two downloadable SVG templates (phase 10 task 4) and in the demo
-instance (phase 11). Sweeping either today would fail for a reason task 3
-cannot fix, so each is left to the phase that renames it.
+`convener-register` -- and "TEC" is in the two downloadable SVG templates,
+which derive it (phase 10 task 4), and in the demo instance (phase 11).
+Sweeping either here would fail for a reason no source edit can fix, so
+each is left to the phase that renames it.
+
+**Task 5 sweeps both, and can, because it compares two instances rather
+than looking for one.** `test_second_instance.py` builds this repository
+with `instances/example/` in place of everything `config/boundary.yml`
+hands to the instance, so the series' title and the short name in that
+build are the *example's*; finding this instance's is then unambiguous in
+a way it can never be in a source tree the product's own names live in.
 """
 
 from __future__ import annotations
@@ -79,6 +91,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+import instance_identity
 import pytest
 import yaml
 
@@ -101,18 +114,18 @@ _MINIMAL: dict[str, Any] = {
 }
 
 #: A second instance's identity, manifestly synthetic: no real name, no
-#: real address. Every field `IDENTITY_FIELDS` names, so a field added to
-#: the declaration and not here fails loudly rather than being skipped.
-_OTHER_IDENTITY: dict[str, Any] = {
-    "organisation": "The Example Collective",
-    "short_name": "TEC",
-    "series": "Monthly Reading Group",
-    "tagline": "A made-up series, for a test.",
-    "forum": "https://forum.example.test",
-    "contact": "hello@example.test",
-    "proposal_form": "https://forms.example.test/propose",
-    "repository": "example-collective/reading-group",
-}
+#: real address. Read from `instances/example/`, the fictional instance
+#: phase 10 task 5 builds this whole repository as, rather than typed
+#: here: a second synthetic identity would be a second answer to "what
+#: does another instance look like", free to drift from the one an actual
+#: build is made with. Every field `IDENTITY_FIELDS` names has to be
+#: there, so a field added to the declaration and not to the example
+#: fails loudly rather than being skipped.
+_OTHER_IDENTITY: dict[str, Any] = json.loads(
+    (ROOT / "instances" / "example" / "config" / "instance.json").read_text(
+        encoding="utf-8"
+    )
+)[published.IDENTITY_KEY]
 
 _MINIMAL_IDENTITY: dict[str, Any] = {
     "v": published.DECLARATION_VERSION,
@@ -683,23 +696,14 @@ _DERIVED_IDENTITY_FILES = (
 #: Files that still name this organisation and are somebody else's task,
 #: each with the phase that owns it. Not a general exemption: adding a
 #: path here is a decision, and the reason is beside it.
-_IDENTITY_DEFERRED = {
-    # Phase 11, with the example instance and the reference renders.
-    # Phase 10 task 4 looked at this one and left it deliberately: the
-    # poster's wordmark sets `www.<accent>The</accent>Behaviour<accent>
-    # Forum.org</accent>`, a two-tone treatment *of one organisation's
-    # own name* that no derivation reproduces, and its hero line
-    # ("Read together") is a strapline `config/instance.json`
-    # has no key for. Both are identity work, not charter work, and
-    # `visuals/references/*.png` pin what this module renders, so the two
-    # move together or not at all.
-    Path("tools/convener_ops/visual.py"): "phase 11 (the poster's own wordmark)",
-    # Phase 11: the example instance. `demo.ts` *is* an instance, in code.
-    Path("app/src/data/demo.ts"): "phase 11 (the example instance)",
-    Path("site/src/_data/events.json"): "phase 11 (the example instance)",
-    # The spell-checker's own dictionary: a list of words, not prose.
-    Path("project-words.txt"): "the cspell dictionary",
-}
+#:
+#: Phase 10 task 5 moved the list itself into `instance_identity.DEFERRED`
+#: and left this reading of it. It is the same fact answering two
+#: questions -- which *source* this module may forgive, and which phrases
+#: task 5's sweep of a *built* second instance may find -- and two lists
+#: would let a file be forgiven on one side while the other still refused
+#: it. Each entry carries its own reason there, beside the path.
+_IDENTITY_DEFERRED = {entry.path: entry.owner for entry in instance_identity.DEFERRED}
 
 #: Test trees. A fixture naming this organisation is a fixture of *this*
 #: instance, and the check that actually matters for behaviour is task 5's

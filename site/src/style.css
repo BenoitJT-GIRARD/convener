@@ -1,8 +1,12 @@
 /* The public showcase's stylesheet
  *
- * Every value below comes from data/brand.json in example-cockpit, which is the
- * one source of fact for this identity and carries the reasoning for each
- * token. Do not introduce a colour here that is not in that file.
+ * Every value below comes from the charter in force -- data/brand.json if
+ * this instance has chosen its colours, brand/convener/brand.json if it has
+ * not (tools/convener_ops/brand.py::source) -- which is the one source of fact
+ * for the identity and carries the reasoning for each token. Do not
+ * introduce a colour here that is not in that file: the block below is
+ * generated from it, and scripts/generate_brand_css.py --check fails on a
+ * stylesheet that has drifted.
  *
  * The palette is Anonymous's own, read out of her originals rather than out of
  * the *_test_dev.svg reconstruction that this stylesheet used until now. That

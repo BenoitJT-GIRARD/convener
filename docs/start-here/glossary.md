@@ -2,7 +2,7 @@
 
 | Word | What it means |
 |---|---|
-| **Convener** | The short name this project carries throughout its own code and repositories — `convener-register`, `convener_ops`, `example-cockpit`. The series' own title is the instance's, and is in `config/instance.json`. |
+| **Convener** | The short name this project carries throughout its own code — `convener-register`, `convener_ops`. The series' own title and the repositories this instance runs from are the instance's, and are in `config/instance.json`. |
 | **MRG-NN** | A webinar's number, e.g. `MRG-07`. |
 | **Contributor** | Anyone helping out. |
 | **Event Host** | One of the **two** volunteers who run a webinar together — preparing and hosting it. |

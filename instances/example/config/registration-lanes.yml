@@ -1,0 +1,7 @@
+# How far from an edition a registration still waits for the daily drain
+# rather than being dispatched at once. Depends on the rhythm of the
+# series, which is why it is the instance's: a monthly reading group and a
+# weekly seminar do not queue the same way.
+owner: instance
+v: 1
+queue_beyond_hours: 96

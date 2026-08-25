@@ -53,6 +53,19 @@
 # cannot become a file in this directory whose owner nothing ever asks
 # for.
 #
+# `instances/example/` is the product's, and looks exactly like it is not
+# ---------------------------------------------------------------------
+# That directory holds one file for each path named below, at the same
+# relative path -- an invented instance's `instance.json`, `brand.json`,
+# `config.yml`, `speakers.yml`. It is still the product's, by the default
+# above: upstream ships it and upstream maintains it, and nothing reads it
+# at run time. `tools/tests/test_second_instance.py` copies this
+# repository, deletes everything the list below hands to the instance,
+# lays those files into the holes, builds the result and refuses anything
+# of this instance in the output. So the list below is not only a
+# statement about merges any more -- a path carrying identity that nobody
+# declared here survives that deletion, and the sweep finds it.
+#
 # `kept:` -- the product's own files inside a directory the instance owns
 # ----------------------------------------------------------------------
 # Two directories hand their *contents* to the instance while still carrying

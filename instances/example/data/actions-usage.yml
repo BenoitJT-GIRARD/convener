@@ -1,0 +1,26 @@
+# What the example instance's own Actions runs really billed; see tools/convener_ops/actions_usage.py
+# A LOWER BOUND, never the bill: the free minutes belong to the organisation and are shared.
+v: 1
+latest:
+  observed_on: '2026-08-24'
+  since: '2026-08-18'
+  window_days: 7
+  runs: 0
+  uncosted_runs: 0
+  truncated: false
+  billed_minutes: 0
+  scheduled_minutes: 0
+  submission_minutes: 0
+  development_minutes: 0
+  projected_monthly_minutes: 0
+  busiest_submission_day: ''
+  busiest_submissions: 0
+  by_event: []
+  by_workflow: []
+  submissions_by_day: []
+history:
+- day: '2026-08-24'
+  runs: 0
+  minutes: 0
+  projected_monthly: 0
+  busiest_submissions: 0

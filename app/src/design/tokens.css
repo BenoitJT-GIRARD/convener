@@ -1,8 +1,14 @@
-/* TEC Convener — design tokens.
+/* The cockpit's design tokens.
  *
- * On-brand: TEC turquoise primary + deep purple accent. Archivo for display
- * and body, JetBrains Mono for IDs / dates / metadata. Hairline rules,
- * sharp rectangles, generous whitespace.
+ * The block below is generated from the charter in force -- data/brand.json
+ * if this instance has chosen its colours, brand/convener/brand.json if it
+ * has not (tools/convener_ops/brand.py::source) -- by
+ * scripts/generate_brand_css.py, whose --check fails on a stylesheet that
+ * has drifted from it. The token *names* are the product's and describe a
+ * role rather than a hue: `primary` is the dominant colour, `turquoise` is
+ * a ground, and which colours those are is the instance's answer, not this
+ * file's. Archivo for display and body, JetBrains Mono for IDs / dates /
+ * metadata. Hairline rules, sharp rectangles, generous whitespace.
  */
 
 /* Self-hosted, and that is a requirement rather than a preference: this
