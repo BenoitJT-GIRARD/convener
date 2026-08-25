@@ -2079,6 +2079,20 @@ and not before — and the screen doing the editing is running on the previous
 build. The edition prefix is frozen besides: it is in published addresses, on
 issued certificates and in key filenames.
 
+**A duplicate that has not edited it says so, on its own pages.** Every value
+in `instances/example/config/instance.json` is invented and reserved — `.test`
+addresses no registry will ever delegate (RFC 2606), a GitHub Pages host nobody
+is asked to register, an organisation that does not exist — so a declaration
+still
+carrying one of them cannot be a coincidence. While any is left, the showcase
+prints a band above its masthead on every page and the cockpit prints one
+above its sign-in screen, both naming the exact keys still to fill in. Edit
+them and rebuild, and the band disappears with no switch to find: nothing
+turns it off but configuring the instance. `identity.proposal_form` is
+deliberately not one of the triggers — a proposal form nobody has opened yet
+is an ordinary state that degrades on `/propose/` itself, and a permanent
+warning about it would be a warning people learn to ignore.
+
 **The screen never accepts a secret**, and cannot: the cockpit is a static
 bundle that writes with the signed-in person's own token, so a token able to
 write a repository secret would be a right every Board member held. What it

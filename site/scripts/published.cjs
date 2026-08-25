@@ -29,6 +29,12 @@
 // jobs, `app/scripts/published.mjs` for the cockpit's own build, bound to
 // each other by `tools/tests/fixtures/edition-prefix.json`.
 //
+// Phase 11 task 6 does not change that, and the distinction is worth
+// keeping: `unconfigured` at the foot of this file reads the key, but only
+// to compare the string against the example's. It derives nothing from it,
+// validates nothing about it and hands it to no template -- which is what
+// "no reader here" means.
+//
 // Throws rather than defaulting: a build that cannot read this file must
 // stop. Every internal link the showcase emits is resolved against the
 // prefix below, and a missing one resolves to the *domain* root -- one
@@ -178,4 +184,77 @@ function identity() {
   return out;
 }
 
-module.exports = { publishedAddress, identity, isPlaceholder };
+// Whether this instance is still publishing the identity the *product*
+// ships as its worked example -- `tools/convener_ops/published.py::
+// unconfigured` is Python's answer to the same question and
+// `app/scripts/published.mjs::unconfigured` the cockpit build's, mirrored
+// here clause for clause like everything else in this file.
+//
+// The whole argument is stated once, in `published.py::unconfigured`'s own
+// docstring: what counts as unconfigured, why it is a value-by-value
+// comparison and not a file-against-file one, and why the `REPLACE` marker
+// deliberately decides nothing here. What this side adds is the surface:
+// `.eleventy.js` hands the result to every template as `site.unconfigured`
+// and `_includes/layout.njk` prints a banner across every page of the
+// showcase while it is not empty. A duplicate deployed before it was
+// configured says so where a visitor reads it, rather than publishing the
+// template's organisation, address and contact under its own roof in
+// silence.
+const EXAMPLE_DECLARATION = path.join(
+  __dirname,
+  '..',
+  '..',
+  'instances',
+  'example',
+  'config',
+  'instance.json'
+);
+const EXAMPLE_NAMED = 'instances/example/config/instance.json';
+
+/** The eleven values a declaration carries about *who* is publishing,
+ *  under the declaration's own names. Raw, deliberately: the question is
+ *  about the text somebody typed, and it has to stay answerable for a
+ *  declaration `identity()` above would refuse. Mirrors
+ *  `published.py::declared_values`. */
+function declaredValues(declaration) {
+  const values = {};
+  if (declaration === null || typeof declaration !== 'object') return values;
+  for (const key of ['published_url', 'edition_prefix']) {
+    const value = declaration[key];
+    if (typeof value === 'string' && value !== '') values[key] = value;
+  }
+  const raw = declaration.identity;
+  if (raw !== null && typeof raw === 'object') {
+    for (const field of IDENTITY_FIELDS) {
+      const value = raw[field];
+      if (typeof value === 'string' && value !== '') values[`identity.${field}`] = value;
+    }
+  }
+  return values;
+}
+
+/** Which declared values are still the example's, sorted and named.
+ *  Throws rather than answering "configured" when the example cannot be
+ *  read: with nothing to compare against nothing can be proved, and a
+ *  check that says "fine" when it could not run is D-25's own definition
+ *  of not being one. */
+function unconfigured() {
+  let example;
+  try {
+    example = JSON.parse(readFileSync(EXAMPLE_DECLARATION, 'utf8'));
+  } catch (err) {
+    throw new Error(
+      `${EXAMPLE_NAMED} cannot be read (${err.message}), so there is nothing to ` +
+        "tell this instance's declaration apart from the example the product " +
+        'ships -- restore it rather than publish a page that cannot say whether ' +
+        'it is configured'
+    );
+  }
+  const ours = declaredValues(JSON.parse(readFileSync(DECLARATION, 'utf8')));
+  const theirs = declaredValues(example);
+  return Object.keys(ours)
+    .filter((name) => theirs[name] === ours[name])
+    .sort();
+}
+
+module.exports = { publishedAddress, identity, isPlaceholder, unconfigured };

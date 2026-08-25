@@ -22,7 +22,7 @@
 import { fileURLToPath } from 'node:url';
 import { loadConfigFromFile } from 'vite';
 
-import { editionPrefix, identity, published } from './published.mjs';
+import { editionPrefix, identity, published, unconfigured } from './published.mjs';
 
 /** The real, committed configuration file, as an OS path -- `fileURLToPath`
  *  rather than `new URL(...).pathname`, which keeps a leading slash before
@@ -41,6 +41,7 @@ const bases = {};
 const defines = {};
 const identityDefines = {};
 const editionPrefixDefines = {};
+const unconfiguredDefines = {};
 for (const mode of MODES) {
   const loaded = await loadConfigFromFile({ command: 'build', mode }, CONFIG);
   if (!loaded) throw new Error(`vite.config.ts did not load for mode ${mode}`);
@@ -60,6 +61,13 @@ for (const mode of MODES) {
   // a published address, on an issued certificate and in a key filename.
   editionPrefixDefines[mode] =
     loaded.config.define?.['import.meta.env.VITE_INSTANCE_EDITION_PREFIX'];
+  // Phase 11, task 6: whether this instance has been configured at all,
+  // read the same way and for a reason the other three do not have --
+  // the ordinary answer is the empty list, so a configuration that lost
+  // this define would look exactly like a configured instance and the
+  // warning would fall silent precisely where the build was broken.
+  unconfiguredDefines[mode] =
+    loaded.config.define?.['import.meta.env.VITE_INSTANCE_UNCONFIGURED'];
 }
 
 console.log(
@@ -67,9 +75,11 @@ console.log(
     reader: published(),
     identity: identity(),
     editionPrefix: editionPrefix(),
+    unconfigured: unconfigured(),
     bases,
     defines,
     identityDefines,
     editionPrefixDefines,
+    unconfiguredDefines,
   }),
 );

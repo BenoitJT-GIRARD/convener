@@ -4,7 +4,12 @@ import react from '@vitejs/plugin-react';
 import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
 import { exampleInstance } from './scripts/example-instance.mjs';
 import { exampleSettings } from './scripts/example-settings.mjs';
-import { editionPrefix, identity, published } from './scripts/published.mjs';
+import {
+  editionPrefix,
+  identity,
+  published,
+  unconfigured,
+} from './scripts/published.mjs';
 
 /**
  * Phase 10, task 2: the address this project is published at, read once
@@ -108,12 +113,41 @@ const EXAMPLE_SETTINGS = exampleSettings();
 
 const EDITION_PREFIX = editionPrefix();
 
+/**
+ * Phase 11, task 6: which of this instance's declared values are still
+ * the ones the product ships in `instances/example/config/instance.json`,
+ * carried into the bundle the same way as everything above it.
+ *
+ * Empty for an instance somebody has configured, and the names of the
+ * offending keys for one nobody has. `src/components/UnconfiguredBanner.
+ * tsx` prints them above the sign-in screen and above the cockpit itself,
+ * because the first thing anybody does with a template is deploy it
+ * before configuring it -- and a cockpit built from somebody else's
+ * declaration is a cockpit whose masthead names the wrong organisation
+ * while every check stays green.
+ *
+ * Declared for all four configurations along with the rest, for the same
+ * reason: no island references it and `define` only substitutes a token a
+ * bundle actually contains, but a value present in one configuration and
+ * absent from another is the shape that passes a test suite and ships
+ * broken.
+ *
+ * JSON rather than the bare string `VITE_INSTANCE_EDITION_PREFIX` is,
+ * and for a reason that is the whole point of the warning: the ordinary
+ * answer here is *empty*, so a bundle built without this define would be
+ * indistinguishable from a configured instance and the banner would go
+ * quiet exactly when the build was broken. `'[]'` is a value; an absent
+ * define is not, and `src/instance.ts` throws on it (D-25).
+ */
+const UNCONFIGURED = unconfigured();
+
 const INSTANCE_DEFINE = {
   'import.meta.env.VITE_PUBLISHED_URL': JSON.stringify(PUBLISHED.url),
   'import.meta.env.VITE_INSTANCE_IDENTITY': JSON.stringify(JSON.stringify(IDENTITY)),
   'import.meta.env.VITE_INSTANCE_EDITION_PREFIX': JSON.stringify(EDITION_PREFIX),
   'import.meta.env.VITE_EXAMPLE_INSTANCE': JSON.stringify(JSON.stringify(EXAMPLE)),
   'import.meta.env.VITE_EXAMPLE_SETTINGS': JSON.stringify(JSON.stringify(EXAMPLE_SETTINGS)),
+  'import.meta.env.VITE_INSTANCE_UNCONFIGURED': JSON.stringify(JSON.stringify(UNCONFIGURED)),
 };
 
 /**

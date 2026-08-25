@@ -64,6 +64,7 @@ __all__ = [
     "EDITION_PREFIX_KEY",
     "EDITION_PREFIX_MAX_LENGTH",
     "EDITION_PREFIX_RE",
+    "EXAMPLE_INSTANCE_PATH",
     "IDENTITY_FIELDS",
     "IDENTITY_KEY",
     "INSTANCE_PATH",
@@ -72,6 +73,7 @@ __all__ = [
     "EditionPrefix",
     "Identity",
     "Published",
+    "declared_values",
     "edition_prefix_from_data",
     "from_data",
     "identity_from_data",
@@ -79,12 +81,25 @@ __all__ = [
     "load",
     "load_edition_prefix",
     "load_identity",
+    "unconfigured",
+    "unconfigured_from_data",
 ]
 
 #: The instance's own declaration, relative to a repository root. In
 #: `config/` rather than beside it, and stating its own `owner:` the way
 #: every other file in that directory does -- see `boundary.py`.
 INSTANCE_PATH: Final = Path("config") / "instance.json"
+
+#: The declaration the *product* ships, as its own worked example --
+#: `instances/example/`'s copy of the file above, at the same relative
+#: path the boundary gives it. Product-owned: upstream ships it, upstream
+#: maintains it, and `test_second_instance.py` already lays it into this
+#: repository's own hole on every run.
+#:
+#: Read here for one purpose: telling an instance that has been configured
+#: from one that is still publishing the template's identity. See
+#: `unconfigured` below for what that comparison is and is not.
+EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
 
 #: `config/instance.json`'s own format version.
 DECLARATION_VERSION: Final = 1
@@ -631,6 +646,114 @@ def edition_prefix_from_data(data: Any) -> EditionPrefix:
 def load_edition_prefix(root: Path | None = None) -> EditionPrefix:
     """The edition prefix as this repository declares it."""
     return edition_prefix_from_data(_declaration(root))
+
+
+def declared_values(data: Any) -> dict[str, str]:
+    """Every value one declaration carries about *who* is publishing,
+    under the name the declaration itself gives it.
+
+    Eleven: the address, the edition prefix, and the nine fields of
+    `identity`. Read raw rather than through `from_data`,
+    `identity_from_data` and `edition_prefix_from_data`, and that is the
+    one place in this module where raw is right -- the question this feeds
+    is "is this still somebody else's value", which is a question about
+    the text somebody typed, and it has to stay answerable for a
+    declaration those three would refuse. A non-string is simply not a
+    value anybody typed, so it is left out rather than coerced.
+
+    The names are the declaration's own, dotted where the declaration
+    nests (`identity.organisation`), because they are printed to a person
+    who then has to go and edit that key.
+    """
+    values: dict[str, str] = {}
+    if not isinstance(data, dict):
+        return values
+    for key in (PUBLISHED_URL_KEY, EDITION_PREFIX_KEY):
+        value = data.get(key)
+        if isinstance(value, str) and value:
+            values[key] = value
+    raw = data.get(IDENTITY_KEY)
+    if isinstance(raw, dict):
+        for field in IDENTITY_FIELDS:
+            value = raw.get(field)
+            if isinstance(value, str) and value:
+                values[f"{IDENTITY_KEY}.{field}"] = value
+    return values
+
+
+def unconfigured_from_data(data: Any, example: Any) -> tuple[str, ...]:
+    """Which of `data`'s declared values are still `example`'s.
+
+    Sorted, and named rather than counted: a banner that says "this
+    instance is not configured" and cannot say *what* is not configured
+    sends its reader looking through a file; one that names
+    `identity.contact` sends them to a line.
+    """
+    ours = declared_values(data)
+    theirs = declared_values(example)
+    return tuple(
+        sorted(name for name, value in ours.items() if theirs.get(name) == value)
+    )
+
+
+def unconfigured(root: Path | None = None) -> tuple[str, ...]:
+    """Which declared values this instance has not made its own.
+
+    **What "not configured" means here, mechanically.** A duplicate is
+    unconfigured exactly while its declaration still carries a value the
+    product ships in `instances/example/config/instance.json` -- the
+    invented instance this repository already builds itself as on every
+    run of `tools/tests/test_second_instance.py`. Every value in that file
+    is unmistakably synthetic and reserved: `.test` is RFC 2606's, no
+    registry will ever delegate it, `example-instance.github.io` is a name
+    nobody is asked to register, and "The Example Collective" is nobody.
+    So a match is never a coincidence, and this cannot fire on an instance
+    that has been configured.
+
+    **Value by value, not file against file.** The dangerous state is the
+    half-done one: a duplicate that renames the organisation and forgets
+    the address publishes at somebody else's prefix while every page reads
+    as its own. Comparing the two declarations whole would call that
+    configured.
+
+    **Not the placeholder marker, and that is a decision.** `REPLACE` is
+    how this repository writes a value nobody has filled in, and it is
+    already handled -- twice, in opposite directions, both of them right.
+    In the eight identity fields there is nothing to print instead, so
+    `identity_from_data` refuses the declaration outright and no build
+    exists to carry a banner. In `proposal_form`, the one field with a
+    fallback, D-13 makes the absence an ordinary state that degrades at
+    the point of use: `/propose/` offers the contact address instead of a
+    dead link, and it says so on the page where it matters. A banner
+    across every page of a working site because one optional form is not
+    open yet is a banner somebody deletes within the week, and it would
+    take the real warning with it. So the marker decides nothing here.
+
+    **The charter is not in this set either.** `data/brand.json` is the
+    instance's too, and a duplicate that keeps the example's palette has
+    kept a palette -- it has not published somebody else's name, address
+    or contact, which is the whole of what this warns about.
+
+    Raises rather than reporting "configured" when the example cannot be
+    read: with nothing to compare against, nothing can be *proved* about
+    this declaration, and a check that answers "fine" when it could not
+    run is D-25's own definition of not being a check. The application's
+    build already depends on that directory outright
+    (`app/scripts/example-instance.mjs`, which throws for the same reason),
+    so this adds no failure a duplicate did not already have.
+    """
+    base = root if root is not None else repo_root()
+    example_path = base / EXAMPLE_INSTANCE_PATH
+    try:
+        example = json.loads(example_path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise ValueError(
+            f"{EXAMPLE_INSTANCE_PATH.as_posix()} cannot be read ({error}), so "
+            "there is nothing to tell this instance's declaration apart from "
+            "the example the product ships -- restore it rather than publish a "
+            "page that cannot say whether it is configured"
+        ) from error
+    return unconfigured_from_data(_declaration(root), example)
 
 
 def _declaration(root: Path | None) -> Any:

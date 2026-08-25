@@ -5,6 +5,7 @@ import { useRole } from '../auth/useRole';
 import { useData } from '../data/DataContext';
 import { isDemoMode, exitDemoMode } from '../data/demo';
 import { instanceIdentity } from '../instance';
+import { UnconfiguredBanner } from './UnconfiguredBanner';
 
 function exitDemo() {
   exitDemoMode();
@@ -19,6 +20,11 @@ export function Layout() {
   const { saveError, clearSaveError } = useData();
   return (
     <>
+      {/* Above the masthead, not below it: the masthead is the thing
+          that is wrong -- it names whoever the declaration says runs
+          this series, and on an unconfigured duplicate that is the
+          example collective. See UnconfiguredBanner's own header. */}
+      <UnconfiguredBanner />
       <header className="bg-primary text-white border-b-4 border-accent">
         <div className="max-w-content mx-auto px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
           <Link to="/" className="flex items-baseline gap-2 no-underline">

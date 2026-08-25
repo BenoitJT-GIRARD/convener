@@ -136,3 +136,41 @@ export function editionCodePrefix(): string {
 export function organisationLogin(): string {
   return instanceIdentity().repository.split('/')[0];
 }
+
+let cachedUnconfigured: string[] | null = null;
+
+/**
+ * Which of this instance's declared values are still the ones the product
+ * ships in `instances/example/config/instance.json` -- empty for an
+ * instance somebody has configured, and the names of the offending keys
+ * for one nobody has.
+ *
+ * Phase 11, task 6. The first thing anybody does with a template is
+ * deploy it before configuring it, and until this the result was a public
+ * cockpit whose masthead named the example collective, whose footer
+ * linked its invented forum and whose every check stayed green -- a
+ * declaration that belongs to somebody else is still a perfectly valid
+ * declaration. `scripts/published.mjs::unconfigured` is this build's
+ * reader of it; `tools/convener_ops/published.py::unconfigured` states the
+ * whole rule and why the `REPLACE` marker is deliberately no part of it.
+ *
+ * Throws when the define is absent, for the reason `instanceIdentity`
+ * above does and then one more: the ordinary answer here is the empty
+ * list, so a bundle built without the define would look exactly like a
+ * configured instance and this warning would fall silent precisely when
+ * the build was broken. `vite.config.ts` therefore carries the value as
+ * JSON -- `'[]'` is a value, an absent define is not (D-25).
+ */
+export function unconfiguredFields(): string[] {
+  if (cachedUnconfigured) return cachedUnconfigured;
+  const raw = import.meta.env.VITE_INSTANCE_UNCONFIGURED as string | undefined;
+  if (!raw) {
+    throw new Error(
+      'VITE_INSTANCE_UNCONFIGURED is unset: this bundle was built without ' +
+        "vite.config.ts's own define, so it cannot say whether this instance " +
+        'has been configured (see config/instance.json)',
+    );
+  }
+  cachedUnconfigured = JSON.parse(raw) as string[];
+  return cachedUnconfigured;
+}

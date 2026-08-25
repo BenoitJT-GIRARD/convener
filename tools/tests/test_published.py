@@ -1054,3 +1054,158 @@ def test_this_side_of_the_prefix_boundary_reads_the_shared_cases() -> None:
                 published.edition_prefix_from_data(declaration)
     assert any(case["accepted"] for case in fixture["cases"])
     assert any(not case["accepted"] for case in fixture["cases"])
+
+
+# ------------------------------------------------------------------ #
+# 9 -- a duplicate that has not been configured says so
+# ------------------------------------------------------------------ #
+
+
+def _laid_out(root: Path, declaration: dict[str, Any]) -> Path:
+    """A scratch repository root holding a declaration and the example the
+    product ships beside it -- the two files `published.unconfigured`
+    reads, and nothing else."""
+    (root / published.INSTANCE_PATH.parent).mkdir(parents=True, exist_ok=True)
+    (root / published.INSTANCE_PATH).write_text(
+        json.dumps(declaration), encoding="utf-8", newline="\n"
+    )
+    example = root / published.EXAMPLE_INSTANCE_PATH
+    example.parent.mkdir(parents=True, exist_ok=True)
+    example.write_text(
+        (ROOT / published.EXAMPLE_INSTANCE_PATH).read_text(encoding="utf-8"),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return root
+
+
+def _example_declaration() -> dict[str, Any]:
+    loaded = json.loads(
+        (ROOT / published.EXAMPLE_INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def test_this_repository_has_been_configured() -> None:
+    """The control that makes every other case here mean something: this
+    instance shares no declared value with the example, so the banner is
+    silent on the site people actually read."""
+    assert published.unconfigured() == ()
+
+
+def test_the_declaration_names_every_value_that_says_who_is_publishing() -> None:
+    """Eleven, enumerated from the declaration's own lists rather than
+    written out again: the address, the edition prefix and each identity
+    field. A field added to `IDENTITY_FIELDS` and not to this comparison
+    would be a field a duplicate could leave as the example's without
+    anything noticing -- which is exactly how `strapline` slipped past the
+    second-instance sweep until task 3."""
+    values = published.declared_values(_example_declaration())
+    assert set(values) == {
+        published.PUBLISHED_URL_KEY,
+        published.EDITION_PREFIX_KEY,
+    } | {f"{published.IDENTITY_KEY}.{field}" for field in published.IDENTITY_FIELDS}
+
+
+def test_a_deployment_of_the_example_itself_is_unconfigured_in_every_value(
+    tmp_path: Path,
+) -> None:
+    """What a duplicate deployed before it was configured actually looks
+    like, and what `tools/tests/test_second_instance.py` builds on every
+    run: `instances/example/`'s own declaration, sitting in `config/`."""
+    root = _laid_out(tmp_path, _example_declaration())
+    assert published.unconfigured(root) == tuple(
+        sorted(published.declared_values(_example_declaration()))
+    )
+
+
+def test_a_half_configured_duplicate_is_still_unconfigured(tmp_path: Path) -> None:
+    """The dangerous state, and the reason this compares value by value
+    rather than file against file: somebody who renames the organisation
+    and forgets the address publishes at a prefix that is not theirs while
+    every page reads as their own. A whole-file comparison calls that
+    configured."""
+    declaration = _example_declaration()
+    declaration[published.IDENTITY_KEY]["organisation"] = "A Real Society"
+    root = _laid_out(tmp_path, declaration)
+    remaining = published.unconfigured(root)
+    assert f"{published.IDENTITY_KEY}.organisation" not in remaining
+    assert published.PUBLISHED_URL_KEY in remaining
+    assert f"{published.IDENTITY_KEY}.contact" in remaining
+
+
+def test_a_placeholder_in_a_degradable_field_is_not_this_warning(
+    tmp_path: Path,
+) -> None:
+    """`REPLACE` decides nothing here, and that is a decision.
+
+    This repository has declared `proposal_form: https://tally.so/r/
+    REPLACE` since before the declaration existed, and D-13 makes that an
+    ordinary state that degrades at the point of use -- `/propose/` offers
+    the contact address instead of a dead link, and says so on the page
+    where it matters. A banner across every page of a working site because
+    one optional form is not open yet is a banner somebody deletes within
+    the week, and it would take the real warning with it.
+
+    In the other eight identity fields the marker never reaches a build at
+    all: `identity_from_data` refuses the declaration outright, so there
+    would be no page to carry a banner. The marker is therefore already
+    handled twice, in opposite directions, and both of them are right.
+    """
+    declaration = json.loads(
+        (ROOT / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert published.is_placeholder(
+        declaration[published.IDENTITY_KEY]["proposal_form"]
+    ), "this instance no longer ships the placeholder this test is about"
+    assert published.unconfigured(_laid_out(tmp_path, declaration)) == ()
+
+
+def test_an_example_that_cannot_be_read_stops_rather_than_reporting_configured(
+    tmp_path: Path,
+) -> None:
+    """D-25 at the one place it is easiest to get backwards. With nothing
+    to compare against, nothing can be *proved* about this declaration --
+    and a check that answers "configured" when it could not run is not a
+    check. The application's build already depends on that directory
+    outright (`app/scripts/example-instance.mjs`), so this adds no failure
+    a duplicate did not already have."""
+    root = _laid_out(tmp_path, _example_declaration())
+    (root / published.EXAMPLE_INSTANCE_PATH).unlink()
+    with pytest.raises(ValueError, match="cannot be read"):
+        published.unconfigured(root)
+
+
+def test_the_showcase_tells_its_templates_whether_this_instance_is_configured() -> None:
+    """The real, committed `.eleventy.js`, called with a stub -- so this is
+    the value `_includes/layout.njk` actually tests before deciding whether
+    to publish the banner, not a reading of the file that computes it."""
+    answer = _node_json(
+        ROOT / "site" / "scripts" / "print-published.cjs", ROOT / "site"
+    )
+    assert answer["siteData"]["unconfigured"] == list(published.unconfigured())
+
+
+def test_every_bundle_the_application_builds_carries_the_unconfigured_verdict() -> None:
+    """All four configurations, and all four `define`s.
+
+    Named separately from the identity define for a reason the other three
+    do not have: the ordinary answer here is the *empty* list, so a
+    configuration that had quietly lost this define would be
+    indistinguishable from a configured instance, and the warning would
+    fall silent precisely where the build was broken. `src/instance.ts`
+    therefore throws on an absent define and the value travels as JSON --
+    `"[]"` is a value, an absent define is not.
+    """
+    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    assert answer["unconfigured"] == list(published.unconfigured())
+    assert set(answer["unconfiguredDefines"]) == {
+        "production",
+        "island-signup",
+        "island-verify",
+        "island-survey",
+    }
+    for mode, defined in answer["unconfiguredDefines"].items():
+        assert defined is not None, f"{mode} builds without the verdict define"
+        assert json.loads(json.loads(defined)) == list(published.unconfigured()), mode

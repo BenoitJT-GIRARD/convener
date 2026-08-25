@@ -2630,6 +2630,17 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
     shutil.copy2(
         ROOT / "config" / "instance.json", scratch_root / "config" / "instance.json"
     )
+    # Phase 11, task 6: and `.eleventy.js` now also reads the declaration
+    # the *product* ships, to decide whether this instance is still
+    # publishing the example's identity. Same reasoning one paragraph up,
+    # one file further out: a tree carrying the declaration but not the
+    # example it is compared against cannot answer the question, so the
+    # build refuses rather than reporting "configured" -- which is the
+    # answer that would have made the banner go quiet exactly where it was
+    # needed (D-25).
+    example = scratch_root / published.EXAMPLE_INSTANCE_PATH
+    example.parent.mkdir(parents=True)
+    shutil.copy2(ROOT / published.EXAMPLE_INSTANCE_PATH, example)
     banners_dir = scratch_site / "src" / "banners"
     banners_dir.mkdir(parents=True, exist_ok=True)
     (banners_dir / f"{_the_one_scheduled_event_id()}.png").write_bytes(
@@ -2826,4 +2837,43 @@ def test_the_build_emits_the_published_repositorys_own_readme(
     )
     assert (built_site / ".gitignore").is_file(), (
         "the build wrote no .gitignore for the published repository"
+    )
+
+
+def test_no_page_of_a_configured_instance_carries_the_unconfigured_banner(
+    built_site: Path,
+) -> None:
+    """The half of phase 11 task 6 that decides whether the other half
+    survives: a banner that shows when it should not is deleted within a
+    week, and it takes the real warning with it.
+
+    This instance shares no declared value with the example the product
+    ships (`test_published.py::test_this_repository_has_been_configured`),
+    so `site.unconfigured` is empty here and `_includes/layout.njk` emits
+    nothing at all -- not a hidden element, not an empty band, no markup.
+    Asserted on the built pages rather than on the template, because what
+    a visitor gets is the build.
+
+    `tools/tests/test_second_instance.py::test_the_second_instances_
+    showcase_says_it_has_not_been_configured` is the same claim made the
+    other way round, on a build that *is* unconfigured. Neither half means
+    anything without the other.
+    """
+    pages = sorted(built_site.rglob("*.html"))
+    assert len(pages) > 5, f"the showcase built almost no pages: {pages}"
+    # The band's own class names, not the bare word: a future page about
+    # configuring a duplicate could legitimately write "unconfigured" in
+    # its prose, and a check that failed on that is a check somebody
+    # loosens rather than reads.
+    shouting = [
+        page.relative_to(built_site).as_posix()
+        for page in pages
+        if any(
+            marker in page.read_text(encoding="utf-8")
+            for marker in ('class="unconfigured"', "unconfigured__eyebrow")
+        )
+    ]
+    assert shouting == [], (
+        "these pages warn that this instance has not been configured, and "
+        f"it has: {shouting[:10]}"
     )

@@ -25,3 +25,10 @@ export declare function editionPrefix(): string;
  *  by both readers rather than by a comment claiming they agree; `unknown`
  *  because refusing a non-string is part of what it decides. */
 export declare function isEditionPrefix(value: unknown): boolean;
+
+/** Which of this instance's declared values are still the ones the product
+ *  ships in `instances/example/config/instance.json` -- empty for an
+ *  instance somebody has configured, and the names of the offending keys
+ *  for one nobody has. Sorted, so a bundle's own define is stable between
+ *  builds. */
+export declare function unconfigured(): string[];

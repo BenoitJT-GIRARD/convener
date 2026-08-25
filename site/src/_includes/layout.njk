@@ -82,6 +82,44 @@
 </head>
 <body>
 
+{#
+  Phase 11, task 6. A duplicate that has not been configured says so, on
+  its own pages, before anything else on them.
+
+  `site.unconfigured` (site/.eleventy.js, from
+  `scripts/published.cjs::unconfigured`) is the list of values this
+  instance's `config/instance.json` still shares with the example
+  declaration the product ships -- empty for a configured instance, so
+  this block renders nothing at all on one. The whole rule, and why the
+  `REPLACE` marker is deliberately no part of it, is stated once in
+  `tools/convener_ops/published.py::unconfigured`.
+
+  Here rather than only in the cockpit's own chrome, and above the
+  masthead rather than in the colophon: the failure this exists to catch
+  is a template deployed before it was configured, and what is published
+  then is a *public* site announcing the example collective's name,
+  address and contact under somebody else's roof. The person who needs
+  to be told is a visitor reading it, not the operator who already knows
+  where the file is -- and the keys are named because a banner that
+  cannot say what is wrong sends its reader through a file instead of to
+  a line.
+#}
+{% if site.unconfigured.length %}
+<div class="unconfigured">
+  <div class="container unconfigured__inner">
+    <p class="unconfigured__eyebrow">Not configured</p>
+    <p>
+      This site still publishes the identity that ships with the software as
+      its worked example, so nothing on it names a real organisation, a real
+      address or a real contact. Whoever deployed it has to fill in
+      <code class="unconfigured__keys">config/instance.json</code> &mdash;
+      still the example&rsquo;s:
+      <code class="unconfigured__keys">{{ site.unconfigured | join(', ') }}</code>.
+    </p>
+  </div>
+</div>
+{% endif %}
+
 <header class="masthead">
   {# Same continuous, cubic-Bézier ribbon as .hero__loops in index.njk,
      carried here because layout.njk is the one piece of chrome every

@@ -215,3 +215,74 @@ export function editionPrefix() {
   }
   return value;
 }
+
+/**
+ * Whether this instance is still publishing the identity the *product*
+ * ships as its worked example.
+ *
+ * `tools/convener_ops/published.py::unconfigured` is Python's answer to the
+ * same question and `site/scripts/published.cjs::unconfigured` the
+ * showcase build's; the whole rule is stated once in the first of those
+ * -- what counts as unconfigured, why it is a value-by-value comparison
+ * and not a file-against-file one, and why the `REPLACE` marker
+ * deliberately decides nothing here.
+ *
+ * What this side adds is the cockpit's own surface. `vite.config.ts`
+ * carries the result into every bundle through Vite's own `define`, for
+ * the reason it already carries the address and the identity: the chrome
+ * that has to print the warning runs in a browser, which can read no
+ * file. `src/components/UnconfiguredBanner.tsx` is what prints it, above
+ * the sign-in screen a visitor lands on and above the cockpit itself.
+ */
+const EXAMPLE_DECLARATION = new URL(
+  '../../instances/example/config/instance.json',
+  import.meta.url
+);
+const EXAMPLE_NAMED = 'instances/example/config/instance.json';
+
+/** The eleven values a declaration carries about *who* is publishing,
+ *  under the declaration's own names. Raw, deliberately: the question is
+ *  about the text somebody typed, and it has to stay answerable for a
+ *  declaration `identity()` above would refuse. Mirrors
+ *  `published.py::declared_values`. */
+function declaredValues(declaration) {
+  const values = {};
+  if (declaration === null || typeof declaration !== 'object') return values;
+  for (const key of ['published_url', 'edition_prefix']) {
+    const value = declaration[key];
+    if (typeof value === 'string' && value !== '') values[key] = value;
+  }
+  const raw = declaration.identity;
+  if (raw !== null && typeof raw === 'object') {
+    for (const field of IDENTITY_FIELDS) {
+      const value = raw[field];
+      if (typeof value === 'string' && value !== '') values[`identity.${field}`] = value;
+    }
+  }
+  return values;
+}
+
+/** Which declared values are still the example's, sorted and named.
+ *  Throws rather than answering "configured" when the example cannot be
+ *  read, the same rule `example-instance.mjs` already applies to the same
+ *  directory: with nothing to compare against nothing can be proved, and
+ *  a check that says "fine" when it could not run is D-25's own
+ *  definition of not being one. */
+export function unconfigured() {
+  let example;
+  try {
+    example = JSON.parse(readFileSync(EXAMPLE_DECLARATION, 'utf8'));
+  } catch (err) {
+    throw new Error(
+      `${EXAMPLE_NAMED} cannot be read (${err.message}), so there is nothing to ` +
+        "tell this instance's declaration apart from the example the product " +
+        'ships -- restore it rather than build a cockpit that cannot say ' +
+        'whether it is configured'
+    );
+  }
+  const ours = declaredValues(JSON.parse(readFileSync(DECLARATION, 'utf8')));
+  const theirs = declaredValues(example);
+  return Object.keys(ours)
+    .filter((name) => theirs[name] === ours[name])
+    .sort();
+}

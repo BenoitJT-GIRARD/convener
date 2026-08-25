@@ -874,3 +874,92 @@ def test_the_second_instances_showcase_offers_its_own_proposal_form(
         f"the second instance's propose page does not link its own form ({form})"
     )
     assert "The proposal form is not published yet." not in text
+
+
+# ------------------------------------------------------------------ #
+# 5 -- a duplicate that has not been configured says so, out loud
+# ------------------------------------------------------------------ #
+
+
+def test_this_tree_is_what_an_unconfigured_duplicate_looks_like(
+    second_instance_tree: Path,
+) -> None:
+    """The premise the two tests below rest on, checked rather than
+    assumed -- and checked on the laid-out tree, which needs no toolchain,
+    so it is proved on every machine whether or not anything can be built
+    here.
+
+    `_lay_out` copies `instances/example/`'s files into the holes the
+    boundary leaves, so the declaration this build is made from *is* the
+    example's, value for value -- which is precisely the state a duplicate
+    is in on the day it is made and before anybody has edited anything.
+    The demonstration is therefore not a special build with a warning
+    switched on for effect: it is the unconfigured state, and the warning
+    is the one any duplicate would get.
+    """
+    example = json.loads(
+        (ROOT / published.EXAMPLE_INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    assert published.unconfigured(second_instance_tree) == tuple(
+        sorted(published.declared_values(example))
+    ), (
+        "the tree this module builds no longer declares the example's own "
+        "values, so it is not the unconfigured state any more"
+    )
+
+
+def test_the_second_instances_showcase_says_it_has_not_been_configured(
+    second_instance: Built,
+) -> None:
+    """The banner the inventory (S 5) asks for, on a build rather than in
+    a template: "pour qu'un duplicata non configure le dise, fort, plutot
+    que de publier silencieusement l'identite du gabarit".
+
+    Every page, not one: `_includes/layout.njk` is the one piece of chrome
+    the whole showcase shares, and a warning on the home page alone is a
+    warning anybody arriving by a direct link never sees. And the keys are
+    named on the page, so what a reader is told is which line to go and
+    edit rather than that something, somewhere, is wrong.
+    """
+    pages = [
+        (relative, text)
+        for relative, text in second_instance.readable()
+        if relative.startswith("site/_site/") and relative.endswith(".html")
+    ]
+    assert len(pages) > 5, f"the second instance built almost no pages: {pages}"
+    silent = [
+        relative for relative, text in pages if "unconfigured__eyebrow" not in text
+    ]
+    assert silent == [], (
+        "these pages of an unconfigured duplicate publish the example's "
+        f"identity without saying so: {silent[:10]}"
+    )
+    named = published.unconfigured(second_instance.root)
+    for relative, text in pages:
+        for key in named:
+            assert key in text, f"{relative} does not name {key}"
+
+
+def test_the_second_instances_cockpit_says_it_too(second_instance: Built) -> None:
+    """The other half of what a visitor can reach without installing
+    anything, and the half that is behind a sign-in for everybody except a
+    visitor: `auth/Login.tsx` is the screen somebody with no GitHub account
+    lands on, and it carries the same band as the cockpit itself.
+
+    Read out of the built bundle rather than out of the source, because
+    what is being asked is whether the *define* survived into it: the
+    ordinary value of that define is the empty list, so a bundle that lost
+    it would render nothing and look exactly like a configured instance.
+    """
+    bundles = [
+        (relative, text)
+        for relative, text in second_instance.readable()
+        if relative.startswith("app/dist/") and relative.endswith(".js")
+    ]
+    assert bundles, "the second instance built no application bundle"
+    carrying = [relative for relative, text in bundles if "Not configured" in text]
+    assert carrying, (
+        "no bundle of an unconfigured duplicate's cockpit carries the "
+        "warning -- vite.config.ts's own VITE_INSTANCE_UNCONFIGURED define, "
+        "or the component that reads it, has stopped reaching the build"
+    )

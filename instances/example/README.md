@@ -34,6 +34,18 @@ example instance a visitor can click through and the fixture `convener`'s
 own test suite runs against. It is not a test double written for a
 demonstration; it is what a duplicate looks like on the day it is made.
 
+**Being what "not configured" is measured against.** Phase 11 task 6 makes
+the declaration here the thing every instance's own declaration is compared
+with, value by value: while any of the eleven values in
+`config/instance.json` is still one of these, the showcase prints a band
+above its masthead on every page and the cockpit prints one above its
+sign-in screen, naming the keys still to fill in
+(`tools/convener_ops/published.py::unconfigured`, and one reader per language
+beside it). That is why every value here has to stay invented and reserved
+rather than merely plausible: a value somebody could genuinely declare
+would make the warning fire on an instance that had been configured, and a
+warning that shows when it should not is deleted within a week.
+
 ## Everything here is invented, and it can be checked
 
 No real person, no real organisation, no real institution, no real

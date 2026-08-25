@@ -6,6 +6,7 @@ import { authEnv, availableStrategy } from './strategy';
 import { requestDeviceCode, pollForToken, DeviceFlowError } from './device';
 import type { DeviceCode } from './device';
 import { instanceIdentity } from '../instance';
+import { UnconfiguredBanner } from '../components/UnconfiguredBanner';
 
 function realSleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -35,6 +36,12 @@ function Shell({ children }: { children: ReactNode }) {
         <path d="M 70 270 C 30 290 50 360 110 350 C 160 342 160 280 120 280 C 80 280 60 340 120 360" opacity=".7" />
       </svg>
 
+      {/* The one screen of this bundle a visitor with no account
+          actually reaches, so the one place the warning is addressed to
+          somebody other than the operator who already knows. */}
+      <div className="relative z-10">
+        <UnconfiguredBanner />
+      </div>
       <header className="bg-primary text-white border-b-4 border-accent relative z-10">
         <div className="max-w-content mx-auto px-6 py-3 flex items-baseline gap-2">
           <span className="font-mono text-sm opacity-85">No.</span>
