@@ -67,7 +67,7 @@ path, and refuses (`404`, the same bucket "no such event" already falls
 into) when the event is not in the array it decodes.
 
 Fix round 1 originally read that file from a plain public HTTPS URL
-instead (a deployed example-showcase page, no token, no GitHub API budget). Fix
+instead (a page on the published site, no token, no GitHub API budget). Fix
 round 2 (R-41) removed that: the URL pointed at a deployment this project
 had never actually wired up, so the relay's own answer depended on a site
 that did not exist; it also carried a build-to-live latency the handler's
@@ -82,8 +82,8 @@ personal data, refreshed by `deploy.yml`'s "Commit survey status" step
 every time it changes.
 
 This is the relay's own layer, not the only one: `app/src/islands/survey/
-SurveyForm.tsx` still fetches the deployed `survey-status.json` from
-example-showcase — a static page has no token and cannot read the Contents API
+SurveyForm.tsx` still fetches the deployed `survey-status.json` from the
+published site — a static page has no token and cannot read the Contents API
 any other way — and the daily drain checks the authoritative
 `data/speakers.yml` again regardless. Three layers still, for the same
 reason as before: a page check is bypassable by posting straight to this

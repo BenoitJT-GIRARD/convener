@@ -25,10 +25,20 @@
 # perfectly good product defaults: upstream cannot ship half a file. That is
 # the rule that settles `config/`, and each file there states its own answer
 # in its own header rather than being listed again here -- see `owner:` in
-# `config/actions-budget.yml`, `config/integrations.yml`,
-# `config/queue-drain.yml`, `config/registration-lanes.yml`, and in this file
-# itself. One fact, one place: `test_boundary.py` refuses a `config/` path
-# named in the list below, so the two can never disagree.
+# `config/actions-budget.yml`, `config/instance.json`,
+# `config/integrations.yml`, `config/queue-drain.yml`,
+# `config/registration-lanes.yml`, and in this file itself. One fact, one
+# place: `test_boundary.py` refuses a `config/` path named in the list
+# below, so the two can never disagree.
+#
+# `config/instance.json` is JSON rather than YAML for a reason that is not
+# taste: phase 10 task 2 made it the one declaration of this project's
+# published address, and Python, the application's build and the showcase's
+# build all read it. JSON is the only format all three parse without a
+# dependency `site/` and `services/` do not have. `boundary.py` reads both
+# formats for exactly this file's sake, so that a format nobody enumerated
+# cannot become a file in this directory whose owner nothing ever asks
+# for.
 #
 # `kept:` -- the product's own files inside a directory the instance owns
 # ----------------------------------------------------------------------

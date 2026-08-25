@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
+from convener_ops import published
 from convener_ops.attendance import MatchedAttendee
 from convener_ops.certificate import (
     _CERTIFICATE_ID_RE,
@@ -1187,7 +1188,11 @@ def test_the_shared_fixture_states_match_this_modules_own_constants() -> None:
 
 
 def test_the_shared_fixture_base_matches_this_modules_own_constant() -> None:
-    assert _FIXTURE["verification_base"] == VERIFICATION_BASE
+    """Phase 10 task 2: the fixture states the *path* -- `verify/#/`,
+    which is the product's own route plus the fragment that keeps a
+    holder's name out of every request -- and the root comes from
+    `config/instance.json`, the one place it is written down."""
+    assert published.load().under(_FIXTURE["verification_path"]) == VERIFICATION_BASE
 
 
 def test_the_shared_fixtures_token_genuinely_verifies() -> None:
@@ -1207,10 +1212,9 @@ def test_the_shared_fixtures_url_is_reproducible_from_this_modules_own_function(
     None
 ):
     example = _FIXTURE["signed_example"]
-    assert (
-        verification_url(example["identifier"], example["token"])
-        == example["verification_url"]
-    )
+    assert verification_url(
+        example["identifier"], example["token"]
+    ) == published.load().under(example["verification_url_path"])
 
 
 def test_the_shared_fixtures_projection_example_has_no_fingerprint_either() -> None:
@@ -1283,7 +1287,6 @@ def test_the_shared_fixtures_integer_duration_example_genuinely_verifies() -> No
     assert result.valid
     assert result.payload == example["payload_decoded"]
     assert example["payload_decoded"]["duration_hours"] == 2.0
-    assert (
-        verification_url(example["identifier"], example["token"])
-        == example["verification_url"]
-    )
+    assert verification_url(
+        example["identifier"], example["token"]
+    ) == published.load().under(example["verification_url_path"])

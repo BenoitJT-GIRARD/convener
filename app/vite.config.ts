@@ -2,6 +2,36 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { cspMetaContent } from './scripts/csp.mjs';
+import { published } from './scripts/published.mjs';
+
+/**
+ * Phase 10, task 2: the address this project is published at, read once
+ * from `config/instance.json` -- the instance's own declaration -- rather
+ * than typed into this file four times as `base: '/<repository>/app/'`.
+ *
+ * A build configuration cannot always read what one would like at the
+ * moment one would like, so this was checked before being promised rather
+ * than assumed: Vite loads this file in Node, bundling it with esbuild
+ * first, which is exactly why `./scripts/csp.mjs` above is already
+ * imported and called here. `published()` is the same shape -- a plain
+ * ESM module doing a `readFileSync` -- so `base` below is genuinely
+ * derived, not a literal with a comment claiming a derivation.
+ *
+ * `define` carries the one value that has to survive into the browser.
+ * `src/content/render.ts` builds a public registration link inside a
+ * volunteer's browser, where nothing can read a file at all, so the
+ * address is substituted into the bundle at build time under
+ * `import.meta.env.VITE_PUBLISHED_URL`. Declared for every one of the
+ * four configurations below, including the three islands: `vitest` reads
+ * the main configuration and each island is built from its own, and a
+ * value present in one but not another is exactly the shape that passes
+ * a test suite and ships broken.
+ */
+const PUBLISHED = published();
+
+const PUBLISHED_DEFINE = {
+  'import.meta.env.VITE_PUBLISHED_URL': JSON.stringify(PUBLISHED.url),
+};
 
 /**
  * Security audit 2026-08-23, M4: injects this project's Content-Security-
@@ -65,7 +95,7 @@ function cspHtmlPlugin(): Plugin {
  * a foreign page conventionally ships under a name that does not change
  * build to build.
  *
- * `base: '/example-showcase/app/'`, the *same* value the main app build below
+ * `base: PUBLISHED.appBase`, the *same* value the main app build below
  * uses -- Fix round 4 correction: this used to read `'/app/'`, deliberately
  * distinct from the main app's own base, on the reasoning that this bundle
  * runs on a page the *site* serves, whose own templates already addressed
@@ -73,24 +103,25 @@ function cspHtmlPlugin(): Plugin {
  * (`layout.njk`'s `/style.css`, `/fonts/`). That reasoning assumed the
  * site's own root-relative links already landed at wherever GitHub Pages
  * resolves this project's published root to -- which they did not: there
- * is no CNAME and no custom domain, so that root is
- * `https://example-instance.github.io/example-showcase/`, one path segment
- * below the domain root a bare `/foo` actually addresses. That gap is the
- * whole of the defect `site/.eleventy.js`'s own `PATH_PREFIX` and every
+ * is no CNAME and no custom domain, so that root is one path segment below
+ * the domain root a bare `/foo` actually addresses. That gap is the whole
+ * of the defect `site/.eleventy.js`'s own `pathPrefix` and every
  * template's `| url` filter call now close -- it was not a fact particular
  * to this island, just uncaught here for the identical reason it was
  * uncaught everywhere else: every screenshot pass served the built site at
  * a bare localhost root, where the gap does not exist to see.
  *
  * With the site now prefix-aware, both this island and the main app
- * publish to, and are addressed from, the exact same place
- * (`example-showcase`'s own `app/` subtree, `deploy.yml`'s "Push to example-showcase"
- * step) -- so both now share the one value that actually describes it,
- * rather than two that happened to agree only by not yet having been
- * tested against a real deployment. `SignupForm.tsx`'s own key fetch reads
- * this value back through `import.meta.env.BASE_URL`, landing on
- * `/example-showcase/app/keys/events/<id>.pub` -- exactly where
- * `copy-event-keys.mjs` already publishes it inside the app's own `dist/`.
+ * publish to, and are addressed from, the exact same place (the published
+ * repository's own `app/` subtree, `deploy.yml`'s own push step) -- so
+ * both now share the one value that actually describes it, rather than two
+ * that happened to agree only by not yet having been tested against a real
+ * deployment. Phase 10 task 2 made that literally one value:
+ * `PUBLISHED.appBase`, derived from `config/instance.json`.
+ * `SignupForm.tsx`'s own key fetch reads it back through
+ * `import.meta.env.BASE_URL`, landing on
+ * `<app base>keys/events/<id>.pub` -- exactly where `copy-event-keys.mjs`
+ * already publishes it inside the app's own `dist/`.
  *
  * No CSS import from this entry (`main.tsx` imports no stylesheet): the
  * island's own class names are plain, semantic strings styled by
@@ -105,7 +136,8 @@ function cspHtmlPlugin(): Plugin {
 function islandSignupConfig() {
   return {
     plugins: [react()],
-    base: '/example-showcase/app/',
+    base: PUBLISHED.appBase,
+    define: PUBLISHED_DEFINE,
     build: {
       outDir: 'dist/islands/signup',
       emptyOutDir: true,
@@ -130,15 +162,14 @@ function islandSignupConfig() {
  * one -- its own, separate artefact (P-2), picked apart at the command
  * line by `npm run build`'s third `vite build` call. Everything
  * `islandSignupConfig`'s own comment explains about fixed output names,
- * `base: '/example-showcase/app/'`, and skipping `copyPublicDir` applies
+ * `base: PUBLISHED.appBase`, and skipping `copyPublicDir` applies
  * identically here: the consumer is `site/src/verify.njk`, a foreign
  * toolchain with no manifest to read hashed names from, and this bundle
  * runs on a page the *site* serves. `register.ts` and `publicKeys.ts`
  * read this same `base` back through `import.meta.env.BASE_URL`, landing
- * on `/example-showcase/app/certificates.json` and
- * `/example-showcase/app/keys/signing/index.json` -- exactly where the main
- * app build's own `scripts/copy-certificates.mjs` and
- * `copy-signing-keys.mjs` publish them inside `dist/`.
+ * on `<app base>certificates.json` and `<app base>keys/signing/index.json`
+ * -- exactly where the main app build's own `scripts/copy-certificates.mjs`
+ * and `copy-signing-keys.mjs` publish them inside `dist/`.
  *
  * No CSS import from this entry either, for the identical reason
  * `islandSignupConfig`'s own comment gives: the island's class names are
@@ -149,7 +180,8 @@ function islandSignupConfig() {
 function islandVerifyConfig() {
   return {
     plugins: [react()],
-    base: '/example-showcase/app/',
+    base: PUBLISHED.appBase,
+    define: PUBLISHED_DEFINE,
     build: {
       outDir: 'dist/islands/verify',
       emptyOutDir: true,
@@ -174,15 +206,14 @@ function islandVerifyConfig() {
  * above build their own -- its own, separate artefact (P-2), picked apart
  * at the command line by `npm run build`'s fourth `vite build` call.
  * Everything `islandSignupConfig`'s own comment explains about fixed
- * output names, `base: '/example-showcase/app/'`, and skipping `copyPublicDir`
+ * output names, `base: PUBLISHED.appBase`, and skipping `copyPublicDir`
  * applies identically here: the consumer is `site/src/survey.njk`, a
  * foreign toolchain with no manifest to read hashed names from, and this
  * bundle runs on a page the *site* serves. `SurveyForm.tsx` reads this
  * same `base` back through `import.meta.env.BASE_URL`, landing on
- * `/example-showcase/app/keys/events/<id>.pub` and
- * `/example-showcase/app/survey-status.json` -- exactly where the main app
- * build's own `copy-event-keys.mjs` and `copy-survey-status.mjs` publish
- * them inside `dist/`.
+ * `<app base>keys/events/<id>.pub` and `<app base>survey-status.json` --
+ * exactly where the main app build's own `copy-event-keys.mjs` and
+ * `copy-survey-status.mjs` publish them inside `dist/`.
  *
  * No CSS import from this entry either, for the identical reason
  * `islandSignupConfig`'s own comment gives: the island's class names are
@@ -193,7 +224,8 @@ function islandVerifyConfig() {
 function islandSurveyConfig() {
   return {
     plugins: [react()],
-    base: '/example-showcase/app/',
+    base: PUBLISHED.appBase,
+    define: PUBLISHED_DEFINE,
     build: {
       outDir: 'dist/islands/survey',
       emptyOutDir: true,
@@ -219,7 +251,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), cspHtmlPlugin()],
-    base: '/example-showcase/app/',
+    base: PUBLISHED.appBase,
+    define: PUBLISHED_DEFINE,
     build: { outDir: 'dist' },
     test: {
       environment: 'jsdom',

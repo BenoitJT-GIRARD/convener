@@ -71,23 +71,62 @@ def test_print_is_the_only_named_format_that_is_wide() -> None:
 # ---------------------------------------------------------------------------
 
 
+#: The slot the printed code actually occupies on A4, in millimetres --
+#: `visual.py`'s own `.registration-code-slot` fraction of the paper's
+#: shorter side, less its inner padding. Pinned as a number because that is
+#: the regression this section is really guarding: a change to the slot's
+#: own size, or to the paper, moves every figure below at once.
+#:
+#: Phase 10, task 2: the module size itself used to be pinned here instead
+#: (0.589mm), and it was a statement about *this* instance's published
+#: address rather than about the poster. `registration_code_modules` encodes
+#: `registration.signup_url(event_id)`, so the module count -- and with it
+#: every millimetre figure -- moves with the length of the address the
+#: instance publishes at. A duplicate with a longer one failed this test for
+#: a reason it could not fix, while the property the test exists for (the
+#: printed code stays scannable) still held. The slot's width does not move;
+#: what the address can move is how finely it is divided.
+PRINT_QR_SLOT_MM = 24.15
+
+
+def test_the_print_qr_slot_is_the_same_width_whatever_address_it_carries() -> None:
+    """The geometry, held on its own: however many modules the encoded
+    address needs, they divide this one physical width."""
+    for event_id in ("mrg-9", "mrg-999999999"):
+        modules = registration_code_modules(event_id)
+        actual = qr_module_size_mm(PRINT, event_id) * modules
+        assert actual == pytest.approx(PRINT_QR_SLOT_MM, abs=0.01)
+
+
 def test_the_print_qr_module_clears_the_scannable_threshold_for_a_real_id() -> None:
-    mm = qr_module_size_mm(PRINT, "mrg-9")
-    assert mm == pytest.approx(0.589, abs=0.001)
-    assert mm >= SCANNABLE_QR_MODULE_MM
+    """The property, which is what "a poster actually pinned to a wall"
+    means: one module is wide enough for a phone camera to resolve."""
+    assert qr_module_size_mm(PRINT, "mrg-9") >= SCANNABLE_QR_MODULE_MM
 
 
 def test_the_print_qr_module_still_clears_the_threshold_for_a_longer_id() -> None:
     """A longer id can bump segno's own version choice (more modules,
-    dividing the same physical slot further) -- checked here against an
-    id long enough to actually do that (`registration_code_modules` goes
-    from 41 to 45 across this boundary), not merely a realistic one, so
-    this is the id that stresses the property rather than restating the
-    typical case above."""
-    long_id = "mrg-999999999"
-    assert registration_code_modules(long_id) > registration_code_modules("mrg-9")
-    mm = qr_module_size_mm(PRINT, long_id)
-    assert mm >= SCANNABLE_QR_MODULE_MM
+    dividing the same physical slot further), and the id that does it is
+    *found* rather than typed: where that boundary falls depends on how
+    long the published address already is, which is the instance's own
+    business. Searching for the first id that actually crosses it keeps
+    this a test of the property under stress rather than a restatement of
+    one organisation's address length."""
+    baseline = registration_code_modules("mrg-9")
+    longer = next(
+        (
+            candidate
+            for candidate in ("mrg-" + "9" * n for n in range(1, 80))
+            if registration_code_modules(candidate) > baseline
+        ),
+        None,
+    )
+    assert longer is not None, (
+        "no event id under 80 characters needs a larger QR version than "
+        "'mrg-9' -- this test would otherwise pass without ever crossing the "
+        "boundary it exists to cross"
+    )
+    assert qr_module_size_mm(PRINT, longer) >= SCANNABLE_QR_MODULE_MM
 
 
 def test_qr_module_size_mm_raises_for_a_screen_format() -> None:

@@ -140,16 +140,27 @@ describe('substitute v2 context', () => {
 // `tools/tests/test_confirmation.py` reads on the Python side (D-14),
 // rather than trusting two lower-casing implementations to agree.
 describe('speaker.signup_link matches the shared D-14 fixture', () => {
-  it('carries the same signup_base as the fixture', () => {
-    expect(signupLinkFixture.signup_base).toBe(
-      'https://example-instance.github.io/example-showcase/events/',
-    );
+  // Phase 10 task 2: the fixture states paths, not addresses. The root
+  // comes from `config/instance.json`, which `vite.config.ts` substitutes
+  // into this bundle (and into this test run, which reads the same
+  // configuration) as `import.meta.env.VITE_PUBLISHED_URL` -- Python reads
+  // the same declaration through `convener_ops.published`. Asserting the define
+  // exists at all is the point of the first case: without it every
+  // assertion below would compare `undefined...` against `undefined...`
+  // and pass while the built bundle shipped a broken public link.
+  const publishedUrl = import.meta.env.VITE_PUBLISHED_URL as string | undefined;
+
+  it("carries the published address vite.config.ts's own define injects", () => {
+    expect(publishedUrl).toMatch(/^https:\/\/[^/]+\/.*\/$/);
+    expect(signupLinkFixture.signup_path).toBe('events/');
   });
 
   for (const c of signupLinkFixture.cases) {
-    it(`computes ${c.signup_url} for edition_code ${c.edition_code}`, () => {
+    it(`computes ${c.signup_url_path} for edition_code ${c.edition_code}`, () => {
       const s = makeSpeaker({ name: 'X', edition_code: c.edition_code });
-      expect(substitute('{{ speaker.signup_link }}', { speaker: s })).toBe(c.signup_url);
+      expect(substitute('{{ speaker.signup_link }}', { speaker: s })).toBe(
+        `${publishedUrl}${c.signup_url_path}`,
+      );
     });
   }
 });

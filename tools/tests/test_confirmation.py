@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 
 import pytest
 
-from convener_ops import registration
+from convener_ops import published, registration
 from convener_ops.confirmation import (
     CONTACT_EMAIL,
     FIELD_LABELS,
@@ -797,8 +797,14 @@ def _signup_link_cases() -> dict[str, Any]:
 
 
 def test_signup_base_matches_the_shared_fixture() -> None:
+    """Phase 10 task 2: the fixture states the *path* the product
+    publishes an event page under; the root both sides prepend is
+    `config/instance.json`'s, read here through `published.load()` and on
+    the TypeScript side through `import.meta.env.VITE_PUBLISHED_URL`. The
+    fixture used to hold the whole address, which made it a copy of that
+    root rather than a binding between two implementations."""
     cases = _signup_link_cases()
-    assert cases["signup_base"] == registration.SIGNUP_BASE
+    assert published.load().under(cases["signup_path"]) == registration.SIGNUP_BASE
 
 
 @pytest.mark.parametrize(
@@ -810,4 +816,6 @@ def test_signup_url_matches_the_shared_fixtures_worked_examples(
     # The fixture's own event_id pins R-5 itself: lower-casing edition_code
     # IS the rule, not merely an assumption the case was built under.
     assert case["event_id"] == case["edition_code"].lower()
-    assert registration.signup_url(case["event_id"]) == case["signup_url"]
+    assert registration.signup_url(case["event_id"]) == published.load().under(
+        case["signup_url_path"]
+    )

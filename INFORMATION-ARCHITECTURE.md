@@ -31,6 +31,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | Live speaker & event data | `data/speakers.yml` |
 | External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
 | Which paths belong to this series rather than to the code | `config/boundary.yml`, and each `config/` file's own `owner:` key |
+| The address this project is published at | `config/instance.json`, read by `tools/convener_ops/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
 
 ## 2 · Doctrine in the handbook, state in the app
 

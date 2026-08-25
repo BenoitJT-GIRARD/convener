@@ -17,11 +17,25 @@ export interface SubstitutionContext {
 const MISSING = (path: string) => `«missing: ${path}»`;
 
 /**
- * The public signup address, mirrored byte-for-byte against Python's
- * `tools/convener_ops/registration.SIGNUP_BASE` -- pinned by
- * `tools/tests/fixtures/signup-link.json`'s own `signup_base`, the D-14
- * discipline `certificate-verification.json` and `governance-cases.json`
- * already use.
+ * The public signup address: this instance's published root, plus the
+ * one path segment `site/src/event.njk`'s permalink publishes an event
+ * page under (`/events/<event id>/`, D-19).
+ *
+ * Phase 10, task 2: the root used to be a literal here, mirrored
+ * byte-for-byte against Python's `tools/convener_ops/registration.SIGNUP_BASE`
+ * and bound to it by a shared fixture -- a binding that could say the two
+ * copies still agreed, never that there was one. It now comes from
+ * `config/instance.json`, substituted into this bundle at build time by
+ * `vite.config.ts`'s own `define` (this code runs in a volunteer's
+ * browser, which can read no file), while `events/` stays written here:
+ * that segment is the *product's* own route shape, inherited by every
+ * duplicate, not something an instance configures.
+ *
+ * The `define` is what makes this value exist at all, so an absent one is
+ * a broken build rather than an ordinary state (D-13 is about a relay
+ * that may genuinely not be deployed yet; this is not that). It throws
+ * rather than composing `undefined` into a public address printed on an
+ * announcement nobody can recall.
  *
  * Task 6: this used to be a `HashRouter` fragment
  * (`App.tsx`'s `path="/signup/:eventId"`, the convention
@@ -31,10 +45,19 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  * for a reason this address does not share: see that constant's own
  * comment) -- registration left that route for an island mounted on the
  * public event page, so this now points at that page's own address
- * instead: `site/src/event.njk`'s permalink, `/events/<event id>/`
- * (D-19).
+ * instead.
  */
-const SIGNUP_BASE = 'https://example-instance.github.io/example-showcase/events/';
+function signupBase(): string {
+  const published = import.meta.env.VITE_PUBLISHED_URL as string | undefined;
+  if (!published) {
+    throw new Error(
+      'VITE_PUBLISHED_URL is unset: this bundle was built without ' +
+        "vite.config.ts's own define, so it cannot say where this project " +
+        'is published (see config/instance.json)'
+    );
+  }
+  return `${published}events/`;
+}
 
 /**
  * The R-5 rule (`tools/convener_ops/platform.py::find_speaker`) computed here
@@ -50,7 +73,7 @@ const SIGNUP_BASE = 'https://example-instance.github.io/example-showcase/events/
  */
 function signupLink(editionCode: string): string {
   if (!editionCode) return '';
-  return `${SIGNUP_BASE}${encodeURIComponent(editionCode.toLowerCase())}/`;
+  return `${signupBase()}${encodeURIComponent(editionCode.toLowerCase())}/`;
 }
 
 interface Resolved {

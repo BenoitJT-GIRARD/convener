@@ -27,7 +27,7 @@ and when it stops being readable, and how to take this project over.
 ```bash
 cd app
 npm install
-npm run dev           # http://localhost:5173/example-showcase/app/
+npm run dev           # served under the base config/instance.json declares
 ```
 
 You'll be prompted for a GitHub fine-grained PAT scoped to this repository
@@ -47,7 +47,7 @@ The public showcase is a separate, static project — no sign-in, no secret:
 ```bash
 cd site
 npm install
-npm start             # http://localhost:8080/example-showcase/
+npm start             # served under the prefix config/instance.json declares
 ```
 
 Validate data:

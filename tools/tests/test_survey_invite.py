@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from convener_ops import published
 from convener_ops.confirmation import Confirmation
 from convener_ops.registration import Registration
 from convener_ops.survey_invite import (
@@ -38,7 +39,7 @@ def test_survey_url_names_the_event_on_the_survey_pages_own_address() -> None:
     # explains why this no longer carries a `#` fragment (there was never
     # a Referer-leak property tying it to one in the first place).
     url = survey_url("mrg-042")
-    assert url == "https://example-instance.github.io/example-showcase/survey/mrg-042/"
+    assert url == published.load().under("survey/mrg-042/")
 
 
 def test_survey_url_quotes_a_hostile_event_id() -> None:
@@ -189,7 +190,7 @@ def test_registry_from_data_rejects_malformed_input(data: Any) -> None:
 
 def test_survey_base_is_the_survey_pages_own_address() -> None:
     assert SURVEY_BASE.endswith("/survey/")
-    assert SURVEY_BASE.startswith("https://example-instance.github.io/example-showcase/")
+    assert SURVEY_BASE.startswith(published.load().url)
     assert "#" not in SURVEY_BASE
     assert "/app/" not in SURVEY_BASE
 

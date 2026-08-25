@@ -29,10 +29,41 @@ const VALID_BODY = JSON.stringify({ event_id: EVENT_ID, ...VALID_ENVELOPE });
 const SURVEY_ENVELOPE = JSON.parse(SURVEY_CASES[0].envelope);
 const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 
-// Mirrors services/signup-relay/wrangler.toml's ALLOWED_ORIGIN, which in
-// turn mirrors services/auth-proxy/wrangler.toml's -- the app's origin,
-// not its full URL (Origin never carries a path).
-const ALLOWED_ORIGIN = 'https://example-instance.github.io';
+// Phase 10, task 2: the origin this worker answers CORS preflights for is
+// the one address `config/instance.json` declares this project is
+// published at -- the same declaration `tools/convener_ops/published.py`, the
+// application's build and the showcase's build all read (D-14). A Worker
+// cannot read any of it: it runs on Cloudflare with no repository in
+// reach, so the deployed value lives in this package's own
+// `wrangler.toml` and reaches `handle` as `env.ALLOWED_ORIGIN`. That is
+// the honest arrangement, and it leaves exactly one thing for a test to
+// hold: that the value shipped for deployment is the address the project
+// is actually published at. TOML has no include and no reader here
+// without a dependency this package does not have and the zero-cost
+// constraint forbids adding, so the one line is matched out of it -- and
+// a `wrangler.toml` that stopped declaring it fails loudly below rather
+// than silently exercising this suite against a value nothing deploys.
+const DECLARED_ORIGIN = new URL(
+  JSON.parse(
+    readFileSync(new URL('../../../config/instance.json', import.meta.url), 'utf-8'),
+  ).published_url,
+).origin;
+
+const WRANGLER = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf-8');
+const DEPLOYED_ORIGIN_MATCH = /^ALLOWED_ORIGIN\s*=\s*"([^"]+)"/m.exec(WRANGLER);
+if (!DEPLOYED_ORIGIN_MATCH) {
+  throw new Error(
+    'wrangler.toml no longer declares ALLOWED_ORIGIN -- this worker would ' +
+      'deploy answering CORS preflights for nothing at all',
+  );
+}
+const ALLOWED_ORIGIN = DEPLOYED_ORIGIN_MATCH[1];
+
+describe('the deployed origin is the address this project is published at', () => {
+  it('matches config/instance.json', () => {
+    expect(ALLOWED_ORIGIN).toBe(DECLARED_ORIGIN);
+  });
+});
 
 const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cockpit/dispatches';
 const CONTENTS_URL = (id) =>
@@ -926,11 +957,14 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
       expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_CONTENTS_URL)).toBe(true);
     });
 
-    it('never depends on any deployed example-showcase or github.io URL -- R-41 removed that dependency entirely', async () => {
+    it('never depends on the published site at all -- R-41 removed that dependency entirely', async () => {
       await handle(postSurvey(SURVEY_BODY), env());
       const calls = globalThis.fetch.mock.calls;
-      expect(calls.every(([url]) => !String(url).includes('example-showcase'))).toBe(true);
-      expect(calls.every(([url]) => !String(url).includes('.github.io'))).toBe(true);
+      // Built from the declaration rather than typed: the address this
+      // worker must not reach for is whatever address this project is
+      // published at, which is exactly what changes under a duplicate.
+      const published = new URL(DECLARED_ORIGIN).host;
+      expect(calls.every(([url]) => !String(url).includes(published))).toBe(true);
     });
   });
 

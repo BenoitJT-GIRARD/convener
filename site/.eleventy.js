@@ -1,46 +1,45 @@
 // Fix round 4 (the path-prefix defect): GitHub Pages serves this project's
-// build output at <https://example-instance.github.io/example-showcase/>, not at
-// a bare domain root -- there is no CNAME and no custom domain
-// (`publish-vitrine.yml`'s own "already-active GitHub Pages setting" is
-// "branch main, folder root" on the *example-showcase* repository, so the
-// address is this repository's own name). Every template used to write its
-// internal links as a bare `/foo`, which resolves to the *domain* root, one
-// path segment short of where the site actually lives -- invisible on a
-// developer's own `localhost` build, total once published.
+// build output one path segment below a bare domain root -- there is no
+// CNAME and no custom domain (`publish-vitrine.yml`'s own "already-active
+// GitHub Pages setting" is "branch main, folder root" on the published
+// repository, so the address is that repository's own name). Every
+// template used to write its internal links as a bare `/foo`, which
+// resolves to the *domain* root, one path segment short of where the site
+// actually lives -- invisible on a developer's own `localhost` build,
+// total once published.
 //
 // `pathPrefix` is Eleventy's own mechanism for exactly this: every call to
 // the built-in `url` filter (`{{ '/foo' | url }}`) resolves against it, so
-// this is the one place that address is written down for every template in
-// this project -- see each `.njk` file's own `| url` filter calls, and
-// `style.css`'s `@font-face` block, which needs no prefix at all because a
-// relative `url('fonts/...')` inside a stylesheet already resolves against
-// the stylesheet's own address, at any prefix.
+// this is where that address reaches every template in this project -- see
+// each `.njk` file's own `| url` filter calls, and `style.css`'s
+// `@font-face` block, which needs no prefix at all because a relative
+// `url('fonts/...')` inside a stylesheet already resolves against the
+// stylesheet's own address, at any prefix.
 //
-// A hand-typed literal, the same D-14 discipline `tools/convener_ops/
-// registration.py::SIGNUP_BASE` and `tools/convener_ops/certificate.py::
-// VERIFICATION_BASE` already use for this identical address, rather than an
-// import across the Python/JavaScript boundary this project does not build
-// tooling to cross -- bound to those two constants, and to
-// `app/vite.config.ts`'s own published `base`, by
-// `tools/tests/test_site.py::
-// test_the_path_prefix_agrees_with_the_addresses_python_already_pins`, so
-// the four cannot silently drift apart. Change all four together.
-const PATH_PREFIX = '/example-showcase/';
+// Phase 10, task 2: both constants below used to be hand-typed literals,
+// bound to `tools/convener_ops/registration.py::SIGNUP_BASE`, to
+// `certificate.py::VERIFICATION_BASE` and to `app/vite.config.ts`'s own
+// `base` by tests that could say the copies still agreed but never that
+// there was one. They are now read from `config/instance.json`, the
+// instance's own declaration, through `scripts/published.cjs` -- the
+// showcase's side of a boundary Python and the application build read
+// from their own (D-14). The names stay: everything below this line uses
+// them exactly as before.
+const { publishedAddress } = require('./scripts/published.cjs');
+
+const PUBLISHED = publishedAddress();
+
+const PATH_PREFIX = PUBLISHED.pathPrefix;
 
 // Phase 5, task 10: structured event data, share metadata, the sitemap and
 // the feed all need this project's real, *absolute* published address --
 // a root-relative link, even one already carrying PATH_PREFIX, is nonsense
 // outside a browser that already has this page open: a search engine's
 // crawler, a link-preview bot and an RSS reader all resolve a URL against a
-// document of their own, not this one. `SITE_ORIGIN` is the one place this
-// project's public host is written down on the JavaScript side -- the same
-// D-14 discipline PATH_PREFIX above already follows, and for the identical
-// reason (a JavaScript config cannot import a Python constant) -- bound to
-// `registration.SIGNUP_BASE` and `certificate.VERIFICATION_BASE`, which
-// already carry this exact host, by `tools/tests/test_site.py::
-// test_absolute_urls_share_the_one_origin_this_project_already_pins`.
-// Change all three together.
-const SITE_ORIGIN = 'https://example-instance.github.io';
+// document of their own, not this one. The origin and the prefix come out
+// of the one declaration together, which is why they cannot disagree about
+// which deployment they describe.
+const SITE_ORIGIN = PUBLISHED.origin;
 
 // Fix round 1: the series' one standing start time, Europe/Paris *local*
 // -- what a recurring seminar series means by "the seminar starts at

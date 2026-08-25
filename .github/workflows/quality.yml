@@ -292,7 +292,7 @@ jobs:
       # larger surface: `react-router`/`react-router-dom` and `js-yaml` are
       # `dependencies`, not `devDependencies`, so they ship in the built
       # `dist/assets/index-*.js` the operators' cockpit serves at
-      # `/example-showcase/app/` behind its login screen (App.tsx's `Login`/
+      # its own published base behind its login screen (App.tsx's `Login`/
       # `useAuth` gate) -- bounded (never reached by a visitor who only
       # loads a public showcase page or one of the two islands, both of
       # which import neither package), but real. `--omit=dev` is the gate:
@@ -343,14 +343,16 @@ jobs:
       # site/eslint.config.js, the same minimal, plugin-free flat config
       # services/auth-proxy's own already uses -- Eleventy's own CommonJS
       # config file, plus (task 11) the accessibility checker's own ES
-      # module, (task 12) the performance-budget checker's own, and (fix
+      # module, (task 12) the performance-budget checker's own, (fix
       # round 1, phase 6 task 7) the shared Paris-offset fixture's own
-      # CommonJS check script, each under its own scoped override in that
+      # CommonJS check script, and (phase 10 task 2) this package's reader
+      # of `config/instance.json` and the script that prints what it and
+      # `.eleventy.js` resolve, each under its own scoped override in that
       # same config file.
       - name: Lint site
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
-        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs
+        run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/published.cjs scripts/print-published.cjs
       # Task 12: the same quality chain phase 1 already holds Python to
       # (`uv run pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
       # axe-core, puppeteer-core) had never been audited before this task.

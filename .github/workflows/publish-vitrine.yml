@@ -66,6 +66,12 @@ on:
       - 'data/events/*/certificates.yml'
       - 'tools/**'
       - 'site/**'
+      # Phase 10, task 2: `site/.eleventy.js` reads the one address this
+      # project is published at from here, so every internal link and
+      # every absolute URL this build emits depends on it. Without this
+      # entry, changing that address would leave the showcase published at
+      # the old one until some unrelated commit happened to run this.
+      - 'config/instance.json'
   workflow_dispatch:
 
 jobs:

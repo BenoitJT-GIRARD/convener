@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from convener_ops import eventkeys
+from convener_ops import eventkeys, published
 from convener_ops.registration import (
     _CODE_ALPHABET,
     _MAX_FIELD_LENGTH,
@@ -741,7 +741,7 @@ def test_event_id_from_payload_returns_none_for_anything_malformed(
 
 def test_signup_base_is_the_event_pages_own_address() -> None:
     assert SIGNUP_BASE.endswith("/events/")
-    assert SIGNUP_BASE.startswith("https://example-instance.github.io/example-showcase/")
+    assert SIGNUP_BASE.startswith(published.load().url)
 
 
 # ------------------------------------------------------------------ #

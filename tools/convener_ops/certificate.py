@@ -375,6 +375,7 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
+from . import published
 from .attendance import MatchedAttendee
 from .registration import normalize_email
 from .signing import sign
@@ -425,7 +426,18 @@ ORGANISER: Final = "The Example Collective"
 #: task 6 moved `registration.SIGNUP_BASE`, would silently lose that
 #: property; see the module docstring's "verification address" section and
 #: `test_verification_url_carries_the_token_after_the_fragment_not_before_it`.
-VERIFICATION_BASE: Final = "https://example-instance.github.io/example-showcase/verify/#/"
+#:
+#: **Phase 10, task 2:** the host and prefix now come from
+#: `config/instance.json` through `published.load()`, the one declaration
+#: every published address in this repository is built from. The value for
+#: this instance is byte-identical to the literal it replaces -- a
+#: certificate already delivered carries this address printed on it, and
+#: changing an address that has already gone out is a maintainer's call,
+#: not a refactor's. `verify/` is the product's own route
+#: (`site/src/verify.njk`'s permalink) and `#/` is the privacy property
+#: above, so both stay written here: neither is anything an instance
+#: configures.
+VERIFICATION_BASE: Final = f"{published.load().under('verify/')}#/"
 
 #: `certificates.yml`'s own format version -- the file-level analogue of
 #: `registration.FILE_VERSION`.

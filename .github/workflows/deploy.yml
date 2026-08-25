@@ -22,15 +22,24 @@ on:
     # this list holds only what provably cannot reach the bundle -- the
     # planning notes, the showcase (`site/`, published by
     # `publish-vitrine.yml`), the reference renders, the relays (each with
-    # its own deploy workflow), the tooling config, and the four
-    # repository-root files nothing under `app/` reads.
+    # its own deploy workflow), and the four repository-root files nothing
+    # under `app/` reads.
+    #
+    # `config/**` was on this list until phase 10 task 2 put the one
+    # address this project is published at in `config/instance.json`,
+    # which `app/vite.config.ts` now reads for every bundle's `base`.
+    # `test_workflows.py::test_no_path_the_deploy_ignores_can_reach_the_
+    # deployed_bundle` is what noticed, and it is exactly right to: with
+    # that entry still here, changing the published address would have
+    # published nothing and gone green. The cost of removing it is that
+    # editing an unrelated threshold now runs this workflow -- which is
+    # the direction this list is chosen to fail in.
     paths-ignore:
       - 'docs/superpowers/**'
       - '.superpowers/**'
       - 'site/**'
       - 'visuals/**'
       - 'services/**'
-      - 'config/**'
       - 'cspell.json'
       - 'project-words.txt'
       - 'README.md'
@@ -207,12 +216,13 @@ jobs:
       #
       # Note what this file's *staleness* can and cannot cost, because it
       # is the one thing worth knowing before editing the threshold:
-      # `paths-ignore` above names `config/**`, so editing the threshold
-      # does not start this workflow, and the change lands at the next run
-      # of it (or a `workflow_dispatch` by hand). Nothing is lost by that
-      # lag -- a stale cutoff only routes a registration to the wrong
-      # *lane*, and `registration_routing.floor_hours` is what keeps the
-      # slow lane safe either way.
+      # editing the threshold starts this workflow since phase 10 task 2
+      # took `config/**` off `paths-ignore` above, so the change lands on
+      # the next push rather than at the next unrelated run. Nothing was
+      # lost by the lag it used to carry either -- a stale cutoff only
+      # routes a registration to the wrong *lane*, and
+      # `registration_routing.floor_hours` is what keeps the slow lane
+      # safe either way.
       - name: Commit registration routing
         run: |
           set -e

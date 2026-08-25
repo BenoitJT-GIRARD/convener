@@ -3,17 +3,25 @@ main = "src/index.js"
 compatibility_date = "2026-01-01"
 
 # The application's origin -- the only one this worker answers CORS
-# preflights for. Same value as services/auth-proxy/wrangler.toml's
-# ALLOWED_ORIGIN, for the same reason: Origin carries no path, so the app
-# being served from a subpath of this host does not change it. Not a
-# secret -- it ships in every CORS response header already.
+# preflights for. Origin carries no path, so the app being served from a
+# subpath of this host does not change it. Not a secret -- it ships in
+# every CORS response header already.
+#
+# Phase 10, task 2: this is the one address `config/instance.json`
+# declares this project is published at, and it is written out here
+# because a Worker deploys from this file and can read nothing else --
+# TOML has no include, and this package has no parser for the declaration
+# that would not be a new dependency. `test/index.test.js` reads both and
+# refuses them disagreeing, so the copy cannot drift even though it has
+# to exist. services/auth-proxy/wrangler.toml carries the same value for
+# the same reason, held by its own suite the same way.
 [vars]
 ALLOWED_ORIGIN = "https://example-instance.github.io"
 
 # R-37 (fix round 1, task 16) checked the survey switch against a plain
 # public HTTPS URL here (SURVEY_STATUS_URL), because it seemed like the
 # cheaper read: no token, no GitHub API budget. R-41 (fix round 2) removed
-# it: that URL pointed at a example-showcase deployment this project had never
+# it: that URL pointed at a published deployment this project had never
 # actually wired up, so the check depended on a site that did not exist,
 # carried a build-to-live latency the relay had no reason to inherit on
 # top of the handler's, and was a hardcoded cross-origin literal nothing

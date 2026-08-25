@@ -146,14 +146,24 @@ def test_every_file_in_config_states_which_it_is() -> None:
     """`config/` filled up by accumulation and nobody ever decided. Now
     every file answers, and both answers are actually used -- a directory
     where everything said `product` would satisfy a weaker test while
-    saying nothing at all."""
+    saying nothing at all.
+
+    Every file in every format `boundary.CONFIG_READERS` knows, compared
+    against what the directory really holds: phase 10 task 2 added
+    `config/instance.json`, and a check that only ever globbed `*.yml`
+    would have let a second format arrive here with nobody deciding what
+    it is -- the exact silence this directory was in before.
+    """
     owners = load().config_owners
     assert set(owners) == {
-        path.relative_to(ROOT).as_posix() for path in (ROOT / "config").glob("*.yml")
+        path.relative_to(ROOT).as_posix()
+        for suffix in boundary.CONFIG_READERS
+        for path in (ROOT / "config").glob(f"*{suffix}")
     }
     assert set(owners.values()) == {INSTANCE, PRODUCT}
     assert owners["config/integrations.yml"] == PRODUCT
     assert owners["config/boundary.yml"] == PRODUCT
+    assert owners["config/instance.json"] == INSTANCE
 
 
 def test_the_packages_own_config_constants_agree_with_the_declaration() -> None:
@@ -204,6 +214,23 @@ def test_a_config_file_with_no_owner_is_refused_by_name(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match=r"config/thresholds\.yml declares no owner"):
         config_owners(root)
+
+
+def test_a_json_config_file_answers_the_same_question(tmp_path: Path) -> None:
+    """`config/instance.json` is JSON because three languages read it and
+    only JSON has a parser on all three sides without a dependency two of
+    them do not carry. That must not become a way around the rule above:
+    a JSON file states the same `owner` key, and one that does not is
+    refused by name exactly as a YAML one is."""
+    root = _write_root(tmp_path)
+    named = root / "config" / "instance.json"
+
+    named.write_text('{"v": 1}', encoding="utf-8")
+    with pytest.raises(ValueError, match=r"config/instance\.json declares no owner"):
+        config_owners(root)
+
+    named.write_text('{"owner": "instance", "v": 1}', encoding="utf-8")
+    assert config_owners(root)["config/instance.json"] == INSTANCE
 
 
 def test_a_config_file_with_an_invented_owner_is_refused(tmp_path: Path) -> None:

@@ -38,11 +38,11 @@ name: Preview
 #
 # D-26: served at the address it will actually be served at
 # -------------------------------------------------------------
-# GitHub Pages serves this project under `/example-showcase/`, never a bare
-# domain root (no CNAME, no custom domain) -- `site/.eleventy.js`'s own
-# `PATH_PREFIX` is the one place that address is written down, and every
-# template's `| url` filter call, plus all three `base:` literals in
-# `app/vite.config.ts`, resolve against it. D-26 exists because phase 5's
+# GitHub Pages serves this project one path segment below a bare domain
+# root (no CNAME, no custom domain) -- `config/instance.json` is the one
+# place that address is written down, and every template's `| url` filter
+# call, plus all four `base` values in `app/vite.config.ts`, resolve
+# against what each build derives from it. D-26 exists because phase 5's
 # own seven earlier screenshot rounds were all taken at a bare `localhost`
 # root and all green, on a site where the stylesheet, the fonts, internal
 # navigation and both islands would have 404'd once actually published.
@@ -97,6 +97,10 @@ on:
   pull_request:
     paths:
       - 'site/**'
+      # Phase 10, task 2: both builds resolve their published
+      # address from here, and D-26 is about checking at the address
+      # a build is actually served under.
+      - 'config/instance.json'
       - 'app/**'
       - 'tools/convener_ops/**'
       - 'tools/pyproject.toml'
@@ -209,29 +213,30 @@ jobs:
         working-directory: app
         run: npm run build
       # D-26: nests the two builds one level under a directory named after
-      # `site/.eleventy.js`'s own PATH_PREFIX, so a reviewer who serves
+      # this project's own published path prefix, so a reviewer who serves
       # *this step's own output directory* (never the nested one) with any
       # static file server, at that same prefix, sees the exact topology
       # GitHub Pages will -- the identical shape
       # `site/scripts/check-a11y.mjs`'s own `assembleTree`/`publishRoot`
       # already builds to check this build, written to disk here instead
-      # of an ephemeral scratch directory. The prefix is read out of its
-      # one source with the same regex `check-a11y.mjs`'s own
-      # `configuredPathPrefix` uses, never retyped, so this step fails
-      # loudly instead of assembling a preview at a guessed address if
-      # that source ever stops defining it.
+      # of an ephemeral scratch directory. The prefix is read from
+      # `config/instance.json` through the very module the site's own build
+      # reads it through (`site/scripts/published.cjs`), never retyped, so
+      # this step assembles at the address the build was configured for or
+      # fails loudly -- `node -p` exits non-zero if that module refuses,
+      # and `set -e` stops the step on it rather than guessing.
       - name: Assemble the preview at its published address
         run: |
           set -e
-          prefix=$(grep -oP "PATH_PREFIX\s*=\s*'\K[^']+" site/.eleventy.js)
+          prefix=$(node -p "require('./site/scripts/published.cjs').publishedAddress().pathPrefix")
           if [ -z "$prefix" ]; then
-            echo "::error::could not read PATH_PREFIX out of site/.eleventy.js -- refusing to assemble a preview at a guessed address"
+            echo "::error::could not read the published path prefix out of config/instance.json -- refusing to assemble a preview at a guessed address"
             exit 1
           fi
           segment="${prefix#/}"
           segment="${segment%/}"
           if [ -z "$segment" ]; then
-            echo "::error::PATH_PREFIX ($prefix) resolved to an empty path segment -- refusing to assemble a preview at a guessed address"
+            echo "::error::the published path prefix ($prefix) resolved to an empty path segment -- refusing to assemble a preview at a guessed address"
             exit 1
           fi
 
@@ -243,7 +248,7 @@ jobs:
           Convener showcase -- pull request preview
           =====================================
 
-          This is a build of the public showcase (example-showcase), assembled from
+          This is a build of the public showcase, assembled from
           this pull request's branch. It is not published anywhere -- download
           it from this workflow run and serve it locally to review it before
           merging.
@@ -296,7 +301,7 @@ jobs:
             is never published anywhere, and nothing links to it.
           EOF
 
-          echo "assembled preview under preview/$segment/ (PATH_PREFIX=$prefix)"
+          echo "assembled preview under preview/$segment/ (path prefix $prefix)"
       # D-25: "a control that cannot fail loudly is not a control" --
       # applied to the empty-build case Eleventy's own exit code cannot
       # rule out (see this workflow's own header comment), and to the
@@ -307,7 +312,7 @@ jobs:
       - name: Refuse to package a preview that is not a site
         run: |
           set -e
-          prefix=$(grep -oP "PATH_PREFIX\s*=\s*'\K[^']+" site/.eleventy.js)
+          prefix=$(node -p "require('./site/scripts/published.cjs').publishedAddress().pathPrefix")
           segment="${prefix#/}"
           segment="${segment%/}"
           root="preview/$segment"

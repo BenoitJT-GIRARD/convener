@@ -344,8 +344,8 @@ function base64DecodeContentsApi(value) {
  * R-41 (fix round 2): reads `public-data/survey-status.json` through the
  * GitHub Contents API against *this* repository -- the same credential
  * (`token`) and the same call shape `eventKeyExists` already uses for
- * `keys/events/<id>.pub`, just a different path -- rather than a second,
- * deployed example-showcase URL. That URL (`env.SURVEY_STATUS_URL`, fix round
+ * `keys/events/<id>.pub`, just a different path -- rather than a second
+ * URL on the published site. That URL (`env.SURVEY_STATUS_URL`, fix round
  * 1) depended on a deployment this project has never actually wired up,
  * carried a build-to-live latency this repository's own commit does not,
  * and was a hardcoded cross-origin literal nothing derived. Reading the

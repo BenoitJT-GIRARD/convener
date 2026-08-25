@@ -26,6 +26,7 @@ npm install
 npm start
 ```
 
-Then open <http://localhost:8080/example-showcase/>. The dev server honours the
+Then open `http://localhost:8080` plus the path prefix
+`config/instance.json` declares. The dev server honours the
 same path prefix the published site is served under, so a bare root only
 redirects there.

@@ -38,7 +38,8 @@ leaves uncovered.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+import json
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Final
@@ -56,6 +57,20 @@ DECLARATION_PATH: Final = Path("config") / "boundary.yml"
 
 #: Where a file states its own owner in its own header.
 CONFIG_DIR: Final = Path("config")
+
+#: What a file in `config/` may be written in, and how to read each. YAML
+#: for anything only this repository's Python reads; JSON for anything
+#: read from more than one side of the language boundary, because it is
+#: the only format `site/` and `services/` can parse without a dependency
+#: neither of them has and the zero-cost constraint forbids adding
+#: (`config/instance.json`). Both are listed here for one reason: a
+#: format nobody enumerated is a file in this directory whose owner
+#: nothing asks for, and "every file answers" would quietly become "every
+#: file we happened to look at".
+CONFIG_READERS: Final[dict[str, Callable[[str], Any]]] = {
+    ".yml": yaml.safe_load,
+    ".json": json.loads,
+}
 
 #: `config/boundary.yml`'s own format version.
 DECLARATION_VERSION: Final = 1
@@ -271,17 +286,24 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
 def config_owners(root: Path) -> dict[str, str]:
     """What each file in `config/` says it is, read from its own header.
 
-    Every file must answer. A file with no `owner:` is refused by name
-    rather than defaulted to either side: the phase 10 spec found this
+    Every file must answer, in whichever of `CONFIG_READERS`' formats it
+    is written -- a JSON file states the same `owner` key a YAML one
+    does, next to the same argument for it, in a `_comment` because JSON
+    has nowhere else to put one. A file with no `owner` is refused by
+    name rather than defaulted to either side: the phase 10 spec found this
     directory mixing product and instance precisely because it filled up by
     accumulation, with nobody ever deciding, and a default here would be
     that same silence with a friendlier face.
     """
     directory = root / CONFIG_DIR
     owners: dict[str, str] = {}
-    for path in sorted(directory.glob("*.yml")):
+    candidates = sorted(
+        path for suffix in CONFIG_READERS for path in directory.glob(f"*{suffix}")
+    )
+    for path in candidates:
         name = path.relative_to(root).as_posix()
-        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+        read = CONFIG_READERS[path.suffix]
+        loaded = read(path.read_text(encoding="utf-8"))
         declared = loaded.get("owner") if isinstance(loaded, dict) else None
         if declared not in OWNERS:
             raise ValueError(

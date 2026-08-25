@@ -58,13 +58,13 @@ function stubFetch(options: { keys?: string[] | 'fail'; projection?: unknown[] |
 }
 
 describe('parseVerificationFragment', () => {
-  it('reproduces the identifier and token the shared fixture\'s own verification_url actually carries', async () => {
+  it('reproduces the identifier and token the shared fixture\'s own verification address actually carries', async () => {
     const { parseVerificationFragment } = await import('../src/islands/verify/main');
     // certificate.VERIFICATION_BASE ends "#/" -- everything after "#" is
     // exactly this function's own input once a real browser assigns it to
     // `location.hash`. If this ever drifts from what certificate.py
     // actually builds, this is what would catch it.
-    const fragment = `#${SIGNED.verification_url.split('#')[1]}`;
+    const fragment = `#${SIGNED.verification_url_path.split('#')[1]}`;
     expect(parseVerificationFragment(fragment)).toEqual({
       identifier: SIGNED.identifier,
       token: SIGNED.token,
@@ -122,7 +122,9 @@ describe('main.tsx -- finding and reading the mount point', () => {
     const el = document.createElement('div');
     el.id = 'verify-app';
     document.body.appendChild(el);
-    window.location.hash = SIGNED.verification_url.split('#')[1] ? `#${SIGNED.verification_url.split('#')[1]}` : '';
+    window.location.hash = SIGNED.verification_url_path.split('#')[1]
+      ? `#${SIGNED.verification_url_path.split('#')[1]}`
+      : '';
 
     await import('../src/islands/verify/main');
 

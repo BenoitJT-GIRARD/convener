@@ -34,6 +34,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from ics_reader import parse_calendar
 
+from convener_ops import published
 from convener_ops.certificate import VERIFICATION_BASE
 from convener_ops.confirmation import CONTACT_EMAIL
 from convener_ops.formats import BANNER
@@ -64,28 +65,23 @@ def _without_comments(text: str) -> str:
 
 ROOT = repo_root()
 SITE_SRC = ROOT / "site" / "src"
-_ELEVENTY_CONFIG = ROOT / "site" / ".eleventy.js"
 
 
 def _configured_path_prefix() -> str:
-    """`site/.eleventy.js`'s own `PATH_PREFIX` -- the one place this
-    project's published address prefix (GitHub Pages serves this build's
-    output under `/example-showcase/`, not at a bare domain root: no CNAME, no
-    custom domain) is written down, feeding every template's `| url`
-    filter call. Read here rather than hand-typed a second time, so every
-    assertion below that expects a prefixed link fails immediately if this
-    source value ever changes without the assertion being updated to
-    match -- the same reason `_published_app_base` below reads
-    `vite.config.ts` rather than restating its own literal.
+    """This project's published path prefix -- GitHub Pages serves the
+    build one path segment below a bare domain root (no CNAME, no custom
+    domain), and that segment feeds every template's `| url` filter call.
+
+    Phase 10, task 2: this used to scrape `PATH_PREFIX` out of
+    `site/.eleventy.js` with a regular expression, because that file was
+    where the value lived. It now lives in `config/instance.json`, which
+    `.eleventy.js` reads for itself, so this reads the declaration
+    directly rather than the source of another reader of it. That the two
+    actually agree -- that the *build* resolves the same prefix this
+    module asserts against -- is `test_published.py`'s own job, and it
+    checks it by running the real configuration, not by reading it.
     """
-    text = _ELEVENTY_CONFIG.read_text(encoding="utf-8")
-    match = re.search(r"PATH_PREFIX\s*=\s*'([^']+)'", text)
-    assert match is not None, (
-        f"{_ELEVENTY_CONFIG.as_posix()} no longer defines PATH_PREFIX -- "
-        "every assertion in this module that expects a prefixed link would "
-        "otherwise silently check against the wrong prefix"
-    )
-    return match.group(1)
+    return published.load().path_prefix
 
 
 def _pfx(path: str) -> str:
@@ -99,20 +95,13 @@ def _pfx(path: str) -> str:
 
 
 def _configured_site_origin() -> str:
-    """`site/.eleventy.js`'s own `SITE_ORIGIN` -- task 10's absolute-URL
-    counterpart to `_configured_path_prefix` above, for the identical
-    reason: read from the source this project's structured data, share
-    metadata, sitemap and feed are actually built from, rather than
-    hand-typed a second time in this test file.
+    """The origin half of the same declaration -- task 10's absolute-URL
+    counterpart to `_configured_path_prefix` above, and read the same way
+    and for the same reason. The two cannot disagree about which
+    deployment they describe, because they are two properties of one
+    value rather than two values.
     """
-    text = _ELEVENTY_CONFIG.read_text(encoding="utf-8")
-    match = re.search(r"SITE_ORIGIN\s*=\s*'([^']+)'", text)
-    assert match is not None, (
-        f"{_ELEVENTY_CONFIG.as_posix()} no longer defines SITE_ORIGIN -- "
-        "every assertion in this module that expects an absolute URL would "
-        "otherwise silently check against the wrong host"
-    )
-    return match.group(1)
+    return published.load().origin
 
 
 def _absolute(path: str) -> str:
@@ -887,7 +876,6 @@ _SITE_JSON = SITE_SRC / "_data" / "site.json"
 _LAYOUT_TEMPLATE = SITE_SRC / "_includes" / "layout.njk"
 _DONNEES_TEMPLATE = SITE_SRC / "donnees.njk"
 _REGISTRY_TS = ROOT / "app" / "src" / "content" / "registry.ts"
-_VITE_CONFIG = ROOT / "app" / "vite.config.ts"
 _DOCS_DIR = ROOT / "docs"
 _HANDBOOK_REGISTRY_MJS = ROOT / "app" / "scripts" / "handbook-registry.mjs"
 
@@ -978,7 +966,7 @@ def test_archive_filter_bar_marks_the_all_page_current_without_linking_to_it(
     )
     # Fix round 4: checked against the real, prefixed address this page
     # would carry if it wrongly linked to itself -- checking the old,
-    # unprefixed literal would pass even if a `/example-showcase/archives/`
+    # unprefixed literal would pass even if a prefixed `archives/`
     # link had reappeared here.
     assert f'<a href="{_pfx("/archives/")}">All</a>' not in page
 
@@ -1324,23 +1312,19 @@ def _governance_record_file() -> str:
 
 
 def _published_app_base() -> str:
-    """`vite.config.ts`'s own production `base` -- the `/example-showcase/app/`
-    every published asset URL is resolved against, including (fix round 4)
-    the two islands' own, which used to read a different, undocumented-in-
-    production `/app/` and now match this exactly (see that file's own
-    comment for why they used to differ, and why that reasoning did not
-    hold once the site itself became prefix-aware). Matched by its
-    distinguishing `/example-showcase/` prefix rather than by position, so it
-    stays the right one of the three `base:` literals in that file even if
-    they are reordered.
+    """The base every published application asset URL is resolved
+    against: the published prefix plus `app/`, where the cockpit and all
+    three islands publish (fix round 4 -- the islands used to set a
+    different, undocumented-in-production `/app/`; see `vite.config.ts`'s
+    own comment for why that reasoning did not hold once the site itself
+    became prefix-aware).
+
+    Phase 10, task 2: read from the declaration rather than matched out
+    of `vite.config.ts`, which no longer writes it down at all. That the
+    four builds really do resolve to this is checked by running each of
+    them, in `test_published.py`.
     """
-    text = _VITE_CONFIG.read_text(encoding="utf-8")
-    match = re.search(r"base:\s*'(/example-showcase/[^']*)'", text)
-    assert match is not None, (
-        "vite.config.ts no longer sets a '/example-showcase/...' base -- "
-        "donnees.njk's link to the governance record assumes this exact prefix"
-    )
-    return match.group(1)
+    return published.load().app_base
 
 
 #: Fix round 2 (the private-repository defect, D-15): `event.njk` used to
@@ -1355,25 +1339,26 @@ _GOVERNANCE_LINK_TEMPLATES = (_DONNEES_TEMPLATE, _EVENT_TEMPLATE)
 def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None:
     """One of the two things the task brief asks to be pinned hard: every
     page's link to the governance record resolves to something published,
-    not to the private repository it actually lives in the source of. Built
-    from the same two constants that decide where the record actually
-    lands, rather than against a literal URL nothing would catch drifting
-    out from under it -- and checked identically against every template
-    that carries this link, so `event.njk` and `donnees.njk` cannot state
-    two different answers to the same question again.
+    not to the private repository it actually lives in the source of.
+
+    Phase 10, task 2: the templates no longer write the address at all --
+    they pipe a root-relative path through `absoluteUrl`, which builds it
+    from `config/instance.json`. So what is checked here is that both
+    templates make the *same* call (they cannot state two different
+    answers to the same question), and the address itself is checked
+    where it is actually produced: on the built pages, by
+    `test_the_governance_record_link_resolves_to_the_published_handbook`
+    below.
     """
-    host = "https://example-instance.github.io"
-    assert SIGNUP_BASE.startswith(f"{host}/example-showcase/"), (
-        "registration.SIGNUP_BASE no longer shares this page's own "
-        "assumed host -- update both together"
+    expected_call = (
+        f"{{{{ '/app/handbook/{_governance_record_file()}' | absoluteUrl }}}}"
     )
-    expected = f"{host}{_published_app_base()}handbook/{_governance_record_file()}"
     for template in _GOVERNANCE_LINK_TEMPLATES:
         source = template.read_text(encoding="utf-8")
-        assert expected in source, (
+        assert expected_call in source, (
             f"{template.relative_to(ROOT).as_posix()} does not link to "
-            f"{expected!r} -- either the link drifted, or "
-            "registry.ts/vite.config.ts changed under it"
+            f"{expected_call!r} -- either the link drifted, or "
+            "registry.ts changed under it"
         )
         # `_without_comments`: this fix's own explanatory comment names
         # "example-cockpit" by way of saying what was removed -- the same
@@ -1385,6 +1370,33 @@ def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None
             "private example-cockpit repository -- a public visitor gets "
             "GitHub's own 404 (D-15: private source, public artefact)"
         )
+
+
+def test_the_governance_record_link_resolves_to_the_published_handbook(
+    built_site: Path,
+) -> None:
+    """The other half, and the half that matters: what a visitor's browser
+    actually receives.
+
+    D-26 -- checked at the deployed shape, never at the template. The
+    address is composed at build time from `config/instance.json` and the
+    application's own published base, so the only way to know it came out
+    right is to read it off a built page. Both pages that carry this link
+    are checked, and the expected value is built from the declaration
+    rather than typed, so a duplicate publishing at its own address gets
+    its own link with nothing to edit in either template.
+    """
+    expected = published.load().under(f"app/handbook/{_governance_record_file()}")
+    pages = [built_site / "data" / "index.html"]
+    pages += sorted((built_site / "events").glob("*/index.html"))
+    assert len(pages) >= 2, f"only {pages} to check -- the build wrote too little"
+
+    carrying = [p for p in pages if expected in p.read_text(encoding="utf-8")]
+    assert carrying, (
+        f"no built page links the governance record at {expected!r} -- the "
+        "data page and every event page make this link, so either it "
+        "stopped resolving against the published address or it moved"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -1443,7 +1455,7 @@ def test_the_governance_record_is_actually_among_what_the_app_publishes(
 
 # -------------------------------------------------------------------------- #
 # Fix round 4: the path-prefix defect. GitHub Pages serves this project's
-# build output at <https://example-instance.github.io/example-showcase/>, not at
+# build output one path segment below a bare domain root, not at
 # a bare domain root -- there is no CNAME and no custom domain. Every
 # template used to write its internal links as a bare `/foo`, which
 # resolves one path segment short of where the site actually lives --
@@ -1511,33 +1523,31 @@ def test_no_built_page_emits_a_root_relative_link_without_the_prefix(
 
 
 def test_the_path_prefix_agrees_with_the_addresses_python_already_pins() -> None:
-    """D-14: this project's published path prefix must not become a
-    fourth, independent literal. `registration.SIGNUP_BASE` and
-    `certificate.VERIFICATION_BASE` already carry it (host and path both),
-    and `vite.config.ts`'s own production `base` already pins the app's own
-    half of it (`_published_app_base`, above) -- bound here to
-    `site/.eleventy.js`'s `PATH_PREFIX` by a test, the same discipline that
-    already binds those three literals to each other, rather than an
-    import across the Python/JavaScript boundary this project builds no
-    tooling to cross.
+    """D-14: this project's published path prefix is not a second literal
+    anywhere. `registration.SIGNUP_BASE`, `certificate.VERIFICATION_BASE`
+    and the application's own `base` all used to carry it independently,
+    bound to each other by tests that could say the copies still agreed
+    but never that there was one. Phase 10 task 2 made there be one: this
+    now checks that each of those addresses is genuinely *under* the
+    declared root, which is the property the rest of this module's
+    prefixed assertions rest on. What still needs a real run to be worth
+    anything -- that the showcase and the four application builds resolve
+    the same root -- is `test_published.py`'s.
     """
-    prefix = _configured_path_prefix()
-    host = "https://example-instance.github.io"
-    assert SIGNUP_BASE.startswith(f"{host}{prefix}"), (
+    root = published.load().url
+    assert SIGNUP_BASE.startswith(root), (
         f"registration.SIGNUP_BASE ({SIGNUP_BASE!r}) no longer starts with "
-        f"{host + prefix!r} -- update it and site/.eleventy.js's PATH_PREFIX "
-        "together"
+        f"{root!r} -- it has stopped deriving from config/instance.json"
     )
-    assert VERIFICATION_BASE.startswith(f"{host}{prefix}"), (
+    assert VERIFICATION_BASE.startswith(root), (
         f"certificate.VERIFICATION_BASE ({VERIFICATION_BASE!r}) no longer "
-        f"starts with {host + prefix!r} -- update it and "
-        "site/.eleventy.js's PATH_PREFIX together"
+        f"starts with {root!r} -- it has stopped deriving from "
+        "config/instance.json"
     )
-    assert _published_app_base() == f"{prefix}app/", (
-        f"vite.config.ts's own published base ({_published_app_base()!r}) no "
-        f"longer agrees with site/.eleventy.js's PATH_PREFIX ({prefix!r}) -- "
-        "the app and the site would publish to, and be addressed from, "
-        "different places"
+    assert _published_app_base() == f"{_configured_path_prefix()}app/", (
+        "the application's published base no longer sits under the "
+        "showcase's own prefix -- the app and the site would publish to, "
+        "and be addressed from, different places"
     )
 
 
@@ -1546,10 +1556,10 @@ def test_absolute_urls_share_the_one_origin_this_project_already_pins() -> None:
     (structured data, share metadata, the sitemap, the feed) and therefore
     its first need for a full origin, not just the path prefix
     `test_the_path_prefix_agrees_with_the_addresses_python_already_pins`
-    above already binds. `site/.eleventy.js`'s `SITE_ORIGIN` is that
-    origin, bound here to the two addresses Python already pins it
-    against, rather than left free to drift into a fourth, independent
-    literal.
+    above already binds. Phase 10 task 2: the origin and the prefix are
+    two properties of one declared value now, so this checks the property
+    that still means something -- that every absolute address this
+    project builds starts at that one root.
     """
     base = f"{_configured_site_origin()}{_configured_path_prefix()}"
     assert SIGNUP_BASE.startswith(base), (
@@ -1568,7 +1578,7 @@ def test_absolute_urls_share_the_one_origin_this_project_already_pins() -> None:
 #
 # Every URL this section checks is *absolute* (`_absolute`, above) -- this
 # is the one part of the site where a merely-prefixed root-relative link
-# (`/example-showcase/events/mrg-05/`) is still wrong: structured data, Open
+# (`<prefix>events/mrg-05/`) is still wrong: structured data, Open
 # Graph/Twitter Card metadata, the sitemap and the feed are all read by a
 # consumer with no document of its own to resolve a relative link against
 # (a search engine's crawler, a link-preview bot, an RSS reader), so they
@@ -2478,11 +2488,22 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
             f"{_ELEVENTY_CMD.as_posix()} not found -- run `npm ci` in site/ "
             "before this suite (quality.yml's own python job now does)"
         )
-    scratch_site = tmp_path_factory.mktemp("site-with-banner") / "site"
+    scratch_root = tmp_path_factory.mktemp("site-with-banner")
+    scratch_site = scratch_root / "site"
     shutil.copytree(
         _SITE_PROJECT_ROOT,
         scratch_site,
         ignore=shutil.ignore_patterns("node_modules", "_site"),
+    )
+    # Phase 10, task 2: `.eleventy.js` reads this project's published
+    # address from `config/instance.json`, one level above `site/` -- the
+    # same way it already passthrough-copies `../fonts`. A copy of `site/`
+    # alone is no longer a buildable tree, and the build says so loudly
+    # rather than guessing an address, which is the whole point of that
+    # module refusing a default.
+    (scratch_root / "config").mkdir()
+    shutil.copy2(
+        ROOT / "config" / "instance.json", scratch_root / "config" / "instance.json"
     )
     banners_dir = scratch_site / "src" / "banners"
     banners_dir.mkdir(parents=True, exist_ok=True)

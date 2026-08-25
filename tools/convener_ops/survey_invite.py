@@ -184,7 +184,7 @@ from pathlib import Path
 from typing import Any, Final
 from urllib.parse import quote
 
-from . import confirmation
+from . import confirmation, published
 from .registration import Registration
 
 __all__ = [
@@ -218,7 +218,12 @@ __all__ = [
 #: page_permalink` pins this against `survey.njk`'s own permalink,
 #: read from both sides, the same discipline that test module already
 #: holds `registration.SIGNUP_BASE` to.
-SURVEY_BASE: Final = "https://example-instance.github.io/example-showcase/survey/"
+#:
+#: **Phase 10, task 2:** the host and prefix now come from
+#: `config/instance.json` through `published.load()`, exactly as
+#: `registration.SIGNUP_BASE` does; `survey/` stays here because it is the
+#: product's own route shape (`site/src/survey.njk`'s permalink).
+SURVEY_BASE: Final = published.load().under("survey/")
 
 
 def survey_url(event_id: str) -> str:

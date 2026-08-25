@@ -78,16 +78,17 @@ def test_the_site_lane_is_isolated_correctly() -> None:
 
 
 def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
-    """D-26: never a second, hand-typed `/example-showcase/` that could drift
-    from `site/.eleventy.js`'s own `PATH_PREFIX` -- the identical
-    property `test_a11y_workflow.py::test_the_checker_reads_the_path_
-    prefix_from_its_one_source` already pins for task 11's checker.
+    """D-26: never a second, hand-typed prefix that could drift from
+    `config/instance.json` -- the identical property
+    `test_a11y_workflow.py::test_the_checker_reads_the_path_prefix_from_
+    its_one_source` already pins for task 11's checker.
     """
-    assert "PATH_PREFIX\\s*=\\s*'([^']+)'" in _CHECKER, (
-        "check-performance-budget.mjs no longer reads PATH_PREFIX out of "
-        "site/.eleventy.js -- it must derive the served prefix from that "
-        "one source, never restate it"
+    assert "from './published.cjs'" in _CHECKER, (
+        "check-performance-budget.mjs no longer reads the published address "
+        "through site/scripts/published.cjs -- it must derive the served "
+        "prefix from config/instance.json, never restate it"
     )
+    assert "publishedAddress().pathPrefix" in _CHECKER
 
 
 def test_the_checker_discovers_pages_by_walking_the_build_not_a_fixed_list() -> None:

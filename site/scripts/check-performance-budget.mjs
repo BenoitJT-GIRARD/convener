@@ -64,11 +64,14 @@
  */
 
 import { readFile, readdir, mkdtemp, rm, mkdir, cp } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
+// The instance's own published address, read through the same module
+// `.eleventy.js` reads it through -- so every page reference is resolved
+// against the address the build itself was configured for.
+import { publishedAddress } from './published.cjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SITE_DIR = path.resolve(__dirname, '..');
@@ -134,26 +137,6 @@ function gzipSize(buffer) {
   return zlib.gzipSync(buffer, { level: 9 }).length;
 }
 
-/** `site/.eleventy.js`'s own `PATH_PREFIX` -- read from source, not
- *  retyped, the identical technique `check-a11y.mjs`'s own
- *  `configuredPathPrefix` uses and explains: every assertion downstream
- *  that expects a prefixed address must fail immediately if this drifts,
- *  rather than silently checking against the wrong prefix. Kept as its own
- *  small copy here rather than a shared import -- this file and
- *  check-a11y.mjs are two independent, single-purpose scripts, each
- *  already following this exact pattern for the exact same reason;
- *  neither needs the other's dependencies. */
-function configuredPathPrefix() {
-  const text = readFileSync(path.join(SITE_DIR, '.eleventy.js'), 'utf8');
-  const match = /PATH_PREFIX\s*=\s*'([^']+)'/.exec(text);
-  if (!match) {
-    throw new Error(
-      'site/.eleventy.js no longer defines PATH_PREFIX -- this checker would ' +
-        'otherwise resolve every page reference against the wrong address'
-    );
-  }
-  return match[1];
-}
 
 function parseArgs(argv) {
   const args = {};
@@ -216,9 +199,9 @@ async function discoverHtmlPages(root) {
 
 /** The exact number of HTML pages this build should produce -- the same
  *  formula `check-a11y.mjs`'s own `expectedPageCount` derives from the
- *  same fixture data, kept as its own small copy here for the identical
- *  reason `configuredPathPrefix` above is: two independent, single-purpose
- *  scripts, not a shared module. See that file's own comment for the full
+ *  same fixture data, kept as its own small copy here rather than shared:
+ *  these are two independent, single-purpose scripts, and neither needs
+ *  the other's dependencies. See that file's own comment for the full
  *  breakdown this formula encodes, including `survey.njk`'s own one page
  *  per event (phase 7 task 5). */
 function expectedPageCount(events) {
@@ -260,7 +243,7 @@ function localResourceHrefs(html) {
 }
 
 /** Resolves one page-relative resource href (e.g.
- *  `/example-showcase/app/islands/verify/verify.js`) to its real file inside
+ *  `<prefix>app/islands/verify/verify.js`) to its real file inside
  *  the merged tree `assembleTree` produced. D-26, applied to this
  *  resolution step specifically: every href this project's templates emit
  *  must already carry `prefix` (a separate, repository-wide guard,
@@ -285,7 +268,7 @@ function resolveLocalHref(href, prefix, scratch) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const prefix = configuredPathPrefix(); // e.g. '/example-showcase/'
+  const prefix = publishedAddress().pathPrefix;
 
   const events = JSON.parse(
     await readFile(path.join(SITE_DIR, 'src', '_data', 'events.json'), 'utf8')

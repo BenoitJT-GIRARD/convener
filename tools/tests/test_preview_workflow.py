@@ -17,11 +17,10 @@ their own checkers):
   no islands (the "empty box" this task's own brief warns against), and a
   room link that reached a built page;
 * it could assemble the preview at a bare `localhost` root rather than the
-  `/example-showcase/` prefix GitHub Pages actually serves this project under
-  (D-26) -- the exact defect that cost phase 5 seven earlier screenshot
-  rounds;
-* it could read a stale, hand-typed copy of `PATH_PREFIX` instead of the
-  one place `site/.eleventy.js` defines it.
+  path prefix GitHub Pages actually serves this project under (D-26) --
+  the exact defect that cost phase 5 seven earlier screenshot rounds;
+* it could read a stale, hand-typed copy of that prefix instead of the one
+  place `config/instance.json` declares it.
 
 Read as text and asserted against with `in`/regex checks and `safe_load`,
 the same idiom every workflow-pinning module in this suite already uses --
@@ -192,26 +191,26 @@ def test_the_site_build_never_regenerates_data_from_the_private_repository() -> 
 
 
 def test_the_path_prefix_is_derived_not_retyped() -> None:
-    """D-26: a second, hand-typed `/example-showcase/` standing in for
-    `site/.eleventy.js`'s own `PATH_PREFIX` could silently drift from it
-    the way the site's own templates once could, before that constant and
-    `tools/tests/test_site.py::test_the_path_prefix_agrees_with_the_
-    addresses_python_already_pins` existed. This workflow reads the value
-    out of that one source with a `grep -oP` pattern, the shell analogue
-    of `check-a11y.mjs`'s own `configuredPathPrefix` regex -- asserted by
-    the pattern's own text, not by re-deriving the value here, so a future
-    edit to the extraction itself fails this test rather than silently
-    reading the wrong prefix at run time."""
+    """D-26: a second, hand-typed prefix standing in for the one
+    `config/instance.json` declares could silently drift from it the way
+    the site's own templates once could. Phase 10 task 2 replaced this
+    workflow's `grep -oP` over `.eleventy.js` -- which had become a scrape
+    of a file that no longer holds the value -- with a `node -p` call into
+    `site/scripts/published.cjs`, the very module the site's own build
+    reads the declaration through. Asserted by the extraction's own text,
+    not by re-deriving the value here, so a future edit to the extraction
+    itself fails this test rather than silently assembling at the wrong
+    address."""
     assemble = _step_run(_ASSEMBLE_STEP)
-    assert "grep -oP" in assemble
-    assert "PATH_PREFIX" in assemble
-    # The literal address may appear in this file's own prose (the header
-    # comment, the README.txt heredoc's own explanatory text below) --
-    # but the *extraction* itself must never fall back to a hardcoded
-    # default if the source stops defining PATH_PREFIX.
-    extraction_line = [line for line in assemble.splitlines() if "grep -oP" in line]
+    assert "node -p" in assemble
+    assert "published.cjs" in assemble
+    # The extraction itself must never fall back to a hardcoded default
+    # if the declaration stops being readable: `node -p` exits non-zero
+    # and `set -e` is what stops the step.
+    extraction_line = [line for line in assemble.splitlines() if "node -p" in line]
     assert extraction_line
-    assert "'/example-showcase/'" not in extraction_line[0]
+    assert "publishedAddress().pathPrefix" in extraction_line[0]
+    assert "set -e" in assemble
 
 
 def test_a_missing_or_empty_path_prefix_refuses_to_assemble_a_guessed_address() -> None:
@@ -317,7 +316,7 @@ def test_the_leak_guard_sweeps_the_assembled_artefact_and_can_fail_the_run() -> 
 
 def test_the_readme_documents_the_non_obvious_serving_step() -> None:
     """D-26: opening the assembled tree at its own root, or serving the
-    nested `example-showcase/` folder itself, breaks every internal link this
+    nested prefix folder itself, breaks every internal link this
     build writes. Nothing about that is obvious from a downloaded zip, so
     the artefact must say so itself -- this asserts the instructions are
     actually written into `preview/README.txt` by the workflow, not left
