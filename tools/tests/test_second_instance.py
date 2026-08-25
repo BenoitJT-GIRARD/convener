@@ -42,6 +42,27 @@ The tree therefore keeps it, and the sweep covers it as inherited. See
 symbolic link elsewhere): `npm ci` is a network call and no test here may
 make one, and the packages are the product's, identical in both trees.
 
+When this module does not run, and where that is refused
+--------------------------------------------------------
+It needs `node` and both `node_modules` and may not install them, so on a
+machine that has never run `npm ci` the build cannot happen. That is a
+circumstance, not a defect, and it skips -- **except on a runner**, where
+a step of `quality.yml`'s own `python` job installs exactly those before
+`pytest` starts. There a missing toolchain fails by name
+(`_toolchain_absent`), because a skip in the one environment that was set
+up for this test is a green suite reporting a coverage it does not have,
+and what silently would not have run is the acceptance criterion of the
+whole phase.
+
+Two claims are held below the build line so that they hold everywhere:
+`test_the_example_instance_answers_every_path_an_instance_owns` reads the
+boundary and the example, and `test_the_two_instances_disagree_about_
+every_needle` reads two declarations -- neither needs an artefact, so
+neither is lost with the toolchain. What that still leaves is stated
+rather than implied: a developer's own run can report `passed` with the
+sweep itself skipped, and only those two will have said anything. The
+merge gate is the runner, not the laptop.
+
 What is swept
 -------------
 Everything a reader receives: the showcase and its feeds (`site/_site`),
@@ -98,7 +119,7 @@ import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import Final, NoReturn
 
 import instance_identity
 import pytest
@@ -177,6 +198,56 @@ _BUILD_VARIABLES: Final = (
     "VITE_GITHUB_APP_CLIENT_ID",
     "VITE_SIGNUP_RELAY_URL",
 )
+
+
+#: The environment variables an automated run sets for itself. GitHub's
+#: runner sets both; `CI` alone is what nearly every other service sets,
+#: and it is here so that moving this project off GitHub Actions cannot
+#: silently restore the skip `_toolchain_absent` refuses below.
+_AUTOMATED: Final = ("CI", "GITHUB_ACTIONS")
+
+
+def _automated_run() -> bool:
+    """Whether this suite is running somewhere a toolchain was installed
+    for it. `false` and `0` are read as unset, because a variable set to
+    the word "false" is how a job turns one off."""
+    return any(
+        os.environ.get(name, "").strip().lower() not in ("", "false", "0")
+        for name in _AUTOMATED
+    )
+
+
+def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
+    """A skip on a laptop, a failure on a runner -- D-25.
+
+    A skip is not wrong in itself: a developer who has never run `npm ci`
+    genuinely cannot build a second instance, and this suite may not
+    install one for them because installing it is the one thing here that
+    would touch the network. What is wrong is one sentence covering that
+    machine *and* the one environment where the packages are installed on
+    purpose. `quality.yml`'s own `python` job sets up node 20 and runs
+    `npm ci` in both `app/` and `site/` before it runs `pytest`, so on a
+    runner their absence means that install stopped happening -- and a
+    skip there would let the acceptance criterion the whole of phase 10
+    rests on (spec § 6) not run at all while the suite reported green.
+
+    That is the failure D-25 names, and this module was committing it:
+    `docs/superpowers/phase-10-bilan.md` § 4.3 found a fresh clone
+    passing the entire suite without the one test the phase exists to
+    produce ever executing. So the absence is loud where it means
+    something is broken, and quiet where it means nothing at all.
+    """
+    if _automated_run():
+        pytest.fail(
+            f"{missing}. This is an automated run "
+            f"({' or '.join(_AUTOMATED)} is set), where quality.yml's own "
+            "`python` job installs node and both node_modules before it "
+            "runs pytest -- so this is a broken pipeline rather than a "
+            "machine without a toolchain, and phase 10's acceptance "
+            f"criterion has not run. {remedy}",
+            pytrace=False,
+        )
+    pytest.skip(f"{missing} -- {remedy}")
 
 
 @dataclass(frozen=True)
@@ -365,28 +436,46 @@ def _build(root: Path) -> None:
 
 
 @pytest.fixture(scope="module")
-def second_instance(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Built]:
-    """The whole thing, built once for this module.
+def second_instance_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The second instance's repository, laid out but not yet built.
 
-    Skips rather than fails when a toolchain is missing, exactly as
-    `test_site.py::built_site` already does: `node_modules` is installed
-    by a step of the job, not by a test, because installing it is the one
-    thing here that would touch the network.
+    Split out of `second_instance` below because none of it needs a
+    toolchain: copying the tracked tree, deleting what the boundary hands
+    the instance and laying `instances/example/` into the holes is
+    filesystem work and nothing else. What can be proved without a build
+    is therefore proved without one, on every machine, whether or not
+    `npm ci` has ever been run here -- and the thing that can be is not a
+    detail: `test_the_two_instances_disagree_about_every_needle` is what
+    makes the sweep mean anything at all.
     """
-    if shutil.which("node") is None:
-        pytest.skip("node is not on PATH -- cannot build a second instance")
-    for package in ("app", "site"):
-        if not (ROOT / package / "node_modules").is_dir():
-            pytest.skip(
-                f"{package}/node_modules is missing -- run `npm ci` in "
-                f"{package}/ before this suite (quality.yml's own python "
-                "job does)"
-            )
     root = tmp_path_factory.mktemp("second-instance") / "repository"
     root.mkdir()
+    _lay_out(root)
+    return root
+
+
+@pytest.fixture(scope="module")
+def second_instance(second_instance_tree: Path) -> Iterator[Built]:
+    """The whole thing, built once for this module, in the tree above.
+
+    Skips on a machine that never installed the packages and fails on one
+    that was supposed to have -- see `_toolchain_absent` for why those are
+    not the same sentence.
+    """
+    if shutil.which("node") is None:
+        _toolchain_absent(
+            "node is not on PATH, so no second instance can be built",
+            "Install Node 20.",
+        )
+    for package in ("app", "site"):
+        if not (ROOT / package / "node_modules").is_dir():
+            _toolchain_absent(
+                f"{package}/node_modules is missing",
+                f"Run `npm ci` in {package}/ before this suite.",
+            )
+    root = second_instance_tree
     links = [root / package / "node_modules" for package in ("app", "site")]
     try:
-        _lay_out(root)
         for link in links:
             _link_directory(ROOT / link.relative_to(root), link)
         _publish(root)
@@ -396,6 +485,50 @@ def second_instance(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Built]
         for link in links:
             if link.exists():
                 os.rmdir(link)
+
+
+# ------------------------------------------------------------------ #
+# 0 -- the control that says whether the rest of this module ran
+# ------------------------------------------------------------------ #
+
+
+@pytest.mark.parametrize(
+    ("environment", "automated"),
+    [
+        ({}, False),
+        ({"CI": ""}, False),
+        ({"CI": "false"}, False),
+        ({"CI": "0"}, False),
+        ({"CI": "true"}, True),
+        ({"CI": "1"}, True),
+        ({"GITHUB_ACTIONS": "true"}, True),
+        ({"CI": "false", "GITHUB_ACTIONS": "true"}, True),
+    ],
+)
+def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
+    environment: dict[str, str], automated: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The clause that makes everything below a control rather than a
+    formality, proved rather than trusted.
+
+    Every test in this module needs a build, a build needs `node_modules`,
+    and until this branch existed a machine without them turned the whole
+    acceptance criterion into six skips inside a green suite. It is the
+    one branch here nothing else exercises -- a runner that has its
+    toolchain never reaches it -- so it is exercised directly, with the
+    environment a runner sets and with the environments that only look
+    like one.
+    """
+    for name in _AUTOMATED:
+        monkeypatch.delenv(name, raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    expected = pytest.fail.Exception if automated else pytest.skip.Exception
+    with pytest.raises(expected) as raised:
+        _toolchain_absent("app/node_modules is missing", "Run `npm ci` in app/.")
+    assert "app/node_modules is missing" in str(raised.value)
+    assert "Run `npm ci` in app/." in str(raised.value)
+    assert ("acceptance criterion has not run" in str(raised.value)) is automated
 
 
 # ------------------------------------------------------------------ #
@@ -439,14 +572,20 @@ def test_the_example_instance_answers_every_path_an_instance_owns() -> None:
 
 
 def test_the_two_instances_disagree_about_every_needle(
-    second_instance: Built,
+    second_instance_tree: Path,
 ) -> None:
     """A needle whose two instances happen to write the same value proves
     nothing at all: it would be absent from a build for the same reason it
     is present. This is what makes the sweep below meaningful, so it runs
-    before it rather than being assumed."""
+    before it rather than being assumed.
+
+    On the laid-out tree, not the built one, and deliberately: a needle is
+    read out of a declaration, never out of an artefact, so this needs no
+    toolchain -- and the half of this module's claim that can hold on
+    every machine should not be lost with the half that cannot.
+    """
     here = instance_identity.needles(ROOT)
-    there = instance_identity.needles(second_instance.root)
+    there = instance_identity.needles(second_instance_tree)
     assert set(here) == set(there)
     shared = {name: here[name] for name in here if here[name] == there[name]}
     assert shared == {}, (
@@ -623,3 +762,33 @@ def test_the_second_instances_showcase_resolves_under_its_own_prefix(
         f"these links resolve above {prefix}, where this instance is not "
         f"served (D-26): {offending[:10]}"
     )
+
+
+# ------------------------------------------------------------------ #
+# 4 -- a declared value that is only a placeholder
+# ------------------------------------------------------------------ #
+
+
+def test_the_second_instances_showcase_offers_its_own_proposal_form(
+    second_instance: Built,
+) -> None:
+    """The configured half of `published.Identity.proposal_form_url`, on a
+    build rather than on a reading.
+
+    This repository declares `proposal_form:
+    https://forms.example.test/propose` -- a placeholder -- so its own `/propose/`
+    renders the state that offers the contact address instead
+    (`test_site.py::test_the_propose_page_offers_a_form_or_says_it_is_not_
+    open`). The example declares a real form, so the same template on the
+    same page must link *its* address here. Without this, a degradation
+    that never stopped degrading would look exactly like a feature that
+    works.
+    """
+    form = instance_identity.needles(second_instance.root)["proposal_form"]
+    page = second_instance.root / "site" / "_site" / "propose" / "index.html"
+    assert page.is_file(), "the second instance built no propose page"
+    text = page.read_text(encoding="utf-8")
+    assert f'href="{form}"' in text, (
+        f"the second instance's propose page does not link its own form ({form})"
+    )
+    assert "The proposal form is not published yet." not in text

@@ -58,14 +58,17 @@ from .paths import repo_root
 
 __all__ = [
     "DECLARATION_VERSION",
+    "DEGRADABLE_FIELDS",
     "IDENTITY_FIELDS",
     "IDENTITY_KEY",
     "INSTANCE_PATH",
+    "PLACEHOLDER_MARKER",
     "PUBLISHED_URL_KEY",
     "Identity",
     "Published",
     "from_data",
     "identity_from_data",
+    "is_placeholder",
     "load",
     "load_identity",
 ]
@@ -101,6 +104,43 @@ IDENTITY_FIELDS: Final = (
     "proposal_form",
     "repository",
 )
+
+#: What this repository writes into a declared value nobody has filled in
+#: yet. Not invented here: `services/*/wrangler.toml` ships
+#: `REPLACE_WITH_KV_NAMESPACE_ID`, and `deploy-form-relay.yml` and
+#: `deploy-signup-relay.yml` already grep for exactly this token before
+#: deciding an integration is configured. A placeholder is not a value; it
+#: is the absence of one, spelled so a human can see it -- and the whole
+#: point of naming it here is that until now only a human could.
+PLACEHOLDER_MARKER: Final = "REPLACE"
+
+#: The identity fields the product can publish *without*, and therefore
+#: the only ones allowed to still carry a placeholder.
+#:
+#: `proposal_form` is one because the showcase has somewhere else to send
+#: a visitor -- `contact`, which the same page already prints -- so an
+#: unfilled form degrades visibly (D-13: an unconfigured integration is a
+#: normal state that degrades, not a failure) instead of stopping every
+#: command a duplicate runs. Every other field is prose with no substitute
+#: at all: there is nothing to render in place of an organisation's name,
+#: so a placeholder there is refused exactly as a missing key is.
+#:
+#: Found by phase 10's own bilan (section 7.2): this instance has shipped
+#: `proposal_form: https://forms.example.test/propose` since before the
+#: declaration existed, and the showcase published it as the one call to
+#: action on `/propose/` -- a link that resolves to nothing, on a public
+#: page, with no check anywhere able to see it.
+DEGRADABLE_FIELDS: Final = ("proposal_form",)
+
+
+def is_placeholder(value: str) -> bool:
+    """Whether a declared value is still the placeholder that stands in
+    for one. Mirrored on the other side of the language boundary by
+    `site/scripts/published.cjs`, and the two are held together by
+    `tools/tests/test_published.py::test_the_showcase_feeds_its_templates_
+    the_declared_identity`, which compares what that build hands its
+    templates against what this reader derives."""
+    return PLACEHOLDER_MARKER in value
 
 
 @dataclass(frozen=True)
@@ -281,6 +321,19 @@ class Identity:
     repository: str
 
     @property
+    def proposal_form_url(self) -> str:
+        """The proposal form's address, or the empty string while the
+        declaration still carries a placeholder in place of one.
+
+        The showcase links this rather than `proposal_form` itself, so a
+        duplicate that has not built its form yet -- and this instance,
+        which had not -- publishes a page that says so instead of a button
+        that resolves to nothing. `proposal_form` stays the declared value
+        and stays a needle of the second-instance sweep; this is the one
+        derivation that decides whether a reader is ever shown it."""
+        return "" if is_placeholder(self.proposal_form) else self.proposal_form
+
+    @property
     def forum_host(self) -> str:
         """`www.example.org` -- the forum's address as prose names it,
         with no scheme. Templates print the bare host inside a sentence
@@ -332,6 +385,15 @@ def identity_from_data(data: Any) -> Identity:
         if value != value.strip():
             raise ValueError(
                 f"{named}: {IDENTITY_KEY}.{field} has surrounding whitespace"
+            )
+        if is_placeholder(value) and field not in DEGRADABLE_FIELDS:
+            raise ValueError(
+                f"{named}: {IDENTITY_KEY}.{field} is still a placeholder "
+                f"({value!r}) -- {PLACEHOLDER_MARKER} is how this repository "
+                "writes a value nobody has filled in, and there is nothing to "
+                "print in place of this one, so it is refused here rather "
+                f"than published. See {DEGRADABLE_FIELDS} for the fields that "
+                "have a fallback and degrade instead"
             )
         values[field] = value
     forum = urlsplit(values["forum"])

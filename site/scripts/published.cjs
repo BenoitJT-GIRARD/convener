@@ -119,6 +119,22 @@ const IDENTITY_FIELDS = [
   'repository',
 ];
 
+// What this repository writes into a declared value nobody has filled in
+// yet -- the same token `services/*/wrangler.toml` carries as
+// `REPLACE_WITH_KV_NAMESPACE_ID` and the two relay deploys already grep
+// for before deciding an integration is configured. Mirrors
+// `published.py::PLACEHOLDER_MARKER` and `DEGRADABLE_FIELDS`: a
+// placeholder is refused in every field the showcase has no fallback for,
+// and tolerated in the one it does (`proposal_form` -- `/propose/` sends
+// a visitor to the contact address instead, rather than to a link that
+// resolves to nothing).
+const PLACEHOLDER_MARKER = 'REPLACE';
+const DEGRADABLE_FIELDS = ['proposal_form'];
+
+function isPlaceholder(value) {
+  return value.includes(PLACEHOLDER_MARKER);
+}
+
 function identity() {
   const declaration = JSON.parse(readFileSync(DECLARATION, 'utf8'));
   if (declaration.v !== 1) {
@@ -137,6 +153,13 @@ function identity() {
           'every field here is printed to somebody outside this project'
       );
     }
+    if (isPlaceholder(value) && !DEGRADABLE_FIELDS.includes(field)) {
+      throw new Error(
+        `${NAMED}: identity.${field} is still a placeholder (${value}) -- ` +
+          `${PLACEHOLDER_MARKER} is how this repository writes a value nobody ` +
+          'has filled in, and there is nothing to print in place of this one'
+      );
+    }
     out[field] = value;
   }
   // `www.example.org` -- the forum's address as prose names it, with no
@@ -145,4 +168,4 @@ function identity() {
   return out;
 }
 
-module.exports = { publishedAddress, identity };
+module.exports = { publishedAddress, identity, isPlaceholder };

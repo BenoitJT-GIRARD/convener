@@ -25,7 +25,7 @@
 // showcase's side of a boundary Python and the application build read
 // from their own (D-14). The names stay: everything below this line uses
 // them exactly as before.
-const { publishedAddress, identity } = require('./scripts/published.cjs');
+const { publishedAddress, identity, isPlaceholder } = require('./scripts/published.cjs');
 
 const PUBLISHED = publishedAddress();
 
@@ -69,7 +69,17 @@ const SITE = {
   forumHost: IDENTITY.forum_host,
   // The proposal form `src/propose.njk` sends people to -- the same form
   // `tools/convener_ops/proposal.py`'s webhook receives from.
-  applyForm: IDENTITY.proposal_form,
+  //
+  // Empty while the declaration still carries a placeholder instead of an
+  // address, and `propose.njk` renders the page's other half when it is:
+  // a duplicate has not built its form before its first publish, and this
+  // instance had not built one at all -- `identity.proposal_form` was
+  // `https://forms.example.test/propose`, published as that page's one call to
+  // action (phase 10 bilan, section 7.2). Mirrors
+  // `published.py::Identity.proposal_form_url`, and
+  // `test_published.py::test_the_showcase_feeds_its_templates_the_declared_
+  // identity` compares this value against that one.
+  applyForm: isPlaceholder(IDENTITY.proposal_form) ? '' : IDENTITY.proposal_form,
   // The organisation itself: the masthead, the footer's "run by
   // volunteers from", every event page's `Organization` structured data,
   // and the address a participant writes to about their own data.

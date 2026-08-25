@@ -506,6 +506,60 @@ def test_an_identity_field_that_reads_plausibly_and_is_wrong_is_refused(
         )
 
 
+@pytest.mark.parametrize(
+    "field",
+    [f for f in published.IDENTITY_FIELDS if f not in published.DEGRADABLE_FIELDS],
+)
+def test_a_field_still_carrying_a_placeholder_is_refused_by_name(field: str) -> None:
+    """`REPLACE` is how this repository writes a value nobody has filled
+    in -- `services/*/wrangler.toml` ships `REPLACE_WITH_KV_NAMESPACE_ID`
+    and both relay deploys already grep for it. It reads as a string and
+    passes every check a string passes, so until this clause a placeholder
+    in `organisation` would have been printed at the top of a public page
+    exactly as a real name is."""
+    broken = {**_OTHER_IDENTITY, field: f"{_OTHER_IDENTITY[field]}-REPLACE"}
+    with pytest.raises(ValueError, match=f"identity.{field} is still a placeholder"):
+        published.identity_from_data(
+            {**_MINIMAL_IDENTITY, published.IDENTITY_KEY: broken}
+        )
+
+
+@pytest.mark.parametrize("field", published.DEGRADABLE_FIELDS)
+def test_the_fields_with_a_fallback_degrade_instead_of_stopping(field: str) -> None:
+    """The other half of the same rule, and the reason it is a list rather
+    than a blanket refusal.
+
+    `proposal_form` is the one declared value the showcase can publish
+    *without*: `/propose/` has the contact address to send a visitor to
+    instead. So a placeholder there is read, kept as the declared value --
+    it is still a needle of the second-instance sweep -- and derived away
+    at the one point a reader would have been shown it. Refusing it
+    outright would stop every command a duplicate runs over a link, which
+    is not proportionate; publishing it is what this instance did for two
+    phases (phase 10 bilan, section 7.2)."""
+    assert field == "proposal_form", "a new degradable field needs its own fallback"
+    declared = f"https://forms.example.test/{published.PLACEHOLDER_MARKER}"
+    identity = published.identity_from_data(
+        {
+            **_MINIMAL_IDENTITY,
+            published.IDENTITY_KEY: {**_OTHER_IDENTITY, field: declared},
+        }
+    )
+    assert identity.proposal_form == declared
+    assert identity.proposal_form_url == ""
+    assert identity.namespace[field] == declared
+
+
+def test_a_declared_form_this_instance_could_publish_survives_the_derivation() -> None:
+    """The branch above only says what is taken away. This says the
+    derivation takes nothing away from an address that is real, which is
+    the state the example instance is in and the state a configured
+    duplicate is in."""
+    identity = published.identity_from_data(_MINIMAL_IDENTITY)
+    assert published.PLACEHOLDER_MARKER not in identity.proposal_form
+    assert identity.proposal_form_url == identity.proposal_form
+
+
 def test_the_substitution_vocabulary_is_the_declaration_plus_one_derived_name() -> None:
     """`{{ instance.* }}`, as both rendering engines resolve it. Asserted
     as the whole set rather than as membership: a name in one engine and
@@ -545,7 +599,12 @@ def test_the_showcase_feeds_its_templates_the_declared_identity() -> None:
     assert site["tagline"] == identity.tagline
     assert site["forum"] == identity.forum
     assert site["forumHost"] == identity.forum_host
-    assert site["applyForm"] == identity.proposal_form
+    # Not `identity.proposal_form`: the showcase publishes the derived
+    # address, which is empty while the declaration still carries a
+    # placeholder. This comparison *is* the boundary fixture for that rule
+    # -- `published.cjs` has its own copy of it (D-14), and a copy nothing
+    # compares is a copy that drifts.
+    assert site["applyForm"] == identity.proposal_form_url
     assert site["organisation"] == identity.organisation
     assert site["contact"] == identity.contact
     assert site["repository"] == identity.repository

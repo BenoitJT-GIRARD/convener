@@ -16,6 +16,17 @@ eleventyComputed:
   to link straight out to; both now point here instead, so a visitor
   reads what to expect before leaving the site, and there is exactly one
   place this page needs to change if the live form ever moves.
+
+  Two states, and the second is not hypothetical. `site.applyForm` is
+  empty while `config/instance.json` still declares a placeholder instead
+  of a form address (`.eleventy.js`, mirroring
+  `published.py::Identity.proposal_form_url`), and this instance declared
+  `https://forms.example.test/propose` from the day the old `site.json` was folded
+  into the declaration until phase 10 task 7 -- so the button below was a
+  live call to action on a public page, pointing at nothing. It now says
+  so and offers the contact address instead, which is the state a fresh
+  duplicate is in too: nobody has built their form before their first
+  publish.
 #}
 <section class="hero">
   <div class="container hero__inner">
@@ -23,10 +34,9 @@ eleventyComputed:
     <h1 class="hero__title">Bring us <em>your</em> talk.</h1>
     <p class="hero__lede">
       Propose yourself, or someone whose work you admire &mdash;
-      early-career researchers especially welcome. A short form asks who
-      they are, what they would talk about, and how to reach them; a
-      volunteer from the Editorial Board reads every proposal and gets
-      back to you.
+      early-career researchers especially welcome. We ask who they are,
+      what they would talk about, and how to reach them; a volunteer from
+      the Editorial Board reads every proposal and gets back to you.
     </p>
   </div>
 </section>
@@ -40,21 +50,33 @@ eleventyComputed:
   <div class="notice">
     <p class="notice__eyebrow">What to expect</p>
     <p>
-      The form takes a few minutes: the speaker&rsquo;s name and contact
+      A proposal takes a few minutes: the speaker&rsquo;s name and contact
       details, a preliminary title and short abstract, and who is
       proposing them if not themself. Nothing about a candidate speaker is
       published without their own, separate consent, later, if the talk
       is selected.
     </p>
     <p>
-      It is hosted on Tally, a third-party form service &mdash; the only
-      part of this process that is. Questions about a proposal, or a
-      request to withdraw one, go to
+      {% if site.applyForm %}It is hosted on Tally, a third-party form
+      service &mdash; the only part of this process that is. {% endif %}Questions
+      about a proposal, or a request to withdraw one, go to
       <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
     </p>
   </div>
 
+  {% if site.applyForm %}
   <div class="hero__actions">
     <a class="btn btn--primary" href="{{ site.applyForm }}">Open the proposal form &rarr;</a>
   </div>
+  {% else %}
+  <div class="notice">
+    <p class="notice__eyebrow">Not open yet</p>
+    <p>
+      The proposal form is not published yet. Until it is, send those
+      details to
+      <a href="mailto:{{ site.contact }}">{{ site.contact }}</a> and a
+      volunteer from the Editorial Board will pick them up.
+    </p>
+  </div>
+  {% endif %}
 </section>

@@ -110,6 +110,18 @@ const IDENTITY_FIELDS = [
   'repository',
 ];
 
+/** What this repository writes into a declared value nobody has filled in
+ *  yet -- the same token the two relays' own `wrangler.toml` files carry
+ *  as `REPLACE_WITH_KV_NAMESPACE_ID`. Mirrors
+ *  `published.py::PLACEHOLDER_MARKER` and `DEGRADABLE_FIELDS`, clause for
+ *  clause like everything else here: refused in every field there is
+ *  nothing to print in place of, tolerated in the one the showcase has a
+ *  fallback for. This build never renders `proposal_form` -- it only
+ *  carries it into the bundle's identity define -- so there is nothing to
+ *  derive here, only something to refuse. */
+const PLACEHOLDER_MARKER = 'REPLACE';
+const DEGRADABLE_FIELDS = ['proposal_form'];
+
 export function identity() {
   const declaration = JSON.parse(readFileSync(DECLARATION, 'utf8'));
   if (declaration.v !== 1) {
@@ -126,6 +138,13 @@ export function identity() {
       throw new Error(
         `${NAMED}: identity.${field} must be a non-empty string, got ${value} -- ` +
           'every field here is printed to somebody outside this project'
+      );
+    }
+    if (value.includes(PLACEHOLDER_MARKER) && !DEGRADABLE_FIELDS.includes(field)) {
+      throw new Error(
+        `${NAMED}: identity.${field} is still a placeholder (${value}) -- ` +
+          `${PLACEHOLDER_MARKER} is how this repository writes a value nobody ` +
+          'has filled in, and there is nothing to print in place of this one'
       );
     }
     out[field] = value;

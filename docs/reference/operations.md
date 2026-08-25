@@ -107,6 +107,13 @@ still holds.
    suffix (the worker's only route is its root) — any other path 404s and
    the submission is silently lost — and set the same signing secret in
    Tally that is set below as `TALLY_WEBHOOK_SECRET`.
+4. Write the published form's own address into `config/instance.json` as
+   `identity.proposal_form`. This is the half a reader sees: the showcase's
+   `/propose/` page links it, and it is the only way a visitor reaches the
+   form the three steps above just built. Until it is written, that page
+   says the form is not open yet and offers the contact address instead —
+   a placeholder (`REPLACE`) is read as *not configured*, never published
+   as a link (`published.py::Identity.proposal_form_url`).
 
 **Secrets to set:**
 - Wrangler secret `TALLY_WEBHOOK_SECRET` on the worker — set with

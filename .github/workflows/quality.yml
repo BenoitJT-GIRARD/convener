@@ -168,6 +168,15 @@ jobs:
       # only where somebody remembers to look; the build itself takes
       # about ten seconds once `node_modules` is there, and it makes no
       # network call of any kind.
+      #
+      # Phase 10, task 7: these two steps are now load-bearing rather than
+      # convenient. `tests/test_second_instance.py::_toolchain_absent`
+      # skips a missing toolchain on a developer's machine and *fails* it
+      # here, because `CI` is set -- so deleting, renaming or reordering
+      # either install below turns this job red by name instead of turning
+      # the acceptance criterion into a row of skips inside a green suite
+      # (D-25, and the defect `docs/superpowers/phase-10-bilan.md` § 4.3
+      # found).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'

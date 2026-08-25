@@ -901,7 +901,10 @@ def _site_config() -> dict[str, Any]:
         "tagline": identity.tagline,
         "forum": identity.forum,
         "forumHost": identity.forum_host,
-        "applyForm": identity.proposal_form,
+        # The derived address, not the declared one: empty while the
+        # declaration still carries a placeholder. See
+        # `test_the_propose_page_offers_a_form_or_says_it_is_not_open`.
+        "applyForm": identity.proposal_form_url,
         "organisation": identity.organisation,
         "contact": identity.contact,
     }
@@ -1277,10 +1280,36 @@ def test_both_field_filters_show_their_own_empty_state_though_the_archive_is_not
 # ---- Proposing a speaker: the public entry point -------------------------
 
 
-def test_propose_page_links_to_the_configured_proposal_form(built_site: Path) -> None:
-    apply_form = _site_config()["applyForm"]
+def test_the_propose_page_offers_a_form_or_says_it_is_not_open(
+    built_site: Path,
+) -> None:
+    """One page, two states, and never the third one it used to have.
+
+    `config/instance.json` declared `proposal_form:
+    https://forms.example.test/propose` -- a placeholder inherited from the old
+    `site/src/_data/site.json` -- and this page published it as its one
+    call to action, a live button on a public page resolving to nothing
+    (phase 10 bilan, section 7.2). `Identity.proposal_form_url` is empty
+    for a placeholder, and the template renders the other state instead.
+
+    Written as an equivalence rather than as a branch: whichever state
+    this instance's own declaration is in, exactly one of the two must be
+    on the page. The configured state is exercised on a real build by
+    `test_second_instance.py::test_the_second_instances_showcase_offers_
+    its_own_proposal_form`, where the example instance declares a form.
+    """
+    identity = published.load_identity()
     page = (built_site / "propose" / "index.html").read_text(encoding="utf-8")
-    assert f'href="{apply_form}"' in page
+    linked = f'href="{identity.proposal_form}"' in page
+    not_open = "The proposal form is not published yet." in page
+    assert linked is bool(identity.proposal_form_url), (
+        "the propose page links a form the declaration does not offer, or "
+        f"offers none when it does: proposal_form={identity.proposal_form!r}"
+    )
+    assert not_open is not linked, (
+        "the propose page must say the form is not open exactly when it cannot link one"
+    )
+    assert published.PLACEHOLDER_MARKER not in page
 
 
 def test_propose_page_names_the_shared_contact_address(built_site: Path) -> None:
