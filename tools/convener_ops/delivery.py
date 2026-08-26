@@ -18,8 +18,8 @@ holder who wants a PDF can produce one themselves with a browser's own
 SVG rather than a raster (PNG) code: no image toolchain either, and an SVG
 scales cleanly whatever size a reader's screen or printer renders it at.
 
-The QR library: verified against the task's own constraints before it was
-added, not assumed
+The QR library: verified against this project's own constraints before it
+was added, not assumed
 ------------------------------------------------------------------------------
 `segno` (`tools/pyproject.toml`'s own comment on this dependency has the
 checked facts): pure Python, one universal wheel (`py3-none-any`, checked
@@ -88,8 +88,8 @@ nothing about it was ever computed randomly. `DeliveryResult` was already
 the shape `confirmation.SendResult` only later adopted, once that type was
 narrowed to match -- see that dataclass's own docstring, below.
 
-Replayable, not regenerated -- and bounded by retention (ruling 3)
-------------------------------------------------------------------------
+Replayable, not regenerated -- and bounded by retention
+-------------------------------------------------------
 `signing.sign` is deterministic (RSA-PKCS1v15, no randomised salt -- see
 that module's own docstring for why), and `certificate.issue`'s
 fingerprint-keyed lookup reuses an already-registered attendee's existing
@@ -118,9 +118,8 @@ header changes the *message* on a retry, never the attachment or its
 signature, and nothing this module's own tests pin ever compares the
 envelope byte for byte -- only `_sent_attachment_html` and the token it
 carries. `confirmation.py`'s own transport had the identical gap
-(inherited, not introduced here), deliberately not touched by this round
--- carried item 6 closed it in the phase's final fix wave instead, the
-same fix, in the same place in that module's own `_SmtpTransport.send`.
+(inherited, not introduced here), and was fixed separately -- the same
+fix, in the same place in that module's own `_SmtpTransport.send`.
 
 **That replayability is not unconditional forever, and this module does
 not claim it is.** `certificate.issue` needs the event's own decrypted
@@ -378,8 +377,8 @@ class Delivery:
 #: only the *subject* was pinned (`test_delivery.py`'s own
 #: `test_compose_subject_names_the_event`); the body had drifted
 #: typographically from the docs copy -- an ASCII "--" here where the docs
-#: page has already used an em dash ("—") since this task's own first
-#: round, matching `confirmation.compose`'s own subject-line precedent
+#: page has long used an em dash ("—"), matching
+#: `confirmation.compose`'s own subject-line precedent
 #: (`f"{subject} — {event.title}"`) -- so this also fixes that drift, not
 #: only pins against a future one.
 DOCUMENT_INSTRUCTION: Final = (
@@ -485,7 +484,7 @@ class DeliveryResult:
     No `document` field, and (since always) no `unsent_body` field either:
     **no way to hold the rendered document here at all**, even
     transiently. See the module docstring's "never written to disk"
-    section (ruling 1, ruling 2) for why -- a future caller must never be
+    section for why -- a future caller must never be
     able to "helpfully" write an unsent certificate to a file, an artefact
     included, the way an earlier version of `cli.py::_send_confirmation`
     once wrote `confirmation.SendResult.unsent_body` to

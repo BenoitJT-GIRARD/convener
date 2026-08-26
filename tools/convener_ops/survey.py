@@ -12,8 +12,8 @@ same discipline `registration.py`'s own module docstring holds itself to.
 
 The three questions, and why these three
 ------------------------------------------
-Fixed for every event (ruling 1: the spec says the survey is short and
-optional *per event*, never that the questions vary), so one shape, one
+Fixed for every event -- the survey is short and optional *per event*,
+and nothing says the questions vary -- so one shape, one
 validator, one template, and a switch that is a single boolean rather than a
 per-event question bank nobody has asked for yet:
 
@@ -30,10 +30,9 @@ per-event question bank nobody has asked for yet:
   `registration.Registration.institution` already uses.
 
 Three questions, not four or more: every additional question is one more
-reason to abandon a survey the spec already calls short, and the spec's own
-risk table (S:9) is explicit that a certificate attests presence, not
-learning -- this questionnaire is a signal the organisers can act on, not an
-assessment participants must pass.
+reason to abandon a survey that is meant to be short, and a certificate
+attests presence, not learning -- this questionnaire is a signal the
+organisers can act on, not an assessment participants must pass.
 
 Why no identity travels with a response
 ------------------------------------------
@@ -57,9 +56,9 @@ address. Two things follow from that, deliberately:
    responses" is the same lever that erases its registrations: destroying
    the event's key early, which `eventkeys.destroy` already supports and
    which this module adds no new procedure for. This is a real, named gap
-   between what the spec's S:4 rights section promises for registrations
-   and what this module can deliver for anonymous survey text -- recorded
-   here rather than quietly assumed away.
+   between what `docs/governance/traitement-donnees.md` records for
+   registrations and what this module can deliver for anonymous survey
+   text -- written down here rather than quietly assumed away.
 
 Anonymity is achieved by what does not travel with a response -- no name,
 no address, no matching code -- and by `_PLAINTEXT_PAD_BYTES` (below),

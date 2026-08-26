@@ -10,12 +10,12 @@ read as that mark, no matter how faithfully every other measurement passes.
 
 What the reference actually shows
 ----------------------------------
-Traced pixel by pixel against the 1200x1200 reference -- the brief for it
-was a starting point to verify, not a given, and two of its claims did not
-survive that check: the left curl does not cross its own tail (it is a near
-circle open on one side, like the right one), and the stroke measures 23-33px
-wide there, not the 0.0075-ratio 9px `data/brand.json` held before this task
-(see `motif._ribbon_width_ratio`).
+Traced pixel by pixel against the 1200x1200 reference. The description
+that came with it was a starting point to verify, not a given, and two of
+its claims did not survive that check: the left curl does not cross its own
+tail (it is a near circle open on one side, like the right one), and the
+stroke measures 23-33px wide there, not the 0.0075-ratio 9px
+`data/brand.json` used to hold (see `motif._ribbon_width_ratio`).
 
 What does hold up: a single purple stroke, uniform width, round caps, no
 fill, that enters and leaves the canvas rather than closing on itself. On the
@@ -187,8 +187,8 @@ _RIGHT_LOOP_RADIUS: Final = 0.103
 
 #: Points sampled along each loop's visible arc. Dense enough that Catmull-
 #: Rom through them reads as a round curl rather than a faceted polygon --
-#: verified by rendering, not by a formula, since "looks round" is a visual
-#: property. See the task's own report for the side-by-side comparison.
+#: verified by rendering and comparing side by side, not by a formula,
+#: since "looks round" is a visual property.
 _ARC_STEPS: Final = 8
 
 #: The left tail's own bulge: the one interior anchor a Catmull-Rom curve

@@ -187,8 +187,8 @@ page runs long is to take it from an item that is allowed to give some up,
 and `.content` (now holding only the "what to expect" copy and the photo)
 is that item -- `min-height: 0; overflow: hidden`, with a flex-shrink
 factor (20) large enough that ordinary content growth is absorbed there
-alone, invisibly, for every state this module's own tests and this task's
-own report render. `.band--talk-title` keeps its own flex-shrink too (1,
+alone, invisibly, for every state this module's own tests render.
+`.band--talk-title` keeps its own flex-shrink too (1,
 twenty times less eager than `.content`'s), not because an everyday title
 is expected to need it -- `.content` shrinks first, and the six rendered
 states never drive it below what its own children need -- but because
@@ -669,9 +669,8 @@ def _series_html(strapline: str, forum_host: str) -> str:
 
 
 def _expect_html(forum_host: str) -> str:
-    """Fixed boilerplate (`render_announcement`'s own brief: "Fixed: ...
-    the `WHAT TO EXPECT?` block"), with the one thing in it that is not
-    the product's read from the declaration.
+    """The `WHAT TO EXPECT?` block, fixed on every poster, with the one
+    thing in it that is not the product's read from the declaration.
 
     The three rows carry no edition-specific fact -- no date, no name, no
     hard-typed zone -- so none of them needed correcting the way the date
@@ -765,8 +764,8 @@ def _frame_html(
     sized by `_scaled_font_size` and allowed to wrap rather than being
     clipped -- the caption's own height is not fixed, so a long name and a
     long affiliation together grow the frame's own footprint instead of
-    losing text to an ellipsis, matching this task's "the composition
-    degrades; it does not break" brief.
+    losing text to an ellipsis: the composition degrades, it does not
+    break.
     """
     safe_name = html.escape(speaker_name) if speaker_name else "Speaker name"
     photo = _frame_photo_html(portrait_data_uri, speaker_name)
@@ -905,8 +904,8 @@ def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
 # `formats.BANNER` (1200x630) is short enough that the square's full
 # vertical rhythm (wordmark, hero, talk title, date, "what to expect" plus
 # photo, register) cannot all fit without clipping, overlapping, or
-# shrinking text below a legible size -- three outcomes this task's own
-# brief forbids equally. Something has to give; two things do, chosen for
+# shrinking text below a legible size -- three outcomes that are equally
+# unacceptable. Something has to give; two things do, chosen for
 # being the *least* essential to a share-preview thumbnail glimpsed in a
 # feed, never studied the way a poster on an institute wall is:
 #

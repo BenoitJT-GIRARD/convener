@@ -181,8 +181,8 @@ hands**:
    on a publication-shaped field meant a legitimately-never-published
    recording (a speaker who withheld consent; the discussion segment,
    never uploaded anywhere, see below) could never be released, and the
-   quota it occupies would never be freed -- the exact failure this task
-   exists to prevent, reached *through* the guard. `RETRIEVED_TICK` is a
+   quota it occupies would never be freed -- the exact failure the guard
+   exists to prevent, reached *through* it. `RETRIEVED_TICK` is a
    distinct, single-purpose fact -- "this was retrieved" and nothing else
    -- read from `runbook_progress`, the free-form per-step tick map
    `app/src/data/validate.ts` already documents ("free-form step names,
@@ -279,7 +279,7 @@ board's approval and its objection window govern whether the talk is
 provider's storage. Gating on the full publication gate held the quota
 hostage to a board timeline the quota has no relationship with,
 recreating -- inside the very fix meant to prevent it -- the "refuses
-forever, quota fills" failure this task exists to stop, for every fresh
+forever, quota fills" failure the gate exists to stop, for every fresh
 talk, every time `finalize-archive` had not yet run.
 
 `_consent_granted` keeps `recording_withheld`'s own documented asymmetry,

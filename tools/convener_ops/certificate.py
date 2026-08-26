@@ -31,8 +31,8 @@ this file defines, which has no field a name could occupy. The name lives
 exactly once, in the token, in the recipient's own inbox. We do not keep a
 second copy "just in case"; that copy is what this project forbids.
 
-Two numbers a stranger must never be able to confuse (ruling 3)
--------------------------------------------------------------------
+Two numbers a stranger must never be able to confuse
+----------------------------------------------------
 This module computes two different values from the same registration, and
 conflating them would quietly undo the whole design:
 
@@ -104,7 +104,7 @@ one. A second call for the same person, whether a delivery is being
 retried or the same job simply ran twice, produces
 `already_registered=True` and never grows the register --
 `test_reissuing_the_same_attendee_does_not_grow_the_register` below is
-one of this task's mutation-tested guarantees.
+one of the mutation-tested guarantees that hold it.
 
 That lookup is also what makes a retried delivery reproduce the *same*
 document, not merely the same register row. `signing.sign` uses
@@ -152,8 +152,8 @@ publiées, pour que la rotation n'invalide jamais un certificat déjà
 completely untouched -- there is nothing in it retention could ever apply
 to, because there was never anything identifying in it to begin with.
 
-Revocation touches the register, never the signature (ruling 11)
-----------------------------------------------------------------------
+Revocation touches the register, never the signature
+----------------------------------------------------
 `revoke` flips one entry's `state` to `STATE_REVOKED` and returns a new
 register. It has no access to, and does not need, the signing key: the
 token issued earlier keeps verifying successfully forever, exactly as
@@ -167,8 +167,8 @@ check into the other is the one mistake this split is built to prevent,
 and `test_a_revoked_certificate_still_verifies_but_reports_revoked` below
 is the test that catches a future edit doing exactly that.
 
-The duration a document prints is rounded, on a written rule (ruling 10)
-------------------------------------------------------------------------------
+The duration a document prints is rounded, on a written rule
+------------------------------------------------------------
 `duration_hours` rounds a summed attendance duration to the nearest
 **quarter hour**, ties rounding **up** (`ROUND_HALF_UP`, not Python's
 default banker's rounding, which would round a boundary case down as
@@ -256,8 +256,8 @@ no longer secret -- not on rotating the value in place, which breaks
 idempotence for every event with a register already on file rather than
 fixing anything.
 
-The public projection: identifiers and states, nothing else (ruling 5)
------------------------------------------------------------------------------
+The public projection: identifiers and states, nothing else
+-----------------------------------------------------------
 `public_register` is this module's other pure output: a list of
 `{"identifier", "state"}` dicts, sorted by identifier, built from a
 register the same way `public_data.to_public` builds `events-public.json`
@@ -271,8 +271,8 @@ purpose -- learning whether the identifier a certificate's own token
 already named is currently revoked -- and never sees `certificates.yml`
 itself, which is not published anywhere.
 
-The verification address: one URL, carrying the token (ruling 7)
------------------------------------------------------------------------
+The verification address: one URL, carrying the token
+-----------------------------------------------------
 "Adresse de vérification" is part of a certificate's
 printed content, and so, separately, is "un code
 lisible par machine, contenant le jeton" -- read together, this module
@@ -337,7 +337,7 @@ pinned as a test, not left as a paragraph a future editor might not read.
 The shared fixture (D-14) -- what stops the verifier verifying nothing
 ------------------------------------------------------------------------
 `tools/tests/fixtures/certificate-verification.json` holds a **real
-signed token**, generated once by this task from a throwaway key pair
+signed token**, generated once from a throwaway key pair
 whose private half was never written to disk and is not recoverable from
 anything committed -- only the public half and the token it produced are
 in the fixture, both of which are safe to publish by the very design
@@ -405,7 +405,7 @@ __all__ = [
 
 #: The organisation's own name, printed on the document as the
 #: "organisateur". Not a `data/config.yml` key: it does not vary between
-#: events (ruling 8), so a config key here would buy a TypeScript ripple
+#: events, so a config key here would buy a TypeScript ripple
 #: -- `types.ts`, `validate.ts`, `CONFIG_KEYS`, `readConfig`, every
 #: hand-built `Config` literal in the app's tests, a regenerated
 #: `schema.md` -- for a value that does not vary.
@@ -792,8 +792,8 @@ def issue(
     `signing.sign` raises for a key that will not load
     (`signing.SigningError`); never raises for a bad `attendee` or `event`,
     because both are already-validated data by the time either reaches
-    this module -- the one new exception this round adds is the
-    `ValueError` above, for a fingerprint whose every row is revoked.
+    this module -- the one exception it does raise is the `ValueError`
+    above, for a fingerprint whose every row is revoked.
     """
     entry_fingerprint = fingerprint(event.event_id, attendee.registration.email, salt)
     matches = [
@@ -1182,7 +1182,7 @@ def certificates_path(root: Path, event_id: str) -> Path:
     `registrations.enc`, its sibling in the same directory that the
     retention sweep destroys 90 days after the event: see the module
     docstring's "the register survives the data it was derived from"
-    section (ruling 2) for why the two must never be treated alike, and
+    section for why the two must never be treated alike, and
     `eventkeys.py`'s own module docstring for the destruction side of that
     boundary. A retention sweep that deleted this event's
     whole directory, rather than calling `eventkeys.destroy` for

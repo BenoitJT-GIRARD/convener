@@ -711,8 +711,8 @@ def _send_confirmation(
     `changed` is the field labels the caller already worked out
     (`confirmation.changed_fields`) -- this function does not compute it,
     so `resend_confirmation` (always `changed=()`) and `send_confirmation`
-    (a fresh or updated registration, this task's own step) share one code
-    path with no branch of their own in here.
+    (a fresh or updated registration) share one code path with no branch of
+    their own in here.
 
     Never lets a room lookup that fails (`confirmation.EventNotFoundError`
     -- no speaker record matches `event_id`) stop the confirmation from
@@ -3320,8 +3320,8 @@ def invite_survey() -> int:
     command that counts either population at all -- `unmatched-attendance.md`
     (`match-attendance.yml`, above) is the only place a host can act on the
     unmatched half, but nothing here reads that file back, so this line
-    was the one place acceptance criterion 9's own distinction could still
-    be erased even after it was.
+    was the one place the unmatched/unreachable distinction could still be
+    erased even after it was drawn.
 
     **Writes `record` to `$GITHUB_OUTPUT`** (`true` when at least one
     invitation actually sent this run, `false` otherwise) --
@@ -4283,9 +4283,9 @@ def deliver_certificates() -> int:
       below never raises for an ordinary send failure, it *returns*
       `sent=False`, so anything caught here is this module's own code
       (the concrete, reachable case: `event.title` overflowing the QR --
-      see `certificate.CertificateEvent`'s own `_MAX_TITLE_LENGTH`, which
-      this round also added, for why that specific crash can no longer
-      happen, though a still-unanticipated one is handled identically).
+      see `certificate.CertificateEvent`'s own `_MAX_TITLE_LENGTH` for
+      why that specific crash can no longer happen, though a
+      still-unanticipated one is handled identically).
       An operator seeing this count knows to look at the code or the data,
       never at the mail secrets.
     - **`delivery.deliver` returns `sent=False`:** no transport configured,
@@ -4541,8 +4541,8 @@ def deliver_certificate() -> int:
     fingerprint -- almost always `target_entry` itself, but not after a
     revoke-and-reissue with no correction applied here: the register would
     then read `[old(revoked)]` or (mid-correction) still resolve to a row
-    other than the one `CERTIFICATE_ID` named. Before this round this
-    function resolved `target_entry` correctly and then discarded it by
+    other than the one `CERTIFICATE_ID` named. This function used to
+    resolve `target_entry` correctly and then discard it by
     calling `issue` anyway -- naming one certificate in its own log while
     delivering whatever `issue` happened to resolve. `sign_for` signs the
     exact row this function already holds; nothing here re-resolves
@@ -5565,9 +5565,9 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
     still-`scheduled` row, and `docs/reference/schema.md` calls
     `photo_url` "a link, not an upload": turning it into something
     `render_announcement` can inline would mean this command reaching onto
-    the network for a URL a data file names, which this task does not take
-    on. A row that does carry a consented one prints a visible notice
-    instead of silently doing nothing about it (D-25) -- the alternative
+    the network for a URL a data file names, which it does not do. A row
+    that does carry a consented one prints a visible notice instead of
+    silently doing nothing about it (D-25) -- the alternative
     is a gap that looks identical to the common, legitimate case of
     "nothing to embed".
     """

@@ -13,10 +13,10 @@ The hard constraint is that the **browser** encrypts, with `WebCrypto` and no
 library, and **Python** decrypts; the two have to speak one wire format
 without either side adding a dependency. RSA-OAEP with SHA-256 is available
 on both sides for free -- natively in `crypto.subtle`, and in `cryptography`
-here, which this task's dispatch flagged as a dependency to *verify* rather
-than assume: it was neither declared nor installed before this change (see
-`pyproject.toml`). Python has no asymmetric primitive of its own -- `hashlib`,
-`hmac` and `secrets` are hashing and symmetric only -- and a symmetric key a
+here -- a dependency verified rather than assumed, since it was neither
+declared nor installed before it was needed (see `pyproject.toml`). Python
+has no asymmetric primitive of its own -- `hashlib`, `hmac` and `secrets`
+are hashing and symmetric only -- and a symmetric key a
 public registration page could hold would not be a key, so the real choice
 was between this well-audited library and hand-rolling RSA in the one module
 that handles a stranger's personal data. That is not a choice a project
@@ -527,7 +527,7 @@ def destroy(
 
 #: The retention window: the event's date, plus 90 days.
 #: A module constant, not a `data/config.yml` value: retention is a legal
-#: commitment stated once in the spec and in the confirmation e-mail
+#: commitment, stated once here and once in the confirmation e-mail
 #: (`confirmation.py::_DATA_PROTECTION`), never something an operator
 #: tunes per event.
 RETENTION_DAYS: Final = 90

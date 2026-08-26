@@ -87,17 +87,17 @@ BANNER: Final = Format(name="banner", width=1200.0, height=630.0)
 #: takes A4. The channel is "affiches imprimées et posées dans les
 #: instituts" -- printed and pinned up -- not "professionally printed",
 #: and this project has already turned down machinery nobody would actually
-#: run (the revalidation's own reasoning for not building a container image
-#: nobody would ever exercise applies here too, one level down).
+#: run -- the same reasoning that turned down building a container image
+#: nobody would ever exercise applies here too, one level down.
 PRINT_PAPER_MM: Final = (210.0, 297.0)
 
 #: 300 dpi, not 150. `_A4_150DPI_PX` below is what 150 dpi would give:
-#: 1240x1754, half the linear resolution -- the task brief's own "thin for
-#: print" example, and correctly so: a 150dpi print holds up passably at
+#: 1240x1754, half the linear resolution -- thin for print, and correctly
+#: judged so: a 150dpi print holds up passably at
 #: arm's length but a printed line at that resolution visibly softens up
 #: close, exactly the distance someone reads an institute noticeboard from.
-#: 300 dpi costs real, measurable things in return, both reported (not
-#: assumed) once this task actually rendered the print state: roughly 4x
+#: 300 dpi costs real, measurable things in return, both measured (not
+#: assumed) by rendering the print state: roughly 4x
 #: the pixels (2480x3508 against 1240x1754) means roughly 4x the PNG bytes
 #: and a render several times slower -- acceptable for a file generated
 #: once per edition by a CI job with no visitor waiting on it, the same
@@ -122,8 +122,8 @@ PRINT: Final = Format(
 
 FORMATS: Final = (SQUARE, BANNER, PRINT)
 
-#: The task brief's own stated reliability floor: a QR module below roughly
-#: this size is unreliable under an ordinary phone camera. Not this
+#: The reliability floor: a QR module below roughly this size is
+#: unreliable under an ordinary phone camera. Not this
 #: project's own measurement -- a physical constraint of the scanning
 #: hardware, stated as given -- but the one number `qr_module_size_mm`'s
 #: own result has to clear for `PRINT` to be a real, usable channel rather

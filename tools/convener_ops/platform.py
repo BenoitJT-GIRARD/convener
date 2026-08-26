@@ -12,10 +12,10 @@ other, and nothing here ever will.
 
 `ManualPlatform` is the default, not the fallback
 ---------------------------------------------------
-It needs no account, no secret, no network call. That is what makes
-acceptance criterion 8 of the spec true -- "the whole chain is executable
-end to end with the manual implementation, without any external account" --
-and what D-13 means when it calls a missing integration a normal state:
+It needs no account, no secret, no network call. That is what keeps the
+whole chain executable end to end with the manual implementation and no
+external account at all, and what D-13 means when it calls a missing
+integration a normal state:
 `config/integrations.yml`'s `meeting_provider` row already says so. Without
 `CONVENER_MEETING_API_TOKEN`, this is the implementation in use, which is the
 ordinary case, not a degraded one. The API implementation does not replace
@@ -63,8 +63,8 @@ was reading a file at all, not which file it was reading. So:
   it; `None` (no config supplied) reads as `''`, the same "nothing more to
   say" answer an explicit empty string would give.
 
-For attendance, the file stays exactly where the brief named it -- nothing
-about that path was in question:
+For attendance, the file stays where it has always been -- nothing about
+that path was in question:
 
     data/events/<id>/attendance-import.csv
 
@@ -78,9 +78,8 @@ under `data/` like everything else here -- it is dropped locally (or into
 an ephemeral job workspace) for this reader to consume once, never checked
 in.
 
-That, on its own, used to make acceptance criterion 8 ("the whole chain is
-executable end to end with the manual implementation, without any external
-account") undemonstrable for this path: `EVENT_PRIVATE_KEY` must never
+That, on its own, used to make the whole chain undemonstrable end to end
+for this path without an external account: `EVENT_PRIVATE_KEY` must never
 leave a CI job's environment (`eventkeys.py`'s own module docstring), yet
 the plaintext CSV can never reach a CI checkout at all (the `.gitignore`
 rule above forbids it) -- so the manual path could run neither in CI (no
@@ -115,9 +114,9 @@ inconsistency: `registration.py`'s own module docstring gives the real
 reason ("The file shape, and why it is not one envelope for the whole
 event") and it applies here word for word. A single blob means a bit
 flipped anywhere costs the whole event's attendance rather than one row,
-and -- the concrete failure this round closes -- there is no way to
-remove one person's rows from it without decrypting and re-encrypting
-everyone else's. `ATTENDANCE_FILE_VERSION`, `AttendanceExportFile`,
+and -- the concrete failure the per-row shape closes -- there is no way
+to remove one person's rows from a single blob without decrypting and
+re-encrypting everyone else's. `ATTENDANCE_FILE_VERSION`, `AttendanceExportFile`,
 `load_attendance_export_file` and `dump_attendance_export_file` below
 mirror `registration.py`'s `RegistrationFile` shape exactly: each entry is
 its own `eventkeys.encrypt` call over one row's fields, decoded back to a
@@ -165,7 +164,7 @@ is the thin wrapper that finds the file, calls it, and prints one line per
 dropped row to the job log (the same "printed where any volunteer can read
 it" idiom `cli.py` already uses for `board_notifications`'s fallback)
 before returning the rows that parsed. A column missing from the header is
-a whole-file failure, named in the exception (step 3 of the brief); a
+a whole-file failure, named in the exception; a
 single malformed row is reported and excluded, never silently dropped, and
 never aborts the rows around it.
 
@@ -174,8 +173,8 @@ never aborts the rows around it.
 turning `display_name` into a string starting with a BOM and making this
 module report *that* column missing -- on a file that has it. Windows and
 Excel-adjacent export tools write a BOM often enough that this is not a
-theoretical case, and getting the diagnosis wrong is exactly what the task
-exists to prevent: `utf-8-sig` strips a BOM when present and reads
+theoretical case, and getting the diagnosis wrong is exactly what this
+reader exists to prevent: `utf-8-sig` strips a BOM when present and reads
 identically to `utf-8` when it is not, so this is a strict widening, not a
 behaviour change for the files that already worked.
 
@@ -184,11 +183,11 @@ The email boundary (do not "fix" this)
 `AttendanceRow.email` is `str | None`, not `str`. A participant who joins by
 telephone has no address to give -- the platform never collects one -- and
 no matching cascade this project can build, present or future, will ever
-reach them by address or by normalised name, for want of both. The spec's
-2026-08-20 revalidation (SS5) writes this down as a **boundary**, not a
-matching weakness: "a certificate is only ever available to someone who
-joins by the link." `email=None` forces every caller to confront that case
-in the type checker rather than in production; mapping a phone joiner's
+reach them by address or by normalised name, for want of both. That is a
+**boundary**, not a matching weakness: a certificate is only ever
+available to someone who joins by the link. `email=None` forces every
+caller to confront that case in the type checker rather than in
+production; mapping a phone joiner's
 blank cell to `""` instead would let a caller compare two telephone rows'
 `""` addresses and read them as the same person, which they may not be.
 
@@ -231,10 +230,10 @@ _REQUIRED_ATTENDANCE_COLUMNS: Final = frozenset(
 #: An event id, validated the same way `eventkeys.py` validates one --
 #: `commit_format._TOKEN`, imported rather than copied so the two cannot
 #: drift into two different definitions of "a token" by hand-edit. The
-#: regex itself is rebuilt here, not imported from `eventkeys`: this task
+#: regex itself is rebuilt here, not imported from `eventkeys`: this module
 #: does not depend on event keys at all (nothing here handles registration
 #: data), and importing a private name from a sibling module for a two-line
-#: regex would create a coupling the brief explicitly says does not exist.
+#: regex would create a coupling that does not otherwise exist.
 #: The id becomes a path component (`events_dir / event_id / ...`); the
 #: leading-character rule (`[A-Za-z0-9]`, never `.`) already refuses `..`
 #: and any id starting with a dot, and the charset admits no `/`, so a
@@ -404,8 +403,8 @@ def parse_attendance_csv(
     text: str,
 ) -> tuple[list[AttendanceRow], list[AttendanceIssue]]:
     """The pure half of attendance reading: CSV text in, valid rows and
-    reported issues out. No filesystem, so every case the brief's step 3
-    asks for is testable directly, without a temp file.
+    reported issues out. No filesystem, so every malformed-input case is
+    testable directly, without a temp file.
 
     Raises `AttendanceImportError` if a required column is missing from the
     header, or if the header repeats a column name -- both are whole-file
@@ -825,7 +824,7 @@ class ManualPlatform:
 
     def delete_recording(self, event_id: str) -> None:
         """A documented no-op. `delete_recording` exists in D-05 because of
-        the *chosen platform's* storage quota (spec SS2): a 90-minute
+        the *chosen platform's* storage quota: a 90-minute
         recording there costs roughly its free tier's entire allowance. The
         manual implementation holds no recording storage of its own -- the
         file lives wherever the host uploaded it by hand -- so there is

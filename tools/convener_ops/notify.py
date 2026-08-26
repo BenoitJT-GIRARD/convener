@@ -91,8 +91,8 @@ from convener_ops.governance import paris_today, vote_window_days
 # Lateness -- the twin of `app/src/state/sla.ts`
 #
 # Calendar days, not working days: `config.sla_days` says its unit in neither
-# direction, and the spec's table writes these as plain days alongside windows
-# it does spell out as working days. `governance.add_working_days` is
+# direction, and these windows have always been written as plain days beside
+# others that do spell out working days. `governance.add_working_days` is
 # deliberately not used here, and that absence is the decision, not an
 # omission. Converting between the two units would move a real deadline by
 # real days.
@@ -644,8 +644,8 @@ def daily_digest(speakers: Any, config: Any, now: datetime) -> str | None:
     a day or duplicating `board.ts::NOMINATION_WINDOW_DAYS` into a second
     language, and a second copy of a window length is exactly the divergence
     this repository keeps having to back out of. So they are absent, and the
-    schema change that would fix it is written up in the task report rather
-    than worked around here.
+    schema change that would fix it is left to be made properly rather than
+    worked around here.
     """
     if not isinstance(speakers, Sequence) or isinstance(speakers, str | bytes):
         speakers = []

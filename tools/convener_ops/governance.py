@@ -244,13 +244,13 @@ def decide(
 # ------------------------------------------------------------------ #
 
 #: Saturday and Sunday, as `datetime.date.weekday` numbers them.
-#: Spec default for the vote window when `config.vote_window_days` is absent
+#: Built-in default for the vote window when `config.vote_window_days` is absent
 #: or unusable. Days, counted from `selection.opened_on`.
 DEFAULT_VOTE_WINDOW_DAYS = 14
 
 
 def vote_window_days(config: Any) -> int:
-    """The configured vote window, or the spec's 14-day default.
+    """The configured vote window, or the built-in 14-day default.
 
     Absent, zero, negative or non-integer: all fall back to the default rather
     than to zero. A config that never mentions the key must degrade to "do

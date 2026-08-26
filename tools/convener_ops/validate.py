@@ -118,8 +118,8 @@ CONFIG_REQUIRED = frozenset(
         # The configurable eligibility threshold: a share of
         # seminar_duration_minutes a matched attendee's summed duration must
         # reach to count as present. Required, not merely validated when
-        # present, as an earlier version of this check had it: the spec's
-        # own reason for making this configuration at all is that it must
+        # present, as an earlier version of this check had it: the whole
+        # reason for making this a configuration at all is that it must
         # be able to align with accreditation requirements this project
         # does not yet know - and alignment happens by editing this file,
         # not by editing tools/convener_ops/attendance.py. A threshold that only
@@ -129,7 +129,7 @@ CONFIG_REQUIRED = frozenset(
 )
 #: The two fields one promotion channel carries, and the only two.
 #:
-#: The seven channels the spec named are configuration and not a constant:
+#: The seven channels are configuration and not a constant:
 #: whether they are still the right seven cannot be confirmed without asking
 #: the collaborators, which this project never does. So nothing here counts
 #: them, and nothing here names one - a channel added, renamed or dropped in
@@ -531,7 +531,7 @@ def validate_speakers(
         if status == "scheduled" and not (entry.get("host_1") and entry.get("host_2")):
             errors.append(f"{where}: scheduled requires both host_1 and host_2")
 
-        # assigned_to is the board member who owns the lead (ruling P2-15).
+        # assigned_to is the board member who owns the lead.
         # It is not proposed_by, which is the submitter's self-reported name
         # and is never checked against the board: a member of the public may
         # propose a speaker, but only a member may be handed the follow-up.
@@ -975,8 +975,8 @@ def validate_config(cfg: Any) -> list[str]:
     # `seminar_duration_minutes` a matched attendee's summed duration must
     # reach to count as present. `eligibility_share` is in
     # `CONFIG_REQUIRED` above (a threshold that only ever
-    # lives as a Python default is a constant with extra steps, and the
-    # spec's own rationale - alignment with accreditation requirements not
+    # lives as a Python default is a constant with extra steps, and its
+    # whole rationale - alignment with accreditation requirements not
     # yet known - happens by editing this file, not by editing
     # `tools/convener_ops/attendance.py`). The `"eligibility_share" in cfg` guard
     # below is not a leftover of the old, optional shape: it still has to

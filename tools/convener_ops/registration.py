@@ -71,10 +71,10 @@ nothing here ever writes it down.
 
 A length cap, and why it is a threat-model line, not a data-quality one
 --------------------------------------------------------------------------
-This task turns the signup relay into something it was not before: a way
-to make the organisation's own mailbox deliver text to an arbitrary
-address. `to_registration` is the first and only gate a submission passes
-before `confirmation.compose` writes `first_name` straight into
+The signup relay is a way to make the organisation's own mailbox deliver
+text to an arbitrary address. `to_registration` is the first and only gate
+a submission passes before `confirmation.compose` writes `first_name`
+straight into
 `Dear {name},`, and, before this, that gate checked *shape* only --
 present, a string, non-empty after stripping -- never *size*.
 `services/signup-relay/src/index.js::MAX_CIPHERTEXT_BYTES` allows 16 KB of
@@ -83,8 +83,8 @@ bound the length of any one field inside it, only how often a submission
 can be made. So anyone who knows a published event id could already,
 before this cap, have every field padded out to most of that budget,
 addressed to any string containing `@`, delivered by the organisation's
-real mailbox -- a reputation and phishing exposure new to this task, not
-inherited from an earlier one.
+real mailbox -- a reputation and phishing exposure the relay creates and
+nothing else in this project does.
 
 `_MAX_FIELD_LENGTH` closes it the same way every other malformed-shape
 case in this function is refused: silently, by `to_registration` returning
@@ -485,7 +485,7 @@ def find_by_email(
     against the ten-minute job timeout; noted here rather than optimised
     away, because the alternative -- one combined find-and-replace pass --
     would have `upsert` hand back the entry it is about to overwrite,
-    which is a real API change this task's review did not ask for.
+    which is a real API change nothing here needs.
     """
     target = normalize_email(email)
     for entry in file.entries:

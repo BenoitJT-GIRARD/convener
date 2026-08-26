@@ -168,7 +168,7 @@ def _inactivity_months(config: dict[str, Any]) -> int | None:
     Absent, zero, negative or non-integer all degrade to `None` rather than to
     a built-in default, which is the opposite choice from
     `governance.vote_window_days`'s. The two safe directions are opposite:
-    there, the spec default is the value that parks nothing today; here, *any*
+    there, the built-in default is the value that parks nothing today; here, *any*
     number
     would name somebody, and no hand-edit to `config.yml` should be able to
     put a volunteer's name on a list by accident. A missing key means the

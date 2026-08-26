@@ -5,8 +5,8 @@ Three outcomes, not two
 ------------------------
 A person who showed up is **matched** (their `Registration`, with all their
 connections' durations summed), **unmatched** (an address the cascade could
-not tie to any registration -- the host resolves this by hand, per S:5's
-"reprise manuelle"), or **unreachable** (no address at all: a telephone
+not tie to any registration -- the host resolves this by hand), or
+**unreachable** (no address at all: a telephone
 joiner). The third is not a flavour of the second. `platform.py`'s own
 module docstring already draws this line and calls it a boundary, not a
 matching weakness to keep improving: "no matching cascade this project can
@@ -118,9 +118,9 @@ still one unresolved person, not two entries for a host to puzzle over
 separately. An unreachable row is never summed with another: there is no
 address to group by, and inventing one -- by display name, which is
 typically just the calling number and can legitimately repeat or vary
-between two unrelated calls -- would be exactly the kind of invention the
-task brief rules out ("aucune reprise manuelle ne peut inventer ce qu'elle
-n'a jamais eu"). Each unreachable row stands for itself.
+between two unrelated calls -- would be exactly the kind of invention this
+module rules out: no manual recovery can invent what it never had. Each
+unreachable row stands for itself.
 
 Nobody disappears in silence
 ---------------------------------
@@ -179,20 +179,20 @@ certificate would have to name. Two cases follow from that, both of them
 real risks rather than hypotheticals:
 
 - **Present without having registered** (an `UnmatchedAttendee`, or an
-  `UnreachableAttendee` if the same person joined by phone) is "non
-  éligible" in the spec's own words, and `eligible_attendees` agrees with
-  that verdict -- but not by computing `False` for them. There is no
-  honest way to ask "was this duration long enough" about a person this
-  module never identified, and answering it anyway would look, from a
-  caller's side, exactly like a registrant who attended too briefly:
+  `UnreachableAttendee` if the same person joined by phone) is not
+  eligible, and `eligible_attendees` agrees with that verdict -- but not
+  by computing `False` for them. There is no honest way to ask "was this
+  duration long enough" about a person this module never identified, and
+  answering it anyway would look, from a caller's side, exactly like a
+  registrant who attended too briefly:
   "we do not know who this was" collapsing into "we know who this was and
   they fell short", which are different facts the host resolving
   `matched.unmatched` needs told apart (a "reprise manuelle" is
   only actionable if it still says who is unresolved, not who failed a
   duration check). `eligible_attendees` keeps them apart the same way
   `match` keeps `unmatched` apart from `unreachable`: by construction,
-  never producing the first kind of answer at all. This is the deliberate
-  choice the task brief asks this module to write down: excluded as
+  never producing the first kind of answer at all. That is a deliberate
+  choice, written down rather than left implicit: excluded as
   something a caller must handle separately (the host's manual
   resolution, or, for a telephone joiner, the platform boundary the event
   page already documents), not folded into "not eligible".

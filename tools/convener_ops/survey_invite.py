@@ -3,8 +3,8 @@ stops a re-dispatch from sending it twice. `tools/convener_ops/survey.py`
 is the storage side; this module is the *sending* side --
 sent afterwards, only to people recognised as present.
 
-Who gets invited, and why the other two do not (ruling 1)
-------------------------------------------------------------
+Who gets invited, and why the other two do not
+----------------------------------------------
 `attendance.match` sorts every person a session's own attendance
 export names into exactly three outcomes -- see that module's own "Three
 outcomes, not two" section. Only `MatchedAttendee` is invited here:
@@ -36,14 +36,14 @@ scheduled duration, a bar set for a signed attestation of
 learning-adjacent presence; "reconnue presente" asks only whether we
 recognised the person in the room at all. Someone present for five minutes
 is not eligible for a certificate, but they were, in fact, recognised
-present, and the spec's own words for who receives a survey invitation are
-narrower than "eligible" only in one direction -- they never say "eligible
-attendee". Requiring the certificate threshold here would refuse an
-invitation to someone the spec's own sentence plainly includes.
+present, and "reconnue presente" is narrower than "eligible" only in one
+direction -- it never says "eligible attendee". Requiring the certificate
+threshold here would refuse an invitation to someone that phrase plainly
+includes.
 
 No personal data in the subject or the headers, and the same link for
-everyone (ruling 2)
------------------------------------------------------------------------------
+everyone
+----------------------------------------------------------------------
 The message names no certificate, no identifier, no matching code, and no
 per-recipient token: `survey_url` returns exactly one string, `event_id`
 and nothing else, the same address for every matched attendee of the same
@@ -147,8 +147,8 @@ a single message to either; writing to that person by hand, pasting
 already writes to a participant by hand for anything this codebase does
 not automate.
 
-Nothing nominative reaches a job log, on every path (ruling 4)
--------------------------------------------------------------------
+Nothing nominative reaches a job log, on every path
+---------------------------------------------------
 Mirrors `delivery.py` and `confirmation.py` exactly, for the identical
 reason: `compose` below returns a `confirmation.Confirmation`, and
 `cli.py::invite_survey` -- the only caller -- prints counts and event ids
@@ -209,8 +209,8 @@ __all__ = [
 #: (`site/src/survey.njk`, D-19: one page per event, the same addressing
 #: `event.njk` already uses for registration) -- and unlike
 #: `verification_url`, there was never a token to protect from `Referer`
-#: here in the first place (ruling 2: this module mints no per-person
-#: token at all), so the fragment was only ever a consistency choice with
+#: here in the first place (this module mints no per-person token at
+#: all), so the fragment was only ever a consistency choice with
 #: the certificate's own address, never a second privacy property this
 #: module relied on. Losing it loses nothing.
 #: `tools/tests/test_workflows.py::test_survey_base_matches_the_survey_
@@ -227,9 +227,9 @@ SURVEY_BASE: Final = published.load().under("survey/")
 
 def survey_url(event_id: str) -> str:
     """The one link every matched attendee of `event_id` receives -- see
-    the module docstring's "ruling 2" section for why this is a single,
-    person-independent address rather than anything computed from a
-    registration.
+    the module docstring's "the same link for everyone" section for why
+    this is a single, person-independent address rather than anything
+    computed from a registration.
 
     The trailing `/` mirrors `registration.signup_url` exactly, not
     `certificate.verification_url`: both this address and registration's
@@ -240,7 +240,8 @@ def survey_url(event_id: str) -> str:
 
 
 #: The one sentence every invitation carries about who receives it -- the
-#: "notice" ruling 2 asks for, restated here as a named constant rather
+#: notice that stands in for a per-person token, held here as a named
+#: constant rather
 #: than typed inline so `test_survey_invite.py` can pin it against
 #: `docs/toolkit/emails/survey-invitation.md`'s own copy, the same
 #: discipline `confirmation.MATCHING_INSTRUCTION` already holds itself to.
@@ -291,8 +292,8 @@ def compose(
 
 # ------------------------------------------------------------------ #
 # The per-event invitation registry -- see the module docstring's
-# "ruling 3" section for why this is the whole bound, and why it is
-# keyed on the event, never on a person.
+# "A resend must not re-invite everybody" section for why this is the
+# whole bound, and why it is keyed on the event, never on a person.
 # ------------------------------------------------------------------ #
 
 #: Where the registry lives, relative to a repository root -- mirrors

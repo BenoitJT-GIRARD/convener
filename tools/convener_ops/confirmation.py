@@ -30,9 +30,9 @@ entry point that reaches this job is deliberately without a shared secret --
 a browser cannot hold one. So anyone who knows an event id and a
 participant's address can overwrite that participant's name, institution or
 announce-list preference, and a certificate is generated from exactly that
-stored data. The review that found this ruled it *mandated* behaviour, not a
-defect -- the relay's openness is deliberate, a decision already taken
--- and named this confirmation as the only channel a genuine participant is
+stored data. That is *mandated* behaviour, not a defect -- the relay's
+openness is deliberate, a decision already taken -- and this confirmation
+is the only channel a genuine participant is
 ever sent down that could let them notice an overwrite that was not theirs.
 
 A channel nobody is ever sent down is not a channel. So `compose` takes

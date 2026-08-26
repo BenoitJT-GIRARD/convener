@@ -22,9 +22,9 @@ own `MRG-05` entry).
 
 The encoder: `segno`, already a dependency, not a new one
 ----------------------------------------------------------
-This task's own brief says a QR encoder is legitimate work to write from
-scratch, and that is true -- but it is also unnecessary here: `segno` is
-not added by this task. `tools/pyproject.toml` already carries it, checked
+Writing a QR encoder from scratch would be legitimate work, but it is
+also unnecessary here, because `segno` is not a new dependency:
+`tools/pyproject.toml` already carries it, checked
 against this project's own zero-cost constraints when `delivery.py` first
 added it for the certificate's own QR: pure Python, one
 universal wheel (`py3-none-any`, checked against the built artefact, not
@@ -35,8 +35,8 @@ the call path. Writing a second, hand-rolled encoder next to an
 already-vetted one would not be caution; it would be exactly the kind of
 duplicated logic this project avoids elsewhere for the same reason
 (`registration.normalize_email`'s own docstring: "a second, hand-written
-definition ... here would risk disagreeing with this one"). What this task
-does write from scratch is the *decoder* that proves the encoder's output
+definition ... here would risk disagreeing with this one"). What *is*
+written from scratch here is the *decoder* that proves the encoder's output
 is correct -- `tools/tests/qr_decode.py` -- because nothing in this
 project's dependency tree, and no service this project is willing to call
 over the network, reads a QR code back. See that module's own docstring.

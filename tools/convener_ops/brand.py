@@ -290,8 +290,8 @@ def contrast_problems(brand: dict[str, Any], *, named: str) -> list[str]:
     rechecked -- exactly how D-16's drift survived for months, on the
     strength of a plausible-sounding number. A ratio that recomputes
     correctly and sits below 4.5 is a *palette* that fails AA, which is
-    the state the spec forbids a default from ever reaching: "a palette
-    that does not clear AA must not build".
+    the state a default must never reach: a palette that does not clear AA
+    must not build.
 
     Both are checked at the command rather than only in the test suite,
     because the palette a duplicate builds with is not one this

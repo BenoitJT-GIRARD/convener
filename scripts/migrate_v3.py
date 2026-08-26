@@ -13,7 +13,7 @@ What it does:
 4. every speaker gains `career_stage: undisclosed`;
 5. every speaker gains a `publication` block, with `consent: pending` for a
    speaker whose status is `delivered` or `archived` and `''` otherwise;
-6. every speaker gains `assigned_to: ''` (ruling P2-15) -- `proposed_by` is
+6. every speaker gains `assigned_to: ''` -- `proposed_by` is
    the submitter, self-reported, and is never touched here.
 
 The migration is **idempotent**: every step tests for the migrated shape
@@ -47,7 +47,7 @@ PUBLISHABLE = frozenset({"delivered", "archived"})
 #: board size 5..9, vote window 14 days, objection window 3
 #: working days, balance window 24 months,
 #: and the four SLA delays. `inactivity_months` is the one
-#: value the specification leaves open; 6 months is what the test fixtures
+#: value nothing else pins down; 6 months is what the test fixtures
 #: already assume, and it is a configuration key precisely so the Board can
 #: change it without code.
 CONFIG_DEFAULTS: dict[str, Any] = {
@@ -128,7 +128,7 @@ def migrate_speaker(speaker: dict[str, Any]) -> dict[str, Any]:
         if key == "gender" and "career_stage" not in speaker:
             migrated["career_stage"] = "undisclosed"
         if key == "proposed_by" and "assigned_to" not in speaker:
-            # Ruling P2-15: assigned_to is the board member who owns the
+            # assigned_to is the board member who owns the
             # lead, proposed_by is whoever suggested the speaker. They are
             # not the same person and are never merged.
             migrated["assigned_to"] = ""
