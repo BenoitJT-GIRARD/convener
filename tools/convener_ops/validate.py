@@ -37,6 +37,12 @@ STATUSES = frozenset(
     }
 )
 GENDERS = frozenset({"M", "F", "NB", "undisclosed"})
+#: How a lead reached the series (`app/src/data/types.ts::Speaker.source`).
+#: Enumerated here for one narrow use below -- `proposed_by` is a person's
+#: name and must never be spelt like one of these -- and not to validate
+#: `source` itself, which this module has never checked and which
+#: `app/src/data/validate.ts` refuses at read time.
+SOURCES = frozenset({"form", "outreach", "organizer"})
 
 #: Governance model (schema v3, see app/src/data/types.ts). Kept in this
 #: module rather than imported from governance.py because governance.py
@@ -534,6 +540,21 @@ def validate_speakers(
         elif assigned_to and assigned_to not in board_logins:
             errors.append(
                 f"{where}: assigned_to is not a board member ({assigned_to!r})"
+            )
+
+        # proposed_by is a person or nobody. Rows imported before this
+        # schema existed wrote a *provenance* there -- the literal name of
+        # a `source` value -- while `source` itself said something else, so
+        # the field held a person on some records and a channel on others
+        # and no reader could tell which. Refused by the one thing that can
+        # be checked without guessing at names: a value spelt exactly like
+        # one of `source`'s own, which is the field that answers that
+        # question. Nothing here decides whether the rest are names.
+        proposed_by = entry.get("proposed_by")
+        if isinstance(proposed_by, str) and proposed_by.strip().lower() in SOURCES:
+            errors.append(
+                f"{where}: proposed_by names a person, not how the lead "
+                f"arrived ({proposed_by!r}) -- that is source's answer"
             )
 
         # career_stage and publication are required since the v3 migration

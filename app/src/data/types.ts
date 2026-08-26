@@ -337,8 +337,22 @@ export interface Speaker {
    *  outreach, or a record added by hand. */
   source: 'form' | 'outreach' | 'organizer';
   /** Who suggested this speaker, as self-reported at submission time -- often
-   *  someone outside the team. Kept verbatim: it is the only record of who to
-   *  tell if the Board declines the lead. Never overwritten by assignment. */
+   *  someone outside the team. A person or nobody: `''` where nobody is on
+   *  record. How the lead arrived is `source`'s answer and never this
+   *  field's. Kept verbatim otherwise -- it is the only record of who to
+   *  tell if the Board declines the lead -- and never overwritten by
+   *  assignment.
+   *
+   *  "A person or nobody" is written down because the records broke it.
+   *  Rows imported before this schema existed put the literal `Form` here
+   *  to mean "it arrived through the public form", while `source` on those
+   *  same rows said `organizer`: the field held a person on some records
+   *  and a provenance on others, and nothing reading it could tell which.
+   *  A provenance already had a field, and it was the wrong one that got
+   *  written. `tools/convener_ops/validate.py` now refuses a `proposed_by`
+   *  spelt like one of `source`'s own values, because the record has to
+   *  say what it means -- no reader downstream can guess it, and one that
+   *  tried would be guessing about somebody's name. */
   proposed_by: string;
   /** Which board member currently looks after this lead, assigned by rotation
    *  (see `state/board.ts::assignLead`). Distinct from `proposed_by` -- do not

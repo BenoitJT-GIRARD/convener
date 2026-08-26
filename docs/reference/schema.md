@@ -46,7 +46,7 @@ given" — and is well formed.
 | `seed_questions` | string | A few sentences from the speaker to open the forum discussion with. Free text, in their words, not a list this app parses. |
 | `conflicts_of_interest` | string | Declared by the speaker or noted by the Board, for the Board's own recusal rules. Not the declaration made to the audience during the session, which is three lines of the runbook. |
 | `source` | enum | How the lead reached the series: the public form, the team's own outreach, or a record added by hand. One of `form`, `outreach` or `organizer`. |
-| `proposed_by` | string | Who suggested this speaker, as self-reported at submission time -- often someone outside the team. Kept verbatim: it is the only record of who to tell if the Board declines the lead. Never overwritten by assignment. |
+| `proposed_by` | string | Who suggested this speaker, as self-reported at submission time -- often someone outside the team. A person or nobody: `''` where nobody is on record. How the lead arrived is `source`'s answer and never this field's. Kept verbatim otherwise -- it is the only record of who to tell if the Board declines the lead -- and never overwritten by assignment. |
 | `assigned_to` | string | Which board member currently looks after this lead, assigned by rotation (see `state/board.ts::assignLead`). Distinct from `proposed_by` -- do not merge the two: one is who nominated the speaker, the other is who is handling the follow-up. Empty until an assignment is made. |
 | `links` | list&lt;string&gt; | URLs the lead arrived with: ORCID, lab page, a paper. |
 | `host_1` | string | Login of the first Event Host. Both hosts are required from `scheduled` onwards. |

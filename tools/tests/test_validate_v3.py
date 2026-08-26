@@ -8,6 +8,7 @@ task's decision 2, which is not itself in the brief's table.
 
 from __future__ import annotations
 
+import pytest
 from conftest import (
     EDITIONS,
     ballot,
@@ -29,7 +30,7 @@ def test_ballot_with_unknown_value_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
+    errors = validate_speakers([s], board_logins={"carol"}, editions=EDITIONS)
     assert any("invalid ballot value" in e for e in errors)
 
 
@@ -41,7 +42,7 @@ def test_recused_ballot_without_coi_reason_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
+    errors = validate_speakers([s], board_logins={"carol"}, editions=EDITIONS)
     assert any("recusal requires coi_reason" in e for e in errors)
 
 
@@ -65,7 +66,7 @@ def test_ballot_from_a_login_absent_from_the_board_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
+    errors = validate_speakers([s], board_logins={"carol"}, editions=EDITIONS)
     assert any("ballot from a non-member" in e for e in errors)
 
 
@@ -77,7 +78,7 @@ def test_a_selection_with_no_ballots_list_is_not_a_ballot_error() -> None:
     # this validator's job to invent a threshold-affecting default for a
     # field it cannot see.
     s = speaker(selection={"opened_on": "", "decided_on": ""})
-    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
+    errors = validate_speakers([s], board_logins={"carol"}, editions=EDITIONS)
     assert not any("ballot" in e for e in errors)
 
 
@@ -89,7 +90,7 @@ def test_a_non_mapping_ballot_is_rejected() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
+    errors = validate_speakers([s], board_logins={"carol"}, editions=EDITIONS)
     assert any("not a mapping" in e for e in errors)
 
 
@@ -131,7 +132,7 @@ def test_board_members_still_present_is_obsolete() -> None:
     # Not in the brief's table, but decision 2 of the task requires the same
     # loud treatment for board_members as for vote_threshold: a file that
     # still carries the flat login list has not been migrated to `board`.
-    errors = validate_config(config(board_members=["Anonymous"]))
+    errors = validate_config(config(board_members=["carol"]))
     assert any("board_members is obsolete" in e for e in errors)
 
 
@@ -279,7 +280,7 @@ def test_accepted_nomination_of_an_inactive_member_is_accepted() -> None:
     errors = validate_config(
         config(
             board=[
-                board_member(login="Anonymous"),
+                board_member(login="carol"),
                 board_member(login="ada"),
                 board_member(login="grace", status="inactive"),
             ],
@@ -310,7 +311,7 @@ def test_publication_approved_on_must_be_a_date() -> None:
     s = speaker(
         publication={
             "consent": "granted",
-            "approved_by": "Anonymous",
+            "approved_by": "carol",
             "approved_on": "not-a-date",
             "objections": [],
             "outcome": "",
@@ -375,7 +376,7 @@ def test_ballot_date_must_be_a_date() -> None:
             "decided_on": "",
         }
     )
-    errors = validate_speakers([s], board_logins={"Anonymous"}, editions=EDITIONS)
+    errors = validate_speakers([s], board_logins={"carol"}, editions=EDITIONS)
     assert any("date must be YYYY-MM-DD" in e for e in errors)
 
 
@@ -509,7 +510,7 @@ def test_assigned_to_must_be_present_and_a_string() -> None:
 def test_assigned_to_must_name_a_board_member_when_set() -> None:
     errors = validate_speakers(
         [speaker(assigned_to="someone-else")],
-        board_logins={"Anonymous"},
+        board_logins={"carol"},
         editions=EDITIONS,
     )
     assert any("assigned_to is not a board member" in e for e in errors)
@@ -517,8 +518,7 @@ def test_assigned_to_must_name_a_board_member_when_set() -> None:
 
 def test_an_empty_assigned_to_is_accepted() -> None:
     assert (
-        validate_speakers([speaker(assigned_to="")], {"Anonymous"}, editions=EDITIONS)
-        == []
+        validate_speakers([speaker(assigned_to="")], {"carol"}, editions=EDITIONS) == []
     )
 
 
@@ -528,10 +528,48 @@ def test_proposed_by_is_never_checked_against_the_board() -> None:
     # form's own leads.
     assert (
         validate_speakers(
-            [speaker(proposed_by="A Passer-By")], {"Anonymous"}, editions=EDITIONS
+            [speaker(proposed_by="A Passer-By")], {"carol"}, editions=EDITIONS
         )
         == []
     )
+
+
+@pytest.mark.parametrize("spelling", ["form", "Form", "  OUTREACH ", "organizer"])
+def test_proposed_by_may_not_be_spelt_like_a_provenance(spelling: str) -> None:
+    """A record whose `proposed_by` is the name of a `source` value is
+    refused, however it is cased or padded.
+
+    The defect this closes was in the data, not the code: rows imported
+    before the schema existed wrote the channel into the field that names a
+    person, while `source` on the same rows said something else -- so the
+    field held a person on some records and a provenance on others, and
+    every reader downstream had to guess. `source` is the field that
+    answers "how did this arrive", and this is the only part of the
+    question a validator can settle without deciding what is a name.
+    """
+    errors = validate_speakers([speaker(proposed_by=spelling)], editions=EDITIONS)
+    assert [e for e in errors if "proposed_by names a person" in e], errors
+    assert all("spk-001" in error for error in errors), errors
+
+
+def test_proposed_by_may_hold_a_name_that_merely_contains_one() -> None:
+    """The rule matches the whole field, never a word inside it: somebody
+    actually called Form-something is a person, and a validator that read
+    their name as a channel would be the same guess in the other
+    direction."""
+    assert validate_speakers([speaker(proposed_by="Formby")], editions=EDITIONS) == []
+    assert (
+        validate_speakers(
+            [speaker(proposed_by="the organizers' own list")], editions=EDITIONS
+        )
+        == []
+    )
+
+
+def test_an_empty_proposed_by_is_accepted() -> None:
+    """Nobody on record is a state the file has to be able to hold -- a
+    lead the board raised itself has no submitter to name."""
+    assert validate_speakers([speaker(proposed_by="")], editions=EDITIONS) == []
 
 
 def test_a_speaker_without_career_stage_is_rejected() -> None:
