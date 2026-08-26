@@ -255,10 +255,21 @@ describe('the repository this app actually reads', () => {
     return readFileSync(resolve(__dirname, `../../data/${name}`), 'utf-8');
   }
 
+  // `parseSpeakers` throws on anything the model refuses -- a top level that
+  // is not a list, a row missing a field, a value outside a closed
+  // vocabulary -- so the call is the assertion, and it is the file itself
+  // that is on trial rather than what happens to be in it.
+  //
+  // It used to open on `expect(speakers.length).toBeGreaterThan(0)`, as the
+  // non-vacuity guard for the row assertion under it. Phase 12 task 4
+  // cleared the records of personal data and the list became empty, so that
+  // line would now pin this repository to holding rows -- and re-adding
+  // records is an ordinary cockpit operation, not a repair. An empty list is
+  // a shape the model has to accept. The check still fails on its own the
+  // moment the file and the model part company, which is what it is for.
   it('reads data/speakers.yml as the model says it is', () => {
-    const speakers = parseSpeakers(dataFile('speakers.yml'));
-    expect(speakers.length).toBeGreaterThan(0);
-    expect(speakers.every(s => s.id !== '')).toBe(true);
+    expect(() => parseSpeakers(dataFile('speakers.yml'))).not.toThrow();
+    expect(parseSpeakers(dataFile('speakers.yml')).every(s => s.id !== '')).toBe(true);
   });
 
   it('reads data/config.yml as the model says it is', () => {

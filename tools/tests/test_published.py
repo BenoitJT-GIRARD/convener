@@ -928,17 +928,42 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
     That is what makes changing the declaration impossible in practice
     rather than merely discouraged -- an edition code is in a published
     address, on an issued certificate and in a key filename, so the day
-    the two disagree the file is wrong, not the editions."""
+    the two disagree the file is wrong, not the editions.
+
+    **Where the evidence lives moved in phase 12, task 4**, and the
+    reasoning is worth keeping. This used to read the `edition_code` of
+    every row of `data/speakers.yml` and refuse an empty list, so that the
+    check could not pass by having nothing to check (D-25). Those rows
+    were then cleared of personal data and every code went with them --
+    but the editions themselves did not. `data/config.yml`'s
+    `next_edition_number` is a **high-water mark, not a count of rows**:
+    it is what still says this series is already numbering under this
+    prefix, and it is the one thing left in the repository that a
+    renumbering would have to go through. So the non-vacuity comes from
+    the counter now, and the rows are still held to the prefix whenever
+    there are any.
+
+    Which makes this the check that holds the counter still, too. Resetting
+    it to 1 alongside the emptied rows would have renumbered MRG-01..MRG-04 --
+    editions that already exist on posters and in sent mail -- and this
+    assertion is what refuses that.
+    """
     editions = published.load_edition_prefix()
+    config = yaml.safe_load((ROOT / "data" / "config.yml").read_text(encoding="utf-8"))
+    counter = config["next_edition_number"]
+    assert isinstance(counter, int) and counter > 1, (
+        "this instance has assigned no edition at all"
+    )
+    assert editions.describes(f"{editions.code_prefix}{counter - 1}")
+
     speakers = yaml.safe_load(
         (ROOT / "data" / "speakers.yml").read_text(encoding="utf-8")
     )
     assigned = [
         entry["edition_code"]
-        for entry in speakers
+        for entry in speakers or ()
         if isinstance(entry, dict) and entry.get("edition_code")
     ]
-    assert assigned, "this instance has assigned no edition at all"
     assert [code for code in assigned if not editions.describes(code)] == []
 
 
