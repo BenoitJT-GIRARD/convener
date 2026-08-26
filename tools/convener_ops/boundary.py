@@ -49,8 +49,8 @@ import yaml
 from .paths import repo_root
 
 #: The declaration itself, relative to a repository root. In `config/`
-#: rather than beside it: the revalidation of the phase 10 spec found that
-#: directory already mixing product and instance by accumulation, and the
+#: rather than beside it: that directory was already mixing product and
+#: instance by accumulation, and the
 #: answer to a directory nobody sorted is to sort it, not to open a second
 #: one next to it.
 DECLARATION_PATH: Final = Path("config") / "boundary.yml"
@@ -236,8 +236,7 @@ class Boundary:
     @property
     def instance_paths(self) -> tuple[str, ...]:
         """Every path an instance owns, from both halves of the
-        declaration, sorted. The enumeration phase 10 asks for -- computed,
-        never retyped."""
+        declaration, sorted. Computed, never retyped."""
         from_config = [
             name for name, owner in self.config_owners.items() if owner == INSTANCE
         ]
@@ -366,8 +365,8 @@ def config_owners(root: Path) -> dict[str, str]:
     is written -- a JSON file states the same `owner` key a YAML one
     does, next to the same argument for it, in a `_comment` because JSON
     has nowhere else to put one. A file with no `owner` is refused by
-    name rather than defaulted to either side: the phase 10 spec found this
-    directory mixing product and instance precisely because it filled up by
+    name rather than defaulted to either side: this
+    directory was found mixing product and instance precisely because it filled up by
     accumulation, with nobody ever deciding, and a default here would be
     that same silence with a friendlier face.
     """

@@ -10,7 +10,7 @@ read as that mark, no matter how faithfully every other measurement passes.
 
 What the reference actually shows
 ----------------------------------
-Traced pixel by pixel against the 1200x1200 reference -- task 1's own brief
+Traced pixel by pixel against the 1200x1200 reference -- the brief for it
 was a starting point to verify, not a given, and two of its claims did not
 survive that check: the left curl does not cross its own tail (it is a near
 circle open on one side, like the right one), and the stroke measures 23-33px
@@ -33,7 +33,7 @@ Every coordinate below is a fraction of either the canvas's shorter side
 loop's radius, a stroke's width, how far a curl sits from its edge) or of
 its width or height (for how far a point sits along the edge it belongs to,
 or how far the S-curve has travelled down the page). Nothing is a literal
-pixel count: task 4 renders this same function into a square poster, a wide
+pixel count: this same function renders into a square poster, a wide
 banner and a high-definition print, and a ribbon that only composes at one
 aspect ratio is a ribbon that fails three tasks later. Each loop is a true
 arc of a circle -- computed from where that circle crosses the edge it
@@ -171,7 +171,7 @@ def _arc_points(
 #: bottom ~(0.058, 0.429), in the same units) while crossing x=0 twice, the
 #: two points the reference shows the stroke actually touching the edge; the
 #: radius reads a touch larger than that fit once rendered and compared
-#: side by side against the reference (see the task 1 report) -- looking at
+#: side by side against the reference -- looking at
 #: it, not just measuring it, is the actual acceptance test here.
 _LEFT_LOOP_CENTRE_X: Final = 0.058
 _LEFT_LOOP_CENTRE_Y: Final = 0.365
@@ -204,8 +204,8 @@ _ARC_STEPS: Final = 8
 #: the resulting curve's own apex at (0.240, 0.792), close to the trace.
 #: Residual: 9.4px RMS over the 165 rows, against a stroke ~29px wide at
 #: this scale -- under a third of the stroke's own half-width, and not only
-#: at the apex. This replaces task 1's own (0.213, 0.875), which its report
-#: named directly: "the tail curvature is a generic smooth interpolation,
+#: at the apex. This replaces an earlier (0.213, 0.875), which was
+#: named directly as wrong: "the tail curvature is a generic smooth interpolation,
 #: not a point-by-point trace" -- that anchor left the resulting curve's
 #: apex about 100px short of the traced centreline through the middle of
 #: the tail (worst row, y~807: 97px), most visible there and less so near

@@ -306,7 +306,7 @@
         "context": { "period_hours": 24, "queue_beyond_hours": 96, "alarm_after_hours": 48 },
         "accepted": true,
         "bound": null,
-        "why": "the phase-8 audit's own burst figure"
+        "why": "the measured burst figure"
       },
       {
         "file": "config/actions-budget.yml",

@@ -325,7 +325,7 @@ def test_a_form_lead_opens_its_vote_window_so_it_can_expire() -> None:
 
 # --------------------------------------------------------------------- #
 # GENDER_ORDER/CAREER_STAGE_ORDER -- the guard against re-introducing the
-# hash-seed drift the sets used to carry (prerequisite for R-9).
+# hash-seed drift the sets used to carry.
 # --------------------------------------------------------------------- #
 
 
@@ -358,7 +358,7 @@ def test_the_vocabulary_this_form_offers_is_pinned() -> None:
 
 # --------------------------------------------------------------------- #
 # field_value -- resolving a picker's chosen option id(s) against that
-# field's own `options` array (R-9).
+# field's own `options` array.
 # --------------------------------------------------------------------- #
 
 

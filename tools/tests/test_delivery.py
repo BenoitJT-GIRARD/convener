@@ -97,7 +97,7 @@ def test_render_certificate_prints_a_whole_number_duration_without_a_decimal() -
 
 
 def test_render_certificate_carries_the_verification_url_as_text_and_as_a_qr() -> None:
-    """Important 2, fix round 1: the original version of this test proved
+    """The original version of this test proved
     the URL appears as text and that *some* `<svg class="qr">` exists,
     with nothing linking the two -- a QR encoding anything at all would
     still pass. `segno.make(url, ...)` -> `segno.make(identifier, ...)`
@@ -223,7 +223,7 @@ def test_compose_is_deterministic_so_a_resend_reproduces_it_exactly() -> None:
 # test opens a socket; the real transport is only ever reached through a
 # fake. `DeliveryResult` carries only `sent`, never the document -- see
 # the module docstring. `confirmation.SendResult` was narrowed to the
-# identical shape by Critical 3 (branch review); this module never had
+# identical shape on review; this module never had
 # the wider one in the first place -- see the module docstring's "never
 # written to disk" section for why.
 # ------------------------------------------------------------------ #
@@ -352,8 +352,8 @@ def test_smtp_delivery_transport_uses_starttls_on_an_ordinary_port(
     assert len(client.sent) == 1
     sent_email = client.sent[0]
     assert sent_email["Reply-To"] == CONTACT_EMAIL
-    # Minor 5, fix round 1: a real Date header -- spec S:9's own risk
-    # table names the spam folder by name, and a missing Date is a real
+    # A real Date header -- the spam folder is a named risk
+    # here, and a missing Date is a real
     # scoring signal. Present, and not empty -- not asserting an exact
     # value, since the real transport uses the actual send time.
     assert sent_email["Date"] is not None
@@ -413,7 +413,7 @@ def test_the_subject_matches_the_documentation_copy() -> None:
 
 
 def test_the_document_instruction_matches_the_documentation_copy() -> None:
-    """Minor 4, fix round 1: before this, only the subject was pinned --
+    """Only the subject used to be pinned --
     the body had already drifted typographically from the docs copy (an
     ASCII "--" where both the docs page and `compose`'s own subject line
     already used an em dash). `DOCUMENT_INSTRUCTION` is exported so this

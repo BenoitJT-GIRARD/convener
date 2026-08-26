@@ -131,7 +131,7 @@ def test_a_four_digit_edition_code_is_still_accepted() -> None:
 
 
 def test_the_edition_pattern_follows_the_declaration() -> None:
-    """Phase 11, task 4: the shape is no longer the product's.
+    """The shape is no longer the product's.
 
     `EDITION_RE` used to fix `MRG-` and one to four digits here -- the
     initials of the series that happens to run this repository, in the
@@ -143,8 +143,8 @@ def test_the_edition_pattern_follows_the_declaration() -> None:
     assert (
         validate_speakers([speaker(edition_code="MRG-1")], editions=reading_group) == []
     )
-    # A prefix that is nobody's. This was the prefix of the instance
-    # running the repository until phase 12 task 6, which made the
+    # A prefix that is nobody's. This used to be the prefix of the instance
+    # running the repository, which made the
     # counter-example the one string a derivation is bound to rewrite --
     # and rewriting it turned the negative case into a second copy of the
     # positive one, silently.
@@ -226,7 +226,7 @@ def test_the_view_counting_window_is_configuration_on_this_side_too() -> None:
 
 
 def test_a_turnaround_target_must_be_a_whole_number() -> None:
-    """F-14. The four `sla_days` values are day counts, and nothing said so.
+    """The four `sla_days` values are day counts, and nothing said so.
 
     `validate_config` used to check the four keys were *present* and never
     what they held, while `app/src/data/validate.ts::readSlaDays` reads each
@@ -280,7 +280,7 @@ def test_a_missing_sla_days_key_is_reported_once_not_twice() -> None:
 
 
 def test_a_stored_lead_decision_sla_is_reported_as_obsolete() -> None:
-    # F-14/schema v3: the board's decision deadline is vote_window_days, not
+    # Schema v3: the board's decision deadline is vote_window_days, not
     # a fourth sla_days entry -- a file that still carries the old key would
     # leave whoever set it believing the board had that many days instead.
     cfg = config()
@@ -290,7 +290,7 @@ def test_a_stored_lead_decision_sla_is_reported_as_obsolete() -> None:
 
 
 def test_eligibility_share_is_required_configuration_not_a_constant() -> None:
-    """Phase 4 S:5, round 2 review: a threshold that only ever lives as a
+    """A threshold that only ever lives as a
     Python default is a constant with extra steps, and alignment with an
     accreditation body's requirement has to happen by editing this file.
 
@@ -345,7 +345,7 @@ def test_eligibility_share_must_be_a_number() -> None:
 
 def test_config_board_member_must_look_like_a_login() -> None:
     # Schema v3: board_members (flat login list) was replaced by board
-    # (a list of BoardMember mappings) in Task 1 / Task 4. The rule this
+    # (a list of BoardMember mappings). The rule this
     # test pins - a malformed login is rejected - is unchanged; only the
     # shape of the data it is expressed against has moved.
     errors = validate_config(config(board=[board_member(login="not a login!")]))

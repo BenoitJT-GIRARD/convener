@@ -1,7 +1,6 @@
-"""A registration that took the slow lane, from the queue to the e-mail
-(phase 9, task 3).
+"""A registration that took the slow lane, from the queue to the e-mail.
 
-Task 2's own `test_submission_queue.py` holds the queue's mechanism; this
+`test_submission_queue.py` holds the queue's mechanism; this
 file holds the second kind that now travels through it, and the one thing
 the survey response never needed: **the confirmation has to go out exactly
 once, after the record has landed, and the entry may not be cleared until
@@ -351,7 +350,8 @@ def test_a_registration_never_shares_a_ledger_entry_with_a_survey_response() -> 
 
 
 def test_a_waiting_registration_takes_a_slot_before_a_survey_only_event() -> None:
-    """The competition task 3 introduced, and the answer it picked. The two
+    """The competition two kinds of submission create, and the answer this
+    picked. The two
     kinds do not lose the same thing by waiting: a deferred survey response
     costs its submitter nothing, a deferred registration spends one of the
     two drain periods the floor reserves for a dropped run."""
@@ -481,7 +481,7 @@ def test_the_two_scripts_store_then_confirm_and_only_then_allow_a_clear(
 def test_the_confirming_script_leaves_an_entry_whose_key_is_missing_in_the_queue(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The rescue property, one step further on than task 2 proved it: a
+    """The rescue property, one step further on than the queue proves it: a
     confirmation that could not be composed must not clear the entry that
     still needs one."""
     _, public_pem = _repo(tmp_path)

@@ -1,4 +1,4 @@
-"""Fix round 1 (task 12 follow-up): task 12 wired a dependency audit into
+"""A dependency audit was first wired into
 `.github/workflows/quality.yml`'s `site/` steps only. `site/` was the surface
 that happened to pass -- `app/`'s own tree was never audited at all, and
 it is the larger one: `react-router`/`react-router-dom` and `js-yaml` are
@@ -36,8 +36,7 @@ registry, exactly the network access this suite must not take on.
 Running the real audits for real -- against the real installed trees, on
 both the current state and (reverted afterwards) the state before this
 fix -- is this task's own report, not this module: see
-`.superpowers/sdd/2026-08-22-phase-5-vitrine-publique/task-12-report.md`,
-"Fix round 1", for the exact commands and the exact findings each printed.
+Each command below was run for real, and what it printed was read.
 """
 
 from __future__ import annotations
@@ -68,7 +67,7 @@ def _job(name: str, next_job: str | None) -> str:
 def _lane(job: str, first_step: str, next_step: str | None) -> str:
     """Slices one *lane* out of a merged job's own text.
 
-    Phase 8, task 2 grouped `quality.yml`'s eight jobs into four: what
+    `quality.yml`'s eight jobs were grouped into four: what
     were the `typescript`, `site` and `spelling` jobs are now three lanes
     of one `web` job, and the three relays are three lanes of one
     `relays` job -- eight billed jobs became four with no check dropped.
@@ -113,8 +112,8 @@ def test_the_app_lane_audits_production_dependencies() -> None:
     """The blocking gate: `react-router`/`react-router-dom` and `js-yaml`
     are real `dependencies` (`app/package.json`), shipped in the built
     application bundle -- `--omit=dev` is what makes this step fail on
-    exactly that shipped surface, the one this fix round found unaudited
-    and fixed (see the report)."""
+    exactly that shipped surface, the one that went unaudited
+    longest."""
     assert "npm audit --omit=dev" in _APP_LANE
 
 
@@ -150,8 +149,8 @@ def test_the_app_lane_surfaces_development_findings_without_blocking() -> None:
 
 def test_the_app_lanes_two_audit_steps_are_not_the_same_step() -> None:
     """The production gate must not itself be marked `continue-on-error`
-    -- that would silently turn the one check this fix round exists to
-    make block into another step nothing can fail."""
+    -- that would silently turn the one check that has to block
+    into another step nothing can fail."""
     omit_dev_index = _APP_LANE.index("npm audit --omit=dev")
     preceding = _APP_LANE[max(0, omit_dev_index - 200) : omit_dev_index]
     assert "continue-on-error" not in preceding
@@ -217,7 +216,7 @@ def test_the_relay_audit_step_runs_before_the_test_step() -> None:
 
 def test_app_production_dependencies_that_were_the_finding_are_still_declared() -> None:
     """`react-router-dom` and `js-yaml` must stay real `dependencies` --
-    the fact that made this fix round's finding real (they ship in the
+    the fact that made the finding real (they ship in the
     built cockpit bundle) rather than academic. This does not pin a
     version (the fix was a lockfile-only bump within the existing caret
     ranges, not a package.json edit -- see the report); a floating range

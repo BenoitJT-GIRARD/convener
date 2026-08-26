@@ -1,4 +1,4 @@
-"""Phase 9, task 4: nothing detects a submission that entered the queue and
+"""Nothing detects a submission that entered the queue and
 was never handled.
 
 Every failure *inside* a drain is already loud (`test_submission_queue.py`).
@@ -278,8 +278,8 @@ def _configured() -> queue_watch.Thresholds:
 
 def test_the_threshold_lives_in_config_beside_the_others() -> None:
     """Never `data/config.yml`: the app's validator refuses by name any key
-    it does not know and would delete it at the next Board edit, which
-    phase 8 hit. `config/` is what `deploy.yml` ignores."""
+    it does not know and would delete it at the next Board edit, which has
+    happened. `config/` is what `deploy.yml` ignores."""
     assert queue_watch.CONFIG_PATH.parent.as_posix() == "config"
     assert queue_watch.config_path(_ROOT).is_file()
     assert (_ROOT / "config" / "actions-budget.yml").is_file()
@@ -596,7 +596,7 @@ def test_both_commands_refuse_a_configuration_they_cannot_read(
 def test_a_listing_that_was_never_taken_is_not_read_as_an_empty_queue(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """R-36's own lesson, one file over in retention.yml: a question that
+    """The lesson retention.yml carries one file over: a question that
     could not be answered is not the answer "nothing", and reading it as
     one is how a control reports that everything is fine while it is not."""
     root = _repo(tmp_path, monkeypatch, _NOW)

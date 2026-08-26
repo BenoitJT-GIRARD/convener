@@ -16,7 +16,7 @@ dependencies = [
   # hand-rolling RSA in the one module that handles other people's personal
   # data; see tools/convener_ops/eventkeys.py for the rest of that reasoning.
   "cryptography>=43",
-  # spec S:7 requires the certificate's machine-readable code, and task 14's
+  # A certificate carries a machine-readable code, and the delivery step's
   # own ruling requires the library that draws it to be pure Python, no
   # binary wheel, no Pillow -- verified before adding it, not assumed: segno
   # ships one universal wheel (py3-none-any, checked directly against the

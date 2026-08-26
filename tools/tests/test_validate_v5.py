@@ -1,13 +1,12 @@
-"""Schema v5: the post-event survey's per-event switch (task 16, phase 4
-spec S:6), on the write side.
+"""Schema v5: the post-event survey's per-event switch, on the write side.
 
 The same two-language discipline `test_validate_v4.py`'s own module
 docstring states, applied to the one field schema v5 adds:
 
 - **An absent key is a defect.** A record with no `survey_enabled` at all
   is a record nobody finished migrating, not a record whose survey is off.
-- **`False` is an answer.** The switch is off by default (task 16 ruling
-  1, "facultatif veut dire absent par defaut"), and a record that says so
+- **`False` is an answer.** The switch is off by default -- optional means
+  absent by default -- and a record that says so
   explicitly is well formed.
 
 Everything here is a whole record from `conftest.speaker()` with one thing

@@ -1,5 +1,5 @@
 """`convener-render-visual-fixtures` -- the one disk-writing seam between
-`visual.render_announcement`/`formats.FORMATS` (both pure) and task 5's own
+`visual.render_announcement`/`formats.FORMATS` (both pure) and the
 pinned Node/Puppeteer render step, which reads what this command writes
 rather than re-deriving a page's own markup a second time in JavaScript.
 """
@@ -106,7 +106,7 @@ def test_wrong_argument_count_fails_with_a_usage_message(
 
 
 # ------------------------------------------------------------------ #
-# Whose poster the committed reference images are (phase 12, task 1)
+# Whose poster the committed reference images are
 # ------------------------------------------------------------------ #
 
 

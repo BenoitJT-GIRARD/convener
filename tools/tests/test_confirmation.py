@@ -92,7 +92,7 @@ _CONFIG_ENV = {
 
 
 # ------------------------------------------------------------------ #
-# changed_fields(): what an update names, never what it quotes (R-9)
+# changed_fields(): what an update names, never what it quotes
 # ------------------------------------------------------------------ #
 
 
@@ -114,7 +114,7 @@ def test_changed_fields_names_several_fields_in_a_fixed_order() -> None:
 
 
 def test_changed_fields_never_names_a_value_it_saw_change() -> None:
-    """The property R-9 asks for directly: a diff that leaks the old or the
+    """The property directly: a diff that leaks the old or the
     new institution name would defeat the point of naming fields instead of
     quoting them."""
     old = _registration(institution="Old Institute")
@@ -175,7 +175,7 @@ def test_event_details_blank_title_and_date_read_as_empty_strings() -> None:
 
 
 # ------------------------------------------------------------------ #
-# compose(): the four required contents (spec S:3), and R-9's update notice
+# compose(): the four required contents, and the update notice
 # ------------------------------------------------------------------ #
 
 
@@ -221,7 +221,7 @@ def test_compose_carries_the_matching_code_and_its_exact_instruction() -> None:
 
 
 def test_compose_gives_a_worked_example_built_from_the_registrants_name() -> None:
-    """Review round 1, Important 7: the instruction alone leaves open
+    """The instruction alone leaves open
     whether the hyphen is part of the code and whether the participant's
     own name stays in the field. The worked example answers both."""
     message = compose(
@@ -259,11 +259,11 @@ def test_compose_says_nothing_about_an_update_when_nothing_changed() -> None:
 
 
 def test_compose_names_what_changed_and_warns_when_something_did() -> None:
-    """R-9: the only detection channel for a silent overwrite has to name
+    """The only detection channel for a silent overwrite has to name
     the change and tell the reader what to do if it was not them.
 
-    Asserts the whole sentence, not a bare substring (review round 1,
-    Important 6): "institution" also appears in `_DATA_PROTECTION`, which
+    Asserts the whole sentence, not a bare substring:
+    "institution" also appears in `_DATA_PROTECTION`, which
     every message ever composed carries, so a mutant naming the *wrong*
     changed field would still satisfy a check for that word alone."""
     message = compose(_registration(), _EVENT, "WXYZ-2345", changed=("institution",))
@@ -285,7 +285,7 @@ def test_compose_joins_several_changed_fields_in_one_sentence() -> None:
 
 
 def test_compose_never_quotes_the_institution_value_in_an_update_notice() -> None:
-    """The property `changed_fields` names but does not quote (R-9) has to
+    """The property `changed_fields` names but does not quote has to
     survive into the composed message too, not only into the field list."""
     message = compose(
         _registration(institution="Analytical Engines Institute"),
@@ -312,7 +312,7 @@ def test_compose_is_deterministic_so_a_resend_reproduces_it_exactly() -> None:
 
 
 def test_smtp_env_vars_names_exactly_the_five_keys_of_config_env() -> None:
-    """`SMTP_ENV_VARS` (task 14) exists so a second module
+    """`SMTP_ENV_VARS` exists so a second module
     (`delivery.py`) and a test deriving what a function reads from its
     own source (`test_workflows.py`'s `_env_vars_read`) can name "every
     email_transport secret" without retyping five strings a second time
@@ -383,7 +383,7 @@ def test_smtp_config_from_env_accepts_the_implicit_tls_port() -> None:
 
 
 def test_deliver_with_no_transport_returns_unsent() -> None:
-    """Critical 3, branch review: `SendResult` carries only `sent` now --
+    """`SendResult` carries only `sent` --
     no `unsent_body`, the same narrow shape `delivery.DeliveryResult`
     already used. Nothing here holds the composed message on the unsent
     path any more, so there is nothing left to inspect but the boolean."""
@@ -507,13 +507,13 @@ def test_smtp_transport_uses_starttls_on_an_ordinary_port(
     assert client.starttls_called is True
     assert client.login_calls == [("u", "p")]
     assert len(client.sent) == 1
-    # Review round 1, minor 5: "reply to this message" must be true
+    # "reply to this message" must be true
     # regardless of what `config.sender` (CONVENER_SMTP_FROM) happens to be.
     assert client.sent[0]["Reply-To"] == CONTACT_EMAIL
-    # Carried item 6 (fix wave 2): the same `Date` header
-    # `delivery.py::_SmtpDeliveryTransport.send` already carries (Minor 5,
-    # fix round 1) -- spec S:9's own risk table names the spam folder by
-    # name, and a missing `Date` is a real scoring signal. Present, and
+    # The same `Date` header
+    # `delivery.py::_SmtpDeliveryTransport.send` already carries
+    # -- the spam folder is a real risk here, and a missing `Date` is a
+    # real scoring signal. Present, and
     # not empty -- not asserting an exact value, since the real transport
     # uses the actual send time.
     assert client.sent[0]["Date"] is not None
@@ -590,17 +590,17 @@ def test_the_update_warning_matches_the_documentation_copy() -> None:
 
 
 # ------------------------------------------------------------------ #
-# Two more unbound copies review round 1 found: the contact address and
+# Two more unbound copies a review found: the contact address and
 # the retention window, both restated in `SignupForm.tsx` (the page a
 # participant reads *before* registering) rather than read from one place.
 # Pinned the same D-14 way, across a third file this time.
 # ------------------------------------------------------------------ #
 
-#: Task 6: the form itself moved from `app/src/signup/SignupForm.tsx`
+#: The form itself moved from `app/src/signup/SignupForm.tsx`
 #: (the operators' application) to `app/src/islands/signup/SignupForm.tsx`
 #: (the island mounted on the public event page) -- see git history for
 #: the file this replaced. `encrypt.ts`, which these tests never read,
-#: stayed exactly where it was: shared, not moved, not forked (P-2).
+#: stayed exactly where it was: shared, not moved, not forked.
 _SIGNUP_FORM = (
     Path(__file__).resolve().parents[2]
     / "app"
@@ -616,7 +616,7 @@ def test_the_contact_email_matches_the_signup_pages_own_notice() -> None:
     erase your data" before anyone registers; the confirmation e-mail's
     own rights notice names the same one.
 
-    Until phase 10 task 3 both sides held the literal and this test bound
+    Both sides used to hold the literal and this test bound
     them to each other -- which could say the two copies still agreed,
     never that there was one. Both now read `config/instance.json`, so
     what is asserted here is that neither has gone back to writing it out:
@@ -636,19 +636,19 @@ def test_the_contact_email_matches_the_signup_pages_own_notice() -> None:
 
 
 def test_the_retention_window_is_the_same_number_everywhere() -> None:
-    """The paragraph with legal weight (review round 1): "90 days" is
+    """The paragraph with legal weight: "90 days" is
     restated in `confirmation.py`, the docs copy, and `eventkeys.py`'s own
     citation of the same number (`RSA_KEY_BITS`'s docstring: "this
-    project's retention window (90 days, see the phase 4 spec)"). Nothing
-    here reads a shared constant -- none exists yet, since the retention
-    job itself is a later task -- so this test is what keeps the prose
+    project's retention window, 90 days"). Nothing
+    here reads a shared constant -- none exists -- so this test is what
+    keeps the prose
     copies from drifting apart until one does.
 
-    Phase 5 task 5 added a fourth restatement, `site/src/event.njk`'s own
-    notice -- at the time, quoted from `SignupForm.tsx`'s own copy as a
-    stopgap (that template's own comment said so), because task 6 had not
-    mounted the registration island yet. Task 6 removed that in-component
-    copy once it did: the notice is not interactive, so D-18 keeps it as
+    There is a fourth restatement, `site/src/event.njk`'s own
+    notice -- at first quoted from `SignupForm.tsx`'s own copy as a
+    stopgap (that template's own comment said so), before the registration
+    island was mounted. Mounting it removed the in-component
+    copy: the notice is not interactive, so D-18 keeps it as
     plain static HTML on the event page and the island renders none of it
     itself -- rendering it from both places would put two copies of the
     same legal notice on one page. `event.njk` is therefore the *only*
@@ -689,7 +689,7 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
 
 
 def test_signup_form_max_field_length_matches_the_python_constant() -> None:
-    """Important 1 (branch review): `registration._MAX_FIELD_LENGTH`
+    """`registration._MAX_FIELD_LENGTH`
     mutated from 200 to 5000 survived every Python test, and `SignupForm.tsx`
     had no `maxLength` counterpart at all -- a 201-character field was
     accepted by the browser and the relay, shown as sent, and only then
@@ -708,7 +708,7 @@ def test_signup_form_max_field_length_matches_the_python_constant() -> None:
 
 
 # ------------------------------------------------------------------ #
-# Critical 2 (branch review): this page's own pinned claim -- "the room
+# This page's own pinned claim -- "the room
 # is a permanent account, its link is not otherwise published" -- is only
 # checkable if something actually checks the "otherwise" against every
 # public template, not merely against this one page's own prose. Before
@@ -724,16 +724,16 @@ _TOOLKIT_DIR = Path(__file__).resolve().parents[2] / "docs" / "toolkit"
 _PUBLIC_ANNOUNCEMENT_TEMPLATES = (
     _TOOLKIT_DIR / "forum-post-announce.md",
     _TOOLKIT_DIR / "linkedin-post.md",
-    # Task 7's own mailing-list message: the same "announces something
+    # The mailing-list message: the same "announces something
     # upcoming, points at the event page" shape as the two above, so it
     # carries the same signup-link claim and is checked against the same
-    # room-link literal. `recording-announce.md`, task 7's fourth text,
+    # room-link literal. `recording-announce.md`, the fourth text,
     # is not here -- it announces something already delivered and has no
     # registration to send anyone to, so it is checked on its own below.
     _TOOLKIT_DIR / "mailing-list-announce.md",
 )
 
-#: Task 7's recording announcement, checked for the room-link leak this
+#: The recording announcement, checked for the room-link leak this
 #: whole section exists to catch, but not folded into
 #: `_PUBLIC_ANNOUNCEMENT_TEMPLATES`: that tuple's second test requires
 #: every member to publish `{{ speaker.signup_link }}`, and this page
@@ -768,12 +768,12 @@ def test_the_recording_announcement_never_publishes_the_room_link_either() -> No
 
 
 def test_every_public_announcement_template_publishes_the_signup_link_instead() -> None:
-    """Fix wave 2 correction: wave 1 published `registration.SIGNUP_BASE`
-    itself as a literal, with the event id left for a volunteer to type in
+    """A correction: `registration.SIGNUP_BASE` used to be published
+    as a literal, with the event id left for a volunteer to type in
     by hand -- exactly the "depends on somebody remembering, and getting it
     right" shape this project refuses everywhere else. Both templates now
     carry `{{ speaker.signup_link }}`, a value `render.ts` computes from the
-    Speaker record's own `edition_code` per R-5, so nothing about the
+    Speaker record's own `edition_code`, so nothing about the
     address is ever hand-filled."""
     for path in _PUBLIC_ANNOUNCEMENT_TEMPLATES:
         text = path.read_text(encoding="utf-8")
@@ -788,9 +788,9 @@ def test_every_public_announcement_template_publishes_the_signup_link_instead() 
 
 
 # ------------------------------------------------------------------ #
-# Fix wave 2 correction: the R-5 mapping (event_id is edition_code,
-# lower-cased -- platform.py::find_speaker) does exist, contrary to wave
-# 1's stated reasoning. `registration.signup_url` and `render.ts`'s own
+# The mapping (event_id is edition_code,
+# lower-cased -- platform.py::find_speaker) does exist, contrary to an
+# earlier claim. `registration.signup_url` and `render.ts`'s own
 # `signup_link` derivation must compute the identical address for the
 # identical Speaker record; bound here by the shared, worked fixture
 # (D-14) rather than by two constants trusted to agree. `edition_code` is
@@ -810,7 +810,7 @@ def _signup_link_cases() -> dict[str, Any]:
 
 
 def test_signup_base_matches_the_shared_fixture() -> None:
-    """Phase 10 task 2: the fixture states the *path* the product
+    """The fixture states the *path* the product
     publishes an event page under; the root both sides prepend is
     `config/instance.json`'s, read here through `published.load()` and on
     the TypeScript side through `import.meta.env.VITE_PUBLISHED_URL`. The
@@ -826,7 +826,7 @@ def test_signup_base_matches_the_shared_fixture() -> None:
 def test_signup_url_matches_the_shared_fixtures_worked_examples(
     case: dict[str, str],
 ) -> None:
-    # The fixture's own event_id pins R-5 itself: lower-casing edition_code
+    # The fixture's own event_id pins the rule: lower-casing edition_code
     # IS the rule, not merely an assumption the case was built under.
     assert case["event_id"] == case["edition_code"].lower()
     assert registration.signup_url(case["event_id"]) == published.load().under(

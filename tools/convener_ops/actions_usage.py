@@ -3,7 +3,7 @@
 Every minute figure this project has ever written down is a
 `timeout-minutes` ceiling. Nothing in this repository has ever run on
 GitHub, so the gap between those ceilings and a real duration is unknown
-and plausibly a factor of five to ten -- phase 8's own plan, P-5. This
+and plausibly a factor of five to ten. This
 module is the half of closing that gap that can be computed offline: the
 arithmetic that turns what the Actions API reports into a billed figure, a
 rate, and the reasons an alarm should go off.
@@ -20,7 +20,7 @@ repository, with no CI running and no log to scroll -- the same shape
 **Is the budget about to run out.** `alarms` answers that, and the answer
 is loud or it is nothing: an exhausted Actions budget does not fail
 noisily, it simply stops work, and `retention.yml` -- a promise with legal
-weight -- is one of the things it stops (AF-2, 2026-08-23 security audit).
+weight -- is one of the things it stops.
 A counter nobody reads is not a control (D-25).
 
 Why a rate over a rolling window, and never a monthly total
@@ -98,7 +98,7 @@ USAGE_FILE_VERSION: Final = 1
 BILLED_MINUTE_MS: Final = 60_000
 
 #: Days in an average month, for projecting a window's rate. The same 30.4
-#: the phase-8 audit used, so its ceilings and these measurements are
+#: the declared ceilings were computed with, so the two are
 #: directly comparable.
 DAYS_PER_MONTH: Final = 30.4
 
@@ -117,7 +117,7 @@ SCHEDULED_EVENT: Final = "schedule"
 #: volume is decided by strangers, and the only one that grows when the
 #: series succeeds.**
 #:
-#: Phase 9, task 2 took the survey off this line entirely: a survey
+#: The survey is off this line entirely: a survey
 #: response is written to the submission queue and handled by a step of a
 #: job that already runs, so it produces no run of its own and appears in
 #: no measurement here. What that means for a reading of
@@ -177,8 +177,8 @@ class Budget:
     `config/actions-budget.yml`.
 
     None of them has a default here, and that is the point: a threshold
-    with a fallback in Python is a constant with extra steps, and phase 10
-    is going to make the instance/code boundary mechanical. A malformed or
+    with a fallback in Python is a constant with extra steps, and the
+    instance/code boundary is mechanical. A malformed or
     partial file is refused by `budget_from_data`, never quietly completed.
     """
 
@@ -255,7 +255,7 @@ class Run:
     `billed_minutes` is `None` when the timing endpoint could not be read
     for this run. That is deliberately not zero: a question that could not
     be answered is not the answer "nothing" -- this repository has already
-    paid for reading one as the other once (`retention.yml`'s own R-36
+    paid for reading one as the other once (`retention.yml`'s own
     comment on `gh secret list`), and reading an unreadable run as free is
     exactly the direction that understates a bill.
 
@@ -563,7 +563,7 @@ def alarms(usage: Usage, budget: Budget) -> tuple[Alarm, ...]:
                 "for. Submissions are the only item here whose volume is "
                 "decided by strangers and the only one that grows when the "
                 "series succeeds: one run each, today. This is the number "
-                "that says the public-submission queue (phase 9) has stopped "
+                "that says the public-submission queue has stopped "
                 "being a precaution and become the thing standing between an "
                 "announcement and an exhausted budget.",
             )

@@ -1,4 +1,4 @@
-"""The internal agenda feed (task 8, phase 6) -- see `convener_ops.agenda`'s own
+"""The internal agenda feed -- see `convener_ops.agenda`'s own
 module docstring for the feed in full, and its architecture against the
 public one.
 
@@ -186,7 +186,7 @@ def test_the_fixture_covers_both_sides_of_both_dst_boundaries() -> None:
 
 
 def test_a_room_link_never_reaches_the_internal_calendar() -> None:
-    """Fix round 2 (branch review, Important 1): the previous 61-octet
+    """The previous 61-octet
     fixture link sat just under RFC 5545's 75-octet fold threshold and so
     never exercised folding at all -- a byte-substring search against the
     *unfolded* string would still report "absent" for a link that reached

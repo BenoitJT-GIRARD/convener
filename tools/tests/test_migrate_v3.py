@@ -202,7 +202,7 @@ def test_the_new_configuration_keys_get_their_specified_values() -> None:
     assert migrated["balance_window_months"] == 24
     assert migrated["nominations"] == []
     assert migrated["sla_days"]["invitation_follow_up"] == 30
-    # No `lead_decision`: the board's deadline is `vote_window_days` (F-13).
+    # No `lead_decision`: the board's deadline is `vote_window_days`.
     assert "lead_decision" not in migrated["sla_days"]
 
 
@@ -260,7 +260,7 @@ V4_FIELDS = (
     "checklist",
 )
 
-#: Task 16, schema v5's own single addition -- the same "named exhaustively,
+#: Schema v5's own single addition -- the same "named exhaustively,
 #: not merely tolerated" discipline `V4_FIELDS` above already follows.
 V5_FIELDS = ("survey_enabled",)
 
@@ -271,8 +271,8 @@ def test_the_migrated_data_passes_the_validator() -> None:
     The gap is named rather than tolerated: the errors this asserts are the
     exhaustive list of what schema v4 and schema v5 ask for and the v3
     migration cannot know about -- the six v4 fields that were never in a
-    v2 file to migrate, plus v5's own single addition, `survey_enabled`
-    (task 16), which did not exist when this migration was written and
+    v2 file to migrate, plus v5's own single addition, `survey_enabled`,
+    which did not exist when this migration was written and
     which the validator now requires unconditionally, regardless of which
     schema version a record claims. Anything else the validator finds
     still fails here.
@@ -324,10 +324,10 @@ def test_the_migrated_data_passes_the_validator() -> None:
     # The promotion channels are configuration somebody writes, not data a
     # migration can derive: there was nothing in a v2 config to turn into
     # them, and inventing seven here would be this script deciding on the
-    # collaborators' behalf what the list holds. `instructions` (phase 4,
-    # R-6) is the same story a season later: this migration predates it
+    # collaborators' behalf what the list holds. `instructions`
+    # is the same story a season later: this migration predates it
     # entirely and has no more business inventing join instructions than it
-    # does channels. `eligibility_share` (phase 4 S:5, round 1 review) is a
+    # does channels. `eligibility_share` is a
     # third instance of the identical shape: an accreditation-driven number
     # nobody has decided yet, so `migrate_config` has no more business
     # inventing it than it does the other two. A v3 config that grew any

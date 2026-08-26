@@ -156,7 +156,7 @@ def test_valid_config_and_speakers_produce_no_errors() -> None:
     assert validate_config(config()) == []
 
 
-# --- Fix round 1 (coordinator review) ------------------------------------
+# --- Found on review ------------------------------------------------------
 
 
 def test_vote_threshold_message_points_to_the_computed_threshold() -> None:
@@ -396,7 +396,7 @@ def test_a_board_over_its_ceiling_is_rejected() -> None:
 
 
 def test_ballot_from_non_member_fires_even_when_board_is_empty() -> None:
-    # Minor 2: an empty board must not silently disable the non-member
+    # An empty board must not silently disable the non-member
     # check - it must fail loudly, the same as any ballot would in a config
     # with no board yet.
     s = speaker(
@@ -410,12 +410,12 @@ def test_ballot_from_non_member_fires_even_when_board_is_empty() -> None:
     assert any("ballot from a non-member" in e for e in errors)
 
 
-# --- Fix round 2 (coordinator review) -------------------------------------
+# --- Found on a second review ---------------------------------------------
 
 
 def test_selection_decided_on_must_be_a_date() -> None:
     # The migration copies decided_on into every generated ballot's date
-    # (scripts/migrate_v3.py, Task 5): a malformed value here would
+    # (scripts/migrate_v3.py): a malformed value here would
     # propagate into every ballot it touches, not stay in one field.
     s = speaker(selection={"ballots": [], "opened_on": "", "decided_on": "not-a-date"})
     errors = validate_speakers([s], editions=EDITIONS)
@@ -493,7 +493,7 @@ def test_nomination_objection_date_must_be_a_date() -> None:
     assert any("objections[0]: date must be YYYY-MM-DD" in e for e in errors)
 
 
-# --- Task 5 (the migration's own guarantees) ------------------------------
+# --- The migration's own guarantees ---------------------------------------
 
 
 def test_assigned_to_must_be_present_and_a_string() -> None:

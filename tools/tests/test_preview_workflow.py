@@ -1,5 +1,5 @@
-"""Task 13 (phase 5): pins `.github/workflows/preview.yml` against the
-properties a green run does not, by itself, prove -- spec S:7's "a preview
+"""Pins `.github/workflows/preview.yml` against the
+properties a green run does not, by itself, prove -- "a preview
 mode on a pull request" only means something if a reviewer can trust what
 the run uploaded, and if the workflow degrades the same way for a fork PR
 as for a same-repo one.
@@ -18,7 +18,7 @@ their own checkers):
   room link that reached a built page;
 * it could assemble the preview at a bare `localhost` root rather than the
   path prefix GitHub Pages actually serves this project under (D-26) --
-  the exact defect that cost phase 5 seven earlier screenshot rounds;
+  the exact defect that cost this project seven earlier screenshot passes;
 * it could read a stale, hand-typed copy of that prefix instead of the one
   place `config/instance.json` declares it.
 
@@ -193,7 +193,7 @@ def test_the_site_build_never_regenerates_data_from_the_private_repository() -> 
 def test_the_path_prefix_is_derived_not_retyped() -> None:
     """D-26: a second, hand-typed prefix standing in for the one
     `config/instance.json` declares could silently drift from it the way
-    the site's own templates once could. Phase 10 task 2 replaced this
+    the site's own templates once could. That replaced this
     workflow's `grep -oP` over `.eleventy.js` -- which had become a scrape
     of a file that no longer holds the value -- with a `node -p` call into
     `site/scripts/published.cjs`, the very module the site's own build
@@ -255,8 +255,8 @@ def test_the_empty_site_guard_never_counts_the_app_subtree() -> None:
 def test_the_empty_site_guard_checks_index_html_and_can_fail_the_run() -> None:
     """D-25: the guard must be able to actually stop the job, not merely
     print a warning -- the same shape `publish-vitrine.yml`'s own
-    identical `index.html` check already uses (task 13's own recipe is
-    deliberately the same guard, run one step earlier, before an artefact
+    identical `index.html` check already uses (deliberately the same
+    guard, run one step earlier, before an artefact
     is ever produced rather than before a push)."""
     guard = _step_run(_NOT_A_SITE_STEP)
     check_at = guard.find('if [ ! -f "$root/index.html" ]')

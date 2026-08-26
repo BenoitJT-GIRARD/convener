@@ -13,7 +13,7 @@ to survive a volunteer hand-editing `data/speakers.yml` in a text editor,
 and an unquoted `time: 12:30` typed by hand must still come back as the
 string `"12:30"`, not the integer 750 — which is exactly what broke
 `validate-data`, the nightly sweep, and the browser's own re-read of the
-same field (see the phase-1 review, finding I1).
+same field.
 
 `safe_load` below is a drop-in replacement for `yaml.safe_load` that keeps
 every other SafeLoader behaviour (ints, floats, bools, null, dates that are

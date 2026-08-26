@@ -8,7 +8,7 @@ corrected by hand every time. `scripts/generate_schema_doc.py` derives it from
 that stick.
 
 **The loop is proved, not assumed.** The register of decisions was given the
-same treatment in phase 2 and its `--check` went red the moment it was wired
+same treatment, and its `--check` went red the moment it was wired
 in, because the file it guarded had never been produced: the job that wrote it
 only ran on push to `main`. So the first test here reads the committed page off
 disk and compares it with what today's types derive. It fails on a model

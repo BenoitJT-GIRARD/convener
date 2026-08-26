@@ -5,7 +5,7 @@ Three properties matter more than the rest:
 * `build_blocks()` is pure -- no network, no environment, no filesystem --
   and deterministic, so it is tested directly, with nothing faked;
 * the eleven labels, the two vocabularies, and their order come from
-  `convener_ops.proposal`, not from a second, hand-typed copy of them (R-3), so
+  `convener_ops.proposal`, not from a second, hand-typed copy of them, so
   a rename or reorder on either side is expected to break a test here or in
   `test_proposal.py`, not to go unnoticed;
 * `main()` and `sync_form()` are the only parts that would ever reach
@@ -16,7 +16,7 @@ Three properties matter more than the rest:
 The self-review question this whole task exists to answer -- could a form
 built from `build_blocks()` produce a submission that `to_lead` silently
 drops or downgrades to `undisclosed` -- is answered directly by the
-round-trip tests in the "R-9" section: they build the exact webhook shape
+round-trip tests below: they build the exact webhook shape
 Tally sends for a chosen dropdown option, using `build_blocks()`'s own
 option uuids (never hand-typed ones), resolve it through the real
 `convener_ops.proposal.field_value`, and feed the result to the real `to_lead`.
@@ -152,7 +152,7 @@ class FakeTally:
 
     `misname_new_forms`, when set, has `POST /forms` name a freshly created
     form something other than what its FORM_TITLE block asked for -- the
-    scenario Critical 2 is about: Tally not honouring the assumed
+    case where Tally does not honour the assumed
     title-from-block naming. `sync_form` is expected to notice and correct
     it with a follow-up `PATCH`.
     """
@@ -317,7 +317,7 @@ def test_gender_and_career_stage_are_dropdowns_and_no_other_question_is_a_picker
     None
 ):
     # Every choice-type block Tally has, other than DROPDOWN_OPTION, which
-    # is exactly what Gender and Career stage must be (R-9).
+    # is exactly what Gender and Career stage must be.
     other_picker_types = {
         "MULTIPLE_CHOICE_OPTION",
         "CHECKBOX",
@@ -347,12 +347,14 @@ def test_the_career_stage_options_are_exactly_the_imported_vocabulary_in_order()
 
 
 def test_every_question_has_a_non_empty_placeholder() -> None:
-    # R-9 made the vocabulary arrive intact; it does not make a respondent
+    # Resolving the option ids makes the vocabulary arrive intact; it does
+    # not make a respondent
     # pick the *right* token. A dropdown with bare tokens and no
     # disambiguation ("independent" vs "group-leader"; an unexplained "NB")
     # would still let every choice pass vocabulary membership -- nothing
     # downstream would ever flag the resulting noise, a quieter version of
-    # the failure R-2 exists to prevent. The nine plain questions already
+    # the failure a closed vocabulary exists to prevent. The nine plain
+    # questions already
     # carry a placeholder; this pins that Gender and Career stage's first
     # option does too, across all eleven in one assertion.
     for title, body in _question_groups(build_blocks()):
@@ -379,7 +381,7 @@ def test_the_career_stage_placeholder_distinguishes_independent_from_group_leade
 
 
 def test_the_dropdown_placeholder_glosses_never_touch_the_bare_option_text() -> None:
-    # R-3 a second time: the gloss belongs in the placeholder only. Option
+    # A second time: the gloss belongs in the placeholder only. Option
     # text (already pinned exactly against GENDER_ORDER/CAREER_STAGE_ORDER
     # above) must stay the bare token, with no parenthetical explanation
     # smuggled in -- that is what the next "helpful" rewording would touch
@@ -401,7 +403,7 @@ def test_no_option_text_or_placeholder_or_label_carries_non_ascii_text() -> None
 
 
 # --------------------------------------------------------------------- #
-# R-9: does a submission through this form survive to_lead intact, for
+# Does a submission through this form survive to_lead intact, for
 # every question and every accepted vocabulary value -- resolved through
 # the real field_value, from build_blocks()'s own option ids, not a
 # hand-typed string standing in for one?
@@ -538,7 +540,7 @@ def test_find_form_id_gives_up_rather_than_paging_forever() -> None:
 def test_find_form_id_raises_when_a_matching_form_has_no_readable_id() -> None:
     # "found it but its id is unreadable" must not be treated as "no such
     # form" -- that would let sync_form POST a second form with the same
-    # name (Critical 2's sibling risk on the read side).
+    # name, the sibling risk on the read side.
     def get(path: str) -> dict[str, Any]:
         return {"items": [{"name": FORM_TITLE}], "hasMore": False}
 
@@ -595,7 +597,7 @@ def test_sync_form_never_touches_a_form_with_a_different_title() -> None:
 
 
 def test_sync_form_corrects_a_form_tally_named_differently_than_asked() -> None:
-    # Critical 2: nothing but the FORM_TITLE block's own payload.title tells
+    # Nothing but the FORM_TITLE block's own payload.title tells
     # Tally what to call the form on creation -- if that assumption turns
     # out wrong, sync_form must notice and fix the name in the same run,
     # rather than silently leaving a form _find_form_id can never match
@@ -676,7 +678,7 @@ def test_main_reports_an_api_error_in_plain_ascii_not_a_traceback(
 def test_main_ascii_escapes_the_form_id_not_only_the_title(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # Important 3: form_id is the one API-controlled string on that printed
+    # form_id is the one API-controlled string on that printed
     # line, and it must be escaped exactly like FORM_TITLE is.
     monkeypatch.setenv("TALLY_API_KEY", "tly-test-key")
 
@@ -757,7 +759,7 @@ def test_request_wraps_a_connection_failure_as_a_tally_error(
 def test_request_wraps_a_raw_http_client_exception_as_a_tally_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Important 1: http.client.getresponse() sits under urllib's bare
+    # http.client.getresponse() sits under urllib's bare
     # `except: raise`, unlike h.request() -- so BadStatusLine and friends
     # reach here as themselves, never as URLError, unless _request catches
     # them too.

@@ -1,5 +1,5 @@
 """Compose and deliver the registration confirmation -- the only channel a
-participant is ever sent down (phase 4 spec S:3, S:9), and, per the ruling
+participant is ever sent down, and, per the ruling
 below, the only channel that can ever let a real participant notice that
 their registration was silently overwritten.
 
@@ -8,7 +8,7 @@ What the message must carry (spec S:3)
 The room link, the matching code together with the exact instruction to put
 it in the display name used when joining, the data-protection notice, and
 the means to exercise data-protection rights. The second item is
-load-bearing: task 8's whole attendance-matching cascade (spec S:5) rests on
+load-bearing: the whole attendance-matching cascade rests on
 a participant typing this code where instructed, so it is built from
 `MATCHING_INSTRUCTION` below rather than restated by hand at each call site
 -- one sentence, quoted by `test_confirmation.py` against both this module's
@@ -23,15 +23,15 @@ normalised name) as the documented fallback. `compose` below does not
 refuse to send without a code for that reason; it sends a message that
 names the fallback instead.
 
-An update is sent down the same channel, not only a first registration (R-9)
-------------------------------------------------------------------------------
+An update is sent down the same channel, not only a first registration
+------------------------------------------------------------------------
 Registrations deduplicate by address (`registration.py::upsert`), and the
 entry point that reaches this job is deliberately without a shared secret --
 a browser cannot hold one. So anyone who knows an event id and a
 participant's address can overwrite that participant's name, institution or
 announce-list preference, and a certificate is generated from exactly that
 stored data. The review that found this ruled it *mandated* behaviour, not a
-defect -- the relay's openness is deliberate, a decision task 5 already made
+defect -- the relay's openness is deliberate, a decision already taken
 -- and named this confirmation as the only channel a genuine participant is
 ever sent down that could let them notice an overwrite that was not theirs.
 
@@ -66,7 +66,7 @@ into on purpose (the same hard rule `registration.py` exists to uphold for
 the committed file, applied here to a *log* rather than to git history).
 
 So `deliver` below never prints anything, on any path. **Reported, not
-retained (Critical 3, whole-branch review).** An earlier version of
+retained.** An earlier version of
 this module handed the *whole* composed text back to the caller as
 `SendResult.unsent_body`, for `cli.py` to write to a single fixed,
 `.gitignore`d file that `.github/workflows/registration.yml` and
@@ -81,7 +81,7 @@ the length of that job's run" -- true only when SMTP is configured. With
 artefact was not an exception at all; it was the path *every* registration
 took.
 
-What makes deleting the copy safe is exactly what task 14 already
+What makes deleting the copy safe is exactly what was already
 established for an unsent *certificate* (`delivery.py`'s own module
 docstring, "never written to disk"): nothing here is computed randomly, so
 nothing is lost by never keeping a copy. `convener-resend-confirmation`
@@ -138,7 +138,7 @@ __all__ = [
 ]
 
 # ------------------------------------------------------------------ #
-# What changed, named rather than quoted (R-9)
+# What changed, named rather than quoted
 # ------------------------------------------------------------------ #
 
 #: `Registration` field name -> the label an update notice names it by, in
@@ -158,7 +158,7 @@ FIELD_LABELS: Final[dict[str, str]] = {
 def changed_fields(old: Registration, new: Registration) -> tuple[str, ...]:
     """The labels of every field that differs between `old` and `new`, in
     `FIELD_LABELS`'s own order -- never the values themselves (see the
-    module docstring's R-9 section for why). `old` and `new` are assumed to
+    module docstring for why). `old` and `new` are assumed to
     be the same registrant (`upsert` already matched them by normalised
     address before either reaches here); this does not check that itself,
     the same "the caller already established the precondition" contract
@@ -255,7 +255,7 @@ class Confirmation:
 #: hand-copied sentence living in the test file too.
 #:
 #: `compose` follows it with a worked example built from the registrant's
-#: own name (review round 1, Important 7): the instruction alone leaves
+#: own name: the instruction alone leaves
 #: two things open -- whether the hyphen is part of the code, and whether
 #: the participant's own name stays in the field or is replaced by it --
 #: and a concrete "Ada Lovelace WXYZ-2345" answers both without a second
@@ -284,7 +284,7 @@ _NO_CODE_FALLBACK: Final = (
 #: to this message" is true regardless of what `CONVENER_SMTP_FROM` happens
 #: to be.
 #:
-#: Phase 10, task 3: both sides used to hold the literal, bound to each
+#: Both sides used to hold the literal, bound to each
 #: other by `test_confirmation.py` -- a binding that could say the two
 #: copies still agreed, never that there was one. Both now read
 #: `config/instance.json`, this side through `published.load_identity()`
@@ -407,13 +407,13 @@ _USER_ENV: Final = "CONVENER_SMTP_USER"
 _PASSWORD_ENV: Final = "CONVENER_SMTP_PASSWORD"
 _FROM_ENV: Final = "CONVENER_SMTP_FROM"
 
-#: The five names above, as a set -- exported (task 14) so a second module
+#: The five names above, as a set -- exported so a second module
 #: that also sends over this same transport (`delivery.py`, the
 #: certificate's own e-mail step) can name "every secret this integration
 #: needs" without retyping the five strings a second time, and so a test
 #: deriving what a function reads from its own source (`test_workflows.py`'s
 #: `_env_vars_read`) can reference one collection instead of a hand-typed
-#: list -- the exact gap task 7 itself shipped once already (a workflow
+#: list -- the exact gap a workflow shipped with once (
 #: forwarding three of nine variables its own command read, unnoticed by a
 #: fully green suite) and the reason a hand-copied list is refused
 #: everywhere else this project derives one instead.
@@ -490,15 +490,15 @@ class _SmtpTransport:
         email["Subject"] = message.subject
         email["From"] = config.sender
         email["To"] = message.to
-        # Carried item 6 (fix wave 2): the same gap `delivery.py`'s own
-        # `_SmtpDeliveryTransport.send` was made to close (Minor 5, fix
-        # round 1) -- a real send time, not an omitted one. Spec S:9's
-        # own risk table names the spam folder explicitly, and a missing
+        # The same gap `delivery.py`'s own
+        # `_SmtpDeliveryTransport.send` was made to close
+        # -- a real send time, not an omitted one. The spam folder is a
+        # named risk here, and a missing
         # `Date` header is a real spam-scoring signal a resend deserves
         # exactly as much protection from as the first send did.
         email["Date"] = formatdate(localtime=True)
         # Explicit, not left to default to whatever `config.sender`
-        # happens to be (review round 1, minor 5): `_RIGHTS_NOTICE` says
+        # happens to be: `_RIGHTS_NOTICE` says
         # "reply to this message", and this is what makes that literally
         # true regardless of which mailbox `CONVENER_SMTP_FROM` names.
         email["Reply-To"] = CONTACT_EMAIL
@@ -520,8 +520,8 @@ class _SmtpTransport:
 class SendResult:
     """The outcome of trying to deliver one `Confirmation`.
 
-    **Deliberately narrower than an earlier version of this type** (Critical
-    3, branch review): no `unsent_body` field at all, the same shape
+    **Deliberately narrower than an earlier version of this type:**
+    no `unsent_body` field at all, the same shape
     `delivery.DeliveryResult` already uses and for the identical reason --
     see that dataclass's own docstring. `sent` alone is everything `cli.py`
     needs to print a one-line outcome and name the recovery

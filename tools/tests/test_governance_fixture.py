@@ -1,6 +1,6 @@
 """The shared fixture is the contract between the two implementations.
 
-Two green suites in two languages proved insufficient in phase 1: the browser
+Two green suites in two languages once proved insufficient: the browser
 wrote `time: 12:30` and Python read the integer 750. Both sides now read the
 same cases from one file.
 """
@@ -104,8 +104,8 @@ def test_elapsed_inverts_add_on_every_shared_case(case: dict[str, Any]) -> None:
 def test_overdue_wording_matches_the_shared_fixture(case: dict[str, Any]) -> None:
     """The sentences the daily digest carries are the screens' sentences.
 
-    Spec section 7 puts the overdue list in the digest, and task 19 had already
-    written that wording for `app/src/state/sla.ts`. A digest that reworded it
+    The overdue list belongs in the digest, and that wording already
+    existed in `app/src/state/sla.ts`. A digest that reworded it
     would be the fifth cross-language divergence in this repository, so both
     halves read these cases: `app/tests/governance-fixture.test.ts` runs them
     through `lateness`, `overdueText` and `waitingSince`.

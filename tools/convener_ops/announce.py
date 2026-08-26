@@ -15,8 +15,8 @@ way `visual.render_announcement` never re-checks `photo_url`'s consent
 because `to_public` already emptied it. See `public_data.py`'s own module
 docstring for the argument in full; nothing here re-derives it.
 
-Fix round 1: one prose, not two
---------------------------------
+One prose, not two
+-------------------
 This module used to compose its own English by hand, deliberately not
 reading `docs/toolkit/*.md` -- a second templating engine over the same
 four files, its own docstring argued, was a second thing to keep in step
@@ -46,8 +46,8 @@ than resolved here, the same convention `visual.render_announcement` and
 rather than reading `paths.repo_root()` itself is the one every test in
 this module already calls against the real checkout.
 
-Fix round 2: an optional field is not a missing one
------------------------------------------------------
+An optional field is not a missing one
+----------------------------------------
 `«missing: …»` is right for a field this project expects a row to carry by
 the time this text is drafted -- a title, a date -- because a draft missing
 one of those is not ready to post and should look exactly that unfinished.
@@ -107,7 +107,7 @@ TOOLKIT_DIR: Final[Path] = Path("docs") / "toolkit"
 #: reproduced here rather than imported: a `.ts` module cannot be required
 #: from Python, and this is the whole of what there is to reproduce.
 #:
-#: Fix round 2 adds one thing to the grammar rather than a second one beside
+#: The grammar carries one thing rather than a second one beside
 #: it: an optional trailing sigil, `?` or `!`, read by `_render` and never
 #: passed on to `_missing` -- see that function's own docstring for what
 #: each one does. A token with neither behaves exactly as before.
@@ -116,7 +116,7 @@ _PLACEHOLDER = re.compile(r"\{\{\s*([\w]+)\.([\w]+)\s*([?!])?\s*\}\}")
 #: Two or more blank lines left behind by a dropped line -- `_render`'s own
 #: cleanup, run once per call rather than once per drop, so a line dropped
 #: next to another blank line never leaves a visible gap in the body an
-#: operator is about to paste (the finding fix round 2 exists to close).
+#: operator is about to paste.
 _EXCESS_BLANK_LINES = re.compile(r"\n{3,}")
 
 
@@ -140,12 +140,12 @@ def _render(text: str, namespaces: Mapping[str, Mapping[str, str]]) -> str:
     marker, and so does an empty string -- never a blank line silently
     standing in for a field nobody filled in.
 
-    Fix round 2: that rule stayed exactly as strict for a field this project
+    That rule stays exactly as strict for a field this project
     expects to be there -- a title, a date, anything with no `?`/`!` sigil.
     It was always the wrong rule for a field that is *ordinarily* absent,
     read against a body an operator is about to copy verbatim and post
     (`docs/toolkit/recording-announce.md`'s own `{{ public.bio }}`, sitting
-    alone as a paragraph, was the finding this fix round exists for): a
+    alone as a paragraph, was the finding this exists for): a
     volunteer who pastes `«missing: public.bio»` into a forum reply has
     pasted a bug report, not an announcement.
 
@@ -159,8 +159,8 @@ def _render(text: str, namespaces: Mapping[str, Mapping[str, str]]) -> str:
       it, rather than the sentence staying and the field it was about going
       missing from the middle of it. A template that wants this drop to
       take the whole sentence with it therefore has to give that sentence
-      its own line, which is why fix round 2 also reflows the two sentences
-      this applies to onto one line each in the three templates that carry
+      its own line, which is why the two sentences
+      this applies to sit on one line each in the three templates that carry
       them, rather than leaving them soft-wrapped: dropping only the
       *wrapped* half of a sentence would leave the other half behind,
       reading as a sentence that stops short.
@@ -177,7 +177,7 @@ def _render(text: str, namespaces: Mapping[str, Mapping[str, str]]) -> str:
     Not a general templating language -- an `{{ ns.leaf? }}` with no `!`
     counterpart anywhere in "Notes" is not wrong, it is a gap this project
     is choosing not to call out in prose (there is none among the four
-    drafts today: every `?` this fix round adds has a `!` beside it). Both
+    drafts today: every `?` has a `!` beside it). Both
     sigils share one cleanup: `_EXCESS_BLANK_LINES` collapses whatever
     blank-line stack a drop leaves behind to the ordinary one, so a dropped
     paragraph in the body reads as no paragraph, not as a visible gap where
@@ -222,7 +222,7 @@ def _instance_namespace(root: Path) -> dict[str, str]:
     this series, what it is called, its forum, the address a participant
     writes to.
 
-    Phase 10, task 3. These four pages used to write the organisation's
+    These four pages used to write the organisation's
     name and its forum out in full -- which is exactly the shape this
     module's own "one prose, not two" section objects to, one level up:
     the words were in one file, and the *identity* in that file was a copy
@@ -241,7 +241,7 @@ def _instance_namespace(root: Path) -> dict[str, str]:
 
 def _event_id(row: Mapping[str, Any]) -> str:
     """`row["id"]` is `to_public`'s own rendering of `edition_code`, cased
-    exactly as typed in `data/speakers.yml` -- R-5 (`platform.find_speaker`)
+    exactly as typed in `data/speakers.yml` -- `platform.find_speaker`
     lower-cases it, and this is the one place these functions apply that
     rule, rather than trusting every caller to have done it already."""
     return str(row.get("id", "")).lower()

@@ -130,26 +130,26 @@ SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/reference/schema.m
 CONFIG_HEADER = "# Repo-wide config for the convener app\n"
 #: certificates.yml holds no name and no address by construction -- see
 #: tools/convener_ops/certificate.py's module docstring for why this file
-#: survives task 15's retention sweep on registrations.enc, in the same
+#: survives the retention sweep on registrations.enc, in the same
 #: directory, untouched.
 CERTIFICATES_HEADER = (
     "# Certificate register -- no name, no address; "
     "see tools/convener_ops/certificate.py\n"
 )
-#: The destruction registry (task 15) holds only an event id and a date --
+#: The destruction registry holds only an event id and a date --
 #: see tools/convener_ops/eventkeys.py's module docstring, "the destruction
 #: registry lives in one file".
 DESTRUCTIONS_HEADER = (
     "# Event key destruction registry; see tools/convener_ops/eventkeys.py\n"
 )
-#: The survey invitation registry (task 16b) holds only an event id and a
-#: date -- see tools/convener_ops/survey_invite.py's module docstring, "ruling
-#: 3", for why this is the whole bound a resend is checked against.
+#: The survey invitation registry holds only an event id and a
+#: date -- see tools/convener_ops/survey_invite.py's module docstring for
+#: why this is the whole bound a resend is checked against.
 SURVEY_INVITATIONS_HEADER = (
     "# Survey invitation registry -- no name, no address; "
     "see tools/convener_ops/survey_invite.py\n"
 )
-#: H2 (2026-08-23 security audit) -- evidence that retention.yml's own
+#: Evidence that retention.yml's own
 #: schedule still fires, independent of whether that day's sweep found
 #: anything due; see tools/convener_ops/retention_liveness.py's own module
 #: docstring.
@@ -157,7 +157,7 @@ RETENTION_LAST_RUN_HEADER = (
     "# Evidence the retention sweep still runs; "
     "see tools/convener_ops/retention_liveness.py\n"
 )
-#: Phase 9, task 2 -- which queue entries a drain has already applied, so a
+#: Which queue entries a drain has already applied, so a
 #: drain that committed its result and was then interrupted before clearing
 #: the queue does not apply them a second time. Committed in the *same*
 #: commit as the data those entries produced, which is the whole of why it
@@ -166,7 +166,7 @@ QUEUE_LEDGER_HEADER = (
     "# Which queued submissions a drain has already applied; "
     "see tools/convener_ops/submission_queue.py\n"
 )
-#: Phase 8, task 4 -- what the last window of runs actually billed, and the
+#: What the last window of runs actually billed, and the
 #: only place in this repository where a *measured* minute exists rather
 #: than a `timeout-minutes` ceiling. Committed on purpose: legible by
 #: opening this repository, with no run log to scroll and no CI required.
@@ -289,8 +289,8 @@ def validate() -> int:
     cfg, cfg_errors = _load(root / "data" / "config.yml")
     errors += cfg_errors
 
-    # The prefix this instance numbers its editions under (phase 11, task
-    # 4), read before anything is checked against it. Reported as one more
+    # The prefix this instance numbers its editions under,
+    # read before anything is checked against it. Reported as one more
     # error rather than raised: `convener-validate` is the command a duplicate
     # runs first and its whole contract is to print what is wrong with
     # this repository and exit 1, so answering the one defect it exists to
@@ -471,7 +471,7 @@ def public_data() -> int:
 def survey_status_public_data() -> int:
     """`convener-survey-status-public-data`: rebuild
     `public-data/survey-status.json` from `data/speakers.yml`'s own
-    `survey_enabled` field (R-37, fix round 1) -- `public_data`'s own
+    `survey_enabled` field -- `public_data`'s own
     precedent (above), for a different consumer and a different field: an
     operational fact, not the programme feed `to_public` projects through
     the consent gate.
@@ -505,7 +505,7 @@ def survey_status_public_data() -> int:
 def registration_routing_public_data() -> int:
     """`convener-registration-routing-public-data`: rebuild
     `public-data/registration-routing.json` from `data/speakers.yml` and
-    `config/registration-lanes.yml` (phase 9, task 3) --
+    `config/registration-lanes.yml` --
     `survey_status_public_data`'s own precedent above, for a third consumer
     and a third question.
 
@@ -557,7 +557,7 @@ def registration_routing_public_data() -> int:
 
 def agenda_internal() -> int:
     """`convener-agenda-internal`: rebuild `public-data/agenda-internal.ics` from
-    `data/speakers.yml` and `data/config.yml` (task 8, phase 6) --
+    `data/speakers.yml` and `data/config.yml` --
     `public_data`'s own precedent (above), for a feed that must never reach
     either published bundle: unlike `events-public.json`, nothing in this
     build's own copy scripts ever names this file, and `.gitattributes`
@@ -634,7 +634,7 @@ def handle_proposal() -> int:
     if not isinstance(fields_list, list):
         fields_list = []
     # field_value resolves a picker's chosen option id(s) against that
-    # field's own `options` array (R-9) -- without it, a DROPDOWN/
+    # field's own `options` array -- without it, a DROPDOWN/
     # MULTIPLE_CHOICE/CHECKBOXES/MULTI_SELECT answer's raw `value` is a list
     # of ids, never the text `to_lead` compares against `GENDERS`/
     # `CAREER_STAGES`, and every such answer would silently become
@@ -694,7 +694,7 @@ def _send_confirmation(
     composed message. See `confirmation.py`'s module docstring for the
     reasoning.
 
-    **Reported, not retained (Critical 3, branch review).** An unsent
+    **Reported, not retained.** An unsent
     confirmation used to be written to a `.gitignore`d file and uploaded as
     a 14-day build artefact -- `docs/governance/traitement-donnees.md`'s
     own Recipients section named this an exception, but with
@@ -724,7 +724,7 @@ def _send_confirmation(
     Nothing in this function is allowed to raise past it: the whole body,
     not only the compose-and-deliver sequence, is wrapped in one broad
     `except Exception`. That catch is no longer a defence against `set -e`
-    aborting a commit -- since review round 1 (Important 2), sending is a
+    aborting a commit: sending is a
     separate, non-retried step from storing, so a failure here can no
     longer reach back and threaten a registration already on the branch by
     the time this runs. It stays for the same reason `notify.py`'s own
@@ -823,8 +823,8 @@ def handle_registration() -> int:
     The confirmation itself is sent by a *separate* step
     (`convener-send-confirmation`, gated `if: success()` so it runs at most once
     per job, only after this step's own push-retry loop has actually
-    landed the record on the branch). Split this way on review (R-9 round
-    1, Important 2): this step's workflow retries on a rejected push,
+    landed the record on the branch). Split this way on review: this
+    step's workflow retries on a rejected push,
     re-running the whole step up to three times, and a step that both
     stored and sent would send one confirmation per attempt -- or, worse,
     send one for a registration a later, failed attempt then discarded.
@@ -844,11 +844,11 @@ def handle_registration() -> int:
     handed, the same as a genuinely undecryptable one.
 
     Writes `changed=<comma-joined field labels>` to `$GITHUB_OUTPUT` -- the
-    R-9 diff between the prior stored registration (read via
+    diff between the prior stored registration (read via
     `find_by_email`, before `upsert` overwrites it) and this one, for
     `send_confirmation` to read back and hand to `confirmation.compose`
     unchanged. Field labels are not personal data (that is the whole point
-    of naming rather than quoting, R-9), so this is the one thing this
+    of naming rather than quoting), so this is the one thing this
     function ever writes anywhere a stranger could, in principle, also
     read.
     """
@@ -865,9 +865,9 @@ def handle_registration() -> int:
 
     registration = to_registration(payload, private_pem)
     if registration is None:
-        # Important 3 (branch review), the survey twin's own fix (Important
-        # 3, fix round 1) applied here: "could not be read", not "could not
-        # be decrypted". to_registration's own uniform None folds a missing
+        # The survey twin's own fix, applied here: "could not be read",
+        # not "could not be decrypted". to_registration's own uniform None
+        # folds a missing
         # field, a wrong type, an empty required field or a field over
         # _MAX_FIELD_LENGTH into the same outcome as an undecryptable one --
         # correct for the untrusted-input reason its own docstring gives --
@@ -907,15 +907,14 @@ def send_confirmation() -> int:
     `if: success()`, so it runs at most once per job, only once
     `convener-handle-registration`'s own push-retry loop has actually landed
     the record on the branch. See `handle_registration`'s own docstring
-    for why sending was split into its own step (R-9 review round 1,
-    Important 2).
+    for why sending was split into its own step.
 
     Reads `REGISTRATION_PAYLOAD` and `EVENT_PRIVATE_KEY` again -- the
     workflow already holds both for the step that ran before this one, so
     reading them again here needs no new secret -- and decrypts the
     registration a second time. Not wasted work an oversight left behind:
     the registration's plaintext lives only in one process's memory at a
-    time (the phase 4 spec's whole design; `registration.py`'s own module
+    time (this project's whole design; `registration.py`'s own module
     docstring), so a later step that needs it again has no way to ask for
     it except by decrypting it again from the same ciphertext, exactly as
     `resend_confirmation` already does for a manual resend.
@@ -941,9 +940,9 @@ def send_confirmation() -> int:
 
     registration = to_registration(payload, private_pem)
     if registration is None:
-        # Important 3, branch review: see handle_registration's own
+        # See handle_registration's own
         # identical comment above -- the same wrong claim, at the second
-        # of the two call sites the review found it at.
+        # of the two call sites it was found at.
         print(f"registration for event {event_id} could not be read", file=sys.stderr)
         return 1
 
@@ -957,8 +956,8 @@ def send_confirmation() -> int:
 def resend_confirmation() -> int:
     """`convener-resend-confirmation`: re-send the confirmation already on file
     for one address, without regenerating anything -- the manual resend the
-    phase 4 spec's risk table asks for (S:9: "a certificate in the spam
-    folder does not exist").
+    risk of silent loss asks for: a confirmation in a spam folder does not
+    exist.
 
     Reads `EVENT_ID` -- a plain, operator-typed value -- and
     `EMAIL_ENVELOPE`: not the address itself, but that address hybrid-
@@ -970,12 +969,12 @@ def resend_confirmation() -> int:
     function decrypts `EMAIL_ENVELOPE` with -- nothing here can recover an
     address from `EMAIL_ENVELOPE` alone.
 
-    **H1, fix wave 2.** `EMAIL_ENVELOPE` used to be `REGISTRATION_EMAIL`,
+    `EMAIL_ENVELOPE` used to be `REGISTRATION_EMAIL`,
     a bare address: GitHub renders and retains a `workflow_dispatch`
     input's own value on the run page for as long as the run's history
     exists, which manufactured a fresh, permanent, plaintext copy of the
-    address every single resend -- the identical exposure H1 named for
-    `erase-registration.yml`'s own fallback. `registration.py`'s own
+    address every single resend -- the identical exposure
+    `erase-registration.yml`'s own fallback carried. `registration.py`'s own
     module docstring still explains why no other identifier for one
     registration is stored at all ("No stored identifier for whose entry
     is this"), so an address is still the only handle a resend can name a
@@ -1055,7 +1054,7 @@ def encrypt_identifier() -> int:
     """`convener-encrypt-identifier`: turn a registrant's own e-mail address
     into the ciphertext `resend-confirmation.yml`'s and
     `erase-registration.yml`'s own `encrypted_identifier` input both
-    expect -- H1's fix, closing the class rather than the one instance.
+    expect -- closing the class rather than the one instance.
 
     D-24: an operator command names a record, never a person. Both
     workflows' own declared exception lets a participant who lost their
@@ -1112,10 +1111,10 @@ def encrypt_identifier() -> int:
 
 
 # ------------------------------------------------------------------ #
-# The post-event survey (task 16, phase 4 spec S:6): "meme entree que
-# l'inscription, meme stockage chiffre, meme destruction de cle."
+# The post-event survey: the same intake as registration, the same
+# encrypted storage, the same key destruction.
 #
-# Phase 9, task 2 removed the two console scripts that used to live here
+# Two console scripts used to live here
 # -- `resolve_survey_secret` and `handle_survey_response`, the two steps of
 # `.github/workflows/survey.yml` -- along with that workflow itself. A
 # survey response no longer arrives as a `repository_dispatch` that starts
@@ -1128,7 +1127,7 @@ def encrypt_identifier() -> int:
 
 def _survey_enabled(root: Path, event_id: str) -> bool:
     """Whether `event_id`'s speaker record has the survey switch on --
-    ruling 2 of task 16: the switch is a field on the speaker record, a
+    the switch is a field on the speaker record, a
     per-event fact beside the event's other per-event facts, not a
     `data/config.yml` setting. `False` for every failure to determine it
     cleanly: a speaker file that will not load, no record for this event
@@ -1149,7 +1148,7 @@ def _survey_enabled(root: Path, event_id: str) -> bool:
 
 
 # ------------------------------------------------------------------ #
-# The submission queue (phase 9, task 2). Two steps of
+# The submission queue. Two steps of
 # `.github/workflows/sweep-and-notify.yml`'s own daily job, never a
 # workflow or a job of their own -- one of either would cost a billed run
 # every day, which is what this feature exists to stop.
@@ -1183,7 +1182,7 @@ QUEUE_CLEAR_ENV: Final = "CONVENER_QUEUE_CLEAR_FILE"
 #: from, after the drain's commit has actually been pushed.
 #:
 #: A file for the same two reasons as `QUEUE_CLEAR_ENV`, and one more: the
-#: only things on a line are a queue entry path and R-9 field *labels*
+#: only things on a line are a queue entry path and field *labels*
 #: (`confirmation.FIELD_LABELS`, never a value), so nothing here is personal
 #: data even though it crosses between two steps of a job whose log a
 #: volunteer can read. That is the same property `registration.yml` relies on
@@ -1197,7 +1196,7 @@ _CONFIRM_FIELD_SEPARATOR: Final = "\t"
 
 #: Where `drain_queue` writes the entries it could **not** finish and the
 #: reason for each -- one `<entry name><tab><reason>` line -- and where
-#: `record_queue_watch` reads them back from (phase 9, task 4).
+#: `record_queue_watch` reads them back from.
 #:
 #: A third cross-step file rather than a step output, for the first of
 #: `QUEUE_CLEAR_ENV`'s two reasons: a drain that deferred two hundred
@@ -1235,7 +1234,7 @@ _DEFERRED_FIELD_SEPARATOR: Final = "\t"
 #: never a second message.
 QUEUE_BODY: Final = "queue-body.md"
 
-#: Phase 9, task 4 -- what the public submission queue still held the last
+#: What the public submission queue still held the last
 #: time a drain looked at it, and since when. Committed on purpose, like
 #: every other record this repository keeps about itself: legible by
 #: opening the repository, with no run log to scroll and no CI required,
@@ -1483,7 +1482,7 @@ def drain_queue() -> int:
 
     deferred_file = os.environ.get(QUEUE_DEFERRED_ENV, "")
     if deferred_file:
-        # Phase 9, task 4. The drain is the only thing in the run that
+        # The drain is the only thing in the run that
         # knows *why* an entry is still waiting -- a key nobody
         # configured, a committed file nobody can parse, more open events
         # than there are secret slots -- and the fix differs by reason, so
@@ -1628,7 +1627,7 @@ def confirm_queued_registrations() -> int:
 
 
 # ------------------------------------------------------------------ #
-# Whether the queue is emptying at all -- phase 9, task 4
+# Whether the queue is emptying at all
 # ------------------------------------------------------------------ #
 
 
@@ -1735,7 +1734,7 @@ def record_queue_watch() -> int:
       both the queue and the board's channel (D-07).
 
     Returns 0 even when the alarm fires: the workflow's own last step is
-    what turns the job red, the same split phase 8's budget alarm uses so
+    what turns the job red, the same split the budget alarm uses so
     that an unconfigured channel can never turn a real finding into
     silence.
     """
@@ -1754,8 +1753,8 @@ def record_queue_watch() -> int:
     if not path.exists():
         # Never read as "the queue is empty". A listing that was not taken
         # is not the answer "nothing waiting", and reading it as one is how
-        # a control reports that everything is fine while it is not (R-36's
-        # own lesson, one file over in retention.yml).
+        # a control reports that everything is fine while it is not (the
+        # same lesson retention.yml carries one file over).
         print(
             f"::error::{listing} does not exist -- the queue was never "
             "listed, which is not the same as the queue being empty",
@@ -1875,7 +1874,7 @@ def check_queue_liveness() -> int:
     return 0
 
 
-#: Phase 9, task 6 -- where `check_registration_routing` leaves the body it
+#: Where `check_registration_routing` leaves the body it
 #: composed, for the workflow step that posts it. Neither `NOTIFY_BODY`,
 #: nor `BUDGET_BODY`, nor `QUEUE_BODY`: four messages are now composed in
 #: the one daily job, and one filename for several of them means whichever
@@ -1922,7 +1921,7 @@ def check_registration_routing() -> int:
     """`convener-check-registration-routing`: can a registration still reach the
     queue at all?
 
-    The last of phase 9's controls, and the one that guards the *saving*
+    The last of the queue's controls, and the one that guards the *saving*
     rather than a submission. Every failure the relay meets while reading
     `public-data/registration-routing.json` resolves to the immediate lane,
     deliberately and correctly -- and therefore invisibly. If that file goes
@@ -1937,8 +1936,8 @@ def check_registration_routing() -> int:
     the file's age, and for why a file naming only past events is a quiet
     season instead of an alarm.
 
-    Returns 0 even when a finding fires, the same split phase 8's budget
-    alarm and task 4's queue alarm use: the workflow's own last step is
+    Returns 0 even when a finding fires, the same split the budget alarm
+    and the queue alarm use: the workflow's own last step is
     what turns the job red, so an unconfigured channel can never turn a
     real finding into silence. Returns 1 only for the inputs *this*
     repository owns and cannot read -- a missing or malformed
@@ -2007,8 +2006,8 @@ def _load_destruction_registry(root: Path) -> tuple[dict[str, date], str | None]
 
 
 def retention_sweep() -> int:
-    """`convener-retention-sweep`: the job that makes spec S4's central promise
-    true. Finds the id of every event whose retention window has elapsed
+    """`convener-retention-sweep`: the job that makes this project's central
+    retention promise true. Finds the id of every event whose window has elapsed
     (`eventkeys.is_due_for_destruction`: event date + 90 days, measured
     against `paris_today`) and whose key is not already on record as
     destroyed.
@@ -2026,7 +2025,7 @@ def retention_sweep() -> int:
     step, never `gh secret delete` a second time against a secret an
     earlier attempt already removed.
 
-    **R-28: `CONVENER_RETENTION_TOKEN` absent fails this job outright, on
+    **`CONVENER_RETENTION_TOKEN` absent fails this job outright, on
     every scheduled run, whether or not any event happens to be due for
     destruction today.** Every other secret in this codebase degrades to
     an ordinary D-13 absence -- a feature that does not run this time,
@@ -2090,8 +2089,8 @@ def retention_sweep() -> int:
             try:
                 speaker_record = find_speaker(speaker_list, event_id)
             except EventNotFoundError:
-                # ::warning:: (Important 1): a skip nobody sees is exactly
-                # the failure R-28 exists to prevent -- this function's own
+                # ::warning::, because a skip nobody sees is exactly
+                # the failure this guard exists to prevent -- the function's own
                 # docstring argues a retention job that exits green having
                 # destroyed nothing must never look, from the Actions tab,
                 # like a job that genuinely had nothing to do; a plain
@@ -2140,7 +2139,7 @@ def retention_sweep() -> int:
 
 def record_retention_run() -> int:
     """`convener-record-retention-run`: record that today's `retention.yml` run
-    happened at all -- H2, 2026-08-23 security audit (AF-2).
+    happened at all.
 
     Writes `data/retention-last-run.yml` with today's Paris date
     (`governance.paris_today`), unconditionally. `retention.yml`'s own
@@ -2175,7 +2174,7 @@ def record_retention_run() -> int:
 
 def check_retention_liveness() -> int:
     """`convener-check-retention-liveness`: `retention-watchdog.yml`'s own
-    command -- H2, 2026-08-23 security audit (AF-2).
+    command.
 
     Reads `data/retention-last-run.yml` (written by `record_retention_run`
     above) and fails, loudly, once it has gone more than
@@ -2239,7 +2238,7 @@ def check_retention_liveness() -> int:
 
 
 # ------------------------------------------------------------------ #
-# What the runs really cost -- phase 8, task 4
+# What the runs really cost
 # ------------------------------------------------------------------ #
 
 
@@ -2473,8 +2472,8 @@ def record_destructions() -> int:
     date, never overwritten by whatever day the retry happens to run on
     (`eventkeys.destroy`'s own idempotence).
 
-    **Calls `eventkeys.destroy`, not a bare `dict.setdefault` (R-35,
-    Important 3 and Minor 6).** Every id `retention_sweep` itself ever
+    **Calls `eventkeys.destroy`, not a bare `dict.setdefault`.**
+    Every id `retention_sweep` itself ever
     produces already names a published key by construction, but this
     function is also `convener-record-destructions`, a console script an
     operator can and does run by hand after a wedged sweep -- reading a
@@ -2488,7 +2487,7 @@ def record_destructions() -> int:
     is caught here and turned into an ordinary exit 1.
 
     **Only after every id above is durably written does this delete the
-    published `.pub` (R-35, Important 2).** `keys/events/<id>.pub` is the
+    published `.pub`.** `keys/events/<id>.pub` is the
     signup relay's only "this event is open" gate
     (`services/signup-relay/src/index.js`); leaving it published after
     destruction lets a destroyed event keep accepting registrations that
@@ -2514,11 +2513,11 @@ def record_destructions() -> int:
     record.
 
     **This function is all-or-nothing across `ids`, unlike the delete
-    step above, which is per-event tolerant (R-34) -- a deliberate
+    step above, which is per-event tolerant -- a deliberate
     asymmetry, not an oversight.** If recording aborts partway, the
     secrets already confirmed gone are simply left unrecorded; the next
     sweep finds those events still due, re-deletes secrets that are
-    already absent (which R-34 made safe), and records them then.
+    already absent (which the tolerance above makes safe), and records them then.
     """
     ids = [
         event_id
@@ -2581,20 +2580,20 @@ def record_destructions() -> int:
 
 def erase_registration() -> int:
     """`convener-erase-registration`: rewrite `registrations.enc` without the
-    one entry an early erasure request names -- spec S4's "effacement
-    avant echeance" ("reecriture du fichier chiffre sans l'enregistrement
-    concerne, procedure documentee et testee").
+    one entry an early erasure request names: the encrypted file is
+    rewritten without that record, by a procedure that is documented and
+    tested.
 
     **Identifies the registration by `MATCHING_CODE` in preference to
-    `EMAIL_ENVELOPE` (R-32).** The code is already in the participant's
-    own confirmation e-mail (task 7) and is recomputed and compared
+    `EMAIL_ENVELOPE`.** The code is already in the participant's
+    own confirmation e-mail and is recomputed and compared
     against every stored entry (`registration.find_by_matching_code`),
     never reversed out of anything stored -- nothing here stores it.
     `EMAIL_ENVELOPE` is accepted as a fallback for a participant who no
     longer has that e-mail: the same **deliberate, documented exception**
     `resend_confirmation` above already makes for the identical reason.
 
-    **H1, fix wave 2.** `EMAIL_ENVELOPE` used to be `REGISTRATION_EMAIL`,
+    `EMAIL_ENVELOPE` used to be `REGISTRATION_EMAIL`,
     a bare address rendered and retained on the run page for as long as
     the run's history exists -- the erasure command manufacturing a
     fresh, permanent, plaintext copy of the exact address it exists to
@@ -2607,7 +2606,7 @@ def erase_registration() -> int:
     anywhere but this job's own memory. Both `MATCHING_CODE` and
     `EMAIL_ENVELOPE` may be supplied; the code is tried first.
 
-    **A code collision (Minor 8) is resolved by the address, if one was
+    **A code collision is resolved by the address, if one was
     also given and it narrows the tie to exactly one entry** -- reading
     the evidence the requester supplied is not guessing, so this proceeds;
     with no address, or an address that does not narrow the tie, this
@@ -2617,19 +2616,19 @@ def erase_registration() -> int:
     **Checked before anything else touches disk: has this event's key
     already been destroyed?** `data/event-key-destructions.yml` is read
     first, and if it already names `event_id`, this prints the destruction
-    date on record and returns 0 -- spec S4's "et c'est demontrable",
-    proved from the committed registry rather than merely asserted, and
+    date on record and returns 0 -- demonstrable, not merely asserted:
+    proved from the committed registry, and
     the request is already satisfied (there is nothing left that could be
     erased). An event id that is not known to this repository at all (no
     `keys/events/<id>.pub`, and no destruction on record either) is
     refused instead -- that is not "already erased", it names nothing this
     repository ever registered.
 
-    **Unless `EVENT_PRIVATE_KEY` is supplied anyway (Minor 4).** A key
+    **Unless `EVENT_PRIVATE_KEY` is supplied anyway.** A key
     that still opens `registrations.enc` for an event this registry
     already calls destroyed contradicts the one thing this command exists
     to prove -- "there is nothing left" would then be an assertion, not a
-    demonstration, exactly the distinction spec S4 draws. So that
+    demonstration, and this command exists to demonstrate. So that
     contradiction refuses loudly (exit 1) rather than confirming "nothing
     to erase" over it; a caller with nothing to prove wrong simply omits
     `EVENT_PRIVATE_KEY`, the ordinary case.
@@ -2714,7 +2713,7 @@ def erase_registration() -> int:
             target = find_by_matching_code(current, event_id, code, salt, private_pem)
         except AmbiguousMatchingCodeError as exc:
             # A collision on the code alone must refuse -- but if an
-            # address was also supplied (R-32) and it narrows the tied
+            # address was also supplied and it narrows the tied
             # entries to exactly one, that is evidence in hand, not a
             # guess: using it is the right side of the same rule that
             # refuses when there is nothing else to go on.
@@ -2743,7 +2742,7 @@ def erase_registration() -> int:
         print(f"no registration found for event {event_id}", file=sys.stderr)
         return 1
 
-    # Fix round 1, R-45 (Critical 1): this early erasure request has to
+    # This early erasure request has to
     # remove the same person's rows from the committed attendance export
     # too, or "erased" is no longer true -- an early erasure exists
     # precisely to beat the +90-day key destruction, and before this fix
@@ -2797,12 +2796,12 @@ def erase_registration() -> int:
 #: a stale file from an earlier run of this same job workspace is never
 #: mistaken for this run's answer. `.gitignore`d: never committed.
 #:
-#: M1, fix wave 2 (security audit 2026-08-23): this file used to carry
+#: This file used to carry
 #: display names and addresses in the clear -- a 14-day build artefact
 #: readable by anyone with repository read access, a wider set than those
 #: holding the event's own decryption key, and entirely outside the
 #: encryption/erasure/key-destruction lifecycle every other piece of
-#: personal data in this project is held to (P-1, P-2). The `.gitignore`
+#: personal data in this project is held to. The `.gitignore`
 #: comment that used to guard it said "never printed" -- true, but that
 #: never covered "never uploaded", which is the surface that actually
 #: leaked. `match_attendance` below no longer writes a name or an address
@@ -2823,10 +2822,9 @@ UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
 def encrypt_attendance_export() -> int:
     """`convener-encrypt-attendance-export`: turn a host's raw, never-committed
     `data/events/<id>/attendance-import.csv` into a committable,
-    encrypted `data/events/<id>/attendance-import.csv.enc` (task 17,
-    closing `docs/superpowers/deferred-work.md` entry 10; the file's own
-    per-row shape is fix round 1, R-45 -- see `platform.py`'s module
-    docstring, "one independent envelope per row").
+    encrypted `data/events/<id>/attendance-import.csv.enc` -- see
+    `platform.py`'s module docstring, "one independent envelope per row",
+    for the file's own per-row shape.
 
     Runs entirely outside continuous integration, on a host's own
     machine, against the plaintext export they just downloaded off the
@@ -2852,7 +2850,7 @@ def encrypt_attendance_export() -> int:
     (a missing or duplicated required column -- `parse_attendance_csv`'s
     own whole-file failures, surfaced here on the host's own screen
     rather than reaching a CI job log at all, which is the strongest
-    answer Important 5's own finding could have).
+    answer to that finding there is).
 
     Parses the plaintext locally and prints one line per malformed row,
     the same as `ManualPlatform.get_attendance` already does for the
@@ -2911,7 +2909,7 @@ def encrypt_attendance_export() -> int:
 
     enc_path = plain_path.parent / f"{plain_path.name}.enc"
     rel_enc = Path("data") / "events" / event_id / enc_path.name
-    # Minor 8, fix round 1: this has no date or content to compare against
+    # This has no date or content to compare against
     # -- it always encrypts whatever the local plaintext currently says --
     # so a stray or stale local export would otherwise replace a good
     # committed file with a worse one and the only signal would be an
@@ -2941,9 +2939,9 @@ def _load_registrations(
     defect" -- so this is the one place the loop is written, and the one
     place its silence was fixed.
 
-    Not the same shape as R-46's fix to `platform.decrypt_attendance_rows`:
+    Not the same shape as `platform.decrypt_attendance_rows`'s own guard:
     that one refuses outright when *every* row in a non-empty file fails --
-    the wrong-file case. This is the *partial* case R-46 deliberately left
+    the wrong-file case. This is the *partial* case that guard deliberately left
     open ("some rows failing is a damaged file -- tolerable"): one
     undecryptable entry among many good ones is not refused here either,
     for the same reason -- it would let one damaged entry take down a
@@ -2964,16 +2962,16 @@ def _load_registrations(
 
 
 def _warn_if_title_truncated(event: CertificateEvent) -> None:
-    """Carried item 8 (fix wave 2): `CertificateEvent.__post_init__`
+    """`CertificateEvent.__post_init__`
     truncates a title over `certificate._MAX_TITLE_LENGTH` silently --
-    correct for the document and the signature (R-22, they must never
+    correct for the document and the signature (they must never
     disagree about which title they carry), but silent for the operator
     too, until now. Every one of the four commands that construct a
     `CertificateEvent` (`issue_certificates`, `reissue_certificate`,
     `deliver_certificates`, `deliver_certificate`) calls this right after,
     so a shortened title is always named once, on stderr, never
     swallowed -- the same "surfaced, not folded away" discipline this
-    module already gives R-26's revoked-refusal case."""
+    module already gives the revoked-refusal case."""
     if event.title_truncated:
         print(
             f"::warning::the title for event {event.event_id} was too "
@@ -2990,7 +2988,7 @@ def _salted_record_id(event_id: str, email: str, salt: str) -> str:
     explicitly rather than asserted -- an `assert` is stripped under
     `python -O`, and D-25 requires this failure mode to survive that --
     rather than silently falling back to the address it would otherwise
-    have to print instead, the one leak M1's fix exists to rule out."""
+    have to print instead, the one leak this is meant to rule out."""
     record_id = matching_code(event_id, email, salt)
     if record_id is None:
         raise RuntimeError(
@@ -3022,13 +3020,13 @@ def match_attendance() -> int:
 
     `attendance.py` is pure and never prints; this function is the only
     place its answer is turned into output, and it draws the same line
-    task 6 drew for a decrypted registration: only counts -- how many
+    this project draws for a decrypted registration: only counts -- how many
     matched, unmatched and unreachable, and how many rows were read --
     ever reach stdout, never a name or an address. The host's actual short
     list goes to `UNMATCHED_ATTENDANCE` instead, never printed and never
     committed (see its own comment above).
 
-    **M1, fix wave 2: `UNMATCHED_ATTENDANCE` itself no longer carries a
+    **`UNMATCHED_ATTENDANCE` itself no longer carries a
     name or an address either.** An unmatched connection is named by its
     own salted record identifier (`_salted_record_id`, the identical
     `matching_code` shape a registrant's own confirmation code already
@@ -3042,8 +3040,8 @@ def match_attendance() -> int:
     case", so there was never a name for a host to act on there in the
     first place.
 
-    **`CONVENER_MATCHING_SALT` and `CONVENER_FCC_CONFERENCE_ID`** (I-4, branch
-    review): the same optional matching-salt and per-event conference id
+    **`CONVENER_MATCHING_SALT` and `CONVENER_FCC_CONFERENCE_ID`:**
+    the same optional matching-salt and per-event conference id
     `issue_certificates` and `invite_survey` already read, via the
     identical `_conference_ids_from_env` resolution -- match-attendance.yml
     gives this command the same `EVENT_ID`/`conference_id` input shape
@@ -3085,7 +3083,7 @@ def match_attendance() -> int:
         os.environ,
         speaker_list,
         config_map,
-        # I-4, branch review: this now has a workflow of its own
+        # This has a workflow of its own
         # (match-attendance.yml), with the same `conference_id` input
         # `issue_certificates` and `invite_survey` already take -- so the
         # resolution those two already share is shared here too, rather
@@ -3106,10 +3104,10 @@ def match_attendance() -> int:
         # Catching only the first would leave a real API outage as an
         # uncaught traceback instead of the same clean one-line failure
         # every other error path in this function already gives.
-        # `EventNotFoundError` joined the tuple in fix round 3 (Critical B),
-        # for the FCC path raising it whenever conference_ids resolved
+        # `EventNotFoundError` is in the tuple
+        # for the FCC path raising it whenever conference_ids resolves
         # nothing for event_id -- still reachable even now that
-        # conference_ids is populated (I-4): an operator can still leave
+        # conference_ids is populated: an operator can still leave
         # `conference_id` blank.
         print(str(exc), file=sys.stderr)
         return 1
@@ -3132,7 +3130,7 @@ def match_attendance() -> int:
             lines.append("## Unmatched -- the host can resolve these by hand")
             for index, unmatched in enumerate(result.unmatched, start=1):
                 minutes = unmatched.duration_seconds // 60
-                # M1, fix wave 2: named by record, never by person (D-24).
+                # Named by record, never by person (D-24).
                 # `unmatched.email` and `.display_name` are the platform's
                 # own observed values for this connection -- never printed
                 # here. `_salted_record_id` needs the same salt every
@@ -3172,7 +3170,7 @@ def match_attendance() -> int:
                         )
                 lines.append(line)
         if result.unreachable:
-            # M1, fix wave 2: `attendance.py`'s own module docstring already
+            # `attendance.py`'s own module docstring already
             # calls this outcome "not a host-resolvable case" -- no cascade
             # level past the code could ever reach a telephone joiner, so a
             # per-row name here was never actionable, only a name. One
@@ -3209,31 +3207,29 @@ def match_attendance() -> int:
 def _conference_ids_from_env(event_id: str) -> dict[str, str]:
     """`conference_ids` for `platform_from_env`, folded from
     `CONVENER_FCC_CONFERENCE_ID` exactly the way `release_recording` already
-    does (task 10) -- Critical B, fix round 3: `issue_certificates` and
+    does: `issue_certificates` and
     `reissue_certificate` both need the identical resolution, so it is
-    factored out here rather than retyped a third and fourth time, per
-    this round's own ruling ("reuse that code path rather than writing a
-    second one").
+    factored out here rather than retyped a third and fourth time.
 
-    Before this round, neither `issue_certificates` nor `reissue_certificate`
-    passed any `conference_ids` at all, so `PlatformFCC._conference_id`
+    Neither `issue_certificates` nor `reissue_certificate` used to
+    pass any `conference_ids` at all, so `PlatformFCC._conference_id`
     always raised `EventNotFoundError` the moment the FCC path was in play
-    -- uncaught until this same round also added `EventNotFoundError` to
+    -- uncaught until `EventNotFoundError` joined
     both functions' own `except` tuples. An event with no FCC conference
     configured is the ordinary D-13 shape either way: this returns `{}`,
     the same "nothing to resolve" `release_recording` and
     `discard_recording` already treat identically.
 
-    `release_recording` and `discard_recording` (task 10, a closed round)
+    `release_recording` and `discard_recording`
     keep their own inline versions rather than being rewritten to call
-    this -- not reopened here."""
+    this -- deliberately left alone."""
     conference_id = os.environ.get("CONVENER_FCC_CONFERENCE_ID", "").strip()
     return {event_id: conference_id} if conference_id else {}
 
 
 def _env_flag_is_true(name: str) -> bool:
     """This project's own convention for a boolean `workflow_dispatch`
-    input, named here rather than nowhere (carried item 9, fix wave 2):
+    input, named here rather than nowhere:
     the literal string `"true"`, matched case-insensitively after
     stripping surrounding whitespace -- never `bool(os.environ.get(...))`
     (a non-empty `"false"` string is still truthy in Python) and never a
@@ -3252,17 +3248,17 @@ def _env_flag_is_true(name: str) -> bool:
 
 
 # ------------------------------------------------------------------ #
-# Inviting the post-event survey (task 16b, phase 4 spec S:6): "envoye
-# apres coup aux seules personnes reconnues presentes." Two commands, the
-# same split registration.yml already draws between storing and sending
-# (Important 2, task 6/7's own review): `invite_survey` composes and sends
+# Inviting the post-event survey: sent afterwards, only to people
+# recognised as present. Two commands, the
+# same split registration.yml already draws between storing and sending:
+# `invite_survey` composes and sends
 # -- once, never retried, so a rejected push downstream can never turn
 # into a second copy of the same message -- and `record_survey_invitation`
 # writes the one, person-free fact that stops a re-dispatch from doing it
 # again, inside a commit-and-push retry loop exactly like every other
 # writer in this file uses. See `survey_invite.py`'s own module docstring
-# for the reasoning this split rests on (ruling 3): there is no
-# identifier here the way `certificate.py`'s own register gives R-27, so
+# for the reasoning this split rests on: there is no
+# identifier here the way `certificate.py`'s own register gives one, so
 # the whole bound is "this event was invited", never "these people were".
 # ------------------------------------------------------------------ #
 
@@ -3302,14 +3298,13 @@ def invite_survey() -> int:
     and `deliver_certificates`'s own discipline:
 
     1. the event id is a legal token at all;
-    2. **the survey switch is on** (`_survey_enabled`) -- ruling 6: an
+    2. **the survey switch is on** (`_survey_enabled`): an
        invitation to a closed survey would be a fourth hole in the same
        switch `handle_survey_response`, the signup relay and `SurveyForm.tsx`
-       already enforce (`_survey_enabled`'s own docstring, "task 16's own
-       mutant to kill");
+       already enforce;
     3. **this event has not already been invited**
-       (`data/survey-invitations.yml`), unless `RESEND_ALL=true` -- ruling
-       3's own bound, checked before anything is decrypted so a routine
+       (`data/survey-invitations.yml`), unless `RESEND_ALL=true` -- the
+       whole bound a resend has, checked before anything is decrypted so a routine
        re-dispatch after nothing changed touches no registration at all;
     4. the event's private key is configured;
     5. `registrations.enc` exists and parses;
@@ -3319,9 +3314,9 @@ def invite_survey() -> int:
     rebuilt, see `survey_invite.py`'s own module docstring for why -- and
     prints only counts: how many matched attendees were invited, how many
     sends failed, and, kept apart rather than folded into one number
-    (Minor 4, branch review), how many this event's own attendance export
-    named but never invited for each of the two different reasons spec S:5
-    distinguishes -- unmatched (an address was seen; no registration tied
+    rather than folded into one number, how many this event's own attendance
+    export named but never invited for each of the two different reasons
+    eligibility distinguishes -- unmatched (an address was seen; no registration tied
     to it, so there is nothing on file to compose an invitation *from*,
     never mind send it to) and unreachable (a telephone joiner; no address
     was ever collected at all). `invite_survey` is the only *reachable*
@@ -3341,11 +3336,11 @@ def invite_survey() -> int:
     refuse itself outright for an invitation that, in fact, never went
     anywhere.
 
-    **A single in-place retry, needing no identifier at all (Important 4,
-    fix round 1).** A delivery that fails is retried once, immediately,
+    **A single in-place retry, needing no identifier at all.**
+    A delivery that fails is retried once, immediately,
     inside this same loop, before counting it as unsent -- see
-    `survey_invite.py`'s own module docstring, "ruling 3, corrected in fix
-    round 1", for why this -- not a per-person resend handle -- is the
+    `survey_invite.py`'s own module docstring
+    for why this -- not a per-person resend handle -- is the
     right place to spend effort on a transient failure: it needs nothing
     committed anywhere, so it costs nothing in proportionality or in
     `CONVENER_MATCHING_SALT`'s own ordinary absence, and it means a run of 40
@@ -3435,9 +3430,9 @@ def invite_survey() -> int:
         message = survey_invite.compose(attendee.registration, event_title, event_id)
         result = confirmation.deliver(message, os.environ)
         if not result.sent:
-            # Important 4, fix round 1: one immediate retry, in place --
+            # One immediate retry, in place --
             # see this function's own docstring and survey_invite.py's
-            # module docstring ("ruling 3") for why this, not a per-person
+            # module docstring for why this, not a per-person
             # resend handle, is the right answer to a transient failure.
             result = confirmation.deliver(message, os.environ)
         if result.sent:
@@ -3445,7 +3440,7 @@ def invite_survey() -> int:
         else:
             unsent_count += 1
 
-    # Minor 4, branch review: kept apart rather than folded into one
+    # Kept apart rather than folded into one
     # "present but not invited" count -- see this function's own docstring
     # for why the two are not the same finding, and why this print line
     # was the one reachable place that still erased the difference.
@@ -3505,27 +3500,27 @@ def record_survey_invitation() -> int:
 
 def issue_certificates() -> int:
     """`convener-issue-certificates`: match this event's attendance, work out
-    who is eligible (spec S:5), and issue -- or reproduce -- a certificate
-    for each of them (spec S:7, task 12).
+    who is eligible, and issue -- or reproduce -- a certificate
+    for each of them.
 
     Reads `EVENT_ID` and `EVENT_PRIVATE_KEY` exactly as `match_attendance`
     does, for the same reason: this job re-derives the match from scratch
     rather than trusting a prior run's own answer, so a corrected
     registration or a corrected attendance export is picked up for free
-    (spec S:8: "un appariement corrigé se recalcule sans réinscrire").
+    -- a corrected match recomputes without anybody re-registering.
 
-    **Critical B, fix round 3.** Also reads `CONVENER_FCC_CONFERENCE_ID`
+    Also reads `CONVENER_FCC_CONFERENCE_ID`
     (`_conference_ids_from_env`, shared with `reissue_certificate`), the
     same optional `workflow_dispatch` input `recording.yml` already gives
-    `release_recording` (task 10) -- without it, nothing ever populated
+    `release_recording`. Without it, nothing ever populated
     `conference_ids`, so the FCC path (`CONVENER_MEETING_API_TOKEN` configured)
     could never issue a certificate at all: `PlatformFCC._conference_id`
     raised `EventNotFoundError` before any network call, and this function
-    did not catch it. Both are fixed together here: the input is now
+    did not catch it. Both are closed together: the input is
     threaded through, and `EventNotFoundError` joins the exception tuple
     below alongside `AttendanceImportError` and `FCCRequestError`. A
-    conference id is a provider identifier, not personal data -- none of
-    R-22's "never an address" reasoning applies to it, the same conclusion
+    conference id is a provider identifier, not personal data -- so the
+    "never an address" reasoning does not apply to it, the same conclusion
     `recording.yml`'s own header comment already reached. **The manual
     path (no `CONVENER_MEETING_API_TOKEN`) stays blocked regardless**: its own
     attendance export is `.gitignore`d and cannot exist in a CI checkout
@@ -3556,14 +3551,14 @@ def issue_certificates() -> int:
     but unusable (a mangled PEM, the ordinary way a pasted secret fails)
     is checked once, before any registration is decrypted, rather than
     left to surface as an unhandled `signing.SigningError` traceback from
-    inside the loop below (Important 1, fix round 1).
+    inside the loop below.
 
     A speaker record for `event_id` that is missing, or present but
     carries an empty title or an empty date, refuses the whole run (exit
     1) rather than signing a certificate that names no event and no date
-    -- spec S:7's content list is not optional, and the register row a
-    silently-empty certificate would leave behind is permanent (Important
-    2, fix round 1). When `data/speakers.yml` itself failed to parse, the
+    -- a certificate's content is not optional, and the register row a
+    silently-empty certificate would leave behind is permanent.
+    When `data/speakers.yml` itself failed to parse, the
     message names that parse failure -- surfaced from `_load`, never
     discarded -- instead of sending an operator to look for a speaker
     record that was never actually missing.
@@ -3575,8 +3570,8 @@ def issue_certificates() -> int:
     was freshly minted; reissuing every attendee already on record writes
     nothing and still exits 0.
 
-    **A fingerprint whose only rows are revoked is refused, not resurrected
-    (R-26, fix round 1, Critical 1).** `issue`'s own three-way lookup
+    **A fingerprint whose only rows are revoked is refused, not
+    resurrected.** `issue`'s own three-way lookup
     raises `ValueError` for that one attendee; this loop catches it,
     counts it separately (never crashing the whole run over it), and
     leaves the register untouched for that fingerprint. The correction
@@ -3584,7 +3579,7 @@ def issue_certificates() -> int:
     never something this scheduled-and-re-run command performs itself.
 
     **Writes the freshly-issued identifiers to `$GITHUB_OUTPUT` as
-    `issued_ids=<comma-joined>` (R-27, fix round 1).** Identifiers are
+    `issued_ids=<comma-joined>`.** Identifiers are
     public by design -- already printed on the document, already
     published in `certificates-public.json` -- so nothing personal
     travels. `issue-certificates.yml`'s delivery step
@@ -3594,7 +3589,7 @@ def issue_certificates() -> int:
 
     Each eligible attendee's `duration_seconds` is capped at
     `threshold.seminar_duration_minutes * 60` before it ever reaches
-    `issue` (R-17, fix round 1, Critical 1) -- see
+    `issue` -- see
     `certificate.duration_hours`'s own docstring for why this is the
     correct number, not a workaround, and why it is done here rather than
     inside `certificate.py`: this is the one place both the attendee's
@@ -3668,10 +3663,10 @@ def issue_certificates() -> int:
     try:
         rows = platform.get_attendance(event_id)
     except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
-        # `EventNotFoundError` joined this tuple in fix round 3 (Critical
-        # B): with no `CONVENER_FCC_CONFERENCE_ID` configured for this event,
-        # `PlatformFCC._conference_id` raises it, and before this round
-        # nothing here caught it -- `issue_certificates`'s own docstring
+        # `EventNotFoundError` is in this tuple because,
+        # with no `CONVENER_FCC_CONFERENCE_ID` configured for this event,
+        # `PlatformFCC._conference_id` raises it and nothing here used to
+        # catch it -- `issue_certificates`'s own docstring
         # already promised every failure is "reported on one line and
         # exit 1", and this was the one hole in that promise.
         print(str(exc), file=sys.stderr)
@@ -3723,7 +3718,7 @@ def issue_certificates() -> int:
             attendee,
             duration_seconds=min(attendee.duration_seconds, max_duration_seconds),
         )
-        # `result.token` is deliberately dropped: task 14 recomputes it
+        # `result.token` is deliberately dropped: delivery recomputes it
         # byte-identically (PKCS1v15 determinism -- see certificate.py's
         # own module docstring, "idempotent without being deterministic").
         # This is the payoff of the idempotence design, not an oversight.
@@ -3737,7 +3732,7 @@ def issue_certificates() -> int:
                 issued_on=issued_on,
             )
         except ValueError:
-            # R-26, fix round 1: every register row for this fingerprint
+            # Every register row for this fingerprint
             # is revoked -- `issue`'s own three-way lookup refuses rather
             # than resurrecting it. A routine re-run must skip this one
             # attendee, never crash the whole run over it; the correction
@@ -3759,7 +3754,7 @@ def issue_certificates() -> int:
             newline="",
         )
 
-    # R-27, fix round 1: hand the freshly-issued identifiers (public by
+    # Hand the freshly-issued identifiers (public by
     # design -- already printed on the document, already published in
     # certificates-public.json) to the delivery step through
     # `$GITHUB_OUTPUT`, so a re-dispatch after a corrected export mails
@@ -3806,7 +3801,7 @@ def certificates_public_data() -> int:
     entries: list[Any] = []
     if events_dir.is_dir():
         for register_path in sorted(events_dir.glob("*/certificates.yml")):
-            # Minor 5 (fix round 1): relative to `root`, not the whole
+            # Relative to `root`, not the whole
             # absolute path -- issue_certificates and reissue_certificate
             # already name a register this way, and the absolute form
             # carries CONVENER_REPO_ROOT into the log for no reason.
@@ -3835,7 +3830,7 @@ def certificates_public_data() -> int:
 def _load_certificate_register(
     root: Path, event_id: str
 ) -> tuple[Path, tuple[CertificateEntry, ...]] | None:
-    """Load `event_id`'s register -- factored out (fix round 2) so
+    """Load `event_id`'s register -- factored out so
     `issue_certificates`, `reissue_certificate` and `revoke_certificate`
     share one reading of `certificates.yml` rather than three copies that
     could drift. Returns `None` on any failure, having already printed the
@@ -3867,7 +3862,7 @@ def _find_register_entry(
     existing: Sequence[CertificateEntry], event_id: str, certificate_id: str
 ) -> CertificateEntry | None:
     """`existing`'s own row for `(event_id, certificate_id)`, or `None` --
-    factored out (task 14) so `reissue_certificate` and
+    factored out so `reissue_certificate` and
     `deliver_certificate` share one reading of "does this certificate id
     exist on record for this event", rather than the inline `next(...)`
     each once wrote for itself."""
@@ -3889,9 +3884,9 @@ def _find_attendee_by_fingerprint(
 ) -> MatchedAttendee | None:
     """The one currently-eligible attendee whose own fingerprint matches
     `target_fingerprint`, or `None` -- the reverse of
-    `certificate.issue`'s own lookup (R-22): resolve a public certificate
+    `certificate.issue`'s own lookup: resolve a public certificate
     id to a person by fingerprint alone, never by accepting or holding an
-    address. Factored out (task 14) so `reissue_certificate` and
+    address. Factored out so `reissue_certificate` and
     `deliver_certificate` share this one resolution path rather than
     `deliver_certificate` writing a second copy of it -- see that
     function's own docstring."""
@@ -3910,11 +3905,11 @@ def reissue_certificate() -> int:
     """`convener-reissue-certificate`: an operator's deliberate correction to
     one already-issued certificate -- mint a fresh identifier and a fresh
     signed token for the attendee named by `CERTIFICATE_ID`, never
-    touching the row it replaces (R-18, fix round 1, Important 3).
+    touching the row it replaces.
 
     Unlike `convener-issue-certificates`, this is never a scheduled job: an
     operator runs it by hand, once, for one certificate, after revoking
-    the one it replaces (`convener-revoke-certificate`, R-21, fix round 2).
+    the one it replaces (`convener-revoke-certificate`).
     See `certificate.reissue`'s own docstring for why this has to be a
     separate, explicit command rather than a change to
     `convener-issue-certificates`'s own idempotent lookup: that job must keep
@@ -3924,12 +3919,11 @@ def reissue_certificate() -> int:
     Reads `EVENT_ID`, `EVENT_PRIVATE_KEY`, `CONVENER_SIGNING_KEY`,
     `CONVENER_MATCHING_SALT` and `CONVENER_FCC_CONFERENCE_ID` exactly as
     `convener-issue-certificates` does -- the same D-13 shapes, and the same
-    `_conference_ids_from_env` resolution (Critical B, fix round 3) --
-    plus `CERTIFICATE_ID`, the certificate this run corrects (R-22, fix
-    round 2).
+    `_conference_ids_from_env` resolution --
+    plus `CERTIFICATE_ID`, the certificate this run corrects.
 
-    **`CERTIFICATE_ID` is shape-checked before it is ever echoed (minor 2,
-    fix round 3).** `certificate.is_valid_identifier` -- the exact 32
+    **`CERTIFICATE_ID` is shape-checked before it is ever echoed.**
+    `certificate.is_valid_identifier` -- the exact 32
     lowercase hex characters `_new_identifier` always produces -- is
     checked immediately after this value is read, the same one-line
     discipline `eventkeys.secret_name` already gives `EVENT_ID`.
@@ -3938,11 +3932,11 @@ def reissue_certificate() -> int:
     Actions workflow command at the start of a log line the moment this
     function's own refusal or success message printed it back.
 
-    **`CERTIFICATE_ID`, never an address (R-22).** A `workflow_dispatch`
+    **`CERTIFICATE_ID`, never an address.** A `workflow_dispatch`
     input is rendered on the run page and retained with the run for as
     long as the run's own history exists -- longer than the 14-day
     artefact this project uses everywhere it has to carry personal data
-    at all, and exactly the exposure task 7's own Important 4 named. This
+    at all, and exactly the exposure that argues against it. This
     command has an alternative `convener-resend-confirmation` never had: the
     certificate identifier is random, public by design, already printed
     on the document and already published in
@@ -4007,7 +4001,7 @@ def reissue_certificate() -> int:
         print("no certificate id supplied", file=sys.stderr)
         return 1
     if not is_valid_identifier(certificate_id):
-        # Minor 2, fix round 3: never echo a malformed value back -- the
+        # Never echo a malformed value back -- the
         # same "no valid event id supplied" idiom `eventkeys.secret_name`'s
         # own caller above already uses for the identical reason.
         print("not a valid certificate id supplied", file=sys.stderr)
@@ -4063,7 +4057,7 @@ def reissue_certificate() -> int:
         rows = platform.get_attendance(event_id)
     except (AttendanceImportError, FCCRequestError, EventNotFoundError) as exc:
         # See `issue_certificates`'s own comment on the identical
-        # `EventNotFoundError` addition (Critical B, fix round 3).
+        # `EventNotFoundError` addition.
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -4071,11 +4065,11 @@ def reissue_certificate() -> int:
     threshold = EligibilityThreshold.from_config(cfg)
     eligible = eligible_attendees(matched, threshold)
 
-    # R-22: resolve the certificate to a candidate by fingerprint, the
+    # Resolve the certificate to a candidate by fingerprint, the
     # same derivation `certificate.issue` performs, run in reverse --
     # never by reading an address out of the register (it holds none) or
     # accepting one as input (see the docstring above). Shared with
-    # `deliver_certificate` (task 14) through `_find_attendee_by_fingerprint`
+    # `deliver_certificate` through `_find_attendee_by_fingerprint`
     # rather than written a second time.
     attendee = _find_attendee_by_fingerprint(
         eligible, event_id, salt, target_entry.fingerprint
@@ -4142,15 +4136,13 @@ def reissue_certificate() -> int:
 
 def revoke_certificate() -> int:
     """`convener-revoke-certificate`: mark one already-issued certificate
-    `STATE_REVOKED` in the register (R-21, fix round 2) -- the operation
-    spec S:7 names by itself ("Révocation"), and the one this module
-    always had a tested, correct pure function for (`certificate.revoke`)
-    and, until this round, no caller at all.
+    `STATE_REVOKED` in the register -- the operation
+    this module always had a tested, correct pure function for
+    (`certificate.revoke`) and, for a long time, no caller at all.
 
-    Round 1 reasoned that a hand edit of the committed-clear register was
-    a legitimate way to flip one entry's `state` (`cli.py`'s own docstring
-    at the time; see the fix round 1 report's Concern 2). R-21 does not
-    accept that: it depends on a volunteer having a working checkout,
+    A hand edit of the committed-clear register was once reasoned to be
+    a legitimate way to flip one entry's `state`. It is not: it depends
+    on a volunteer having a working checkout,
     finding the right file, editing the right row, and committing it
     correctly -- exactly the "a collaborator's goodwill or their post"
     dependency this whole project refuses to build on elsewhere -- and
@@ -4159,11 +4151,11 @@ def revoke_certificate() -> int:
     that mistake gets made.
 
     Reads `EVENT_ID` and `CERTIFICATE_ID` -- both public identifiers,
-    never an address (R-22; see `reissue_certificate`'s own docstring for
+    never an address (see `reissue_certificate`'s own docstring for
     why an address is never accepted by any command in this module that a
     `workflow_dispatch` form could expose). `CERTIFICATE_ID` is
-    shape-checked the same way `reissue_certificate` checks it (minor 2,
-    fix round 3) -- see that function's own docstring for why. Needs no
+    shape-checked the same way `reissue_certificate` checks it
+    -- see that function's own docstring for why. Needs no
     signing key and no matching salt: revocation touches the register alone
     (`certificate.py`'s own "revocation touches the register, never the
     signature" section) -- the token a revoked certificate's holder
@@ -4192,8 +4184,8 @@ def revoke_certificate() -> int:
     register_path, existing = loaded_register
 
     try:
-        # `event_id` is passed alongside `certificate_id` since fix round
-        # 3 (minor 1): `revoke` now filters on both, the same "this
+        # `event_id` is passed alongside `certificate_id`:
+        # `revoke` filters on both, the same "this
         # event's own certificate" `reissue` already required, rather than
         # matching an identifier alone across whatever `existing` happens
         # to hold.
@@ -4231,10 +4223,10 @@ def deliver_certificates() -> int:
     same signed token every time (`signing.sign` is deterministic) -- so
     running this command again, for a delivery that failed the first
     time, replays the identical document rather than minting a second
-    certificate for the same person (spec S:8's own guarantee, and
-    `delivery.py`'s module docstring, "replayable, not regenerated").
+    certificate for the same person (`delivery.py`'s module docstring,
+    "replayable, not regenerated").
 
-    Never writes anything to disk (ruling 1, task 14): the rendered
+    Never writes anything to disk: the rendered
     document lives only in memory for the length of one e-mail send
     (`delivery.render_certificate`, `delivery.deliver`) and is never
     written to a file, an artefact, or printed. A failed delivery is
@@ -4243,9 +4235,9 @@ def deliver_certificates() -> int:
     module docstring, "never written to disk", for why writing it
     anywhere would be the wrong pattern here regardless: what it would
     retain is a nominative, signed document, in an Actions surface,
-    exactly what spec S:7 forbids -- the same "reported, not retained"
-    rule `_send_confirmation` now applies to an unsent registration
-    confirmation too (Critical 3, branch review), once that message
+    exactly what this project forbids -- the same "reported, not retained"
+    rule `_send_confirmation` applies to an unsent registration
+    confirmation too, once that message
     stopped being the one documented case a build artefact was the right
     place for it.
 
@@ -4268,7 +4260,7 @@ def deliver_certificates() -> int:
     `data/config.yml`, a platform that cannot answer, or a speaker record
     with no title and no date all refuse the whole run (exit 1) before
     anything is delivered. **A missing certificate register also refuses
-    (Minor 1, fix round 1):** with no `certificates.yml` on disk for this
+    :** with no `certificates.yml` on disk for this
     event, `issue`'s own "no row" branch would mint a fresh identifier
     that this function never persists (only `issue_certificates` writes
     the register) -- a certificate mailed once and never again reproducible.
@@ -4278,12 +4270,11 @@ def deliver_certificates() -> int:
 
     Once eligibility is computed, this command never fails the whole run
     again. Four outcomes, each counted separately and printed by name,
-    never folded into one indistinguishable bucket (Important 3, fix
-    round 1; carried item 7, fix wave 2):
+    never folded into one indistinguishable bucket:
 
-    - **`issue` refuses (R-26):** every register row for this fingerprint
+    - **`issue` refuses:** every register row for this fingerprint
       is revoked. Counted as its own `refused_count`, not folded into
-      "not sent" (carried item 7, fix wave 2: it used to be, and an
+      "not sent" (it used to be, and an
       operator reading the printed line could not tell "correctly not
       sent, on purpose" from "the mail server is down" -- exactly the
       distinction `unsent_count`'s own D-13 framing below depends on
@@ -4308,12 +4299,12 @@ def deliver_certificates() -> int:
     None of these three stops delivery to the rest of `eligible`; the
     exception's own text is never printed, only counted, and the message
     also lists the *identifiers* (never a name or an address) that did not
-    go out (R-27, fix round 1) -- an operator whose one bounce failed can
+    go out -- an operator whose one bounce failed can
     then name it directly to `convener-deliver-certificate`, rather than
     reaching for the batch that caused the problem in the first place.
 
     **Restricted by default to what this run's own issuance step just
-    minted (R-27, fix round 1).** `DELIVER_ONLY` -- a comma-joined set of
+    minted.** `DELIVER_ONLY` -- a comma-joined set of
     identifiers, ordinarily `issue_certificates`'s own `issued_ids` output,
     forwarded by `issue-certificates.yml` -- skips every eligible attendee
     whose identifier is not in that set, counted separately
@@ -4321,7 +4312,7 @@ def deliver_certificates() -> int:
     entirely (a manual, standalone run outside that workflow) or
     `RESEND_ALL=true` (an operator's own deliberate batch retry, never the
     default) both mean no restriction at all -- every eligible attendee is
-    targeted, the behaviour this function always had before this round.
+    targeted, the behaviour this function had before `DELIVER_ONLY` existed.
     `DELIVER_ONLY` set to the empty string -- an issuance run that minted
     nothing new -- means every eligible attendee is skipped: the whole
     point of the hand-off is that a re-dispatch after nothing changed
@@ -4329,8 +4320,8 @@ def deliver_certificates() -> int:
 
     Prints only counts and public identifiers, never a name or an
     address, on every path -- including an attendee who was already on
-    record before this run started (Important 10 in `certificate.py`'s
-    own review history: a name printed on exactly that branch survived a
+    record before this run started (a name printed on exactly that branch
+    survived a
     full green suite once already, because the leak sweep that would have
     caught it only ever ran on the freshly-issued path)."""
     event_id = os.environ.get("EVENT_ID", "").strip()
@@ -4435,7 +4426,7 @@ def deliver_certificates() -> int:
         return 1
     register_path, existing = loaded_register
     if not register_path.exists():
-        # Minor 1, fix round 1: nothing to reproduce from -- see this
+        # Nothing to reproduce from -- see this
         # function's own docstring for why minting here anyway would be
         # unsafe (an identifier written nowhere).
         print(f"no certificate register for event {event_id}", file=sys.stderr)
@@ -4446,7 +4437,7 @@ def deliver_certificates() -> int:
     issued_on = paris_today(datetime.now(UTC))
     max_duration_seconds = threshold.seminar_duration_minutes * 60
 
-    # R-27, fix round 1: restrict to what this run's own issuance step
+    # Restrict to what this run's own issuance step
     # just minted, unless an operator has explicitly asked for everyone.
     # See this function's own docstring for the full contract.
     resend_all = _env_flag_is_true("RESEND_ALL")
@@ -4475,8 +4466,8 @@ def deliver_certificates() -> int:
                 capped_attendee, event, signing_key, salt, existing, issued_on=issued_on
             )
         except ValueError:
-            # R-26: every register row for this fingerprint is revoked --
-            # never resurrect it here. Carried item 7 (fix wave 2): counted
+            # Every register row for this fingerprint is revoked --
+            # never resurrect it here. Counted
             # separately from `unsent_count` -- a revoked certificate that
             # was correctly never delivered is not the same finding as a
             # transport failure, and an operator could not previously tell
@@ -4504,7 +4495,7 @@ def deliver_certificates() -> int:
                 result.entry.identifier,
                 document,
             )
-        except Exception:  # Important 3: our own code, not the transport
+        except Exception:  # our own code, not the transport
             render_failed_count += 1
             unsent_ids.append(result.entry.identifier)
             continue
@@ -4524,7 +4515,7 @@ def deliver_certificates() -> int:
         f"{unreadable_registrations} registration(s) could not be read)"
     )
     if unsent_ids:
-        # R-27, fix round 1: identifiers are public by design -- never a
+        # Identifiers are public by design -- never a
         # name or an address -- so an operator can copy one straight into
         # convener-deliver-certificate's own CERTIFICATE_ID input.
         print(f"not sent: {', '.join(sorted(unsent_ids))}")
@@ -4533,9 +4524,10 @@ def deliver_certificates() -> int:
 
 def deliver_certificate() -> int:
     """`convener-deliver-certificate`: (re)deliver one already-issued
-    certificate, named by `CERTIFICATE_ID` -- the manual resend `spec S:9`
-    asks for ("un certificat dans les indesirables n'existe pas"), for the
-    one document R-22 forbids ever accepting an address to redeliver.
+    certificate, named by `CERTIFICATE_ID` -- the manual resend the risk
+    of silent loss asks for (a certificate in a spam folder does not
+    exist), for the one document this project never accepts an address to
+    redeliver.
 
     Reuses `reissue_certificate`'s own `CERTIFICATE_ID` -> attendee
     resolution (`_find_register_entry`, `_find_attendee_by_fingerprint`)
@@ -4547,7 +4539,7 @@ def deliver_certificate() -> int:
     full reasoning this shares).
 
     **Signs `target_entry` directly, via `certificate.sign_for`, never
-    `certificate.issue` (R-26, fix round 1, Critical 1).** `issue`
+    `certificate.issue`.** `issue`
     re-resolves by *fingerprint*, taking the currently-issued row for that
     fingerprint -- almost always `target_entry` itself, but not after a
     revoke-and-reissue with no correction applied here: the register would
@@ -4559,7 +4551,7 @@ def deliver_certificate() -> int:
     exact row this function already holds; nothing here re-resolves
     anything by fingerprint at all.
 
-    **Refuses a revoked `target_entry` outright (R-26).** Checked
+    **Refuses a revoked `target_entry` outright.** Checked
     immediately after resolving it by `CERTIFICATE_ID`, before eligibility
     is even computed -- a revoked certificate is not delivered, ever, by
     any path; the correction is `convener-reissue-certificate`, run by hand.
@@ -4582,7 +4574,7 @@ def deliver_certificate() -> int:
     ordinary outward shape (a line, a clean exit), never a job failure,
     because the certificate itself is unaffected either way and a repeat
     run replays it identically (`delivery.py`'s own module docstring,
-    "replayable, not regenerated" -- bounded, after task 15's retention
+    "replayable, not regenerated" -- bounded, after the retention
     sweep, by whether this event's registrations still exist at all; see
     that same section for the boundary). Prints only the certificate id
     (already public) and the outcome -- never a name or an address."""
@@ -4656,7 +4648,7 @@ def deliver_certificate() -> int:
         )
         return 1
     if target_entry.state == STATE_REVOKED:
-        # R-26, fix round 1, Critical 1: a revoked certificate is not
+        # A revoked certificate is not
         # delivered, ever, by any path -- refuse outright rather than
         # ever reaching a signer with it.
         print(
@@ -4735,11 +4727,11 @@ def deliver_certificate() -> int:
         ),
     )
     try:
-        # R-26, fix round 1, Critical 1: sign `target_entry` -- the row
+        # Sign `target_entry` -- the row
         # `CERTIFICATE_ID` actually named -- rather than calling `issue`,
         # which re-resolves by fingerprint and could hand back a
-        # different row (the exact bug this round found: this command
-        # named one certificate in its own log and delivered another).
+        # different row. That is a real defect this project has had: the
+        # command named one certificate in its own log and delivered another.
         token = sign_for(target_entry, event, capped_attendee, signing_key)
         document = delivery.render_certificate(
             name=full_name(capped_attendee),
@@ -4777,8 +4769,8 @@ def deliver_certificate() -> int:
 def _consent_granted(record: Mapping[str, Any]) -> bool:
     """Whether this event's speaker explicitly agreed to publication --
     read directly, not through `public_data.recording_withheld`, because
-    that function answers a different question and round 3 wiring it in
-    here was wrong (caught on review, round 4). `recording_withheld` has
+    that function answers a different question and wiring it in
+    here was wrong, caught on review. `recording_withheld` has
     no reusable, decomposed "consent alone" reader -- it is built on the
     private `_gate_closed`, which combines consent with the board's own
     archive gate and is not exported -- so this reads the field directly
@@ -4805,17 +4797,15 @@ def release_recording() -> int:
     below (pinned by
     `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`).
     `delete_recording` exists because of the chosen platform's
-    storage quota (spec Section 2/9: a 90-minute recording costs roughly
-    1.6x the free tier's entire 1 GB allowance) -- freeing it after every
+    storage quota: a 90-minute recording costs roughly
+    1.6x the free tier's entire 1 GB allowance, so freeing it after every
     event is a condition of operation, not an optimisation, and getting
     the order wrong loses a recording forever.
 
-    The two-trace shape this enforces is not invented here: it reproduces
-    a design ruling already recorded in
-    `.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19 -- DESIGN RULING
-    for the spec: who deletes the recording, and on what evidence"), and
-    `platform_fcc.py`'s module docstring cites it in full; this function's
-    job is carrying that ruling into a real, tested call order.
+    The two-trace shape this enforces is a settled design ruling about
+    who deletes the recording and on what evidence;
+    `platform_fcc.py`'s module docstring carries it in full, and this
+    function's job is turning it into a real, tested call order.
 
     The order is not negotiable, and it is not a comment above a function
     call -- it is the only order this function's own control flow can
@@ -4841,10 +4831,10 @@ def release_recording() -> int:
     retrieved, and the quota it occupies would never have been freed.
 
     **This function is only for a recording headed to YouTube, and it now
-    enforces that rather than only documenting it (fix round 3; corrected
-    in round 4).** A recording that must never become public -- the
-    discussion segment (recorded on purpose, phase 3's own three-step
-    discipline, but never published), or a talk whose publication consent
+    enforces that rather than only documenting it.**
+    A recording that must never become public -- the
+    discussion segment (recorded on purpose, under the hosting runbook's
+    three-step discipline, but never published), or a talk whose publication consent
     was withheld -- must never take this path: trace 2 can only be
     satisfied by converting to MP4, and a converted file stays *publicly
     reachable at its own URL even after the conference is deleted*
@@ -4853,8 +4843,8 @@ def release_recording() -> int:
     even checked, this function refuses unless `_consent_granted` reads
     `publication.consent == "granted"` on the event's own speaker record.
 
-    **Consent alone, not `public_data.recording_withheld`.** Round 3
-    wired that function in here and it was wrong, caught on review:
+    **Consent alone, not `public_data.recording_withheld`.** That
+    function was wired in here once and it was wrong, caught on review:
     `recording_withheld` answers a *different* question -- "must this
     recording stay out of the public feed" -- and requires the board's
     own archive gate too (`publication.outcome == "published"`, written
@@ -4867,7 +4857,7 @@ def release_recording() -> int:
     approving it for the public feed. Gating on the full publication gate
     would hold the quota hostage to a board timeline the quota has no
     relationship with, recreating the exact "refuses forever, quota fills"
-    failure this whole task exists to prevent, for every fresh talk, every
+    failure this command exists to prevent, for every fresh talk, every
     time. `discard_recording` below is the other route: no proof of
     retrieval is asked for or accepted, because none may ever exist. See
     its own docstring, and `platform_fcc.py`'s module docstring's "Which
@@ -4877,8 +4867,8 @@ def release_recording() -> int:
     click does that, and only a consented recording headed for YouTube
     should ever receive one.
 
-    The quota is checked *after* deletion, deliberately (spec Section 9:
-    "alerte si l'espace reste occupe"), because a saturated quota breaks
+    The quota is checked *after* deletion, deliberately -- an alarm if
+    the space stays occupied -- because a saturated quota breaks
     the *next* session's recording -- discovered on the far side of a
     month otherwise. `platform.get_recording` is called a second time
     once `delete_recording` returns; if it still reports the recording
@@ -4925,7 +4915,7 @@ def release_recording() -> int:
     if not isinstance(runbook_progress, dict):
         runbook_progress = {}
 
-    # Enforced, not only documented (fix round 3; corrected round 4): the
+    # Enforced, not only documented: the
     # question here is only whether converting the recording was
     # legitimate, which turns on consent alone -- not
     # `public_data.recording_withheld`, which also waits on the board's
@@ -5035,7 +5025,7 @@ def discard_recording() -> int:
     requires proof the recording *was* retrieved; this function requires
     proof the operator is *choosing not to retrieve it at all*, because
     for the two cases it exists for -- the discussion segment (recorded
-    on purpose, phase 3's own discipline, never published) and a talk
+    on purpose, under the hosting runbook's discipline, never published) and a talk
     whose publication consent was withheld -- no such proof may ever be
     manufactured. Converting to MP4 is the only way `release_recording`'s
     trace 2 can be satisfied, and a converted file stays publicly
@@ -5069,7 +5059,7 @@ def discard_recording() -> int:
     needs to see that mistake named, which the warning is for.
 
     The quota is checked *after* deletion, the same way and for the same
-    reason `release_recording` does (spec Section 9) -- a saturated quota
+    reason `release_recording` does -- a saturated quota
     breaks the *next* session's recording.
     """
     event_id = os.environ.get("EVENT_ID", "").strip()
@@ -5284,7 +5274,7 @@ def _notify(message: str | None) -> int:
 
 
 def notify_immediate() -> int:
-    """`convener-notify-immediate`: the three events spec section 7 interrupts for.
+    """`convener-notify-immediate`: the three events worth interrupting for.
 
     Compares the working tree's speaker file against the state the branch was
     in before the push (`previous_revision`), so a push carrying several
@@ -5462,18 +5452,18 @@ def register() -> int:
 
 
 def render_visual_fixtures() -> int:
-    """`convener-render-visual-fixtures OUTPUT_DIR`: writes task 5's own pinned
+    """`convener-render-visual-fixtures OUTPUT_DIR`: writes the pinned
     render step its input -- one self-contained HTML page per named format
     (`formats.FORMATS`), a `manifest.json` naming each one's format name and
     pixel size, and a copy of the repository's self-hosted `fonts/` beside
     them so a relative `url('fonts/...')` resolves once served.
 
-    The one disk-writing seam between the two halves of task 5's pipeline.
+    The one disk-writing seam between the two halves of that pipeline.
     `visual.render_announcement` and `formats.FORMATS` stay pure -- neither
     touches disk or knows this project builds a Node/Puppeteer step on top
     of what they return -- and the pinned renderer (`visuals/`, a separate
     npm package so only its own CI job ever pays for the Chrome-for-Testing
-    download P-2 accepts) never re-derives a page's own markup a second
+    download that isolation buys) never re-derives a page's own markup a second
     time in JavaScript: it reads exactly the bytes this command wrote.
 
     `manifest.json` is the shared *fixture* the two languages agree on
@@ -5483,15 +5473,15 @@ def render_visual_fixtures() -> int:
     JavaScript that `formats.py` could silently drift away from.
 
     Always renders `visual.FIXTURE_ANNOUNCEMENT` -- the one fixed, versioned
-    identity task 5's own committed reference images are measured against
+    identity the committed reference images are measured against
     (see that constant's own docstring for why it is Ada Lovelace and no
     photograph, never a real, living speaker's name or face). Nothing about
     this command reads `data/speakers.yml`, the clock, or the network: the
     same input always produces the same three pages, which is the entire
     point of a pinned regression fixture.
 
-    **And it renders as the example instance, never as this one** (phase 12,
-    task 1). `render_announcement` takes a `root` to read the charter and
+    **And it renders as the example instance, never as this one.**
+    `render_announcement` takes a `root` to read the charter and
     the declaration from; this command used to hand it `repo_root()`, so
     the three committed reference images were a frozen photograph of
     whichever instance ran the repository -- its palette, its ribbon, its
@@ -5557,13 +5547,13 @@ def render_visual_fixtures() -> int:
 
 def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announcement]:
     """`public_data.to_public`'s own output, turned into the
-    `visual.Announcement`s task 6's production render needs -- never a
+    `visual.Announcement`s the production render needs -- never a
     second, looser read of the raw speaker record.
 
     Filtered to `status == "scheduled"`: an edition still being announced,
     the one state "a date locked" (the trigger's own language) describes.
     Routing through `to_public` first is what withholds a portrait under
-    P-4 with no second check written here -- see `visual.py`'s own module
+    the consent gate with no second check written here -- see `visual.py`'s own module
     docstring, "Portrait", for why passing the gated projection through is
     "enough on its own".
 
@@ -5620,7 +5610,7 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
 
 
 def render_visuals() -> int:
-    """`convener-render-visuals OUTPUT_DIR`: task 6's own disk-writing seam for
+    """`convener-render-visuals OUTPUT_DIR`: the disk-writing seam for
     *production* visuals -- real, scheduled editions read from
     `data/speakers.yml`, through the same public gate every other public
     artefact in this project already goes through (`public_data.
@@ -5740,7 +5730,7 @@ def render_visuals() -> int:
 
 
 def render_announcements() -> int:
-    """`convener-render-announcements OUTPUT_DIR`: task 7's own disk-writing
+    """`convener-render-announcements OUTPUT_DIR`: the disk-writing
     seam for the ready-to-publish texts (D-09) -- the forum announcement,
     the professional-network post, the mailing-list message, and the
     recording announcement, one Markdown file each, one subdirectory per
@@ -5757,13 +5747,13 @@ def render_announcements() -> int:
     the same "manual command, independent of any workflow" property
     `render_visuals`'s own docstring states for the visuals.
 
-    Fix round 1: unlike task 7's own version, this command now has a real
+    This command has a real
     consumer -- `.github/workflows/visuals-production.yml` runs it
     alongside `convener-render-visuals` and uploads both into the identical
     `announcement-visuals` artefact, one subdirectory per edition, so an
     operator downloads the poster and the words for the same talk
     together rather than hunting two separate places for them. The
-    per-edition subdirectory (rather than task 7's own flat `<event id>-
+    per-edition subdirectory (rather than a flat `<event id>-
     <channel>.txt` naming) is what makes that placement work without a
     merge step: `render-production.mjs` already writes each edition's
     images to `OUTPUT_DIR/<event id>/<format>.png` in that same artefact
@@ -5774,7 +5764,7 @@ def render_announcements() -> int:
     it is now `docs/toolkit/*.md` itself, rendered (`announce.py`'s own
     module docstring) -- the extension names what the file actually is.
 
-    Routed through `public_data.to_public` before either module of task 7
+    Routed through `public_data.to_public` before either rendering module
     ever sees a row (`announce.py`'s own module docstring) -- never a
     second, looser read of the raw record. A `scheduled` row gets its
     three promotional texts; an `archived` row gets a recording

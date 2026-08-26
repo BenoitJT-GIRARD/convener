@@ -667,7 +667,7 @@ def test_the_transformation_never_touches_the_config_it_was_given() -> None:
 
 
 def test_the_answer_follows_the_config_passed_in_not_one_read_earlier() -> None:
-    # The Python twin of task 11's "the transform must read its `current`
+    # The Python twin of "the transform must read its `current`
     # argument": call twice with two different configs and the two answers must
     # differ, so no threshold or board can have been captured from the first.
     speakers = [voted("grace", "2026-08-01"), voted("ada", "2026-08-01")]

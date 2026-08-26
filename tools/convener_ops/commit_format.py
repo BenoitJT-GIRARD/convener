@@ -72,8 +72,8 @@ ACTS: Final[dict[str, str]] = {
     "finalize-archive": "publish the recording of",
     # Who sits on the board (G-08), and who is available to vote (G-09).
     #
-    # `availability-set` is a decision like the rest and not a diary entry
-    # (F-16): `unavailable_until` is read by `activeBoard`, so declaring
+    # `availability-set` is a decision like the rest and not a diary
+    # entry: `unavailable_until` is read by `activeBoard`, so declaring
     # oneself away changes `N` and with it the majority a speaker needs. An
     # act that moves the threshold belongs in the register. The day it runs
     # to is not in the subject, for the same reason `lock-date` does not
@@ -205,7 +205,7 @@ _JUDGEMENT_STEMS: Final[tuple[str, ...]] = (
 )
 
 #: Families the mechanical rule cannot reach: English keeps a few of these
-#: irregular, and `left` is exactly one of the six words phase 2 already bans.
+#: irregular, and `left` is exactly one of the six words this grammar bans.
 _JUDGEMENT_IRREGULAR: Final[tuple[str, ...]] = (
     "drop",
     "drops",
@@ -367,8 +367,8 @@ def check_commits() -> int:
 
     Fed by `git log --format=%B%x00 <range>` in CI, so a message keeps its
     body and the one-line rule stays checkable; a plain line-per-message
-    stream works too. Only the range under review is passed: phase 1 is
-    already written and does not follow this grammar, and a check that
+    stream works too. Only the range under review is passed: the oldest
+    commits predate this grammar and do not follow it, and a check that
     demanded the past be rewritten would be turned off rather than obeyed.
     """
     raw = sys.stdin.read()

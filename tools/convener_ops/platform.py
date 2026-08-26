@@ -1,11 +1,11 @@
 """The D-05 platform interface, and the manual implementation of it.
 
-Phase 4's guiding decision (D-06) splits an event in two: *"the platform
+D-06 splits an event in two: *"the platform
 provides the room and the recording. We provide the registration and the
 identity."* `Platform` is the seam that split creates -- four operations,
 `get_room`, `get_attendance`, `get_recording` and `delete_recording`, that
 any concrete platform must answer. `ManualPlatform` below is one answer.
-Task 3's `platform_fcc.py` is the other, calling the chosen provider's
+`platform_fcc.py` is the other, calling the chosen provider's
 undocumented (but empirically verified) HTTP endpoint instead of reading a
 file. Both satisfy `Platform` structurally -- neither inherits from the
 other, and nothing here ever will.
@@ -18,15 +18,15 @@ end to end with the manual implementation, without any external account" --
 and what D-13 means when it calls a missing integration a normal state:
 `config/integrations.yml`'s `meeting_provider` row already says so. Without
 `CONVENER_MEETING_API_TOKEN`, this is the implementation in use, which is the
-ordinary case, not a degraded one. Task 3 will not replace this module; it
-will sit beside it, and the choice between the two is made by whoever wires
-them together, not by anything in here.
+ordinary case, not a degraded one. The API implementation does not replace
+this module; it sits beside it, and the choice between the two is made by
+whoever wires them together, not by anything in here.
 
-Where "the event's configuration" lives (revised on review, R-5 / R-6)
---------------------------------------------------------------------------
+Where "the event's configuration" lives (revised on review)
+------------------------------------------------------------
 The first version of this module opened its own file,
 `data/events/<id>/config.yml`, reasoning that `data/speakers.yml`'s
-`zoom_link` and `youtube_url` belonged to a phase-1 schema this task had no
+`zoom_link` and `youtube_url` belonged to a schema it had no
 licence to change. Review found the reasoning sound but pointed at the
 wrong file: every `convener_ops` business-logic module except `cli.py` is pure,
 receiving already-loaded data rather than reading a file itself --
@@ -41,16 +41,16 @@ was reading a file at all, not which file it was reading. So:
   version rejected, now reached the way every other pure module in this
   package reaches `data/speakers.yml`'s content: already loaded, by
   whoever wires this class up (`cli.py`, in the end).
-* **`event_id` is `edition_code`, lower-cased (R-5).** Nothing else in the
+* **`event_id` is `edition_code`, lower-cased.** Nothing else in the
   codebase defines that mapping, and it cannot be implemented without one:
   `edition_code` is the only candidate consistent with existing convention
   (`app/src/state/consent.ts` already treats it as the event's public id,
   and `tools/convener_ops/validate.py` fixes its shape as the prefix this
-  instance declares followed by digits), and it is what task 1's own tests
-  already use (`mrg-042` for `MRG-042`). `find_speaker` below is the one
+  instance declares followed by digits), and it is what this project's own
+  tests already use (`mrg-042` for `MRG-042`). `find_speaker` below is the one
   place this rule is written down.
-* **`instructions` lives in `data/config.yml`, not on the speaker record
-  (R-6).** The cost of the alternative is real -- a `Speaker` field must
+* **`instructions` lives in `data/config.yml`, not on the speaker
+  record.** The cost of the alternative is real -- a `Speaker` field must
   also join the exhaustive field set, be classified in `consent.ts`,
   mirrored in `public_data.py`, and added to the cross-language fixture
   that binds the two -- but the deciding argument is D-06 itself: the
@@ -68,8 +68,8 @@ about that path was in question:
 
     data/events/<id>/attendance-import.csv
 
-The plaintext CSV is never committed -- the encrypted export is (task 17)
------------------------------------------------------------------------------
+The plaintext CSV is never committed -- the encrypted export is
+-----------------------------------------------------------------
 `attendance-import.csv` is a raw export off the chosen platform:
 `display_name` and `email` are personal data. "No personal data in the
 repository, ever" is a hard constraint of this phase, so this path is
@@ -99,15 +99,15 @@ half already (`EVENT_PRIVATE_KEY`, the same secret every other command in
 this event's chain reads to decrypt `registrations.enc`), so it can
 decrypt this file the moment it is checked out -- no plaintext ever has to
 reach a CI runner, and no key ever has to leave one. This is what makes
-AC8 genuinely true for the manual implementation:
+the whole chain genuinely true for the manual implementation:
 `tools/tests/test_event_chain.py` drives the real
 `convener-encrypt-attendance-export` and `convener-match-attendance` /
 `convener-issue-certificates` commands against nothing but committed,
 encrypted fixtures and asserts the chain completes -- not "by hand against
 a real drop", a real, automated proof.
 
-**One independent envelope per row, not one envelope for the whole file
-(fix round 1, R-45 / Important 4).** The first version of this wrapped the
+**One independent envelope per row, not one envelope for the whole
+file.** The first version of this wrapped the
 entire CSV text in a single `eventkeys.encrypt` call, unlike
 `registrations.enc` and `survey-responses.enc`, which are already one
 envelope per record -- a divergence that was not merely a style
@@ -125,11 +125,11 @@ its own `eventkeys.encrypt` call over one row's fields, decoded back to a
 `registration.py` gives. `encrypt_attendance_rows` and
 `decrypt_attendance_rows` are the encode/decode halves;
 `erase_attendance_rows` is what `convener-erase-registration` now calls
-alongside `registration.erase` (spec S4's early-erasure wording, "le
-fichier chiffre est reecrit sans l'enregistrement concerne, et rien
-d'autre ne bouge" -- with a blob, everything moved; with one envelope per
-row, nothing else does, and task 15's own "compare the neighbours" test
-shape applies unchanged). One person can hold several rows (a
+alongside `registration.erase`: the encrypted file is rewritten without
+the record concerned and nothing else moves -- with a blob, everything
+moved; with one envelope per
+row, nothing else does, and the "compare the neighbours" test
+shape applies unchanged. One person can hold several rows (a
 reconnection); `erase_attendance_rows` removes all of theirs, the same
 "erasure removes every row" rule a reconnection already gets from
 `attendance.py`'s own summing.
@@ -197,7 +197,7 @@ empirically and reserved for later tasks:
 
 * A disconnect-and-rejoin produces **several rows** for the same person.
   This reader returns every row as read; summing durations per person is
-  `attendance.py`'s job (task 8/9), done once, in the one place that also
+  `attendance.py`'s job, done once, in the one place that also
   has to decide what "per person" means (the address).
 * Name capitalisation varies between two connections by the same person.
   `display_name` is returned verbatim, never normalised here -- normalising
@@ -241,7 +241,7 @@ _REQUIRED_ATTENDANCE_COLUMNS: Final = frozenset(
 #: validated id cannot walk out of `events_dir`.
 #:
 #: Length-capped the same way, and for the same reason, `eventkeys.py`'s
-#: own copy of this pattern now is (Minor 7, branch review) -- see that
+#: own copy of this pattern is -- see that
 #: module's own comment on `_EVENT_ID_MAX_LENGTH` for the full reasoning
 #: against `services/signup-relay/src/index.js::EVENT_ID_RE`'s own 64.
 _EVENT_ID_MAX_LENGTH: Final = 64
@@ -285,7 +285,7 @@ class Recording:
     url: str
     #: Bytes, when known. The manual implementation never hosts the file
     #: itself -- it is uploaded by hand wherever the host chooses -- so it
-    #: has no way to measure this and always reports 0. Task 3's
+    #: has no way to measure this and always reports 0. The API
     #: implementation, which does hold the file under the chosen platform's
     #: own quota, is expected to report the real size.
     size: int
@@ -294,7 +294,7 @@ class Recording:
 
 @runtime_checkable
 class Platform(Protocol):
-    """The D-05 interface. `ManualPlatform` below and task 3's
+    """The D-05 interface. `ManualPlatform` below and
     `PlatformFCC` both satisfy this structurally -- neither inherits from
     the other or from this class; `Protocol` exists so a caller can accept
     "a platform" without knowing or caring which one it was handed."""
@@ -309,8 +309,8 @@ class Platform(Protocol):
 
 
 #: The committed, encrypted attendance export -- one JSON file holding one
-#: independent `eventkeys` envelope per attendance row (fix round 1, R-45 /
-#: Important 4 -- see the module docstring's "one independent envelope per
+#: independent `eventkeys` envelope per attendance row (see the module
+#: docstring's "one independent envelope per
 #: row" section for why this is not one envelope for the whole file), the
 #: same per-record shape `registrations.enc` and `survey-responses.enc`
 #: already use. Produced by `convener-encrypt-attendance-export` and checked in
@@ -336,7 +336,7 @@ class AttendanceImportError(Exception):
 
 
 class EventNotFoundError(Exception):
-    """No speaker record's `edition_code` matches an event id (R-5). Raised
+    """No speaker record's `edition_code` matches an event id. Raised
     by `find_speaker`, and by `get_room` / `get_recording` through it --
     both need the matching record before they can answer, and "no such
     event" is the whole failure; there is nothing else here to name."""
@@ -425,12 +425,13 @@ def parse_attendance_csv(
         {name for name in fieldnames if fieldnames.count(name) > 1}
     )
     if duplicate_columns:
-        # Important 5, fix round 1: this used to echo the duplicated
+        # This used to echo the duplicated
         # column *names* -- the file's own header text, written by
         # whatever export tool produced it -- into the exception message,
         # which every caller in `cli.py` prints straight to a job log.
-        # Task 17 is what makes this branch reachable from CI at all (the
-        # manual path previously had no file to read there); once it is,
+        # The committed encrypted export is what makes this branch
+        # reachable from CI at all (the
+        # manual path had no file to read there before); once it is,
         # the same "never echo the file's own content" rule `_parse_row`
         # already holds itself to for a malformed cell applies here too.
         # The count and the 1-based header positions are always enough
@@ -582,8 +583,8 @@ def dump_attendance_export_file(file: AttendanceExportFile) -> str:
 def encrypt_attendance_rows(public_pem: str, rows: Sequence[AttendanceRow]) -> str:
     """Encrypt every row in `rows` under an event's own published public
     key, one independent `eventkeys.encrypt` call each, and return the
-    whole committable `attendance-import.csv.enc` text (fix round 1, R-45
-    -- see the module docstring's "one independent envelope per row"
+    whole committable `attendance-import.csv.enc` text
+    (see the module docstring's "one independent envelope per row"
     section for why this replaced a single whole-file envelope).
 
     Takes `public_pem`, never a private key or a secret -- see
@@ -609,7 +610,7 @@ def decrypt_attendance_rows(
     already give a stray undecryptable entry in `registrations.enc`. One
     damaged or foreign row costs one row, not the whole file.
 
-    **R-46, fix round 2: zero rows out of a non-empty file is a refusal,
+    **Zero rows out of a non-empty file is a refusal,
     not an answer.** *Some* rows failing is a damaged file -- tolerable,
     the case the paragraph above describes. *All* rows failing is the
     wrong file -- an export encrypted under a different event's public
@@ -648,9 +649,9 @@ def erase_attendance_rows(
     file: AttendanceExportFile, email: str, private_pem: str
 ) -> tuple[AttendanceExportFile, int]:
     """Remove every row addressed to `email` from `file` -- the attendance
-    half of an early erasure request (fix round 1, R-45), called by
+    half of an early erasure request, called by
     `cli.py::erase_registration` alongside `registration.erase` so the two
-    stores stay in step. Spec S4's own words for early erasure --
+    stores stay in step. Early erasure means
     "le fichier chiffre est reecrit sans l'enregistrement concerne, et
     rien d'autre ne bouge" -- hold here exactly as they do for
     `registrations.enc`, because the shape is now the same: every entry
@@ -695,7 +696,7 @@ def _matches_event(record: Mapping[str, Any], event_id: str) -> bool:
 def find_speaker(
     speakers: Sequence[Mapping[str, Any]], event_id: str
 ) -> Mapping[str, Any]:
-    """The R-5 rule, and the one place it is written down: `event_id` is
+    """The rule, and the one place it is written down: `event_id` is
     `edition_code`, lower-cased -- `mrg-1` matches the record whose
     `edition_code` is `MRG-1`. `event_id` is expected to already be
     lower-case (that is what "is edition_code lower-cased" means); this
@@ -730,12 +731,12 @@ class ManualPlatform:
     #: raises `EventNotFoundError` for every id, which is the honest
     #: answer to "no speaker data was supplied".
     speakers: Sequence[Mapping[str, Any]] = ()
-    #: The loaded contents of `data/config.yml`, for `instructions` (R-6).
+    #: The loaded contents of `data/config.yml`, for `instructions`.
     #: `None` -- the default -- reads as `''`: no config supplied is not a
     #: data-integrity failure the way a missing speaker record is, it is
     #: the same "nothing more to say" an explicit empty string would be.
     config: Mapping[str, Any] | None = None
-    #: The event's own decrypted private key (task 17), read from
+    #: The event's own decrypted private key, read from
     #: `EVENT_PRIVATE_KEY` by whoever constructs this class (`cli.py`,
     #: never this module) -- the same key every other command touching
     #: `registrations.enc` already holds. Only needed to read
@@ -763,7 +764,7 @@ class ManualPlatform:
         plain_path = event_dir / PLAINTEXT_ATTENDANCE_FILENAME
 
         if encrypted_path.exists():
-            # Task 17: the committed, encrypted export takes priority over
+            # The committed, encrypted export takes priority over
             # a local plaintext drop -- see the module docstring's "the
             # encrypted export" section. An absent or wrong `private_pem`
             # here is not D-13's ordinary state: this file is personal
@@ -785,10 +786,10 @@ class ManualPlatform:
                     f"the attendance export for event {event_id!r} could "
                     f"not be read: {exc}"
                 ) from exc
-            # Fix round 1, R-45: one independent envelope per row now, not
+            # One independent envelope per row, not
             # one envelope for the whole file. A row that fails to decrypt
             # or fails to parse is skipped rather than failing this whole
-            # call -- unless fix round 2's R-46 finds that *every* row
+            # call -- unless *every* row
             # failed, which `decrypt_attendance_rows` itself refuses
             # rather than silently returning "nobody attended". See that
             # function's own docstring for both halves of the rule.
@@ -801,11 +802,11 @@ class ManualPlatform:
                 print(f"attendance-import.csv line {issue.line_number}: {issue.reason}")
             return rows
 
-        # Small item 2, fix round 3: named relative to the repository,
+        # Named relative to the repository,
         # never as the absolute `path` this class actually checked --
         # that would carry CONVENER_REPO_ROOT (a CI runner's own filesystem
         # layout, or a test's tmp_path) into a job's log for no reason,
-        # the same leak minor 5 of fix round 1 already closed for
+        # the same leak already closed for
         # `cli.py`'s own register-path messages. `_validate_event_id`
         # inside `_event_dir` above has already accepted `event_id` by
         # this point, so it is safe to reuse verbatim in a relative,

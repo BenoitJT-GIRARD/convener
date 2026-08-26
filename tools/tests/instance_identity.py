@@ -5,7 +5,7 @@ second copy of either would be the defect this whole phase exists to end:
 
 1. **The needles** -- every writable form of what `config/instance.json`
    and the charter in force declare. They are **not written here any
-   more**: phase 12 gave them a second reader outside the suite
+   more**: they have a second reader outside the suite
    (`convener_ops.derivation_guard`, which asks the same question of every
    blob of every ref before a public push), and a derivation with two
    readers belongs in the package. `convener_ops.needles` owns it; the names
@@ -35,9 +35,9 @@ file, and it closes by itself the day the source stops carrying the
 phrase.
 
 **No entry claims a built artefact today, and that is a result rather
-than a simplification.** Phase 11 closed the last two that did: task 2
-pointed the demonstration at `instances/example/` and task 3 derived the
-poster's wordmark and strapline from the declaration. The machinery below
+than a simplification.** The last two that did are closed: the
+demonstration points at `instances/example/`, and the
+poster's wordmark and strapline are derived from the declaration. The machinery below
 (`carried_into`, `allowance`, `literal_runs`, `allowed_for`,
 `claimed_by_any`) stays exactly as it was -- it is what an entry has to
 say for itself the next time one is needed, and
@@ -114,7 +114,7 @@ class Deferred:
 DEFERRED: Final = (
     Deferred(
         path=Path("site/src/_data/events.json"),
-        owner="phase 11 (the example instance)",
+        owner="the example instance",
         reason=(
             "The showcase's committed build fixture: a copy of "
             "`public-data/events-public.json`, refreshed by "
@@ -129,12 +129,12 @@ DEFERRED: Final = (
             "second instance's build regenerates it from that instance's "
             "own `data/speakers.yml` before Eleventy ever reads it. "
             "Two corrections live in this sentence, both of the same "
-            'shape. Until phase 11 task 8 it said "no needle here matches '
-            'it", which was false the day it was written. Until phase 12 '
-            "task 4 it said the matching needles were `identity.forum` "
+            'shape. It once said "no needle here matches '
+            'it", which was false the day it was written. It then said '
+            "the matching needles were `identity.forum` "
             "and `identity.forum_host`, which stopped being true when "
-            "phase 12 task 3 replaced both forum addresses with a "
-            "reserved-domain one and left the sentence describing them. "
+            "both forum addresses were replaced with a "
+            "reserved-domain one and the sentence was left describing them. "
             "An exemption justified by a fact that is not true is an "
             "exemption the next reader deletes, and the sweep then fails "
             "for a reason nobody was warned about -- so the reason names "
@@ -149,8 +149,8 @@ DEFERRED: Final = (
             "this organisation's name is spelled that way because the "
             "repository's own history and specs write it. Nothing builds "
             "this file -- but it does ship, into the derived product "
-            "repository, which is what phase 12 task 4 reread this entry "
-            "for. Eight of its entries were parts of people's names, and "
+            "repository, which is why this entry was reread. "
+            "Eight of its entries were parts of people's names, and "
             "not one of them was reachable from anything cspell actually "
             "lints -- `cspell.json` ignores `data/speakers.yml` outright "
             "and lints no `.json` at all -- so they came out and the run "

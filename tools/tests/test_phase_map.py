@@ -2,10 +2,9 @@
 
 That file calls itself the entry point -- "quelqu'un qui reprend le travail,
 humain ou agent, le lit en premier" -- and its table of phases is the first
-thing read there. By phase 11 it had drifted twice over: it skipped phase 9
-entirely and renumbered everything after it (calling the instance separation
-"9" when it is 10, this phase "10" when it is 11, `convener` "11" when it is
-12), and it gave three already-merged phases as "spec écrite, à revalider".
+thing read there. It has drifted twice over: it once skipped a phase
+entirely and renumbered everything after it, and it gave three
+already-merged phases as "spec écrite, à revalider".
 
 Nothing read it, which is the whole of why. Two facts are read here, and
 both come out of the repository rather than out of prose:
@@ -17,7 +16,7 @@ both come out of the repository rather than out of prose:
 2. **A phase that has filed a bilan is not "à revalider".**
    `phase-N-bilan.md` is written at the end of a phase, so a row still
    telling a reader to revalidate its spec at the opening is a row about a
-   phase that closed. This is one-directional on purpose: phase 7 merged
+   phase that closed. This is one-directional on purpose: a phase can merge
    without a bilan, so "has no bilan" says nothing at all.
 
 **What this deliberately does not check is the label.** Binding a row's
@@ -44,8 +43,8 @@ MAP = SUPERPOWERS / "README.md"
 #: repository: `derivation_guard.KEPT_BACK` keeps `docs/superpowers/`
 #: back, so a repository derived from this one has no delivery map, no
 #: specs and no phase reviews -- and four tests that read them fail with
-#: `FileNotFoundError` rather than saying so. Phase 12 task 6 found that
-#: by running the derived repository's own suite.
+#: `FileNotFoundError` rather than saying so. Found by running the derived
+#: repository's own suite.
 #:
 #: The module is still the product's and still ships, deliberately: a
 #: duplicate that starts keeping a working record of its own gets the
@@ -98,7 +97,7 @@ def _rows() -> list[tuple[str, str, str]]:
 def _numbered_rows() -> list[tuple[int, str, str]]:
     """The rows that carry a phase number. The others are the three steps
     that are deliberately not phases (`| — |`): the services hookup, the
-    launch, the security audit."""
+    launch, the security review."""
     return [
         (int(number), label, state)
         for number, label, state in _rows()

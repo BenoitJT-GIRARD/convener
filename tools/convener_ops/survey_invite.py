@@ -1,12 +1,11 @@
 """Compose the post-event survey invitation, and keep the one record that
-stops a re-dispatch from sending it twice -- phase 4 spec S:6's other half
-of "meme entree que l'inscription": `tools/convener_ops/survey.py` is the
-storage side (task 16a); this module is the *sending* side (task 16b),
-"envoye apres coup aux seules personnes reconnues presentes".
+stops a re-dispatch from sending it twice. `tools/convener_ops/survey.py`
+is the storage side; this module is the *sending* side --
+sent afterwards, only to people recognised as present.
 
 Who gets invited, and why the other two do not (ruling 1)
 ------------------------------------------------------------
-`attendance.match` (task 8) sorts every person a session's own attendance
+`attendance.match` sorts every person a session's own attendance
 export names into exactly three outcomes -- see that module's own "Three
 outcomes, not two" section. Only `MatchedAttendee` is invited here:
 
@@ -31,8 +30,8 @@ outcomes, not two" section. Only `MatchedAttendee` is invited here:
   before this module was ever written.
 
 So the fact this module invites *matched* attendees, not *eligible* ones
-(`attendance.eligible_attendees`, the certificate-issuing threshold task 12
-computes), is deliberate too: eligibility is a share of the seminar's own
+(`attendance.eligible_attendees`, the certificate-issuing threshold), is
+deliberate too: eligibility is a share of the seminar's own
 scheduled duration, a bar spec S:5 sets for a signed attestation of
 learning-adjacent presence; "reconnue presente" (S:6) asks only whether we
 recognised the person in the room at all. Someone present for five minutes
@@ -75,10 +74,10 @@ shorter paraphrase in an e-mail could only say it less precisely, never
 more.
 
 A resend must not re-invite everybody, and why that is a choice, not a
-forced consequence of anonymity (ruling 3, corrected in fix round 1)
------------------------------------------------------------------------------
-`certificate.py`'s own identifiers let R-27 (task 14's own fix) restrict a
-resend to exactly what one run minted, and report exactly which identifier
+forced consequence of anonymity
+---------------------------------------------------------------------
+`certificate.py`'s own identifiers let a certificate resend restrict itself
+to exactly what one run minted, and report exactly which identifier
 failed, because an identifier is a certificate's own public name, never a
 person's. This module could, in principle, keep the equivalent for an
 invitation: a salted HMAC of an address, committed to
@@ -97,14 +96,14 @@ this module does without one.
 
 **The real reason is proportionality, not privacy.** A certificate register
 earns its permanence: a certificate is an attestation its holder may need
-verified years later, so R-29 deliberately makes `certificates.yml` survive
+verified years later, so `certificates.yml` deliberately survives
 the very key destruction that makes `registrations.enc` unreadable. A
 survey-invitation record exists for one narrow, short-lived purpose -- not
 mailing the same person twice inside a single campaign, whose entire useful
 life is the days between an invitation and a reply. Giving that purpose a
 permanent, salted, committed linkage between a person and the event they
 attended would outlive its own reason to exist, and it would outlive it
-specifically by surviving the one event meant to end it: task 15's
+specifically by surviving the one event meant to end it: the
 retention sweep destroys `CONVENER_EVENT_KEY_<ID>` per event, but
 `data/survey-invitations.yml` is one file shared across every event (unlike
 `certificates.yml`, which already lives under `data/events/<id>/` and is
@@ -128,7 +127,7 @@ which then re-invites *every* currently matched attendee, including
 everyone the first run already reached. Duplicate, not targeted.
 
 **What actually shrinks how often that matters: a single in-place retry,
-which needs no identifier at all (Important 4, fix round 1).**
+which needs no identifier at all.**
 `cli.py::invite_survey` retries one immediate resend attempt for any
 attendee whose first delivery attempt failed, inside the same run, before
 moving on -- a transient SMTP hiccup at message 3 of 40 no longer forces
@@ -200,13 +199,13 @@ __all__ = [
     "survey_url",
 ]
 
-#: Phase 7 task 5: mirrors `registration.SIGNUP_BASE`, not
+#: Mirrors `registration.SIGNUP_BASE`, not
 #: `certificate.VERIFICATION_BASE` -- a real, bare path, no `#` fragment.
 #: This used to mirror `VERIFICATION_BASE` (a `HashRouter` fragment on
 #: `App.tsx`'s own former `path="/survey/:eventId"` route; see git
 #: history), on the reasoning that both addresses lived on the same
-#: application. That reasoning stopped applying the moment task 5
-#: extracted the survey off `App.tsx` entirely, onto its own static page
+#: application. That reasoning stopped applying the moment the survey
+#: was extracted off `App.tsx` entirely, onto its own static page
 #: (`site/src/survey.njk`, D-19: one page per event, the same addressing
 #: `event.njk` already uses for registration) -- and unlike
 #: `verification_url`, there was never a token to protect from `Referer`
@@ -219,7 +218,7 @@ __all__ = [
 #: read from both sides, the same discipline that test module already
 #: holds `registration.SIGNUP_BASE` to.
 #:
-#: **Phase 10, task 2:** the host and prefix now come from
+#: The host and prefix come from
 #: `config/instance.json` through `published.load()`, exactly as
 #: `registration.SIGNUP_BASE` does; `survey/` stays here because it is the
 #: product's own route shape (`site/src/survey.njk`'s permalink).

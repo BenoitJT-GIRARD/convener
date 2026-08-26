@@ -1,7 +1,7 @@
 """Detects, never prevents: a secret-bearing workflow run whose ref was not
 `main`.
 
-The security audit's C1/C2 fix wanted every job that reads a sensitive
+A security review wanted every job that reads a sensitive
 secret scoped behind a GitHub `environment:` with a deployment branch
 policy, so a `workflow_dispatch` against an attacker's own branch would be
 refused the secret before any step ran -- real prevention. That control
@@ -20,7 +20,7 @@ the time this code executes, the workflow it is describing has already been
 requested, and nothing here calls the Actions API to cancel anything. A
 loud, fast alert shortens the time before someone rotates whatever the run
 could see from "nobody ever finds out" to "minutes" -- real, worthwhile
-value, and not the same property as P-5, which asks whether the exfiltration
+value, and not the same property as asking whether the exfiltration
 could happen at all. Never describe this module's output as though it were.
 
 Shares its channel with `notify.py` rather than inventing a second address

@@ -5,8 +5,8 @@ review and revert. A message that has been sent cannot be unsent, so this
 module is built the other way round from the rest: **sending nothing is the
 resting state**, and it is that way structurally rather than by default value.
 
-How "no channel, no message" is made unreachable rather than guarded (P2-8)
---------------------------------------------------------------------------
+How "no channel, no message" is made unreachable rather than guarded
+----------------------------------------------------------------------
 There is no `notifications_enabled` flag here, and no `if not enabled: return`.
 Instead the *address* is the thing that can be absent:
 
@@ -62,8 +62,8 @@ parking a lead there is not a rejection either.
 
 The overdue sentences are `app/src/state/sla.ts`'s, not a second set
 --------------------------------------------------------------------
-Spec section 7 wants the overdue list in the daily digest, and task 19 already
-built that wording for the screens. Two implementations of one sentence is the
+The overdue list belongs in the daily digest, and the screens already
+have that wording. Two implementations of one sentence is the
 cross-language divergence this repository has been bitten by four times, so
 the Python half below is an explicit twin of `app/src/state/sla.ts` and the two
 are pinned together by `tools/tests/fixtures/governance-cases.json`'s
@@ -101,7 +101,7 @@ from convener_ops.governance import paris_today, vote_window_days
 #: The four steps the series sets a turnaround time for.
 #:
 #: Three of them are read off `config.sla_days`. The fourth, `lead_decision`,
-#: is read off `config.vote_window_days` (F-13): the day the board's decision
+#: is read off `config.vote_window_days`: the day the board's decision
 #: becomes late is the day `sweep.expire_votes` parks the lead, and those were
 #: two separate numbers in `config.yml` until this stopped being possible.
 #: `sla_days.lead_decision` no longer exists, so the digest cannot call a lead
@@ -316,7 +316,7 @@ THRESHOLD_REACHED: Final = "threshold-reached"
 #: An objection was lodged against publishing a recording.
 OBJECTION_FILED: Final = "objection-filed"
 
-#: The complete set. Spec section 7 reserves the immediate channel for what
+#: The complete set. The immediate channel is reserved for what
 #: calls for a quick reaction, and everything else waits for the digest --
 #: because too much noise means the notifications get ignored, which is worse
 #: than not having them. Adding a fourth kind is a spec change, not a tweak.
@@ -409,7 +409,7 @@ def _standing_objections(entry: Any) -> list[tuple[str, str, str]]:
 
 
 def immediate_events(before: Any, after: Any) -> list[Event]:
-    """The three things spec section 7 interrupts people for, and nothing else.
+    """The three things worth interrupting people for, and nothing else.
 
     * a new lead received through the public form;
     * a vote reaching its threshold, which approves the lead;
@@ -626,8 +626,8 @@ def daily_digest(speakers: Any, config: Any, now: datetime) -> str | None:
     never off a UTC clock, so a run between 00:00 and 02:00 Paris does not
     report yesterday.
 
-    **The one automatic transition, and how it is dated.** Spec section 7 asks
-    for automatic transitions here. There is exactly one -- `expire_votes`
+    **The one automatic transition, and how it is dated.** There is
+    exactly one -- `expire_votes`
     parking a lead whose window ran out -- and it writes `status: parked` and
     no day. `_parked_on` derives that day from `selection.opened_on` and
     `governance.vote_window_days`, the same single definition the sweep parks

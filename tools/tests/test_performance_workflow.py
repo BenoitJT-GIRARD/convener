@@ -1,4 +1,4 @@
-"""Task 12 (phase 5): pins `.github/workflows/quality.yml`'s own `site` lane
+"""Pins `.github/workflows/quality.yml`'s own `site` lane
 and `site/scripts/check-performance-budget.mjs` against the properties a
 green run does not, by itself, prove -- acceptance criterion 7's own "the
 budget is tenu and verified automatically" only means something if the
@@ -6,8 +6,8 @@ check that enforces it can actually turn red.
 
 Three things a passing job could still be wrong about, each with its own
 test below (the identical three-part shape
-`tests/test_a11y_workflow.py`'s own module docstring names for task 11's
-checker):
+`tests/test_a11y_workflow.py`'s own module docstring names for the
+accessibility checker):
 
 * it could be weighing a stale, partial, or empty build rather than the
   real one -- checked by pinning the page-count guard, the same defence
@@ -44,7 +44,7 @@ _CHECKER = (_ROOT / "site" / "scripts" / "check-performance-budget.mjs").read_te
 )
 _PACKAGE_JSON = (_ROOT / "site" / "package.json").read_text(encoding="utf-8")
 
-# quality.yml carries several jobs, and since phase 8 task 2 one of them
+# quality.yml carries several jobs, and one of them
 # carries several lanes: what were the `typescript`, `site` and
 # `spelling` jobs are three lanes of one `web` job (eight billed jobs
 # grouped into four, no check dropped -- see quality.yml's own header).
@@ -81,7 +81,7 @@ def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
     """D-26: never a second, hand-typed prefix that could drift from
     `config/instance.json` -- the identical property
     `test_a11y_workflow.py::test_the_checker_reads_the_path_prefix_from_
-    its_one_source` already pins for task 11's checker.
+    its_one_source` already pins for the accessibility checker.
     """
     assert "from './published.cjs'" in _CHECKER, (
         "check-performance-budget.mjs no longer reads the published address "
@@ -205,7 +205,7 @@ def test_the_workflow_builds_both_the_site_and_the_app() -> None:
     lane that only ever built `site/` could never weigh either page
     carrying one, and `--app-dir` would have nothing real to point at.
 
-    Phase 8, task 2 merged this lane's job with the one that installs
+    This lane's job was merged with the one that installs
     `app/`; the install moved, the build did not, and this assertion is
     what would fail if a future tidy-up moved the build out of the lane
     that reads its output."""
@@ -239,7 +239,7 @@ def test_the_workflow_lints_the_new_checker_script() -> None:
 
 
 def test_the_workflow_audits_site_dependencies() -> None:
-    """Phase 1's own quality chain holds Python to `pip-audit` (this same
+    """The quality chain holds Python to `pip-audit` (this same
     workflow's `python` job); `site/`'s own dependencies had never been
     audited before this task. `npm audit` with no flags added -- never
     `--omit=dev`, which would exempt every dependency this package
@@ -251,7 +251,7 @@ def test_the_workflow_audits_site_dependencies() -> None:
 
 
 def test_the_generator_version_is_pinned_exactly() -> None:
-    """ "Aligner la version du générateur" (phase 5 spec, S:7): the
+    """The generator's version is aligned: the
     declared Eleventy dependency must equal the version actually
     resolved, never a caret range that could silently install a
     different major version on a fresh lock regeneration -- which is
@@ -271,7 +271,7 @@ def test_the_checker_is_zero_cost_no_new_runtime_dependency() -> None:
     built-in, and every other import is one already used elsewhere in
     this project's own scripts (`node:fs/promises`, `node:path`, ...).
     `site/package.json`'s `devDependencies` must gain nothing beyond what
-    task 11 already declared."""
+    the accessibility checker already declared."""
     assert "import zlib from 'node:zlib';" in _CHECKER
     for forbidden in (
         "require(",

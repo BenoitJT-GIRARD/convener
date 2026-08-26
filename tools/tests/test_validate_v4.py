@@ -81,7 +81,7 @@ def test_every_missing_field_is_listed_at_once() -> None:
 
     The browser stops at the first defect -- it has one reader in front of
     it and no way to show ten sentences -- and this side does not, which is
-    the same split phase 2 settled for the hand-edited fixture.
+    the same split the hand-edited fixture settled on.
     """
     entry = speaker()
     for field in NEW_FIELDS:

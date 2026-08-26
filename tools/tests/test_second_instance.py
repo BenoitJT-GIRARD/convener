@@ -1,8 +1,8 @@
 """Build this repository as a second instance, and refuse anything of the
 first in what comes out.
 
-Phase 10, task 5 -- the acceptance criterion the whole phase rests on
-(spec § 6). Tasks 1 to 4 each drove a second-instance build by hand and
+The acceptance criterion separating the instance from the code rests on.
+Several earlier passes each drove a second-instance build by hand and
 each found something a single-instance run could not: two sentences the
 substitution made ungrammatical, a GitHub team named wrongly in the
 operator's own instructions, a forum address set in its own background
@@ -84,8 +84,8 @@ What this module cannot see, stated rather than left to be found
   `docs/superpowers/inventaire-instance.md`; it cannot become a needle
   until it becomes a declared value.
 
-  **The names of the people who run the series were a second until phase
-  12 task 6 read this paragraph against the files.**
+  **The names of the people who run the series were a second, until this
+  paragraph was read against the files.**
   `docs/reference/contacts.md` and `docs/reference/operations.md` each
   named four of them, in paragraphs the cockpit publishes to every
   instance; the reference pages name roles now, and the one page that
@@ -95,7 +95,7 @@ What this module cannot see, stated rather than left to be found
   also its limit: an entry stays true only for as long as somebody
   re-reads it.
 
-  `site/src/style.css` was a third until phase 12 task 2: it named the
+  `site/src/style.css` was a third: it named the
   designer in seven comments that shipped verbatim inside the showcase's
   own stylesheet, and the charter's author asked on 2026-08-25 not to
   have her charter offered as a product option. The comments now say
@@ -109,7 +109,7 @@ What this module cannot see, stated rather than left to be found
   docstring for where that stops.
 
   The series' **strapline** was another
-  until phase 11 task 3 gave it a key: `visual.py` reads
+  until it got a key of its own: `visual.py` reads
   `identity.strapline` now, and `needles` carries it, so the poster's own
   hero line is swept like everything else on it.
 - **Bytes.** `BINARY_SUFFIXES` skips images and fonts, and one of them
@@ -119,8 +119,8 @@ What this module cannot see, stated rather than left to be found
   build does not regenerate it.
 
   `visuals/references/*.png` used to be a second, and are not any more.
-  They pin what `visual.py` renders, and phase 12 task 1 pointed the
-  render at `instances/example/`: the palette, the motif, the strapline,
+  They pin what `visual.py` renders, and that render points at
+  `instances/example/`: the palette, the motif, the strapline,
   the wordmark and the address inside the registration QR are the
   example's now, so those three images carry nothing a duplicate would
   have to replace. The blind spot has not moved -- nothing here can read a
@@ -129,7 +129,7 @@ What this module cannot see, stated rather than left to be found
   where it can be, on the pages they are rendered from, by
   `test_cli_render_visual_fixtures.py::
   test_no_value_of_the_instance_running_this_repository_reaches_the_page`.
-- **The edition prefix was a fourth until phase 11 task 4.**
+- **The edition prefix was a fourth.**
   `validate.py` fixed an edition code as `MRG-` and one to four digits --
   an abbreviation of *this* series' name, in the product's own validator,
   so the example instance numbered a reading group's sessions `MRG-1` and
@@ -269,12 +269,12 @@ def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
     purpose. `quality.yml`'s own `python` job sets up node 20 and runs
     `npm ci` in both `app/` and `site/` before it runs `pytest`, so on a
     runner their absence means that install stopped happening -- and a
-    skip there would let the acceptance criterion the whole of phase 10
-    rests on (spec § 6) not run at all while the suite reported green.
+    skip there would let the acceptance criterion the whole separation
+    rests on not run at all while the suite reported green.
 
     That is the failure D-25 names, and this module was committing it:
-    `docs/superpowers/phase-10-bilan.md` § 4.3 found a fresh clone
-    passing the entire suite without the one test the phase exists to
+    a review found a fresh clone
+    passing the entire suite without the one test this module exists to
     produce ever executing. So the absence is loud where it means
     something is broken, and quiet where it means nothing at all.
     """
@@ -284,7 +284,7 @@ def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
             f"({' or '.join(_AUTOMATED)} is set), where quality.yml's own "
             "`python` job installs node and both node_modules before it "
             "runs pytest -- so this is a broken pipeline rather than a "
-            "machine without a toolchain, and phase 10's acceptance "
+            "machine without a toolchain, and the acceptance "
             f"criterion has not run. {remedy}",
             pytrace=False,
         )
@@ -630,13 +630,13 @@ def test_every_value_the_declaration_holds_is_swept() -> None:
     """A key nothing derives a needle from is a value a second instance's
     build can carry with nothing looking for it.
 
-    Phase 11 task 3 is why this exists. `instance_identity.needles` was a
-    hand-typed dictionary of eight identity fields; task 3 added a ninth
+    A near miss is why this exists. `instance_identity.needles` was a
+    hand-typed dictionary of eight identity fields; a ninth appeared
     (`strapline`, the poster's own hero line) and the sweep went on
     passing green over a poster hard-typing this instance's motto, because
     nobody thought to add the needle beside the key. That was fixed by
-    enumerating `published.IDENTITY_FIELDS` -- but the address half and,
-    from task 4, the edition prefix are still written out by hand, for
+    enumerating `published.IDENTITY_FIELDS` -- but the address half and
+    the edition prefix are still written out by hand, for
     reasons those entries state. This is the clause that makes the
     hand-written half safe: it reads the declaration rather than the
     reader, so a *new key* fails here on the first run after it is added.
@@ -722,7 +722,7 @@ def _leaks(
 def test_a_second_instances_build_carries_nothing_of_this_one(
     second_instance: Built,
 ) -> None:
-    """The acceptance criterion of phase 10, § 6.
+    """The acceptance criterion separating the instance from the code.
 
     Everything a reader receives, swept for every writable form of this
     instance's name, its addresses, its series and its charter. The only
@@ -736,8 +736,8 @@ def test_a_second_instances_build_carries_nothing_of_this_one(
     offending = _leaks(second_instance, wanted, patterns)
     assert offending == [], (
         "a build made with another instance's configuration still carries "
-        "this instance's identity, which is the one thing phase 10 exists "
-        f"to make impossible: {offending}"
+        "this instance's identity, which is the one thing this separation "
+        f"exists to make impossible: {offending}"
     )
 
 
@@ -779,13 +779,13 @@ def test_the_sweep_sees_what_the_deferred_register_accounts_for(
     in an artefact some entry claims -- that is what fails the day a *new*
     leak hides behind an old entry's name.
 
-    The other half is conditional on there being a claim to prove, and
-    phase 11 is why. While some entry named a built artefact, a sweep that
+    The other half is conditional on there being a claim to prove.
+    While some entry named a built artefact, a sweep that
     found *nothing* meant the entry was being kept for a file that no
     longer reaches a build -- a list of apologies for nothing -- so this
-    asserted that it found something. No entry claims one now (task 2
-    pointed the demonstration at the example instance, task 3 derived the
-    poster's wordmark and its strapline), and with nothing claimed that
+    asserted that it found something. No entry claims one now (the
+    demonstration points at the example instance, and the
+    poster's wordmark and strapline are derived), and with nothing claimed that
     assertion would be demanding a leak in order to prove an exemption
     that has no subject -- the exact opposite of what it is for, and it
     would contradict `test_a_second_instances_build_carries_nothing_of_
@@ -823,7 +823,7 @@ def test_every_deferred_entry_that_claims_a_build_reaches_it(
     leak that no longer exists -- it costs nothing today and blinds the
     sweep the day somebody reintroduces exactly that phrase.
 
-    No entry claims one since phase 11 task 3, so this asserts nothing
+    No entry claims one any more, so this asserts nothing
     today. It is kept rather than deleted for the same reason the
     machinery it exercises is: the next entry that needs a `carried_into`
     should meet this on its way in, not after somebody notices the

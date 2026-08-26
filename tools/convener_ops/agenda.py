@@ -1,8 +1,8 @@
-"""iCalendar (RFC 5545) agenda feeds -- task 8, phase 6.
+"""iCalendar (RFC 5545) agenda feeds.
 
 Distinct from `site/src/feed.njk`'s RSS syndication feed: that one is a
 reading list for a feed reader, this one is a subscribable calendar for a
-calendar client. F-06 (spec §4) is the request this answers: a shared
+calendar client. The request it answers: a shared
 calendar with nothing to administer and no account -- a static file, not a
 service.
 
@@ -11,8 +11,8 @@ Two feeds, two audiences:
 * The **public** feed is built entirely on the JavaScript side
   (`site/.eleventy.js::agendaCalendar`, `site/src/agenda.njk`), published as
   part of the showcase at `/agenda.ics` -- scheduled editions only, title,
-  start, end, timezone and the event page's address, exactly the list task 8
-  names. Nothing here builds it; it has no Python half.
+  start, end, timezone and the event page's address, and nothing else.
+  Nothing here builds it; it has no Python half.
 * The **internal** feed is this module's own: everything the public one
   carries, plus the preparation deadlines the board is already tracking
   (`notify.due_date`) -- so a volunteer subscribed to it sees "Board decision
@@ -193,7 +193,7 @@ def _edition_vevent(event: Mapping[str, Any], *, duration_minutes: int) -> str:
     project-wide, extended here to a property RFC 5545 requires but does not
     otherwise constrain the meaning of.
     """
-    # `edition_code` (D-19, R-5), never `id`: a speaker record's `id`
+    # `edition_code` (D-19), never `id`: a speaker record's `id`
     # ("spk-014") is its own internal record key, `notify.py`'s own "name
     # the record, never the person" identity for a deadline entry below --
     # the *edition's* own public identifier, the one `signup_url` and the

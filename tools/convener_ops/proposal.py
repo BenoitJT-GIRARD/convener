@@ -20,7 +20,7 @@ from convener_ops.governance import active_board
 # processes* -- two runs of this interpreter can iterate the same set in a
 # different order. `GENDERS`/`CAREER_STAGES` are membership-tested only
 # here, but `scripts/create_tally_form.py` also needs a *stable* order to
-# build a DROPDOWN's options from (R-9): iterate the set there and the
+# build a DROPDOWN's options from: iterate the set there and the
 # option order, and each option's `index`, would differ run to run, so
 # every re-run would rewrite the live form for no reason. These tuples are
 # the one source of order; the sets below are derived from them, never a
@@ -46,7 +46,7 @@ CAREER_STAGES = frozenset(CAREER_STAGE_ORDER)
 # any alias this module also accepts after it. ``scripts/create_tally_form.py``
 # builds the live form's questions from these same tuples, not from a second,
 # hand-typed copy of them, so a label renamed on one side breaks a test
-# instead of breaking the form in production (R-3, D-03).
+# instead of breaking the form in production (D-03).
 LABEL_NAME = ("Name",)
 LABEL_EMAIL = ("Email",)
 LABEL_INSTITUTION = ("Institution", "Affiliation")
@@ -130,7 +130,7 @@ def field_value(field: dict[str, Any]) -> str:
     contract: without this step ``to_lead`` would be comparing a
     stringified id list against ``GENDERS``/``CAREER_STAGES`` and losing
     every declared answer to ``"undisclosed"`` silently -- for every
-    respondent, not an occasional one (R-9). This lives here rather than in
+    respondent, not an occasional one. This lives here rather than in
     ``convener_ops.cli`` because it is knowledge about the shape of a
     submission, this module's subject, and because it makes the behaviour
     reachable from this file's own tests.
@@ -344,7 +344,7 @@ def to_lead(
         "youtube_url": "",
         "forum_thread": "",
         # Off by default, the same "absent means off" default the v5
-        # migration gives every existing record (task 16 ruling 1): a new
+        # migration gives every existing record: a new
         # lead never starts with a survey nobody asked for.
         "survey_enabled": False,
         "runbook_progress": {},

@@ -1,7 +1,7 @@
 """Which of the two lanes a registration takes, and the floor under it.
 
-Phase 9, task 3. Task 2 put the survey response in `submission_queue`'s own
-queue and left the registration alone, deliberately: a survey response
+The survey response goes into `submission_queue`'s own
+queue, and a registration used to be left alone: a survey response
 sends nothing back to anybody, so the slowest cadence costs the person who
 submitted it nothing at all, while **a registration's confirmation e-mail
 is not a receipt, it is the entry ticket.** It carries the room link and
@@ -47,7 +47,7 @@ land before the event.
 
 `drain_period_hours` refuses to evaluate a cron shape it does not
 positively understand rather than guessing at one -- the same discipline
-task 1's own workflow sweep adopted for GitHub's branch filters, and for
+the workflow sweep adopted for GitHub's branch filters, and for
 the same reason: a floor that answered "probably 24 hours" about a cron it
 misread would be worse than no floor at all. A maintainer who changes the
 drain's cadence to a shape this cannot read gets a red test naming the
@@ -306,7 +306,7 @@ def to_routing_data(speakers: Sequence[object], threshold_hours: int) -> dict[st
     is nothing else this function could emit, the same property
     `public_data.to_survey_status` has for its own single field.
 
-    Keyed on the lower-cased `edition_code`, the R-5 rule
+    Keyed on the lower-cased `edition_code`, the rule
     `platform.find_speaker` owns and `SignupForm.tsx` and the relay both
     already use -- never on `id`, which is the record's own internal key
     and means nothing to a submitter. A record with no usable

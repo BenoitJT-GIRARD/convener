@@ -1,4 +1,4 @@
-"""Task 11 (phase 5): pins `.github/workflows/a11y.yml` and
+"""Pins `.github/workflows/a11y.yml` and
 `site/scripts/check-a11y.mjs` against the properties a green run does not,
 by itself, prove -- the exact gap acceptance criterion 4's own report has
 to close: "a green accessibility job proves nothing by itself."
@@ -43,8 +43,8 @@ def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
     commode." `config/instance.json` is the one place this project's
     published address is written down -- a second, hand-typed prefix here
     could drift from it exactly the way the site's own templates once
-    could. Phase 10 task 2 replaced this checker's own regular expression
-    over `.eleventy.js` with the same reader the build itself uses, so
+    could. This checker's own regular expression
+    over `.eleventy.js` gave way to the same reader the build itself uses, so
     what is asserted here is that the checker asks the declaration rather
     than any intermediary. That the value actually agrees is
     `test_published.py`'s own job, from a real run of both.
@@ -121,7 +121,7 @@ def test_incomplete_results_are_reviewed_by_name_never_suppressed_wholesale() ->
 
 
 def test_the_reviewed_allow_list_is_scoped_by_element_not_only_by_message_key() -> None:
-    """A branch review found that `REVIEWED_INCOMPLETE_NODES`'s predecessor
+    """A review found that `REVIEWED_INCOMPLETE_NODES`'s predecessor
     (`REVIEWED_INCOMPLETE_MESSAGE_KEYS`) matched on axe's `messageKey`
     alone -- the generic *reason* color-contrast gave up on a node, never
     the node itself. Reproduced by hand: a deliberately broken,

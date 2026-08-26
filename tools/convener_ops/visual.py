@@ -1,4 +1,4 @@
-"""The announcement composition: a page, not a hand-drawn SVG (P-3).
+"""The announcement composition: a page, not a hand-drawn SVG.
 
 `docs/assets/example_and_template_initial_assets/announcement-template_initial.png`
 (gitignored -- entry 9 of `docs/superpowers/deferred-work.md`) is the designer's
@@ -7,7 +7,7 @@ wordmark; the series title in heavy purple caps on turquoise; a two-line
 invitation to the discussion; a second cream band carrying the talk's own
 title; a purple date line; a "WHAT TO EXPECT?" block; a white, tilted
 photographic frame with the speaker's name along its lower edge; a
-"REGISTER HERE" label over a QR code; and task 1's ribbon running over
+"REGISTER HERE" label over a QR code; and the ribbon running over
 everything, off every edge.
 
 Why a page rather than an SVG template with placeholders
@@ -47,7 +47,7 @@ to keep in step by hand.
 Every *name* below comes from `config/instance.json`, through
 `published.load_identity` -- the same reader `announce.py` and the two
 generated SVG templates already use, never a fourth. Three of this page's
-fixed parts were this instance's own prose until phase 11: the wordmark
+fixed parts used to be this instance's own prose: the wordmark
 band, the hero band's strapline, and two of the three "what to expect"
 rows. A poster is the artefact a duplicate prints and pins to a wall, so
 each of the three was this instance's name arriving in another
@@ -68,8 +68,8 @@ the code rather than in the abstract:
   Re-casing is the same: the band used to set the host in camel case,
   which is a typographic reading of a name, and DNS holds no capitals to
   read one back out of.
-- **Refuse to render.** S-4 refuses what has no safe default, and phase
-  10 applied it to a *value* that might be missing. Nothing is missing
+- **Refuse to render.** This project refuses what has no safe default,
+  applied to a *value* that might be missing. Nothing is missing
   here: `identity.forum` is required, is refused while it still carries a
   placeholder, and is parsed before `forum_host` exists at all
   (`published.identity_from_data`). What has no safe default is a
@@ -97,7 +97,7 @@ is untouched: it is drawn from the charter's own `--purple` and
 templates read for their wordmark -- and it carries no name.
 
 The ribbon itself is never redrawn here. `ribbon_path`, `ribbon_stroke_colour`
-and `ribbon_stroke_width` (task 1's own module) are called with this
+and `ribbon_stroke_width` (`ribbon.py`) are called with this
 composition's exact canvas size and painted as the last element in the
 document, so it always sits on top -- exactly what the reference shows:
 the purple stroke crosses over the lower "WHAT TO EXPECT?" text near the
@@ -127,7 +127,7 @@ used to (a number that, worked out independently here, turns out close to
 what `_ribbon_safe_margins` derives for a square canvas -- a useful sanity
 check, not a coincidence worth relying on for the next aspect ratio).
 Deriving the margins from `ribbon.waypoints` rather than typing two numbers
-is what makes them survive task 4 changing the aspect ratio: `waypoints`
+is what makes them survive a change of aspect ratio: `waypoints`
 already expresses every loop and bulge as a fraction of the canvas's own
 short side, width or height (see that module's own docstring), so a margin
 computed from it adapts the same way the ribbon itself does, at any
@@ -150,17 +150,17 @@ either through nesting the way it once did.
 
 That nesting -- `.register` used to sit inside `.content`'s own
 `.expect-col`, below the "what to expect" copy -- is also what fixed a
-different, independent bug fix round 1 found in the same render:
+different, independent bug found in the same render:
 `.register` used to be positioned `absolute`, pinned a fixed distance from
 the *viewport's* own bottom regardless of how tall the content above it
 grew -- exactly the kind of fixed assumption a page whose text can wrap to
 more lines must not make. Moving it into normal flow fixed that overlap.
-It introduced a second, subtler one in its place, task 3's own carried
-defect, which is why the band is no longer nested at all -- see below.
+It introduced a second, subtler one in its place, which is why the band
+is no longer nested at all -- see below.
 
 Why the code can never be clipped, and why that took more than a QR image
 ---------------------------------------------------------------------------
-Fix round 1 made `.content` the one flexible element in the page's own
+`.content` is the one flexible element in the page's own
 column of bands, `flex: 1 1 auto; min-height: 0`, absorbing whatever
 height the rigid bands above it (`wordmark`, `hero`, the talk-title band,
 the date line -- all `flex: 0 0 auto`) left over. That is fine exactly as
@@ -211,7 +211,7 @@ The variable parts, and how each is handled
   overflow) by `_scaled_font_size` (a pure function of its character
   count, computed here in Python rather than measured by a script in the
   rendered page -- see that function's own docstring for why
-  a *measured* fit would undermine task 5's own pinned image comparison).
+  a *measured* fit would undermine the pinned image comparison).
 - **Date** -- `talk_date`, a real `datetime.date`, never a hand-typed
   string. `paris_standing_start` derives the real Europe/Paris UTC offset
   and abbreviation for this project's standing 12:30 local start time on
@@ -227,8 +227,8 @@ The variable parts, and how each is handled
   the one instance this module and the governance rule both anchor to.
 - **Portrait** -- `portrait_data_uri`, `None` by default. `None` is not a
   degraded case to work around -- it is what most editions look like until
-  a speaker's `photo_url` clears the consent gate (P-4,
-  `public_data.PUBLISHABLE_ON_CONSENT`), and `_frame_html` below renders a
+  a speaker's `photo_url` clears the consent gate
+  (`public_data.PUBLISHABLE_ON_CONSENT`), and `_frame_html` below renders a
   composed placeholder for it, never a hole or a broken `<img>`. This
   module never fetches a URL and never reads `data/speakers.yml` itself --
   `photo_url` is, by the schema's own words, "a link, not an upload: the
@@ -252,12 +252,12 @@ The variable parts, and how each is handled
   display (see `render_announcement`'s own docstring for the reasoning).
 - **Registration code** -- `announcement.event_id`. `_registration_slot_html`
   renders a QR code encoding `registration.signup_url(event_id)` (D-19)
-  into the fixed-size slot phase 6's task 2 reserved for it
+  into the fixed-size slot reserved for it
   (`registration_code.registration_code_svg`; see that module's own
   docstring for the encoder, and for why its signature -- an id, never a
   URL -- makes a room link structurally unreachable here). The wrapping
-  element keeps `data-registration-code-slot`, the same hook task 2 marked
-  it with, now around real content rather than an empty placeholder.
+  element keeps `data-registration-code-slot`, the hook that
+  marked it, now around real content rather than an empty placeholder.
 """
 
 from __future__ import annotations
@@ -474,9 +474,9 @@ _FONT_FACE_CSS: Final = """\
 
 #: `font-display: block` rather than the showcase's own `swap`: this page
 #: is rendered exactly once, to a screenshot, by a renderer that already
-#: waits for it to finish loading (task 5's own pinned engine) -- there is
+#: waits for it to finish loading (the pinned engine) -- there is
 #: no visitor for a swap to matter to, and `block` guarantees the glyphs
-#: task 1's ribbon shares a canvas with are never captured mid-swap in a
+#: the ribbon shares a canvas with are never captured mid-swap in a
 #: fallback face.
 
 _FONT_STACK: Final = (
@@ -501,7 +501,7 @@ def _scaled_font_size(
     `_affiliation_font_size` pair theirs with `vmin` (the tilted frame
     they sit inside is itself sized in `vmin` -- see `render_announcement`'s
     own CSS -- so text meant to fit inside it has to shrink on the same
-    axis the frame does, at any aspect ratio task 4 renders this page at,
+    axis the frame does, at any aspect ratio this page is rendered at,
     or the two would drift apart on anything but a square canvas).
 
     Computed here, in Python, rather than measured in the browser by a
@@ -510,13 +510,13 @@ def _scaled_font_size(
     rendered metrics, which means either a layout pass a plain CSS
     property cannot see (`ResizeObserver`, requestAnimationFrame polling)
     or a canvas text-measurement call -- either way, script this page does
-    not otherwise need. Second, and more importantly: task 5's own image
+    not otherwise need. Second, and more importantly: the pinned image
     comparison is only a real control if identical input always renders
-    identically (P-2's whole argument for pinning the engine at all) -- a
+    identically (the whole argument for pinning the engine at all) -- a
     size that depended on live browser font-metrics could legitimately
     differ by a pixel between two Chromium builds that still agree on
-    every design decision, which is exactly the false-positive P-2 exists
-    to rule out. A pure function of `len(text)` cannot do that: the same
+    every design decision, which is exactly the false positive pinning
+    exists to rule out. A pure function of `len(text)` cannot do that: the same
     title always asks for the same size, on any machine, before a single
     pixel is painted.
 
@@ -610,9 +610,9 @@ def _num(value: float) -> str:
 
 #: The squares-and-dots device to the wordmark's own left, in the
 #: reference poster -- a deliberately simplified reading of it, not a
-#: pixel trace the way task 1's ribbon is. Unlike the ribbon, this glyph
+#: pixel trace the way the ribbon is. Unlike the ribbon, this glyph
 #: was never named as the part of the identity that had drifted (D-16
-#: names the palette; the brief for this task names the ribbon
+#: names the palette; the correction named the ribbon
 #: specifically as "the only part of the identity that was ever in
 #: doubt"), so it is redrawn here as a plain evocation -- two turquoise
 #: squares on a diagonal, two purple dots joined by a short curved
@@ -652,7 +652,7 @@ def _wordmark_html(forum_host: str) -> str:
 def _series_html(strapline: str, forum_host: str) -> str:
     """The hero band: the series' own strapline, and where to discuss it.
 
-    `strapline` is `config/instance.json`'s own key (phase 11), not a
+    `strapline` is `config/instance.json`'s own key, not a
     motto typed here: until it existed, a duplicate's posters announced
     *this* series' motto above *its* talks. `published.Identity`'s own
     docstring records why it is not `tagline` -- that one is a sentence,
@@ -695,15 +695,15 @@ def _expect_html(forum_host: str) -> str:
 
 
 def _registration_slot_html(event_id: str, *, dark: str, root: Path) -> str:
-    """The registration QR code, filling the fixed-size slot phase 6's
-    task 2 reserved (the same `data-registration-code-slot` hook, the
-    same "reserve the mount point before the next task fills it" pattern
-    phase 5's task 5 used for the registration form). `registration_code_svg`
+    """The registration QR code, filling the fixed-size slot reserved for
+    it (the same `data-registration-code-slot` hook, the
+    same "reserve the mount point before the thing that fills it exists"
+    pattern the registration form used). `registration_code_svg`
     encodes `registration.signup_url(event_id)` and nothing else -- see that
     function's own docstring for why its signature (an id, never a URL)
     makes a room link structurally unreachable through this call.
 
-    No longer `aria-hidden`: task 2's placeholder had nothing to announce;
+    No longer `aria-hidden`: the placeholder had nothing to announce;
     this element now carries the one machine-readable way to reach the
     event's own registration page, so it is left to whatever assistive
     reading the surrounding `<svg>`'s own `<title>` (the plain URL,
@@ -721,7 +721,7 @@ def _registration_slot_html(event_id: str, *, dark: str, root: Path) -> str:
 
 # ---------------------------------------------------------------------------
 # The photographic frame: a portrait, or a composed placeholder -- never a
-# hole, never a broken <img> (P-4)
+# hole, never a broken <img>
 # ---------------------------------------------------------------------------
 
 
@@ -730,7 +730,7 @@ def _frame_photo_html(portrait_data_uri: str | None, speaker_name: str) -> str:
 
     `portrait_data_uri` is `None` far more often than not -- see the module
     docstring's "Portrait" section for why that is a legitimate, common
-    state (P-4) rather than something to work around, and why this
+    state rather than something to work around, and why this
     function never reaches for a network request to fill it in itself. A
     `None` renders a composed placeholder (the speaker's own first
     initial, on the same turquoise tint the rest of this identity already
@@ -880,9 +880,9 @@ def _ribbon_content_right_margin(width: float, height: float, root: Path) -> flo
 
 def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
     """The ribbon, painted last so it sits on top of everything else --
-    exactly what the reference shows (task 1's own stroke crosses over the
+    exactly what the reference shows (the stroke crosses over the
     "WHAT TO EXPECT?" text near the left edge in the designer's own poster,
-    not behind it). Colour and width both come from task 1's own reader
+    not behind it). Colour and width both come from `ribbon.py`'s reader
     functions, never hand-typed here."""
     d = ribbon_path(width, height)
     colour = ribbon_stroke_colour(root)
@@ -897,7 +897,7 @@ def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
-# The wide derivation (task 4): a banner is not a squashed poster
+# The wide derivation: a banner is not a squashed poster
 # ---------------------------------------------------------------------------
 #
 # `formats.SQUARE` and `formats.PRINT` both render the composition above
@@ -931,7 +931,7 @@ def _ribbon_overlay_svg(width: float, height: float, root: Path) -> str:
 # `is_wide` is a plain function of the two numbers `render_announcement`
 # already receives, not a CSS media query the browser evaluates at its own
 # viewport: every one of this project's three named formats is rendered
-# once, to one screenshot, at one already-known size (task 5's own pinned
+# once, to one screenshot, at one already-known size (the pinned
 # engine, never resized after the fact), so there is nothing for a media
 # query to answer that this function does not already know when it builds
 # the page -- and a plain Python conditional is what every other
@@ -958,8 +958,8 @@ def is_wide(width: float, height: float) -> bool:
 #: The registration slot's own footprint and inner padding, in vmin --
 #: named constants rather than literals inside the CSS block below, because
 #: `formats.qr_module_size_mm` needs these same two numbers to work out the
-#: registration QR's physical module size at print resolution (F-03's
-#: seventh channel: a poster actually pinned to a wall, where "physical
+#: registration QR's physical module size at print resolution (the
+#: printed channel: a poster actually pinned to a wall, where "physical
 #: module size" is a real, measurable thing, not a figure of speech). A
 #: hand-copied second reading of "12.5" and "0.5" over there could silently
 #: drift from what this page actually renders; one is threaded through
@@ -985,7 +985,7 @@ class Announcement:
     absent by convention.
 
     `portrait_data_uri` defaults to `None` -- the common, legitimate state
-    (P-4) -- rather than requiring every caller to spell it out. Nothing
+    -- rather than requiring every caller to spell it out. Nothing
     else defaults: a title, a date, a name, an event id are what an
     announcement *is*. `speaker_affiliation` may be `""` (a speaker with
     none to show), which `_frame_html` handles by omitting the second
@@ -1000,16 +1000,16 @@ class Announcement:
     portrait_data_uri: str | None = None
 
 
-#: The one canonical announcement task 5's versioned reference images
+#: The one canonical announcement the versioned reference images
 #: render -- reusing `tools/tests/test_visual.py::_announcement`'s own
 #: default identity rather than inventing a second "canonical" one (two
 #: fixture identities claiming to be *the* announcement is exactly the
 #: unforced drift D-14 warns against). Ada Lovelace has been dead for over
 #: a century and a half: a name safe to commit to a versioned image where
-#: a real, living speaker's would not be (task 5's own brief: "no real
-#: person's name or face may enter them"). `portrait_data_uri` stays at
-#: its default, `None` -- no photograph is ever committed either, and P-4
-#: applies here exactly as it does to a real edition: a reference image is
+#: a real, living speaker's would not be -- no real person's name or face
+#: may enter one. `portrait_data_uri` stays at
+#: its default, `None` -- no photograph is ever committed either, and the
+#: gate applies here exactly as it does to a real edition: a reference image is
 #: not an exemption from the consent gate, it is one more thing the gate
 #: must hold for.
 FIXTURE_ANNOUNCEMENT: Final = Announcement(
@@ -1028,14 +1028,14 @@ def render_announcement(
     page -- see the module docstring for what is fixed, what varies, and
     why this is a page rather than an SVG template.
 
-    Reads `data/brand.json` for colour, and task 1's `ribbon.py` for the
+    Reads `data/brand.json` for colour, and `ribbon.py` for the
     motif; touches nothing else on disk and makes no network request of
     its own -- `portrait_data_uri`, if given, is inlined as-is (a `data:`
     URI is what a caller should normally pass, so the rendered page never
     needs one either).
 
     `width` and `height` are the canvas the ribbon and every `vw`/`vmin`
-    -relative size in this page's own CSS are computed against -- task 4's
+    -relative size in this page's own CSS are computed against -- the
     three formats are this same function called with three different
     pairs, not three different templates.
 
@@ -1063,7 +1063,7 @@ def render_announcement(
     frame = _frame_html(
         portrait_data_uri=announcement.portrait_data_uri,
         speaker_name=announcement.speaker_name,
-        # Fix round 1: dropped on the banner alone, never hidden with CSS.
+        # Dropped on the banner alone, never hidden with CSS.
         # `_AFFILIATION_FONT_MAX_VMIN` is 1.7vmin; at the banner's own
         # 630px-tall canvas (`vmin` reads the *shorter* side, and height is
         # shorter than width on every wide render) that is ~10.7px before a
@@ -1110,7 +1110,7 @@ def render_announcement(
         # centred as a pair, reads better than two separate grid rows that
         # `.frame-wrap`'s own spanning height can pull apart.
         #
-        # Fix round 1: `title_band` (shared with the square and print
+        # `title_band` (shared with the square and print
         # branch below, unchanged) is wrapped in one extra element here,
         # `.wide-title-row` -- wide-only, never emitted outside this
         # branch. `.band--talk-title__backdrop`, the first child, is what
@@ -1370,7 +1370,7 @@ def render_announcement(
      `poster--wide` on a square or print render, so nothing below ever
      matches.
 
-     Fix round 1: the grid's own two columns (`heading`'s "1fr" beside
+     The grid's own two columns (`heading`'s "1fr" beside
      `frame`'s own "auto" width) are exactly the shape `.band--talk-title`
      needs to *not* have -- a cream band confined to one column reads as a
      truncated accident, not the "cream bands run full width" rule
@@ -1404,7 +1404,7 @@ def render_announcement(
     gap: 0.8vmin;
     min-height: 0;
   }}
-  /* Fix round 1: `.wide-title-row` (wide-only markup, wrapping the shared
+  /* `.wide-title-row` (wide-only markup, wrapping the shared
      `title_band` -- see `render_announcement`'s own wide branch) is what
      lets the band's cream *background* run the full canvas width while
      its *text* stays exactly where it was, clear of the frame's own
@@ -1414,7 +1414,7 @@ def render_announcement(
      `.band--talk-title` itself keeps its unconditional `flex: 0 1 auto;
      min-height: 0; overflow: hidden` (shared with the square and print
      formats -- the vertical "shrink and clip rather than spill" backstop
-     task 3 already relies on) unchanged; giving `.wide-title-row` the
+     the composition already relies on) unchanged; giving `.wide-title-row` the
      same `display: flex; flex-direction: column` re-establishes it one
      level further out, so `.band--talk-title` is still a real flex child
      that can be forced to shrink -- and still clips its own overflow when
@@ -1426,7 +1426,7 @@ def render_announcement(
 
      `.band--talk-title__backdrop` is the one element that actually
      breaks out: `position: absolute` removes it from the flow entirely
-     (unlike the plain `width: 100vw` this fix round tried first and
+     (unlike the plain `width: 100vw` tried first and
      reverted -- that fed back into the grid's own "1fr" column-sizing,
      and, worse, widened the *text's* own box too, running it straight
      under the frame -- checked by rendering, not assumed). `top: 0; left:

@@ -5,10 +5,10 @@ event's own public page address (D-19) -- and nothing else.
 `registration_code_svg` takes an `event_id`, never a URL: there is no
 parameter through which a room link, or any other string, could reach the
 encoder. That is not an incidental property of this module; it is the
-whole reason task 3 exists. This project publishes a field that used to be
+whole reason it exists. This project published a field that used to be
 called `registration_link` and actually carried a Zoom room address
-(`public_data.py`'s own module docstring has the history); phase 5 removed
-it from the public feed for exactly that reason, and a workflow guard
+(`public_data.py`'s own module docstring has the history); it was removed
+from the public feed for exactly that reason, and a workflow guard
 (`.github/workflows/preview.yml`) sweeps the built site for it. A poster is
 a worse place for that mistake than a web page: it gets printed and pinned
 to a wall, and a room link on a wall cannot be withdrawn. Encoding only an
@@ -26,7 +26,7 @@ This task's own brief says a QR encoder is legitimate work to write from
 scratch, and that is true -- but it is also unnecessary here: `segno` is
 not added by this task. `tools/pyproject.toml` already carries it, checked
 against this project's own zero-cost constraints when `delivery.py` first
-added it for the certificate's own QR (phase 4, task 14): pure Python, one
+added it for the certificate's own QR: pure Python, one
 universal wheel (`py3-none-any`, checked against the built artefact, not
 only the classifier), no required dependency for this project's Python
 floor, BSD-3-Clause (the licence file, not only the PyPI classifier), and
@@ -125,7 +125,7 @@ def registration_code_svg(event_id: str, *, dark: str, root: Path | None = None)
 
 def registration_code_modules(event_id: str, *, root: Path | None = None) -> int:
     """The registration QR's own width, in modules, quiet zone included --
-    the one number task 4's print derivation needs to work out the code's
+    the one number the print derivation needs to work out the code's
     physical size once printed (`formats.qr_module_size_mm`), and the one
     this function computes the same way `registration_code_svg` itself
     does (same URL, same error level, same `QR_BORDER`) rather than a

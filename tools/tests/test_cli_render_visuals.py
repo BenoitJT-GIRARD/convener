@@ -1,8 +1,8 @@
-"""`convener-render-visuals` -- task 6's own disk-writing seam for *production*
+"""`convener-render-visuals` -- the disk-writing seam for *production*
 visuals: real, scheduled editions from `data/speakers.yml`, run through the
 same public gate every other public artefact in this project already goes
-through (`public_data.to_public`), rendered on task 5's own pure
-composition. `render_visual_fixtures` (task 5) always renders the one
+through (`public_data.to_public`), rendered on the same pure
+composition. `render_visual_fixtures` always renders the one
 fixed, fictional identity a regression check needs; this is its opposite
 number, exercised here against real data shapes instead.
 """
@@ -28,7 +28,7 @@ from convener_ops.visual import render_announcement
 _REAL_ROOT = repo_root()
 
 
-#: Read on demand, never while this module loads (phase 12, task 5).
+#: Read on demand, never while this module loads.
 #: Both are paths `config/boundary.yml` hands to the instance, and a
 #: derived repository is entitled not to have them until the derivation
 #: lays an example's own files there. At module scope the read took this
@@ -39,7 +39,7 @@ def _real_brand() -> str:
     return (_REAL_ROOT / "data" / "brand.json").read_text(encoding="utf-8")
 
 
-#: Phase 11 task 3: the composition reads the instance's own declaration
+#: The composition reads the instance's own declaration
 #: too, for the wordmark, the strapline and the forum the "what to expect"
 #: rows name. Copied from the real repository for the same reason
 #: `data/brand.json` above is -- a second, hand-typed identity here would
@@ -174,8 +174,8 @@ def test_a_consented_photo_url_is_still_not_embedded_but_is_reported(
 ) -> None:
     """The structurally near-unreachable edge case this function's own
     docstring names: consent granted and the publication gate opened by
-    hand on a row that is still `status: scheduled`. Even then, P-4's own
-    direction -- never a way *around* the gate -- holds by construction:
+    hand on a row that is still `status: scheduled`. Even then, the gate's
+    own direction -- never a way *around* it -- holds by construction:
     nothing here fetches `photo_url` over the network, so the rendered
     page still gets no portrait. The gap is visible, not silent (D-25)."""
     rows = to_public(
@@ -198,7 +198,7 @@ def test_a_consented_photo_url_is_still_not_embedded_but_is_reported(
 
 
 def test_an_end_to_end_withheld_portrait_renders_the_no_portrait_variant() -> None:
-    """P-4, proved end to end through the real production path: a real
+    """The consent gate, proved end to end through the real production path: a real
     speaker record carrying a `photo_url` but no recorded consent, run
     through `to_public` and `_scheduled_announcements`, renders a page
     with no `<img>` at all -- never a broken one, never the URL leaked
@@ -382,7 +382,7 @@ def test_a_bad_date_on_a_scheduled_row_fails_the_whole_command(
 def test_a_print_qr_that_would_be_unscannable_fails_the_whole_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Important 2 (branch review): `formats.qr_module_size_mm` is a real,
+    """`formats.qr_module_size_mm` is a real,
     tested function that nothing in the actual pipeline called against a
     real edition before this guard. An `edition_code` long enough to bump
     `registration_code_modules`'s own QR version drops the print poster's

@@ -1,4 +1,4 @@
-"""D-14, fix round 1: `paris_standing_start`/`date_line` (Python),
+"""D-14: `paris_standing_start`/`date_line` (Python),
 `parisStandingStart` (`.eleventy.js`) and `parisStandingStart`/`dateLine`
 (TypeScript, `app/src/state/derived.ts`) are three independent
 implementations of the identical Europe/Paris seasonal-offset rule -- three

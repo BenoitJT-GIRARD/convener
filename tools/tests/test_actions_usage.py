@@ -1,4 +1,4 @@
-"""Phase 8, task 4: what the runs really cost, and the alarm before the
+"""What the runs really cost, and the alarm before the
 budget runs out.
 
 Every minute this project has ever written down is a `timeout-minutes`
@@ -51,7 +51,7 @@ _WORKFLOWS = _ROOT / ".github" / "workflows"
 #: The thresholds this repository actually ships. The simulations below run
 #: against these rather than against numbers invented here, so "it fires"
 #: means it fires on the file a maintainer would edit.
-#: Read on demand, never while this module loads (phase 12, task 5).
+#: Read on demand, never while this module loads.
 #: `config/actions-budget.yml` is a path `config/boundary.yml` hands to the
 #: instance, and a derived repository is entitled not to have it until the
 #: derivation lays an example's own file there. At module scope the read
@@ -317,7 +317,7 @@ def test_a_run_this_cannot_read_is_counted_as_a_run_it_could_not_cost(
 ) -> None:
     """Never dropped, never zeroed. A question that could not be answered
     is not the answer 'nothing' -- this repository already paid for
-    reading one as the other once (retention.yml's own R-36)."""
+    reading one as the other once, in retention.yml."""
     usage = _summarise([payload])
     assert usage.runs == 1
     assert usage.unreadable == 1
@@ -433,15 +433,15 @@ def test_the_submission_alarm_stays_quiet_one_submission_below() -> None:
     assert actions_usage.alarms(usage, _real_budget()) == ()
 
 
-def test_the_submission_alarm_names_the_phase_that_this_number_decides() -> None:
-    """Spec section 5: this rate is what says the public-submission queue
+def test_the_submission_alarm_names_what_this_number_decides() -> None:
+    """This rate is what says the public-submission queue
     has stopped being a precaution. The pointer belongs where the number
     is read, not only in a plan nobody has open at 6am."""
     usage = _summarise(
         _minute_runs(_real_budget().submissions_per_day, event="repository_dispatch")
     )
     fired = actions_usage.alarms(usage, _real_budget())
-    assert "phase 9" in fired[0].text
+    assert "queue" in fired[0].text
 
 
 def test_an_uncosted_run_is_its_own_loud_alarm() -> None:

@@ -1,16 +1,16 @@
 """The announcement composition -- pinning the properties that make it
 compose rather than a byte-identical page, the same discipline
-`test_ribbon.py` already applies to task 1's own module (see that file's
-own docstring). Five groups matter most, because each is where this task's
-own brief (or its fix round) names a defect that would otherwise be
+`test_ribbon.py` already applies to the ribbon (see that file's
+own docstring). Five groups matter most, because each is a defect that
+would otherwise be
 invisible in a single screenshot: a long title staying inside its band, a
 missing portrait composing rather than breaking, every colour coming from
 `data/brand.json` rather than a hand-typed literal, the date line
 reflecting the edition's real Europe/Paris offset -- pinned for a winter
 *and* a summer edition, because a test that only ever checked a winter date
 would pass against the reference poster's own hard-typed "(CET)" defect --
-and, since fix round 1, every text element staying inside a safe area that
-clears task 1's ribbon on both sides, checked against `ribbon.waypoints`
+and every text element staying inside a safe area that
+clears the ribbon on both sides, checked against `ribbon.waypoints`
 itself rather than against a rendered pixel (see
 `test_the_safe_area_clears_every_ribbon_waypoint`'s own docstring for why a
 pixel could not be part of this suite).
@@ -57,15 +57,15 @@ ROOT = repo_root()
 
 #: A small canvas is enough for every structural assertion below and keeps
 #: the suite fast; nothing here inspects pixels, only the generated markup
-#: and CSS text (rendering to an actual image is task 5's own job, done by
-#: hand for this task's own report, never inside this test suite -- no test
+#: and CSS text (rendering to an actual image is the pinned renderer's own
+#: job, never inside this test suite -- no test
 #: here touches a browser or the network).
 _W, _H = 1200.0, 1200.0
 
 
 def _announcement(**overrides: Any) -> Announcement:
     """Derived from `visual.FIXTURE_ANNOUNCEMENT` rather than a second,
-    hand-typed identity: task 5 commits versioned reference images
+    hand-typed identity: the versioned reference images are
     rendered from that exact constant, so this suite's own default state
     and the one a reviewer sees in a reference PNG are provably the same
     fixture, not two that happen to agree today."""
@@ -239,7 +239,7 @@ def test_a_very_long_title_renders_the_full_text_uncut() -> None:
 
 # ---------------------------------------------------------------------------
 # A missing portrait composes a placeholder -- never a hole, never a broken
-# <img> (P-4).
+# <img>.
 # ---------------------------------------------------------------------------
 
 
@@ -361,7 +361,7 @@ def test_no_brand_colour_hand_typed_outside_root_or_ribbon_stroke() -> None:
     """The same guard `test_brand.py` already runs on the ribbon templates
     and the two generated stylesheets, applied to this third consumer of
     `data/brand.json`. The ribbon's own `stroke="#..."` is the one
-    accepted exception -- task 1's own precedent, an SVG attribute filled
+    accepted exception -- an SVG attribute filled
     in from `ribbon_stroke_colour(root)` at render time, never hand-typed
     in this module's source."""
     brand = _brand()
@@ -519,8 +519,8 @@ def test_the_ribbon_geometry_matches_the_requested_canvas() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Fix round 1: text stays inside a safe area that clears the ribbon on both
-# sides -- in every render before this fix, it did not (the ribbon struck
+# Text stays inside a safe area that clears the ribbon on both
+# sides -- in every early render, it did not (the ribbon struck
 # through "READ TOGETHER", "Join the discussion" and the talk
 # title, on both left and right). See the module docstring's "Why a safe
 # area, and why derived rather than hand-typed".
@@ -544,9 +544,9 @@ def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
     module's own generated markup -- checking the geometry that produces
     the collision is what makes the property visible to a test at all.
 
-    Checked at three aspect ratios, not only the square this task's own
-    report renders: `_ribbon_safe_margins` is built to survive task 4
-    changing it (see the module docstring's own argument for why), and a
+    Checked at three aspect ratios, not only the square:
+    `_ribbon_safe_margins` is built to survive a change of aspect ratio
+    (see the module docstring's own argument for why), and a
     property that only happened to hold at one aspect ratio would not be
     evidence of that.
     """
@@ -595,8 +595,8 @@ def test_every_text_bearing_rule_reads_the_derived_safe_area() -> None:
     its own -- every rule this task's fix-round brief named a collision in
     (the wordmark and talk-title bands share `.band`, the hero section, the
     date line) has to actually spend them, not fall back to a fixed `vw`
-    that happens to look similar. `.content` and `.register` (task 3's own
-    band, sibling to `.content` -- see that module's own "Why the code can
+    that happens to look similar. `.content` and `.register` (the
+    band sibling to `.content` -- see that module's own "Why the code can
     never be clipped" section) are the two rules that read a *narrower*
     right margin, `--safe-r-content` -- `_ribbon_content_right_margin`'s own
     docstring explains why -- but still read the full `--safe-l` on their
@@ -614,12 +614,12 @@ def test_every_text_bearing_rule_reads_the_derived_safe_area() -> None:
 
 
 def test_the_register_band_is_never_squeezed_by_flexible_content() -> None:
-    """Task 3's own carried defect: on the tallest content this page ever
+    """A carried defect: on the tallest content this page ever
     composes (a long, heavily-wrapped non-Latin title), the registration
     slot used to run off the bottom edge of the canvas -- see the module
     docstring's "Why the code can never be clipped" section for the full
     mechanism. `.register` used to be nested inside `.content`'s own
-    `.expect-col` (fix round 1's own fix for an earlier, different bug --
+    `.expect-col` (a fix for an earlier, different bug --
     `position: absolute`, pinned to the viewport); once `.content` itself
     became the flexible element absorbing whatever height the rigid bands
     above it did not use, a squeezed `.content` spilled its own children,
@@ -641,7 +641,7 @@ def test_the_register_band_is_never_squeezed_by_flexible_content() -> None:
     `flex: 0 0 auto` back to nothing lets it shrink again; removing
     `.content`'s `overflow: hidden` lets an over-tall `.content` spill past
     `.register` instead of clipping itself; nesting `.register` back inside
-    `.content` (as fix round 1 left it) reintroduces the exact squeeze this
+    `.content` reintroduces the exact squeeze this
     test exists to catch."""
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
 
@@ -689,8 +689,8 @@ def test_the_safe_area_variables_match_the_derived_margins() -> None:
 def test_the_content_right_margin_is_narrower_than_the_full_corridor() -> None:
     """The whole point of `_ribbon_content_right_margin` existing as a
     second function: `.content` would lose real width for nothing if it
-    read the full-corridor `--safe-r` instead -- this is the property fix
-    round 1's own second bug rests on (see `_ribbon_content_right_margin`'s
+    read the full-corridor `--safe-r` instead -- this is the property a
+    second bug rested on (see `_ribbon_content_right_margin`'s
     own docstring for the collision that first exposed it: `.expect`'s copy
     re-wrapping into the "register" label beneath it)."""
     _, full_right_vw = _ribbon_safe_margins(_W, _H, ROOT)
@@ -721,14 +721,14 @@ def test_the_right_motif_never_reaches_below_its_own_tail_exit() -> None:
 def test_the_series_title_is_centred_like_the_talk_title_and_date() -> None:
     """The reference sets "READ TOGETHER" centred, like the talk
     title (`.band--talk-title p`, already centred) and the date line
-    (`.date-line`, already centred) beneath it -- this task's fix round
-    corrects the one heading that had been left flush left."""
+    (`.date-line`, already centred) beneath it -- one heading had been left
+    flush left, and this corrects it."""
     doc = render_announcement(_announcement(), width=_W, height=_H, root=ROOT)
     assert "text-align: center" in _rule_block(doc, ".hero h1")
 
 
 # ---------------------------------------------------------------------------
-# Task 4: three formats, one template (`formats.py` names the three real
+# Three formats, one template (`formats.py` names the three real
 # sizes). Every property established above for the square is re-checked
 # here at the banner's and the print poster's own real dimensions, not
 # assumed to carry over -- the banner is exactly where this task's own
@@ -929,7 +929,7 @@ def test_the_register_row_never_shrinks_in_the_wide_grid() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Fix round 1: the banner's own title band was a cream band in name only --
+# The banner's own title band was once a cream band in name only --
 # flush at the left edge, stopping short of the right (the "heading" grid
 # area is only `.wide-heading`'s own column, beside the frame's own
 # column), reading as a rendering accident rather than the "cream bands run
@@ -1007,11 +1007,11 @@ def test_the_banner_title_text_itself_never_widens_into_the_frames_column() -> N
 
 
 def test_a_long_real_title_never_wraps_under_the_banners_frame() -> None:
-    """The exact regression the fix's own first attempt introduced and
-    fix round 1's own rendering step caught: the real fixture's own
+    """The exact regression a first attempt introduced and
+    a rendering pass caught: the real fixture's own
     longest title (MRG-04) wrapping a word ("across") directly underneath
     the speaker's frame once `.band--talk-title` itself was widened to
-    100mrg. `assert title in doc` alone (already checked by task 4's own
+    100mrg. `assert title in doc` alone (already checked by
     `test_a_long_real_title_composes_without_clipping_in_every_format`)
     cannot catch this -- the full text is still *in* the document even
     when a word renders visually under an opaque photo, which is exactly
@@ -1055,7 +1055,7 @@ def test_the_frame_still_paints_over_the_banner_backdrop_not_the_reverse() -> No
 
 
 def test_the_talk_title_still_shrinks_and_clips_rather_than_spills_when_wide() -> None:
-    """Task 3's own vertical backstop (`.band--talk-title`'s `flex: 0 1
+    """The vertical backstop (`.band--talk-title`'s `flex: 0 1
     auto; min-height: 0; overflow: hidden`) still has a real flex
     container to shrink within now that it sits one level deeper, inside
     `.wide-title-row` rather than directly inside `.wide-heading`:
@@ -1085,7 +1085,7 @@ def test_the_talk_title_still_shrinks_and_clips_rather_than_spills_when_wide() -
 
 
 # ---------------------------------------------------------------------------
-# Fix round 1, second finding: the banner's own affiliation caption was
+# A second finding: the banner's own affiliation caption was
 # illegible at the size a share preview is actually displayed at (the
 # banner's own 630px-tall canvas puts `_AFFILIATION_FONT_MAX_VMIN`,
 # 1.7vmin, at ~10.7px before a preview surface then scales the whole image

@@ -1,4 +1,4 @@
-"""The submission queue and the drain that empties it (phase 9, task 2).
+"""The submission queue and the drain that empties it.
 
 Four groups of properties, in this order:
 
@@ -20,7 +20,7 @@ Four groups of properties, in this order:
    the Python constant names.
 
 And one sweep that is none of the four: `test_no_queue_file_is_committed_
-to_the_default_branch`. Task 1 recorded a precondition no offline test can
+to_the_default_branch`. There is a precondition no offline test can
 enforce -- that no pull request is ever opened from the queue branch -- and
 this is the consequence of breaking it, one step further on, where a file
 *can* be seen. It fails on the pull request that would merge the queue onto
@@ -863,7 +863,7 @@ def test_the_drain_runs_as_steps_of_a_job_that_already_runs() -> None:
 
 def test_no_workflow_but_the_daily_job_mentions_the_queue() -> None:
     """A second consumer of the queue branch would be a second billed run,
-    and a `push:` filter naming it would be worse still (task 1's own
+    and a `push:` filter naming it would be worse still (the workflow
     sweep would catch that one; this catches the softer version)."""
     workflows = (_ROOT / ".github" / "workflows").glob("*.yml")
     mentions = {
@@ -941,7 +941,7 @@ def test_the_dispatch_handler_it_replaces_is_gone() -> None:
 def test_no_queue_file_is_committed_to_the_default_branch() -> None:
     """The consequence of the one precondition no offline test can enforce.
 
-    Task 1 wrote it down and could not hold it: nobody may open a pull
+    It is written down and cannot be held here: nobody may open a pull
     request from the queue branch, and whether one exists is repository
     state rather than file content. This is what breaking it looks like one
     step later -- queue files arriving on the default branch, where at

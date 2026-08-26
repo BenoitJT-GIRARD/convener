@@ -227,7 +227,7 @@ def test_to_survey_response_length_cap_is_checked_after_stripping() -> None:
 
 
 # ------------------------------------------------------------------ #
-# _pad() / _unpad(): R-39, fix round 1 -- the fixed-size plaintext
+# _pad() / _unpad(): the fixed-size plaintext
 # padding that removes the ciphertext-length quasi-identifier.
 # ------------------------------------------------------------------ #
 
@@ -271,7 +271,7 @@ def test_unpad_is_a_no_op_on_data_with_no_null_byte() -> None:
 
 
 def test_two_different_lengths_pad_to_the_identical_size() -> None:
-    # The property R-39 exists for, pinned directly rather than only
+    # The property the padding exists for, pinned directly rather than only
     # through the two layers (encrypt.ts, add_response) that use it.
     assert len(_pad(b"short")) == len(_pad(b"a much, much longer message"))
 
@@ -408,7 +408,7 @@ def test_add_response_never_replaces_an_existing_entry_even_for_identical_answer
 
 
 def test_add_response_leaves_existing_entries_byte_for_byte_unchanged() -> None:
-    """The mutation-testing target named in task 16's brief: adding a third
+    """The obvious mutation-testing target: adding a third
     response must not so much as re-encrypt the first or the second."""
     private_pem, _ = eventkeys.generate()
     file = ResponseFile()
@@ -485,13 +485,13 @@ def test_a_browser_encrypted_envelope_becomes_the_same_survey_response(
 
 
 def test_the_pad_target_is_bound_by_the_shared_fixture_not_its_own_symbol() -> None:
-    """Minor 2, fix round 2: before this test, every assertion in the
+    """Before this test, every assertion in the
     `_pad`/`_unpad` block above compared `_PLAINTEXT_PAD_BYTES` to itself
     (`len(_pad(...)) == _PLAINTEXT_PAD_BYTES`), so changing the constant
     to 4096 left this whole suite green -- every comparison moved with it.
     `governance-cases.json::event_survey_response_encryption.pad_bytes` is
     a literal, independent of this module's own symbol, written once when
-    the fixture's own R-40 case was captured; `encrypt.ts`'s test suite
+    the fixture's own non-ASCII case was captured; `encrypt.ts`'s test suite
     binds the identical literal on its own side (`survey-encrypt.test.ts`).
     A real disagreement between the two languages -- or a drive-by change
     to just one -- fails here, not by coincidence."""
@@ -499,7 +499,7 @@ def test_the_pad_target_is_bound_by_the_shared_fixture_not_its_own_symbol() -> N
 
 
 # ------------------------------------------------------------------ #
-# R-40, fix round 2: `_to_plaintext`'s `ensure_ascii=False`, and
+# `_to_plaintext`'s `ensure_ascii=False`, and
 # `to_survey_response`'s own byte-bound check. `governance-cases.json`'s
 # third survey case (2000 non-Latin code points) is the D-14 half of this
 # -- read from both languages, captured once under Node's own
@@ -511,7 +511,7 @@ def test_the_pad_target_is_bound_by_the_shared_fixture_not_its_own_symbol() -> N
 
 
 def test_to_plaintext_agrees_with_json_stringify_on_non_ascii_byte_length() -> None:
-    """The mechanism R-40 names directly: `json.dumps`'s default
+    """The mechanism directly: `json.dumps`'s default
     `ensure_ascii=True` would have inflated a non-ASCII character to a
     six-byte (or, for an astral character, twelve-byte) escape, while
     `encrypt.ts`'s `JSON.stringify` leaves it as itself -- at most 4 UTF-8
@@ -550,7 +550,7 @@ def test_to_plaintext_agrees_with_json_stringify_on_non_ascii_byte_length() -> N
     ids=["ascii", "cjk", "emoji"],
 )
 def test_every_script_at_the_character_cap_fits_the_pad_target(feedback: str) -> None:
-    """R-40's own headline claim, proven for the worst case in each byte
+    """The headline claim, proven for the worst case in each byte
     class UTF-8 can produce: at `_MAX_FEEDBACK_LENGTH` (2000) code points,
     even an answer written entirely in 4-byte characters must still round
     -trip, not crash. Before this fix, the emoji and CJK cases here both
@@ -565,7 +565,7 @@ def test_every_script_at_the_character_cap_fits_the_pad_target(feedback: str) ->
 
 
 def test_to_survey_response_refuses_rather_than_lets_pad_raise() -> None:
-    """R-40's other half: `_MAX_FEEDBACK_LENGTH` bounds code points, not
+    """The other half: `_MAX_FEEDBACK_LENGTH` bounds code points, not
     bytes, so a hypothetical future change to it (or a bug in the byte
     math) must not resurrect the crash by way of `_pad` itself raising
     inside `add_response`, past `to_survey_response`'s own uniform `None`
@@ -600,7 +600,7 @@ def test_to_survey_response_refuses_a_capped_answer_that_is_still_too_many_bytes
     the same answer is 2000 characters and 12000 bytes, and only the byte
     check can turn it away before `_pad` raises on it.
 
-    Phase 9, task 2: this is checked here rather than through a job,
+    This is checked here rather than through a job,
     because the job that used to reach it (`handle_survey_response`) is
     gone -- the queue drain calls `to_survey_response` directly.
     """

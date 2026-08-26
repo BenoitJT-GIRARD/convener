@@ -1,6 +1,6 @@
 """One declaration, read from every side, and nowhere written twice.
 
-Phase 10, task 2. This project's published address used to be written out
+This project's published address used to be written out
 thirty times across twelve files -- four `base:` in `app/vite.config.ts`,
 two constants in `site/.eleventy.js`, three in `tools/convener_ops/`, a
 calendar UID domain, two relay configurations, two templates' links, two
@@ -34,7 +34,7 @@ Then the sweep: no file outside the declaration writes the address again.
 What this module does **not** cover, stated rather than left to be found:
 
 - **The published output itself.** Nothing here builds anything and
-  reads what came out. `test_second_instance.py` does, as of task 5: it
+  reads what came out. `test_second_instance.py` does: it
   builds this whole repository as a *different* instance and sweeps the
   showcase, all four bundles, the handbook copied into them, the
   generated templates, the published feeds and the posters. That is the
@@ -47,10 +47,10 @@ What this module does **not** cover, stated rather than left to be found:
 - **`docs/superpowers/`.** The specs, the plans and the phase reports are
   this project's own record of its own decisions, quoting the address as
   it stood when each was written. Nothing builds them and nothing ships
-  them. The rest of `docs/` *is* swept, as of task 3.
+  them. The rest of `docs/` *is* swept.
 
-Task 3 added the second half of the same declaration -- who runs this
-series -- and closed the gap this module used to name:
+The second half of the same declaration -- who runs this
+series -- closed a gap this module used to name:
 
 5. **The identity reads, or nothing runs**, on the same refuse-rather-than-
    repair terms as the address.
@@ -68,14 +68,15 @@ series -- and closed the gap this module used to name:
 
 What clause 8 does **not** sweep, stated rather than left to be found:
 the series' *title* and the organisation's *short name*. Both are in the
-two downloadable SVG templates, which *derive* them (phase 10 task 4) and
+two downloadable SVG templates, which *derive* them and
 are committed here as this instance rendered them, and both are in the
-demo instance (phase 11). Sweeping either here would fail on a generated
-artefact rather than on a source edit, so each is left to the phase that
+demo instance. Sweeping either here would fail on a generated
+artefact rather than on a source edit, so each is left to the check that
 regenerates it.
 
-**Task 5 sweeps both, and can, because it compares two instances rather
-than looking for one.** `test_second_instance.py` builds this repository
+**The second-instance sweep covers both, and can, because it compares two
+instances rather than looking for one.** `test_second_instance.py` builds
+this repository
 with `instances/example/` in place of everything `config/boundary.yml`
 hands to the instance, so the series' title and the short name in that
 build are the *example's*; finding this instance's is then unambiguous in
@@ -115,7 +116,7 @@ _MINIMAL: dict[str, Any] = {
 
 #: A second instance's identity, manifestly synthetic: no real name, no
 #: real address. Read from `instances/example/`, the fictional instance
-#: phase 10 task 5 builds this whole repository as, rather than typed
+#: the second-instance build uses, rather than typed
 #: here: a second synthetic identity would be a second answer to "what
 #: does another instance look like", free to drift from the one an actual
 #: build is made with. Every field `IDENTITY_FIELDS` names has to be
@@ -148,7 +149,7 @@ def test_this_repository_declares_one_published_address() -> None:
 
 
 def test_the_declaration_is_the_instances_own_file() -> None:
-    """The boundary of task 1, applied to the file this task adds: a
+    """The boundary, applied to this file: a
     duplicate edits this and merges everything else. If it were ever
     reclassified as the product's, upstream would be shipping one
     organisation's address to everybody who forked."""
@@ -314,7 +315,7 @@ _DEPLOYED_ORIGIN_FILES = (
 #: written, including addresses and names that have since moved; nothing
 #: builds them, nothing ships them, and rewriting them would be rewriting
 #: history rather than code. The rest of `docs/` is swept -- it was
-#: exempt in full until task 3 carried the handbook onto the substitution
+#: exempt in full until the handbook moved onto the substitution
 #: vocabulary.
 _UNSWEPT = ("docs/superpowers/",)
 
@@ -347,8 +348,8 @@ def test_no_source_file_writes_the_published_address_a_second_time() -> None:
     origin, the bare host and the path prefix -- because a copy does not
     have to be a copy of the whole thing to drift. Not the bare
     repository *name*: that is a different identity fact (which repository
-    a build pushes to, what the architecture diagram calls it), owned by
-    tasks 3 and 5, and folding it in here would make this test fail for a
+    a build pushes to, what the architecture diagram calls it), owned
+    elsewhere, and folding it in here would make this test fail for a
     reason it cannot fix.
     """
     address = published.load()
@@ -539,8 +540,8 @@ def test_the_fields_with_a_fallback_degrade_instead_of_stopping(field: str) -> N
     it is still a needle of the second-instance sweep -- and derived away
     at the one point a reader would have been shown it. Refusing it
     outright would stop every command a duplicate runs over a link, which
-    is not proportionate; publishing it is what this instance did for two
-    phases (phase 10 bilan, section 7.2)."""
+    is not proportionate; publishing it is what this instance did for a
+    long time."""
     assert field == "proposal_form", "a new degradable field needs its own fallback"
     declared = f"https://forms.example.test/{published.PLACEHOLDER_MARKER}"
     identity = published.identity_from_data(
@@ -669,7 +670,8 @@ def test_the_push_target_is_derived_from_the_published_address() -> None:
 def test_the_push_target_refuses_an_address_it_cannot_derive_one_from(
     url: str,
 ) -> None:
-    """S-4, applied to the largest thing in this repository that could be
+    """Refusing what has no safe default, applied to the largest thing in
+    this repository that could be
     put in the wrong place. A custom domain says nothing whatever about
     which repository serves it; a bare `github.io` root and a two-segment
     path are not project-page shapes either. There is no safe default for
@@ -733,7 +735,7 @@ def test_both_publishing_workflows_read_the_push_target_rather_than_naming_it() 
 #:
 #: - the two relays' `wrangler.toml` and their Worker sources: a Worker
 #:   deploys from its own package and never sees this repository, exactly
-#:   the argument task 2 already made and proved for `ALLOWED_ORIGIN`;
+#:   the argument already made and proved for `ALLOWED_ORIGIN`;
 #: - `.github/CODEOWNERS`: GitHub reads it verbatim, with no expansion of
 #:   any kind, before any of this project's own code runs.
 _LITERAL_IDENTITY_FILES = (
@@ -760,17 +762,17 @@ _DERIVED_IDENTITY_FILES = (
 #: each with the phase that owns it. Not a general exemption: adding a
 #: path here is a decision, and the reason is beside it.
 #:
-#: Phase 10 task 5 moved the list itself into `instance_identity.DEFERRED`
-#: and left this reading of it. It is the same fact answering two
+#: The list itself lives in `instance_identity.DEFERRED`
+#: and this reads it. It is the same fact answering two
 #: questions -- which *source* this module may forgive, and which phrases
-#: task 5's sweep of a *built* second instance may find -- and two lists
+#: a sweep of a *built* second instance may find -- and two lists
 #: would let a file be forgiven on one side while the other still refused
 #: it. Each entry carries its own reason there, beside the path.
 _IDENTITY_DEFERRED = {entry.path: entry.owner for entry in instance_identity.DEFERRED}
 
 #: Test trees. A fixture naming this organisation is a fixture of *this*
-#: instance, and the check that actually matters for behaviour is task 5's
-#: build of a second instance and sweep of its output -- not the absence
+#: instance, and the check that actually matters for behaviour is the
+#: build of a second instance and the sweep of its output -- not the absence
 #: of a string from a test double.
 _IDENTITY_UNSWEPT_TREES = ("tools/tests/", "app/tests/", "services/")
 
@@ -857,7 +859,7 @@ def test_the_generated_templates_carry_the_identity_the_declaration_names() -> N
 
     These two files are what a collaborator downloads, so the identity
     travelling outward is whatever they say. They are generated from
-    `config/instance.json` (phase 10, task 4) and
+    `config/instance.json` and
     `scripts/generate_brand_css.py --check` refuses them the moment they
     stop being what it derives -- this is the assertion that the
     derivation is of *this* declaration and not of a literal somebody
@@ -914,7 +916,7 @@ def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> 
 
 
 def test_this_repository_declares_the_prefix_its_editions_are_numbered_under() -> None:
-    """Phase 11, task 4. `validate.py` used to fix an edition code as
+    """`validate.py` used to fix an edition code as
     `^MRG-\\d{1,4}$` -- the initials of *this* series, in the product's own
     validator -- and the one sweep that compares two instances could never
     catch it, because both instances were forced to write it.
@@ -942,7 +944,7 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
     address, on an issued certificate and in a key filename, so the day
     the two disagree the file is wrong, not the editions.
 
-    **Where the evidence lives moved in phase 12, task 4**, and the
+    **Where the evidence lives has moved**, and the
     reasoning is worth keeping. This used to read the `edition_code` of
     every row of `data/speakers.yml` and refuse an empty list, so that the
     check could not pass by having nothing to check (D-25). Those rows
@@ -1140,8 +1142,8 @@ def test_the_declaration_names_every_value_that_says_who_is_publishing() -> None
     written out again: the address, the edition prefix and each identity
     field. A field added to `IDENTITY_FIELDS` and not to this comparison
     would be a field a duplicate could leave as the example's without
-    anything noticing -- which is exactly how `strapline` slipped past the
-    second-instance sweep until task 3."""
+    anything noticing -- which is exactly how `strapline` once slipped past
+    the second-instance sweep."""
     values = published.declared_values(_example_declaration())
     assert set(values) == {
         published.PUBLISHED_URL_KEY,

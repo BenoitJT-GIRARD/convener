@@ -453,7 +453,7 @@ def test_secret_name_rejects_an_invalid_event_id() -> None:
 
 
 def test_secret_name_accepts_an_event_id_at_the_length_cap() -> None:
-    """Minor 7, branch review: `_EVENT_ID_MAX_LENGTH` is 64, matching
+    """`_EVENT_ID_MAX_LENGTH` is 64, matching
     `services/signup-relay/src/index.js::EVENT_ID_RE`'s own cap -- see
     `_EVENT_ID_RE`'s own comment. Exactly at the boundary must still be
     accepted; over it must not (below)."""

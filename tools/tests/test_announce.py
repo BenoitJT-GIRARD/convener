@@ -16,7 +16,7 @@ from convener_ops.paths import repo_root
 from convener_ops.public_data import to_public
 from convener_ops.registration import signup_url
 
-#: Fix round 1: every function below now renders the real, committed
+#: Every function below renders the real, committed
 #: `docs/toolkit/*.md` page -- the same file `app/src/content/render.ts`
 #: substitutes for the cockpit's own copy-to-clipboard button -- rather
 #: than a second, hand-typed English composed only in Python. `root=ROOT`
@@ -68,7 +68,7 @@ class TestForumAnnouncement:
         assert "An abstract about analytical engines." in text
 
     def test_reads_the_real_toolkit_page_not_a_second_copy(self) -> None:
-        """The property Fix round 1 exists to prove: a sentence that lives
+        """The property this exists to prove: a sentence that lives
         only in `docs/toolkit/forum-post-announce.md`, never in this
         module's own prose, must appear in the rendered text -- a
         hand-rolled composition of the same facts could never produce it
@@ -127,14 +127,14 @@ class TestNetworkPost:
             _row(forum_thread="https://forum.example.org/t/77"), root=ROOT
         )
         assert "https://forum.example.org/t/77" in text
-        # Fix round 2: the fact is already in the body, so the conditional
+        # The fact is already in the body, so the conditional
         # note in "Notes for the volunteer posting this" must not repeat it.
         assert "none has been opened yet" not in text
 
     def test_drops_the_forum_thread_line_and_flags_it_as_a_task_when_absent(
         self,
     ) -> None:
-        # Fix round 2: this template's own "Join the discussion ..." line
+        # This template's own "Join the discussion ..." line
         # exists only to carry the link, so an unopened thread must not
         # leave that sentence -- or a marker -- sitting in the post a
         # volunteer is about to paste onto LinkedIn.
@@ -178,9 +178,9 @@ class TestMailingListMessage:
     def test_drops_the_forum_thread_sentence_and_flags_it_as_a_task_when_absent(
         self,
     ) -> None:
-        # Fix round 2: task 7's own hand-rolled version showed the ordinary
-        # `«missing: …»` marker here -- exactly the bug this fix round
-        # exists for, since this is plain text a volunteer forwards
+        # An earlier hand-rolled version showed the ordinary
+        # `«missing: …»` marker here -- exactly the bug the optional-field
+        # sigil exists for, since this is plain text a volunteer forwards
         # verbatim. An edition with no thread yet now drops the sentence
         # from the body outright and says so, as a task, in "Notes for the
         # volunteer sending this".
@@ -227,13 +227,13 @@ class TestRecordingAnnouncement:
         assert text is not None
         assert "https://youtu.be/analytical-engines" in text
         assert "Ada writes the first published computer program." in text
-        # Fix round 2: the biography is right there in the body, so the
+        # The biography is right there in the body, so the
         # conditional "withheld" note in "Notes for the volunteer posting
         # this" must not appear alongside it.
         assert "stays withheld" not in text
 
     def test_drops_the_biography_paragraph_and_notes_it_was_withheld(self) -> None:
-        # Fix round 2: this is the finding itself -- `docs/toolkit/
+        # This is the finding itself -- `docs/toolkit/
         # recording-announce.md`'s `{{ public.bio }}` used to sit alone as a
         # paragraph and render the bare `«missing: public.bio»` marker
         # straight into the body a volunteer copies and pastes as-is. An
@@ -300,7 +300,7 @@ class TestRecordingAnnouncement:
         assert POISONED_ROOM_LINK not in text
 
     def test_drops_the_forum_thread_sentence_and_flags_it_as_a_task(self) -> None:
-        # Fix round 2: the sentence naming the forum thread existed only to
+        # The sentence naming the forum thread exists only to
         # carry that link, so an edition with no thread yet drops the whole
         # sentence from the body -- not merely the address -- and names the
         # gap as a task in "Notes for the volunteer posting this" instead.

@@ -124,8 +124,8 @@ NEVER_PUBLISHED = frozenset(
 #: carries. `links` is a list where every other column is a string and no
 #: consumer of the feed asks for it, so it is permitted and unpublished.
 #:
-#: `time` is the same shape of absence, found by the vitrine's fix round 1
-#: (structured event data): nothing here maps any column to it, so no
+#: `time` is the same shape of absence, found while adding structured
+#: event data to the showcase: nothing here maps any column to it, so no
 #: edition's `time` ever reaches `events-public.json` even though it is
 #: classified `PUBLISHABLE_ALWAYS` -- confirmed by regenerating that file
 #: from `data/speakers.yml` and inspecting the output. The site's own
@@ -138,7 +138,7 @@ NEVER_PUBLISHED = frozenset(
 #: `zoom_link` is the same shape of absence for a sharper reason. This
 #: mapping used to carry `"registration_link": "zoom_link"` -- publishing
 #: the room address under a name that, once the event page carried its own
-#: registration form (phase 5, task 5), read as exactly the wrong thing: a
+#: registration form, read as exactly the wrong thing: a
 #: column called "registration link" that actually opened the room, and a
 #: careful reader nearly rendered it believing it was the one to register
 #: at. Nothing reads it any more -- registration happens on the event
@@ -330,8 +330,8 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def to_survey_status(speakers: Sequence[object]) -> list[str]:
-    """The event ids currently open for the post-event survey (task 16,
-    fix round 1, R-37), sorted -- what `convener-survey-status-public-data`
+    """The event ids currently open for the post-event survey,
+    sorted -- what `convener-survey-status-public-data`
     publishes to `public-data/survey-status.json` and, from there,
     `app/scripts/copy-survey-status.mjs` bakes into the app's own built
     output for `SurveyForm.tsx` to fetch same-origin, the same way
@@ -355,7 +355,7 @@ def to_survey_status(speakers: Sequence[object]) -> list[str]:
     A record with `survey_enabled: true` but no `edition_code` is skipped:
     `SurveyForm.tsx` and the signup relay both key on the lower-cased
     edition code (`app/src/state/dates.ts`'s and `platform.find_speaker`'s
-    own R-5 rule), so a record with nothing to key on can never be looked
+    own rule), so a record with nothing to key on can never be looked
     up by either consumer regardless of what this function does with it.
 
     `Sequence[object]`, not `list[dict[str, Any]]`: the one production

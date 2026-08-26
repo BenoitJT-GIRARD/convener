@@ -1,8 +1,8 @@
 """Every writable form of what one instance declares about itself.
 
-Phase 10 wrote this as `tools/tests/instance_identity.py`, for one reader:
+This began as `tools/tests/instance_identity.py`, for one reader:
 the sweep that builds a second instance and refuses anything of the first
-in what it produced. Phase 12 gave it a second, `derivation_guard.py`,
+in what it produced. It has a second now, `derivation_guard.py`,
 which asks the same question of every blob of every ref before a public
 push -- and a second reader is exactly when a thing has to move out of
 `tests/` rather than be copied into the package. The test helper still
@@ -100,8 +100,8 @@ def needles(root: Path) -> dict[str, str]:
         "event_id_prefix": editions.event_prefix,
     }
     # Every declared identity field, enumerated from the declaration's own
-    # list rather than written out again here. Phase 11 task 3 is why: it
-    # added `strapline`, the poster's own hero line, and the eight fields
+    # list rather than written out again here. A near miss is why:
+    # `strapline`, the poster's own hero line, joined the eight fields
     # below were a hand-typed dict -- so the new one was not a needle, and
     # the sweep of a second instance's build passed green over a poster
     # hard-typing this instance's motto. Found by breaking it on purpose

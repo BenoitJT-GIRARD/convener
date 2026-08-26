@@ -3,8 +3,8 @@
 A path string that happens to equal a stored literal would pass for a wrong
 ribbon and fail for a better one -- see `ribbon.py`'s own docstring for the
 defect this replaces (four bare `<circle>` elements) and what the reference
-poster actually shows. What is pinned here instead is what task 1's own
-brief asked to be provable: one continuous stroke rather than disjoint
+poster actually shows. What is pinned here instead is what has to be
+provable: one continuous stroke rather than disjoint
 pieces, a stroke that leaves the frame, a width that tracks the shorter
 side, and a shape that adapts to aspect ratio rather than stretching. Each
 of the four has its own test, named so a mutation report can point at it.
@@ -67,7 +67,7 @@ def test_ribbon_stroke_colour_reads_brand_json() -> None:
 def test_ribbon_width_ratio_reads_brand_json() -> None:
     """It reads the charter, which is the whole claim in the name.
 
-    The expected value was `0.024` until phase 12 task 6 -- one instance's
+    The expected value used to be `0.024` -- one instance's
     measured ratio, in a test of the *product's* reader, which therefore
     said nothing about reading and everything about which repository it
     ran in. See `data/brand.json::motif._ribbon_width_ratio` for how a
@@ -86,7 +86,7 @@ def test_stroke_width_tracks_the_shorter_side_not_the_longer_one() -> None:
     # Same short side (1000), wildly different long side: the width must
     # not move. A `max` in place of `min` inside `ribbon_stroke_width`
     # breaks exactly this -- confirmed by mutating it and watching this
-    # test fail (see the task 1 report).
+    # test fail, not assumed.
     square = ribbon_stroke_width(1000, 1000, ratio=0.02)
     tall = ribbon_stroke_width(1000, 5000, ratio=0.02)
     wide = ribbon_stroke_width(5000, 1000, ratio=0.02)
@@ -255,7 +255,7 @@ def test_ribbon_path_is_a_single_continuous_subpath() -> None:
     # meandering stroke" and "four bare circles". Splicing a second `M`
     # into the middle of `ribbon_path` (simulating a disjoint second piece)
     # breaks exactly this -- confirmed by mutating it and watching this
-    # test fail (see the task 1 report).
+    # test fail, not assumed.
     d = ribbon_path(900, 1200)
     commands = d.split("\n")
     moves = [line for line in commands if line.startswith("M")]

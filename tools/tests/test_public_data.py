@@ -158,8 +158,8 @@ def test_recording_is_only_exposed_once_the_gate_has_published_it() -> None:
 def test_the_room_link_never_reaches_the_public_feed_under_any_name() -> None:
     # This column used to exist, called `registration_link`, and published
     # `zoom_link` under it -- a name that, once the event page carried its
-    # own registration form, read as exactly the wrong thing (task 5's
-    # implementer nearly rendered it believing it was the one to register
+    # own registration form, read as exactly the wrong thing (somebody
+    # nearly rendered it believing it was the address to register
     # at). Nothing reads it any more: registration happens on the event
     # page's own address, and the room link now reaches a participant only
     # through the confirmation e-mail. Swept on the output, not on
@@ -566,7 +566,7 @@ def test_the_availability_and_the_deliberation_stay_in_the_repository() -> None:
 
 
 # ------------------------------------------------------------------ #
-# to_survey_status(): R-37, fix round 1 -- the enabled set as an
+# to_survey_status(): the enabled set as an
 # operational fact, published outside the consent gate entirely.
 # ------------------------------------------------------------------ #
 

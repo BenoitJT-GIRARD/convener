@@ -1,35 +1,35 @@
-"""The three real derivations of one template (task 4).
+"""The three real derivations of one template.
 
 `visual.render_announcement` stays a single function, taking a plain
 `width`/`height` in pixels and knowing nothing about "the square" or "the
 print poster" as concepts of its own -- see that module's own docstring for
 why one composition, read against its own two numbers, is the whole point.
-This module is only where the three concrete choices F-03's seven channels
-actually collapse into are written down once, each under a name, so a
-future caller (task 5's pinned render, a future publishing command) reads
+This module is only where the three concrete choices the seven publication
+channels actually collapse into are written down once, each under a name, so
+a future caller (the pinned render, a future publishing command) reads
 `formats.BANNER` instead of a bare `1200, 630` repeated at every call site
 that needs it.
 
 The three names
 ----------------
 - `SQUARE` (1200x1200) -- the forum, the social pages, the institutes' own
-  newsletters and internal messaging. What tasks 1-3 already built and this
-  project has reviewed.
+  newsletters and internal messaging. The composition this project built
+  first and has reviewed.
 - `BANNER` (1200x630) -- the share preview: 1200x630 is the size several
   major platforms already expect for a link-preview image (a wide,
-  roughly-1.91:1 crop), and it is also what fills the `og:image` phase 5
-  deliberately left absent (that phase's own task 10, and its acceptance
-  criterion 6). Wiring the actual `<meta property="og:image">` tag was not
-  this module's job, or this task's -- see `visual.py`'s own docstring for
-  why: phase 5 left the tag out rather than pointing it at a file that did
-  not exist yet. Task 9 (phase 6) is what finally carries a real, currently
+  roughly-1.91:1 crop), and it is also what fills the `og:image` the
+  showcase deliberately left absent. Wiring the actual
+  `<meta property="og:image">` tag was not
+  this module's job -- see `visual.py`'s own docstring for
+  why: the tag was left out rather than pointed at a file that did
+  not exist yet. `visuals-production.yml` is what carries a real, currently
   scheduled edition's own render to a stable address
   (`site/src/banners/<event id>.png`, committed by `.github/workflows/
   visuals-production.yml`) and wires `site/.eleventy.js::eventBannerUrl`/
   `site/src/_includes/layout.njk` to it. This module's own job stays what
   it always was: making sure the *composition* that fills that file is a
   correct, tested derivation.
-- `PRINT` -- F-03's seventh channel: a poster actually printed and pinned up
+- `PRINT` -- the seventh channel: a poster actually printed and pinned up
   in an institute, not a hypothetical. See `_a4_dimensions_px`'s own
   docstring for the size and resolution this settles on, and why.
 """
@@ -74,7 +74,7 @@ SQUARE: Final = Format(name="square", width=1200.0, height=1200.0)
 #: several major link-preview consumers already expect for an `og:image`;
 #: matching it is what keeps a shared link's own preview un-cropped rather
 #: than centre-cropped to whatever *this* project happened to pick. See the
-#: module docstring for why this is also, eventually, phase 5's own missing
+#: module docstring for why this is also the showcase's own missing
 #: `og:image`.
 BANNER: Final = Format(name="banner", width=1200.0, height=630.0)
 
@@ -84,7 +84,7 @@ BANNER: Final = Format(name="banner", width=1200.0, height=630.0)
 #: constraints already apply to accounts and services extends naturally to
 #: paper size: A3 reads as more of a "real poster" at a glance, but not
 #: every institute's own printer takes A3 stock, and every one of them
-#: takes A4. F-03 names this channel "affiches imprimées et posées dans les
+#: takes A4. The channel is "affiches imprimées et posées dans les
 #: instituts" -- printed and pinned up -- not "professionally printed",
 #: and this project has already turned down machinery nobody would actually
 #: run (the revalidation's own reasoning for not building a container image

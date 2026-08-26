@@ -1,9 +1,9 @@
 """Evidence, inside this repository, that the retention sweep still runs.
 
-H2 / AF-2 (2026-08-23 security audit): D-25 makes every control fail loudly
+D-25 makes every control fail loudly
 *inside* a run. It has nothing to say about a run that never starts --
 `.github/workflows/retention.yml` is the job that destroys an event's
-registration key on schedule (spec P-2, D-22), GitHub disables a workflow's
+registration key on schedule (D-22), GitHub disables a workflow's
 own `schedule:` trigger after 60 days without any activity in the
 repository, and an exhausted Actions minute budget simply stops work either
 way. Neither ever turns a badge red, because no run happens at all.

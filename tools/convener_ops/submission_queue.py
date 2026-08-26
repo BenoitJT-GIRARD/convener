@@ -1,15 +1,15 @@
 """The queue a public submission waits in, and the arithmetic that drains it.
 
-Phase 9, tasks 2 and 3. Until now every survey response and every
-registration a stranger submitted became one `repository_dispatch`, and one
+Every survey response and every
+registration a stranger submitted used to become one `repository_dispatch`, and one
 billed GitHub Actions run, of its own -- the one line item in this project's
 budget whose volume is decided by people the project has never met, and the
-one that grows when the series succeeds (phase 9 spec, Sec 1). The submission
+one that grows when the series succeeds. The submission
 now waits in this repository instead, and one drain a day handles everything
 waiting in a single commit.
 
-Task 2 moved the survey response, which sends nothing back to anybody. Task 3
-moved the registration, but only the ones it is safe to keep waiting: the
+The survey response moved first, since it sends nothing back to anybody.
+The registration followed, but only the ones it is safe to keep waiting: the
 confirmation e-mail is the participant's entry ticket, not a receipt, so
 `registration_routing.py` routes a registration whose event is still days
 away here and leaves everything closer to it on the immediate,
@@ -34,7 +34,7 @@ inverse of this module's purpose. The relay writes with its own token, not
 with a job's `GITHUB_TOKEN`, so GitHub's recursion guard does not apply to
 anything it pushes; the only thing that makes a branch free is that no
 trigger reaches it, and that is held by `tools/tests/test_workflows.py`'s
-own directory-wide sweep (phase 9, task 1) rather than by anybody's care.
+own directory-wide sweep rather than by anybody's care.
 
 **The precondition that sweep cannot enforce, restated here because this is
 the file a reader arrives at: no pull request may ever be opened from
@@ -196,7 +196,7 @@ QUEUE_DIR: Final = "queue"
 #: than guessing what to do with it, and adding a kind means adding the code
 #: that handles it in the same change.
 #:
-#: Registration joined in phase 9's task 3, once the distance-to-event lane
+#: Registration joined once the distance-to-event lane
 #: rule (`registration_routing.py`) existed to keep a last-minute registrant
 #: out of the queue: the confirmation e-mail carries the room link and the
 #: matching code, and there is no second channel for either, so only a
@@ -287,7 +287,7 @@ class PendingConfirmation:
     """One stored registration whose confirmation has not gone out yet.
 
     The drain produces these; the *step after the push* acts on them, and
-    only then is the entry cleared from the queue. `changed` is the R-9
+    only then is the entry cleared from the queue. `changed` is the
     diff `confirmation.compose` renders as "you changed these fields",
     field labels only and never a value -- the identical thing
     `registration.yml` passes between its own two steps as
@@ -668,7 +668,7 @@ def drain(
                         continue
                     # Read before `upsert` overwrites it, exactly as
                     # `cli.handle_registration` does for the immediate lane:
-                    # the R-9 diff is against the *prior* stored entry, and
+                    # the diff is against the *prior* stored entry, and
                     # after the upsert there is no prior entry left to read.
                     # Applying entries in name order -- which is submission
                     # order -- is what makes a registration and its own

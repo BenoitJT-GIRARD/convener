@@ -31,7 +31,7 @@ from convener_ops.platform_fcc import (
 # Fixtures -- stand-ins for the real, undocumented endpoint
 # (GET /api/v4/conferences/{id}/calls). No test in this module opens a
 # socket: every response below is a Python literal shaped exactly like
-# what the task 3 brief records as empirically verified, never a live
+# what was empirically verified against the real provider, never a live
 # call. `_call` mirrors the fields the brief names: custom_name, email,
 # service_types, time_created_utc, time_disconnected_utc, audio_duration
 # -- plus is_host, which the API also returns but AttendanceRow has no
@@ -64,10 +64,10 @@ def _call(**overrides: Any) -> dict[str, Any]:
 
 #: Fixture 1 -- a person who disconnects and rejoins: two rows, same
 #: address, capitalised differently between the two -- the shape verified
-#: empirically against a real reconnection (phase-4-prep-notes.md, 2026-08-19
-#: "a reconnection is two rows"). 12s then 157s of real audio; the reader
+#: empirically against a real reconnection: a reconnection is two rows,
+#: 12s then 157s of real audio. The reader
 #: must hand back both rows, never their sum -- summing is attendance.py's
-#: job (task 8/9), same boundary platform.py already draws for the manual
+#: job, the same boundary platform.py already draws for the manual
 #: CSV path.
 RECONNECTION_CALLS: list[dict[str, Any]] = [
     _call(
@@ -89,7 +89,7 @@ RECONNECTION_CALLS: list[dict[str, Any]] = [
 #: Fixture 2 -- a participant who joined by telephone: `service_types`
 #: is exactly `["toll"]`. `email` is `None` in the raw payload here (as the
 #: real API sends it), and `custom_name` is a phone number, not a typed
-#: name -- both verified in phase-4-prep-notes.md's POC call notes.
+#: name -- both verified against real calls.
 TELEPHONE_CALL: dict[str, Any] = _call(
     custom_name="+33636843236",
     email=None,
@@ -237,10 +237,10 @@ def test_get_attendance_calls_the_conferences_calls_endpoint_with_the_token() ->
 
 
 def test_a_reconnection_produces_two_separate_rows_not_a_summed_one() -> None:
-    """Confirmed empirically (phase-4-prep-notes.md, 2026-08-19): a
+    """Confirmed empirically, not assumed: a
     disconnect-and-rejoin is two rows, 12s then 157s, real presence 169s.
     Summing here would make it impossible to do correctly later -- that is
-    attendance.py's job (task 8/9), not this reader's."""
+    attendance.py's job, not this reader's."""
     transport = FakeTransport(
         get_responses={"/conferences/618515381/calls": RECONNECTION_CALLS}
     )
@@ -386,7 +386,7 @@ def test_get_attendance_raises_a_platform_error_on_a_non_2xx_response() -> None:
 
 
 def test_get_attendance_raises_when_the_response_shape_is_not_a_list() -> None:
-    """The endpoint is not documented by the vendor (task 3 brief) -- it
+    """The endpoint is not documented by the vendor -- it
     answers, verified, but nothing guarantees the shape stays a bare JSON
     array. A response this module cannot recognise must fail loudly, never
     silently return no rows, which would read as "nobody attended"."""
@@ -479,8 +479,8 @@ def test_get_room_raises_when_no_speaker_record_matches_the_event() -> None:
 
 
 # ------------------------------------------------------------------ #
-# get_recording / delete_recording -- the raw primitives task 10 builds
-# its retrieve-then-delete safety on top of. This module reports what the
+# get_recording / delete_recording -- the raw primitives the
+# retrieve-then-delete safety is built on top of. This module reports what the
 # provider says and performs the deletion it is asked to perform; deciding
 # *when* it is safe to call delete_recording is the caller's job, exactly
 # as it already is for ManualPlatform.delete_recording.
@@ -600,7 +600,7 @@ def test_get_recording_raises_when_the_event_has_no_recorded_conference() -> Non
 
 
 # ------------------------------------------------------------------ #
-# _conference_id -- digits-only validation (fix round 1, Important 2).
+# _conference_id -- digits-only validation.
 # `conference_ids` has no production populator; its one caller
 # (cli.py::release_recording) reads an operator-typed value, and this is
 # where it is validated before it can reach a URL this module builds.
@@ -628,7 +628,7 @@ def test_conference_id_must_be_digits_only(bad_id: str) -> None:
 
 
 def test_a_path_traversal_shaped_conference_id_never_reaches_delete() -> None:
-    """The reviewer's own probe, round 1, Important 2: a hand-typed
+    """A reviewer's own probe: a hand-typed
     conference id shaped like a path-traversal payload must be refused
     before it can reach `DELETE /conferences/{id}`."""
     transport = FakeTransport()
@@ -655,7 +655,7 @@ def test_a_valid_digits_only_conference_id_is_accepted() -> None:
 # independent, host-driven traces: a `runbook_progress` tick
 # (`RETRIEVED_TICK`), and a successful open of the converted recording at
 # the provider, checked against `video/mp4` + `Accept-Ranges: bytes`, not
-# a bare 2xx status (fix round 1, Important 3). Neither function here ever
+# a bare 2xx status. Neither function here ever
 # calls get_recording or delete_recording itself -- the caller
 # (cli.py::release_recording) already holds `recording` from its own
 # earlier call, and decides what to do with the result.
@@ -682,7 +682,7 @@ def test_converted_recording_is_reachable_when_the_transport_confirms_it() -> No
 
 
 def test_converted_recording_is_reachable_checks_the_video_mp4_suffix() -> None:
-    """Verified empirically (phase-4-prep-notes.md, 2026-08-19): the
+    """Verified empirically, not assumed: the
     pattern is `recording_url + ".video.mp4"`, not `.mp4` alone."""
     recording = Recording(
         url="https://cdn.example.org/rec/618515381", size=900_000_000, available=True
@@ -718,7 +718,7 @@ def test_converted_recording_is_reachable_is_false_with_no_recording_url() -> No
 
 
 def test_converted_recording_is_reachable_is_false_for_a_200_html_error_page() -> None:
-    """Reviewer probe, round 1, Important 3: a bare 2xx status is not
+    """A reviewer's probe: a bare 2xx status is not
     proof of conversion. `urlopen` follows redirects transparently, so a
     CDN answering an absent object with its own 200 error page must not
     pass -- only a real `video/mp4` response does."""
@@ -821,7 +821,7 @@ def test_missing_retrieval_evidence_names_a_missing_tick() -> None:
 
 
 def test_missing_retrieval_evidence_ignores_youtube_url() -> None:
-    """The concrete Important 4 fix, pinned at the unit level: this
+    """The fix, pinned at the unit level: this
     function no longer takes or reads `youtube_url` at all -- only the
     runbook tick and the provider's own confirmation. A caller with
     `youtube_url` set but no tick is still refused; a caller with no
@@ -995,7 +995,7 @@ def test_urllib_transport_maps_invalid_json_to_fcc_request_error(
 
 
 # ------------------------------------------------------------------ #
-# _UrllibTransport.head -- task 10's HEAD check. No socket, and no
+# _UrllibTransport.head -- the HEAD check. No socket, and no
 # Authorization header (the recording's own media URLs need none,
 # verified empirically): a caller must not send the bearer token to an
 # address it did not build from base_url itself.
@@ -1123,7 +1123,7 @@ def test_urllib_transport_head_is_none_on_a_network_error(
 def test_urllib_transport_head_is_none_on_a_bad_status_line(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Fix round 1, minor 2: `http.client.BadStatusLine` is not an
+    """`http.client.BadStatusLine` is not an
     `OSError` and previously propagated as an uncaught traceback instead
     of reading as `None` -- reproduced by the reviewer, fixed by widening
     the caught exceptions to `http.client.HTTPException`."""
@@ -1142,7 +1142,7 @@ def test_urllib_transport_head_is_none_on_a_bad_status_line(
 def test_urllib_transport_head_is_none_on_a_malformed_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Fix round 1, minor 2: `Request(...)` construction now lives inside
+    """`Request(...)` construction lives inside
     the same `try` as the request itself, so a `ValueError` it raises
     (a malformed URL) reads as `None` too, never propagates."""
 
@@ -1172,7 +1172,7 @@ def test_urllib_transport_head_is_none_and_never_opens_a_non_https_url(
 # ------------------------------------------------------------------ #
 # platform_from_env -- D-13: an absent account is the ordinary case, and
 # the manual implementation keeps the whole chain working by the other
-# path. This is the fallback the task 3 brief's commit message names.
+# path. This is that fallback.
 # ------------------------------------------------------------------ #
 
 
@@ -1210,7 +1210,7 @@ def test_platform_from_env_forwards_speakers_and_config_either_way() -> None:
 
 
 def test_platform_from_env_forwards_private_pem_to_the_manual_implementation() -> None:
-    """Task 17: `ManualPlatform.get_attendance` needs an event's private
+    """`ManualPlatform.get_attendance` needs an event's private
     key to read a committed, encrypted attendance export -- `cli.py`'s
     callers already hold it (the same key that decrypts
     `registrations.enc`), and `platform_from_env` is the one seam that
@@ -1255,7 +1255,7 @@ def test_token_env_matches_the_declared_integration_secret() -> None:
 
 # ------------------------------------------------------------------ #
 # D-14: RETRIEVED_TICK is the one runbook_progress key both Python and
-# the app agree on by name (task 17 wires phases.ts's own key against
+# the app agree on by name (phases.ts's own key is wired against
 # this same fixture -- see tools/tests/fixtures/event-chain-keys.json's
 # own comment for why a drift here is worse than most).
 # ------------------------------------------------------------------ #

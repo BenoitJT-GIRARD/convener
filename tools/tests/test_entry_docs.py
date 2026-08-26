@@ -1,5 +1,5 @@
 """`README.md` and `docs/architecture.md` are the entry documentation a
-newcomer reads first (phase 5 spec Section 8, task 14). Properties are
+newcomer reads first. Properties are
 pinned here rather than trusted by inspection:
 
 1. Every relative Markdown link the two files carry resolves to a real
@@ -194,12 +194,12 @@ def test_the_operations_reference_is_named_not_linked_and_real() -> None:
 
 
 def test_the_diagram_carries_the_personal_data_lifecycle() -> None:
-    # Spec Section 8's own acceptance test: "a reader must see in one
+    # The acceptance test for it: "a reader must see in one
     # image where an address lives and when it disappears." This does not
     # execute the mermaid renderer (that would be a network call to fetch
     # one, on every test run, for a static diagram) -- it was rendered and
-    # visually checked once by hand instead (task 14's own report records
-    # that). What is pinned here is the regression a silent future edit
+    # visually checked once by hand instead.
+    # What is pinned here is the regression a silent future edit
     # could actually cause: exactly one fenced mermaid block, that closes,
     # and that still names the two repositories, the encrypted store, the
     # per-event key, and the 90-day window -- the parts of the diagram
@@ -247,8 +247,7 @@ def _shipping_markdown() -> list[Path]:
 
 
 def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
-    """Phase 12, task 6.
-
+    """
     `app/tests/decisions-records.test.ts` already holds this of
     `docs/decisions/`: a published record may not send a reader into
     `docs/superpowers/`, because that directory never leaves this

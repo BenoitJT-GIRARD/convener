@@ -124,7 +124,7 @@ def test_the_checklist_is_added_empty() -> None:
 def test_the_checklist_is_never_filled_in_from_the_lead_owner() -> None:
     # `assigned_to` is the board member who owns the lead; an item owner is
     # who owes one line of the runbook. Two notions, two fields, and the
-    # migration derives neither from the other -- the phase 2 defect that lost
+    # migration derives neither from the other -- the defect that lost
     # `proposed_by` started as exactly this kind of convenience.
     migrated = migrate_speaker(v3_speaker(assigned_to="carol", host_1="bob"))
     assert migrated["checklist"] == {}
@@ -246,7 +246,7 @@ def test_a_re_run_does_not_blank_a_field_someone_filled_in_since() -> None:
 
 
 def test_the_migrated_data_passes_the_validator() -> None:
-    """The validator now also requires `survey_enabled` (task 16, schema
+    """The validator also requires `survey_enabled` (schema
     v5), which this migration does not add -- `test_migrate_v3.py`'s own
     `test_the_migrated_data_passes_the_validator` names that gap
     exhaustively at every stage; this one only needs the fact that it

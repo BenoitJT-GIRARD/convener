@@ -134,13 +134,13 @@ def test_exactly_these_three_rows_declare_themselves_an_exception() -> None:
     breaks if someone deliberately declares a fourth exception -- which is
     exactly when this test should make them explain why.
 
-    Two, not one, since fix round 1 (Important 5): certificate_fingerprint
+    Two, not one: certificate_fingerprint
     was split out of matching_salt because the two consumers of
     CONVENER_MATCHING_SALT disagree about whether their own absence is ordinary
     -- a single row could only carry one `absent_is_normal` value, so it
     necessarily lied about whichever consumer disagreed with it.
 
-    Three, since task 15 (R-28): retention_token joins the two above for
+    Three: retention_token joins the two above for
     the strongest reason in this project -- a retention job that exits 0
     having destroyed nothing must never look, from the Actions tab,
     identical to a run that genuinely had nothing to do. See
@@ -186,7 +186,7 @@ def _opening_paragraph(text: str) -> str:
 def test_this_declarations_own_header_names_every_exception() -> None:
     """The half of the row above that nothing was reading.
 
-    `absent_is_normal` has been pinned as data since task 15. The sentence
+    `absent_is_normal` is pinned as data. The sentence
     at the top of `config/integrations.yml` that *describes* it was not,
     and it said "with one exception, event_keys" for two phases after the
     second and third rows were added -- through a task that corrected the

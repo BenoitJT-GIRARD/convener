@@ -1,7 +1,7 @@
 """The certificate signing key pair: who may say "this is real," forever.
 
-Phase 4 lets a stranger who receives a certificate confirm it without an
-account, a login, or a request to us -- a public verification page (task 13)
+A stranger who receives a certificate can confirm it without an
+account, a login, or a request to us -- a public verification page
 reads a machine-readable code off the document, checks it against a
 published key, and shows what the code says. That promise rests on one fact
 this module exists to guarantee: a signature proves the payload came from
@@ -26,13 +26,13 @@ The two modules exist separately for a second, sharper reason than "signing
 differs from encryption": **their key lifecycles run in opposite
 directions.**
 
-- An event key (`eventkeys.py`) is *destroyed* at the end of retention
-  (phase 4 spec §4). Destruction is the point: it is what makes already-
+- An event key (`eventkeys.py`) is *destroyed* at the end of retention.
+  Destruction is the point: it is what makes already-
   committed ciphertext permanently unreadable, and that irreversibility is
   the provable half of the retention promise.
 - A signing key is *never* destroyed. Retiring one from active service --
   no longer used to sign new certificates -- must not invalidate a single
-  certificate it already signed; the phase 4 spec (§7) says so explicitly:
+  certificate it already signed. The rule is explicit:
   "les clés publiques antérieures restent publiées, pour que la rotation
   n'invalide jamais un certificat déjà émis." A certificate is meant to
   outlive the event it was earned at, in some cases by years (accreditation
@@ -72,7 +72,7 @@ attendance at a workshop, that reduction in cross-language surface is worth
 more than PSS's marginal proof-theoretic edge.
 
 Key size: **3072 bits, not the 2048 `eventkeys.py` uses.** An event key
-only has to hold for the 90-day retention window (phase 4 spec §4) before
+only has to hold for the 90-day retention window before
 it is destroyed outright; a signing key has to hold for as long as any
 certificate it ever signed still needs to verify, which this module's whole
 design says is forever. NIST guidance rates 2048-bit RSA through roughly
@@ -105,7 +105,7 @@ re-serialising it (`json.dumps(payload, sort_keys=True, separators=(",",
 ":"))`) before checking the signature. That makes the *exact byte sequence
 a signature covers* a cross-language contract every verifier must
 reproduce: `sort_keys`, `separators`, `ensure_ascii`, all of it, forever,
-independently, in Python here and eventually in whatever task 13 writes.
+independently, in Python here and in whatever the verifier is written in.
 Measured directly against this module's own certificate fixture: Python's
 `json.dumps` emits `2.0` for a duration where `JSON.stringify` emits `2`,
 and `\\u00c9` for an accented name where `JSON.stringify` emits the
@@ -154,7 +154,7 @@ The payload's shape is enforced here, not left to `certificate.py`
 ----------------------------------------------------------------------
 `sign` refuses any payload whose key set is not exactly `PAYLOAD_FIELDS`
 below (`identifier`, `event`, `name`, `date`, `duration_hours` -- exactly
-what the phase 4 spec's §7 lists). This module's first cut left `sign`
+what a certificate carries). This module's first cut left `sign`
 content-agnostic, the same way `eventkeys.encrypt` is agnostic about a
 registration's fields, and argued the discipline of "no address" belonged
 to `certificate.py` alone. That reasoning does not survive contact with
@@ -182,12 +182,12 @@ new certificates) never means removing its file. §7's rotation promise is
 kept entirely by this file simply staying put; there is no companion
 "retire" or "destroy" operation in this module, on purpose (see above). See
 `keys/signing/README.md` for the current, real state of that directory and
-what task 13 should do with it.
+what a verifier should do with it.
 
 `verify` accepts an ordered list, `public_pems: list[str]`, and tries each
 in turn, returning the payload from the first one that checks out. The
 order is the caller's choice, not this module's -- but the convention this
-module's own layout implies, and the one task 13's build step and any
+module's own layout implies, and the one the build step and any
 future caller should follow, is **newest first**: list `keys/signing/*.pub`,
 sort filenames in *descending* order, and build the list from that. Almost
 every verification is of a certificate signed under the key currently in
@@ -219,14 +219,14 @@ inside this function, and they are not the same kind of parse:
   does authenticates a payload *after* reading it; the order is the
   guarantee.
 
-This module's first review round got the second half backwards:
+The first version of this module got the second half backwards:
 `json.loads(canonical)` ran inside the same `try` as the envelope parse,
 ahead of the signature loop, so every token's payload was parsed whether
 or not any key ever confirmed it. In Python the gap was harmless --
 bounded by `MAX_TOKEN_BYTES`, and `RecursionError` was caught either way
 -- and that is exactly why it is worth fixing anyway rather than filing
 away as low-severity: this module is the reference implementation for
-task 13's browser-side verifier, and a verifier ported from the control
+the browser-side verifier, and a verifier ported from the control
 flow rather than from `keys/signing/README.md`'s numbered steps inherits
 "parse untrusted bytes before authenticating them" in a language whose
 JSON parser this project does not control -- the one habit this module's
@@ -332,7 +332,7 @@ The private half, and why its absence is an ordinary D-13 state here
 Unlike `eventkeys.py`'s private half, there is exactly one signing private
 key in service at a time, held as the repository secret `CONVENER_SIGNING_KEY`
 (`config/integrations.yml`), read only inside the job that issues
-certificates (task 12/14) and never elsewhere. Rotating it means: an
+certificates and never elsewhere. Rotating it means: an
 *operator* -- a person, interactively, never an automated step and never
 this module acting on anyone's behalf -- runs `generate()`, commits the new
 public half under a new date, and only then replaces the `CONVENER_SIGNING_KEY`
@@ -396,11 +396,11 @@ WIRE_VERSION: Final = 1
 #: field or similar; `verify` must never start reading one).
 TOKEN_FIELDS: Final = frozenset({"v", "payload", "signature"})
 
-#: The certificate payload's exact field set -- everything the phase 4
-#: spec's §7 lists and nothing else. `sign` refuses any payload whose keys
+#: The certificate payload's exact field set -- everything a certificate
+#: carries and nothing else. `sign` refuses any payload whose keys
 #: are not exactly this set. See the module docstring's "payload's shape"
 #: section for why this is enforced here rather than left to
-#: `certificate.py` (task 12) as a convention.
+#: `certificate.py` as a convention.
 PAYLOAD_FIELDS: Final = frozenset(
     {"identifier", "event", "name", "date", "duration_hours"}
 )

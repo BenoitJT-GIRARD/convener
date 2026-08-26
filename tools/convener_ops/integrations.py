@@ -12,7 +12,7 @@ text.
 `tools/convener_ops/eventkeys.py`), `retention_token` and
 `certificate_fingerprint`. This paragraph used to say "the one exception ...
 `event_keys` is that row today", which was true when it was written and had
-quietly stopped being so; phase 11 task 5 corrected it while counting the
+quietly stopped being so; it was corrected while counting the
 rows for the cockpit's settings screen, and left the same sentence standing
 in the declaration's own header and in `Integration.absent_is_normal`'s
 comment below -- the first of those being the more authoritative of the two,

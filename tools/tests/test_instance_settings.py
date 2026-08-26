@@ -1,7 +1,7 @@
 """This side of the boundary between the thresholds' arithmetic and the
 form that now offers those thresholds for editing.
 
-Phase 11, task 5. Three of the four files in `config/` that
+Three of the four files in `config/` that
 `config/boundary.yml` hands to the instance are numbers a maintainer
 edits, and until this task the only thing standing between a maintainer
 and an illegal one was a test -- run later, somewhere else, by somebody

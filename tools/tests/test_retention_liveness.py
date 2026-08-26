@@ -1,9 +1,8 @@
-"""H2 (2026-08-23 security audit, AF-2): nothing detects `retention.yml`
-no longer running.
+"""Nothing detects `retention.yml` no longer running.
 
 D-25 makes every control fail loudly *inside* a run; it says nothing about
 a run that never starts, and `retention.yml` is exactly the job whose
-silence has legal weight (spec P-2, D-22) -- it is what makes an event's
+silence has legal weight (D-22) -- it is what makes an event's
 registrations permanently unreadable once the retention window elapses.
 
 Two layers, mirroring `test_retention.py`'s own split:

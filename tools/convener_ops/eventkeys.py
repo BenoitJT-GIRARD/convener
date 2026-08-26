@@ -1,6 +1,6 @@
 """Per-event key pairs: generation, publication, and provable destruction.
 
-Phase 4 lets a stranger register for an event without their answers ever
+A stranger registers for an event without their answers ever
 existing in plain text outside a CI job. That promise rests on one fact this
 module exists to guarantee: a public key published in the repository cannot
 decrypt anything, only encrypt -- so the static registration page, which
@@ -57,7 +57,7 @@ write it without a library on either side::
 
 Every base64 field uses the standard alphabet, decodable in the browser over
 the raw bytes (`atob`/`btoa`, or `Uint8Array` conversion). These parameters
-are a cross-language contract: the browser implementation (task 4) has to
+are a cross-language contract: the browser implementation has to
 reproduce this exactly, so a change here is a change there too.
 
 The public half is a file, not a secret
@@ -125,10 +125,10 @@ minting a second one: a retention job that reruns after a partial failure
 must be able to repeat the call safely, and the record's date is the day it
 was first destroyed, never the day of the retry.
 
-The deadline is computed, never read off a form (task 15)
-------------------------------------------------------------
-`is_due_for_destruction` is the whole of "date de l'evenement + 90 jours"
-(phase 4 spec S4): `event_date + RETENTION_DAYS` days, compared against
+The deadline is computed, never read off a form
+--------------------------------------------------
+`is_due_for_destruction` is the whole of "date de l'evenement + 90 jours":
+`event_date + RETENTION_DAYS` days, compared against
 `governance.paris_today(now)` -- the same clock discipline every other
 deadline in this repository already uses (`sweep.py`'s own vote-window
 expiry), never a raw `datetime.now()` a caller might read on the wrong
@@ -139,8 +139,8 @@ here. The retention job (`cli.py::retention_sweep`) calls this once per
 event whose key is still `ACTIVE`, and destroys exactly the ones it
 returns `True` for.
 
-The destruction registry lives in one file, not one per event (task 15)
--------------------------------------------------------------------------
+The destruction registry lives in one file, not one per event
+---------------------------------------------------------------
 `destroy` and `key_status` above take `registry: Mapping[str, date]`
 already assembled; `registry_from_data` and `registry_to_data` are its
 parse and serialise halves, reading and writing
@@ -159,8 +159,8 @@ file is never personal data and never becomes unreadable: unlike
 `registrations.enc`, there is no key it depends on and no reason it would
 ever need destroying itself.
 
-The file is not deleted, and here is why (R-30)
---------------------------------------------------
+The file is not deleted, and here is why
+------------------------------------------
 Destroying a key does **not** delete `data/events/<id>/registrations.enc`
 from the working tree. Deleting the file would not, on its own, make
 anything more unreadable than destroying the key already has -- git
@@ -169,10 +169,10 @@ it would invite a future reader to believe the *file's absence* is what
 protects the data, which is backwards: the key is the only thing that
 ever made the ciphertext readable, and once it is gone, an intact,
 committed, permanently unreadable blob is exactly what "les donnees
-deviennent definitivement illisibles" (spec S4) describes -- unreadable,
+deviennent definitivement illisibles" describes -- unreadable,
 not absent. Leaving it in place is also cheaper and safer than rewriting
-history to remove it, which spec S4 rules out by name ("sans reecriture
-d'historique").
+history to remove it, which this project rules out by name ("sans
+reecriture d'historique").
 """
 
 from __future__ import annotations
@@ -198,7 +198,7 @@ from .paths import repo_root
 
 #: RSA modulus size. 2048 bits keeps key generation and RSA-OAEP fast in
 #: both a browser and a CI job, and is accepted by NIST guidance well past
-#: this project's retention window (90 days, see the phase 4 spec). It is
+#: this project's retention window, 90 days. It is
 #: also the OAEP block size the wire format's `encrypted_key` field assumes:
 #: with SHA-256 (32-byte digest) the usable payload is
 #: 256 - 2*32 - 2 = 190 bytes, comfortably more than the 32-byte AES-256 key
@@ -241,7 +241,7 @@ _OAEP: Final = padding.OAEP(
 #: accepts for a decision register entity -- imported, not copied, so the
 #: two cannot drift apart into two different definitions of "a token" by
 #: hand-edit. No `Identifier` type exists yet anywhere in this codebase
-#: (Python or TypeScript) -- event ids are new to phase 4 -- so this module
+#: (Python or TypeScript), so this module
 #: treats one as a validated `str` rather than inventing a wrapper type
 #: nothing else uses. The validation exists because this string becomes a
 #: path component (`public_key_path`): an id that is not a plain token
@@ -250,7 +250,7 @@ _OAEP: Final = padding.OAEP(
 #: `-`, neither legal in a GitHub Actions secret name, which is why
 #: `secret_name` below exists as a separate step.
 #:
-#: **Length-capped at `_EVENT_ID_MAX_LENGTH` (Minor 7, branch review).**
+#: **Length-capped at `_EVENT_ID_MAX_LENGTH`.**
 #: `services/signup-relay/src/index.js::EVENT_ID_RE` mirrors `_TOKEN`'s own
 #: charset (it cannot import this pattern -- the two languages share no
 #: regex object) but, unlike this pattern before this fix, also bounds the
@@ -525,7 +525,7 @@ def destroy(
     return DestructionRecord(event_id=event_id, destroyed_on=paris_today(now))
 
 
-#: The phase 4 spec's own number (S4: "date de l'evenement + 90 jours").
+#: The retention window: the event's date, plus 90 days.
 #: A module constant, not a `data/config.yml` value: retention is a legal
 #: commitment stated once in the spec and in the confirmation e-mail
 #: (`confirmation.py::_DATA_PROTECTION`), never something an operator

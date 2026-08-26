@@ -1,5 +1,5 @@
-"""H2 (2026-08-23 security audit, AF-2): pins the two workflow files this
-fix touches against the properties `test_retention_liveness.py`'s own CLI
+"""Pins the two workflow files the retention watchdog
+touches against the properties `test_retention_liveness.py`'s own CLI
 tests cannot see, because they never read a `.yml` file at all.
 
 Read as text and `safe_load`-parsed, the same idiom every workflow-pinning

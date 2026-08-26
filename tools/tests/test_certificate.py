@@ -152,8 +152,8 @@ def test_fingerprint_differs_by_salt() -> None:
 
 
 def test_fingerprint_is_never_the_same_value_as_the_matching_code() -> None:
-    """Kept as a cheap sanity check, but this alone proves nothing (Critical
-    2, fix round 1): `fingerprint` returns a 64-character hex digest,
+    """Kept as a cheap sanity check, but this alone proves nothing:
+    `fingerprint` returns a 64-character hex digest,
     `matching_code` an 8-character hyphenated code from a 30-symbol
     alphabet, and those two renderings can never be equal for *any* input
     -- so this assertion is true whether or not `_FINGERPRINT_DOMAIN`
@@ -165,7 +165,7 @@ def test_fingerprint_is_never_the_same_value_as_the_matching_code() -> None:
 
 
 def test_fingerprint_would_change_if_the_domain_prefix_were_dropped() -> None:
-    """Critical 2 (fix round 1): pins the *input space*, not the rendered
+    """Pins the *input space*, not the rendered
     output. `matching_code` HMACs `f"{event_id}\\0{normalised address}"`
     under `CONVENER_MATCHING_SALT`; `fingerprint` is supposed to prefix that
     same input with `_FINGERPRINT_DOMAIN` before hashing, under the same
@@ -184,11 +184,11 @@ def test_fingerprint_would_change_if_the_domain_prefix_were_dropped() -> None:
 def test_fingerprints_digest_bytes_cannot_be_reduced_to_the_mailed_matching_code() -> (
     None
 ):
-    """The concrete harm ruling 4 exists to prevent, reproduced directly
-    (Critical 2, fix round 1): applying `matching_code`'s own digest-to-
+    """The concrete harm the domain prefix exists to prevent, reproduced
+    directly: applying `matching_code`'s own digest-to-
     symbols transform (`bytes.fromhex`, modulo the alphabet, hyphenate) to
     `fingerprint`'s own hex digest must never recover the matching code
-    task 7 actually mails -- if it ever did, every row of the committed
+    the confirmation actually mails -- if it ever did, every row of the committed
     register would double as the participant's own, already-sent matching
     code. Under the domain-prefix-dropped mutant, this recomputation
     equals `matching_code(...)` exactly; with the prefix intact, it must
@@ -241,7 +241,7 @@ def test_duration_hours_of_zero_seconds_is_zero() -> None:
 
 
 def test_duration_hours_of_a_negative_value_floors_at_zero_not_negative_zero() -> None:
-    """Minor 7 (fix round 1): unreachable through `attendance._duration`
+    """Unreachable through `attendance._duration`
     (which already floors at zero) but this function is public and `int`
     is signed -- `duration_hours(-5)` rendered `-0.0` before this floor,
     a value with no honest reading on a certificate. `-0.0 == 0.0` is
@@ -271,7 +271,7 @@ def _attendee(
 def test_full_name_joins_first_name_and_surname_with_one_space() -> None:
     """The exact join `_sign_certificate` signs into the payload's own
     `name` field -- see this function's own docstring for why it is
-    factored out at all: `delivery.render_certificate` (task 14) must
+    factored out at all: `delivery.render_certificate` must
     print the identical string, computed the identical way, never a
     second independently-typed join."""
     assert full_name(_attendee()) == "Ada Lovelace"
@@ -321,7 +321,7 @@ def test_issue_mints_a_fresh_random_identifier_each_time_no_register_matches() -
     be deterministic": nothing here ties the identifier to the address by
     formula.
 
-    Also pins the identifier's own shape (Important 4, fix round 1):
+    Also pins the identifier's own shape:
     `_IDENTIFIER_BYTES` -- 128 bits, `secrets.token_hex` -- was asserted
     nowhere; reducing it to 2 bytes (16 bits, 65 536 possible values,
     trivially enumerable against the public projection) left the whole
@@ -350,7 +350,7 @@ def test_issue_mints_a_fresh_random_identifier_each_time_no_register_matches() -
 
 
 # ------------------------------------------------------------------ #
-# is_valid_identifier() -- minor 2, fix round 3: the same one-line shape
+# is_valid_identifier() -- the same one-line shape
 # check eventkeys.secret_name already gives EVENT_ID, applied to
 # CERTIFICATE_ID before cli.py ever echoes it into a job's own log.
 # ------------------------------------------------------------------ #
@@ -439,7 +439,7 @@ def test_reissuing_the_same_attendee_does_not_grow_the_register() -> None:
     assert second.entry.issued_on == date(2026, 8, 20)
     # Deterministic re-signing (PKCS1v15): replaying issue() for an
     # already-registered attendee reproduces the identical token, which is
-    # what lets a failed delivery (task 14) retry without regenerating
+    # what lets a failed delivery retry without regenerating
     # anything.
     assert second.token == first.token
     assert verify(second.token, [public_pem]).valid
@@ -536,7 +536,7 @@ def test_revoke_leaves_every_other_entry_untouched() -> None:
 
 
 def test_revoke_refuses_an_identifier_that_belongs_to_a_different_event() -> None:
-    """Minor 1 (fix round 3): before this, `revoke` matched on `identifier`
+    """`revoke` used to match on `identifier`
     alone, while `reissue` above already filters on `event_id` too -- two
     commands disagreeing about what "this event's certificate" means. A
     register merged from more than one file by mistake, or hand-edited,
@@ -569,18 +569,18 @@ def test_revoke_matches_the_right_event_when_two_share_an_identifier() -> None:
 
 
 def test_issuing_again_after_revocation_refuses_rather_than_resurrecting() -> None:
-    """R-26 (fix round 1, Critical 1), superseding the round 1 test this
-    replaces (which pinned `issue` *reusing* a revoked row -- exactly the
-    defect Critical 1 found: a routine re-run of `convener-issue-certificates`
+    """Supersedes an earlier test
+    (which pinned `issue` *reusing* a revoked row -- exactly the
+    defect that turned up: a routine re-run of `convener-issue-certificates`
     handing back, and `convener-deliver-certificates` mailing, a document whose
     own register row says it no longer stands).
 
     `issue`'s lookup is three-way, not two-way (see its own docstring):
     a fingerprint whose *every* row is revoked must be refused, not
     resurrected by reuse and not resurrected by minting a fresh one
-    either (R-18's own warning against the naive two-way "fix" -- see
-    `reissue`'s own docstring). This is the test the brief's own mutation
-    list names directly: "make the three-way lookup two-way (skip revoked
+    either (the warning against the naive two-way "fix" -- see
+    `reissue`'s own docstring). This is the test the obvious mutation
+    calls for: "make the three-way lookup two-way (skip revoked
     rows and mint) -- a test must fail, and it must be the one about a
     routine re-run after a revocation." Reverting this round's fix to the
     old reuse-the-revoked-row behaviour, or to a two-way skip-and-mint
@@ -610,7 +610,7 @@ def test_issuing_again_after_revocation_refuses_rather_than_resurrecting() -> No
 
 
 def test_issue_resolves_to_the_issued_row_after_a_reissue_not_the_revoked_one() -> None:
-    """The other half of Critical 1's own reproduction (b): after a
+    """The other half of the reproduction (b): after a
     genuine correction (issue, revoke, reissue), the register holds both
     the old, revoked row and the new, issued one for the same fingerprint
     -- exactly the shape `reissue`'s own docstring describes. `issue`
@@ -648,7 +648,7 @@ def test_issue_resolves_to_the_issued_row_after_a_reissue_not_the_revoked_one() 
 
 # ------------------------------------------------------------------ #
 # reissue() -- an operator's deliberate correction: a new identifier,
-# gated on the row it replaces already being revoked (R-18, Important 3).
+# gated on the row it replaces already being revoked.
 # ------------------------------------------------------------------ #
 
 
@@ -661,9 +661,9 @@ def test_reissue_refuses_when_no_certificate_exists_for_the_fingerprint() -> Non
 
 
 def test_reissue_refuses_when_the_standing_certificate_is_still_issued() -> None:
-    """The guard R-18 exists for: reissuing over a still-`STATE_ISSUED` row
-    would leave two valid, contradictory certificates standing at once --
-    exactly Important 3's original defect. An operator must revoke first,
+    """The guard reissue exists for: reissuing over a still-`STATE_ISSUED`
+    row would leave two valid, contradictory certificates standing at once
+    -- the original defect. An operator must revoke first,
     a separate and deliberate act."""
     private_pem, _ = generate()
     issued = issue(
@@ -681,7 +681,7 @@ def test_reissue_refuses_when_the_standing_certificate_is_still_issued() -> None
 
 
 def test_reissue_mints_a_new_identifier_while_the_old_row_stays_revoked() -> None:
-    """The two-halves guarantee R-18 asks for: a genuinely new identifier
+    """The two-halves guarantee: a genuinely new identifier
     for the corrected certificate, and the revoked row this replaces is
     returned completely untouched -- `reissue` never mutates `existing`,
     it only reads it. The caller (`cli.py::reissue_certificate`) is what
@@ -719,7 +719,7 @@ def test_reissue_mints_a_new_identifier_while_the_old_row_stays_revoked() -> Non
 
 
 # ------------------------------------------------------------------ #
-# sign_for() -- R-26, fix round 1, Critical 1: sign an already-resolved
+# sign_for() -- sign an already-resolved
 # register row directly, with no fingerprint lookup at all. The primitive
 # cli.py::deliver_certificate needs so it can sign the exact row
 # CERTIFICATE_ID named, rather than re-resolving one through issue() and
@@ -807,9 +807,9 @@ def test_sign_for_does_not_inspect_or_refuse_a_revoked_entry_itself() -> None:
 
 
 # ------------------------------------------------------------------ #
-# CertificateEvent.__post_init__ -- Important 3, fix round 1: the event
+# CertificateEvent.__post_init__ -- the event
 # title is bounded here, once, so the signed payload and the rendered
-# document can never disagree about what it is (R-22).
+# document can never disagree about what it is.
 # ------------------------------------------------------------------ #
 
 
@@ -821,7 +821,7 @@ def test_certificate_event_truncates_a_title_longer_than_the_max_length() -> Non
 
     assert len(event.title) == _MAX_TITLE_LENGTH
     assert event.title == long_title[:_MAX_TITLE_LENGTH]
-    # Carried item 8, fix wave 2: the truncation is no longer silent --
+    # The truncation is not silent --
     # this flag is what cli.py's own `_warn_if_title_truncated` reads.
     assert event.title_truncated is True
 
@@ -840,7 +840,7 @@ def test_certificate_event_leaves_a_title_at_or_under_the_max_length_untouched()
 
 def test_issue_signs_the_truncated_title_never_the_original() -> None:
     """The property that keeps a truncated title from ever becoming a
-    "document says one thing, signature says another" bug (R-22): the
+    "document says one thing, signature says another" bug: the
     truncation lives on `CertificateEvent` itself, so `issue`'s signed
     payload and any later `render_certificate` call reading
     `event.title` both see the identical, already-short string -- there
@@ -957,7 +957,7 @@ def test_register_from_data_rejects_a_field_of_the_wrong_type() -> None:
 
 
 def test_register_from_data_rejects_a_duplicate_identifier() -> None:
-    """Minor 6 (fix round 1): a hand-edited or badly-merged file could
+    """A hand-edited or badly-merged file could
     otherwise pass with two rows sharing one identifier -- `revoke` would
     then flip both, and `issue`'s own lookup would silently prefer
     whichever it meets first."""
@@ -982,8 +982,8 @@ def test_register_from_data_rejects_a_duplicate_identifier() -> None:
 
 
 def test_register_from_data_rejects_two_issued_rows_for_one_fingerprint() -> None:
-    """Minor 6 (fix round 1): two simultaneously-issued rows for the same
-    fingerprint is the storage-layer shape of Important 3's original
+    """Two simultaneously-issued rows for the same
+    fingerprint is the storage-layer shape of the same
     defect -- two documents claiming to be *the* current certificate for
     one person, neither the register can tell apart."""
     entries = [
@@ -1007,9 +1007,9 @@ def test_register_from_data_rejects_two_issued_rows_for_one_fingerprint() -> Non
 
 
 def test_register_from_data_accepts_a_revoked_row_and_its_reissue() -> None:
-    """The legitimate shape `reissue` leaves behind (R-18): the old,
+    """The legitimate shape `reissue` leaves behind: the old,
     revoked row and its correction, both real, sharing one fingerprint --
-    Minor 6's own duplicate-fingerprint guard must not reject this, or it
+    the duplicate-fingerprint guard must not reject this, or it
     would reject every register a correction was ever applied to."""
     entries = [
         {
@@ -1087,17 +1087,17 @@ def test_verification_url_percent_encodes_a_token_with_reserved_characters() -> 
 
 
 def test_verification_url_carries_the_token_after_the_fragment_not_before_it() -> None:
-    """The reviewer's own finding, pinned (fix round 1): `VERIFICATION_BASE`
+    """A reviewer's own finding, pinned: `VERIFICATION_BASE`
     ends in `#/`, so the `?token=` this function appends -- which
     carries the holder's name -- sits inside the URL *fragment*. A
     fragment is never sent in an HTTP request and is stripped from
     `Referer` before a browser navigates away, so the name never reaches
     GitHub's servers or a third party's request log. That property holds
-    only as long as the token appears *after* the first `#`; task 7 moved
-    this address off `App.tsx`'s `HashRouter` route onto a static page's
+    only as long as the token appears *after* the first `#`. This address
+    moved off `App.tsx`'s `HashRouter` route onto a static page's
     own island, which reads `location.hash` itself -- serving that page
-    from a bare path instead, the way task 6 moved `registration.
-    SIGNUP_BASE`, would silently move the token before the `#` and start
+    from a bare path instead, the way `registration.SIGNUP_BASE` moved,
+    would silently move the token before the `#` and start
     leaking names in every verification. This test is what would catch
     that."""
     url = verification_url("abc123", '{"v":1,"payload":"eyJuYW1lIjoiQWRhIn0="}')
@@ -1126,8 +1126,8 @@ def test_organiser_is_a_non_empty_constant() -> None:
 
 # ------------------------------------------------------------------ #
 # certificates_path: the one function naming where a register lives
-# (Minor 11, fix round 1) -- a symbol a task-15 retention sweep has to
-# walk past, not a paragraph it can skip.
+# -- a symbol the retention sweep has to walk past, not a paragraph it can
+# skip.
 # ------------------------------------------------------------------ #
 
 
@@ -1140,8 +1140,7 @@ def test_certificates_path_is_the_events_directory_plus_certificates_yml() -> No
 
 # ------------------------------------------------------------------ #
 # docs/toolkit/certificate.md: the page claims a test pins its field list
-# against signing.PAYLOAD_FIELDS and ORGANISER (Important 9, fix round 1).
-# This is that test.
+# against signing.PAYLOAD_FIELDS and ORGANISER. This is that test.
 # ------------------------------------------------------------------ #
 
 #: Every signed payload field's own bracketed placeholder on the page --
@@ -1176,7 +1175,7 @@ def test_the_toolkit_page_prints_the_organiser_constant() -> None:
     one declaration rather than being hand-typed a second time somewhere
     this test cannot see.
 
-    Phase 10, task 3: the page carries `{{ instance.organisation }}` now,
+    The page carries `{{ instance.organisation }}`,
     and `ORGANISER` reads the same key of the same file. So this asserts
     both halves -- that the token is on the page, and that rendering it
     produces exactly the name the generated document prints. A page that
@@ -1200,7 +1199,7 @@ def test_the_toolkit_page_prints_the_organiser_constant() -> None:
 
 
 # ------------------------------------------------------------------ #
-# The shared fixture (D-14, ruling 6) -- what stops task 13 shipping a
+# The shared fixture (D-14) -- what stops this project shipping a
 # verification page that verifies nothing.
 # ------------------------------------------------------------------ #
 
@@ -1216,7 +1215,7 @@ def test_the_shared_fixture_states_match_this_modules_own_constants() -> None:
 
 
 def test_the_shared_fixture_base_matches_this_modules_own_constant() -> None:
-    """Phase 10 task 2: the fixture states the *path* -- `verify/#/`,
+    """The fixture states the *path* -- `verify/#/`,
     which is the product's own route plus the fragment that keeps a
     holder's name out of every request -- and the root comes from
     `config/instance.json`, the one place it is written down."""
@@ -1227,7 +1226,7 @@ def test_the_shared_fixtures_token_genuinely_verifies() -> None:
     example = _FIXTURE["signed_example"]
     result = verify(example["token"], [example["public_pem"]])
     assert result.valid
-    # `payload_decoded` (fix round 1, Minor 3): the token's own `payload`
+    # `payload_decoded`: the token's own `payload`
     # field is base64, `signed_example`'s is the already-decoded object --
     # renamed from the shared `payload` name the two used to collide on,
     # which threw `InvalidCharacterError` the moment a TypeScript reader
@@ -1246,7 +1245,7 @@ def test_the_shared_fixtures_url_is_reproducible_from_this_modules_own_function(
 
 
 def test_the_shared_fixtures_projection_example_has_no_fingerprint_either() -> None:
-    """Important 4 (fix round 1, task 13): `projection_example` is a bare
+    """`projection_example` is a bare
     array -- see this key's own `_projection_example_comment` for why it
     used to be nested under a `"certificates"` key and was wrong to be."""
     assert isinstance(_FIXTURE["projection_example"], list)
@@ -1256,21 +1255,21 @@ def test_the_shared_fixtures_projection_example_has_no_fingerprint_either() -> N
 
 
 def test_the_shared_fixtures_identifier_pattern_matches_certificate_pys_own() -> None:
-    """Minor 3 (fix round 1, task 13): the D-14 binding for
+    """The D-14 binding for
     `_CERTIFICATE_ID_RE` -- read from both sides rather than hand-retyped
     on the TypeScript one, which is exactly how a fixture goes stale."""
     assert _CERTIFICATE_ID_RE.pattern == _FIXTURE["identifier_pattern"]
 
 
 def test_the_shared_fixtures_iterable_sections_carry_no_comment_key() -> None:
-    """Minor 4 (fix round 1): a TypeScript `Object.keys(fixture.states)` (or
+    """A TypeScript `Object.keys(fixture.states)` (or
     `.reasons`) sweep expecting exactly the declared spellings must never
     see a stray `_comment` key mixed in among them -- every explanatory
     comment lives at the top level instead, as a sibling `_x_comment` key,
     the same convention `governance-cases.json` already uses.
 
-    `projection_example` is deliberately absent from this list (Important
-    4, fix round 1): it is a bare array now, not an object, so "no stray
+    `projection_example` is deliberately absent from this list:
+    it is a bare array, not an object, so "no stray
     `_comment` key among the ones this section's own keys are swept for"
     is not a claim that means anything for it -- the array's own sibling
     `_projection_example_comment` already keeps the array itself
@@ -1286,7 +1285,7 @@ def test_the_shared_fixtures_iterable_sections_carry_no_comment_key() -> None:
 
 
 def test_the_shared_fixtures_rejects_are_each_correctly_labelled() -> None:
-    """Important 7 (fix round 1): the fixture used to hold only a positive
+    """The fixture used to hold only a positive
     example, plus four bare strings with no input that actually produces
     them -- a verifier that always returned `valid: True`, or one that
     never called `verify` at all, satisfied every assertion this file
@@ -1304,12 +1303,12 @@ def test_the_shared_fixtures_rejects_are_each_correctly_labelled() -> None:
 
 
 def test_the_shared_fixtures_integer_duration_example_genuinely_verifies() -> None:
-    """Minor 10 (fix round 1): `signed_example` only ever carries
+    """`signed_example` only ever carries
     `duration_hours: 1.5` -- never the whole-number rendering hazard
     (`2.0` vs a browser's `JSON.stringify` writing `2`) `signing.py`'s own
     docstring names. This is a second, real, independently verifiable
-    token that does carry one, for task 13's own tests to check a display
-    path against."""
+    token that does carry one, for the verifier's own tests to check a
+    display path against."""
     example = _FIXTURE["integer_duration_example"]
     result = verify(example["token"], [example["public_pem"]])
     assert result.valid

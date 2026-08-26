@@ -1,6 +1,6 @@
 """The three named formats, and the print poster's own physical QR size.
 
-`formats.py` names the three concrete sizes task 4 settles on, and computes
+`formats.py` names the three concrete sizes this project settles on, and computes
 the one number that turns "the print poster" from a hopeful label into a
 checked property: how many millimetres wide one QR module actually is once
 `PRINT` is printed at its own real paper size -- the number a phone camera's
@@ -77,7 +77,7 @@ def test_print_is_the_only_named_format_that_is_wide() -> None:
 #: the regression this section is really guarding: a change to the slot's
 #: own size, or to the paper, moves every figure below at once.
 #:
-#: Phase 10, task 2: the module size itself used to be pinned here instead
+#: The module size itself used to be pinned here instead
 #: (0.589mm), and it was a statement about *this* instance's published
 #: address rather than about the poster. `registration_code_modules` encodes
 #: `registration.signup_url(event_id)`, so the module count -- and with it

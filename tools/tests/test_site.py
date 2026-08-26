@@ -1,4 +1,4 @@
-"""The showcase's templates, moved into this repository by phase 5's task 2.
+"""The showcase's templates, which live in this repository.
 
 `example-showcase` used to hold `index.njk`, `layout.njk`, `style.css`,
 `.eleventy.js`, `package.json` and the self-hosted fonts directly -- source
@@ -8,9 +8,9 @@ is the quality chain's own hold on the one guarantee a reconstruction already
 broke once: no request to a third party from a published page (D-17).
 
 Most of this module is text assertions on the templates and stylesheet
-themselves, never a build. The task 5 section further down is the one
-exception: it needs the real, *rendered* event pages to prove acceptance
-criterion 2 (no room link on any public page), so it builds `site/` itself
+themselves, never a build. The event-page section further down is the one
+exception: it needs the real, *rendered* event pages to prove that no room
+link reaches any public page, so it builds `site/` itself
 into a scratch directory -- see `built_site`'s own docstring for why, and
 for why that still touches no network (`site/`'s own `node_modules` must
 already be installed, exactly the `npm ci` every other job that touches
@@ -43,7 +43,7 @@ from convener_ops.paths import repo_root
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
 from convener_ops.registration import SIGNUP_BASE, signup_url
 
-#: Fix round 1: the same zone `tools/convener_ops/governance.py::PARIS` already
+#: The same zone `tools/convener_ops/governance.py::PARIS` already
 #: anchors this project's Python side on -- `zoneinfo`, the standard
 #: library's own IANA tzdata, rather than `site/.eleventy.js`'s `Intl`
 #: reimplemented here, so this test suite proves the build against an
@@ -73,7 +73,7 @@ def _configured_path_prefix() -> str:
     build one path segment below a bare domain root (no CNAME, no custom
     domain), and that segment feeds every template's `| url` filter call.
 
-    Phase 10, task 2: this used to scrape `PATH_PREFIX` out of
+    This used to scrape `PATH_PREFIX` out of
     `site/.eleventy.js` with a regular expression, because that file was
     where the value lived. It now lives in `config/instance.json`, which
     `.eleventy.js` reads for itself, so this reads the declaration
@@ -96,7 +96,7 @@ def _pfx(path: str) -> str:
 
 
 def _configured_site_origin() -> str:
-    """The origin half of the same declaration -- task 10's absolute-URL
+    """The origin half of the same declaration -- the absolute-URL
     counterpart to `_configured_path_prefix` above, and read the same way
     and for the same reason. The two cannot disagree about which
     deployment they describe, because they are two properties of one
@@ -160,7 +160,7 @@ def test_layout_preloads_a_self_hosted_font() -> None:
     altogether just as readily as on one that self-hosts them properly --
     this is the positive half: the font actually served from `/fonts/`."""
     layout = (SITE_SRC / "_includes" / "layout.njk").read_text(encoding="utf-8")
-    # Fix round 4: `href="/fonts/..."` moved behind Eleventy's `| url`
+    # `href="/fonts/..."` moved behind Eleventy's `| url`
     # filter (`href="{{ '/fonts/...' | url }}"`) so the preload resolves
     # under this project's real published prefix rather than a bare
     # domain root -- see `_configured_path_prefix`'s own docstring.
@@ -184,10 +184,10 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
 
 
 # -------------------------------------------------------------------------- #
-# Security audit 2026-08-23, M4 + L3: a Content-Security-Policy and an
+# A Content-Security-Policy and an
 # explicit referrer policy, both delivered by <meta> -- the only mechanism
 # available at all, since GitHub Pages sets no response headers. `built_site`
-# (below, task 5's own fixture) is built with no VITE_SIGNUP_RELAY_URL set,
+# (below) is built with no VITE_SIGNUP_RELAY_URL set,
 # so it also stands in for that variable's ordinary D-13 absence;
 # `built_site_with_signup_relay` proves the other half -- the relay's own
 # origin joining connect-src when the variable is configured, the identical
@@ -204,7 +204,7 @@ def test_style_sheet_declares_the_self_hosted_font_faces() -> None:
 _META_IGNORED_CSP_DIRECTIVES = ("frame-ancestors", "report-uri", "report-to", "sandbox")
 
 #: Every directive this showcase's policy must name, and the sources each
-#: one may admit -- phase 11, task 5 step 0. Before it the policy named
+#: one may admit. This policy used to name
 #: `script-src`, `connect-src`, `object-src` and `form-action` and nothing
 #: else, on the reasoning, written in `csp.js`'s own header, that those
 #: four "work by `<meta>`". They do; so do these. The specification says a
@@ -250,8 +250,8 @@ def test_every_page_carries_the_content_security_policy_this_project_ships(
     no relay origin appended -- this fixture is built with
     `VITE_SIGNUP_RELAY_URL` unset, D-13's ordinary state.
 
-    And, since phase 11, the five directives whose absence nobody had
-    examined. Until then this policy named four source lists and no
+    And the five directives whose absence nobody had
+    examined for a long time. This policy once named four source lists and no
     fallback, so an image, a frame, a font, a stylesheet or a media file
     was admitted from *any origin at all* -- on every page a stranger
     loads, including the three that carry an island handling somebody's
@@ -321,7 +321,7 @@ def test_every_page_carries_an_explicit_referrer_policy(built_site: Path) -> Non
         match = _REFERRER_META_RE.search(page)
         assert match is not None, (
             f"{path.relative_to(built_site).as_posix()} sets no explicit "
-            "referrer policy -- security audit 2026-08-23, L3"
+            "referrer policy"
         )
         assert match.group(1) == "strict-origin-when-cross-origin", path
         checked += 1
@@ -387,7 +387,7 @@ def test_content_security_policys_connect_src_admits_the_configured_signup_relay
 def test_the_survey_pages_connect_src_also_admits_the_configured_signup_relay(
     built_site_with_signup_relay: Path,
 ) -> None:
-    """Phase 7 task 5: the survey island posts to the identical relay's
+    """The survey island posts to the identical relay's
     own `/survey` route (`SurveyForm.tsx::surveyRelayUrl`), from a
     *different* document (`survey.njk`, not `event.njk`) -- this pin is
     the equivalent proof for that page, not merely an inference from the
@@ -410,9 +410,9 @@ def test_the_survey_pages_connect_src_also_admits_the_configured_signup_relay(
 
 
 # -------------------------------------------------------------------------- #
-# Task 5: the event page -- one addressable page per edition (D-19), no
-# room link on any public page (acceptance criterion 2), and the phase 4
-# notice ahead of the reserved place for task 6's registration island.
+# The event page -- one addressable page per edition (D-19), no
+# room link on any public page, and the data-protection
+# notice ahead of the reserved place for the registration island.
 #
 # The address and no-room-link checks below build the real `site/` project
 # with its own committed fixture (`src/_data/events.json`) and sweep the
@@ -424,8 +424,8 @@ def test_the_survey_pages_connect_src_also_admits_the_configured_signup_relay(
 # the_room_link` already uses for the toolkit's Markdown templates) would
 # have to look for -- so such a scan would stay green even with a leak.
 # (`public_data.py::PUBLIC_FIELD_SOURCES` used to publish it as
-# `registration_link`; task 9 stopped publishing it under any name at
-# all, which makes this template-layer guard the only proof left that a
+# `registration_link`, and publishes it under no name at
+# all now, which makes this template-layer guard the only proof left that a
 # future regression cannot slip a room-link-shaped value back onto a
 # page.) Only the rendered page shows what a visitor would actually see.
 # -------------------------------------------------------------------------- #
@@ -530,13 +530,13 @@ def test_a_built_public_page_never_carries_a_room_link(built_site: Path) -> None
     Sweeps for the literal, non-empty `registration_link` value(s) the
     committed *fixture* carries -- a synthetic room-link-shaped column,
     kept here as a template-regression canary even though `public_data.py`
-    no longer emits any column carrying a room link (task 9 removed it;
-    that mapping used to publish `zoom_link` under this same column name).
+    no longer emits any column carrying a room link (that mapping used to
+    publish `zoom_link` under this same column name).
     This test does not depend on the generator: it proves the template
     still refuses to render a room-link-shaped value if one ever reached
     the page's own data again, under whatever name.
 
-    Task 8, fix round 1: also strips RFC 5545 line folding ("\\r\\n "
+    Also strips RFC 5545 line folding ("\\r\\n "
     inserted every 75 octets, `agenda.ics`'s own format) before searching.
     A leaked link is folded exactly like any other long property value, so
     the literal, unfolded string this test searches for can straddle a
@@ -587,7 +587,7 @@ def test_a_built_html_page_never_mentions_the_internal_field_name_either(
 ) -> None:
     """Belt and braces beside the value-based sweep above: even the
     *name* `zoom_link` -- the speaker record's own internal field, which
-    `public_data.py` never maps to any published column (task 9) -- must
+    `public_data.py` never maps to any published column -- must
     never appear on a built page, which would mean some future template
     reached past the private/public boundary and read the record
     directly.
@@ -611,11 +611,11 @@ def _the_one_scheduled_event_id() -> str:
 def test_the_notice_precedes_the_reserved_place_for_the_registration_form(
     built_site: Path,
 ) -> None:
-    """Phase 4 spec §4 ("Formalités"): a one-screen notice on the event
-    page, *before* the form. Task 6 mounts the registration island itself
-    (`app/src/islands/signup/`); until then this page reserves its place
-    -- this test pins the ordering promise task 6 must not quietly invert
-    by mounting the island above the notice instead of beneath it.
+    """A one-screen data-protection notice on the event
+    page, *before* the form. The registration island
+    (`app/src/islands/signup/`) mounts beneath it; this test pins the
+    ordering promise, which mounting the island above the notice would
+    quietly invert.
     """
     event_id = _the_one_scheduled_event_id()
     page = (built_site / "events" / event_id / "index.html").read_text(encoding="utf-8")
@@ -625,7 +625,7 @@ def test_the_notice_precedes_the_reserved_place_for_the_registration_form(
 
 
 # -------------------------------------------------------------------------- #
-# Phase 7 task 5: the post-event survey's own static page
+# The post-event survey's own static page
 # (`site/src/survey.njk`), one per event (D-19) -- the same per-event
 # addressing `event.njk` already uses for registration, mirrored here
 # because both pages agree on what "this event" means.
@@ -652,7 +652,7 @@ def test_every_event_has_one_survey_page_addressed_by_its_lower_cased_edition_co
 def test_the_survey_notice_precedes_the_reserved_place_for_the_survey_form(
     built_site: Path,
 ) -> None:
-    """Phase 4 spec S:6, the identical "notice before the form" ordering
+    """The identical "notice before the form" ordering
     `test_the_notice_precedes_the_reserved_place_for_the_registration_
     form` already pins for registration -- `survey.njk` reserves this
     page's own place for `app/src/islands/survey/`'s mount point beneath
@@ -669,8 +669,8 @@ def test_the_survey_pages_notice_states_anonymity_retention_and_a_real_contact_a
     built_site: Path,
 ) -> None:
     """The static half of the notice `SurveyForm.tsx::Notice` used to
-    render before this task -- moved to `survey.njk`, unchanged, so every
-    claim phase 4's own review already earned (R-38's anonymity wording,
+    render before it moved -- carried into `survey.njk` unchanged, so every
+    claim a review already earned (the anonymity wording,
     the 90-day retention figure tied to the event's own key) still reads
     even with JavaScript disabled, and even before the island's own
     fetches ever run."""
@@ -716,7 +716,7 @@ def _a_past_event_id() -> str:
 def test_an_upcoming_event_page_leads_with_registration_and_drops_the_recording_section(
     built_site: Path,
 ) -> None:
-    """Fix round 1: a visitor to an upcoming edition's page came to
+    """A visitor to an upcoming edition's page came to
     register, not to be told twice (once by "Upcoming" in the rail, once
     by "No recording yet"/"No thread yet" here) that the seminar has not
     happened. Registration is band 01, and the recording section -- which
@@ -764,10 +764,10 @@ def test_a_past_event_page_still_leads_with_the_recording_section(
 
 
 # -------------------------------------------------------------------------- #
-# Fix round 2: `forum_thread` carries no status gate at all
+# `forum_thread` carries no status gate at all
 # (`public_data.py::PUBLISHABLE_ALWAYS`, no companion to
 # `RECORDING_STATUSES`), unlike `youtube_url` -- an operator can open a
-# discussion thread ahead of the seminar, and round 1 dropped the only
+# discussion thread ahead of the seminar, and an earlier design dropped the only
 # place an upcoming page could ever show it. The committed fixture's one
 # `scheduled` event carries no `forum_thread` (that gap is exactly why the
 # regression shipped), so the "with a thread" case below builds from a
@@ -848,7 +848,7 @@ def test_an_upcoming_event_page_shows_no_discuss_link_without_a_thread(
 ) -> None:
     """The committed fixture's one `scheduled` event carries no
     `forum_thread` -- nothing should render for it: no live link, and, by
-    fix round 1's own rule against a returning "No thread yet", no
+    the rule against a returning "No thread yet", no
     empty-state placeholder in its place either."""
     event_id = _the_one_scheduled_event_id()
     page = (built_site / "events" / event_id / "index.html").read_text(encoding="utf-8")
@@ -867,7 +867,7 @@ def test_an_upcoming_event_page_shows_the_discuss_link_when_a_thread_is_set(
     (`built_site_with_upcoming_forum_thread`, since the committed fixture
     never carries this combination), the link must actually appear --
     attached to the registration section, after it rather than ahead of
-    it, and without resurrecting the recording section round 1 dropped.
+    it, and without resurrecting the recording section that was dropped.
     """
     event_id = _the_one_scheduled_event_id()
     page = (
@@ -888,10 +888,10 @@ def test_an_upcoming_event_page_shows_the_discuss_link_when_a_thread_is_set(
 
 
 def test_the_event_pages_contact_address_matches_confirmations_own_constant() -> None:
-    """Phase 4 settled one contact address, and no template writes it out.
+    """There is one contact address, and no template writes it out.
 
     This used to bind `event.njk`'s own literal to `confirmation.py`'s.
-    Phase 10 task 3 removed the literal: the template names `site.contact`,
+    The literal is gone: the template names `site.contact`,
     which `.eleventy.js` derives from `config/instance.json`. So both
     halves are asserted -- the template names it rather than spelling it,
     and the *built* page carries the address `confirmation.py` sends from.
@@ -906,7 +906,7 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 
 
 # -------------------------------------------------------------------------- #
-# Task 8: archives, the speaker-proposal entry point, and the data page.
+# Archives, the speaker-proposal entry point, and the data page.
 #
 # Archives are filterable entirely without JavaScript: every option the
 # filter bar offers (a year, "with a recording", "with a discussion") is a
@@ -922,7 +922,7 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 # configured (the declaration's own `proposal_form`), and that the home page's own
 # two CTAs now go through it rather than around it.
 #
-# The data page cites phase 4's own data-protection record rather than
+# The data page cites the data-protection record rather than
 # restating it -- in particular it never repeats a retention figure, on
 # purpose (two documents stating the same number independently disagree
 # the day one changes and the other does not). What is pinned hard here,
@@ -936,7 +936,7 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 
 #: What `site/.eleventy.js` hands every template as `site`. Composed
 #: here from the one declaration rather than read out of a file, because
-#: as of phase 10 task 3 there is no file to read: the four keys that used
+#: there is no file to read: the four keys that used
 #: to be `site/src/_data/site.json` are `config/instance.json`'s own
 #: `identity`, and the data file derives them.
 #: `test_published.py::test_the_showcase_feeds_its_templates_the_declared_
@@ -991,7 +991,7 @@ def test_layout_links_to_every_page_this_task_added() -> None:
     one piece of chrome every public page shares, so a link here reaches
     every page from anywhere on the site, including the home page."""
     layout = _LAYOUT_TEMPLATE.read_text(encoding="utf-8")
-    # Fix round 4: each `href="/foo/"` moved behind Eleventy's `| url`
+    # Each `href="/foo/"` moved behind Eleventy's `| url`
     # filter -- `href="{{ '/foo/' | url }}"` -- so a bare, unfiltered href
     # here would fail this pin exactly as surely as a missing link would.
     for href in ("/archives/", "/propose/", "/data/"):
@@ -1002,12 +1002,12 @@ def test_layout_links_to_every_page_this_task_added() -> None:
 
 
 def test_home_pages_proposal_ctas_go_through_the_entry_page_not_around_it() -> None:
-    """Task 8 brief: "build the entry point to that, not to something you
-    invent" -- both "Propose a speaker" buttons on the home page point at
+    """Build the entry point to the real form, not to something invented
+    -- both "Propose a speaker" buttons on the home page point at
     `/propose/` now, not at the external form directly, so there is
     exactly one place the live form's address needs to change."""
     index_source = (SITE_SRC / "index.njk").read_text(encoding="utf-8")
-    # Fix round 4: both CTAs now read `href="{{ '/propose/' | url }}"`.
+    # Both CTAs read `href="{{ '/propose/' | url }}"`.
     assert index_source.count("'/propose/' | url") == 2
     assert "site.applyForm" not in index_source
 
@@ -1041,7 +1041,7 @@ def test_archive_filter_bar_marks_the_all_page_current_without_linking_to_it(
     assert (
         '<span class="archive-filters__current" aria-current="page">All</span>' in page
     )
-    # Fix round 4: checked against the real, prefixed address this page
+    # Checked against the real, prefixed address this page
     # would carry if it wrongly linked to itself -- checking the old,
     # unprefixed literal would pass even if a prefixed `archives/`
     # link had reappeared here.
@@ -1074,7 +1074,7 @@ def test_a_year_page_lists_only_that_years_editions(built_site: Path) -> None:
             encoding="utf-8"
         )
         assert f'aria-current="page">{year}' in page
-        # Fix round 4: same reasoning as the "All" pin above -- checked
+        # Same reasoning as the "All" pin above -- checked
         # against the real, prefixed address.
         assert f'<a href="{_pfx(f"/archives/{year}/")}">' not in page
         for event in events:
@@ -1155,8 +1155,8 @@ def test_archive_pages_carry_no_script_tag_at_all(built_site: Path) -> None:
 
 @pytest.fixture(scope="module")
 def built_site_no_past_editions(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Every event pushed to `scheduled` -- the archive's own empty state
-    ("your states include an empty archive", task 8 brief), which the
+    """Every event pushed to `scheduled` -- the archive's own empty state,
+    which the
     committed fixture can never exercise on its own since it always
     carries past editions. Same scratch-copy technique
     `built_site_with_upcoming_forum_thread` above already uses, for the
@@ -1246,7 +1246,7 @@ def test_the_two_field_filters_still_exist_on_a_wholly_empty_archive(
 @pytest.fixture(scope="module")
 def built_site_one_bare_past_edition(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Exactly one past edition, with neither a recording nor a thread --
-    task 8's own "an archive with one entry" state, and, in the same
+    the "an archive with one entry" state, and, in the same
     build, the two field-presence filters' "matches nothing" state on an
     archive that is *not* itself empty. Distinct from
     `built_site_no_past_editions` above, which can only prove "no
@@ -1344,8 +1344,8 @@ def test_the_propose_page_offers_a_form_or_says_it_is_not_open(
     `config/instance.json` declared `proposal_form:
     https://forms.example.test/propose` -- a placeholder inherited from the old
     `site/src/_data/site.json` -- and this page published it as its one
-    call to action, a live button on a public page resolving to nothing
-    (phase 10 bilan, section 7.2). `Identity.proposal_form_url` is empty
+    call to action, a live button on a public page resolving to nothing.
+    `Identity.proposal_form_url` is empty
     for a placeholder, and the template renders the other state instead.
 
     Written as an equivalence rather than as a branch: whichever state
@@ -1423,7 +1423,7 @@ def test_the_data_page_never_restates_the_retention_figure() -> None:
 def _governance_record_file() -> str:
     """The `file` `CONTENT_REGISTRY['governance/data-protection-record']`
     names, read as text. Independent of `handbook-registry.mjs`'s own
-    identical-in-spirit extraction (task 1): this test must fail if either
+    identical-in-spirit extraction: this test must fail if either
     side of the pairing it checks -- this constant, or `donnees.njk`'s own
     link -- changes without the other, not share a helper with the thing
     it verifies.
@@ -1442,12 +1442,12 @@ def _governance_record_file() -> str:
 def _published_app_base() -> str:
     """The base every published application asset URL is resolved
     against: the published prefix plus `app/`, where the cockpit and all
-    three islands publish (fix round 4 -- the islands used to set a
+    three islands publish (the islands used to set a
     different, undocumented-in-production `/app/`; see `vite.config.ts`'s
     own comment for why that reasoning did not hold once the site itself
     became prefix-aware).
 
-    Phase 10, task 2: read from the declaration rather than matched out
+    Read from the declaration rather than matched out
     of `vite.config.ts`, which no longer writes it down at all. That the
     four builds really do resolve to this is checked by running each of
     them, in `test_published.py`.
@@ -1455,7 +1455,7 @@ def _published_app_base() -> str:
     return published.load().app_base
 
 
-#: Fix round 2 (the private-repository defect, D-15): `event.njk` used to
+#: The private-repository defect (D-15): `event.njk` used to
 #: link the same data-protection record straight at `example-cockpit` -- the
 #: *private* source repository -- which hands a public visitor GitHub's own
 #: 404. `donnees.njk` already linked the published handbook address; both
@@ -1469,7 +1469,7 @@ def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None
     page's link to the governance record resolves to something published,
     not to the private repository it actually lives in the source of.
 
-    Phase 10, task 2: the templates no longer write the address at all --
+    The templates no longer write the address at all --
     they pipe a root-relative path through `absoluteUrl`, which builds it
     from `config/instance.json`. So what is checked here is that both
     templates make the *same* call (they cannot state two different
@@ -1529,7 +1529,7 @@ def test_the_governance_record_link_resolves_to_the_published_handbook(
 
 @pytest.fixture(scope="module")
 def published_handbook(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A real run of `copyHandbook` (task 1's own allowlist filter,
+    """A real run of `copyHandbook` (the allowlist filter in
     `app/scripts/handbook-registry.mjs`) against the real `docs/` tree,
     into a scratch destination -- proof that the file `donnees.njk` links
     to is actually among what the app publishes, not merely named
@@ -1582,7 +1582,7 @@ def test_the_governance_record_is_actually_among_what_the_app_publishes(
 
 
 # -------------------------------------------------------------------------- #
-# Fix round 4: the path-prefix defect. GitHub Pages serves this project's
+# The path-prefix defect. GitHub Pages serves this project's
 # build output one path segment below a bare domain root, not at
 # a bare domain root -- there is no CNAME and no custom domain. Every
 # template used to write its internal links as a bare `/foo`, which
@@ -1655,7 +1655,7 @@ def test_the_path_prefix_agrees_with_the_addresses_python_already_pins() -> None
     anywhere. `registration.SIGNUP_BASE`, `certificate.VERIFICATION_BASE`
     and the application's own `base` all used to carry it independently,
     bound to each other by tests that could say the copies still agreed
-    but never that there was one. Phase 10 task 2 made there be one: this
+    but never that there was one. There is one now: this
     now checks that each of those addresses is genuinely *under* the
     declared root, which is the property the rest of this module's
     prefixed assertions rest on. What still needs a real run to be worth
@@ -1680,11 +1680,11 @@ def test_the_path_prefix_agrees_with_the_addresses_python_already_pins() -> None
 
 
 def test_absolute_urls_share_the_one_origin_this_project_already_pins() -> None:
-    """D-14/D-26: task 10 introduces this project's first *absolute* URLs
-    (structured data, share metadata, the sitemap, the feed) and therefore
-    its first need for a full origin, not just the path prefix
+    """D-14/D-26: structured data, share metadata, the sitemap and the
+    feed are this project's *absolute* URLs, and therefore
+    its need for a full origin, not just the path prefix
     `test_the_path_prefix_agrees_with_the_addresses_python_already_pins`
-    above already binds. Phase 10 task 2: the origin and the prefix are
+    above already binds. The origin and the prefix are
     two properties of one declared value now, so this checks the property
     that still means something -- that every absolute address this
     project builds starts at that one root.
@@ -1702,7 +1702,7 @@ def test_absolute_urls_share_the_one_origin_this_project_already_pins() -> None:
 
 
 # -------------------------------------------------------------------------- #
-# Task 10: structured event data, share metadata, a sitemap and a feed.
+# Structured event data, share metadata, a sitemap and a feed.
 #
 # Every URL this section checks is *absolute* (`_absolute`, above) -- this
 # is the one part of the site where a merely-prefixed root-relative link
@@ -1766,7 +1766,7 @@ def _an_archived_event_with_recording_id() -> str:
 def test_an_event_pages_structured_data_names_the_event_type_and_its_real_date(
     built_site: Path,
 ) -> None:
-    """Task 10, step 1: structured event data on every event page, so a
+    """Structured event data on every event page, so a
     search engine shows date and place correctly rather than reading the
     page as an ordinary article."""
     event_id = _the_one_scheduled_event_id()
@@ -1784,7 +1784,7 @@ def test_an_event_pages_structured_data_names_the_event_type_and_its_real_date(
 def test_the_paris_offset_and_label_agree_across_every_edition_and_the_dst_boundary(
     built_site: Path,
 ) -> None:
-    """Fix round 1: `startDate`'s UTC offset must be the one Europe/Paris
+    """`startDate`'s UTC offset must be the one Europe/Paris
     actually observes on the edition's own date, not a fixed `+01:00` --
     silently wrong by an hour for any edition in daylight-saving time,
     which three of this project's own five fixture editions are. And the
@@ -1977,12 +1977,12 @@ def test_every_page_carries_a_canonical_link_and_matching_open_graph_metadata(
 def test_no_page_ever_references_an_og_image_that_would_be_a_dangling_link(
     built_site: Path,
 ) -> None:
-    """The other half of acceptance criterion 6: the per-event social image
-    is phase 6's own deliverable (spec §6); until then, `layout.njk` emits
+    """The other half of a correct preview: until a per-event social image
+    exists, `layout.njk` emits
     no `og:image`/`twitter:image` at all rather than one pointing at a file
     that does not exist yet -- "a fallback that is not broken" read
     literally: a link-preview bot renders a correct text-only card, never
-    a broken image. Written to survive phase 6 landing a real image, not
+    a broken image. Written to survive a real image landing, not
     merely to prove today's absence: whichever this repository does,
     a referenced image must resolve to a file the build actually wrote.
     """
@@ -2010,7 +2010,7 @@ def test_no_page_ever_references_an_og_image_that_would_be_a_dangling_link(
 def test_every_addressable_page_is_in_the_sitemap_and_the_two_archive_filters_are_not(
     built_site: Path,
 ) -> None:
-    """Task 10, step 3, and the task brief's own worked mutation: remove a
+    """The worked mutation: remove a
     page from the sitemap and this is the test that notices. Every page
     this project's committed fixture actually generates is expected, by
     name, except the two archive facets (`archives-filter.njk`'s own
@@ -2102,7 +2102,7 @@ def test_the_feed_lists_every_edition_newest_first_and_nothing_else(
 def test_the_feed_description_agrees_with_the_event_pages_own_description(
     built_site: Path,
 ) -> None:
-    """Branch review (fix wave), minor 2: `feed.njk`'s fallback description
+    """`feed.njk`'s fallback description
     for an edition with no `abstract` had drifted from `event.njk`'s
     identical rule -- missing the closing " — a <organisation> virtual
     seminar." sentence -- while `feed.njk`'s own comment claimed the two
@@ -2175,7 +2175,7 @@ def _expected_paris_start(iso_date: str) -> tuple[str, str]:
     'CET'/'CEST' for this zone; unambiguous at 12:30, since Europe/Paris's
     DST transitions all happen in the small hours.
 
-    Fix round 1: this replaces a fixed `timezone(timedelta(hours=1))` that
+    This replaces a fixed `timezone(timedelta(hours=1))` that
     silently assumed CET year-round -- wrong for any edition falling in
     daylight-saving time, which three of this project's own five fixture
     editions do.
@@ -2337,7 +2337,7 @@ def test_the_sitemap_still_lists_the_static_pages_with_no_editions_at_all(
 
 
 # ------------------------------------------------------------------ #
-# Task 8 (phase 6): the public agenda feed (`/agenda.ics`) -- iCalendar,
+# The public agenda feed (`/agenda.ics`) -- iCalendar,
 # distinct from `feed.xml`'s RSS syndication feed above. Every test below
 # parses the real, built `agenda.ics` bytes with `ics_reader.parse_calendar`
 # -- a reader written independently of `site/.eleventy.js`'s own escape/
@@ -2551,10 +2551,10 @@ def test_agenda_feed_long_title_folds_and_round_trips_intact(
 
 
 # -------------------------------------------------------------------------- #
-# Task 9 (phase 6): the share banner reaches a stable, published address.
+# The share banner reaches a stable, published address.
 #
-# `og:image`/`twitter:image` (phase 5's own task 10, whose comment on the
-# block these tests exercise explains why the tag was left out until now)
+# `og:image`/`twitter:image` (whose comment on the
+# block these tests exercise explains why the tag was left out at first)
 # resolve to real content only once a banner file actually exists at the
 # address the tag names -- and the committed fixture this module's own
 # `built_site` builds from can never exercise that on its own: no fixture
@@ -2592,11 +2592,11 @@ _SITE_PROJECT_ROOT = ROOT / "site"
 #: The smallest byte sequence libpng accepts as a real image (a 1x1, true
 #: colour PNG) -- a stand-in for a real rendered banner, not one: these
 #: tests prove the *pipeline* (a file present, a tag built, its bytes
-#: delivered), never the composition itself (`test_visual.py` and task 5's
-#: own pinned image comparison already own that). Fabricated bytes, never
+#: delivered), never the composition itself (`test_visual.py` and the
+#: pinned image comparison already own that). Fabricated bytes, never
 #: this instance's own identity or any real speaker's likeness -- there is
-#: nothing here for P-4 or the "no personal data in the repository"
-#: constraint to say anything about.
+#: nothing here for the consent gate or the "no personal data in the
+#: repository" constraint to say anything about.
 _MINIMAL_PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk"
     "+A8AAQUBAScY42YAAAAASUVORK5CYII="
@@ -2623,7 +2623,7 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
         scratch_site,
         ignore=shutil.ignore_patterns("node_modules", "_site"),
     )
-    # Phase 10, task 2: `.eleventy.js` reads this project's published
+    # `.eleventy.js` reads this project's published
     # address from `config/instance.json`, one level above `site/` -- the
     # same way it already passthrough-copies `../fonts`. A copy of `site/`
     # alone is no longer a buildable tree, and the build says so loudly
@@ -2633,7 +2633,7 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
     shutil.copy2(
         ROOT / "config" / "instance.json", scratch_root / "config" / "instance.json"
     )
-    # Phase 11, task 6: and `.eleventy.js` now also reads the declaration
+    # And `.eleventy.js` also reads the declaration
     # the *product* ships, to decide whether this instance is still
     # publishing the example's identity. Same reasoning one paragraph up,
     # one file further out: a tree carrying the declaration but not the
@@ -2679,10 +2679,10 @@ _TWITTER_IMAGE_RE = re.compile(r'<meta name="twitter:image" content="([^"]*)"')
 def test_a_scheduled_editions_share_banner_produces_a_correctly_dimensioned_tag(
     built_site_with_share_banner: Path,
 ) -> None:
-    """Task 9, acceptance step 2: `og:image` and its card equivalent, with
+    """`og:image` and its card equivalent, with
     dimensions, pointing at the published address -- built from a real
     banner file this fixture placed for the fixture's own scheduled
-    edition, not asserted against an absence the way phase 5's own task 10
+    edition, not asserted against an absence the way the sibling
     test still correctly does for the ordinary, no-banner build
     (`built_site`, above)."""
     event_id = _the_one_scheduled_event_id()
@@ -2749,7 +2749,7 @@ def test_an_edition_with_no_banner_file_still_emits_no_og_image_tag(
     other one does not -- proof that a banner appearing for one edition
     does not leak an `og:image` tag onto pages that have none of their
     own, and that the "correct absence, not a broken pointer" choice
-    (phase 5's own task 10) still holds once the feature it was waiting
+    still holds once the feature it was waiting
     for exists."""
     events = _events_fixture()
     other_ids = [
@@ -2850,7 +2850,7 @@ def test_the_build_emits_the_published_repositorys_own_readme(
 def test_no_page_of_a_configured_instance_carries_the_unconfigured_banner(
     built_site: Path,
 ) -> None:
-    """The half of phase 11 task 6 that decides whether the other half
+    """The half that decides whether the other half
     survives: a banner that shows when it should not is deleted within a
     week, and it takes the real warning with it.
 

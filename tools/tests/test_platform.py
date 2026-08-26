@@ -34,15 +34,15 @@ def _write_csv(path: Path, *rows: str) -> None:
 
 def _rows_from_csv_lines(*rows: str) -> list[AttendanceRow]:
     """The same rows `_write_csv` would have written, already parsed --
-    the input `encrypt_attendance_rows` takes (fix round 1, R-45: one
-    envelope per row, not one for the whole CSV)."""
+    the input `encrypt_attendance_rows` takes: one
+    envelope per row, not one for the whole CSV."""
     parsed, issues = parse_attendance_csv("\n".join((CSV_HEADER, *rows)) + "\n")
     assert issues == []
     return parsed
 
 
 def _write_encrypted_csv(path: Path, public_pem: str, *rows: str) -> None:
-    """The committed shape (fix round 1): one independent `eventkeys`
+    """The committed shape: one independent `eventkeys`
     envelope per row, hybrid-encrypted under `public_pem` via
     `encrypt_attendance_rows` -- the real function this module ships,
     never a hand-rolled stand-in for it."""
@@ -88,12 +88,12 @@ def _platform(
 def test_manual_platform_satisfies_the_platform_protocol(tmp_path: Path) -> None:
     """`ManualPlatform` is not a stopgap: a caller written against the
     `Platform` interface must accept it without an isinstance check ever
-    failing, exactly as it will later accept task 3's platform_fcc.py."""
+    failing, exactly as it accepts platform_fcc.py."""
     assert isinstance(_platform(tmp_path), Platform)
 
 
 # ------------------------------------------------------------------ #
-# find_speaker -- R-5: event_id is edition_code, lower-cased
+# find_speaker -- event_id is edition_code, lower-cased
 # ------------------------------------------------------------------ #
 
 
@@ -124,7 +124,7 @@ def test_find_speaker_ignores_a_record_with_no_edition_code() -> None:
 
 # ------------------------------------------------------------------ #
 # get_room -- the room comes from the speaker record, instructions from
-# data/config.yml (R-5, R-6)
+# data/config.yml
 # ------------------------------------------------------------------ #
 
 
@@ -146,7 +146,7 @@ def test_get_room_reads_the_join_url_from_the_matching_speaker_record(
 def test_get_room_reads_instructions_from_config_not_the_speaker_record(
     tmp_path: Path,
 ) -> None:
-    """R-6: D-06 makes the account itself the permanent room, so join
+    """D-06 makes the account itself the permanent room, so join
     instructions describe a room that never changes -- a property of the
     series (`data/config.yml`), not of one event."""
     speakers = [_speaker(edition_code="MRG-901")]
@@ -187,7 +187,7 @@ def test_get_room_raises_when_no_speaker_record_matches_the_event(
 
 
 def test_get_room_the_same_instructions_apply_to_every_event(tmp_path: Path) -> None:
-    """The point of R-6, made concrete: two different events, one config,
+    """The point, made concrete: two different events, one config,
     the same instructions -- because it is the same room."""
     speakers = [
         _speaker(edition_code="MRG-901", zoom_link="https://meet.example.org/room"),
@@ -226,7 +226,7 @@ def test_get_room_also_validates_the_event_id_first(tmp_path: Path) -> None:
 
 
 def test_an_event_id_at_the_length_cap_is_accepted(tmp_path: Path) -> None:
-    """Minor 7, branch review: `_EVENT_ID_MAX_LENGTH` is 64, matching
+    """`_EVENT_ID_MAX_LENGTH` is 64, matching
     `services/signup-relay/src/index.js::EVENT_ID_RE`'s own cap. Exactly
     at the boundary must still be accepted -- `AttendanceImportError`, not
     `ValueError`, since a 64-character id is a legal *shape* that
@@ -309,7 +309,7 @@ def test_email_is_never_an_empty_string(tmp_path: Path) -> None:
 def test_a_reconnection_produces_two_separate_rows_not_a_summed_one(
     tmp_path: Path,
 ) -> None:
-    """Confirmed empirically against the real platform (task 3's brief): a
+    """Confirmed empirically against the real platform: a
     disconnect-and-rejoin produces several rows for the same person, summed
     downstream. Summing here would make that impossible to do correctly
     later -- it belongs to attendance.py, not to the platform reader."""
@@ -352,11 +352,11 @@ def test_missing_attendance_file_raises_and_names_the_event(tmp_path: Path) -> N
 def test_missing_attendance_file_message_does_not_leak_the_repository_root(
     tmp_path: Path,
 ) -> None:
-    """Small item 2 (fix round 3): the message used to interpolate the
+    """The message used to interpolate the
     absolute `path` this class actually checked, which carries
     `CONVENER_REPO_ROOT` -- here, `tmp_path` itself, standing in for a CI
     runner's own filesystem layout -- into a job's own log for no reason,
-    the same leak minor 5 of fix round 1 already closed for `cli.py`'s own
+    the same leak already closed for `cli.py`'s own
     register-path messages. Only the repository-relative form should ever
     appear; `tmp_path`'s own absolute string must not."""
     with pytest.raises(AttendanceImportError) as excinfo:
@@ -412,9 +412,10 @@ def test_duplicate_column_names_are_refused_not_silently_collapsed() -> None:
 def test_duplicate_column_message_names_the_count_and_position_never_the_text(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Important 5, fix round 1: this branch used to echo the duplicated
+    """This branch used to echo the duplicated
     column's own *name* -- the file's own header text, written by
-    whatever export tool produced it -- and task 17 is what made this
+    whatever export tool produced it -- and the committed encrypted export
+    is what made this
     branch reachable from a CI job log at all (the manual path previously
     had no file to read there). The message must still be enough to find
     and fix the file: the count, and the 1-based header position(s)."""
@@ -669,8 +670,8 @@ def test_get_attendance_ignores_extra_cells_on_an_over_long_row(
 
 
 # ------------------------------------------------------------------ #
-# get_attendance -- the encrypted export (task 17, AC8: the manual
-# implementation must run end to end with no external account). See
+# get_attendance -- the encrypted export: the manual
+# implementation must run end to end with no external account. See
 # `platform.py`'s own module docstring, "the plaintext CSV is never
 # committed -- the encrypted export is", for why this exists at all.
 # ------------------------------------------------------------------ #
@@ -727,7 +728,7 @@ def test_get_attendance_refuses_the_encrypted_export_without_a_private_key(
 def test_get_attendance_refuses_when_every_row_fails_to_decrypt(
     tmp_path: Path,
 ) -> None:
-    """R-46, fix round 2: with one independent envelope per row, a private
+    """With one independent envelope per row, a private
     key that matches no row at all is not the same case as one damaged
     row among good ones -- it is the wrong file (the export was committed
     for a different event's key by mistake, one copied identifier away
@@ -842,7 +843,7 @@ def test_decrypt_attendance_rows_skips_one_row_that_fails_to_decrypt(
 def test_decrypt_attendance_rows_returns_the_good_two_of_three_when_one_is_foreign(
     tmp_path: Path,
 ) -> None:
-    """R-46's own worked example: *some* rows failing is a damaged file,
+    """The worked example: *some* rows failing is a damaged file,
     tolerable -- one foreign row among three still returns the other
     two."""
     private_pem, public_pem = eventkeys.generate()
@@ -866,7 +867,7 @@ def test_decrypt_attendance_rows_returns_the_good_two_of_three_when_one_is_forei
 def test_decrypt_attendance_rows_refuses_when_every_row_is_foreign(
     tmp_path: Path,
 ) -> None:
-    """R-46, fix round 2: *all* rows failing is the wrong file, not a
+    """*All* rows failing is the wrong file, not a
     damaged one -- an export encrypted entirely under a different event's
     key. `[]` here would read downstream as "nobody attended", which is
     certainly false for a non-empty committed file, so this refuses
@@ -903,7 +904,7 @@ def test_load_attendance_export_file_starts_empty_when_text_is_none() -> None:
 
 
 # ------------------------------------------------------------------ #
-# erase_attendance_rows -- fix round 1, R-45 / Critical 1: an early
+# erase_attendance_rows -- an early
 # erasure request has to remove a person's rows from the committed
 # attendance export too, or the request is not actually satisfied.
 # ------------------------------------------------------------------ #
@@ -912,7 +913,7 @@ def test_load_attendance_export_file_starts_empty_when_text_is_none() -> None:
 def test_erase_attendance_rows_removes_the_target_and_leaves_neighbours_byte_identical(
     tmp_path: Path,
 ) -> None:
-    """Task 15's existing shape for `registrations.enc`, applied unchanged:
+    """The existing shape for `registrations.enc`, applied unchanged:
     erasing one row must not so much as re-serialise another. Compares
     the two surviving envelopes verbatim, not merely "still decrypts to
     the same row" -- the guarantee is that nothing else moved at all."""

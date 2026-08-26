@@ -1,6 +1,6 @@
 """The boundary between what an instance owns and what the product ships.
 
-Phase 10 exists because a duplicate of this repository updates by
+This boundary exists because a duplicate of this repository updates by
 **merging**: it works when upstream's commits and the instance's commits
 never touch the same file, and it collapses into conflicts otherwise. The
 rule the phase states in one sentence is *upstream never writes into an
@@ -51,8 +51,8 @@ What these three do **not** cover, stated plainly rather than left to be
 discovered:
 
 - **Content.** A hard-coded organisation name inside a product file is not
-  visible here at all. That is tasks 2 to 4 of this phase, and the build
-  sweep of task 5.
+  visible here at all. That is what the substitution vocabulary and the
+  second-instance build sweep are for.
 - **Completeness.** A new instance-owned file created *outside* the
   declared paths is invisible: the boundary can only hold what somebody
   declared. Clause 2 catches the reverse mistake (code moving into an
@@ -138,8 +138,8 @@ def test_this_repository_declares_a_boundary_that_reads() -> None:
     *membership*, never as the whole list -- a test that restated the list
     would be the second copy this whole design exists to refuse.
 
-    `site/src/_data/site.json` was the fourth of these until phase 10 task
-    3, which folded its four keys into `config/instance.json`'s own
+    `site/src/_data/site.json` was the fourth of these until
+    its four keys were folded into `config/instance.json`'s own
     `identity` and left `site/.eleventy.js` composing them. The file
     entry went with the file, and nothing under `site/` is the instance's
     now -- so the anchor moved to `docs/governance/register.md`, the one
@@ -157,8 +157,8 @@ def test_every_file_in_config_states_which_it_is() -> None:
     saying nothing at all.
 
     Every file in every format `boundary.CONFIG_READERS` knows, compared
-    against what the directory really holds: phase 10 task 2 added
-    `config/instance.json`, and a check that only ever globbed `*.yml`
+    against what the directory really holds: `config/instance.json` is
+    JSON, and a check that only ever globbed `*.yml`
     would have let a second format arrive here with nobody deciding what
     it is -- the exact silence this directory was in before.
     """
@@ -487,8 +487,8 @@ def test_every_regenerated_path_is_told_to_git_how_to_merge() -> None:
 
 def test_the_register_is_the_regenerated_path_this_task_found() -> None:
     """The anchor, so the clause above cannot pass over an empty set or a
-    set somebody quietly widened. One path today, and it is the one phase
-    10 task 1 found and task 3 ruled on."""
+    set somebody quietly widened. One path today, and it is the one this
+    repository found and ruled on."""
     assert load().regenerated_paths == ("docs/governance/register.md",)
     assert (ROOT / "docs" / "governance" / "register.md").is_file()
 
@@ -715,7 +715,7 @@ def _module_level_reads(source: str) -> list[tuple[int, str]]:
 
 
 def test_no_test_module_reads_an_instance_path_while_it_loads() -> None:
-    """Phase 12, task 5. A read at module scope is not a failing test, it
+    """A read at module scope is not a failing test, it
     is a module that never collects: in a derived repository, where these
     paths are the derivation's to lay back in, every test in the file goes
     down together and the report is a stack trace rather than a sentence.

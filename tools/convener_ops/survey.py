@@ -1,7 +1,7 @@
 """Turn one decrypted survey response into a stored, re-encrypted record.
 
-Phase 4 spec S:6: the post-event questionnaire is optional, short, sent only
-to people recognised present (task 16b's job, not this module's), and rides
+The post-event questionnaire is optional, short, sent only
+to people recognised present (`survey_invite.py`'s job, not this module's), and rides
 the *same* intake as registration -- "meme entree que l'inscription, meme
 stockage chiffre, meme destruction de cle." This module is the storage half
 of that sentence: `app/src/survey/encrypt.ts` hybrid-encrypts a response in
@@ -46,8 +46,8 @@ address. Two things follow from that, deliberately:
    `add_response` only ever appends a fresh, independently encrypted entry.
    A participant who submits twice leaves two entries; nothing here can or
    should tell that those two entries came from the same person, and
-   nothing about eligibility (task 16b's own gate, "reconnues presentes")
-   depends on this module being able to.
+   nothing about eligibility -- the invitation's own gate, "recognised as
+   present" -- depends on this module being able to.
 2. **There is no erase-by-identity path**, unlike
    `registration.py::erase` and `find_by_matching_code`. A right-to-erasure
    request naming one person's *survey answers* specifically cannot be
@@ -70,7 +70,7 @@ length. What remains, on purpose, is the one channel padding cannot touch
 array position with arrival time, at whatever resolution the workflow that
 writes it commits at. That is a property of an append-only git store, not
 a defect this module introduces or could remove without breaking the
-independent-envelope-per-response shape task 15 needs -- see
+independent-envelope-per-response shape retention needs -- see
 `docs/reference/operations.md`'s "Retention and early erasure" section,
 which carries the full argument for whoever next builds on this file.
 
@@ -94,12 +94,12 @@ Same destruction, and nothing new to destroy
 `eventkeys.destroy` operates on an event id, not on a filename: destroying
 `CONVENER_EVENT_KEY_<ID>` makes *both* `registrations.enc` and
 `survey-responses.enc` for that event permanently unreadable in the same
-one operation, on the same 90-day schedule task 15 already sweeps. Nothing
+one operation, on the same 90-day schedule the sweep already runs. Nothing
 in `tools/convener_ops/cli.py::retention_sweep` or `record_destructions` needed
 to change for this file to be covered -- that is the point of "meme
 destruction de cle" being a design property of the key, not a second
 procedure this module would otherwise have had to add and then keep in
-sync with task 15's.
+sync with the sweep's.
 
 A length cap, for the same reason registration.py has one
 --------------------------------------------------------------
@@ -150,7 +150,7 @@ _RATING_MAX: Final = 5
 #: See the module docstring's "A length cap" section.
 _MAX_FEEDBACK_LENGTH: Final = 2000
 
-#: R-39 (fix round 1): AES-GCM does not pad, so an unpadded ciphertext's
+#: AES-GCM does not pad, so an unpadded ciphertext's
 #: length is a deterministic function of the plaintext's -- measured
 #: before this fix, an empty `feedback` produced a 92-character base64
 #: ciphertext and a 2000-character one produced 2756, and even
@@ -205,12 +205,12 @@ def _unpad(data: bytes) -> bytes:
 def _to_plaintext(response: SurveyResponse) -> bytes:
     """The inverse of `to_survey_response`'s field extraction -- the JSON
     `add_response` encrypts afresh for storage, and the same bytes
-    `to_survey_response`'s own R-40 length check below measures before
+    `to_survey_response`'s own length check below measures before
     accepting a response at all. Parsed back through `json.loads`, never by
     position, so field order here does not have to match anything; only the
     same three keys have to round trip.
 
-    `ensure_ascii=False` (fix round 2, R-40): the default flips every
+    `ensure_ascii=False`: the default flips every
     non-ASCII character to a `\\uXXXX` escape -- six bytes for a BMP
     character, twelve for an astral one via a surrogate pair -- while
     `encrypt.ts`'s `JSON.stringify` leaves non-ASCII as itself, at most 4
@@ -249,8 +249,8 @@ def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | No
     `None`: a ciphertext that does not decrypt at all, a plaintext that is
     not the JSON object this module writes, a field missing, extra, or of
     the wrong type, a rating outside `[1, 5]`, feedback text longer than
-    `_MAX_FEEDBACK_LENGTH` once stripped in code points, or -- R-40, fix
-    round 2 -- a response whose re-encoded bytes would not fit
+    `_MAX_FEEDBACK_LENGTH` once stripped in code points, or a response
+    whose re-encoded bytes would not fit
     `_PLAINTEXT_PAD_BYTES` once re-serialised for storage. That last check
     exists because `_MAX_FEEDBACK_LENGTH` bounds *characters*, not bytes:
     a script where each character costs up to 4 UTF-8 bytes (most non-Latin
@@ -303,7 +303,7 @@ def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | No
         recommend=data["recommend"],
         feedback=feedback,
     )
-    # R-40, fix round 2: the character cap above is not a byte cap -- see
+    # The character cap above is not a byte cap -- see
     # this function's own docstring. `>=`, not `>`, to match `_pad`'s own
     # boundary exactly: `_pad` raises at `>= _PLAINTEXT_PAD_BYTES`, so this
     # must refuse at that same boundary for `_pad` to never be reachable
@@ -316,8 +316,8 @@ def to_survey_response(ciphertext: str, private_pem: str) -> SurveyResponse | No
 
 @dataclass(frozen=True)
 class ResponseFile:
-    """`survey-responses.enc`'s in-memory shape: the entries. (Minor 3, fix
-    round 1: this dataclass carries `entries` only -- the file's own `"v"`
+    """`survey-responses.enc`'s in-memory shape: the entries. (This
+    dataclass carries `entries` only -- the file's own `"v"`
     key is a module constant, `FILE_VERSION`, supplied by
     `dump_response_file` on the way out and checked by `load_response_file`
     on the way in; it is never stored on this object.) Every entry is a
@@ -382,8 +382,8 @@ def add_response(
     been handed to decrypt the incoming submission in the first place --
     never whatever happens to be committed at `keys/events/<id>.pub`.
 
-    The plaintext is padded to `_PLAINTEXT_PAD_BYTES` before encryption
-    (R-39): re-encrypting for storage is exactly the moment this module
+    The plaintext is padded to `_PLAINTEXT_PAD_BYTES` before encryption:
+    re-encrypting for storage is exactly the moment this module
     controls the plaintext going into AES-GCM, so it is also the moment
     that fixes the stored ciphertext's length regardless of what
     `response.feedback` holds.

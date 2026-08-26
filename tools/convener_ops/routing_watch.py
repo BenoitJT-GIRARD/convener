@@ -1,7 +1,7 @@
 """Evidence, inside this repository, that a registration can still be queued.
 
-Phase 9, task 6, and the gap phase 9's own report names in its section 5:
-"the saving can disappear in silence". Tasks 2 and 3 gave a registration
+The gap the submission queue leaves behind:
+"the saving can disappear in silence". A registration has
 two lanes, and `registration_routing.py` states in as many words that
 **every** failure to resolve `public-data/registration-routing.json`
 resolves to the *immediate* lane -- a 404, a body that will not decode, a
@@ -14,10 +14,10 @@ run.
 
 The cost of *never finding out* is the whole phase. If the projection goes
 stale, or an event never reaches it, every registration takes the immediate
-lane and bills a run each -- exactly the behaviour tasks 2 and 3 replaced.
+lane and bills a run each -- exactly the behaviour the queue replaced.
 Nobody is harmed, nothing is lost, the queue is simply empty, and an empty
 queue looks like a quiet day. The only backstop before this module was
-phase 8's budget alarm, which speaks a week later and about a different
+the budget alarm, which speaks a week later and about a different
 thing. A control that cannot fail loudly is not a control (D-25); this
 module is that requirement applied to a saving rather than to a protection.
 

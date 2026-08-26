@@ -146,8 +146,8 @@ def expire_votes(
 # Marking a member inactive does nothing to their GitHub repository write
 # access -- the two are separate systems, and a former board member proposed
 # inactive keeps that access, and with it the ability to read or exfiltrate
-# any secret this repository holds (AF-1: this project applies least
-# privilege to data, never to credentials). The proposed-inactive line below
+# any secret this repository holds -- this project applies least
+# privilege to data, never to credentials. The proposed-inactive line below
 # says so every time, at the moment a human is already reading it to act on
 # that person, rather than once in a document nobody opens at the point of
 # action.

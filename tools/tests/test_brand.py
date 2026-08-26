@@ -10,7 +10,7 @@ measured charter gives 7.93, AAA (`docs/superpowers/deferred-work.md`, entry 1).
 and this module holds what makes that stick.
 
 A third file, `app/src/design/tokens.ts`, used to be generated here too and
-was covered by this module's own tests. Fix round 1 retired it -- nothing
+was covered by this module's own tests. It was retired -- nothing
 under `app/src` ever imported it -- so it is guarded only by
 `test_the_reconstructions_palette_never_reappears` staying silent about it
 now, not by a generation test for a file that no longer exists.
@@ -95,7 +95,7 @@ _GUARDED_FILES = (
     Path("site") / "src" / "index.njk",
     Path("app") / "src" / "design" / "tokens.css",
     Path("app") / "src" / "auth" / "Login.tsx",
-    # Phase 10 task 4: the two files a collaborator downloads. They carried
+    # The two files a collaborator downloads. They carried
     # all three of these values until they stopped being drawn by hand.
     ANNOUNCEMENT_SVG_PATH,
     FLYER_SVG_PATH,
@@ -197,10 +197,10 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
         checked += 1
     # Every entry data/brand.json currently carries -- a change to that
     # section without a matching change here would otherwise pass silently.
-    # 9 through task 4, plus 2 task 7 added for the verify page's own
-    # panel (turquoise_text_on_cream, ink_muted_on_cream), plus 1 task 11
-    # added (turquoise_on_purple) once the accessibility sweep found the
-    # pairing had gone unnamed since task 4.
+    # Nine at first, plus two the verify page's own
+    # panel needed (turquoise_text_on_cream, ink_muted_on_cream), plus one
+    # (turquoise_on_purple) the accessibility sweep found had gone
+    # unnamed.
     assert checked == 12
 
 
@@ -210,7 +210,7 @@ def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
     text, and the measured charter that replaced it clears it.
 
     The two colours are read from the charter in force rather than typed.
-    They were typed until phase 12 task 6, and the two hexadecimal values
+    They used to be typed, and the two hexadecimal values
     in them were `data/brand.json`'s own -- one instance's declared
     palette, written into a test of the *product's* arithmetic, where the
     derivation quite correctly replaced them with another instance's and
@@ -238,8 +238,8 @@ def test_relative_luminance_of_white_and_black_are_the_extremes() -> None:
 
 
 def test_hex_to_rgb_and_the_css_literals_built_from_it() -> None:
-    # A colour that is nobody's: this read one instance's declared
-    # turquoise until phase 12 task 6, which made a test of six lines of
+    # A colour that is nobody's: this used to read one instance's declared
+    # turquoise, which made a test of six lines of
     # arithmetic depend on which instance was running the repository.
     assert hex_to_rgb("#0080ff") == (0, 128, 255)
     assert rgba("#0080ff", 0.35) == "rgba(0, 128, 255, 0.35)"
@@ -276,7 +276,7 @@ def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> No
     clears AA on whichever ground it can now appear on; this pins that each
     one stays off the value that would fail there again.
 
-    `.archive__action:hover` joined this dict at task 11: task 4 found it
+    `.archive__action:hover` joined this dict late: it was found early
     (a solid turquoise fill under white text, 1.61 -- measured at 2.54 by
     a real browser) and deliberately left it, out of its own scope, for
     the accessibility task to fix. That task moved it to the same purple
@@ -522,7 +522,7 @@ def test_the_terminal_output_is_ascii(
 
 
 # --------------------------------------------------------------------------
-# Phase 10 task 4: one charter, a product default, and a mark that refuses
+# One charter, a product default, and a mark that refuses
 # --------------------------------------------------------------------------
 
 
@@ -887,7 +887,7 @@ def test_a_palette_that_measures_below_aa_does_not_build(
     ground = "#3fb1c2"
     data["colour"]["turquoise"] = ground
     # Recomputed against the charter in force rather than written out.
-    # The five figures were literals until phase 12 task 6, and they were
+    # The five figures used to be literals, and they were
     # honest only for one instance's purple and ink: under another's the
     # generator reported a *mismatch* first and this test lost its
     # subject, which is not the failure it exists to provoke.

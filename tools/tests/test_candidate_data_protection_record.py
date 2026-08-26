@@ -1,7 +1,7 @@
 """`docs/governance/candidate-data-protection.md`, against the schema it
 describes.
 
-Security audit finding M2 (2026-08-23): `docs/governance/traitement-donnees.md`
+A security review found that `docs/governance/traitement-donnees.md`
 described `data/speakers.yml` in one sentence -- "speakers' own names and
 institutional email addresses" -- and pointed at
 `docs/governance/selection-criteria.md` for the rest, which is the Board's

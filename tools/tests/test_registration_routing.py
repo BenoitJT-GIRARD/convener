@@ -1,5 +1,4 @@
-"""Which lane a registration takes, and the floor under the threshold
-(phase 9, task 3).
+"""Which lane a registration takes, and the floor under the threshold.
 
 Four groups, in this order:
 

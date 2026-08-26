@@ -1,6 +1,6 @@
 """Evidence, inside this repository, that the submission queue still empties.
 
-Phase 9, task 4. Tasks 2 and 3 made a public submission wait in a branch
+A public submission waits in a branch
 instead of starting a run of its own, and every failure *inside* a drain is
 already loud: a refusal is annotated, a deferral is annotated **and** turns
 the daily job red (`submission_queue.annotation_lines`). What none of that
@@ -18,13 +18,12 @@ could not:
 
 * the daily drain stops running -- GitHub disables a workflow's `schedule:`
   after 60 days without activity in the repository, and an exhausted
-  Actions minute budget simply stops work (AF-2, 2026-08-23 security
-  audit);
+  Actions minute budget simply stops work;
 * the drain runs and fails on the same entry every time;
 * entries defer past `submission_queue.MAX_EVENTS_PER_DRAIN` day after day,
   because more than that many distinct events have submissions waiting;
 * an entry defers for ever because no key is configured for its event --
-  task 2 deliberately keeps such an entry *in* the queue rather than
+  the drain deliberately keeps such an entry *in* the queue rather than
   dropping it, which is right, and which also means it waits indefinitely
   if nobody looks.
 
@@ -57,14 +56,14 @@ An entry that is *known* to be stuck can only be known by something that
 read the queue -- which is the daily drain, which by definition is running.
 So the daily job is where that alarm belongs, and it is also the only place
 that already has the board's thread and team mention (D-07). It posts with
-its own body file for the reason phase 8's budget alarm does: the digest
+its own body file for the reason the budget alarm does: the digest
 composed in the same job writes `notify-body.md`, and one file for two
 messages means whichever is composed last silently replaces the other.
 
 **The drain having stopped altogether cannot be detected from inside it.**
 A control hosted in the job it watches reports nothing when that job is the
 thing that went quiet -- the identical argument `retention-watchdog.yml`
-records for `retention.yml` and, since phase 8, for `data/actions-usage.yml`.
+records for `retention.yml` and for `data/actions-usage.yml`.
 So the second half is a record, `data/queue-watch.yml`, written by the daily
 job every day whatever it found, and read on `retention-watchdog.yml`'s own
 independent schedule some hours later. Going stale is the finding.
@@ -82,7 +81,7 @@ run log and no CI at all, can read the date it names and the entries it
 lists and draw the same conclusion by hand.
 
 One overlap is worth naming rather than being quietly relied on.
-`data/actions-usage.yml` is written by the *same* daily job, and phase 8's
+`data/actions-usage.yml` is written by the *same* daily job, and its
 own liveness check already goes red when it stops moving -- so "the daily
 job died" is, today, detected twice. That is an accident of the two records
 sharing a job, not a contract: this record is written by the queue steps

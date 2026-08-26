@@ -230,9 +230,9 @@ def test_to_registration_returns_none_for_a_plaintext_that_is_not_an_object() ->
 
 # ------------------------------------------------------------------ #
 # to_registration(): the length cap -- a reputation bound, not a
-# data-quality check (review round 1, Important 5).
+# data-quality check.
 #
-# Important 1 (branch review): every test below built its input as
+# Every test below used to build its input as
 # `_MAX_FIELD_LENGTH` characters, or `_MAX_FIELD_LENGTH + 1` -- which
 # passes for whatever value the constant holds, so mutating it from 200 to
 # 5000 survived the entire suite. Written against the literal `200` now,
@@ -510,7 +510,7 @@ def test_load_registration_file_rejects_an_entry_missing_a_field() -> None:
 
 # ------------------------------------------------------------------ #
 # find_by_email(): the same question upsert() answers internally, asked
-# about a file's state *before* an upsert call -- task 7's own need.
+# about a file's state *before* an upsert call -- the confirmation's own need.
 # ------------------------------------------------------------------ #
 
 
@@ -567,7 +567,7 @@ def test_find_by_email_skips_an_entry_it_cannot_decrypt() -> None:
 
 
 def test_find_by_email_reflects_an_update_before_it_was_applied() -> None:
-    """The property task 7 needs directly: called against the file *before*
+    """The property the confirmation needs directly: called against the file *before*
     `upsert`, this returns the pre-update registration, not the one about
     to replace it."""
     private_pem, _ = eventkeys.generate()
@@ -724,11 +724,11 @@ def test_event_id_from_payload_returns_none_for_anything_malformed(
 
 
 # ------------------------------------------------------------------ #
-# SIGNUP_BASE -- Critical 2 (branch review): before this, nothing in the
-# repository carried the address that reaches the registration page at
+# SIGNUP_BASE -- nothing in the
+# repository used to carry the address that reaches the registration page at
 # all.
 #
-# Task 6: registration moved off the operators' application's own
+# Registration moved off the operators' application's own
 # `/signup/:eventId` route onto an island mounted on the public event
 # page, so this pin moved with it -- from a `HashRouter` fragment to a
 # plain server path, `site/src/event.njk`'s own permalink.

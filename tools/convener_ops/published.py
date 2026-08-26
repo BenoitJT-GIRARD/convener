@@ -1,11 +1,11 @@
 """What this particular instance is, read from its own declaration.
 
 Three things, one file, one reader per language. The address this project
-is published at came first (phase 10, task 2) and the rest of its
-identity followed (task 3): the name of the organisation running the
+is published at came first, and the rest of its
+identity followed: the name of the organisation running the
 series, what the series is called, the forum it discusses on, and the
-address a participant writes to about their own data. Phase 11 task 4
-added the third, the prefix its editions are numbered under. All three
+address a participant writes to about their own data. The third
+is the prefix its editions are numbered under. All three
 are in `config/instance.json`, all three are read here, and none of them
 is written down anywhere else.
 
@@ -109,8 +109,8 @@ EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
 #: the other.
 #:
 #: Anything that has to render *as* the example -- rather than merely
-#: read one of its files -- takes this as its `root`. Phase 12 task 1
-#: is why it exists: `cli.render_visual_fixtures` renders the poster
+#: read one of its files -- takes this as its `root`. The reference
+#: images are why it exists: `cli.render_visual_fixtures` renders the poster
 #: the committed reference images pin, and rendering it from this
 #: repository's own root made those images a frozen photograph of one
 #: real instance's charter, in a product-side directory.
@@ -224,7 +224,7 @@ PLACEHOLDER_MARKER: Final = "REPLACE"
 #: at all: there is nothing to render in place of an organisation's name,
 #: so a placeholder there is refused exactly as a missing key is.
 #:
-#: Found by phase 10's own bilan (section 7.2): this instance has shipped
+#: Found on review: this instance has shipped
 #: `proposal_form: https://forms.example.test/propose` since before the
 #: declaration existed, and the showcase published it as the one call to
 #: action on `/propose/` -- a link that resolves to nothing, on a public
@@ -306,7 +306,7 @@ class Published:
         Refuses rather than guessing when the host is not a `github.io`
         one. A custom domain says nothing whatever about which repository
         serves it, and there is no safe default for "push a whole site
-        somewhere" (S-4). The owner is taken from the host as GitHub
+        somewhere". The owner is taken from the host as GitHub
         itself lower-cases it; a clone URL is case-insensitive on that
         segment, so nothing here has to know the organisation's own
         capitalisation.
@@ -421,7 +421,7 @@ class Identity:
     in the feed's `<description>` says nothing a reader can act on. The
     example instance's two -- `instances/example/config/instance.json` --
     are a two-word display line and a full sentence, and neither
-    substitutes for the other. Until phase 11 the strapline was typed
+    substitutes for the other. The strapline used to be typed
     into `visual.py` with no key at all, which is why a second
     instance's poster carried the first instance's motto.
     """

@@ -2,11 +2,11 @@
 against the one property a Python test could not see on its own: what
 secrets a workflow step actually passes.
 
-Task 7's whole confirmation-sending path -- `matching_code`,
+The whole confirmation-sending path -- `matching_code`,
 `smtp_config_from_env` -- was fully covered by `tools/tests/test_cli.py`
 and `test_confirmation.py`, and every one of those tests passed, because
-every one of them sets its own environment. The gap review round 1 found
-(Critical 1) was invisible to all of them for exactly that reason: the real
+every one of them sets its own environment. The gap a review found
+was invisible to all of them for exactly that reason: the real
 workflow step that runs `convener-handle-registration` passed none of
 `CONVENER_MATCHING_SALT` or the five `CONVENER_SMTP_*` secrets, so in production
 `matching_code` always returned `None` and `smtp_config_from_env` always
@@ -66,7 +66,7 @@ def _step_block(workflow: str, step_name: str) -> str:
 
 
 def test_the_send_step_exists_and_runs_only_on_success() -> None:
-    """The fix for review round 1's Important 2 as much as Critical 1:
+    """Two findings in one:
     sending must be a step of its own, gated so it runs at most once, only
     once the store step has actually landed the record."""
     block = _step_block(_REGISTRATION, "Send the registration confirmation")
@@ -75,10 +75,10 @@ def test_the_send_step_exists_and_runs_only_on_success() -> None:
 
 
 def test_the_send_step_carries_every_confirmation_secret() -> None:
-    """Critical 1: the step that runs `convener-send-confirmation` must hold
+    """The step that runs `convener-send-confirmation` must hold
     `CONVENER_MATCHING_SALT` and all five `CONVENER_SMTP_*` secrets, or every
     confirmation in production silently takes the no-code, unsent path
-    task 7 exists to prevent."""
+    the confirmation exists to prevent."""
     block = _step_block(_REGISTRATION, "Send the registration confirmation")
     for secret in _CONFIRMATION_SECRETS:
         assert f"secrets.{secret}" in block, f"{secret} missing from the send step"
@@ -105,15 +105,15 @@ def test_the_store_step_is_named_handle_for_the_send_step_to_reference() -> None
 def test_the_store_step_does_not_hold_any_confirmation_secret() -> None:
     """Guards the split itself, not only the send step's own secrets: a
     future edit that copies `CONVENER_SMTP_*` back onto the store step would
-    reintroduce Important 2's send-per-retry-attempt defect even with
-    Critical 1 otherwise fixed."""
+    reintroduce the send-per-retry-attempt defect even with the other
+    finding otherwise fixed."""
     block = _step_block(_REGISTRATION, "Decrypt, store and commit the registration")
     for secret in _CONFIRMATION_SECRETS:
         assert secret not in block, f"{secret} leaked back onto the store step"
 
 
 def test_the_workflow_never_uploads_an_unsent_confirmation_artefact() -> None:
-    """Critical 3, branch review: an unsent confirmation is reported, not
+    """An unsent confirmation is reported, not
     retained. There used to be a step here uploading the composed message
     as a 14-day build artefact; it is gone, and this pins that it does not
     come back -- `docs/governance/traitement-donnees.md`'s own Recipients

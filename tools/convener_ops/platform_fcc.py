@@ -130,7 +130,7 @@ get_room does not call the API
 D-06 again: the provider does not create meetings, so there is no request
 that could return a join link `ManualPlatform.get_room` does not already
 give from the same two sources -- `zoom_link` on the matching speaker
-record, `instructions` from `data/config.yml` (R-4, R-6). `PlatformFCC`
+record, `instructions` from `data/config.yml`. `PlatformFCC`
 reads them the same way rather than composing `ManualPlatform`, so that
 constructing a room never has to build the unrelated `events_dir` default
 `ManualPlatform` needs only for `get_attendance`.
@@ -147,17 +147,16 @@ what the provider says about the conference's recording (`recording_url`,
 the conference record and every `/calls` row intact -- but the deletion
 itself is real and irreversible, with no confirmation parameter and no
 precondition, see its own docstring. Neither method decides **when** it is
-safe to call `delete_recording` -- `Platform`'s four-method shape is fixed
-by task 2, so that sequencing cannot live in either method's signature.
+safe to call `delete_recording` -- `Platform`'s four-method shape is
+fixed, so that sequencing cannot live in either method's signature.
 
-Verifying retrieval before delete_recording (task 10)
--------------------------------------------------------
-`missing_retrieval_evidence` below is the sequencing task 3 deferred: the
+Verifying retrieval before delete_recording
+---------------------------------------------
+`missing_retrieval_evidence` below is that sequencing: the
 caller-side check that must come back empty before `delete_recording` may
 be invoked at all. The two-trace shape below is not this module's own
-invention -- it reproduces a design ruling already recorded in
-`.superpowers/sdd/phase-4-prep-notes.md`, "2026-08-19 -- DESIGN RULING for
-the spec: who deletes the recording, and on what evidence", including its
+invention -- it reproduces a settled design ruling about
+who deletes the recording, and on what evidence, including its
 own reasoning for why a ticked box is a claim and not a fact ("a distracted
 click would destroy someone's recording"). This module's job was to carry
 that ruling into working, tested code within `Platform`'s fixed shape --
@@ -190,8 +189,8 @@ hands**:
    each ticked or not... they follow the runbook"), beside the existing
    `scheduled/T-0/recording-*` family. Naming a new key there needs no
    schema change on either language's side. **Not yet wired into
-   `app/src/state/phases.ts`'s journey UI** -- that is a later task's
-   work, the same way task 3 left the token-renewal notice documented but
+   `app/src/state/phases.ts`'s journey UI** -- that is later
+   work, the same way the token-renewal notice is documented but
    unwired; until then a host (or whoever maintains `data/speakers.yml`)
    sets it by hand.
 2. **`converted_recording_is_reachable`** confirms, independently, that
@@ -221,8 +220,8 @@ human action that can is the host's, by hand, once, deliberately.
 
 Which recordings take which route: release, or discard
 -----------------------------------------------------------
-Phase 3's own recording discipline -- "enregistrement lance pour l'expose,
-arrete avant la discussion, relance pour la discussion" -- means an event
+The hosting runbook's recording discipline -- start for the talk, stop
+before the discussion, start again for the discussion -- means an event
 routinely produces **two** FCC recordings: the talk, and, deliberately, the
 discussion. Both cost quota; only one may ever be converted. That is not
 a corner case this module tolerates, it is the ordinary shape of every
@@ -248,7 +247,7 @@ one, each with its own, opposite guard:
 Both call sites end in the same `delete_recording`, the same irreversible
 primitive, and both are pinned by
 `tools/tests/test_cli.py::test_delete_recording_has_exactly_two_call_sites_both_in_cli`
--- `Platform`'s shape is fixed by task 2, so neither guard can live in
+-- `Platform`'s shape is fixed, so neither guard can live in
 `delete_recording`'s own signature. Neither function can reach the
 other's call: `discard_recording` never reads `runbook_progress`,
 `RETRIEVED_TICK` or calls `missing_retrieval_evidence`, so a ticked
@@ -264,8 +263,8 @@ recorded here rather than only in the fix history, because the mistake is
 an easy one to make again.
 
 **The gate is consent alone (`cli.py::_consent_granted`), not
-`public_data.recording_withheld`.** Round 3 wired `recording_withheld` in
-here and it was wrong, caught on review in round 4: that function answers
+`public_data.recording_withheld`.** `recording_withheld` was wired in
+here once and it was wrong, caught on review: that function answers
 a different question -- "must this recording stay out of the public
 feed" -- and requires **both** `publication.consent == "granted"` **and**
 `publication.outcome == "published"`, the second written only by
@@ -362,7 +361,7 @@ TOKEN_ENV: Final = "CONVENER_MEETING_API_TOKEN"
 _BASE_URL: Final = "https://www.freeconferencecall.com/api/v4"
 
 #: A bare run of digits -- every real FCC conference id observed
-#: (618516753, 618517384, 618515381, phase-4-prep-notes.md) has this shape.
+#: (618516753, 618517384, 618515381) has this shape.
 #: `PlatformFCC._conference_id` validates every id against it before one
 #: reaches a URL this module builds.
 _CONFERENCE_ID_RE: Final = re.compile(r"^[0-9]+$")
@@ -372,9 +371,9 @@ _CONFERENCE_ID_RE: Final = re.compile(r"^[0-9]+$")
 #: published. See the module docstring's "Verifying retrieval before
 #: delete_recording" section for why this replaced `youtube_url` as trace
 #: 1 (a publication signal, not a retrieval one). Not yet a checklist item
-#: `app/src/state/phases.ts` shows a host -- read here, not written; a
-#: later task's own work to wire in, the same way task 3 left the
-#: token-renewal notice documented but unwired.
+#: `app/src/state/phases.ts` shows a host -- read here, not written;
+#: later work to wire in, the same way the
+#: token-renewal notice is documented but unwired.
 RETRIEVED_TICK: Final = "delivered/recording-retrieved"
 
 
@@ -395,11 +394,10 @@ class FCCTransport(Protocol):
     """What `PlatformFCC` needs from an HTTP client: one authenticated GET
     that returns parsed JSON, one authenticated DELETE, and one
     unauthenticated `HEAD` against an arbitrary absolute URL, returning its
-    status-relevant headers (task 10's `head` -- see
+    status-relevant headers (see
     `converted_recording_is_reachable`). The real implementation
     (`_UrllibTransport`) wraps `urllib.request`; every test substitutes a
-    fake, which is what keeps this whole suite off the network (task 3
-    brief, step 2)."""
+    fake, which is what keeps this whole suite off the network."""
 
     def get_json(self, path: str, token: str) -> Any: ...
 
@@ -431,9 +429,9 @@ class _UrllibTransport:
             # is built from a conference id that `PlatformFCC._conference_id`
             # validates digits-only before this method is ever reached. That
             # id may originate from operator-typed input (a
-            # `workflow_dispatch` field, since task 10) -- not "never raw
-            # user input", the claim this comment made before task 10's
-            # review round found it false -- but the digit-only validation
+            # `workflow_dispatch` field) -- not "never raw
+            # user input", a claim this comment once made and
+            # a review found false -- but the digit-only validation
             # forecloses `/`, `..` and every other URL-structuring
             # character, so this is not the "URL built from unchecked
             # input" bandit's urlopen check (B310) exists to catch.
@@ -474,7 +472,7 @@ class _UrllibTransport:
 
         No `Authorization` header: `url` is not necessarily under
         `base_url` (the recording's own media URLs are public, verified to
-        need no token -- phase-4-prep-notes.md, 2026-08-19), and this class
+        need no token rather than assumed to), and this class
         never sends the bearer token to an address it did not build from
         `base_url` itself.
 
@@ -614,7 +612,7 @@ def _extract_calls(payload: Any) -> list[Mapping[str, Any]]:
 class PlatformFCC:
     """The chosen platform's implementation of `Platform` (D-05). See the
     module docstring for the token, the conference-id boundary, and the
-    get_recording / delete_recording split with task 10."""
+    get_recording / delete_recording split."""
 
     #: The bearer access token, already obtained -- this class never
     #: exchanges credentials or a refresh token for one. See the module
@@ -625,7 +623,7 @@ class PlatformFCC:
     #: `ManualPlatform` reads them -- never from a file this class opens
     #: itself.
     speakers: Sequence[Mapping[str, Any]] = ()
-    #: The loaded contents of `data/config.yml`, for `instructions` (R-6),
+    #: The loaded contents of `data/config.yml`, for `instructions`,
     #: read the same way `ManualPlatform` reads it.
     config: Mapping[str, Any] | None = None
     #: `event_id -> FCC conference id`, already resolved by whoever
@@ -649,7 +647,7 @@ class PlatformFCC:
         or which implementation asked.
 
         Every real conference id observed (618516753, 618517384,
-        618515381 -- phase-4-prep-notes.md) is a bare run of digits, so
+        618515381) is a bare run of digits, so
         that shape is validated here, once, for every caller: raises
         `ValueError` -- distinct from `EventNotFoundError`, the same
         "malformed" vs "unknown" split `platform.py::find_speaker` already
@@ -736,7 +734,7 @@ class PlatformFCC:
         retrieved -- or must have deliberately chosen never to -- before
         invoking this method.** Deciding how, and on what evidence, is
         deliberately not this method's job: `Platform`'s four-method shape
-        is fixed by task 2 and this class does not extend it, so the
+        is fixed and this class does not extend it, so the
         structural guard lives at the call site instead -- there are
         exactly two, `cli.py::release_recording` (the two-trace guard,
         `missing_retrieval_evidence` below) and `cli.py::discard_recording`
@@ -757,7 +755,7 @@ def converted_recording_is_reachable(
     called (see that function, and the module docstring's "Verifying
     retrieval before delete_recording" section for the full reasoning).
 
-    Verified empirically (phase-4-prep-notes.md, 2026-08-19): an untouched
+    Verified empirically, not assumed: an untouched
     recording's `<recording_url>.video.mp4` answers 404; once the host has
     clicked Download in FreeConferenceCall's own web interface, the same
     address answers 200, content type `video/mp4`, `Accept-Ranges: bytes`,
@@ -834,7 +832,7 @@ def missing_retrieval_evidence(
     never raises, so a caller can report every gap at once rather than
     stopping at the first.
 
-    This is the whole answer to the ordering task 10 exists to enforce
+    This is the whole answer to the ordering this module exists to enforce
     (`delete_recording`'s own docstring: "A caller MUST confirm the
     recording was retrieved before invoking this method"). Two checks,
     neither producible by this function, by `PlatformFCC`, or by anything
@@ -894,7 +892,7 @@ def platform_from_env(
     rule `convener_ops.integrations.resolve_states` already applies to every
     other secret this project reads.
 
-    `private_pem` (task 17) is forwarded to `ManualPlatform` alone --
+    `private_pem` is forwarded to `ManualPlatform` alone --
     `PlatformFCC.get_attendance` reads real per-person attendance straight
     from the provider's own API and never touches a committed, encrypted
     export, so it has no use for an event's private key. Every one of

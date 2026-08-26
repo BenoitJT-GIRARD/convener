@@ -20,13 +20,13 @@ if str(_SCRIPTS) not in sys.path:
 
 @pytest.fixture(autouse=True)
 def _isolate_environment() -> Iterator[None]:
-    """Task 17's own finding, from proving `test_event_chain.py`'s replay
+    """A finding from proving `test_event_chain.py`'s replay
     tests actually bite: `monkeypatch.setenv`/`delenv` only undoes changes
     made *through monkeypatch itself* -- a stray `os.environ[key] = value`
     written directly by production code would survive past that test's
     own teardown and leak into whichever test runs next in the same
     process. Nothing in `convener_ops`, `scripts` or this test tree does that
-    today (fix round 1's review checked by grep and by removing this
+    today (checked by grep and by removing this
     fixture entirely: the suite's result is identical either way) -- this
     guards against a mutant introducing exactly that coupling, not a live
     leak. A mutant that made one CLI step secretly depend on a previous

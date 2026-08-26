@@ -712,7 +712,7 @@ def test_zero_seconds_is_never_eligible() -> None:
 
 def test_the_default_share_matches_data_config_ymls_own_chosen_literal() -> None:
     """`DEFAULT_ELIGIBILITY_SHARE` is `data/config.yml`'s own
-    `0.6666666666666666`, digit for digit (round 2 review) -- the closest
+    `0.6666666666666666`, digit for digit -- the closest
     float64 to two thirds, chosen fractionally *below* the exact value so
     a duration of exactly 3600 seconds against a 90-minute session still
     reads as eligible, not refused by a rounding artefact. Not `Fraction(2,
@@ -793,7 +793,7 @@ def test_present_without_registration_is_never_a_candidate_for_eligibility() -> 
 
 
 def test_a_telephone_joiner_is_never_a_candidate_for_eligibility_either() -> None:
-    """The other case task 8's types separate from `unmatched`: a phone
+    """The other case the match's types separate from `unmatched`: a phone
     joiner has a duration and no way to ever acquire an identity. Same
     exclusion-by-construction as the unmatched case above, for the same
     reason -- see the module docstring's "Eligibility answers a question

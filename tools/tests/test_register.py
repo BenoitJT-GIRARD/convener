@@ -506,8 +506,8 @@ def test_the_quality_workflow_checks_the_register_against_the_whole_history() ->
     workflow = (repo_root() / ".github" / "workflows" / "quality.yml").read_text(
         encoding="utf-8"
     )
-    # The `python` job is the first in the file; phase 8, task 2 made
-    # `web` the second (it merged the former `typescript`, `site` and
+    # The `python` job is the first in the file; `web` is the second
+    # (it merged the former `typescript`, `site` and
     # `spelling` jobs into one). The property pinned below is unchanged:
     # the job that runs `convener-register --check` is the job that takes the
     # full-history checkout.

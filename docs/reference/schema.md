@@ -67,7 +67,7 @@ given" — and is well formed.
 | `zoom_link` | string | The meeting link the session runs on. |
 | `youtube_url` | string | Where the recording sits. Recorded here; published only through the publication gate. |
 | `forum_thread` | string | Link to the forum announcement thread. |
-| `survey_enabled` | bool | Whether the post-event survey (phase 4 spec S:6) is open for this event. A per-event fact, not a `data/config.yml` setting: the spec says the survey is switched on per event, and every other per-event fact -- the room link, the recording, the forum thread -- already lives on the speaker record rather than in the shared config. The three questions themselves are fixed for every event (`tools/convener_ops/survey.py`'s module docstring); this is the only thing that varies. |
+| `survey_enabled` | bool | Whether the post-event survey is open for this event. A per-event fact, not a `data/config.yml` setting: the survey is switched on per event, and every other per-event fact -- the room link, the recording, the forum thread -- already lives on the speaker record rather than in the shared config. The three questions themselves are fixed for every event (`tools/convener_ops/survey.py`'s module docstring); this is the only thing that varies. |
 | `runbook_progress` | map&lt;string, bool&gt; | Which lines of the journey are ticked, keyed `phase/item`. |
 | `checklist` | map&lt;string, ChecklistAssignee&gt; | Who owes each line of the journey, keyed by runbook item. An item with no entry here is nobody's in particular, which means the hosts' -- the behaviour the app has always had, and still the default. Never read from, and never written to, `assigned_to`. |
 | `metrics.registrations` | number \| null | How many people registered. |
@@ -162,7 +162,7 @@ One mapping, with the keys below.
 | `next_edition_number` | number | The next edition number to assign, under the prefix `config/instance.json` declares. |
 | `overlap_window_days` | number | Forbidden window around each scheduled date, in days. |
 | `seminar_duration_minutes` | number | How long a seminar runs, in minutes. |
-| `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`: above zero, at most one. Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |
+| `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate, in `]0, 1]`: above zero, at most one. Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |
 | `board` | list&lt;BoardMember&gt; | The editorial board, one entry per member. Replaces the flat `board_members` list of logins. |
 | `nominations` | list&lt;Nomination&gt; | Candidates put forward for the board, with their objection windows. |
 | `board_min` | number | Fewest members the board may hold. |

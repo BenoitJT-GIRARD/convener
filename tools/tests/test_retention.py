@@ -1,13 +1,13 @@
-"""Task 15: retention, early erasure, and provable key destruction.
+"""Retention, early erasure, and provable key destruction.
 
-The brief's own words are the standard this module is held to: "a
+The standard this module is held to: "a
 retention announced and never carried out is worse than no retention -- it
 makes people believe in a protection that does not exist." Acceptance
 criterion 6 asks for the destruction to be *verified by a test*, not
 merely implemented; this module is that verification, plus the two
-companion guarantees phase 4 spec S4 names in the same breath: an early
-erasure that touches only the entry it names (R-31), and a destruction
-that leaves the certificate register untouched (R-29, ruling 2 in
+companion guarantees that come with it: an early
+erasure that touches only the entry it names, and a destruction
+that leaves the certificate register untouched (see
 `tools/convener_ops/certificate.py`'s own module docstring).
 
 Three layers, in three sections below:
@@ -16,13 +16,13 @@ Three layers, in three sections below:
   registry file format -- plus the one test that justifies the whole
   scheme: encrypt, destroy the key, try to read, and fail.
 * `registration.py`'s `erase` and `find_by_matching_code` -- the early
-  erasure procedure, tested the same way task 6 tested `upsert`: assert
-  `==` on the neighbours, not merely "the file still decrypts" (R-31).
+  erasure procedure, tested the same way `upsert` is: assert
+  `==` on the neighbours, not merely "the file still decrypts".
 * `cli.py`'s `retention_sweep`, `record_destructions` and
   `erase_registration` -- the commands `.github/workflows/retention.yml`
   and `erase-registration.yml` actually run, including the credential
   that must fail the job loud rather than let it exit green having
-  destroyed nothing (R-28).
+  destroyed nothing.
 """
 
 from __future__ import annotations
@@ -102,8 +102,8 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
     donnees deviennent definitivement illisibles" est une phrase et non
     une garantie.
 
-    There is no separate cryptographic "destroy" call to invoke: R-30
-    (`eventkeys.py`'s own module docstring) is that the private key IS the
+    There is no separate cryptographic "destroy" call to invoke
+    (`eventkeys.py`'s own module docstring): the private key IS the
     only thing that ever made a registration's ciphertext readable, so
     losing it -- `CONVENER_EVENT_KEY_<ID>` removed from the repository's
     secrets, `retention.yml`'s own `gh secret delete` step -- is
@@ -111,7 +111,7 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
     test never holds the real key again after this line, exactly as a
     retention job never does once the secret is gone.
 
-    **What this does not cover (Minor 5).** This proves the *scheme*
+    **What this does not cover.** This proves the *scheme*
     cryptographically: destroying a key makes its ciphertext unreadable,
     full stop. It never calls `retention_sweep`, `record_destructions` or
     anything else in `cli.py`, and `del private_pem` is a no-op on a local
@@ -132,7 +132,7 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
     # would read it inside the retention window.
     assert decrypt(private_pem, ciphertext) == plaintext
 
-    # Destruction: the private key is gone. R-30 -- the ciphertext itself
+    # Destruction: the private key is gone -- the ciphertext itself
     # is untouched; `ciphertext` above is the identical string, still
     # sitting right here, committed and unreadable, never deleted.
     del private_pem
@@ -145,15 +145,15 @@ def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> No
 
 
 def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
-    """Minor 5's own strengthening: the assertion that *is* available
+    """The strengthening: the assertion that *is* available
     offline, since "the GitHub secret is gone" is not. Walks every `.py`
     file's AST under `tools/convener_ops` and refuses any `.write_text(...)`,
     `.write(...)` or `.write_bytes(...)` call whose argument is built from
     a name that looks like a private key, or a string literal carrying the
     PEM marker itself -- which would catch a second, forgotten copy on
     disk the moment someone wrote it, rather than trusting nobody ever
-    will. `write_bytes` has no caller in this module today (round 2
-    trivia); it is here so that stays true rather than merely assumed."""
+    will. `write_bytes` has no caller in this module today;
+    it is here so that stays true rather than merely assumed."""
     suspect_fragments = ("private_pem", "private_key")
     package_dir = repo_root() / "tools" / "convener_ops"
     checked = 0
@@ -181,7 +181,7 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
                             f"{path.name}:{node.lineno} calls "
                             f"{node.func.attr}(...) with {sub.id!r}, which "
                             "looks like a private key -- see this test's "
-                            "own docstring (Minor 5)"
+                            "own docstring"
                         )
     assert checked > 0, "no write_text/write call found -- the walk itself is broken"
 
@@ -269,7 +269,7 @@ def test_registry_from_data_rejects_a_field_of_the_wrong_type() -> None:
 
 # ==================================================================== #
 # registration.py: erase() and find_by_matching_code() -- the early
-# erasure procedure, spec S4's "effacement avant echeance".
+# erasure procedure, before the retention deadline.
 # ==================================================================== #
 
 
@@ -332,13 +332,13 @@ def test_erase_skips_an_entry_it_cannot_decrypt() -> None:
 
 
 def test_erase_leaves_every_other_entrys_ciphertext_byte_for_byte_unchanged() -> None:
-    """R-31, and the test the task 15 brief names by its own reasoning:
+    """The test the erasure guarantee calls for by its own reasoning:
     "reecriture du fichier chiffre sans l'enregistrement concerne, et rien
     d'autre ne bouge." Not "the file still decrypts" -- a rewrite that
     re-encrypted every survivor under fresh AES keys would still pass that
     weaker check. Ada's and Marie's entries must be the identical `dict`,
     key for key and byte for byte, both before and after Grace's is
-    erased -- the same `==` idiom task 6's own
+    erased -- the same `==` idiom
     `test_upsert_leaves_every_other_entrys_ciphertext_byte_for_byte_unchanged`
     already uses for an update, now applied to a removal."""
     private_pem, _ = generate()
@@ -358,8 +358,7 @@ def test_erase_leaves_every_other_entrys_ciphertext_byte_for_byte_unchanged() ->
     assert marie_entry in updated.entries
     assert grace_entry not in updated.entries
     # Every survivor is still independently decryptable -- an erasure that
-    # broke the file for everyone else is not an erasure (task 15 brief,
-    # step 3).
+    # broke the file for everyone else is not an erasure.
     assert to_registration(json.dumps(ada_entry), private_pem) == ada
     assert to_registration(json.dumps(marie_entry), private_pem) == marie
 
@@ -431,7 +430,7 @@ def test_find_by_matching_code_skips_an_entry_it_cannot_decrypt() -> None:
 def test_find_by_matching_code_refuses_a_collision_instead_of_returning_the_first(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Minor 8, against the reviewer's own recommendation: the probability
+    """Against a reviewer's own recommendation: the probability
     of two registrations sharing a matching code is negligible
     (`matching_code`'s own docstring: ~1.9e-7 at the relay's 500-per-event
     ceiling), but the consequence -- erasing the wrong person's data
@@ -476,7 +475,7 @@ def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, 
 
 
 def _email_envelope(public_pem: str, email: str) -> str:
-    """The `EMAIL_ENVELOPE` shape H1's fix expects: `email`, hybrid-
+    """The `EMAIL_ENVELOPE` shape expected here: `email`, hybrid-
     encrypted under `public_pem` -- the same envelope
     `convener-encrypt-identifier` produces on an operator's own machine, and
     `erase_registration`'s own new decrypt step expects to read back."""
@@ -508,8 +507,8 @@ def _write_registrations(
 def _write_certificate_register(
     tmp_path: Path, event_id: str = "mrg-042"
 ) -> tuple[Path, str]:
-    """A minimal, valid `certificates.yml` for `event_id` -- R-29's own
-    fixture: the register this task's destruction must leave untouched."""
+    """A minimal, valid `certificates.yml` for `event_id` -- the register
+    destruction must leave untouched."""
     entry = CertificateEntry(
         identifier="a" * 32,
         event_id=event_id,
@@ -557,7 +556,7 @@ def _outputs(output_file: Path) -> dict[str, str]:
 def test_retention_sweep_fails_without_the_retention_token(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """R-28's own test: a retention job that exits 0 having destroyed
+    """A retention job that exits 0 having destroyed
     nothing must never look the same, from the Actions tab, as a run that
     genuinely had nothing to do. This must fail even though there is
     nothing on disk for it to find due -- the credential's absence alone
@@ -635,8 +634,8 @@ def test_retention_sweep_finds_an_event_past_its_deadline(
 def test_retention_sweep_uses_the_paris_day_not_the_utc_day(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Important 4: `today = paris_today(datetime.now(UTC))` at
-    `cli.py:899` -- pinned at the one kind of instant where the mutant
+    """`today = paris_today(datetime.now(UTC))` in `retention_sweep`
+    -- pinned at the one kind of instant where the mutant
     `datetime.now(UTC).date()` and the real implementation disagree.
     Every other delivered clock in this suite is fixed at 03:00 or 12:00
     UTC, where the Paris day and the UTC day happen to agree, which is
@@ -665,7 +664,7 @@ def test_retention_sweep_uses_the_paris_day_not_the_utc_day(
 def test_retention_sweep_uses_the_paris_day_not_a_fixed_cest_offset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Important 4, second half: the probe above pins one direction only
+    """The second half: the probe above pins one direction only
     -- it is fixed in summer, so a mutant that hardcodes CEST
     (`datetime.now(UTC) + timedelta(hours=2)`, always two hours ahead)
     agrees with the real implementation there and survives. Paris has two
@@ -732,7 +731,7 @@ def test_retention_sweep_skips_an_event_with_no_speaker_record(
     err = capsys.readouterr().err
     assert "mrg-042" in err
     assert "cannot be determined" in err
-    # Important 1: the exit code and the message alone are not enough --
+    # The exit code and the message alone are not enough --
     # both held on the delivered code even though the message landed on
     # stderr, where nobody looks at a green job. `::warning::` is the
     # annotation this diff already uses twice elsewhere and is what
@@ -842,7 +841,7 @@ def test_record_destructions_writes_the_registry(
 def test_record_destructions_calls_eventkeys_destroy_and_refuses_a_malformed_id(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Important 3 / Minor 6: `record_destructions` is also
+    """`record_destructions` is also
     `convener-record-destructions`, a console script an operator can run by
     hand against a plain `DESTROYED_IDS` environment variable with no
     guarantee it names a real, published event -- unlike the ids
@@ -879,7 +878,7 @@ def test_record_destructions_refuses_an_id_whose_key_was_never_published(
 def test_record_destructions_deletes_the_published_pub_only_after_recording(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R-35 / Important 2: `keys/events/<id>.pub` is the signup relay's
+    """`keys/events/<id>.pub` is the signup relay's
     only "this event is open" gate, so it must go in the same operation
     that records the destruction -- and strictly after, per the ruling's
     own ordering, so `destroy`'s `key_was_published` guard still sees the
@@ -909,10 +908,9 @@ def test_record_destructions_never_overwrites_an_existing_destruction_date(
 ) -> None:
     """The end-to-end guarantee `eventkeys.destroy` promises in isolation
     (`test_destroy_is_idempotent_on_an_already_destroyed_event`,
-    `test_eventkeys.py`, task 1) held all the way through the file this
-    task actually persists it to. Catches a mutant that recorded the day
-    of a retry rather than the day of the first destruction -- exactly
-    the task 15 brief's second named mutation."""
+    `test_eventkeys.py`) held all the way through the file this
+    command actually persists it to. Catches a mutant that recorded the day
+    of a retry rather than the day of the first destruction."""
     _write_destruction_registry(tmp_path, {"mrg-042": date(2026, 4, 1)})
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
@@ -963,7 +961,7 @@ def test_record_destructions_fails_on_a_malformed_registry(
 
 
 # -------------------------------------------------------------------- #
-# R-29: the certificate register survives destruction. R-30: so does the
+# The certificate register survives destruction, and so does the
 # ciphertext file -- unreadable, not absent.
 # -------------------------------------------------------------------- #
 
@@ -971,8 +969,8 @@ def test_record_destructions_fails_on_a_malformed_registry(
 def test_destruction_leaves_the_certificate_register_untouched(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ruling 2 (`certificate.py`'s own module docstring), and the task 15
-    brief's fourth named mutation: destruction must delete or rewrite
+    """The rule `certificate.py`'s own module docstring states, and the
+    obvious mutation of it: destruction must delete or rewrite
     only `registrations.enc`, never so much as touch `certificates.yml`
     in the same directory. Byte-for-byte, not merely "still parses" --
     a rewrite that reformatted the register would still pass a weaker
@@ -1006,7 +1004,7 @@ def test_destruction_leaves_the_certificate_register_untouched(
 def test_destruction_leaves_the_ciphertext_file_in_place(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R-30: deleting `registrations.enc` would not make anything more
+    """Deleting `registrations.enc` would not make anything more
     unreadable than losing the key already has, and would invite the next
     reader to believe deletion is what made it safe. Destruction never
     removes the file -- only the key that could ever open it."""
@@ -1035,7 +1033,7 @@ def test_destruction_leaves_the_ciphertext_file_in_place(
 
 # -------------------------------------------------------------------- #
 # erase_registration(): identifies by matching code (preferred) or
-# address (fallback, R-32), and proves -- from the registry -- that a
+# address (fallback), and proves -- from the registry -- that a
 # destroyed event has nothing left to erase.
 # -------------------------------------------------------------------- #
 
@@ -1064,8 +1062,8 @@ def test_erase_registration_for_an_unknown_event_returns_1(
 def test_erase_registration_after_destruction_proves_nothing_remains(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Step 4 of the task 15 brief: "et c'est demontrable" -- proved from
-    the committed registry, not merely asserted. This must not even ask
+    """Demonstrable, not merely asserted -- proved from
+    the committed registry. This must not even ask
     for a private key: an event whose destruction is on record has
     nothing left that a key could read."""
     _write_destruction_registry(tmp_path, {"mrg-042": date(2026, 4, 1)})
@@ -1085,7 +1083,7 @@ def test_erase_registration_after_destruction_proves_nothing_remains(
 def test_erase_registration_refuses_a_key_supplied_for_a_destroyed_event(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Minor 4: a key that still opens `registrations.enc` for an event
+    """A key that still opens `registrations.enc` for an event
     this registry already calls destroyed contradicts the one thing
     `convener-erase-registration` exists to prove -- so this must refuse loudly
     (exit 1) rather than confirm "nothing to erase" over a contradiction,
@@ -1187,7 +1185,7 @@ def test_erase_registration_removes_only_the_named_entry_by_address(
 def test_erase_registration_also_removes_the_persons_attendance_rows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Fix round 1, R-45 (Critical 1): R-44 made the attendance export a
+    """The attendance export is a
     committed file carrying names and addresses, and an early erasure
     request has to reach it too, or "erased" is no longer true --
     an early erasure exists precisely to beat the +90-day key
@@ -1283,7 +1281,7 @@ def test_erase_registration_refuses_on_a_malformed_attendance_export(
 def test_erase_registration_prefers_the_matching_code_over_the_address(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R-32: the code, already in the participant's own confirmation
+    """The code, already in the participant's own confirmation
     e-mail, is tried first -- this test supplies a matching code that
     resolves to Ada and a *wrong* address, and expects Ada to be the one
     erased anyway."""
@@ -1312,7 +1310,7 @@ def test_erase_registration_prefers_the_matching_code_over_the_address(
 def test_erase_registration_refuses_an_ambiguous_matching_code(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Minor 8, at the command `convener-erase-registration` an operator
+    """At the command `convener-erase-registration` an operator
     actually runs: a colliding code with no address to disambiguate it
     must not silently erase whichever entry happens to be stored first.
     Forces the collision the same way
@@ -1338,7 +1336,7 @@ def test_erase_registration_refuses_an_ambiguous_matching_code(
     assert erase_registration() == 1
     err = capsys.readouterr().err
     assert "share one matching code" in err
-    # Minor 3 (round 2): the code itself must never reach stderr -- the
+    # The code itself must never reach stderr -- the
     # invariant every other refusal path in convener_ops already holds.
     assert "ABCD-2345" not in err
 
@@ -1456,7 +1454,7 @@ def test_erase_registration_rejects_a_malformed_committed_file(
 def test_erase_registration_refuses_an_undecryptable_envelope(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """H1, fix wave 2 -- D-25: an EMAIL_ENVELOPE this job cannot decrypt
+    """D-25: an EMAIL_ENVELOPE this job cannot decrypt
     (wrong event's key, corrupted paste, or the pre-fix plaintext address
     typed in by habit) must refuse loudly and specifically, never fall
     through to a generic "no registration found" that would misreport

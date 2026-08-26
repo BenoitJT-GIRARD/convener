@@ -32,21 +32,21 @@ checked against this project's own realistic worst case, not chosen by
 guesswork: `registration._MAX_FIELD_LENGTH` bounds `first_name` and
 `surname` at 200 characters each, and a token built from two 200-character
 names plus a 300-character event title still encodes at QR version 36 of
-40 under "m" (Minor 3, fix round 1: measured as 36, not the 35 an earlier
+40 under "m" (measured as 36, not the 35 an earlier
 draft of this comment assumed -- the whole point of this sentence is that
 the number was checked rather than assumed, so it has to be the checked
 one) -- comfortable headroom, confirmed by generating one and checking
 `segno` did not raise, not merely assumed from a capacity table. The
 300-character title is no longer only an assumed worst case either:
-`certificate.CertificateEvent.__post_init__` enforces it (Important 3,
-fix round 1) -- see that constant's own comment for the concrete overflow
+`certificate.CertificateEvent.__post_init__` enforces it
+-- see that constant's own comment for the concrete overflow
 this closes (a title long enough on its own, regardless of name length,
 made `segno.make` raise `DataOverflowError`, which this module's caller
 folded silently into "not sent", forever, since every retry hit the
 identical wall).
 
-Never written to disk, never printed -- and why not task 7's own artefact
-(ruling 1, ruling 2)
+Never written to disk, never printed -- and why not a build artefact
+either
 ------------------------------------------------------------------------------
 `render_certificate` returns a `str`; nothing in this module, and nothing
 in `cli.py`'s own callers, ever writes that string to a file anywhere
@@ -57,13 +57,13 @@ rather than typed by a person. `test_cli.py`'s own
 `test_deliver_certificates_never_writes_anything_to_disk` is the test that
 would fail the moment a future edit adds exactly that write.
 
-Task 7 originally faced the analogous problem -- an unsent confirmation --
-and answered it differently: writing the composed message to a single,
+The registration confirmation faced the analogous problem -- an unsent
+message -- and answered it differently: writing it to a single,
 `.gitignore`d file inside the job's own workspace, uploaded as a 14-day,
 access-controlled build artefact. **That pattern was wrong here,
 deliberately, not by oversight, from the day this module was written** --
-and the whole-branch review that found Critical 3 later ruled it wrong for
-task 7's own confirmation too, once `docs/governance/traitement-donnees.md`
+and a review later ruled it wrong for
+that confirmation too, once `docs/governance/traitement-donnees.md`
 turned out to call that artefact a documented *exception*, when with SMTP
 unconfigured (this project's default state) it was the path every
 registration took. `confirmation.py`'s own module docstring now carries
@@ -85,8 +85,8 @@ inputs. So an undelivered certificate is never stashed anywhere -- it is
 body, nothing but a boolean) and *replayed*: re-running the same command,
 or the whole workflow, regenerates and re-sends the same document, because
 nothing about it was ever computed randomly. `DeliveryResult` was already
-the shape `confirmation.SendResult` only later adopted, once Critical 3
-narrowed that type to match -- see that dataclass's own docstring, below.
+the shape `confirmation.SendResult` only later adopted, once that type was
+narrowed to match -- see that dataclass's own docstring, below.
 
 Replayable, not regenerated -- and bounded by retention (ruling 3)
 ------------------------------------------------------------------------
@@ -107,7 +107,7 @@ avoid *breaking* that property, which is exactly what never caching or
 regenerating any part of the document from anything but its own
 deterministic inputs achieves.
 
-**What "byte-identical" actually covers, since Minor 5 (fix round 1): the
+**What "byte-identical" actually covers: the
 document and the token, not the envelope.** `_SmtpDeliveryTransport.send`
 now sets a `Date` header (`email.utils.formatdate`, current send time) --
 spec S:9's own risk table names the spam folder explicitly ("un certificat
@@ -126,8 +126,8 @@ same fix, in the same place in that module's own `_SmtpTransport.send`.
 not claim it is.** `certificate.issue` needs the event's own decrypted
 registrations to find the attendee's fingerprint and address at all --
 `data/events/<id>/registrations.enc`, together with the event's own
-private key. Task 15's retention sweep destroys that private key, and with
-it every registration it protects, 90 days after the event (spec S:4).
+private key. The retention sweep destroys that private key, and with
+it every registration it protects, 90 days after the event.
 After that, `certificate.issue` (and therefore this module) has no address
 left to resolve `CERTIFICATE_ID` against, or to build a fresh delivery
 for, at all -- `data/events/<id>/certificates.yml`, the certificate
@@ -156,8 +156,8 @@ that might print it -- or even just format it into a wider message --
 would reopen the exact leak `confirmation.py`'s own module docstring
 already closed once. `cli.py`'s own callers print only counts, never a
 name or an address, on every path including the branch where an attendee
-was already on record before this run started (Important 10 in
-`certificate.py`'s own review history is the reason that branch gets its
+was already on record before this run started (a real defect once found in
+`certificate.py` is the reason that branch gets its
 own leak-sweep test here too, not only the freshly-issued one).
 """
 
@@ -251,7 +251,7 @@ def render_certificate(
     might one day render untrusted.
 
     **Deliberately not sanitised: bidi overrides (`U+202E` and friends) and
-    a bare newline in `name` (Minor 6, fix round 1).** `html.escape` only
+    a bare newline in `name`.** `html.escape` only
     ever handles `<`, `>`, `&` and `"` -- markup, not direction control or
     whitespace -- so a name carrying `U+202E` or `\\n` reaches this page
     exactly as typed. Left alone on purpose, not merely unnoticed: the
@@ -374,7 +374,7 @@ class Delivery:
 #: `docs/toolkit/emails/certificate-delivered.md`'s own copy, the same
 #: "export the sentence, do not retype it" discipline
 #: `confirmation.MATCHING_INSTRUCTION` and `confirmation.UPDATE_WARNING`
-#: already use for their own pages (Minor 4, fix round 1). Before this,
+#: already use for their own pages. Before this,
 #: only the *subject* was pinned (`test_delivery.py`'s own
 #: `test_compose_subject_names_the_event`); the body had drifted
 #: typographically from the docs copy -- an ASCII "--" here where the docs
@@ -446,7 +446,7 @@ class _SmtpDeliveryTransport:
         email["Subject"] = delivery.subject
         email["From"] = config.sender
         email["To"] = delivery.to
-        # Minor 5, fix round 1: a real send time, not a fixed or omitted
+        # A real send time, not a fixed or omitted
         # one -- see the module docstring's "what byte-identical actually
         # covers" section for why this does not weaken the replay
         # guarantee (it changes the envelope, never the document or its
@@ -490,7 +490,7 @@ class DeliveryResult:
     included, the way an earlier version of `cli.py::_send_confirmation`
     once wrote `confirmation.SendResult.unsent_body` to
     `unsent-confirmation.eml`. That pattern was already wrong for an
-    unsent *confirmation* too, once Critical 3 (whole-branch review) found
+    unsent *confirmation* too, once a review found
     it the default path rather than the documented exception the record
     called it -- `confirmation.py`'s own module docstring carries that
     history -- but it would have been wrong here regardless of what that

@@ -1,6 +1,6 @@
 """The v4 -> v5 migration (scripts/migrate_v5.py).
 
-Schema v5 adds one field, `survey_enabled` (task 16, phase 4 spec S:6).
+Schema v5 adds one field, `survey_enabled`.
 This mirrors test_migrate_v4.py's own shape, cut down to one field: the
 transformation is pure and tested here before it is ever pointed at
 `data/`, because the file it rewrites holds 31 real people's records.

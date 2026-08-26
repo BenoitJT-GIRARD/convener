@@ -1,4 +1,4 @@
-"""Task 5 (phase 6): pins `.github/workflows/visuals.yml`,
+"""Pins `.github/workflows/visuals.yml`,
 `visuals/render-and-compare.mjs` and `visuals/package.json` against the
 properties a green run does not, by itself, prove -- the same idiom
 `test_a11y_workflow.py` already uses for the accessibility checker.
@@ -43,7 +43,7 @@ _TRIGGERS = workflow_triggers(_WORKFLOW_DATA)
 
 
 def test_puppeteer_is_pinned_to_an_exact_version_not_a_range() -> None:
-    """P-2: "puppeteer complet, à version fixe" -- a caret or tilde range
+    """A full puppeteer, at a fixed version -- a caret or tilde range
     would let a future `npm install` silently resolve a newer Chromium
     build, exactly the drift pinning the engine exists to rule out."""
     version = _PACKAGE_JSON["devDependencies"]["puppeteer"]
@@ -62,7 +62,7 @@ def test_no_other_dependency_was_added_to_render_or_compare() -> None:
 
 
 def test_puppeteer_core_still_lives_only_with_the_accessibility_checker() -> None:
-    """P-2's other half: `puppeteer-core` (no bundled browser) stays with
+    """The other half: `puppeteer-core` (no bundled browser) stays with
     the a11y checker; the full `puppeteer` package added here must not
     also creep into `site/package.json`, which would make every one of
     that package's five other workflows pay the Chrome-for-Testing
@@ -82,7 +82,7 @@ def test_workflow_is_path_filtered_on_both_triggers() -> None:
     say about most of them. Both `push` and `pull_request` must filter,
     not just one -- a PR run is exactly where this check matters most.
 
-    Fix round 1: this file used to bind the two lists with a YAML anchor
+    This file used to bind the two lists with a YAML anchor
     and alias (`&visual_paths`/`*visual_paths`); GitHub Actions' own
     workflow parser does not support either (a documented limitation, not
     a version question), so both are now hand-written copies instead. This
@@ -121,7 +121,7 @@ def _paths_block(text: str, start_marker: str, end_marker: str) -> list[str]:
 
 
 def test_the_two_path_filters_are_identical_lists() -> None:
-    """Fix round 1: GitHub Actions' own workflow parser does not support
+    """GitHub Actions' own workflow parser does not support
     YAML anchors (`&name`) or aliases (`*name`) -- a long-standing,
     documented limitation of that parser, not a version question. This
     file used to bind `push.paths` and `pull_request.paths` with exactly
@@ -129,7 +129,7 @@ def test_the_two_path_filters_are_identical_lists() -> None:
     complaint, which is exactly why the earlier version parsed clean in
     every check this suite already ran and would still have failed to
     *trigger* on the very first real push -- no workflow in this
-    repository has ever executed (confirmed, task 5's own report).
+    repository has ever executed, which is confirmed rather than assumed.
 
     The fix is two hand-written copies, each carrying a comment naming
     this parser limitation so a future edit is not tempted to "simplify"
@@ -192,7 +192,7 @@ def test_the_path_filter_never_reacts_to_real_speaker_data() -> None:
 
 
 def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
-    """Phase 12, task 1. The fixture is rendered from `instances/example/`,
+    """The fixture is rendered from `instances/example/`,
     so this instance's own declaration and charter change nothing this job
     could compare -- and naming them would do worse than waste a run. It
     is what made this check go red for a duplicate that had done nothing
@@ -213,8 +213,8 @@ def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
 
 
 def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:
-    """Branch review, fix round 1: `tools/convener_ops/public_data.py` (the
-    module `data/speakers.yml` is read *through*, P-4's consent gate
+    """`tools/convener_ops/public_data.py` (the
+    module `data/speakers.yml` is read *through*, the consent gate
     included) is deliberately absent here for the identical reason the
     test above gives for `data/speakers.yml` itself --
     `render_visual_fixtures` renders `FIXTURE_ANNOUNCEMENT`, a fixed,
@@ -244,7 +244,7 @@ def test_npm_ci_installs_from_the_visuals_lockfile() -> None:
 
 
 def test_a_dependency_audit_step_exists_for_the_new_lockfile() -> None:
-    """Task 12 (phase 5) established that every surface with a lockfile
+    """Every surface with a lockfile
     gets an audit in this same quality chain -- this is a new lockfile,
     so it does not become the one surface that escapes it."""
     assert "Dependency audit" in _WORKFLOW
@@ -277,8 +277,8 @@ def _run_strings() -> list[str]:
 
 def test_the_render_step_never_passes_update() -> None:
     """`--update` overwrites a committed reference with whatever just
-    rendered -- exactly the "regenerate on every failure" reflex P-2
-    exists to close off. Only a human, running `npm run update-references`
+    rendered -- exactly the "regenerate on every failure" reflex pinning
+    the engine exists to close off. Only a human, running `npm run update-references`
     by hand after reviewing the result, may ever produce that flag; CI
     must never pass it."""
     assert not any("--update" in run for run in _run_strings())
@@ -356,8 +356,8 @@ def test_the_renderer_waits_for_self_hosted_fonts_before_screenshotting() -> Non
 def test_the_server_is_never_file_url() -> None:
     """A relative `@font-face url(...)` cannot load from a bare `file://`
     origin without a flag this project has no reason to carry -- every
-    render in this phase already used a local HTTP server for exactly
-    this reason (tasks 1-4's own reports). Checked against the actual
+    render of this composition already used a local HTTP server for exactly
+    this reason. Checked against the actual
     `goto` call, not a blanket ban on the substring `file://` anywhere in
     the file -- this module's own comment names it deliberately, to say
     why it is never used."""

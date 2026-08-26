@@ -134,7 +134,7 @@ def test_a_room_link_never_reaches_the_encoded_code() -> None:
     "SHOULD-NEVER-APPEAR-IN-BUILT-HTML" -- the same string
     `.github/workflows/preview.yml`'s own guard sweeps the built site for.
     A caller building this edition's poster has that whole record in hand
-    and extracts only `event_id = entry["id"].lower()` (R-5) to construct
+    and extracts only `event_id = entry["id"].lower()` to construct
     an `Announcement` -- there is no parameter here the room link could
     travel through even if a future caller tried to pass the record
     itself, because `Announcement` and `registration_code_svg` both take
@@ -179,7 +179,7 @@ def test_registration_code_svg_signature_has_no_url_or_link_parameter() -> None:
     # declaration the URL is *derived* from -- the same root
     # `visual.render_announcement` already takes for the charter, so that a
     # poster's colours and the address inside its QR come from one instance
-    # rather than two (phase 12, task 1). Nothing about it lets a caller
+    # rather than two. Nothing about it lets a caller
     # choose the address itself, which is the property this test exists
     # for, so the shape rule below is what carries the guard now and the
     # set above is only what makes a reviewer look.

@@ -1,5 +1,5 @@
-"""Task 17: the whole phase-4 chain, and the one property spec S:8 asks
-for by name -- "les echecs partiels sont la norme, pas l'exception" -- each
+"""The whole registration-to-certificate chain, and the one property that
+matters most -- "les echecs partiels sont la norme, pas l'exception" -- each
 step replayable on its own, without the step before it having just run.
 
     inscription -> confirmation -> evenement -> recuperation presence
@@ -24,16 +24,16 @@ The order above is a narrative, not a transaction
 Four of these eleven words are not separate commands at all.
 `appariement`, `eligibilite`, `generation` and `ecriture au registre` are
 one call to `convener-issue-certificates`: the register is written *at
-issuance*, never after delivery -- task 12's review already settled this,
-because idempotence requires it (`convener-deliver-certificates` re-derives and
+issuance*, never after delivery -- idempotence requires it
+(`convener-deliver-certificates` re-derives and
 re-signs but never grows the register; see `certificate.issue`'s own
 "idempotent without being deterministic" section). So there is one test
 below for issuance (covering all four words at once) and a separate one
 for `remise`, in the order they actually run, not four separate tests
 pretending the brief's prose is a call graph.
 
-AC8, closed here
-------------------
+The manual implementation, closed end to end
+----------------------------------------------
 Acceptance criterion 8 -- "toute la chaine est executable de bout en bout
 avec l'implementation manuelle, sans aucun compte externe" -- used to be
 undemonstrable for the one step that reads a meeting platform's export:
@@ -143,7 +143,7 @@ def _write_encrypted_attendance_directly(
     that earlier command having just run in this same process. The
     dedicated `convener-encrypt-attendance-export` command gets its own test
     below, replayed from nothing but a plaintext drop. One independent
-    envelope per row (fix round 1, R-45), not one for the whole file."""
+    envelope per row, not one for the whole file."""
     text = "\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n"
     parsed_rows, issues = _parse_attendance_csv(text)
     assert issues == []
@@ -216,7 +216,7 @@ def test_confirmation_resend_replays_from_a_committed_registration_alone(
 
 
 # ------------------------------------------------------------------ #
-# recuperation presence -- the manual export, encrypted (task 17, AC8).
+# recuperation presence -- the manual export, encrypted.
 # Replays from a plaintext drop alone -- no registration, no other
 # command, ever needs to have run first.
 # ------------------------------------------------------------------ #
@@ -227,7 +227,7 @@ def test_encrypt_attendance_export_replays_from_a_plaintext_drop_alone(
 ) -> None:
     """Needs nothing about registrations, matching, or certificates -- only
     the event's own published public key (not a secret) and a plaintext
-    CSV a host dropped by hand. Proves the host's own half of AC8's chain
+    CSV a host dropped by hand. Proves the host's own half of the chain
     needs no account and no prior step -- and that what it commits is
     genuinely encrypted, not the plaintext under a new name: decrypted
     here with the private half this command never touched, the same key
@@ -261,7 +261,7 @@ def test_encrypt_attendance_export_replays_from_a_plaintext_drop_alone(
 
 # ------------------------------------------------------------------ #
 # recuperation presence -- matching. Replays from a committed
-# registration and a committed encrypted export alone (AC8).
+# registration and a committed encrypted export alone.
 # ------------------------------------------------------------------ #
 
 
@@ -294,7 +294,7 @@ def test_match_attendance_replays_from_committed_registrations_and_export_alone(
 # one command, convener-issue-certificates (see the module docstring's "the
 # order above is a narrative" section for why these four words share
 # one test). Replays from committed registrations and a committed,
-# encrypted attendance export alone -- AC8's central proof.
+# encrypted attendance export alone -- the central proof.
 # ------------------------------------------------------------------ #
 
 
@@ -474,7 +474,7 @@ def test_deliver_certificate_replays_from_an_issued_undelivered_entry_alone(
     register_path = tmp_path / "data" / "events" / "mrg-042" / "certificates.yml"
     before = yaml.safe_load(register_path.read_text(encoding="utf-8"))
 
-    # Important 1, fix round 1: `deliver_certificate` returns 0 on every
+    # `deliver_certificate` returns 0 on every
     # outcome once the attendee is resolved -- delivered, not delivered,
     # and (via cli.py's own broad `except Exception`) blown up entirely.
     # The exit code alone proved nothing here; inserting `raise
@@ -554,7 +554,7 @@ def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
     register_path = tmp_path / "data" / "events" / "mrg-042" / "certificates.yml"
     before = yaml.safe_load(register_path.read_text(encoding="utf-8"))
 
-    # Important 1, fix round 1: making the delivery loop `continue`
+    # Making the delivery loop `continue`
     # immediately -- nobody delivered at all -- used to leave this test
     # green too. Asserting the printed counts and that the register's own
     # identifier set is unchanged is what actually demonstrates "sans
@@ -574,8 +574,8 @@ def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
 # recuperation et suppression de l'enregistrement -- the manual chain's
 # own answer, replayed from a speaker record alone: nothing to release,
 # nothing to discard, because ManualPlatform holds no recording storage
-# at all (D-13's ordinary state, and AC8's own boundary -- this step
-# is a real no-op for the manual implementation, not an unreachable one).
+# at all (D-13's ordinary state, and the manual implementation's own
+# boundary -- this step is a real no-op there, not an unreachable one).
 # ------------------------------------------------------------------ #
 
 

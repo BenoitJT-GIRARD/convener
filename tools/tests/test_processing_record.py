@@ -1,4 +1,4 @@
-"""The processing record spec §4 asks for
+"""The data-protection processing record
 (`docs/governance/traitement-donnees.md`), against the code it describes.
 
 A page that states a number or an address the code also holds is a copy --
@@ -57,7 +57,7 @@ def test_the_contact_address_matches_confirmation_pys_own_constant() -> None:
     """One address, and this page reaches it the way every other page the
     cockpit renders does.
 
-    Phase 10, task 3: the literal here became `{{ instance.contact }}`,
+    The literal here became `{{ instance.contact }}`,
     resolved by `render.ts::substituteWithoutSpeaker` when the cockpit
     renders this record -- the surface a Board member actually reads it
     on. So the assertion is that the token is what the page carries, and

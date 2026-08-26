@@ -4,7 +4,7 @@ Every function takes already-parsed data and returns a list of human-readable
 errors. Nothing here touches the filesystem — that belongs to cli.py.
 
 That rule is why `validate_speakers` is *handed* the edition prefix rather
-than reading it. Until phase 11 task 4 this module fixed an edition code as
+than reading it. This module used to fix an edition code as
 `^MRG-\\d{1,4}$` — the initials of the series that happens to run this
 repository, written into the product's own validator, where no sweep could
 ever find it: both instances were forced to write it, so the needle was
@@ -53,7 +53,7 @@ CAREER_STAGES = frozenset(
     {"phd", "postdoc", "independent", "group-leader", "other", "undisclosed"}
 )
 #: '' is a legal consent: the migration sets it for any speaker whose status
-#: never reached a publishable state (see scripts/migrate_v3.py, Task 5).
+#: never reached a publishable state (see scripts/migrate_v3.py).
 PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
 #: Schema v4. The fields the checklists have always asked for and the model
 #: never had, so they travelled by e-mail and were lost: a portrait, a short
@@ -67,7 +67,7 @@ PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
 #: field ends up silently optional. `app/src/data/validate.ts` draws the same
 #: line on the read side.
 SPEAKER_TEXT_V4 = ("photo_url", "bio", "linkedin", "seed_questions")
-#: Task 16 (phase 4 spec S:6): the post-event survey's per-event switch --
+#: The post-event survey's per-event switch --
 #: a field on the speaker record, not `data/config.yml`, for the same
 #: "per-event fact beside the event's other per-event facts" reasoning
 #: `app/src/data/types.ts::Speaker.survey_enabled`'s own doc comment gives.
@@ -108,14 +108,14 @@ CONFIG_REQUIRED = frozenset(
         "inactivity_months",
         "balance_window_months",
         "view_count_window_days",
-        # Phase 4 (R-6): how to join the permanent room beyond the link
+        # How to join the permanent room beyond the link
         # itself. One value for the whole series, not one per event -- D-06
         # makes the account itself the permanent room, so per-event
         # instructions would describe a room that never changes.
         "instructions",
         "sla_days",
         "channels",
-        # Phase 4 S:5's configurable eligibility threshold: a share of
+        # The configurable eligibility threshold: a share of
         # seminar_duration_minutes a matched attendee's summed duration must
         # reach to count as present. Required, not merely validated when
         # present, as an earlier version of this check had it: the spec's
@@ -144,7 +144,7 @@ CHANNEL_KEYS = frozenset({"key", "label"})
 CHANNEL_KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 #: The turnaround targets the series sets, and the three it still stores.
 #:
-#: `lead_decision` is deliberately not among them (F-13). The board's
+#: `lead_decision` is deliberately not among them. The board's
 #: decision deadline is `vote_window_days`, the number `sweep.expire_votes`
 #: actually parks a lead on; a second key holding the same deadline meant a
 #: file could say the board was on time on the very morning the job parked
@@ -394,7 +394,7 @@ def _validate_ballots(
         )
 
     # decided_on gets copied into every generated ballot's date by the
-    # migration (scripts/migrate_v3.py, Task 5) - a malformed value here
+    # migration (scripts/migrate_v3.py) - a malformed value here
     # would propagate into every ballot it touches, not stay in one field.
     decided_on = selection.get("decided_on")
     if decided_on and not DATE_RE.match(str(decided_on)):
@@ -450,8 +450,9 @@ def validate_speakers(
 
     `editions` is the prefix `config/instance.json` declares and has no
     default, deliberately. A default would be this instance's own value
-    living on in the product's validator under a different name -- which
-    is the defect phase 11 task 4 removed -- and it would be invisible:
+    living on in the product's validator under a different name -- the
+    defect that gave this parameter its reason to exist -- and it would be
+    invisible:
     every caller that forgot to pass one would go on numbering a reading
     group's sessions `MRG-1` and pass. Keyword-only so that the two
     collections above cannot be handed to it by position.
@@ -558,7 +559,7 @@ def validate_speakers(
             )
 
         # career_stage and publication are required since the v3 migration
-        # (scripts/migrate_v3.py, Task 5) gave every speaker both. They were
+        # (scripts/migrate_v3.py) gave every speaker both. They were
         # checked only when present while the real data was still v2; now
         # their absence is a defect - a migration that silently dropped one
         # is exactly what this validator exists to catch.
@@ -575,7 +576,7 @@ def validate_speakers(
             elif not isinstance(entry[key], str):
                 errors.append(f"{where}: {key} must be a string")
 
-        # Task 16, schema v5. bool is checked, not merely "not a string" --
+        # Schema v5. bool is checked, not merely "not a string" --
         # a stray "true" (the string) or a 1 must be caught here rather than
         # silently reaching handle_survey_response as a truthy-but-wrong
         # type. isinstance(x, bool) is deliberately not preceded by an
@@ -836,7 +837,7 @@ def validate_config(cfg: Any) -> list[str]:
             objections = nomination.get("objections")
             errors.extend(_validate_objections(objections, nwhere))
 
-            # Cross-field backstop (coordinator ruling, phase 2): outcome and
+            # Cross-field backstop: outcome and
             # objections can express a contradictory state that no type can
             # forbid. The transformations meant to prevent this ship in
             # later tasks; this check is the backstop for a file hand-edited
@@ -970,10 +971,10 @@ def validate_config(cfg: Any) -> list[str]:
         if isinstance(value, bool) or not isinstance(value, int):
             errors.append(f"config.yml: {path} must be an integer")
 
-    # Phase 4 S:5's configurable eligibility threshold: a share of
+    # The configurable eligibility threshold: a share of
     # `seminar_duration_minutes` a matched attendee's summed duration must
-    # reach to count as present. `eligibility_share` is now in
-    # `CONFIG_REQUIRED` above (round 1 review: a threshold that only ever
+    # reach to count as present. `eligibility_share` is in
+    # `CONFIG_REQUIRED` above (a threshold that only ever
     # lives as a Python default is a constant with extra steps, and the
     # spec's own rationale - alignment with accreditation requirements not
     # yet known - happens by editing this file, not by editing

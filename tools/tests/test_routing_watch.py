@@ -1,6 +1,6 @@
-"""Phase 9, task 6: nothing detects that the saving has quietly stopped.
+"""Nothing detects that the saving has quietly stopped.
 
-Tasks 2 and 3 gave a registration two lanes, and the relay resolves every
+A registration has two lanes, and the relay resolves every
 failure to read `public-data/registration-routing.json` to the *immediate*
 one -- correctly, because the confirmation carries the room link and the
 matching code and there is no second channel for either. The consequence
@@ -614,8 +614,8 @@ def test_the_finding_turns_the_daily_job_red_on_its_own() -> None:
 
 def test_the_check_does_not_raise_the_daily_job_s_ceiling() -> None:
     """It is a pure function over two committed files -- no network, no
-    push, no retry loop. Phase 9 already took the ceiling from 25 to 40
-    minutes, which that phase's own report counts as a real cost; this
+    push, no retry loop. The ceiling has already gone from 25 to 40
+    minutes, which is a real cost; this
     task adds none of it."""
     workflow = safe_load(_SWEEP)
     assert isinstance(workflow, dict)

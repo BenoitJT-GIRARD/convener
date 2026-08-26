@@ -1,6 +1,6 @@
 """Turn one decrypted registration into a stored, re-encrypted record.
 
-Phase 4's whole design (see the phase 4 spec, S:3-4, and
+This project's whole registration design (see
 `tools/convener_ops/eventkeys.py`'s module docstring) rests on plaintext existing
 in exactly one place: the memory of the CI job this module's functions run
 inside. `to_registration` is the only place a submitted envelope is ever
@@ -21,9 +21,9 @@ than kept as the nested, escaped JSON string `encrypt` returns, so the file
 reads as ordinary JSON, not JSON wrapped inside JSON.
 
 The alternative -- one envelope wrapping the *whole list* -- was rejected
-for a reason that only shows up three tasks from now: erasure. The phase 4
-spec (S:4) requires a single registration to be removable before the
-retention window ends, "sans reecriture d'historique", but says nothing
+for a reason that only shows up later: erasure. A single registration has
+to be removable before the
+retention window ends, without rewriting history, and nothing says
 about what happens to *everyone else's* ciphertext while that happens. If
 the whole file were one envelope, erasing one person would mean decrypting
 every registration, dropping one, and re-encrypting the rest under a fresh
@@ -31,8 +31,8 @@ AES key and nonce -- every remaining registrant's bytes on disk would
 change for an erasure that named only one of them. With one independent
 envelope per registration, erasure is deleting one array element and
 rewriting the file: every other entry's `encrypted_key`, `iv` and
-`ciphertext` stay byte for byte what they already were. Task 15 builds that
-procedure; this shape is what makes it possible without re-touching a
+`ciphertext` stay byte for byte what they already were. This shape is what
+makes that procedure possible without re-touching a
 stranger's ciphertext to reach it.
 
 The same independence is what deduplication needs, from the other
@@ -116,8 +116,8 @@ from . import eventkeys, published
 #: inside it) ever has to change.
 FILE_VERSION: Final = 1
 
-#: The base of the one address that reaches this whole feature (Critical 2,
-#: branch review): before this constant existed, nothing in the repository
+#: The base of the one address that reaches this whole feature:
+#: before this constant existed, nothing in the repository
 #: -- no document, no template, no other constant -- carried
 #: `#/signup/<event id>` at all, while the two public announcement
 #: templates (`docs/toolkit/forum-post-announce.md`,
@@ -128,20 +128,20 @@ FILE_VERSION: Final = 1
 #: reach the page `certificate.VERIFICATION_BASE` and `survey_invite.
 #: SURVEY_BASE` already treat as this project's third public address.
 #:
-#: **Correction (fix wave 2):** wave 1 reasoned there was "no established
+#: **A correction:** this once reasoned there was "no established
 #: mapping from a Speaker record to the event id" and, on that basis,
 #: published `SIGNUP_BASE` in both public templates with a hand-filled
 #: `<event id>` placeholder. That was wrong. The mapping exists and is a
-#: decided rule of this project -- R-5, `platform.py::find_speaker`:
+#: decided rule of this project -- `platform.py::find_speaker`:
 #: "`event_id` is `edition_code`, lower-cased. Nothing else..." What
 #: `eventkeys.py`'s module docstring says ("no `Identifier` type exists
 #: yet") is a claim about a missing *type*, not about the mapping. A
-#: Speaker record's own `edition_code` is exactly what R-5 needs, and
+#: Speaker record's own `edition_code` is exactly what that rule needs, and
 #: `signup_url` below computes the same address `verification_url` and
 #: `survey_url` already compute for their own bases. The two public
 #: announcement templates now publish `{{ speaker.signup_link }}`, a value
 #: `app/src/content/render.ts` derives the same way it already derives
-#: `speaker.first_name` -- lower-casing `edition_code` itself, per R-5,
+#: `speaker.first_name` -- lower-casing `edition_code` itself,
 #: since `find_speaker` expects its `event_id` argument already lower-case
 #: and does not do that step for a caller. The rule crosses both
 #: languages, so `tools/tests/fixtures/signup-link.json` binds it with a
@@ -150,13 +150,13 @@ FILE_VERSION: Final = 1
 #: `certificate-verification.json` and `governance-cases.json` already
 #: apply, rather than two constants trusted to agree.
 #:
-#: **Correction (task 6):** this used to end `app/#/signup/`, a
+#: **A second correction:** this used to end `app/#/signup/`, a
 #: `HashRouter` fragment matching `app/src/App.tsx`'s own
 #: `path="/signup/:eventId"` -- the same convention `survey_invite.
 #: SURVEY_BASE` still uses for its own address (`certificate.
-#: VERIFICATION_BASE` used to as well, until task 7 -- see that constant's
-#: own comment for why its own move looked different from this one). Task 6
-#: moved registration out of that application entirely, onto an island
+#: VERIFICATION_BASE` used to as well -- see that constant's
+#: own comment for why its own move looked different from this one).
+#: Registration moved out of that application entirely, onto an island
 #: mounted on the public event page (D-18); this now targets that page's
 #: own, real address instead -- `site/src/event.njk`'s permalink,
 #: `/events/<event id>/` (D-19) -- a server path this time, not a
@@ -166,7 +166,7 @@ FILE_VERSION: Final = 1
 #: the fragment here is safe: `signup_url` carries only an event id, never
 #: a name.
 #:
-#: **Phase 10, task 2:** the host and prefix used to be typed in here, and
+#: The host and prefix used to be typed in here, and
 #: bound by test to the same address written out in eleven other files.
 #: They now come from `config/instance.json` through `published.load()` --
 #: one declaration, read from each side of the language boundary (D-14).
@@ -178,9 +178,9 @@ SIGNUP_BASE: Final = published.load().under("events/")
 def signup_url(event_id: str, *, root: Path | None = None) -> str:
     """The one link a participant follows to register for `event_id` --
     the address of that event's own public page
-    (`site/src/event.njk`'s permalink, D-19), which carries this
-    registration island since task 6. Expects `event_id` already
-    lower-cased per R-5 (`platform.py::find_speaker`), the same contract
+    (`site/src/event.njk`'s permalink, D-19), which carries the
+    registration island. Expects `event_id` already
+    lower-cased (`platform.py::find_speaker`), the same contract
     `certificate.verification_url` and `survey_invite.survey_url` hold for
     their own bases; this function does not lower-case it itself. No
     Python caller invokes this today -- a registration confirmation email
@@ -207,7 +207,7 @@ def signup_url(event_id: str, *, root: Path | None = None) -> str:
 
 @dataclass(frozen=True)
 class Registration:
-    """What a participant supplies, and nothing else (phase 4 spec, S:3).
+    """What a participant supplies, and nothing else.
     Mirrors `app/src/signup/encrypt.ts`'s `Registration` interface field for
     field -- that is the shape the browser encrypts, so it is the shape
     `to_registration` has to recover.
@@ -250,7 +250,7 @@ def normalize_email(email: str) -> str:
     is never passed through this; only comparisons and the matching-code
     derivation are.
 
-    Public rather than module-private: task 7's confirmation module needs
+    Public rather than module-private: the confirmation module needs
     the identical rule to decide whether an update changed the *address
     itself* (see `find_by_email`'s docstring) -- a second, hand-written
     definition of "the same address" here would risk disagreeing with this
@@ -382,7 +382,7 @@ def load_registration_file(text: str | None) -> RegistrationFile:
     # exists to make impossible: a "helpful" extra field such as a cleartext
     # lookup key sitting in plain sight beside the ciphertext it was meant to
     # replace. A test can be forgotten; this runs on every load, including
-    # task 15's eventual read for erasure.
+    # the retention sweep's own read for erasure.
     if not all(set(e) == eventkeys.ENVELOPE_FIELDS for e in entries):
         raise ValueError(
             "registrations.enc holds an entry that is not exactly ciphertext"
@@ -466,9 +466,9 @@ def find_by_email(
     via `normalize_email`), or `None` -- the same question `upsert` already
     answers internally to decide what to replace, exposed here so a caller
     can ask it about a file's state *before* calling `upsert`, which is
-    exactly what the confirmation email (task 7) needs: `upsert` overwrites
+    exactly what the confirmation email needs: `upsert` overwrites
     the matched entry, so the *prior* `Registration` -- to say what changed
-    (R-9) -- has to be read out first, from the same file, under the same
+    -- has to be read out first, from the same file, under the same
     key, using the same notion of "the same registrant" `upsert` uses. A
     second, hand-written comparison here would risk drifting from that one.
 
@@ -481,7 +481,7 @@ def find_by_email(
     up to 500 RSA-OAEP decrypts, milliseconds each -- and `cli.py`'s
     `handle_registration` calls this immediately before `upsert`, so one
     submission now pays that cost twice, roughly a thousand decrypts at
-    the relay's per-event ceiling (review round 1, minor 6). Still cheap
+    the relay's per-event ceiling. Still cheap
     against the ten-minute job timeout; noted here rather than optimised
     away, because the alternative -- one combined find-and-replace pass --
     would have `upsert` hand back the entry it is about to overwrite,
@@ -499,8 +499,8 @@ def erase(
     file: RegistrationFile, email: str, private_pem: str
 ) -> tuple[RegistrationFile, bool]:
     """Remove the one entry addressed to `email` from `file` -- the early
-    erasure spec S4 asks for ("reecriture du fichier chiffre sans
-    l'enregistrement concerne"), task 15's own procedure.
+    erasure procedure: the encrypted file is rewritten without the record
+    concerned, and nothing else moves.
 
     Returns the updated file and whether an entry was actually removed
     (`True`) as opposed to nothing matching (`False`) -- `cli.py` reports
@@ -560,9 +560,9 @@ class AmbiguousMatchingCodeError(Exception):
     **Carries `tied`, every colliding `Registration`, because refusing is
     not always the right answer.** A collision on the code alone must
     refuse -- there is nothing else to go on, and picking one would be
-    exactly the guess `attendance._settle` exists to prevent. But R-32
-    already lets a requester supply an encrypted address (`EMAIL_ENVELOPE`,
-    H1's fix wave 2) alongside the code, and if that address picks out
+    exactly the guess `attendance._settle` exists to prevent. But a
+    requester may supply an encrypted address (`EMAIL_ENVELOPE`)
+    alongside the code, and if that address picks out
     exactly one of the tied entries,
     using it is not guessing -- it is reading the evidence the requester
     actually gave us. Refusing anyway would deny erasure to someone who
@@ -582,8 +582,8 @@ def find_by_matching_code(
 ) -> Registration | None:
     """The entry whose own `matching_code(event_id, entry.email, salt)`
     equals `code`, or `None` -- the preferred way to identify one
-    registration for an early erasure request (R-32): the code is already
-    in the participant's own confirmation e-mail (task 7), never stored
+    registration for an early erasure request: the code is already
+    in the participant's own confirmation e-mail, never stored
     anywhere on our side, and naming it does not require the requester to
     retype an address into an operator-facing form.
 
@@ -595,7 +595,7 @@ def find_by_matching_code(
     match, and there is no reason to decrypt the whole file to learn that
     (the same ordinary D-13 absence `matching_code`'s own docstring
     describes -- an early erasure by code simply cannot be resolved
-    without it; `cli.py` falls back to the address instead, R-32's own
+    without it; `cli.py` falls back to the address instead, the
     documented exception).
 
     Raises `AmbiguousMatchingCodeError` if more than one entry's own code
@@ -613,7 +613,7 @@ def find_by_matching_code(
         existing = to_registration(json.dumps(entry), private_pem)
         if existing is None:
             continue
-        # `hmac.compare_digest`, not `==` (security audit 2026-08-23, L1):
+        # `hmac.compare_digest`, not `==`:
         # `matching_code` returns an HMAC-derived code, and `wanted` is a
         # workflow_dispatch input a caller typed -- the same reasoning
         # `proposal.py`'s own signature check already applies.
@@ -625,12 +625,12 @@ def find_by_matching_code(
         if derived_code is not None and hmac.compare_digest(derived_code, wanted):
             matches.append(existing)
     if len(matches) > 1:
-        # Minor 3 (round 2): the code itself does not go in this message.
+        # The code itself does not go in this message.
         # It reaches this point from MATCHING_CODE, a workflow_dispatch
-        # input already rendered on the run page, but that is R-32's own
+        # input already rendered on the run page, but that is a
         # documented exception for *that* surface, not licence to repeat
         # it here -- this message reaches stderr through erase_registration
-        # unconditionally, on a path R-32 never named. The invariant every
+        # unconditionally, on a path nothing exempts. The invariant every
         # refusal path in convener_ops already holds -- no name, no address, no
         # matching code -- applies here too.
         raise AmbiguousMatchingCodeError(
@@ -655,17 +655,17 @@ _CODE_GROUP: Final = 4
 
 def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
     """A short, spoken-safe code identifying one registration -- read aloud
-    or typed into a display name when joining (phase 4 spec, S:5), never
+    or typed into a display name when joining, never
     stored: the same three inputs always derive the same code, so a resend
-    of the confirmation email (task 7) needs nothing on disk to repeat it.
+    of the confirmation email needs nothing on disk to repeat it.
 
     `None` when `salt` is not set. Unlike an event's own encryption key
     (`eventkeys.py`), an absent salt is an *ordinary* D-13 state here:
-    nothing has to fail closed, because the cascade the phase 4 spec names
-    (S:5 -- exact address, then normalised name) still works with no code
+    nothing has to fail closed, because the matching cascade
+    -- exact address, then normalised name -- still works with no code
     at all. See the `matching_salt` row in `config/integrations.yml`. A
     caller with no code to send falls back to describing that cascade
-    instead, which is task 7's decision, not this function's.
+    instead, which is the confirmation's decision, not this function's.
 
     The alphabet drops the pairs a spoken or handwritten code confuses --
     `0`/`O`, `1`/`I`/`l` -- and `U`, for the same reason Crockford's own
@@ -690,7 +690,7 @@ def matching_code(event_id: str, email: str, salt: str | None) -> str | None:
 
     The result is always uppercase. A participant types it into a display
     name on their own keyboard, which may not match that case, so whoever
-    compares a typed name against this code (task 8) must case-fold the
+    compares a typed name against this code must case-fold the
     typed side first -- this function does not, and should not, guess at
     what a comparison needs.
     """

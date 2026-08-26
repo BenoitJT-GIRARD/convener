@@ -1,6 +1,5 @@
-"""Join attendance rows off the platform (task 2's `AttendanceRow`) against
-this event's registrations (task 6/7's `Registration`), per spec S:5's
-appariement.
+"""Join attendance rows off the platform (`platform.AttendanceRow`) against
+this event's registrations (`registration.Registration`).
 
 Three outcomes, not two
 ------------------------
@@ -65,8 +64,8 @@ Why level 1 alone is tried for a telephone row
 collected from a phone call: 2 needs the address outright, and 3 needs a
 *name* -- which, empirically, a dial-in participant does not have either,
 because the platform shows the calling number as the display name, not
-free text (measured against the real platform, not assumed -- see the
-phase 4 spec's revalidation table). So `_resolve` does not even offer a
+free text (measured against the real platform, not assumed). So `_resolve`
+does not even offer a
 `None`-email row to levels 2 or 3; it would only ever compare a phone
 number against an address or a name and fail, and skipping it outright
 says plainly *why* it fails rather than leaving that to be discovered by
@@ -139,8 +138,8 @@ Eligibility is a calculation, not a decision
 ---------------------------------------------------
 Spec S:5 turns a matched person's summed duration into a yes/no: eligible
 when it reaches a configurable share of the session, by default two
-thirds. Spec S:8 is explicit that this is a *calculation*, kept apart from
-*issuing* a certificate (task 12's `certificate.py`): an appariement
+thirds. This is a *calculation*, kept apart from
+*issuing* a certificate (`certificate.py`): a match
 corrected after the fact is re-run through `match`, and the eligibility
 that follows from it is re-run too, with nothing here to undo -- no
 registry entry, no certificate, nothing this module ever wrote in the
@@ -152,8 +151,8 @@ The threshold itself is `EligibilityThreshold`: `seminar_duration_minutes`
 (`data/config.yml`, already required for every other reason this project
 reads "the session's own length") and `share`, spec S:5's configurable
 fraction -- configuration, not a constant, because the real number "devra
-s'aligner sur des exigences d'accréditation encore inconnues" (spec S:5).
-`eligibility_share` is required in `data/config.yml` (round 1 review: a
+s'aligner sur des exigences d'accréditation encore inconnues".
+`eligibility_share` is required in `data/config.yml` (a
 threshold that only ever lived as a Python default would have been a
 constant with extra steps, and alignment with an accreditation body's
 requirement has to happen by editing that file, not this one).
@@ -563,7 +562,7 @@ def match(
 
 
 #: `data/config.yml` carries `eligibility_share: 0.6666666666666666` for
-#: real (round 1 review) -- the reasoning for that exact sixteen-digit
+#: real -- the reasoning for that exact sixteen-digit
 #: literal lives beside the key itself, in the file, and is not repeated
 #: here. This constant matches it digit for digit on purpose: it is
 #: reached only when a caller builds an `EligibilityThreshold` from a
@@ -594,7 +593,7 @@ class EligibilityThreshold:
     `share` is a plain `float`, matching what YAML gives back for
     `data/config.yml`'s own `eligibility_share`. An earlier version of this
     dataclass accepted `Fraction | float` so the *default* could stay
-    mathematically exact; round 1 review dropped that once the key became
+    mathematically exact; that was dropped once the key became
     required -- see `DEFAULT_ELIGIBILITY_SHARE`'s own comment for why an
     exact fallback would have been the wrong kind of precise."""
 
@@ -680,8 +679,8 @@ def eligible_attendees(
     re-running `match` on a corrected registration file and calling this
     again produces a fresh answer, with no registry entry, no certificate
     and no state of this function's own to undo first. Which of *these*
-    attendees actually receive a certificate is task 12's
-    (`certificate.py`) decision, not this one."""
+    attendees actually receive a certificate is
+    `certificate.py`'s decision, not this one."""
     return tuple(
         attendee for attendee in matched.matched if eligible(attendee, threshold)
     )

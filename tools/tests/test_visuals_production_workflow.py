@@ -1,7 +1,7 @@
-"""Task 6 (phase 6): pins `.github/workflows/visuals-production.yml` and
+"""Pins `.github/workflows/visuals-production.yml` and
 `visuals/render-production.mjs` against the properties a green run does not,
 by itself, prove -- the same idiom `test_visuals_workflow.py` already uses
-for task 5's own workflow.
+for the regression workflow beside it.
 
 Read as text and (for the path filter's own contents) parsed as YAML,
 exactly as that module does, for the identical reason: this file's own
@@ -76,8 +76,8 @@ def test_data_speakers_yml_is_the_one_new_path_this_job_adds() -> None:
 #: what a real edition looks like and what visuals.yml's fixture looks
 #: like, so neither filter may drop one without the other.
 #:
-#: The declaration and the charter are deliberately not here. Until phase
-#: 12 task 1 they were: both jobs rendered this instance's, so both had to
+#: The declaration and the charter are deliberately not here. They used to
+#: be: both jobs rendered this instance's, so both had to
 #: watch the same two files. visuals.yml renders `instances/example/`'s
 #: now, so the two jobs watch *different* declarations and *different*
 #: charters, and `test_the_two_jobs_watch_their_own_instances_files` below
@@ -125,7 +125,7 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     `instances/example/`, so it watches that instance's two files instead
     -- which is what stopped it going red for every duplicate that chose
     its own colours and had them diffed against a committed image of
-    somebody else's poster (phase 12, task 1).
+    somebody else's poster.
 
     `brand/convener/brand.json`, the product's default charter, stays here
     and only here: a duplicate that has written no `data/brand.json` falls
@@ -157,10 +157,10 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
 
 
 def test_public_data_py_is_in_the_filter_the_consent_gate_needs() -> None:
-    """Branch review, fix round 1: `render_visuals` and
+    """`render_visuals` and
     `render_announcements` (this job's own two commands) each call
     `public_data.to_public` directly before either one reads a row -- the
-    P-4 consent gate every one of `cli.py`'s, `announce.py`'s and
+    consent gate every one of `cli.py`'s, `announce.py`'s and
     `visual.py`'s own docstrings names as the reason a portrait or a room
     link cannot reach a rendered page. A change to the gate's own logic
     must re-trigger this job the same way a change to `visual.py` itself
@@ -174,7 +174,7 @@ def test_the_workflow_names_its_own_file_in_its_own_filter() -> None:
 
 
 def test_job_permissions_cover_the_commit_and_dispatch_with_a_bounded_timeout() -> None:
-    """Task 9 (phase 6): this job now commits `site/src/banners/` back to
+    """This job commits `site/src/banners/` back to
     this repository and dispatches `publish-vitrine.yml` -- `contents:
     write` and `actions: write` are exactly the pair `sweep.yml`,
     `retention.yml` and the three certificate workflows already carry for
@@ -187,7 +187,7 @@ def test_job_permissions_cover_the_commit_and_dispatch_with_a_bounded_timeout() 
 
 def test_the_workflow_reads_no_repository_secret() -> None:
     """This job never reads private data beyond this repository's own
-    checkout, and its own commit-and-dispatch step (task 9) authenticates
+    checkout, and its own commit-and-dispatch step authenticates
     with `github.token` -- the ambient, scoped token every job already
     receives, granted through the `permissions:` block above, never a
     repository secret. Unlike publish-vitrine.yml, this workflow needs no
@@ -230,7 +230,7 @@ def test_the_sync_step_regenerates_the_banner_directory_whole() -> None:
     its banner in the same run, not leave a stale file sitting at a live
     public address.
 
-    Phase 7, task 2 merged this file's own sync step into the commit
+    This file's own sync step was merged into the commit
     step below it (`sync_banners`, a shell function called once before
     the retry loop and again on every re-derive, since `git reset --hard`
     would otherwise discard the local commit's own banner files along
@@ -285,7 +285,7 @@ def test_concurrency_group_does_not_collide_with_another_workflow() -> None:
 def test_the_render_step_calls_the_production_command_not_the_fixture_one() -> None:
     """The one substantive difference from visuals.yml's own first step:
     this job must call `convener-render-visuals` (real, scheduled editions),
-    never `convener-render-visual-fixtures` (task 5's fixed, fictional one)."""
+    never `convener-render-visual-fixtures` (the fixed, fictional one)."""
     assert "convener-render-visuals " in _WORKFLOW
     assert "convener-render-visual-fixtures" not in _WORKFLOW
 
@@ -305,7 +305,7 @@ def test_every_heavy_step_after_the_page_count_is_conditional_on_it() -> None:
     level, since the workflow's own trigger-time path filter cannot see
     *how many* scheduled editions a matching push actually leaves behind).
     "Upload the rendered visuals" is deliberately not in this set any more
-    (fix round 1) -- see `test_the_upload_step_also_runs_when_only_
+    -- see `test_the_upload_step_also_runs_when_only_
     announcement_texts_exist` for why its own condition is now broader."""
     heavy_step_names = {
         "Cache the pinned Chrome-for-Testing download",
@@ -330,7 +330,7 @@ def test_every_heavy_step_after_the_page_count_is_conditional_on_it() -> None:
 
 
 def test_the_announcement_command_runs_unconditionally() -> None:
-    """Fix round 1: `convener-render-announcements` is pure Python (no ~430MB
+    """`convener-render-announcements` is pure Python (no ~430MB
     Chrome download to gate) and covers a case `convener-render-visuals`'s own
     page count cannot see -- a freshly-published recording announcement
     for an `archived` edition with zero editions currently `scheduled`.
@@ -426,7 +426,7 @@ def test_the_upload_step_uses_the_production_renderers_own_output_directory() ->
 
 def test_puppeteer_is_the_scripts_only_dependency() -> None:
     """No new dependency was added: `visuals/package.json`'s own
-    `devDependencies` still lists only the one already pinned for task 5;
+    `devDependencies` still lists only the one already pinned;
     this script imports it, adds nothing of its own."""
     assert "import puppeteer from 'puppeteer';" in _SCRIPT
 

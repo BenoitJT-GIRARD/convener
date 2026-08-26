@@ -28,11 +28,11 @@ from convener_ops.signing import (
     verify,
 )
 
-#: The shape a certificate payload actually takes (phase 4 spec §7):
+#: The shape a certificate payload actually takes:
 #: identifier, event, name, date, duration -- and nothing else. Used
 #: throughout this file instead of an arbitrary example dict, on purpose:
 #: this module's own docstring asks whoever builds a real payload
-#: (`certificate.py`, task 12) to keep exactly this discipline, and `sign`
+#: (`certificate.py`) to keep exactly this discipline, and `sign`
 #: itself now enforces it via `PAYLOAD_FIELDS` -- so an address slipped
 #: into this fixture would fail every test in this file, not just the one
 #: that used to guard it alone.
@@ -75,14 +75,14 @@ def test_the_two_reasons_keep_the_spelling_that_crosses_the_language_border() ->
     constants' values and every one of those tests still passes: verified
     by mutation, and the reason this test exists.
 
-    Task 13's verification page cannot import a Python constant. It
+    The verification page cannot import a Python constant. It
     compares whatever string reaches the browser against a literal of its
     own, and the two outcomes are displayed differently on purpose -- one
     says "we cannot confirm this", the other says "this is not a token".
     A silent drift here would make the page show the accusing message for
     the reassuring case, which is the single failure the tri-state was
     built to prevent. So the spellings are part of the contract, not an
-    implementation detail, and they are pinned here (D-14) until task 12's
+    implementation detail, and they are pinned here (D-14) until the
     shared fixture binds both sides directly.
     """
     assert MALFORMED == "malformed"
@@ -145,7 +145,7 @@ def test_verifying_against_a_key_that_never_signed_the_token_fails() -> None:
 
 @pytest.mark.parametrize("field", sorted(PAYLOAD_FIELDS))
 def test_tampering_any_single_payload_field_fails_verification(field: str) -> None:
-    """The review round 2 finding this test exists to close: a mutant tree
+    """The finding this test exists to close: a mutant tree
     that dropped one field at a time from what actually gets signed found
     that only "identifier" was caught by this file's earlier, single-field
     tamper test -- "event", "name", "date" and "duration_hours" all
@@ -506,7 +506,7 @@ def test_verify_returns_malformed_for_a_token_missing_a_field() -> None:
 def test_verify_returns_no_matching_key_when_a_tampered_payload_is_not_an_object() -> (
     None
 ):
-    """R-15 (fix round 2): swapping in a payload that will not even parse
+    """Swapping in a payload that will not even parse
     as a JSON object, while leaving the *original* signature untouched,
     used to return `MALFORMED` -- because `verify` parsed the payload
     before checking any key. Now the signature check runs first, and this
@@ -529,7 +529,7 @@ def test_verify_returns_no_matching_key_when_a_tampered_payload_is_not_an_object
 
 
 def test_verify_returns_no_matching_key_when_a_tampered_payload_is_not_json() -> None:
-    """R-15 (fix round 2): same reasoning as the test above, for payload
+    """Same reasoning as the test above, for payload
     bytes that are not JSON at all rather than JSON-but-not-an-object. The
     original signature does not match these substituted bytes, so
     `verify`'s signature loop rejects it as `NO_MATCHING_KEY` before ever
@@ -678,7 +678,7 @@ def test_verify_result_valid_property_reflects_reason() -> None:
 
 def test_malformed_and_no_matching_key_are_distinct_reasons() -> None:
     """The two failure outcomes must never collapse into one -- that is the
-    entire point of the review round-2 fix. Garbage input and a
+    entire point. Garbage input and a
     well-formed-but-unconfirmable token must be told apart."""
     _, public_pem = generate()
     garbage = verify("not json at all", [public_pem])

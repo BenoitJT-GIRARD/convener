@@ -350,7 +350,7 @@ def test_a_vote_window_opened_yesterday_does_not_reach_todays_digest() -> None:
 
 
 def test_a_lead_parked_by_the_sweep_today_reaches_the_digest() -> None:
-    """Spec section 7 asks for automatic transitions in the digest, and this
+    """The digest carries automatic transitions, and this
     is the only one there is.
 
     `expire_votes` writes `status: parked` and no day, so the day is derived
@@ -466,7 +466,7 @@ def test_a_nomination_opened_today_reaches_the_digest_without_naming_anyone() ->
 
 
 def test_the_overdue_list_alone_is_enough_to_produce_a_digest() -> None:
-    """Spec section 7: the digest carries what is late even on a day when
+    """The digest carries what is late even on a day when
     nothing else moved."""
     speakers = [
         lead(
@@ -478,7 +478,7 @@ def test_the_overdue_list_alone_is_enough_to_produce_a_digest() -> None:
     digest = daily_digest(speakers, make_config(), NOW)
     assert digest is not None
     # `vote_window_days: 10` in the double, and the board's decision deadline
-    # is that number and no other (F-13).
+    # is that number and no other.
     assert "Board decision is 7 days overdue" in digest
     assert "waiting since 2026-08-01" in digest
 
@@ -760,7 +760,7 @@ def test_an_unusable_sla_configuration_produces_no_deadline(sla_days: Any) -> No
 
 @pytest.mark.parametrize("window", [7, 10, 14, 20], ids=str)
 def test_the_lead_goes_overdue_on_the_morning_the_sweep_parks_it(window: int) -> None:
-    """F-13. One deadline, so the two hands on it cannot disagree.
+    """One deadline, so the two hands on it cannot disagree.
 
     `sweep.expire_votes` parks a lead whose window ran out; `notify.overdue`
     (and `app/src/state/sla.ts`, its twin) say the board decision is late.
@@ -802,7 +802,7 @@ def test_the_lead_goes_overdue_on_the_morning_the_sweep_parks_it(window: int) ->
 
 
 def test_the_board_decision_deadline_survives_an_unusable_sla_block() -> None:
-    """F-13. The board's clock is `vote_window_days`, not an `sla_days` key.
+    """The board's clock is `vote_window_days`, not an `sla_days` key.
 
     So a mangled `sla_days` cannot silence it, and the fallback it lands on is
     `governance.vote_window_days` -- the number `sweep.expire_votes` will
@@ -1551,7 +1551,7 @@ def test_immediate_reports_unreadable_current_data(
 def test_git_show_reads_the_previous_revision_of_the_speaker_file(
     tmp_path: Path,
 ) -> None:
-    """Minor 6, branch review: this used to run `cli._git_show` against
+    """This used to run `cli._git_show` against
     this very checkout's own `HEAD~1:data/speakers.yml` -- real repository
     history, not a fixture. That passes inside the checkout and raises
     `fatal: not a git repository` in any copy without a `.git` (an
@@ -1647,7 +1647,7 @@ def test_the_immediate_job_fetches_enough_history_to_reach_that_commit() -> None
     push of three commits could not read the revision it has to compare
     against even when GitHub names it.
 
-    Phase 8, task 3, change E: the file this reads is now
+    The file this reads is
     `sweep-and-notify.yml` and the job that follows `immediate` is `daily`
     (the sweep and the digest, in that order, as one job) rather than
     `digest`. The property is unchanged -- it is about the *immediate*
@@ -1684,9 +1684,9 @@ def test_the_channel_is_declared_as_an_integration() -> None:
 
 
 def test_the_workflow_asks_for_no_permission_beyond_issues_and_checkout() -> None:
-    """Least privilege, restated for the shape phase 8's task 3 left.
+    """Least privilege, restated for the merged shape.
 
-    Before change E this file held only the notification, so one assertion
+    This file used to hold only the notification, so one assertion
     over the whole file said it all: `contents: read` to check out,
     `issues: write` to post, nothing else. The sweep now shares the file,
     and it genuinely needs more -- it commits `data/speakers.yml` and
@@ -1723,7 +1723,7 @@ def test_the_workflow_asks_for_no_permission_beyond_issues_and_checkout() -> Non
 
 
 # ------------------------------------------------------------------ #
-# Phase 8, task 3, change E: the nightly sweep and this digest are one
+# The nightly sweep and this digest are one
 # workflow now. What follows pins what the merge had to keep, because a
 # merge is exactly the moment a trigger or an ordering gets dropped by
 # hand and nothing says so afterwards.
@@ -1820,7 +1820,7 @@ def test_the_sweep_step_never_sees_the_notification_secrets() -> None:
     and `git push`, and has no business being handed the thread and the
     mention the digest posts with. Merging two jobs is precisely when
     somebody lifts both `env:` blocks up to the job to save six lines --
-    P-5 of the security audit, isolation of secrets, which the three
+    the isolation of secrets, which the three
     `deploy-*-relay.yml` files keep for the same reason."""
     jobs = _merged_workflow()["jobs"]
     assert isinstance(jobs, dict)

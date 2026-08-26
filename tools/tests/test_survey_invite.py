@@ -35,7 +35,7 @@ def _registration(**overrides: Any) -> Registration:
 
 
 def test_survey_url_names_the_event_on_the_survey_pages_own_address() -> None:
-    # Phase 7 task 5: a real, bare path -- SURVEY_BASE's own comment
+    # A real, bare path -- SURVEY_BASE's own comment
     # explains why this no longer carries a `#` fragment (there was never
     # a Referer-leak property tying it to one in the first place).
     url = survey_url("mrg-042")
@@ -174,7 +174,7 @@ def test_registry_from_data_rejects_malformed_input(data: Any) -> None:
 
 
 # ------------------------------------------------------------------ #
-# Phase 7 task 5: `SURVEY_BASE` used to be bound to `App.tsx`'s own route
+# `SURVEY_BASE` used to be bound to `App.tsx`'s own route
 # (D-14, "read from both sides") -- that route is gone (see git history).
 # `SURVEY_BASE` is now the survey page's own address, one page per event
 # (D-19) exactly like `registration.SIGNUP_BASE` -- the shape check below
@@ -196,7 +196,7 @@ def test_survey_base_is_the_survey_pages_own_address() -> None:
 
 
 # ------------------------------------------------------------------ #
-# Important 3, fix round 1: `survey_invite.py:196-201` and
+# `survey_invite.py` and
 # `docs/toolkit/emails/survey-invitation.md:12-14` both claimed this test
 # already existed. It did not -- rewording `NOTICE` survived the full
 # suite. Same idiom as `test_confirmation.py`'s `_normalised_docs_template`
