@@ -600,10 +600,10 @@ def test_a_board_already_at_the_floor_moves_nobody() -> None:
     assert all("not proposed" in line for line in prompts)
 
 
-def test_the_live_config_proposes_nobody_while_joined_on_is_blank() -> None:
-    # data/config.yml as it stands: five entries for four people, no joined_on
-    # anywhere. A rule that guessed a start date would shrink a board that is
-    # already mis-declared.
+def test_a_board_with_no_joined_on_dates_proposes_nobody() -> None:
+    # No member carries a start date, so the sweep has nothing to measure
+    # silence from. A rule that guessed one would propose members it cannot
+    # show to be inactive.
     cfg = config(
         inactivity_months=6,
         board_min=5,

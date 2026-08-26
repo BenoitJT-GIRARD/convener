@@ -60,6 +60,17 @@ pass this check. Five upwards, and every `task N`, `round N`, `wave N`,
 `Minor N`, `Critical A` and `change D`, are refused outright, because no
 published page bears any of those names.
 
+**A second limit, and this one is a hole rather than a trade.**
+`COORDINATE` matches inside a single line. A citation split across a
+comment's own line break -- `(task` ending one line, `// 16 ruling 1)`
+opening the next -- reads as one citation to a person and as two unrelated
+fragments to this sweep. One such split existed in this repository and was
+rewritten by hand. Closing the hole means joining a comment's lines before
+matching, which makes a candidate of every sentence that happens to end in
+a number, so it is left open. It is written here rather than left to be
+discovered, because somebody adding a citation should know this check can
+miss one.
+
 **A rule is declared where a page titles it, cited everywhere else.**
 `G-NN` is the one vocabulary of the four that is not one identifier per
 file, per key or per notation: the rules are stated in prose, several of

@@ -272,10 +272,9 @@ def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
     skip there would let the property the whole separation rests on not
     run at all while the suite reported green.
 
-    That is the failure D-25 names, and this module was committing it:
-    a review found a fresh clone
-    passing the entire suite without the one test this module exists to
-    produce ever executing. So the absence is loud where it means
+    That is the failure D-25 names, and this module was committing it: a
+    fresh clone passed the entire suite without the one test this module
+    exists to produce ever executing. So the absence is loud where it means
     something is broken, and quiet where it means nothing at all.
     """
     if _automated_run():
@@ -284,8 +283,8 @@ def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
             f"({' or '.join(_AUTOMATED)} is set), where quality.yml's own "
             "`python` job installs node and both node_modules before it "
             "runs pytest -- so this is a broken pipeline rather than a "
-            "machine without a toolchain, and the acceptance "
-            f"criterion has not run. {remedy}",
+            "machine without a toolchain, and the second instance "
+            f"was never built. {remedy}",
             pytrace=False,
         )
     pytest.skip(f"{missing} -- {remedy}")
@@ -569,7 +568,7 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
         _toolchain_absent("app/node_modules is missing", "Run `npm ci` in app/.")
     assert "app/node_modules is missing" in str(raised.value)
     assert "Run `npm ci` in app/." in str(raised.value)
-    assert ("acceptance criterion has not run" in str(raised.value)) is automated
+    assert ("second instance was never built" in str(raised.value)) is automated
 
 
 # ------------------------------------------------------------------ #
