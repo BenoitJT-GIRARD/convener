@@ -491,10 +491,10 @@ def test_the_command_posts_through_the_channel_that_already_exists(
     root = _repo(tmp_path, monkeypatch, speakers=[_LIVE], published={})
     _github_output(tmp_path, monkeypatch)
     monkeypatch.setenv("CONVENER_NOTIFY_THREAD", "42")
-    monkeypatch.setenv("CONVENER_NOTIFY_MENTION", "@convener/board")
+    monkeypatch.setenv("CONVENER_NOTIFY_MENTION", "@example/board")
     assert check_registration_routing() == 0
     body = (root / "routing-body.md").read_text(encoding="utf-8")
-    assert body.startswith("@convener/board")
+    assert body.startswith("@example/board")
     assert "mrg-09" in body
     assert "Deploy app" in body
     assert "thread 42" in capsys.readouterr().out

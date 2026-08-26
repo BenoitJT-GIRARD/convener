@@ -48,7 +48,7 @@ NOW = datetime(2026, 8, 18, 9, 0, tzinfo=UTC)
 
 #: A fully-configured environment, so the "sends nothing" tests are not
 #: passing merely because the fixture forgot to configure anything.
-CONFIGURED = {THREAD_ENV: "42", MENTION_ENV: "@tec/editorial"}
+CONFIGURED = {THREAD_ENV: "42", MENTION_ENV: "@example/editorial"}
 
 
 def lead(**over: Any) -> dict[str, Any]:
@@ -1062,7 +1062,7 @@ def test_everything_rendered_is_ascii() -> None:
 
 def test_a_fully_configured_environment_yields_a_channel() -> None:
     channel = resolve_channel(CONFIGURED)
-    assert channel == Channel(thread="42", mention="@tec/editorial")
+    assert channel == Channel(thread="42", mention="@example/editorial")
 
 
 @pytest.mark.parametrize(
@@ -1070,8 +1070,8 @@ def test_a_fully_configured_environment_yields_a_channel() -> None:
     [
         {},
         {THREAD_ENV: "42"},
-        {MENTION_ENV: "@tec/editorial"},
-        {THREAD_ENV: "", MENTION_ENV: "@tec/editorial"},
+        {MENTION_ENV: "@example/editorial"},
+        {THREAD_ENV: "", MENTION_ENV: "@example/editorial"},
         {THREAD_ENV: "42", MENTION_ENV: "   "},
     ],
     ids=["nothing", "thread only", "mention only", "blank thread", "blank mention"],
@@ -1142,8 +1142,8 @@ def test_a_dispatch_always_carries_the_address_it_was_built_from() -> None:
     representation to be sent."""
     addressed = dispatch("a real message", CONFIGURED)
     assert addressed is not None
-    assert addressed.channel == Channel(thread="42", mention="@tec/editorial")
-    assert addressed.body.startswith("@tec/editorial")
+    assert addressed.channel == Channel(thread="42", mention="@example/editorial")
+    assert addressed.body.startswith("@example/editorial")
     assert "a real message" in addressed.body
 
 
@@ -1363,12 +1363,12 @@ def test_the_digest_writes_a_body_once_a_channel_is_configured(
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_digest() == 0
 
     body = (root / cli.NOTIFY_BODY).read_text(encoding="utf-8")
-    assert body.startswith("@tec/editorial")
+    assert body.startswith("@example/editorial")
     assert "spk-004: Board decision is " in body
     assert "waiting since 2026-08-01" in body
     assert "left in notify-body.md" in capsys.readouterr().out
@@ -1383,7 +1383,7 @@ def test_a_quiet_day_writes_no_body_even_with_a_channel_configured(
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_digest() == 0
 
@@ -1402,7 +1402,7 @@ def test_dry_run_prints_the_digest_and_writes_nothing(
         "convener_ops.cli.sys.argv", ["convener-notify-digest", "--dry-run"]
     )
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_digest() == 0
 
@@ -1419,7 +1419,7 @@ def test_unreadable_data_is_reported_and_notifies_nothing(
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_digest() == 1
 
@@ -1463,7 +1463,7 @@ def test_immediate_says_nothing_when_there_is_no_previous_revision(
         "convener_ops.cli._git_show", lambda _root, _revision: ("", "no parent commit")
     )
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_immediate() == 0
 
@@ -1483,7 +1483,7 @@ def test_immediate_says_nothing_when_the_previous_revision_is_unreadable(
         "convener_ops.cli._git_show", lambda _root, _revision: ("- id: [unclosed", "")
     )
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_immediate() == 0
 
@@ -1505,7 +1505,7 @@ def test_immediate_writes_a_body_for_a_lead_from_the_form(
         "convener_ops.cli._git_show", lambda _root, _revision: ("[]\n", "")
     )
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_immediate() == 0
 
@@ -1527,7 +1527,7 @@ def test_immediate_writes_nothing_for_an_ordinary_change(
         lambda _root, _revision: ("- id: spk-009\n  status: lead\n", ""),
     )
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
 
     assert cli.notify_immediate() == 0
 

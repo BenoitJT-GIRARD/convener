@@ -634,7 +634,7 @@ def test_record_actions_usage_fires_loudly_when_the_rate_crosses_the_line(
     _instance(tmp_path, _minute_runs(_rate_boundary()))
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("CONVENER_NOTIFY_THREAD", "12")
-    monkeypatch.setenv("CONVENER_NOTIFY_MENTION", "@tec/editorial")
+    monkeypatch.setenv("CONVENER_NOTIFY_MENTION", "@example/editorial")
     _set_today(monkeypatch, date(2026, 8, 24))
 
     assert record_actions_usage() == 0
@@ -643,7 +643,7 @@ def test_record_actions_usage_fires_loudly_when_the_rate_crosses_the_line(
     assert "budget_alert=true" in captured.out
 
     body = (tmp_path / "budget-body.md").read_text(encoding="utf-8")
-    assert body.startswith("@tec/editorial")
+    assert body.startswith("@example/editorial")
     assert actions_usage.LOWER_BOUND_NOTE in body
 
 

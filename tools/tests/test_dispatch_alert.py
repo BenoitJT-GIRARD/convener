@@ -180,14 +180,14 @@ def test_cli_off_main_with_channel_writes_the_body_and_off_main_true(
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
     _set_run_env(monkeypatch, head_branch="chore/cleanup")
     monkeypatch.setenv(THREAD_ENV, "42")
-    monkeypatch.setenv(MENTION_ENV, "@tec/editorial")
+    monkeypatch.setenv(MENTION_ENV, "@example/editorial")
     output_file = tmp_path / "gh_output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output_file))
 
     assert cli.alert_secret_workflow_run() == 0
 
     body = (tmp_path / cli.NOTIFY_BODY).read_text(encoding="utf-8")
-    assert body.startswith("@tec/editorial")
+    assert body.startswith("@example/editorial")
     assert "chore/cleanup" in body
     assert output_file.read_text(encoding="utf-8") == "off_main=true\n"
     assert "addressed to thread 42" in capsys.readouterr().out

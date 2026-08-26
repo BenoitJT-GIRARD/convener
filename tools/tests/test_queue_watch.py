@@ -348,12 +348,12 @@ def test_no_alarm_composes_no_message() -> None:
 
 
 def test_the_message_names_what_is_stuck_and_for_how_long() -> None:
-    stuck = (queue_watch.Waiting(_ENTRY, _hours(72), "no private key for tec-04"),)
+    stuck = (queue_watch.Waiting(_ENTRY, _hours(72), "no private key for abc-04"),)
     body = queue_watch.message(queue_watch.alarms(stuck, _NOW), stuck, _NOW)
     assert body is not None
     assert _ENTRY in body
     assert "72 hour(s)" in body
-    assert "no private key for tec-04" in body
+    assert "no private key for abc-04" in body
 
 
 def test_the_message_and_the_annotations_are_bounded() -> None:
@@ -518,20 +518,20 @@ def test_an_entry_stuck_for_a_missing_event_key_says_so(
 ) -> None:
     """Proof 4. The fix for a missing key is not the fix for a full cap, so
     the message has to carry the drain's own reason and not only a count."""
-    reason = "no private key configured for event tec-04"
+    reason = "no private key configured for event abc-04"
     root = _repo(tmp_path, monkeypatch, _hours(72))
     out = _github_output(tmp_path, monkeypatch)
     _drive(root, monkeypatch, now=_hours(72), waiting={_ENTRY: reason})
     assert record_queue_watch() == 0
     _drive(root, monkeypatch, now=_NOW, waiting={_ENTRY: reason})
     monkeypatch.setenv("CONVENER_NOTIFY_THREAD", "42")
-    monkeypatch.setenv("CONVENER_NOTIFY_MENTION", "@convener/board")
+    monkeypatch.setenv("CONVENER_NOTIFY_MENTION", "@example/board")
     assert record_queue_watch() == 0
     assert _outputs(out)["queue_alert"] == "true"
     assert reason in capsys.readouterr().out
     body = (root / "queue-body.md").read_text(encoding="utf-8")
     assert reason in body
-    assert "@convener/board" in body
+    assert "@example/board" in body
 
 
 def test_the_drain_having_stopped_running_fires(

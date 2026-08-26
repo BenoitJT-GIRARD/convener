@@ -61,6 +61,10 @@ export function activateDemoMode(): void {
 export function exitDemoMode(): void {
   try {
     localStorage.removeItem(FLAG);
+    // Not this product's key: the historical one an earlier build of the
+    // instance running this repository wrote, kept for exactly as long as
+    // a browser somewhere may still hold it -- see `LEGACY_KEY` in
+    // `auth/AuthContext.tsx`, which reads and deletes it on startup.
     localStorage.removeItem('convener.token');
   } catch {
     /* ignore */

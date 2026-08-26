@@ -155,9 +155,9 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
     will. `write_bytes` has no caller in this module today (round 2
     trivia); it is here so that stays true rather than merely assumed."""
     suspect_fragments = ("private_pem", "private_key")
-    convener_ops_dir = repo_root() / "tools" / "convener_ops"
+    package_dir = repo_root() / "tools" / "convener_ops"
     checked = 0
-    for path in sorted(convener_ops_dir.glob("*.py")):
+    for path in sorted(package_dir.glob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if not (

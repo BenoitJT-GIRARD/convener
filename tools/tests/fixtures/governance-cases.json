@@ -1824,7 +1824,7 @@
     },
     {
       "name": "a merge commit is left entirely alone",
-      "message": "Merge pull request #12 from tec/phase-2"
+      "message": "Merge pull request #12 from example/phase-2"
     },
     {
       "name": "an empty message is not the grammar's problem",
