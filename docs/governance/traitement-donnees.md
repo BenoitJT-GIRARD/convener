@@ -16,6 +16,25 @@ knew was happening, where a speaker candidate may not know their name was
 put forward at all. That file has its own record:
 [Data protection record — speaker and event-lead candidates](candidate-data-protection.md).
 
+## Controller
+
+**{{ instance.organisation }}** is the controller for everything set out
+below, and answers for it at `{{ instance.contact }}`.
+
+That names whoever is *running* this instance, and it never names whoever
+wrote the software. This page ships with the product because the mechanisms
+it describes — encryption in the participant's own browser, one key per
+event, destruction of that key on a deadline — are identical in every
+instance and checkable against the code of any of them. The judgements are
+not shipped and could not be: the basis relied on, the window chosen, the
+recipients, and who replies to a participant asking what is held about them
+are decided by the organisation running the series and answered for by it.
+An instance that duplicated this repository has adopted this record as its
+own, with its own name at the head of it. The software's author is not a
+controller, a joint controller or a processor for any of it, and receives
+none of the data — there is no telemetry and no shared service for any of
+it to travel through.
+
 ## What we hold
 
 - **Registration (G-18)**, per event, encrypted (`data/events/<id>/registrations.enc`):
