@@ -1,6 +1,6 @@
 # Data protection record — registration and certification
 
-The processing record spec §4 asks for: what we hold about a participant in
+The processing record: what we hold about a participant in
 the registration, attendance and certificate pipeline, why, on what basis,
 who can reach it, for how long, and what actually protects it. Written as
 the code behaves, not as we would like to describe it — every claim below is
@@ -67,8 +67,8 @@ than overlooked: resending a confirmation
 (`.github/workflows/resend-confirmation.yml`) and the early-erasure fallback
 for someone who no longer has their matching code
 (`.github/workflows/erase-registration.yml`). Neither puts the address
-itself outside the pipeline any more: as of a security-audit fix (H1,
-2026-08-23), both take that address hybrid-encrypted under the event's
+itself outside the pipeline any more: since a security-review fix,
+both take that address hybrid-encrypted under the event's
 own published public key, produced locally with `convener-encrypt-identifier`,
 never the address itself — GitHub still retains the manually-triggered
 workflow input on that run's own page for as long as the run's history
@@ -84,8 +84,8 @@ Registration and attendance data is destroyed **90 days** after the event,
 by destroying the one key that could ever decrypt it — the retention window
 `tools/convener_ops/eventkeys.py` reads for every event. The encrypted files
 themselves are not deleted: `data/events/<id>/registrations.enc`, the
-attendance export and `survey-responses.enc` all stay committed, exactly
-as spec §4 asks — unreadable, not absent, so no commit history anywhere in
+attendance export and `survey-responses.enc` all stay committed —
+unreadable, not absent, so no commit history anywhere in
 this repository is ever rewritten to make that happen. The one credential
 this destruction depends on is the
 one integration this project will not let fail quietly: if it is missing,

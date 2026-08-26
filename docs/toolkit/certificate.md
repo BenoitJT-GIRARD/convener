@@ -1,8 +1,8 @@
 # Certificate of attendance
 
 *Generated automatically, once per eligible attendee, by
-`tools/convener_ops/certificate.py` (task 12) and delivered by e-mail (task 14) --
-never committed to this repository, ever, for any attendee (spec S:7 is
+`tools/convener_ops/certificate.py` and delivered by e-mail --
+never committed to this repository, ever, for any attendee (this project is
 categorical about it: no document naming a person is ever deposited here).
 Nobody opens this page and fills it in by
 hand, so its placeholders are written in **square brackets**, not double
@@ -18,7 +18,7 @@ two cannot quietly say different things.*
 hours and the identifier are the signed payload** -- exactly the five fields
 `tools/convener_ops/signing.py::PAYLOAD_FIELDS` allows, no more, no less. The
 organiser's name and the verification address below are document furniture,
-not signed facts (spec §7 lists both as content the certificate carries, but
+not signed facts (both are content the certificate carries, but
 `signing.sign` would refuse a payload that tried to include them) -- a
 verifier reads them off the page, never off the cryptographic payload,
 because neither one is a fact about the attendee that needs attesting.*

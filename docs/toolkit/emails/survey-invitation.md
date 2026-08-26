@@ -15,7 +15,7 @@ without opening `tools/convener_ops/survey_invite.py`.
 one fixed sentence against that module's own constants, so the two cannot
 quietly say different things.*
 
-*Phase 4 spec §6 restricts this message to people we recognise as having
+*This message goes only to people we recognise as having
 attended, and to nobody else — the questionnaire itself is optional, and
 so is answering it. The link below is the same one for every recipient of
 the same event:
@@ -72,8 +72,8 @@ Best regards,
   round — by choice, not because anonymity forces it.** Unlike a
   certificate resend, which `certificate.py`'s own public identifiers let
   target precisely, `convener-invite-survey` mints no identifier at all — see
-  `tools/convener_ops/survey_invite.py`'s own module docstring, "ruling 3,
-  corrected in fix round 1", for the full argument: a per-person handle
+  `tools/convener_ops/survey_invite.py`'s own module docstring
+  for the full argument: a per-person handle
   here would not undo the survey response's own anonymity, but it would be
   a permanent, cross-event linkage kept for a purpose that expires in
   days, so it is not built. A single in-place retry inside the same run

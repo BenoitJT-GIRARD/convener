@@ -13,8 +13,8 @@ means in GitHub's own permission model. Without a mapping onto a real
 organisation role and a real repository role, G-11 is an intention a
 reader has to trust, not a setting anyone can check.
 
-The 2026-08-23 security audit found that this gap has a sharp edge. **P-5
-— nobody with only write access can exfiltrate a secret — cannot be
+A security review found that this gap has a sharp edge. **The property that
+nobody with only write access can exfiltrate a secret cannot be
 closed on this repository's hosting tier**: environments, branch
 protection, required reviewers and an effective `CODEOWNERS` are all
 unavailable on a private repository at GitHub's Free tier, so nothing
@@ -63,8 +63,8 @@ that does not say this plainly is worse than one that does, because a
 reader who is never told assumes the omission means the risk was not
 seen.
 
-**What this actually bounds.** This mapping does not close P-5 — nothing
-free on this hosting tier does. What it changes is the exposure window.
+**What this actually bounds.** This mapping does not close that gap —
+nothing free on this hosting tier does. What it changes is the exposure window.
 If `Write` is granted only to members who are actually active, and
 revoked by a designated actor — the architect — as soon as someone
 leaves an active role, the window during which an unused `Write` grant
@@ -85,7 +85,7 @@ gets `Admin` — turning a voting seat into an organisation trust root, far
 wider than the cockpit needs — or nobody gets real `Write`, which breaks
 the write-as-yourself model the cockpit is built on (D-04).
 
-**Describing this mapping as closing P-5.** It would overstate what a
+**Describing this mapping as closing that gap.** It would overstate what a
 free-tier access policy can do: environments, branch protection, required
 reviewers and an effective `CODEOWNERS` all stay unavailable on a private
 repository at GitHub's Free tier, whatever this project does with who

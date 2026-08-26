@@ -12,8 +12,8 @@ participant receives without opening `tools/convener_ops/confirmation.py`.
 sentences against that module's own constants, so the two cannot quietly
 say different things.*
 
-*The room link only ever reaches a participant here — see the phase 4
-spec's risk table (S:9): the room is a permanent account, its link is not
+*The room link only ever reaches a participant here: the room is a
+permanent account, its link is not
 otherwise published, and this e-mail is the one channel it goes out on.*
 
 ---
@@ -81,8 +81,8 @@ Best regards,
   one: `convener-handle-registration` decrypts and stores the registration, then
   `convener-send-confirmation` — its own step in `.github/workflows/
   registration.yml`, run only once the record has actually landed on the
-  branch — composes and delivers this message. Split into two on review
-  (round 1, Important 2): the storing step retries on a rejected push, and
+  branch — composes and delivers this message. Split into two on review:
+  the storing step retries on a rejected push, and
   a step that both stored and sent would have sent one confirmation per
   retry. `resend_confirmation` (the `convener-resend-confirmation` command)
   re-sends the same, current message by hand — a certificate in the spam

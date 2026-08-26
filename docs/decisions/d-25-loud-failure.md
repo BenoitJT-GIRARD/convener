@@ -31,7 +31,7 @@ suggestion rather than a standards failure, letting a broken heading
 hierarchy pass; a leak-detection guard whose only signal was the very field
 being stripped out, so it could never see anything else; a dependency audit
 flag that exempted an entire dependency tree because the tree declared no
-production dependencies at all; a security audit added to the one surface
+production dependencies at all; a dependency audit added to the one surface
 that was already passing; a verification step that could have inspected one
 page out of many and reported success regardless of the rest; two
 client-mounted interactive pieces that a server-rendered-HTML check would

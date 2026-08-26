@@ -111,8 +111,8 @@ privacy notice, so nothing here rests on a candidate's consent to be
 evaluated — `publication.consent`, the one consent this schema does record,
 governs a single later question, whether a confirmed speaker's recording may
 be published, and answers nothing about being considered as a candidate in
-the first place. This is the gap the security audit's M2 finding named
-(2026-08-23): a real one, surfaced here rather than papered over, and left
+the first place. This is a gap a security review named:
+a real one, surfaced here rather than papered over, and left
 for the maintainer to settle rather than resolved by this page inventing a
 basis after the fact.
 
@@ -156,7 +156,7 @@ padded, salted or otherwise protected beyond what git and the private
 repository already provide, and this page will not describe a safeguard
 that is not there. Whether that should change — encryption, a retention
 window, a route for a candidate to ask what is held about them — is the
-question the security audit raised and left for the maintainer to decide;
+question that review raised and left for the maintainer to decide;
 this page's job is to describe today's system accurately, not to resolve
 that question by quietly claiming a protection this file does not have.
 

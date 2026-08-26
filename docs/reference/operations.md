@@ -170,8 +170,8 @@ worker are served from different origins, so it follows the same CORS
 pattern `services/auth-proxy/` already established (see its README's
 "Cross-origin requests" section) rather than a second one.
 
-Since task 16, it also answers `POST /survey`, the post-event survey's own
-intake (phase 4 spec S:6) — the same worker, not a fourth one; see its
+It also answers `POST /survey`, the post-event survey's own
+intake — the same worker, not a fourth one; see its
 README's "A second route, not a second worker" section for why, and for the
 separate KV counter and rate-limiter key that route gets so a flooded
 survey cannot spend, or be blocked by, a registration's own budget. Nothing
@@ -179,9 +179,9 @@ here needs a second deployment, a second variable or a second secret: it is
 the same `VITE_SIGNUP_RELAY_URL`, with `/survey` appended by
 `SurveyForm.tsx` itself.
 
-**Since fix round 1 (R-37), `/survey` also checks the survey switch
-itself.** Fix round 1 had it fetch `SURVEY_STATUS_URL`, a plain deployed
-example-showcase page; fix round 2 (R-41) replaced that with a read of this
+**`/survey` also checks the survey switch
+itself.** It first fetched `SURVEY_STATUS_URL`, a plain deployed
+example-showcase page; that gave way to a read of this
 repository's own `public-data/survey-status.json` through the GitHub
 Contents API — the same `CONVENER_DISPATCH_TOKEN` credential and the same call
 shape the relay already spends one read of for `keys/events/<id>.pub` —
@@ -196,7 +196,7 @@ both reads.
 step, alongside "Build public data") and still baked into the app's own
 built output by `app/scripts/copy-survey-status.mjs` for the *page* to
 fetch (a static page has no token and cannot read the Contents API any
-other way) — but as of fix round 2 it is also committed back to this
+other way) — but it is also committed back to this
 repository by `deploy.yml`'s own "Commit survey status" step, which is
 what makes the relay's own Contents-API read possible at all. This is one
 of three layers now (the page, the relay, and the CI handler each check
@@ -306,12 +306,12 @@ site is pushed into — `config/instance.json`'s `published_url` says which
 one, and nothing names it a second time
 (`published.Published.publish_repository` derives it, and both publishing
 workflows read that): Settings → Pages → Source =
-*Deploy from a branch*, branch `main`, folder `/ (root)`. Before phase 5,
-`example-showcase` held the showcase's own Eleventy templates directly, and
+*Deploy from a branch*, branch `main`, folder `/ (root)`. `example-showcase`
+used to hold the showcase's own Eleventy templates directly, and
 that repository's own `build.yml` published them to a `gh-pages` branch —
 one this *Source* setting above was never configured to serve (see *Not
-currently reachable*, below, for what that broke). Phase 5 moved those
-templates into this repository, under `site/` (D-15: private source,
+currently reachable*, below, for what that broke). Those
+templates live in this repository now, under `site/` (D-15: private source,
 public artefact), so `example-showcase` is now **purely generated** — every
 byte there is reproducible from this repository, nothing hand-edited —
 and retired `example-showcase`'s own `build.yml` along with them: two workflows
@@ -382,7 +382,7 @@ things are worth keeping separate once a push does happen:
   state: both *Publish vitrine* and *Deploy app* log a message and exit
   cleanly at their first push step, rather than failing loudly, and simply
   push nothing.
-- Independently of that, task 13's fix round 1 found a second, real
+- Independently of that, a review found a second, real
   problem, live at the time it was checked: a `curl -I` against the
   showcase's address returned `200`, but from GitHub Pages' own Jekyll
   rendering of `example-showcase`'s `README.md` (`<meta name="generator"
@@ -390,8 +390,8 @@ things are worth keeping separate once a push does happen:
   repository's root — and the application and the showcase's own
   stylesheet both `404`d. That was the two-`build.yml` conflict this
   section used to describe: `example-showcase`'s own build published to
-  `gh-pages`, a branch the *Source* setting above does not serve. Phase 5
-  removes the cause rather than working around it, exactly as described
+  `gh-pages`, a branch the *Source* setting above does not serve. Moving
+  the templates removes the cause rather than working around it, exactly as described
   above — but that removal has not yet been checked against a real
   deployment, so treat it as the most likely first thing to verify once
   this repository is finally connected to GitHub, not as settled.
@@ -448,8 +448,8 @@ exactly as `script-src` is. This section used to say instead that
 the whole of both policies — and it was not a reason. Neither policy had
 a `default-src` or an `img-src`, so an image, a frame, a font, a
 stylesheet, a media file or a worker was admitted from **any origin at
-all**, on the public showcase and in the cockpit alike. Phase 11 closed
-that; what each policy now names, and what each name is justified by, is
+all**, on the public showcase and in the cockpit alike. That is closed;
+what each policy now names, and what each name is justified by, is
 written beside the directive in the two files themselves.
 
 Two independent policies, one per document, built from what that document
@@ -457,8 +457,8 @@ actually loads rather than one policy loose enough to cover both:
 
 - `site/src/_data/csp.js` — every page Eleventy builds (the showcase, and
   the registration, certificate-verification and post-event survey
-  islands mounted on three of its pages — the last moved here from the
-  cockpit by phase 7 task 5). `default-src 'none'` with `script-src`,
+  islands mounted on three of its pages — the last of them moved here from
+  the cockpit). `default-src 'none'` with `script-src`,
   `style-src`, `img-src` and `font-src` all `'self'` — one stylesheet,
   three self-hosted woff2 faces and three island bundles are the whole of
   what these pages load — plus `base-uri 'none'`, `object-src 'none'`,
@@ -469,7 +469,7 @@ actually loads rather than one policy loose enough to cover both:
   configured.
 - `app/scripts/csp.mjs` (injected into `app/index.html` by
   `app/vite.config.ts`'s own `cspHtmlPlugin`) — the operators' cockpit,
-  gated on sign-in, and nothing else. Phase 7 task 5 moved the last
+  gated on sign-in, and nothing else. The last
   public route this bundle carried (`/survey/:eventId`, the post-event
   survey) onto the island above, and `connect-src` dropped the signup
   relay's own origin as a direct consequence: nothing left in this
@@ -493,8 +493,8 @@ development server as well as for a build, so `npm run dev` was being
 served the policy above — and `script-src 'self'` refuses
 `@vitejs/plugin-react`'s React Refresh preamble, which is an *inline*
 script the plugin writes into every served document. The cockpit's
-development server therefore rendered a blank page from the day the audit
-added the policy (2026-08-23) until phase 11 found it; the published
+development server therefore rendered a blank page from the day the policy
+landed until somebody found it; the published
 artefact was never affected, which is exactly why nobody met it. The
 obvious remedy — not injecting the policy in development at all — was
 rejected: it takes the policy out of the one environment where a
@@ -518,8 +518,8 @@ browser's console on every page. `site/scripts/check-a11y.mjs` already
 does the first two steps for every page this project publishes, in a
 real, JavaScript-executing Chrome; a clean console on that same run is
 this policy's own proof that legitimate content still loads under it. A
-`javascript:` URI submitted through the public proposal intake (finding
-M3) is exactly the kind of thing `script-src 'self'` refuses.
+`javascript:` URI submitted through the public proposal intake
+is exactly the kind of thing `script-src 'self'` refuses.
 
 ## Meeting platform
 
@@ -542,7 +542,7 @@ breaks: `platform_from_env` falls back to the manual adapter the moment the
 secret is unset, exactly as it does today.
 
 **To create:** requires production API credentials from the meeting
-provider, granted after a manual request (see phase 4). The value to set is
+provider, granted after a manual request. The value to set is
 a bearer **access token**, not a client id and secret — this project does
 not exchange credentials for one itself.
 
@@ -574,21 +574,21 @@ rather than automated:
 
 Skipping the step costs one event's manual attendance import through the
 fallback above, never a cancelled seminar and never a security incident. The
-journey line and the board notice that drive this are wired up in a later
-phase-4 task; this section documents the procedure a volunteer or that later
-task follows, and `tools/convener_ops/platform_fcc.py`'s module docstring
+journey line and the board notice that drive this are not wired up yet;
+this section documents the procedure a volunteer, or whatever eventually
+wires it, follows, and `tools/convener_ops/platform_fcc.py`'s module docstring
 documents the same reasoning from the code's side.
 
 **Two routes free the recording quota, never one.** The provider's free
 tier is 1 GB; a 90-minute recording alone is roughly 1,645 MB, so freeing
 the space after every event is a condition of operation, not an
-optimisation (spec Section 2/9). Phase 3's own recording discipline —
+optimisation. The hosting runbook's recording discipline —
 recording started for the talk, stopped before the discussion, started
 again for the discussion — means an event routinely produces **two**
 recordings that both cost quota, and only one of them may ever be
 converted to MP4. That is why there are two commands, not one, with
 opposite guards, both structural rather than a convention a caller has to
-remember (task 10):
+remember:
 
 **`convener-release-recording`** — for a talk headed to YouTube, only.
 (`tools/convener_ops/cli.py::release_recording`, run through
@@ -616,7 +616,7 @@ rather than restated anywhere it could drift from the code: it refuses to
 delete unless both
 
 1. the `delivered/recording-retrieved` step is ticked on the event's own
-   `runbook_progress` — task 17 gave this its own cockpit checkbox
+   `runbook_progress` — this has its own cockpit checkbox
    ("Recording retrieved and archived somewhere durable", first line of
    the Delivered — wrap-up journey, `app/src/state/phases.ts`); a
    volunteer without the app to hand can still set it directly on
@@ -666,8 +666,8 @@ needs *before* triggering either.
 **Why both stay manual, per-event triggers, never a schedule.** Nothing
 ties an event id to its FreeConferenceCall conference id anywhere in the
 provider's documented or undocumented API in a way this project has been
-able to verify (task 3's own refusal to build a resolver on the unverified
-conference-listing endpoint, upheld on review). Until a verified way to
+able to verify (this project refused to build a resolver on the unverified
+conference-listing endpoint, and that refusal was upheld on review). Until a verified way to
 make that resolution exists, a human supplies the conference id by hand,
 once, when running either workflow — so releasing or discarding a
 recording remains a runbook step, not something this project promises to
@@ -677,13 +677,13 @@ disclosed limit, not an oversight.
 
 ## Outbound email
 
-**Without it:** the registration confirmation (task 7) is composed all the
+**Without it:** the registration confirmation is composed all the
 same, and reported unsent — the job prints one line naming the event and
 saying a confirmation could not be sent, never the composed message
 itself. Nothing is silently dropped: the registration is already stored by
 the time this step runs, so nothing here is the only copy of anything a
-manual resend (below) cannot reproduce. **Reported, not retained (Critical
-3, branch review).** An earlier version of this row described the composed
+manual resend (below) cannot reproduce. **Reported, not retained.**
+An earlier version of this row described the composed
 message being written to a local file and uploaded as a 14-day, access-
 controlled build artefact — that pattern is gone: `docs/governance/
 traitement-donnees.md`'s own Recipients section named it a documented
@@ -732,7 +732,7 @@ secret) and prints one line of ciphertext to paste into the workflow's own
 form. GitHub still renders and retains a `workflow_dispatch` input's own
 value on the run page for as long as the run's history exists, but what it
 retains is now unreadable without this event's `EVENT_PRIVATE_KEY` — a
-security-audit fix (H1, 2026-08-23) closing what used to be a documented,
+security-review fix closing what used to be a documented,
 deliberate exception resting only on `workflow_dispatch` being restricted
 to collaborators with repository write access.
 
@@ -846,8 +846,8 @@ closing line names it explicitly, because — unlike the other five rows —
 this absence is not a harmless fallback (`absent_is_normal: false` in
 `config/integrations.yml`).
 
-**Destroying a key:** at the end of an event's retention window (see the
-phase 4 spec, §4), remove `CONVENER_EVENT_KEY_<EVENT ID>` from the repository's
+**Destroying a key:** at the end of an event's retention window,
+remove `CONVENER_EVENT_KEY_<EVENT ID>` from the repository's
 secrets. The encrypted registrations already committed under
 `data/events/<event id>/` stay in git, with no history rewrite, and become
 permanently unreadable the moment the secret is gone — nothing else needs
@@ -869,18 +869,18 @@ two steps, always together, in that order: remove the secret, then run
 
 ## Retention and early erasure
 
-Task 15's own job: the phase 4 spec's central promise (§4) — a key
+The retention sweep's own job, and this project's central promise — a key
 destroyed 90 days after its event, making that event's registrations
 permanently unreadable — carried out automatically, on a schedule, and
 proved by a test (`tools/tests/test_retention.py`,
 `test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever`).
 
-**Since task 16, this same destruction also covers
+**This same destruction also covers
 `data/events/<id>/survey-responses.enc`, the post-event survey's own
 storage (§6) — with no change to this job at all.** `CONVENER_EVENT_KEY_<ID>`
 is the one key both files are encrypted under; deleting the secret makes
 both permanently unreadable in the same one operation. There is no second
-retention path to remember, because none was built: task 16 deliberately
+retention path to remember, because none was built: the survey deliberately
 did not create a second thing to destroy.
 
 **`.github/workflows/retention.yml`** runs daily and on demand
@@ -898,8 +898,8 @@ from "this event never had a key". That same step also removes the
 event's `keys/events/<id>.pub` once the registry write succeeds, so a
 destroyed event stops accepting new registrations too — the signup relay
 has no other way to know an event has closed. Once that commit actually
-pushes, the same step dispatches `deploy.yml` (Important 2, branch
-review): the commit itself lands with `GITHUB_TOKEN`, which never starts
+pushes, the same step dispatches `deploy.yml`:
+the commit itself lands with `GITHUB_TOKEN`, which never starts
 a new workflow run on its own, so without this the deployed app bundle —
 built from `copy-event-keys.mjs`'s own copy of `keys/events/` — would
 keep serving a destroyed event's public key until some unrelated push to
@@ -926,7 +926,7 @@ check its last run date, and use `workflow_dispatch` to run it by hand,
 the same manual catch-up any other scheduled job in this project uses.
 
 **`CONVENER_RETENTION_TOKEN` — the one credential this whole job depends on,
-and its absence is deliberately not an ordinary D-13 state (R-28).**
+and its absence is deliberately not an ordinary D-13 state.**
 Deleting a repository secret needs a credential `GITHUB_TOKEN` does not
 carry, no matter what `permissions:` a workflow grants it — so this is a
 **fine-grained personal access token, scoped to this repository, with
@@ -953,17 +953,17 @@ Fine-grained tokens → generate one scoped only to this repository, with
 only the Secrets permission, set to read and write; paste the value into
 this repository's own `CONVENER_RETENTION_TOKEN` secret.
 
-**Early erasure**, spec §4's other right (erasure before the retention
+**Early erasure**, the other right (erasure before the retention
 deadline): a participant's own registration removed from
 `registrations.enc` before
 the retention window ends, without touching any other registrant's own
-entry (R-31; `convener_ops.registration.erase`). Run
+entry (`convener_ops.registration.erase`). Run
 **`.github/workflows/erase-registration.yml`** by hand
 (`workflow_dispatch`) with the event id and, **preferred**, the matching
 code from the participant's own confirmation e-mail (`convener_ops.registration
 .find_by_matching_code` recomputes and compares it — nothing on our side
 ever stores it). The e-mail address is accepted as a **documented,
-deliberate fallback** for someone who no longer has that e-mail (R-32) —
+deliberate fallback** for someone who no longer has that e-mail —
 the same exception *Outbound email*'s own "Manual resend" section above
 already makes for `convener-resend-confirmation`'s `encrypted_identifier`
 input. As with that input, `erase-registration.yml`'s own
@@ -972,12 +972,12 @@ first with `convener-encrypt-identifier` (see "Manual resend" above for the
 exact command), and paste the resulting ciphertext. `workflow_dispatch`
 is still restricted to collaborators with repository write access, but
 this fallback's safety no longer depends on that boundary — a security
-audit fix (H1, 2026-08-23) that closes what this exception used to
+review fix that closes what this exception used to
 accept as an open, permanent, plaintext copy of the address it exists to
 erase.
 
 **Once an event's key is destroyed, there is nothing left to erase, and
-this is provable rather than merely asserted (spec §4).**
+this is provable rather than merely asserted.**
 `convener-erase-registration` checks `data/event-key-destructions.yml` first —
 before asking for a private key at all — and, if the event is already on
 record as destroyed, prints the destruction date and exits cleanly: the
@@ -1005,7 +1005,7 @@ per response under its top-level `"responses"` array
 (`tools/convener_ops/survey.py::ResponseFile`), each entry an independent
 hybrid-encrypted envelope with its own AES key and nonce — removing one
 array element and committing the result touches nothing else in the file,
-byte for byte, the same guarantee task 15's `convener-erase-registration` relies
+byte for byte, the same guarantee `convener-erase-registration` relies
 on for `registrations.enc`. There is no CLI command for this today (fair
 warning: a response cannot be *identified* by anything short of decrypting
 it, since none carries a name, address or matching code), so it is a
@@ -1018,7 +1018,7 @@ standing between a hand edit and the committed file the way there is for
 
 **Anonymous against a stranger; pseudonymous by metadata against the
 organiser — stated honestly, not fixed further, because fixing it further
-would cost more than the risk (R-39, fix round 1).** A stored entry is
+would cost more than the risk.** A stored entry is
 exactly `{v, encrypted_key, iv, ciphertext}`; the decrypted plaintext is
 exactly `{overall_rating, recommend, feedback}`, padded to a fixed size
 before encryption so the ciphertext's length no longer reveals how much a
@@ -1026,14 +1026,14 @@ participant wrote. Against a stranger without the event's private key,
 that is complete: there is nothing else on the entry to read. Against the
 organiser — who holds the key, and is the only party for whom anonymity is
 a promise rather than a mathematical certainty — one channel remains
-outside the encryption on purpose: arrival time. Until phase 9 this was
+outside the encryption on purpose: arrival time. This used to be
 sharp — `.github/workflows/survey.yml` committed once per response, at the
 wall-clock minute it arrived, so array position N in
 `survey-responses.enc` was paired with a timestamp permanently in the git
 history, and "the one who answered at 19:04" was a workable handle for
 whoever also held the attendance list.
 
-**Phase 9 blunted it as a side effect of something else.** The daily drain
+**The submission queue blunted it as a side effect of something else.** The daily drain
 (*Draining the submission queue*, below) writes every response that
 arrived since the last drain in *one* commit, so what the history now
 pairs with array position N is the drain's own run, not the participant's
@@ -1043,8 +1043,8 @@ commits, while an entry is waiting, still carry the minute it was written,
 and anyone with access to that branch's history can read them. This was
 not the reason for the change and should not be relied on as a control;
 it is recorded because a later reader comparing this paragraph to the git
-history would otherwise find it wrong. Task 18, or
-whoever next writes anything that treats these responses as anonymous to
+history would otherwise find it wrong. Whoever next writes anything that
+treats these responses as anonymous to
 the organiser specifically, should read this paragraph first.
 
 ## Certificate signing key
@@ -1060,7 +1060,7 @@ both differences, and for why the padding scheme, key size and wire format
 were each chosen the way they were.
 
 **Without it:** no certificate is issued. The job that would sign one
-(`tools/convener_ops/certificate.py`, task 12/14) cannot, and stops there —
+(`tools/convener_ops/certificate.py`) cannot, and stops there —
 nothing partially written, nothing sensitive exposed. Unlike *Event
 registration keys*, this is an ordinary D-13 absence: there is no
 confidentiality risk a missing signing key could expose, only a feature
@@ -1079,7 +1079,7 @@ unlike an event key, this is not per-event.
 
 1. Commit the public half as `keys/signing/<YYYY-MM-DD>.pub`, dated the day
    it was generated (`convener_ops.signing.public_key_path`). This is not a
-   secret: it is what lets a public verification page (task 13) confirm a
+   secret: it is what lets a public verification page confirm a
    certificate offline, with no request to us at all. `keys/signing/`
    holds a `README.md` describing this layout even when the directory is
    otherwise empty — an empty directory there is the normal state before
@@ -1209,8 +1209,8 @@ quick succession — the case the retry loop exists for — leaves both.
 **Without it:** the signup relay's `/survey` route (see *Signup relay*
 above) writes each encrypted envelope to the queue branch and nothing ever
 picks it up. Responses accumulate on a branch nobody looks at, the
-submitters were all told `204`, and no badge anywhere turns red. Phase 9's
-task 4 adds the watchdog for exactly that silence.
+submitters were all told `204`, and no badge anywhere turns red. The
+queue watchdog exists for exactly that silence.
 
 **Where the queue is.** A branch of this repository called
 `submission-queue`, one file per submission at
@@ -1228,7 +1228,7 @@ inverse of the point. The relay writes with its own token rather than a
 job's `GITHUB_TOKEN`, so GitHub's recursion guard does not save it; what
 does is that nothing triggers on a push to a branch other than `main`,
 which `tools/tests/test_workflows.py` holds over the whole workflow
-directory (phase 9, task 1).
+directory.
 
 > **Never open a pull request from `submission-queue`.** Six workflows
 > trigger on `pull_request`, but four of them filter on paths a `queue/**`
@@ -1306,8 +1306,8 @@ proposal per run. Changing that is a decision about personal data, not a
 refactor.
 
 **The survey switch is checked before anything is decrypted or written —
-and, since fix round 1 (R-37), this is the third of three checks, not the
-only one.** Before R-37, `services/signup-relay`'s own known-event check
+and this is the third of three checks, not the
+only one.** `services/signup-relay`'s own known-event check once
 proved only that an event's public key existed, never that its organiser
 turned the survey on, and neither `SurveyForm.tsx` nor the relay had any
 way to know the switch existed at all (`survey_enabled` is `NEVER_PUBLISHED`
@@ -1327,7 +1327,7 @@ any of the three layers: a switch that is off is the ordinary state for
 most events, but a *response arriving* for one is not something this job
 may quietly discard by writing nothing and exiting clean — an unexplained
 green run that stored nothing would be indistinguishable from an ordinary
-day, and this is a case worth an operator's attention. Since phase 9 it is
+day, and this is a case worth an operator's attention. It is
 one of the drain's *refusals*: annotated on the run by entry id and
 reason, cleared from the queue (it will not become true by waiting, and an
 entry that waits for ever is a queue that never empties), and deliberately
@@ -1341,20 +1341,20 @@ with no trade-off at all, and why registration could not.
 
 **To verify:** with an event's `survey_enabled` set to `true` in
 `data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
-(`AdminOverride.tsx`, fix round 1's minor 9) — submit the survey form
-(`/survey/<event id>/` on the vitrine, its own island since phase 7 task
-5). **Nothing runs at that moment, and that is the change:** a file
+(`AdminOverride.tsx`) — submit the survey form
+(`/survey/<event id>/` on the vitrine, its own island). **Nothing runs at
+that moment, and that is the change:** a file
 appears under `queue/survey/` on the `submission-queue` branch. Run *Sweep
 and notify the board* by hand (`workflow_dispatch`) rather than waiting
 for 05:00 UTC, and `data/events/<event id>/survey-responses.enc` gains one
 entry while the queue file disappears. Submitting again adds a second,
 independent entry — this is by design, not a defect; see `survey.py`'s own
 docstring. With `survey_enabled` left `false` (the default for every
-event, task 16 ruling 1), the submission is refused by the relay before it
+event), the submission is refused by the relay before it
 is ever queued, and no file is written at all.
 
-**Toggling that checkbox is not immediately live for a participant** (fix
-round 2, minor 5): `data/speakers.yml` is the authoritative record
+**Toggling that checkbox is not immediately live for a participant:**
+`data/speakers.yml` is the authoritative record
 the drain reads, but `SurveyForm.tsx` and the signup
 relay both read `survey-status.json` instead (see *Signup relay* above),
 which only reflects a new checkbox state once *Deploy app* next builds and
@@ -1368,9 +1368,9 @@ switch expecting it to take effect at once.
 
 **Without it:** `tools/convener_ops/registration.py::matching_code` returns
 nothing — no matching code is derived, printed anywhere, or included in
-the confirmation email a registration triggers (see task 7). Attendance
-matching falls back to the address-and-name cascade the phase 4 spec
-describes (§5) instead of the typed code. This is an ordinary D-13
+the confirmation email a registration triggers. Attendance
+matching falls back to the address-and-name cascade instead of the typed
+code. This is an ordinary D-13
 absence: nothing here fails closed, because that cascade is a documented,
 working fallback, not personal data landing somewhere it should not — see
 `config/integrations.yml`'s own comment on why this row exists at all
@@ -1391,7 +1391,7 @@ change every already-issued code, so a resend of the confirmation email
 (which recomputes the code rather than storing it) would no longer match
 what the participant was already told.
 
-Task 12 gives this same secret a second consumer: `tools/convener_ops/
+This same secret has a second consumer: `tools/convener_ops/
 certificate.py::fingerprint`, the certificate register's own salted trace
 of an address. That is a second reason never to rotate it once any event's
 register exists, not merely the first — rotating it would also change
@@ -1424,7 +1424,7 @@ closes that gap:
    only the event's already-published public key
    (`keys/events/<event id>.pub`) and the plaintext file above, and writes
    `data/events/<event id>/attendance-import.csv.enc` -- one independent
-   `eventkeys` envelope per attendance row (fix round 1, R-45; the same
+   `eventkeys` envelope per attendance row (the same
    per-record shape `registrations.enc` and `survey-responses.enc` already
    use, not one envelope for the whole file), safe to commit: the public
    key that produced it cannot decrypt any of it back. Running this again
@@ -1444,8 +1444,8 @@ encrypted and the plaintext export happen to sit on disk at once (a stray
 leftover from local testing), the encrypted one is read and the plaintext
 one is ignored.
 
-**This is a journey step, not only a command.** Fix round 1 (Important 2)
-gave it a line on the event's own runbook -- "Attendance export encrypted
+**This is a journey step, not only a command.** It has
+a line on the event's own runbook -- "Attendance export encrypted
 and committed" (`app/src/state/phases.ts`, `delivered/attendance-export-
 encrypted`), right beside "Recording retrieved and archived somewhere
 durable" -- and a matching checklist line in
@@ -1459,8 +1459,8 @@ downstream can proceed until this step is done.
 `convener-match-attendance` (`tools/convener_ops/cli.py::match_attendance`) reads one
 event's stored registrations and its attendance export -- the platform's own
 API, or, with no `CONVENER_MEETING_API_TOKEN` configured, the manual
-implementation's attendance export -- and joins them through the phase 4
-spec's own cascade (§5: matching code, then address, then normalised
+implementation's attendance export -- and joins them through the
+matching cascade (matching code, then address, then normalised
 name). It is the diagnostic step an operator runs before issuing
 certificates for an event: it reports only counts on stdout (matched,
 unmatched, unreachable, rows read) and writes the host's short list of
@@ -1470,8 +1470,8 @@ certificates` (below) re-runs the same join internally and never reads
 this file; it exists for a human to resolve an ambiguity by hand before
 certificates are minted, not as an input to anything automated.
 
-**`unmatched-attendance.md` names records, not people (M1, security audit
-2026-08-23).** An unmatched connection is listed by a salted record
+**`unmatched-attendance.md` names records, not people.**
+An unmatched connection is listed by a salted record
 identifier -- `registration.matching_code`, the identical shape a
 registrant's own confirmation code already uses -- when
 `CONVENER_MATCHING_SALT` is configured, or by its position in the list
@@ -1486,8 +1486,8 @@ Like every other command in this section, it needs `EVENT_PRIVATE_KEY` to
 decrypt `registrations.enc` -- and per *Event registration keys* above, that
 key "must never... be written to a file outside a CI job's environment", so
 this command is not meant to be run against a real event from a laptop.
-**Its own workflow now makes it reachable** (`.github/workflows/
-match-attendance.yml`, I-4, branch review) -- the same `workflow_dispatch`
+**Its own workflow makes it reachable** (`.github/workflows/
+match-attendance.yml`) -- the same `workflow_dispatch`
 shape `convener-issue-certificates`, `convener-reissue-certificate` and
 `convener-revoke-certificate` below already use, with the same `event_id` and
 optional `conference_id` inputs `convener-issue-certificates` and
@@ -1505,8 +1505,8 @@ artefact. That restriction is defence in depth now, not the reason the
 file is safe: the file itself carries no name and no address any more
 (see above).
 
-**The manual implementation can now be run against real attendance in CI
-(task 17, closing the gap fix round 3 recorded here).** Before this, with
+**The manual implementation can be run against real attendance in CI**,
+closing a gap this page used to record. Before that, with
 no `CONVENER_MEETING_API_TOKEN`, the manual implementation looked only for
 `data/events/<event id>/attendance-import.csv`, which `.gitignore` keeps
 out of every checkout -- there was nowhere to run this command *from* that
@@ -1521,14 +1521,14 @@ the result; a CI job holding this event's `EVENT_PRIVATE_KEY` -- the same
 key it already reads to decrypt `registrations.enc` -- decrypts it the
 moment it is checked out. `tools/tests/test_event_chain.py` drives the
 real commands against exactly this shape and asserts the chain completes,
-closing AC8 for the manual implementation. With a token configured, this
-command now populates `conference_ids` too (I-4, branch review), the same
+for the manual implementation. With a token configured, this
+command populates `conference_ids` too, the same
 `_conference_ids_from_env` resolution `convener-issue-certificates` and
 `convener-reissue-certificate` below already share -- match-attendance.yml
 gives it the same `conference_id` input those two workflows take, closing
 the gap the paragraph above once left open. Left blank, the FCC path still
 refuses cleanly with "no FCC conference is recorded for event ..." rather
-than an unhandled traceback (fix round 3); that refusal is now reachable
+than an unhandled traceback; that refusal is now reachable
 by choice, not only by a workflow that could not have named the id at
 all.
 
@@ -1537,8 +1537,8 @@ all.
 Three operator actions, three workflows, none scheduled: an operator
 decides an event's attendance is settled and triggers each one by hand from
 the Actions tab (`workflow_dispatch`). All three re-derive registrations and
-attendance from scratch on every run (spec §8's own guarantee that a
-corrected match recalculates without re-registering), the same way
+attendance from scratch on every run, so a
+corrected match recalculates without anybody re-registering, the same way
 *Handling a registration* re-derives rather than trusts a prior run's own
 answer, and all three commit straight to `data/events/<event
 id>/certificates.yml` with the same re-derive-rather-than-rebase retry
@@ -1546,9 +1546,9 @@ id>/certificates.yml` with the same re-derive-rather-than-rebase retry
 above for why a rejected push is never resolved with `git pull --rebase`
 here either.
 
-**The register is written here, at issuance, not after delivery** --
-spec §8's own prose names generating the certificate, delivering it and
-writing the register as three steps in that order; in the code it is two
+**The register is written here, at issuance, not after delivery.**
+Generating the certificate, delivering it and
+writing the register read as three steps in that order; in the code it is two
 steps, because idempotence requires it. `convener-deliver-certificates` (below)
 re-signs the identical token on every run without ever writing to the
 register again, which is what lets a failed delivery be retried without
@@ -1559,7 +1559,7 @@ docstring for the fuller reasoning.
 rendered on its own run's page and retained for as long as that run's
 history exists -- longer than the 14-day artefact this project uses
 everywhere else it has to carry personal data at all, and exactly the
-exposure named in this same document's own history (task 7's Important 4).
+exposure this same document already names for the confirmation resend.
 `convener-reissue-certificate` and `convener-revoke-certificate` both take a
 certificate id instead: random, public by design, already printed on the
 document and already published in `certificates-public.json`, so it names
@@ -1571,11 +1571,11 @@ in the other direction -- see that module's own docstring and
 
 - **Issue certificates** (`.github/workflows/issue-certificates.yml`,
   `convener-issue-certificates`). Inputs: the event id, and, optionally, the
-  FreeConferenceCall conference id (fix round 3, Critical B) -- the same
+  FreeConferenceCall conference id -- the same
   input `recording.yml` already takes, needed only when
   `CONVENER_MEETING_API_TOKEN` is configured; the manual implementation never
   reads it. Signs a certificate for every currently eligible attendee not
-  already on record (spec §5's threshold, computed the same way
+  already on record (the eligibility threshold, computed the same way
   `convener-match-attendance` computes it), and commits the register only when
   at least one certificate was freshly minted. Reading `CONVENER_SIGNING_KEY`
   absent, or `CONVENER_MATCHING_SALT` absent, are both ordinary D-13 states --
@@ -1583,7 +1583,7 @@ in the other direction -- see that module's own docstring and
   the former: `certificate.py`'s own module docstring explains why a
   certificate fingerprint may never be computed without a real salt, so
   an absent salt forbids writing rather than licensing an unsafe write.
-  Before fix round 3, nothing populated the FCC path's own `conference_ids`
+  Nothing used to populate the FCC path's own `conference_ids`
   at all, so it could never issue a single certificate -- see that
   round's own report for the full finding.
 - **Reissue a certificate** (`.github/workflows/reissue-certificate.yml`,
@@ -1599,9 +1599,9 @@ in the other direction -- see that module's own docstring and
   to revoke. Flips one register row to `revoked` and nothing else -- no
   signing key or matching salt is read at all, because revocation touches
   only the register, never the token a revoked certificate's holder still
-  carries (spec §7's own guarantee: the signature stays valid -- it is the
-  register that has the final say on state). Added this round (R-21, fix
-  round 2, task 12): before it, the only way to revoke a certificate was a
+  carries (the signature stays valid -- it is the
+  register that has the final say on state). Before this command existed,
+  the only way to revoke a certificate was a
   hand edit of the committed-clear register, which this project's own
   standing constraint against depending on a collaborator's goodwill or
   their post rules out, and which made `certificate.revoke`'s own guard
@@ -1623,8 +1623,8 @@ their own sections above. Revoking reads neither an event key nor either
 certificate secret, exactly as its own bullet above says: revocation never
 touches anything that would need one.
 
-**How the public projection actually gets rebuilt (corrected, carried item
-4, fix wave 2).** *Deploy app*'s own `push:` trigger only fires from an
+**How the public projection actually gets rebuilt.**
+*Deploy app*'s own `push:` trigger only fires from an
 event GitHub itself raises for the push -- and none of these three jobs'
 own commits raise one: all three push with the checkout's default
 `GITHUB_TOKEN`, and GitHub does not start a new workflow run from an
@@ -1653,9 +1653,9 @@ workflow run on the Actions tab, started a few seconds after the first.
 
 ## Delivering a certificate
 
-Spec §7's own rule on delivery is categorical: by e-mail, and a document
+The rule on delivery is categorical: by e-mail, and a document
 naming a person is never deposited in a repository. Two commands, one
-workflow step and one standalone workflow, both new this round (task 14).
+workflow step and one standalone workflow.
 
 - **Deliver certificates for this event** -- a step in
   `.github/workflows/issue-certificates.yml`, `convener-deliver-certificates`,
@@ -1670,7 +1670,7 @@ workflow step and one standalone workflow, both new this round (task 14).
   Never writes the rendered document anywhere.
 
   **Restricted by default to what this run's own issuance step just
-  minted (R-27, fix round 1).** *Issue certificates* writes the freshly
+  minted.** *Issue certificates* writes the freshly
   issued identifiers to `$GITHUB_OUTPUT` -- public by design, already
   printed on the document, already published in
   `certificates-public.json` -- and this step reads them as `DELIVER_ONLY`,
@@ -1686,14 +1686,14 @@ workflow step and one standalone workflow, both new this round (task 14).
   directly to *Deliver a certificate* below rather than recovered by
   re-running the batch that caused it. This step's own failure --
   including a transient platform error re-fetching attendance -- no longer
-  marks the whole run red (`continue-on-error: true`, Minor 8, fix round
-  1): the certificates were already committed and pushed by the step
+  marks the whole run red (`continue-on-error: true`):
+  the certificates were already committed and pushed by the step
   before it, and that outcome should not be hidden behind a delivery
   hiccup.
 - **Deliver a certificate** (`.github/workflows/deliver-certificate.yml`,
   `convener-deliver-certificate`). A manual resend for one certificate -- a
   certificate sitting unread in a spam folder does not exist any more
-  than a registration confirmation does (spec §9's own risk table) -- named
+  than a registration confirmation does -- named
   by `CERTIFICATE_ID`, never an address, resolved to a registration the
   same fingerprint-reversal `convener-reissue-certificate` already uses (the
   two commands now share that resolution code). Inputs: the event id, the
@@ -1701,11 +1701,11 @@ workflow step and one standalone workflow, both new this round (task 14).
   three certificate workflows take. Read-only: this workflow writes
   nothing and dispatches nothing, so its job needs only `contents: read`,
   unlike the three that write `certificates.yml`. Its own `concurrency`
-  group is keyed on `certificate_id` alone (Minor 7, fix round 1), so two
+  group is keyed on `certificate_id` alone, so two
   dispatches naming the *same* certificate serialise against each other
   (never two e-mails for one resend) while two dispatches naming different
   certificates still run in parallel. **Refuses a revoked certificate
-  outright** (R-26, fix round 1, Critical 1): a certificate the register
+  outright:** a certificate the register
   marks revoked is never delivered, by this command or the bulk one above,
   regardless of how it is invoked.
 
@@ -1715,8 +1715,8 @@ reissuing and revoking certificates* already documents -- plus
 `email_transport`'s five `CONVENER_SMTP_*` secrets (*Outbound email*, above),
 read here for the first time by anything other than the registration
 confirmation. Absent `email_transport` secrets are ordinary D-13 here too,
-and degrade the same way the confirmation now does (Critical 3, branch
-review): nothing is ever written anywhere, not even to a private, short-
+and degrade the same way the confirmation does:
+nothing is ever written anywhere, not even to a private, short-
 retention artefact -- see `tools/convener_ops/delivery.py`'s own module
 docstring for why that would have been the wrong pattern here regardless,
 for a signed, nominative document.
@@ -1724,7 +1724,7 @@ for a signed, nominative document.
 **Replayable, bounded by retention.** A failed or retried delivery
 reproduces the byte-identical document -- `certificate.issue`'s own
 idempotent lookup plus `signing.sign`'s determinism -- for as long as this
-event's `registrations.enc` still exists. Once task 15's retention sweep
+event's `registrations.enc` still exists. Once the retention sweep
 destroys the event's key, 90 days after the event, there is no address
 left to deliver to: the certificate still verifies, forever, but
 `convener-deliver-certificate` refuses cleanly (the same "no registrations
@@ -1741,10 +1741,9 @@ resend path independently.
 
 ## Inviting the post-event survey
 
-Spec §6's own French sentence is precise, and this is its plain English
-sense, not a loosened paraphrase: optional, switched on per event, short,
-sent afterwards, and only to people recognised as present. Task 16 splits
-it in two — `tools/convener_ops/survey.py` (16a) is the anonymous
+The rule is precise: optional, switched on per event, short,
+sent afterwards, and only to people recognised as present. It splits
+in two — `tools/convener_ops/survey.py` is the anonymous
 storage side, already covered above under *Handling a survey response*;
 `tools/convener_ops/survey_invite.py` (16b) is who gets asked, which needs an
 identity to invite even though the answer it collects carries none.
@@ -1759,9 +1758,9 @@ FreeConferenceCall conference id every attendance-reading workflow already
 takes, and `resend_all` (below).
 
 **Only a *matched* attendee is invited** — a stored registration the
-attendance cascade (`tools/convener_ops/attendance.py`, spec §5) tied to a room
+attendance cascade (`tools/convener_ops/attendance.py`) tied to a room
 presence, `attendance.match`'s own `matched` outcome, never `eligible`
-(the certificate-issuing duration threshold, task 12): spec §6 asks only
+(the certificate-issuing duration threshold): the rule asks only
 whether we recognised someone present, not whether they stayed long enough
 to earn a certificate. Neither an **unmatched** attendee (present, but the
 cascade could not tie the address it saw to any registration) nor an
@@ -1784,8 +1783,8 @@ pseudonymous by metadata against the organiser" section, above, for the
 claim this page and that one must never overstate.
 
 **A resend invites everyone again, by choice, not because a finer grain is
-unsafe (corrected in fix round 1).** Unlike `issue-certificates.yml`'s own
-`resend_all` (R-27), which restricts an ordinary run to what was freshly
+unsafe.** Unlike `issue-certificates.yml`'s own
+`resend_all`, which restricts an ordinary run to what was freshly
 minted and can name a single failed delivery by its certificate's own
 public identifier, `convener-invite-survey` mints no identifier at all.
 `data/survey-invitations.yml` records only that an event was invited, and
@@ -1809,11 +1808,11 @@ key at all, unlike `certificates.yml`, which already lives under
 `data/events/<id>/`. `CONVENER_MATCHING_SALT` is also ordinary D-13 for this
 command (unlike for certificate issuance), so such a handle could not
 always be computed in the first place. See
-`tools/convener_ops/survey_invite.py`'s own module docstring, "ruling 3,
-corrected in fix round 1", for the argument in full.
+`tools/convener_ops/survey_invite.py`'s own module docstring
+for the argument in full.
 
 **What actually reduces how often a bounce needs any recovery at all: an
-in-run retry, which needs no identifier (fix round 1).**
+in-run retry, which needs no identifier.**
 `convener-invite-survey` retries one immediate resend, in the same run, for any
 delivery that fails on its first attempt — a transient SMTP hiccup no
 longer forces mailing a whole batch again. `resend_all` remains the
@@ -1945,7 +1944,7 @@ through a nomination is reactivated in place rather than added twice.
 
 **This never touches the person's real GitHub access, and that gap is a
 security-relevant one — a manual step this rule does not take.** `inactive`
-is a flag in `data/config.yml`; the 2026-08-23 security audit's finding on
+is a flag in `data/config.yml`; a security review's finding on
 write access is about a live GitHub setting (Settings → Collaborators, or
 whichever team grants access to this repository), which nothing in this
 codebase reads or writes. A member marked `inactive` here — or one who has
@@ -1953,7 +1952,7 @@ left the Board entirely, replaced by a nomination — can keep full `Write`
 collaborator access indefinitely unless a maintainer separately removes it.
 That matters because `Write` is what lets a collaborator push a branch, add
 a step to a workflow that reads a sensitive secret, and dispatch that
-workflow against the branch — the exact path the audit's C1/C2 fix narrows
+workflow against the branch — the exact path this project narrows
 with `.github/workflows/secret-workflow-monitor.yml` (detection, not
 prevention — prevention itself needs a paid tier this project does not
 have). Every person who
@@ -1971,7 +1970,7 @@ organisation holds is a far more dangerous secret than anything this system
 holds today, including `CONVENER_RETENTION_TOKEN`'s `Secrets: write` (see *CI-only
 secrets*, below, and *Retention and early erasure*, above, for what that one
 can already do). Building one to save a few minutes, a few times a year, is
-the exact trade AF-1 of the security audit already named as this project's
+the exact trade a security review already named as this project's
 own recurring mistake: a credential that can do more than its job. A person
 reading a short checklist is the right size of solution for a change this
 infrequent.
@@ -1981,7 +1980,7 @@ onto GitHub's own organisation-owner role, independent of Board
 membership, and a Board member onto repository `Write` and nothing more
 — the architect is the only account that actually holds the permission
 this checklist needs, so the architect is who runs it. This is also the
-bound that mapping puts on the security audit's write-access finding: not
+bound that mapping puts on the write-access finding: not
 closed, but limited to however long it takes the architect to work
 through this checklist after someone's role changes.
 

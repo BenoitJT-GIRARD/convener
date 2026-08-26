@@ -1,7 +1,7 @@
 # Email — Certificate delivered
 
 *Sent automatically, once per eligible attendee, carrying the certificate of
-attendance itself as an attachment (phase 4 task 14) — never a second copy of
+attendance itself as an attachment — never a second copy of
 [Certificate of attendance](../certificate.md) kept anywhere once this
 message has gone out. Nobody opens this page and fills it in by hand, unlike
 every other template in this section, so its placeholders are written in
@@ -13,8 +13,8 @@ receives without opening `tools/convener_ops/delivery.py`.
 module's own composed message, so the two cannot quietly say different
 things.*
 
-*Spec §7 is categorical on how a certificate reaches its holder: by e-mail,
-and a document naming a person is never deposited in a repository. This
+*This project is categorical on how a certificate reaches its holder: by
+e-mail, and a document naming a person is never deposited in a repository. This
 message is the one place in the whole phase that carries the certificate —
 a self-contained HTML page with an inline QR code — outside our own
 systems, and the certificate is never written to disk here, or anywhere,
@@ -56,7 +56,7 @@ Best regards,
   identifier, never by an address). Neither ever writes the rendered
   document to a file, an artefact, or a job log — a delivery that fails is
   reported by identifier, never stashed, and recovered a different way
-  depending on which command sent it (fix round 1): the bulk step only
+  depending on which command sent it: the bulk step only
   ever mails what its own run just issued or reproduced, by default, so
   the right recovery for one bounce is to hand that identifier to
   *Deliver a certificate* — never to re-run the bulk step, which would not
@@ -70,7 +70,7 @@ Best regards,
   exists.** The certificate itself verifies forever — the register's own
   state is what a verifier checks, and revocation never touches the
   signature. But redelivering it needs the address to send it to, which
-  lives only in `data/events/<id>/registrations.enc`; once task 15's
+  lives only in `data/events/<id>/registrations.enc`; once the
   retention sweep destroys that event's key, 90 days after the event, a
   certificate already issued can still be verified by anyone who holds it,
   but can never be delivered again by us.
@@ -80,5 +80,5 @@ Best regards,
   volunteer can open and paste from by hand; this message has no such
   fallback at all — every attempt is folded into a bare sent/not-sent
   count, and nothing more, because keeping even a private local copy of a
-  signed certificate is the one thing spec §7 rules out. See
+  signed certificate is the one thing this project rules out. See
   `tools/convener_ops/delivery.py`'s module docstring for the full argument.

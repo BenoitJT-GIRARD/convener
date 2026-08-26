@@ -204,7 +204,7 @@ single owner is a bus-factor risk (a second, rarely-used owner is the
 ordinary mitigation, a trade-off the maintainer decides), and an owner is
 inherently a trust root, able to rewrite any secret and add themselves
 anywhere. This is also the one free control this project has left over
-the write-access exposure the 2026-08-23 security audit found: it bounds
+the write-access exposure a security review found: it bounds
 how long an unused write grant stays live, without ever closing what a
 write grant can do.
 
