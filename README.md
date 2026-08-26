@@ -137,6 +137,22 @@ commands continuous integration runs on every push; see
 [`docs/architecture.md`](docs/architecture.md#contributing) for the
 per-directory commands. None of it needs an account or a secret to run.
 
+## Licence
+
+Free software under the [GNU Affero General Public License, version 3 or
+later](LICENSE). Section 13 of it is the point: a hosted, *modified* version
+has to offer its source to the people using it, so this cannot quietly become
+somebody's closed fork.
+
+The name and the mark are **not** covered by that grant — a term at the head
+of `LICENSE`, under section 7 of the licence itself, declines them, and
+[`TRADEMARK.md`](TRADEMARK.md) says what a fork renames and how little an
+unregistered mark is actually worth. Both the showcase and the cockpit display
+the licence notice in their footer; its text is `NOTICE.json`, and no part of
+it is an instance's to configure. See
+[D-29](docs/decisions/d-29-licence-and-attribution.md) for the whole argument,
+including the two licence families that were rejected and why.
+
 ## Spot a mistake?
 
 Every Markdown file under `docs/` is the source of truth for its content.

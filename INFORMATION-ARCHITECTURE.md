@@ -33,6 +33,8 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | Which paths belong to this series rather than to the code | `config/boundary.yml`, and each `config/` file's own `owner:` key |
 | The address this project is published at | `config/instance.json`, read by `tools/convener_ops/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
 | A second, invented instance to build as | `instances/example/`, one file per path `config/boundary.yml` hands to the instance |
+| The terms this software is under, and what the name is not under | `LICENSE`, whose head carries the term declining the name, and `TRADEMARK.md` |
+| The notice both interfaces display in their footer | `NOTICE.json`, read by `site/scripts/notice.cjs` and `app/scripts/notice.mjs` |
 
 ## 2 · Doctrine in the handbook, state in the app
 
