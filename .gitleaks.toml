@@ -1,0 +1,52 @@
+# What this repository's secret scanner is allowed not to report.
+#
+# `.github/workflows/security.yml` runs `gitleaks git --exit-code 1` over
+# every commit of every branch, and `.pre-commit-config.yaml` runs the same
+# scanner, pinned to the same version, over what is about to be committed.
+# Both find this file on their own -- gitleaks reads `<target>/.gitleaks.toml`
+# when no `--config` is given -- so neither the workflow nor the hook names
+# it, and neither can drift from it.
+#
+# One entry, and it exists because `tools/tests/fixtures/governance-cases.json`
+# carries one RSA-2048 private key **on purpose**: generated for that fixture,
+# encrypting nothing anybody sent, and the only thing holding this project's
+# two languages to one wire format (D-14). The argument for keeping it is
+# written once, in `tools/convener_ops/derivation_guard.py::DECLARED_SECRETS`,
+# where the derivation guard reads it. It is not repeated here.
+#
+# Without this file the `secrets` job is red on its first run and stays red.
+# That is where it stood until phase 12: nothing had ever run, so nobody had
+# seen it -- which is the whole argument for a check being executed rather
+# than configured.
+#
+# Keyed on the value, and narrowed by the path -- never the path alone
+# ---------------------------------------------------------------------
+# `paths` on its own would exempt the whole file, and the file most likely to
+# grow a second key is the file that already holds one: a single decision
+# would have become a standing hole in exactly the wrong place. So
+# `condition = "AND"` requires both clauses to hold, which is the same pair
+# `derivation_guard.is_declared(where, digest)` already requires. A second
+# credential added to this fixture is still reported; this key at any other
+# path is still reported; and this key regenerated is still reported, because
+# the anchor below stops matching.
+#
+# The anchor is sixty-four base64 characters of that key's **modulus** -- the
+# public half, which the same fixture publishes in the clear beside it as
+# `public_pem`. A slice of the private half would have made this file a second
+# copy of a key, and a copy the derivation guard would then have to refuse.
+#
+# `tools/tests/test_derivation_guard.py` holds every clause below against the
+# fixture it names, offline and without the scanner: an allowlist that has
+# stopped standing for anything fails in the test suite instead of quietly
+# exempting nothing.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "the fixture key DECLARED_SECRETS declares, at the one path declaring it"
+targetRules = ["private-key"]
+condition = "AND"
+regexTarget = "secret"
+paths = ['''^tools/tests/fixtures/governance-cases\.json$''']
+regexes = ['''1BhYKmCxhw8f6cUOIwIgt8i/lyeJ/CK59TixPvF2hW0djPZY6sfJZN4yv4M9b5RS''']
