@@ -403,8 +403,8 @@ __all__ = [
     "verification_url",
 ]
 
-#: The organisation's own name, printed on the document as the
-#: "organisateur". Not a `data/config.yml` key: it does not vary between
+#: The organisation's own name, printed on the document as the organising
+#: body. Not a `data/config.yml` key: it does not vary between
 #: events, so a config key here would buy a TypeScript ripple
 #: -- `types.ts`, `validate.ts`, `CONFIG_KEYS`, `readConfig`, every
 #: hand-built `Config` literal in the app's tests, a regenerated

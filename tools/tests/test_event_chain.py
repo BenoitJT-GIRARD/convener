@@ -556,8 +556,8 @@ def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
     # Making the delivery loop `continue`
     # immediately -- nobody delivered at all -- used to leave this test
     # green too. Asserting the printed counts and that the register's own
-    # identifier set is unchanged is what actually demonstrates "sans
-    # regenerer" for the batch path.
+    # identifier set is unchanged is what actually demonstrates the
+    # replay without regeneration for the batch path.
     assert deliver_certificates() == 0
     out = capsys.readouterr().out
     assert "0 sent, 2 not sent" in out
@@ -656,7 +656,7 @@ def test_record_destructions_replays_from_env_alone_recovering_a_wedged_sweep(
 
 
 # ------------------------------------------------------------------ #
-# effacement anticipe -- erase_registration replays from a committed
+# early erasure -- erase_registration replays from a committed
 # register alone.
 # ------------------------------------------------------------------ #
 

@@ -27,8 +27,8 @@ The cascade, in order
    comparison `upsert` and `find_by_email` already use, reused rather than
    re-derived so this module cannot quietly disagree with them about what
    "the same address" means.
-3. **The normalised name** -- casse, accents, ordre des mots.
-   Tried only once 1 and 2 have both found nothing.
+3. **The normalised name** -- case, accents and word order all
+   normalised. Tried only once 1 and 2 have both found nothing.
 
 Only tried in that order, and only when the level above found nothing: a
 code beats a contradicting address, and an address beats a contradicting
@@ -188,7 +188,7 @@ real risks rather than hypotheticals:
   registrant who attended too briefly:
   "we do not know who this was" collapsing into "we know who this was and
   they fell short", which are different facts the host resolving
-  `matched.unmatched` needs told apart (a "reprise manuelle" is
+  `matched.unmatched` needs told apart (a manual clean-up pass is
   only actionable if it still says who is unresolved, not who failed a
   duration check). `eligible_attendees` keeps them apart the same way
   `match` keeps `unmatched` apart from `unreachable`: by construction,
@@ -253,7 +253,7 @@ class MatchedAttendee:
 class UnmatchedAttendee:
     """One address the cascade could not tie to a registration -- present
     in the room, absent from every level's answer. The host's short list
-    (the "reprise manuelle"); `display_name` is the first spelling
+    for the manual clean-up pass; `display_name` is the first spelling
     seen for this address, kept only because a host resolving this by hand
     needs something to recognise, not because this module treats it as
     authoritative the way a matched `Registration`'s own fields are."""

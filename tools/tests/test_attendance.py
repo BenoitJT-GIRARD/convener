@@ -1,4 +1,4 @@
-"""Tests for `convener_ops.attendance` -- the appariement cascade and
+"""Tests for `convener_ops.attendance` -- the matching cascade and
 the summing that turns several connections into one person's duration.
 
 Historical figures at `@example.org` throughout, per project convention:
