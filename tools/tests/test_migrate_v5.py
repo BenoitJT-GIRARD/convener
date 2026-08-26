@@ -48,7 +48,7 @@ def v4_speaker(**overrides: Any) -> dict[str, Any]:
         "selection": {
             "ballots": [
                 {
-                    "voter": "Anonymous",
+                    "voter": "carol",
                     "value": "yes",
                     "comment": "",
                     "coi_reason": "",
@@ -154,7 +154,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
             v4_speaker(id="spk-002", status="lead", edition_code="", date=""),
         ]
     )
-    assert validate_speakers(speakers, {"Anonymous"}, editions=EDITIONS) == []
+    assert validate_speakers(speakers, {"carol"}, editions=EDITIONS) == []
 
 
 # --- the script as it is actually run -------------------------------------

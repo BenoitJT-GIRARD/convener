@@ -24,7 +24,7 @@
       "name": "an inactive member leaves the board entirely, not merely the eligible set",
       "board": [
         {
-          "login": "Anonymous",
+          "login": "carol",
           "joined_on": "2024-01-01",
           "status": "active",
           "unavailable_until": ""
@@ -38,11 +38,11 @@
       ],
       "on": "2026-01-20",
       "logins": [
-        "Anonymous"
+        "carol"
       ],
       "unavailable": [],
       "eligible": [
-        "Anonymous"
+        "carol"
       ]
     },
     {
@@ -159,7 +159,7 @@
           "unavailable_until": ""
         },
         {
-          "login": "Anonymous",
+          "login": "carol",
           "joined_on": "2024-01-01",
           "status": "inactive",
           "unavailable_until": ""
@@ -1208,7 +1208,7 @@
     },
     {
       "name": "a github login is an identifier",
-      "value": "Anonymous",
+      "value": "carol",
       "identifier": true
     },
     {

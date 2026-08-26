@@ -71,11 +71,11 @@ def with_three_recent(*members: dict[str, Any]) -> list[dict[str, Any]]:
 
 def test_a_member_silent_past_the_threshold_is_proposed_inactive() -> None:
     cfg = config(inactivity_months=6, board=with_three_recent(board_member()))
-    speakers = [voted("Anonymous", "2025-06-01"), voted("ada", "2026-07-15")]
+    speakers = [voted("carol", "2025-06-01"), voted("ada", "2026-07-15")]
     proposed, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
-    assert statuses(proposed)["Anonymous"] == "inactive"
-    assert [line.split(":")[0] for line in prompts] == ["Anonymous"]
+    assert statuses(proposed)["carol"] == "inactive"
+    assert [line.split(":")[0] for line in prompts] == ["carol"]
 
 
 def test_the_proposed_inactive_line_names_the_repository_access_question() -> None:
@@ -86,18 +86,18 @@ def test_the_proposed_inactive_line_names_the_repository_access_question() -> No
     reads to act on that member has to say so at the point they are already
     reading it, not in a document they would have to go looking for."""
     cfg = config(inactivity_months=6, board=with_three_recent(board_member()))
-    speakers = [voted("Anonymous", "2025-06-01"), voted("ada", "2026-07-15")]
+    speakers = [voted("carol", "2025-06-01"), voted("ada", "2026-07-15")]
     _, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
     line = prompts[0]
-    assert line.startswith("Anonymous:")
+    assert line.startswith("carol:")
     assert "GitHub repository write access" in line
     assert "revoke" in line
 
 
 def test_a_recently_active_member_does_not_move() -> None:
     cfg = config(inactivity_months=6)
-    speakers = [voted(login, "2026-08-01") for login in ("Anonymous", "grace", "ada")]
+    speakers = [voted(login, "2026-08-01") for login in ("carol", "grace", "ada")]
     proposed, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
     assert set(statuses(proposed).values()) == {"active"}
@@ -108,21 +108,21 @@ def test_the_threshold_day_itself_is_still_a_day_to_vote_on() -> None:
     # Inclusive, the same reading expire_votes gives the vote window: silence
     # bites the day after the threshold, never on it.
     cfg = config(inactivity_months=6, board=with_three_recent(board_member()))
-    on_the_day = [voted("Anonymous", "2026-02-18")]
+    on_the_day = [voted("carol", "2026-02-18")]
     proposed, prompts = sweep_inactive_members(cfg, on_the_day, NOW)
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
     assert prompts == []
 
-    the_day_before = [voted("Anonymous", "2026-02-17")]
+    the_day_before = [voted("carol", "2026-02-17")]
     proposed, prompts = sweep_inactive_members(cfg, the_day_before, NOW)
-    assert statuses(proposed)["Anonymous"] == "inactive"
+    assert statuses(proposed)["carol"] == "inactive"
 
 
 def test_a_member_who_never_voted_is_counted_from_the_day_they_joined() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2026-07-01"),
+            board_member(login="carol", joined_on="2026-07-01"),
             board_member(login="grace", joined_on="2020-01-01"),
             board_member(login="ada", joined_on="2020-01-01"),
         ],
@@ -130,7 +130,7 @@ def test_a_member_who_never_voted_is_counted_from_the_day_they_joined() -> None:
     speakers = [voted("grace", "2026-08-01"), voted("ada", "2026-08-01")]
     proposed, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
     assert prompts == []
 
 
@@ -141,7 +141,7 @@ def test_a_member_who_never_voted_and_joined_long_ago_is_proposed() -> None:
     )
     proposed, prompts = sweep_inactive_members(cfg, [], NOW)
 
-    assert statuses(proposed)["Anonymous"] == "inactive"
+    assert statuses(proposed)["carol"] == "inactive"
     assert "no ballot since 2020-01-01" in prompts[0]
 
 
@@ -151,19 +151,19 @@ def test_the_later_of_the_last_ballot_and_joined_on_is_what_counts() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2026-08-10"),
+            board_member(login="carol", joined_on="2026-08-10"),
             board_member(login="grace"),
             board_member(login="ada"),
         ],
     )
     speakers = [
-        voted("Anonymous", "2024-01-05"),
+        voted("carol", "2024-01-05"),
         voted("grace", "2026-08-01"),
         voted("ada", "2026-08-01"),
     ]
     proposed, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
     assert prompts == []
 
 
@@ -174,7 +174,7 @@ def test_any_ballot_value_counts_as_turning_up() -> None:
             id="spk-001",
             selection={
                 "ballots": [
-                    ballot(voter="Anonymous", value="abstain", date="2026-08-01"),
+                    ballot(voter="carol", value="abstain", date="2026-08-01"),
                     ballot(
                         voter="grace",
                         value="recused",
@@ -244,11 +244,11 @@ def test_the_proposal_never_removes_a_member_or_loses_their_history() -> None:
         inactivity_months=6,
         board=with_three_recent(board_member(joined_on="2019-05-04")),
     )
-    speakers = [voted("Anonymous", "2024-01-05")]
+    speakers = [voted("carol", "2024-01-05")]
     proposed, _ = sweep_inactive_members(cfg, speakers, NOW)
 
     assert [m["login"] for m in proposed["board"]] == [
-        "Anonymous",
+        "carol",
         "grace",
         "ada",
         "hopper",
@@ -263,7 +263,7 @@ def test_the_proposal_only_leaves_the_denominator_and_is_undone_by_one_word() ->
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2019-05-04"),
+            board_member(login="carol", joined_on="2019-05-04"),
             board_member(login="grace"),
             board_member(login="ada"),
             board_member(login="hopper"),
@@ -277,7 +277,7 @@ def test_the_proposal_only_leaves_the_denominator_and_is_undone_by_one_word() ->
     # The way back: one word, and the board is exactly what it was.
     proposed["board"][0]["status"] = "active"
     assert active_board(proposed, "2026-08-18")[0] == [
-        "Anonymous",
+        "carol",
         "grace",
         "ada",
         "hopper",
@@ -290,11 +290,11 @@ def test_the_wording_names_a_silence_and_a_way_back_never_a_person() -> None:
         inactivity_months=6,
         board=with_three_recent(board_member(joined_on="2019-05-04")),
     )
-    speakers = [voted("Anonymous", "2024-01-05")]
+    speakers = [voted("carol", "2024-01-05")]
     _, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
     line = prompts[0]
-    assert line.startswith("Anonymous: no ballot since 2024-01-05;")
+    assert line.startswith("carol: no ballot since 2024-01-05;")
     assert "the seat is kept" in line
     assert "the annual meeting decides" in line
     assert "undoes it" in line
@@ -330,7 +330,7 @@ def _speaking_case() -> tuple[dict[str, Any], list[dict[str, Any]]]:
         inactivity_months=6,
         board=with_three_recent(board_member(joined_on="2019-05-04")),
     )
-    return cfg, [voted("Anonymous", "2024-01-05")]
+    return cfg, [voted("carol", "2024-01-05")]
 
 
 def test_the_scheduled_job_reports_the_proposal(
@@ -343,7 +343,7 @@ def test_the_scheduled_job_reports_the_proposal(
 
     assert cli.sweep() == 0
     out = capsys.readouterr().out
-    assert "Anonymous: no ballot since 2024-01-05;" in out
+    assert "carol: no ballot since 2024-01-05;" in out
     # The wording rule holds wherever the lines are printed, heading included.
     for verdict in ("removed", "expelled", "dropped", "failed", "negligent", "left"):
         assert verdict not in out.lower()
@@ -402,7 +402,7 @@ def test_a_member_who_declared_an_absence_is_not_silent() -> None:
     )
     proposed, prompts = sweep_inactive_members(cfg, [], NOW)
 
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
     assert prompts == []
 
 
@@ -417,21 +417,21 @@ def test_an_absence_ending_today_still_shelters_the_member() -> None:
         )
 
     proposed, _ = sweep_inactive_members(cfg_until("2026-08-18"), [], NOW)
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
 
     proposed, _ = sweep_inactive_members(cfg_until("2026-08-17"), [], NOW)
-    assert statuses(proposed)["Anonymous"] == "inactive"
+    assert statuses(proposed)["carol"] == "inactive"
 
 
 def test_a_member_the_board_is_still_admitting_is_left_alone() -> None:
     cfg = config(
         inactivity_months=6,
         board=with_three_recent(board_member(joined_on="2019-05-04")),
-        nominations=[nomination(candidate="Anonymous", outcome="waiting")],
+        nominations=[nomination(candidate="carol", outcome="waiting")],
     )
     proposed, prompts = sweep_inactive_members(cfg, [], NOW)
 
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
     assert prompts == []
 
 
@@ -452,7 +452,7 @@ def test_a_member_the_board_is_arguing_about_is_left_alone_too() -> None:
         board=with_three_recent(board_member(joined_on="2019-05-04")),
         nominations=[
             nomination(
-                candidate="Anonymous",
+                candidate="carol",
                 outcome="deferred",
                 objections=[
                     {
@@ -466,7 +466,7 @@ def test_a_member_the_board_is_arguing_about_is_left_alone_too() -> None:
     )
     proposed, prompts = sweep_inactive_members(cfg, [], NOW)
 
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
     assert prompts == []
 
 
@@ -479,11 +479,11 @@ def test_a_deferral_nobody_still_objects_to_does_not_shield_a_member() -> None:
     cfg = config(
         inactivity_months=6,
         board=with_three_recent(board_member(joined_on="2019-05-04")),
-        nominations=[nomination(candidate="Anonymous", outcome="deferred")],
+        nominations=[nomination(candidate="carol", outcome="deferred")],
     )
     proposed, prompts = sweep_inactive_members(cfg, [], NOW)
 
-    assert statuses(proposed)["Anonymous"] == "inactive"
+    assert statuses(proposed)["carol"] == "inactive"
     assert len(prompts) == 1
 
 
@@ -491,7 +491,7 @@ def test_an_already_inactive_member_is_never_proposed_twice() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2019-05-04", status="inactive"),
+            board_member(login="carol", joined_on="2019-05-04", status="inactive"),
             board_member(login="grace"),
             board_member(login="ada"),
             board_member(login="hopper"),
@@ -501,15 +501,15 @@ def test_an_already_inactive_member_is_never_proposed_twice() -> None:
     proposed, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
     assert prompts == []
-    assert statuses(proposed)["Anonymous"] == "inactive"
+    assert statuses(proposed)["carol"] == "inactive"
 
 
 def test_a_login_listed_twice_is_one_person_and_moves_as_one() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2019-05-04"),
-            board_member(login="Anonymous", joined_on="2019-05-04"),
+            board_member(login="carol", joined_on="2019-05-04"),
+            board_member(login="carol", joined_on="2019-05-04"),
             board_member(login="grace"),
             board_member(login="ada"),
             board_member(login="hopper"),
@@ -535,14 +535,14 @@ def test_the_proposal_leaves_an_accepted_nomination_still_valid() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous"),
+            board_member(login="carol"),
             board_member(login="grace", joined_on="2019-05-04"),
             board_member(login="ada"),
             board_member(login="hopper"),
         ],
         nominations=[nomination(candidate="grace", outcome="accepted")],
     )
-    speakers = [voted(login, "2026-08-01") for login in ("Anonymous", "ada", "hopper")]
+    speakers = [voted(login, "2026-08-01") for login in ("carol", "ada", "hopper")]
     proposed, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
     assert statuses(proposed)["grace"] == "inactive"
@@ -559,7 +559,7 @@ def test_the_rule_stops_before_the_board_can_no_longer_decide_anything() -> None
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2019-01-01"),
+            board_member(login="carol", joined_on="2019-01-01"),
             board_member(login="grace", joined_on="2019-02-01"),
             board_member(login="ada", joined_on="2019-03-01"),
             board_member(login="hopper", joined_on="2026-08-01"),
@@ -569,7 +569,7 @@ def test_the_rule_stops_before_the_board_can_no_longer_decide_anything() -> None
 
     # Longest silence first, and only until MINIMUM_ELIGIBLE remain.
     assert statuses(proposed) == {
-        "Anonymous": "inactive",
+        "carol": "inactive",
         "grace": "active",
         "ada": "active",
         "hopper": "active",
@@ -588,7 +588,7 @@ def test_a_board_already_at_the_floor_moves_nobody() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2019-01-01"),
+            board_member(login="carol", joined_on="2019-01-01"),
             board_member(login="grace", joined_on="2019-02-01"),
             board_member(login="ada", joined_on="2019-03-01"),
         ],
@@ -609,7 +609,7 @@ def test_the_live_config_proposes_nobody_while_joined_on_is_blank() -> None:
         board_min=5,
         board=[
             board_member(login=login, joined_on="")
-            for login in ("Anonymous", "brix", "cedar", "dune", "elm")
+            for login in ("carol", "brix", "cedar", "dune", "elm")
         ],
     )
     proposed, prompts = sweep_inactive_members(cfg, [], NOW)
@@ -628,7 +628,7 @@ def test_board_min_is_not_what_holds_the_rule_back() -> None:
         inactivity_months=6,
         board_min=5,
         board=[
-            board_member(login="Anonymous", joined_on="2019-01-01"),
+            board_member(login="carol", joined_on="2019-01-01"),
             board_member(login="grace"),
             board_member(login="ada"),
             board_member(login="hopper"),
@@ -637,7 +637,7 @@ def test_board_min_is_not_what_holds_the_rule_back() -> None:
     speakers = [voted(login, "2026-08-01") for login in ("grace", "ada", "hopper")]
     proposed, _ = sweep_inactive_members(cfg, speakers, NOW)
 
-    assert statuses(proposed)["Anonymous"] == "inactive"
+    assert statuses(proposed)["carol"] == "inactive"
 
 
 # --------------------------------------------------------------- #
@@ -649,7 +649,7 @@ def test_the_transformation_never_touches_the_config_it_was_given() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="2019-05-04"),
+            board_member(login="carol", joined_on="2019-05-04"),
             board_member(login="grace"),
             board_member(login="ada"),
             board_member(login="hopper"),
@@ -672,7 +672,7 @@ def test_the_answer_follows_the_config_passed_in_not_one_read_earlier() -> None:
     # differ, so no threshold or board can have been captured from the first.
     speakers = [voted("grace", "2026-08-01"), voted("ada", "2026-08-01")]
     board = [
-        board_member(login="Anonymous", joined_on="2026-05-01"),
+        board_member(login="carol", joined_on="2026-05-01"),
         board_member(login="grace"),
         board_member(login="ada"),
         board_member(login="hopper", joined_on="2026-08-01"),
@@ -685,8 +685,8 @@ def test_the_answer_follows_the_config_passed_in_not_one_read_earlier() -> None:
     )
 
     assert no_prompts == []
-    assert statuses(lenient)["Anonymous"] == "active"
-    assert statuses(strict)["Anonymous"] == "inactive"
+    assert statuses(lenient)["carol"] == "active"
+    assert statuses(strict)["carol"] == "inactive"
     assert prompts
 
 
@@ -701,7 +701,7 @@ def test_an_unusable_threshold_proposes_nobody(value: Any) -> None:
     cfg = config(
         inactivity_months=value,
         board=[
-            board_member(login="Anonymous", joined_on="2019-05-04"),
+            board_member(login="carol", joined_on="2019-05-04"),
             board_member(login="grace"),
             board_member(login="ada"),
             board_member(login="hopper"),
@@ -734,7 +734,7 @@ def test_a_joined_on_that_is_not_a_date_supports_no_proposal() -> None:
     cfg = config(
         inactivity_months=6,
         board=[
-            board_member(login="Anonymous", joined_on="04/05/2019"),
+            board_member(login="carol", joined_on="04/05/2019"),
             board_member(login="grace"),
             board_member(login="ada"),
             board_member(login="hopper"),
@@ -743,7 +743,7 @@ def test_a_joined_on_that_is_not_a_date_supports_no_proposal() -> None:
     speakers = [voted(login, "2026-08-01") for login in ("grace", "ada", "hopper")]
     proposed, prompts = sweep_inactive_members(cfg, speakers, NOW)
 
-    assert statuses(proposed)["Anonymous"] == "active"
+    assert statuses(proposed)["carol"] == "active"
     assert prompts == []
 
 

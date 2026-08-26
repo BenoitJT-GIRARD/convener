@@ -57,7 +57,7 @@ def v3_speaker(**overrides: Any) -> dict[str, Any]:
         "selection": {
             "ballots": [
                 {
-                    "voter": "Anonymous",
+                    "voter": "carol",
                     "value": "yes",
                     "comment": "",
                     "coi_reason": "",
@@ -126,9 +126,9 @@ def test_the_checklist_is_never_filled_in_from_the_lead_owner() -> None:
     # who owes one line of the runbook. Two notions, two fields, and the
     # migration derives neither from the other -- the phase 2 defect that lost
     # `proposed_by` started as exactly this kind of convenience.
-    migrated = migrate_speaker(v3_speaker(assigned_to="Anonymous", host_1="Anonymous"))
+    migrated = migrate_speaker(v3_speaker(assigned_to="carol", host_1="Anonymous"))
     assert migrated["checklist"] == {}
-    assert migrated["assigned_to"] == "Anonymous"
+    assert migrated["assigned_to"] == "carol"
 
 
 def test_each_speaker_gets_its_own_checklist() -> None:
@@ -258,7 +258,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
             v3_speaker(id="spk-002", status="lead", edition_code="", date=""),
         ]
     )
-    assert validate_speakers(speakers, {"Anonymous"}, editions=EDITIONS) == [
+    assert validate_speakers(speakers, {"carol"}, editions=EDITIONS) == [
         "speakers[0] (spk-001): missing survey_enabled",
         "speakers[1] (spk-002): missing survey_enabled",
     ]

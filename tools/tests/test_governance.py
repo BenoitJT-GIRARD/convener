@@ -63,12 +63,12 @@ def test_a_ballot_without_a_voter_key_neither_recuses_nor_raises() -> None:
         {"voter": "ada", "value": "yes"},
         {"value": "yes"},
     ]
-    assert eligible_voters(["ada", "grace", "Anonymous"], [], ballots) == [
+    assert eligible_voters(["ada", "grace", "carol"], [], ballots) == [
         "ada",
         "grace",
-        "Anonymous",
+        "carol",
     ]
-    outcome = decide(["ada", "grace", "Anonymous"], [], ballots)
+    outcome = decide(["ada", "grace", "carol"], [], ballots)
     assert outcome.eligible == 3
     assert outcome.yes == 1
 

@@ -1,11 +1,9 @@
 affil
-Aleksandra
 Architecte
 Archivo
 argjson
 assertable
 autoprefixer
-Bartelik
 Anonymous
 Anonymous
 bilan
@@ -44,8 +42,6 @@ middot
 mypy
 neuroethological
 Neuroinformatics
-Niko
-Anonymous
 nojekyll
 noopener
 noscript
@@ -76,7 +72,6 @@ rsquo
 segno
 Segoe
 shellcheck
-Anonymous
 STARTTLS
 strapline
 stylesheet
@@ -92,10 +87,7 @@ urlset
 vars
 Vite
 Vitest
-Anonymous
-Anonymous
 WCAG
-Wellcome
 wordmark
 worktree
 WXYZ

@@ -113,7 +113,7 @@ def workflow_event_names(loaded: Mapping[str | bool, Any]) -> set[str]:
 def ballot(**overrides: Any) -> dict[str, Any]:
     """A minimal valid ballot (schema v3); override any field per test."""
     base: dict[str, Any] = {
-        "voter": "Anonymous",
+        "voter": "carol",
         "value": "yes",
         "comment": "",
         "coi_reason": "",
@@ -126,7 +126,7 @@ def ballot(**overrides: Any) -> dict[str, Any]:
 def board_member(**overrides: Any) -> dict[str, Any]:
     """A minimal valid board member (schema v3); override any field per test."""
     base: dict[str, Any] = {
-        "login": "Anonymous",
+        "login": "carol",
         "joined_on": "2024-01-01",
         "status": "active",
         "unavailable_until": "",
@@ -139,7 +139,7 @@ def objection(**overrides: Any) -> dict[str, Any]:
     """A minimal valid PublicationObjection (schema v3); shared by
     Publication and Nomination."""
     base: dict[str, Any] = {
-        "member": "Anonymous",
+        "member": "carol",
         "reason": "",
         "date": "",
     }
@@ -151,7 +151,7 @@ def nomination(**overrides: Any) -> dict[str, Any]:
     """A minimal valid nomination (schema v3); override any field per test."""
     base: dict[str, Any] = {
         "candidate": "grace",
-        "sponsor": "Anonymous",
+        "sponsor": "carol",
         "opened_on": "2026-01-01",
         "objections": [],
         "outcome": "",
@@ -245,7 +245,7 @@ def config(**overrides: Any) -> dict[str, Any]:
         "seminar_duration_minutes": 90,
         "eligibility_share": 0.6666666666666666,
         "board": [
-            board_member(login="Anonymous"),
+            board_member(login="carol"),
             board_member(login="grace"),
             board_member(login="ada"),
         ],

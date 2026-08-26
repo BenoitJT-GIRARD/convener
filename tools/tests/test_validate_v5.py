@@ -22,7 +22,7 @@ from conftest import EDITIONS, speaker
 
 from convener_ops.validate import SPEAKER_BOOL_V5, validate_speakers
 
-BOARD = frozenset({"Anonymous"})
+BOARD = frozenset({"carol"})
 
 
 def test_a_whole_record_is_accepted() -> None:

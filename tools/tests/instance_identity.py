@@ -118,22 +118,26 @@ DEFERRED: Final = (
             "The showcase's committed build fixture: a copy of "
             "`public-data/events-public.json`, refreshed by "
             "`publish-vitrine.yml` before every real build. It carries "
-            "this instance's identity and not only its speakers, which is "
-            "why the entry is load-bearing rather than a courtesy: two of "
-            "the source sweep's four needles match it -- `identity.forum` "
-            "and `identity.forum_host`, twice each, inside the two "
-            "`forum_thread` values that two of its five records hold -- "
-            "and its ids and thread slugs carry the edition prefix in both "
-            "cases besides. Remove the entry and the source sweep names "
+            "this instance's identity and not only its programme, which "
+            "is why the entry is load-bearing rather than a courtesy: "
+            "every record's id, and both `forum_thread` slugs, carry the "
+            "declared edition prefix in both of the forms it reaches an "
+            "artefact as. Remove the entry and the source sweep names "
             "this file and that needle. What it reaches is nothing "
             "*built*, which is the separate claim `carried_into` makes: a "
             "second instance's build regenerates it from that instance's "
-            "own `data/speakers.yml` before Eleventy ever reads it. Until "
-            'phase 11 task 8 this reason said the opposite -- "no needle '
-            'here matches it" -- which was false the day it was written; '
-            "an exemption justified by a fact that is not true is an "
+            "own `data/speakers.yml` before Eleventy ever reads it. "
+            "Two corrections live in this sentence, both of the same "
+            'shape. Until phase 11 task 8 it said "no needle here matches '
+            'it", which was false the day it was written. Until phase 12 '
+            "task 4 it said the matching needles were `identity.forum` "
+            "and `identity.forum_host`, which stopped being true when "
+            "phase 12 task 3 replaced both forum addresses with a "
+            "reserved-domain one and left the sentence describing them. "
+            "An exemption justified by a fact that is not true is an "
             "exemption the next reader deletes, and the sweep then fails "
-            "for a reason nobody was warned about."
+            "for a reason nobody was warned about -- so the reason names "
+            "the needle that actually matches, and nothing else."
         ),
     ),
     Deferred(
@@ -143,7 +147,20 @@ DEFERRED: Final = (
             "A list of words, not prose: the spell checker has to know "
             "this organisation's name is spelled that way because the "
             "repository's own history and specs write it. Nothing builds "
-            "this file and nothing ships it."
+            "this file -- but it does ship, into the derived product "
+            "repository, which is what phase 12 task 4 reread this entry "
+            "for. Eight of its entries were parts of people's names, and "
+            "not one of them was reachable from anything cspell actually "
+            "lints -- `cspell.json` ignores `data/speakers.yml` outright "
+            "and lints no `.json` at all -- so they came out and the run "
+            "stayed green. Dead weight that happened to be somebody's "
+            "name is the worst kind to leave in a shipped file. Two "
+            "remain, and each is held by exactly one open decision: "
+            "`docs/reference/contacts.md` and `docs/reference/"
+            "operations.md` name the founding board, both are linted, and "
+            "cspell fails on seven occurrences the moment either word "
+            "goes. They are not this entry's to remove -- they leave with "
+            "those pages or not at all."
         ),
     ),
 )

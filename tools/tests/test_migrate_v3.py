@@ -78,7 +78,7 @@ def v2_config(**overrides: Any) -> dict[str, Any]:
         "next_edition_number": 5,
         "vote_threshold": 3,
         "overlap_window_days": 7,
-        "board_members": ["Anonymous"],
+        "board_members": ["carol"],
         "seminar_duration_minutes": 90,
     }
     base.update(overrides)
@@ -181,7 +181,7 @@ def test_migrating_twice_changes_nothing() -> None:
 
 def test_board_members_become_active_members_with_no_joining_date() -> None:
     board = migrate_config(v2_config())["board"]
-    assert board[0]["login"] == "Anonymous"
+    assert board[0]["login"] == "carol"
     assert board[0]["status"] == "active"
     assert board[0]["joined_on"] == ""
     assert board[0]["unavailable_until"] == ""
@@ -217,7 +217,7 @@ def test_people_who_actually_voted_join_the_board() -> None:
     # invalid; nothing is merged, since two entries that turn out to be the
     # same person is a decision for the Board, not for a migration.
     migrated = migrate_config(v2_config(), ["brix", "cedar"])
-    assert [m["login"] for m in migrated["board"]] == ["Anonymous", "brix", "cedar"]
+    assert [m["login"] for m in migrated["board"]] == ["carol", "brix", "cedar"]
 
 
 def test_a_voter_already_declared_is_not_added_twice() -> None:
@@ -245,7 +245,7 @@ def test_migrating_the_config_twice_changes_nothing() -> None:
     # Not even the second call's extra voter: an already-migrated board is
     # the Board's own record from then on, and no re-run may edit it.
     assert twice == once
-    assert [m["login"] for m in twice["board"]] == ["Anonymous", "brix"]
+    assert [m["login"] for m in twice["board"]] == ["carol", "brix"]
 
 
 # --- the two halves together ----------------------------------------------

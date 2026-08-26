@@ -28,7 +28,7 @@ from conftest import EDITIONS, speaker
 
 from convener_ops.validate import DATE_ANSWERS, SPEAKER_TEXT_V4, validate_speakers
 
-BOARD = frozenset({"Anonymous"})
+BOARD = frozenset({"carol"})
 
 #: The two languages' shared statement of what a slot is. See
 #: `_candidate_date_comment` in the file itself.
@@ -248,7 +248,7 @@ class TestChecklist:
         # making one field answer to the other's rule is the first step
         # towards making one field answer to the other's value.
         entry = speaker(
-            assigned_to="Anonymous",
+            assigned_to="carol",
             checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}},
         )
         assert "Anonymous" not in BOARD

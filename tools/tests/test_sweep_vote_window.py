@@ -25,7 +25,7 @@ from convener_ops.sweep import expire_votes
 
 def ballot(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
-        "voter": "Anonymous",
+        "voter": "carol",
         "value": "yes",
         "comment": "",
         "coi_reason": "",
@@ -37,7 +37,7 @@ def ballot(**overrides: Any) -> dict[str, Any]:
 
 def board_member(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
-        "login": "Anonymous",
+        "login": "carol",
         "joined_on": "2024-01-01",
         "status": "active",
         "unavailable_until": "",
@@ -50,7 +50,7 @@ def config(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "vote_window_days": 10,
         "board": [
-            board_member(login="Anonymous"),
+            board_member(login="carol"),
             board_member(login="grace"),
             board_member(login="ada"),
         ],
@@ -81,7 +81,7 @@ def test_a_lead_that_reached_the_threshold_is_untouched() -> None:
     row = lead(
         selection={
             "ballots": [
-                ballot(voter="Anonymous"),
+                ballot(voter="carol"),
                 ballot(voter="grace"),
                 ballot(voter="ada"),
             ],
@@ -114,7 +114,7 @@ def test_no_lead_ever_reaches_decline_board_by_expiry() -> None:
     """
     row = lead(
         selection={
-            "ballots": [ballot(voter="Anonymous", value="yes")],
+            "ballots": [ballot(voter="carol", value="yes")],
             "opened_on": "2026-01-01",
             "decided_on": "",
         }
@@ -122,7 +122,7 @@ def test_no_lead_ever_reaches_decline_board_by_expiry() -> None:
     cfg = config(
         board=[
             board_member(login=name)
-            for name in ("Anonymous", "grace", "ada", "linus", "edsger")
+            for name in ("carol", "grace", "ada", "linus", "edsger")
         ]
     )
     now = datetime(2026, 1, 20, 12, tzinfo=UTC)
@@ -138,7 +138,7 @@ def test_a_suspended_vote_does_not_expire() -> None:
     # have decided even in principle, so expiring here would punish the
     # candidate for a staffing problem, not for the board's inaction.
     row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
-    cfg = config(board=[board_member(login="Anonymous"), board_member(login="grace")])
+    cfg = config(board=[board_member(login="carol"), board_member(login="grace")])
     now = datetime(2026, 1, 20, tzinfo=UTC)  # well past the window
     swept, changes = expire_votes([row], cfg, now)
     assert swept[0]["status"] == "lead"
@@ -232,7 +232,7 @@ def test_an_inactive_member_shrinks_n_enough_to_suspend_an_expiry() -> None:
     row = lead(selection={"ballots": [], "opened_on": "2026-01-01", "decided_on": ""})
     cfg = config(
         board=[
-            board_member(login="Anonymous"),
+            board_member(login="carol"),
             board_member(login="grace"),
             board_member(login="ada", status="inactive"),
         ]
