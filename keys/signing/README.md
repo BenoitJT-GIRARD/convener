@@ -22,18 +22,28 @@ nothing else yet, for exactly that reason -- the contract needs to survive
 being empty.
 
 **No key that has ever existed in this repository's history was in
-service.** An earlier commit (`15a069b`) briefly committed a real
-`2026-08-20.pub` generated as a working bootstrap; its matching private
-half never became the `CONVENER_SIGNING_KEY` secret in any real environment --
-it existed only in an agent's own scratch workspace, was never used to
-sign anything, and was deleted before that commit's follow-up
-(`5e887cc`) removed the orphaned public file again. `git show
-15a069b:keys/signing/2026-08-20.pub` will still show that file if anyone
-goes looking, but it is not a "lost key" to account for or worry about
-recovering -- it never signed a single real certificate, and no verifier
-should ever need to know it existed. The real, first signing key is
-whichever one an operator generates by following the procedure in
+service.** A real `2026-08-20.pub` was briefly committed here, generated
+as a working bootstrap; its matching private half never became the
+`CONVENER_SIGNING_KEY` secret in any real environment -- it existed only in a
+scratch workspace, was never used to sign anything, and was deleted before
+the follow-up commit that removed the orphaned public file again.
+It arrived in *ops: sign a certificate payload, verify it against every
+published key* and left again in *ops: drop the orphaned signing key, keep
+the layout contract in a readme* -- the commit that wrote this file. Anyone
+who wants to see the bytes can run
+`git log --all --diff-filter=A -- keys/signing/2026-08-20.pub` and read the
+blob out of the commit it names. It is not a "lost key" to account for or
+worry about recovering -- it never signed a single real certificate, and no
+verifier should ever need to know it existed. The real, first signing key
+is whichever one an operator generates by following the procedure in
 `docs/reference/operations.md`.
+
+**Those two commits are cited by subject, not by hash, deliberately.** A
+hash written into prose is a cross-reference that any rewrite of the
+history silently breaks: the two this paragraph used to quote had already
+stopped resolving before it was corrected, and pointed a reader at nothing.
+A subject and a path survive a rewrite; an abbreviated object name does
+not.
 
 ## Naming
 

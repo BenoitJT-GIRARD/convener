@@ -201,8 +201,8 @@ export function monthsBefore(day: string, months: number): string {
 
 function stageOf(s: Speaker): CareerStage {
   // `data/validate.ts` has checked this field against the model before the
-  // browser saw it (commit 44c5686), so an unrecognised value no longer
-  // reaches here from `data/speakers.yml`. This is kept anyway: it is a
+  // browser saw it, so an unrecognised value no longer reaches here from
+  // `data/speakers.yml`. This is kept anyway: it is a
   // total function on its argument, so a caller building a `Speaker` some
   // other way still gets a bucket rather than a new category, and an
   // unrecognised value reads as `undisclosed` -- a typo must not become a
