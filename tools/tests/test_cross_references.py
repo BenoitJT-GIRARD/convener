@@ -13,7 +13,7 @@ reader the same thing: they go looking, and there is nothing there.
 
 **What resolves, derived rather than listed**
 =============================================
-Three vocabularies, each read from the repository at run time:
+Four vocabularies, each read from the repository at run time:
 
 * **`D-NN`** -- the architecture decision records. Derived from the
   filenames under `docs/decisions/`, which is published, registered in
@@ -28,6 +28,13 @@ Three vocabularies, each read from the repository at run time:
 * **`<prefix>-N`** -- an edition code. Derived from the `edition_prefix`
   every tracked `instance.json` declares, so `MRG-05` and `MRG-1` resolve
   because two instances in this repository say those prefixes are theirs.
+* **`G-NN`** -- a governance rule. Derived from the pages under `docs/`
+  that state the rules, each of which *titles* the rule with its number:
+  `## Inactivity (G-09)` in `docs/reference/operations.md`, `### The bar
+  (G-01)` in `docs/governance/board-rules.md`, `**Declaring an absence
+  (G-04)**` opening its own paragraph on that same page. Writing a new
+  rule and titling it is what makes its number citable; there is nothing
+  here to edit.
 
 And one category that is not this project's at all: a **public standard**
 (`UTF-8`, `SHA-256`, `AES-256`, `P-256`, `RFC-822`). Naming one is not a
@@ -39,7 +46,7 @@ project* invents.
 **What does not resolve**
 =========================
 Everything else in the shape `X-NN`, and the phrases below. A phrase is
-refused for a reason this module derives too: `_published_page_titles` reads
+refused for a reason this module derives too: `published_page_titles` reads
 the first heading of every published page under `docs/`, and a coordinate
 resolves only if some page bears that name.
 
@@ -53,19 +60,23 @@ pass this check. Five upwards, and every `task N`, `round N`, `wave N`,
 `Minor N`, `Critical A` and `change D`, are refused outright, because no
 published page bears any of those names.
 
-**`G-NN` is the one family this module admits without deriving it, and
-that is a finding rather than an oversight.**
-`docs/governance/` publishes every governance rule these identifiers name --
-the two-thirds bar, the objection window, the inactivity check -- in full
-prose that a volunteer reads. What it does not publish anywhere is the
-*mapping*: no shipped page says which rule is `G-08`. The numbering lives in
-this project's own framing document, which never leaves the repository, so
-`G-08` in a comment is unfollowable in exactly the way `R-5` was. Removing
-it is not this module's call to make: it would mean either rewriting
-forty-odd citations into the rules they name, or printing the identifiers
-into published governance prose, and both are the maintainer's decision
-about their own governance. Recorded here so the next reader meets the gap
-instead of inheriting it silently.
+**A rule is declared where a page titles it, cited everywhere else.**
+`G-NN` is the one vocabulary of the four that is not one identifier per
+file, per key or per notation: the rules are stated in prose, several of
+them on the same page. So the derivation reads the shape a
+page uses to *name* a rule -- a heading, or the bold lead that opens a
+paragraph or a list item -- ending in `(G-NN)`. An identifier anywhere
+else on a published page, in running prose or in a table cell, is a
+citation of a rule stated somewhere else, and a citation cannot
+authorise itself: without that distinction, a comment's own `G-99` would
+become resolvable the moment somebody quoted it in a handbook page.
+
+**A rule nobody publishes has no number, and that is the point.** `G-17`
+was cited in ten shipped files and stated on no page a reader can open;
+the citations now state the rule instead. The same is true today of the
+ballot comment, the absence of a separate quorum rule, and the
+British-English check: they are real rules of this project that no
+published page states, so nothing here resolves a number for them.
 """
 
 from __future__ import annotations
@@ -106,9 +117,22 @@ JOURNEY = Path("app") / "src" / "state" / "phases.ts"
 #: allowlist.
 PUBLIC_STANDARDS = frozenset({"UTF", "SHA", "AES", "RFC", "P"})
 
-#: The family this module admits without deriving it -- see the module
-#: docstring's own section for the finding this records.
-UNDERIVED_FAMILY = "G"
+#: A published page titling one of its sections with a governance rule's
+#: number: `## Inactivity (G-09)`. The number sits at the very end of the
+#: heading, which is what separates naming a rule from mentioning one --
+#: `**Handover is manual and deliberate, exactly as G-11 provides for:**`
+#: in `docs/decisions/d-28-architect-and-board-permissions.md` cites the
+#: rule, it does not state it.
+RULE_HEADING = re.compile(r"^#{1,6}[ \t]+[^\n]*?\((G-\d{2})\)[ \t]*$", re.MULTILINE)
+
+#: The same act on a page whose rules are paragraphs rather than sections:
+#: `**Declaring an absence (G-04)** is something you do for yourself.`, and
+#: `- **Diversity (G-13).** A deliberate aim, not an afterthought`. The bold
+#: run opens the line -- after a list marker, if there is one -- and closes
+#: on the number, so it is a title in everything but markup.
+RULE_LEAD = re.compile(
+    r"^[ \t]*(?:[-*+][ \t]+)?\*\*[^*\n]*?\((G-\d{2})\)[.,]?\*\*", re.MULTILINE
+)
 
 #: An identifier-shaped citation: one to three capitals, a hyphen, a number.
 #: The shape every family this project ever used is written in -- `D-19`,
@@ -311,6 +335,43 @@ def edition_prefixes() -> frozenset[str]:
 
 
 @cache
+def _published_pages() -> list[tuple[str, str]]:
+    """Every page under `docs/` this repository publishes, with its text.
+
+    Everything except the working record: what a reader who clones this
+    repository, or opens the handbook the app serves from these same files,
+    can actually reach.
+    """
+    pages = []
+    for path in sorted((ROOT / "docs").rglob("*.md")):
+        relative = path.relative_to(ROOT).as_posix()
+        if relative.startswith(WORKING_RECORD):
+            continue
+        pages.append((relative, path.read_text(encoding="utf-8")))
+    return pages
+
+
+def declared_rule_ids(text: str) -> set[str]:
+    """Every governance rule one page states as its own.
+
+    Titling, not mentioning: see `RULE_HEADING` and `RULE_LEAD`. The
+    distinction is the whole of the derivation's honesty -- a page is free
+    to cite a rule stated elsewhere, and doing so must not make the number
+    resolve on the strength of the citation alone.
+    """
+    return set(RULE_HEADING.findall(text)) | set(RULE_LEAD.findall(text))
+
+
+@cache
+def published_governance_rules() -> frozenset[str]:
+    """`G-NN` for every rule a published page states."""
+    ids: set[str] = set()
+    for _, body in _published_pages():
+        ids |= declared_rule_ids(body)
+    return frozenset(ids)
+
+
+@cache
 def published_page_titles() -> frozenset[str]:
     """The first heading of every published page under `docs/`, lower-cased.
 
@@ -319,11 +380,8 @@ def published_page_titles() -> frozenset[str]:
     keep saying "Phase 3".
     """
     titles = set()
-    for path in (ROOT / "docs").rglob("*.md"):
-        relative = path.relative_to(ROOT).as_posix()
-        if relative.startswith(WORKING_RECORD):
-            continue
-        match = _HEADING.search(path.read_text(encoding="utf-8"))
+    for _, body in _published_pages():
+        match = _HEADING.search(body)
         if match:
             titles.add(match.group(1).strip().lower())
     return frozenset(titles)
@@ -408,6 +466,56 @@ def test_the_decision_records_this_module_admits_are_the_ones_on_disk() -> None:
     )
 
 
+def test_the_rules_this_module_admits_are_the_ones_the_pages_state() -> None:
+    """The second derived allowlist, held the same way as the first.
+
+    `G-NN` used to be admitted on trust, because the numbering existed only
+    in this project's own framing document and no shipped page carried it.
+    The pages carry it now, and this is the check that they still do: an
+    empty set would make the sweep refuse every governance citation in the
+    repository at once.
+    """
+    rules = published_governance_rules()
+    assert rules, (
+        "no published page under docs/ titles a section or a paragraph with "
+        "a governance rule's number -- either the rules stopped being "
+        "numbered, or the shape they are numbered in changed, and the "
+        "identifier sweep below has nothing to resolve `G-NN` against"
+    )
+    assert "G-01" in rules, (
+        "G-01 (the two-thirds bar) is not among the rules the published "
+        "pages state -- this module derives its allowlist from those "
+        "titles, and this is the sanity check that the derivation reads "
+        "what it thinks"
+    )
+
+
+#: What a page does when it *states* a rule, and what it does when it only
+#: names one. Both happen on published pages, which is why the difference
+#: has to be a shape and not a directory: if a citation counted, quoting a
+#: comment's own `G-99` in a handbook page would make `G-99` resolve.
+DECLARATION_CASES: tuple[tuple[str, set[str]], ...] = (
+    ("## Inactivity (G-09)", {"G-09"}),
+    ("**Inactivity (G-09)** is the other half.", {"G-09"}),
+    ("- **Diversity (G-13).** A deliberate aim, not an afterthought", {"G-13"}),
+    ("| `inactivity_months` | number | ... inactive (G-09). |", set()),
+    ("G-11 says the role is transferable; it does not say what a", set()),
+    ("- **Handover is manual, exactly as G-11 provides for:** promote", set()),
+    ("The second gate (G-10, G-15): what has to be true before a", set()),
+)
+
+
+def test_a_rule_is_declared_by_a_title_and_cited_by_everything_else() -> None:
+    """Why the derivation cannot be "the identifier appears on a page".
+
+    The schema reference cites a rule in a table cell, `d-28` cites two in
+    its own prose, and neither states one. A page is free to do that; what
+    it cannot do is make a number resolve on the strength of the citation.
+    """
+    for line, declared in DECLARATION_CASES:
+        assert declared_rule_ids(line + "\n") == declared, line
+
+
 def test_the_countdown_notation_is_read_and_not_assumed() -> None:
     """`T-N` is admitted because the journey writes its milestones that
     way. The day it stops, the exemption should go with it."""
@@ -453,6 +561,7 @@ def test_the_published_page_titles_include_the_event_journey() -> None:
 def unresolvable_identifiers(name: str, body: str) -> list[str]:
     """Every `X-NN` in `body` that names nothing this repository publishes."""
     decisions = published_decision_ids()
+    rules = published_governance_rules()
     prefixes = edition_prefixes()
     countdown = countdown_notation_exists()
     offenders = []
@@ -460,13 +569,13 @@ def unresolvable_identifiers(name: str, body: str) -> list[str]:
         token = f"{prefix}-{number}"
         if token in decisions:
             continue
+        if token in rules:
+            continue
         if prefix in prefixes:
             continue
         if prefix in PUBLIC_STANDARDS:
             continue
         if prefix == "T" and countdown:
-            continue
-        if prefix == UNDERIVED_FAMILY:
             continue
         offenders.append(token)
     return offenders
@@ -574,6 +683,24 @@ def test_a_dangling_identifier_is_caught(tmp_path: Path) -> None:
     probe.write_text('"""Refuses a stale payload (R-27, fix round 1)."""\n', "utf-8")
     body = prose_of("probe.py", probe.read_text(encoding="utf-8"))
     assert unresolvable_identifiers("probe.py", body) == ["R-27"]
+
+
+def test_a_governance_rule_no_page_states_is_caught(tmp_path: Path) -> None:
+    """`G-17` was exactly this file: a rule the code enacts, cited by number
+    in ten shipped files, and stated on no page a reader can open."""
+    probe = tmp_path / "probe.py"
+    probe.write_text('"""Assigned by rotation (G-99)."""\n', "utf-8")
+    body = prose_of("probe.py", probe.read_text(encoding="utf-8"))
+    assert unresolvable_identifiers("probe.py", body) == ["G-99"]
+
+
+def test_a_published_governance_rule_is_not_caught(tmp_path: Path) -> None:
+    """`docs/governance/board-rules.md` titles a section `### The bar
+    (G-01)`, so a comment naming the bar by its number resolves."""
+    probe = tmp_path / "probe.py"
+    probe.write_text('"""The two-thirds bar (G-01)."""\n', "utf-8")
+    body = prose_of("probe.py", probe.read_text(encoding="utf-8"))
+    assert unresolvable_identifiers("probe.py", body) == []
 
 
 def test_a_published_decision_record_is_not_caught(tmp_path: Path) -> None:
