@@ -18,8 +18,10 @@ all: `SECURITY.md` has the private channel and says what to expect from it.
 
 ## Signing off a commit
 
-**Every commit carries one `Signed-off-by` line. There is no contributor
-licence agreement, no form to sign and no copyright to assign.**
+**Every commit carries one `Signed-off-by` line. There is no form to sign
+and no copyright to assign.** One right is asked beyond the certificate, and
+the paragraph headed *One thing is asked beyond the certificate* below is
+where it is asked -- not in a document, and not in passing.
 
 ```bash
 git commit -s
@@ -35,29 +37,33 @@ By adding it you certify the **Developer Certificate of Origin 1.1**
 (<https://developercertificate.org>): that you wrote the contribution or
 otherwise have the right to submit it under this project's licence, and
 that you understand it will be kept indefinitely and redistributed with the
-project. It is a statement about *your* right to contribute the code. It
-transfers nothing, and it asks for no rights over your work beyond the
-licence the whole repository is already under.
+project. It is a statement about *your* right to contribute the code, and
+it transfers nothing: you keep the copyright in what you wrote, and may do
+anything you like with it elsewhere.
 
 The alternative was a contributor licence agreement. It was rejected for
 what it would cost the people this product is for: a CLA is a document an
 academic has to route past an institution's legal office before they can
-fix a typo, and it asks them to grant rights the AGPL does not need granted.
-The certificate asks for a line in a commit message instead.
+fix a typo. This project does ask for one right the licence does not need
+granted -- the next paragraph says which, and why -- but it asks in a
+paragraph rather than in a document, and nothing here has to be signed.
 
-**One consequence of that, written here rather than discovered later.** The
-sign-off leaves every contributor holding their own copyright, licensed to
-this project under the AGPL and nothing else. While the whole repository is
-one person's work, that person can also grant a different licence to somebody
-whose use the AGPL does not fit, which is what `README.md` offers under
-*Licence*. The first substantive contribution of code ends that, because a
-licence nobody can grant over somebody else's copyright is not a licence.
+**One thing is asked beyond the certificate.** By submitting a contribution
+you also grant the copyright holder a perpetual, irrevocable, **non-exclusive**
+right to license your contribution under terms other than this project's
+licence. Non-exclusive is the operative word: the copyright stays yours, and
+this takes nothing away from what you may do with your own work.
 
-That is not a reason to refuse a contribution. It is a reason to know, on the
-day one arrives, that merging it is a decision with two sides: take it as it
-stands and the separate-licence route closes, or ask that contributor for the
-right to relicense their part and keep it open. Either is defensible.
-Finding out afterwards is not.
+The reason is in `README.md` under *Licence*. The holder can offer a separate
+licence to somebody the AGPL does not suit, and that stays possible only while
+no part of the software sits outside this right -- a licence nobody can grant
+over somebody else's copyright is not a licence. Without this paragraph the
+option would close on the first merge, with nobody having decided anything.
+
+**For a substantial contribution, expect to be asked to say so in the pull
+request itself**, in one line and in your own words. A paragraph in a file
+somebody may not have read is weaker evidence than a sentence written by the
+person who wrote the code.
 
 **Nothing automated enforces it, and that is a decision rather than an
 omission.** `convener-check-commits` was the obvious place to put it, and

@@ -461,11 +461,14 @@ def test_contributing_states_what_a_sign_off_certifies() -> None:
             f"{CONTRIBUTING.name} no longer names {needle!r}. A sign-off "
             "nobody can read the terms of certifies nothing."
         )
-    assert "no contributor licence agreement" in text, (
-        f"{CONTRIBUTING.name} no longer says there is no contributor "
-        "licence agreement, which is the half of this that would otherwise "
-        "cost an academic contributor a trip to a legal office"
-    )
+    for needle in ("no form to sign", "no copyright to assign"):
+        assert needle in text, (
+            f"{CONTRIBUTING.name} no longer says there is {needle!r}. That "
+            "is the half of this which would otherwise cost an academic "
+            "contributor a trip to a legal office, and it is what makes "
+            "the right asked below proportionate rather than a contributor "
+            "licence agreement by another name."
+        )
 
 
 def test_the_separate_licence_is_offered_and_its_condition_is_stated() -> None:
@@ -488,12 +491,30 @@ def test_the_separate_licence_is_offered_and_its_condition_is_stated() -> None:
         "route rather than an imposition."
     )
     contributing = _unwrapped(CONTRIBUTING)
-    for needle in ("holding their own copyright", "substantive contribution"):
+    for needle, why in (
+        (
+            "right to license your contribution under terms other than",
+            "the grant that keeps the offer possible after a first merge",
+        ),
+        (
+            "non-exclusive",
+            "the one word that makes the grant a permission rather than a "
+            "surrender of the contributor's own copyright",
+        ),
+        (
+            "the copyright stays yours",
+            "that word said again in words a contributor reads without a "
+            "lawyer, which is what stops the grant reading as a transfer",
+        ),
+        (
+            "expect to be asked to say so in the pull request",
+            "the explicit confirmation a substantial contribution gets, "
+            "because a paragraph nobody read is weaker evidence than a "
+            "sentence its author wrote",
+        ),
+    ):
         assert needle in contributing, (
-            f"{CONTRIBUTING.name} no longer states what a sign-off leaves "
-            f"with the contributor ({needle!r}). The separate licence "
-            f"{README.name} offers then closes on the first merge, with "
-            "nobody having decided anything."
+            f"{CONTRIBUTING.name} no longer carries {needle!r} -- {why}."
         )
 
 
