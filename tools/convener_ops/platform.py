@@ -650,9 +650,9 @@ def erase_attendance_rows(
     """Remove every row addressed to `email` from `file` -- the attendance
     half of an early erasure request, called by
     `cli.py::erase_registration` alongside `registration.erase` so the two
-    stores stay in step. Early erasure means
-    "le fichier chiffre est reecrit sans l'enregistrement concerne, et
-    rien d'autre ne bouge" -- hold here exactly as they do for
+    stores stay in step. Early erasure means the encrypted file is
+    rewritten without the record concerned and nothing else moves --
+    terms that hold here exactly as they do for
     `registrations.enc`, because the shape is now the same: every entry
     kept is returned byte for byte as found, never re-serialised, the same
     property `registration.erase`'s own docstring explains in full.

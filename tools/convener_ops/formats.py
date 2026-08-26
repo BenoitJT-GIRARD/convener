@@ -84,8 +84,8 @@ BANNER: Final = Format(name="banner", width=1200.0, height=630.0)
 #: constraints already apply to accounts and services extends naturally to
 #: paper size: A3 reads as more of a "real poster" at a glance, but not
 #: every institute's own printer takes A3 stock, and every one of them
-#: takes A4. The channel is "affiches imprimées et posées dans les
-#: instituts" -- printed and pinned up -- not "professionally printed",
+#: takes A4. The channel is posters printed and pinned up in the
+#: institutes themselves, not "professionally printed",
 #: and this project has already turned down machinery nobody would actually
 #: run -- the same reasoning that turned down building a container image
 #: nobody would ever exercise applies here too, one level down.

@@ -2,9 +2,9 @@
 
 The post-event questionnaire is optional, short, sent only
 to people recognised present (`survey_invite.py`'s job, not this module's), and rides
-the *same* intake as registration -- "meme entree que l'inscription, meme
-stockage chiffre, meme destruction de cle." This module is the storage half
-of that sentence: `app/src/survey/encrypt.ts` hybrid-encrypts a response in
+the *same* intake as registration: the same entry point, the same
+encrypted storage, the same key destruction. This module is the storage
+half of that rule: `app/src/survey/encrypt.ts` hybrid-encrypts a response in
 the browser exactly the way `app/src/signup/encrypt.ts` encrypts a
 registration (same wire format, `tools/convener_ops/eventkeys.py`), and this
 module decrypts, validates and re-stores it, in a CI job's memory only, the

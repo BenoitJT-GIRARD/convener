@@ -99,9 +99,10 @@ missed for want of some punctuation this module did not anticipate becomes
 one line in the host's clean-up list -- a nuisance, corrected by looking at
 the unmatched entry next to a room roster. A code matched with a wrong
 character forgiven would bind one participant's certificate to another
-person's presence, silently, which is the one failure the rule
-"empêche de revendiquer la présence d'autrui" exists to rule out. Between
-"the host does a little more manual work" and "the wrong person is
+person's presence, silently, which is the one failure the rule against
+anyone being credited with somebody else's attendance exists to rule
+out. Between "the host does a little more manual work" and "the wrong
+person is
 recognised as present", this module chooses to fail toward the former
 every time punctuation is not exactly what was asked for but the letters
 and digits themselves are.
@@ -150,8 +151,8 @@ module's decision, deliberately.
 The threshold itself is `EligibilityThreshold`: `seminar_duration_minutes`
 (`data/config.yml`, already required for every other reason this project
 reads "the session's own length") and `share`, the configurable
-fraction -- configuration, not a constant, because the real number "devra
-s'aligner sur des exigences d'accréditation encore inconnues".
+fraction -- configuration, not a constant, because the real number will
+have to line up with accreditation requirements nobody knows yet.
 `eligibility_share` is required in `data/config.yml` (a
 threshold that only ever lived as a Python default would have been a
 constant with extra steps, and alignment with an accreditation body's
@@ -648,8 +649,8 @@ def eligible(attendee: MatchedAttendee, threshold: EligibilityThreshold) -> bool
     module docstring's "Eligibility answers a question only a matched
     attendee can be asked" for why `UnmatchedAttendee` and
     `UnreachableAttendee` cannot be passed here at all, and what that
-    means for the two cases that matter ("présent sans s'être inscrit",
-    a telephone joiner).
+    means for the two cases that matter (present without having
+    registered, and a telephone joiner).
 
     Eligible is not certified: this returns a fact about a duration, never
     an act of issuing anything. See the module docstring's "Eligibility is

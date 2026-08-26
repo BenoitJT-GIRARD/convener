@@ -1,7 +1,7 @@
 """Deliver an issued certificate by e-mail -- the only step in this
-project that sends a nominative document anywhere at all (the
-"Remise": "Par courriel. Jamais de document nominatif depose dans un
-depot.").
+project that sends a nominative document anywhere at all, and it goes by
+e-mail alone: a document naming a person is never deposited in a
+repository.
 
 What this module renders, and why HTML with an inline SVG code
 ------------------------------------------------------------------
@@ -50,8 +50,8 @@ either
 ------------------------------------------------------------------------------
 `render_certificate` returns a `str`; nothing in this module, and nothing
 in `cli.py`'s own callers, ever writes that string to a file anywhere
-under the repository, at any point, on any path:
-"aucune donnee ... dans le depot" is not a rule this module bends
+under the repository, at any point, on any path. The rule that no
+personal data reaches the repository is not one this module bends
 for a *rendered* document just because the document itself is derived
 rather than typed by a person. `test_cli.py`'s own
 `test_deliver_certificates_never_writes_anything_to_disk` is the test that
@@ -74,8 +74,8 @@ and downloadable by anyone with the run's own access, and unlike a
 registration confirmation, which carries an address and a matching code
 but no cryptographic attestation of anything, what an unsent certificate
 document *is* is exactly the nominative, signed document that may
-never be "depose dans un depot". No retention window makes that the right
-place for it, fourteen days or otherwise.
+never be deposited in a repository. No retention window makes that the
+right place for it, fourteen days or otherwise.
 
 What makes never keeping a copy safe here is that delivery is *replayable*
 (see the next section): the identical document is reproduced from scratch,
@@ -100,8 +100,8 @@ and the whole command is re-run, or because the workflow itself is simply
 run twice -- reproduces the *exact same* `identifier` and the *exact same*
 token, byte for byte, and therefore the exact same rendered document from
 this module. A retry is a replay, never a second certificate for the same
-person: "une remise echouee se rejoue sans regenerer" is the promise, in
-words; the mechanism that makes it true lives in
+person: a failed delivery is replayed, never regenerated. That is the
+promise in words; the mechanism that makes it true lives in
 `certificate.py` and `signing.py`, not here -- this module only has to
 avoid *breaking* that property, which is exactly what never caching or
 regenerating any part of the document from anything but its own
@@ -110,10 +110,10 @@ deterministic inputs achieves.
 **What "byte-identical" actually covers: the
 document and the token, not the envelope.** `_SmtpDeliveryTransport.send`
 now sets a `Date` header (`email.utils.formatdate`, current send time) --
-the spam folder is a named risk here ("un certificat
-dans les indesirables n'existe pas"), and a missing `Date` is a real
-spam-scoring signal, so a resend deserves one exactly as much as the first
-send did. This does not conflict with the replay guarantee above: a `Date`
+the spam folder is a named risk here -- a certificate that lands in it
+does not exist, as far as its holder is concerned -- and a missing `Date`
+is a real spam-scoring signal, so a resend deserves one exactly as much as
+the first send did. This does not conflict with the replay guarantee above: a `Date`
 header changes the *message* on a retry, never the attachment or its
 signature, and nothing this module's own tests pin ever compares the
 envelope byte for byte -- only `_sent_attachment_html` and the token it
@@ -494,7 +494,7 @@ class DeliveryResult:
     called it -- `confirmation.py`'s own module docstring carries that
     history -- but it would have been wrong here regardless of what that
     module did: a signed, nominative certificate is exactly what may
-    never be "depose dans un depot", and an Actions build artefact
+    never be deposited in a repository, an Actions build artefact
     included, and no retention window changes that. `sent` alone is
     everything `cli.py` needs to print a one-line count; the certificate
     itself is never lost by this type refusing to carry a copy, because a

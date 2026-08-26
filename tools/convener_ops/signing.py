@@ -32,9 +32,8 @@ directions.**
   the provable half of the retention promise.
 - A signing key is *never* destroyed. Retiring one from active service --
   no longer used to sign new certificates -- must not invalidate a single
-  certificate it already signed. The rule is explicit:
-  "les clés publiques antérieures restent publiées, pour que la rotation
-  n'invalide jamais un certificat déjà émis." A certificate is meant to
+  certificate it already signed, which is why every superseded public key
+  stays published rather than being withdrawn. A certificate is meant to
   outlive the event it was earned at, in some cases by years (accreditation
   bodies keep records), so "signed under a key we later stopped using" must
   still mean "valid," permanently.

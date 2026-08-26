@@ -10,13 +10,13 @@ export names into exactly three outcomes -- see that module's own "Three
 outcomes, not two" section. Only `MatchedAttendee` is invited here:
 
 - A **matched** attendee is a stored `Registration` the cascade tied to a
-  room presence -- "reconnue presente" in the plainest possible sense: a
+  room presence -- recognised present in the plainest possible sense: a
   person we can name, and can prove was in the room.
 - An **unmatched** attendee (`UnmatchedAttendee`) was in the room but the
   cascade could not tie the address it saw to any registration on file.
-  Not invited, and not only because the rule says "reconnues presentes":
-  this module has no address to send to either. `UnmatchedAttendee`
-  carries the *room's* display name and address, never a
+  Not invited, and not only because the rule speaks of people recognised
+  present: this module has no address to send to either.
+  `UnmatchedAttendee` carries the *room's* display name and address, never a
   `Registration` -- inventing an invitation from that would mean composing
   a message that names nobody's own stored consent to be written to at
   all, for a channel restricted to a registration in the first
@@ -33,10 +33,10 @@ So the fact this module invites *matched* attendees, not *eligible* ones
 (`attendance.eligible_attendees`, the certificate-issuing threshold), is
 deliberate too: eligibility is a share of the seminar's own
 scheduled duration, a bar set for a signed attestation of
-learning-adjacent presence; "reconnue presente" asks only whether we
+learning-adjacent presence; recognised present asks only whether we
 recognised the person in the room at all. Someone present for five minutes
 is not eligible for a certificate, but they were, in fact, recognised
-present, and "reconnue presente" is narrower than "eligible" only in one
+present, and "recognised present" is narrower than "eligible" only in one
 direction -- it never says "eligible attendee". Requiring the certificate
 threshold here would refuse an invitation to someone that phrase plainly
 includes.

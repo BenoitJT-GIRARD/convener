@@ -127,8 +127,8 @@ was first destroyed, never the day of the retry.
 
 The deadline is computed, never read off a form
 --------------------------------------------------
-`is_due_for_destruction` is the whole of "date de l'evenement + 90 jours":
-`event_date + RETENTION_DAYS` days, compared against
+`is_due_for_destruction` is the whole of the event's date plus ninety
+days: `event_date + RETENTION_DAYS` days, compared against
 `governance.paris_today(now)` -- the same clock discipline every other
 deadline in this repository already uses (`sweep.py`'s own vote-window
 expiry), never a raw `datetime.now()` a caller might read on the wrong
@@ -168,11 +168,10 @@ history still holds every byte of the ciphertext, deletion or not -- and
 it would invite a future reader to believe the *file's absence* is what
 protects the data, which is backwards: the key is the only thing that
 ever made the ciphertext readable, and once it is gone, an intact,
-committed, permanently unreadable blob is exactly what "les donnees
-deviennent definitivement illisibles" describes -- unreadable,
+committed, permanently unreadable blob is exactly what a promise that the
+data becomes permanently unreadable describes -- unreadable,
 not absent. Leaving it in place is also cheaper and safer than rewriting
-history to remove it, which this project rules out by name ("sans
-reecriture d'historique").
+history to remove it, which this project rules out by name.
 """
 
 from __future__ import annotations

@@ -14,7 +14,7 @@ Why a page rather than an SVG template with placeholders
 ----------------------------------------------------------
 An SVG template can hold a blank for a short string. It cannot *compose* a
 title nobody has written yet, because SVG text does not wrap or reflow --
-every one of this project's inherited `*_test_dev.svg` gabarits would clip
+every one of this project's inherited `*_test_dev.svg` templates would clip
 a title longer than whatever the person who drew it happened to type. HTML
 and CSS, rendered to an image, get wrapping, `flex`, and text metrics for
 free: the two-line invitation and the "WHAT TO EXPECT?" block are static,

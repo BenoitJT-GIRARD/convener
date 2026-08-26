@@ -3148,8 +3148,9 @@ def match_attendance() -> int:
                     )
                 line = f"- {label} -- {minutes} min"
                 if unmatched.tied_with:
-                    # A tie the cascade refused to guess between
-                    # ("empêche de revendiquer la présence d'autrui") --
+                    # A tie the cascade refused to guess between -- the
+                    # rule against anyone being credited with somebody
+                    # else's attendance --
                     # named here rather than left as a bare "unmatched",
                     # since the host is resolving a specific ambiguity, not
                     # starting from nothing. See attendance.py's own
@@ -4203,19 +4204,20 @@ def revoke_certificate() -> int:
 
 def deliver_certificates() -> int:
     """`convener-deliver-certificates`: e-mail every currently eligible
-    attendee's certificate for one event (the "Remise": "Par
-    courriel. Jamais de document nominatif depose dans un depot.") -- the
+    attendee's certificate for one event -- by e-mail alone, never as a
+    document naming a person deposited in a repository -- the
     step `issue-certificates.yml` runs immediately after
     `convener-issue-certificates` itself, in the same job and the same
     checkout, so this function's own re-derivation of the register (via
     `_load_certificate_register`) reads exactly what that step just wrote.
 
     Re-derives registrations, attendance and eligibility from scratch,
-    exactly as `issue_certificates` does -- the same "recalcule sans
-    reinscrire" discipline -- and then calls `certificate.issue`
-    again for each eligible attendee. That second call never grows the
-    register (`issue`'s own fingerprint-keyed lookup reuses the existing
-    entry's `identifier`, `certificate.py`'s own module docstring,
+    exactly as `issue_certificates` does -- the same discipline of
+    recalculating without re-registering -- and then calls
+    `certificate.issue` again for each eligible attendee. That second call
+    never grows the register (`issue`'s own fingerprint-keyed lookup
+    reuses the existing entry's `identifier`, `certificate.py`'s own
+    module docstring,
     "idempotent without being deterministic") and reproduces the exact
     same signed token every time (`signing.sign` is deterministic) -- so
     running this command again, for a delivery that failed the first
