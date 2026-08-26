@@ -28,7 +28,9 @@ import type { Speaker } from '../data/types';
  * about themselves at proposal or since, the demographic attributes read
  * for the diversity balance report (`state/diversity.ts`), the free text
  * the Board keeps about the lead, and the one field that names somebody
- * else entirely -- `proposed_by`, kept verbatim under G-17.
+ * else entirely -- `proposed_by`, kept verbatim as whoever submitted the
+ * form typed it, and never overwritten by the assignment that later gives
+ * the lead to a board member.
  */
 export const PERSONAL_DATA_FIELDS = [
   'name',

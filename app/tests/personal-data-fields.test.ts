@@ -64,8 +64,8 @@ describe('which speaker field is personal data', () => {
   });
 
   it('holds the one field naming somebody other than the candidate', () => {
-    // proposed_by is kept verbatim under G-17 -- often somebody outside the
-    // team, and never the candidate themselves.
+    // proposed_by is kept verbatim as the submitter typed it -- often
+    // somebody outside the team, and never the candidate themselves.
     expect(PERSONAL_DATA_FIELDS).toContain('proposed_by');
   });
 

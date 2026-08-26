@@ -7,7 +7,7 @@
  * produces the active-member logins and the subset of them unavailable on a
  * given date; `governance.eligibleVoters` does the subtracting.
  *
- * `assignLead` (G-17) crosses the language boundary: `tools/convener_ops/proposal.py`
+ * `assignLead` crosses the language boundary: `tools/convener_ops/proposal.py`
  * implements the same rule for the public-form intake path, and both are
  * pinned by `tools/tests/fixtures/governance-cases.json`'s `assign_lead_cases`.
  */
@@ -65,7 +65,7 @@ function idOrder(id: string): number {
 }
 
 /**
- * The active, available board member to whom a new lead falls (G-17):
+ * The active, available board member to whom a new lead falls:
  * whoever carries the fewest open leads (status `lead`, `assigned_to` that
  * member -- *not* `proposed_by`, which stays the submitter's self-reported
  * name and is never counted here). A tie goes to whoever's most recent open

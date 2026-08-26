@@ -58,7 +58,7 @@ LABEL_GENDER = ("Gender",)
 LABEL_LINKS = ("Links", "Profile links")
 LABEL_CONFLICTS = ("Conflicts of interest",)
 # The submitter, not the speaker being proposed -- distinct from LABEL_NAME
-# above. Kept as ``proposed_by`` on the resulting lead (G-17).
+# above. Kept as ``proposed_by`` on the resulting lead.
 LABEL_PROPOSED_BY = ("Your name", "Who are you", "How you propose")
 
 #: Every field ``to_lead`` reads, in the order the form asks them, each as
@@ -206,7 +206,7 @@ def _id_order(speaker_id: str) -> int:
 def assign_lead(
     speakers: Sequence[dict[str, Any]], config: dict[str, Any], on: str
 ) -> str:
-    """The active, available board member to whom a new lead falls (G-17):
+    """The active, available board member to whom a new lead falls:
     whoever carries the fewest open leads (status ``lead``, ``assigned_to``
     that member -- *not* ``proposed_by``, which stays the submitter's
     self-reported name and is never counted here).
@@ -261,7 +261,7 @@ def to_lead(
     ``proposed_by`` keeps the submitter's self-reported name exactly as typed
     into the form -- it is the only record of who to tell if the Board
     declines the lead. ``assigned_to`` is a separate field: the board member
-    who will look after the lead, chosen by ``assign_lead`` (G-17).
+    who will look after the lead, chosen by ``assign_lead``.
     """
     if skip_reason(fields, existing) is not None:
         return None

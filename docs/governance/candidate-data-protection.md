@@ -67,7 +67,7 @@ their behalf — rather than the workshop they might one day deliver:
   forward, self-reported at submission and kept exactly as given, often
   someone outside the team entirely. It is the only record of who to tell
   if the Board declines the lead, and it feeds the rotation that assigns an
-  unsponsored lead to a Board member (G-17). Present on every record.
+  unsponsored lead to a Board member. Present on every record.
 - `notes` — free-form text the Board keeps on the record. In practice this
   is mostly a review flag, and for leads carried over from before the
   Editorial Board's own ballot mechanism existed, a plain record of who

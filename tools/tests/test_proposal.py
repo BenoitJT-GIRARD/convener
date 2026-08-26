@@ -225,7 +225,7 @@ def test_a_form_lead_keeps_the_submitters_name_and_assigns_a_board_member() -> N
     # `proposed_by` keeps that name verbatim -- it is the only record of who
     # to tell if the Board declines the lead. `assigned_to` is a separate
     # field: the board member who will look after the lead, filled by
-    # assign_lead (G-17). Both facts are asserted in one test so they cannot
+    # assign_lead. Both facts are asserted in one test so they cannot
     # drift apart again.
     fields = _fields(("Name", "Grace Hopper"), ("Your name", "Grace Hopper"))
     lead = to_lead(fields, [], config(), TODAY)
@@ -280,7 +280,7 @@ def test_assign_lead_matches_the_shared_fixture(case: dict[str, Any]) -> None:
 
 
 def test_assign_lead_ignores_a_speaker_that_has_moved_past_the_lead_stage() -> None:
-    # assign_lead balances by *open* leads only (G-17): a speaker who moved
+    # assign_lead balances by *open* leads only: a speaker who moved
     # on to "confirmed" must not still count against the member who
     # onboarded them, or that member would look permanently busier than
     # they are. ada carries two non-lead records against grace's one real
