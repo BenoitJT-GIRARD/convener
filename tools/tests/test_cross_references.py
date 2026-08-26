@@ -114,11 +114,12 @@ thorough one:
   "Pick a first task", the event journey has four phases, a Markdown
   checklist has tasks, and `yaml.test.ts` has a round-trip. `COORDINATE`
   above already catches the citing use, because that one carries a number.
-* **`§N` on its own.** Sixteen of the eighteen in this repository are RFC
-  5545 sections, and the RFC that governs one is often named a sentence
-  earlier rather than beside it. Telling those apart needs more context
-  than a sweep has; the two that named this project's own documents were
-  rewritten instead.
+* **`§N` on its own.** Fourteen of the eighteen this repository carried
+  were RFC 5545 sections, and the RFC that governs one is often named a
+  sentence earlier rather than beside it -- `ics_reader.py` cites `§3.1`
+  and `§3.3.11` in one sentence and names the RFC once. Telling those
+  apart needs more context than a sweep has; the four that named this
+  project's own documents were rewritten instead.
 
 `this task` is the one entry above that takes the same trade
 `SEVERITY_TOKEN` takes: a volunteer-facing page that genuinely meant a
