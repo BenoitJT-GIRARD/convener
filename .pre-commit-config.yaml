@@ -27,4 +27,8 @@ repos:
     rev: v10.0.1
     hooks:
       - id: cspell
-        files: ^(docs|instances|README|INFORMATION-ARCHITECTURE).*\.md$
+        # Every page this product writes in its own prose. The
+        # authority is cspell.json's own `files` list, which CI reads
+        # and test_prose_language.py holds against what is tracked at
+        # the root; this hook is the local convenience beside it.
+        files: '^(docs|instances|README|INFORMATION-ARCHITECTURE|TRADEMARK|SECURITY|CONTRIBUTING).*\.md$'

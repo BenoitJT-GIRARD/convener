@@ -1,0 +1,58 @@
+# How to cite this software, in the format GitHub reads.
+#
+# The audience for this product is academic, and attribution in that world
+# is a citation rather than a line in a footer. GitHub renders this file as
+# a "Cite this repository" button and produces APA and BibTeX from it, so a
+# reader who wants to credit the software gets the credit right without
+# having to guess at a form. The licence already requires the copyright
+# notice to be kept; this asks for the thing that is actually worth more,
+# and it asks rather than requires.
+#
+# Citation File Format 1.2.0. Its schema
+# (https://github.com/citation-file-format/citation-file-format) requires
+# exactly four keys -- `cff-version`, `message`, `title`, `authors` -- and
+# refuses any key it does not know, so everything below is either required
+# or a documented optional key.
+# `tools/tests/test_public_repository.py` holds this file against that
+# required set and against the licence the repository actually ships.
+#
+# No `repository-code` and no `url`, deliberately. A duplicate inherits
+# this file, and an address here would send that duplicate's readers to
+# upstream's repository as though it were the software they ran. What the
+# citation names instead is the work and its author, which stays true in a
+# duplicate that has not modified the software -- and a duplicate that has
+# modified it adds its own author and its own address, which is what the
+# licence asks of it anyway.
+#
+# No `version` and no `date-released`, for a plainer reason: there are no
+# releases. A fix lands on the default branch and reaches an instance
+# through the merge it already does, so a version here would name something
+# nobody can check out.
+cff-version: 1.2.0
+message: >-
+  If you use this software, or run a seminar series on it, please cite it
+  using the metadata in this file.
+title: Convener
+type: software
+authors:
+  - family-names: GIRARD
+    given-names: Benoît J. T.
+license: AGPL-3.0-or-later
+abstract: >-
+  Convener runs a scholarly seminar series end to end -- proposals, an
+  editorial board, invitations and scheduling, registration, attendance
+  matching, verifiable certificates, and the destruction of participants'
+  personal data on a deadline -- with no database, no server and no running
+  cost. The repository is the store, continuous integration is the compute,
+  and three small edge workers hold what has to answer continuously. It is
+  written for volunteer-run scholarly societies, where the work is unpaid,
+  the person doing it changes every year or two, and there is no budget to
+  lose.
+keywords:
+  - seminar series
+  - research software
+  - scholarly society
+  - open access
+  - attendance certificate
+  - data protection
+  - continuous integration

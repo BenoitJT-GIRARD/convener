@@ -22,6 +22,8 @@
     "README.md",
     "INFORMATION-ARCHITECTURE.md",
     "TRADEMARK.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
     "services/*/README.md",
     "instances/*/README.md",
     "site/**/*.njk",
