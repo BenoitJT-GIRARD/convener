@@ -2,9 +2,8 @@
  * The band a duplicate that has not been configured publishes above its
  * own chrome.
  *
- * Phase 11, task 6. The inventory (`docs/superpowers/inventaire-instance.
- * md` § 5) asks for it in those words -- "pour qu'un duplicata non
- * configuré le dise, fort, plutôt que de publier silencieusement
+ * A duplicate that has not been configured should say so, loudly, rather
+ * than publish silently as somebody else's
  * l'identité du gabarit" -- and it is the direct continuation of a rule
  * this project already settled: a default that leaks when you forget it
  * is not a default, it is a trap.

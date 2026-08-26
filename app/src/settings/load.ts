@@ -1,7 +1,7 @@
 /**
  * Everything the settings screen reads, and where each piece comes from.
  *
- * Phase 11, task 5. Six files answer the two questions this screen asks --
+ * Six files answer the two questions this screen asks --
  * what does this instance own, and what may each of its numbers be --
  * and none of them is a list typed into a component:
  *

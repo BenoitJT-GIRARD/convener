@@ -4,15 +4,15 @@
  * sign-in behind `App.tsx`'s own `Shell`. Injected into the built HTML by
  * `vite.config.ts`'s own `cspHtmlPlugin`, via `transformIndexHtml` --
  * `<meta http-equiv>` is the only mechanism available at all: GitHub Pages
- * sets no response headers of its own (security audit 2026-08-23).
+ * sets no response headers of its own.
  * `X-Content-Type-Options`, `Permissions-Policy`, HSTS and COOP/COEP/CORP
  * are categorically unavailable, not merely undone, and `frame-ancestors`
  * is ignored outright when delivered by `<meta>` -- see
  * `docs/reference/operations.md`'s own "Content-Security-Policy" section
  * for that boundary written out in full.
  *
- * Phase 7 task 5 moved the last public route this document carried
- * (`/survey/:eventId`, the post-event survey) onto its own island, mounted
+ * The last public route this document carried
+ * (`/survey/:eventId`, the post-event survey) moved onto its own island, mounted
  * on `site/src/survey.njk` instead -- see that page's own
  * `site/src/_data/csp.js` for the policy it now ships under. This
  * document's own `connect-src` dropped the signup relay's origin as a
@@ -36,8 +36,8 @@
  * a media file or a worker could be fetched from *any origin at all*, in
  * both modes -- including the demonstration a stranger drives, where
  * `tests/demo-network.test.tsx` had already written down that a
- * third-party `<img src>` added to a screen was held by nothing. Phase 11
- * examined them.
+ * third-party `<img src>` added to a screen was held by nothing. That gap
+ * is closed.
  *
  * Each directive, and what this bundle actually loads to justify it
  * -----------------------------------------------------------------
@@ -57,7 +57,7 @@
  *   contacting a third party quietly.
  * - `script-src 'self'`: the whole application is one same-origin bundle;
  *   no inline `<script>`, no inline event handler, no `eval` anywhere in it
- *   (confirmed by the audit's own search). Vite's own
+ *   (confirmed by search, not assumed). Vite's own
  *   `<link rel="modulepreload">` is governed by this directive too.
  * - `style-src 'self'`: one stylesheet, from this same origin, emitted by
  *   the build. No `<style>` block and no `style="..."` attribute in any

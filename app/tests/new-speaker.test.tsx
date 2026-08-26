@@ -146,7 +146,7 @@ describe('NewSpeaker', () => {
   });
 
   it('commits the new record by its id, never by the researcher it names', async () => {
-    // The subject the branch review found: `data: add lead Jane Doe`, in a
+    // The subject a review found: `data: add lead Jane Doe`, in a
     // history nothing rewrites and every watcher is mailed. What stops it
     // now is the grammar and the `Subject` brand, but neither is read by a
     // test that never looks at what was sent -- so this looks.

@@ -1,6 +1,6 @@
 /**
  * `SURVEY_STATUS_FILENAME` and the URL `SurveyForm.tsx` fetches it from --
- * pulled out of `SurveyForm.tsx` itself (fix round 2, R-42) into this
+ * pulled out of `SurveyForm.tsx` itself into this
  * plain, non-component module for the identical reason
  * `src/verify/register.ts` exports `REGISTER_FILENAME` from its own
  * standalone file rather than from whatever component reads it:
@@ -29,7 +29,7 @@ const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
 /** `scripts/copy-survey-status.mjs`'s own destination -- see that script's
  *  and `survey-status-projection.mjs`'s docstrings for the whole
- *  publish-and-fetch pipeline this closes (R-37): a bare JSON array of
+ *  publish-and-fetch pipeline this closes: a bare JSON array of
  *  the event ids currently open for the survey, derived from
  *  `data/speakers.yml`'s `survey_enabled` field and published outside the
  *  consent gate entirely, because it is an operational fact rather than
@@ -37,9 +37,9 @@ const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
  *
  * Before this was a pinned, tested constant, `DEST_FILENAME` renaming to
  * something else while this string stayed `'survey-status.json'` (or the
- * reverse) would 404 both the page and the relay with every one of round
- * 1's own tests still green -- every event reading as closed forever,
- * nothing turning red anywhere (R-42's own named failure).
+ * reverse) would 404 both the page and the relay with the whole suite
+ * still green -- every event reading as closed forever,
+ * and nothing turning red anywhere.
  */
 export const SURVEY_STATUS_FILENAME = 'survey-status.json';
 

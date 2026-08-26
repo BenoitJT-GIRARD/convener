@@ -10,7 +10,7 @@ import { walkAll } from '../scripts/handbook-registry.mjs';
  * (`tools/tests/test_site.py::test_no_page_requests_a_third_party_font_host`),
  * scoped to `site/src/`; this is the application's, scoped to `app/`,
  * because the two are built and served separately and neither test can see
- * the other's tree. Before fix round 1 of task 3, `app/src/design/tokens.css`
+ * the other's tree. `app/src/design/tokens.css` once
  * `@import`-ed Archivo and JetBrains Mono from fonts.googleapis.com, and
  * `app/index.html` preconnected to fonts.googleapis.com and
  * fonts.gstatic.com and loaded a stylesheet from the former besides -- four

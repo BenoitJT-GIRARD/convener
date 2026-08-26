@@ -65,7 +65,7 @@ const C = createContext<Ctx | null>(null);
 
 /** The example instance, as this context's own state.
  *
- *  A function rather than a constant since phase 11 task 2: the two
+ *  A function rather than a constant: the two
  *  documents behind it are parsed on first use rather than at module load
  *  (see `./demo.ts`), and a fresh copy per call is what lets `reload()`
  *  put back what an edit in this tab changed. */

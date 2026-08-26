@@ -51,7 +51,7 @@
  * - `SPEAKERS[0].checklist` carrying an `assignee: ''`: legal, and the same
  *   fact as no entry at all -- nobody in particular, which is the hosts.
  * - `SPEAKERS[0].survey_enabled: true`, `SPEAKERS[1]` and `SPEAKERS[2]`
- *   left `false`: the post-event survey switch (task 16, phase 4 spec S:6)
+ *   left `false`: the post-event survey switch
  *   is a plain top-level boolean, and both values have to appear somewhere
  *   in this fixture for a reader that swapped the field for its own
  *   negation, or dropped it and defaulted every record to one value, to

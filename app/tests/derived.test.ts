@@ -81,7 +81,7 @@ describe('hasEnded', () => {
   it('rolls a timeless row over at Paris midnight, not UTC midnight', () => {
     // 23:00Z on the 8th is already 00:00 on the 9th in Paris: the seminar's day
     // is over there, and Paris is where the series is run. Under the old UTC
-    // reading this was still the 8th and the row read as not yet ended (P2-9).
+    // reading this was still the 8th and the row read as not yet ended.
     const noTime = scheduled('2026-01-08', '');
     expect(hasEnded(noTime, config, new Date('2026-01-08T23:00:00Z'))).toBe(true);
   });

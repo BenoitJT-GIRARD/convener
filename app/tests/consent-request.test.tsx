@@ -358,7 +358,7 @@ describe('the message asking for permission', () => {
   });
 
   it('says where, not just what', () => {
-    // Phase 10, task 3: the forum's own address is the instance's, so the
+    // The forum's own address is the instance's, so the
     // template names it rather than spelling it. Both halves are asserted --
     // the token is there, and it resolves to the address this instance
     // declares. A duplicate sending this message must name its own forum,

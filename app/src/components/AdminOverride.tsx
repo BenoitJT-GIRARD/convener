@@ -216,7 +216,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
         <L label="Forum thread">
           <input className={input} value={draft.forum_thread} onChange={e => up('forum_thread', e.target.value)} />
         </L>
-        {/* Minor 9 (fix round 1, task 16): the one per-event field with no
+        {/* The one per-event field that had no
             control here before this -- `survey_enabled` round-tripped
             safely regardless (a hand edit of data/speakers.yml, or this
             very object spread, both preserve it), but the person who

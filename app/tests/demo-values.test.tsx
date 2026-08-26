@@ -2,8 +2,8 @@
  * What the demonstration composes, and which instance each part of it came
  * from.
  *
- * Phase 11, task 8 -- the defect this phase's own bilan found and left
- * standing (its § 9.2). Demo mode shows `instances/example/`: its five
+ * A defect found late and left standing for a while.
+ * Demo mode shows `instances/example/`: its five
  * records, its board, its counter. Three values *around* those records
  * were still taken from the instance that built the bundle, and each one
  * came out belonging to neither instance:

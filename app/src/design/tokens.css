@@ -16,8 +16,8 @@
  * index.html preconnecting to fonts.googleapis.com and fonts.gstatic.com
  * besides), which sends every visitor's address to Google -- on the exact
  * pages that exist to keep personal data out of third-party hands (the
- * signup form, the certificate verification page, the survey). Fix round
- * 1 of task 3, found by grep after `site/`'s own equivalent request had
+ * signup form, the certificate verification page, the survey). Found by
+ * grep after `site/`'s own equivalent request had
  * already been removed. The files sit beside their licences in `../fonts/`
  * at the repository root, shared with `site/`'s own copy of this same
  * discipline (D-17); `app/scripts/copy-fonts.mjs` publishes them here at

@@ -38,7 +38,7 @@ export const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..',
  * normal" discipline `certificates-projection.mjs::readProjection` and
  * `signing-keys-files.mjs::readPublicKeys` both apply to their own
  * absent sources. An empty list here means every event reads as closed,
- * which is the fail-closed direction R-37 asks for: the page must never
+ * which is the fail-closed direction the switch asks for: the page must never
  * treat "we could not determine the status" as "open".
  */
 export async function readProjection(srcPath) {

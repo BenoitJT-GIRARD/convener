@@ -160,7 +160,7 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
     expect(JSON.parse(new TextDecoder().decode(unpadded))).toEqual(fields);
   });
 
-  it('R-39: the ciphertext length is the same regardless of how much feedback was written', async () => {
+  it('the ciphertext length is the same regardless of how much feedback was written', async () => {
     // Measured before this fix: an empty `feedback` produced a
     // 92-character base64 ciphertext and a 2000-character one produced
     // 2756 -- the exact quasi-identifier the review named. Padding every
@@ -191,8 +191,8 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
     await expect(encryptSurveyResponse(publicPem, tooLong)).rejects.toThrow();
   });
 
-  it('R-40: a 2000-character non-Latin answer round-trips, now that JSON.stringify and ensure_ascii=False agree byte for byte', async () => {
-    // The browser side of R-40's own fix: `JSON.stringify` here always
+  it('a 2000-character non-Latin answer round-trips, JSON.stringify and ensure_ascii=False agreeing byte for byte', async () => {
+    // The browser side of that fix: `JSON.stringify` here always
     // left non-ASCII as itself (at most 4 UTF-8 bytes/char), so this side
     // never needed a code change -- this test exists to prove the claim,
     // not to fix anything here. 2000 CJK characters (3 bytes each) is
@@ -225,7 +225,7 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
     expect(JSON.parse(new TextDecoder().decode(unpadded))).toEqual(fields);
   });
 
-  it('R-40: an over-long non-Latin answer is refused cleanly, the same as an over-long ASCII one', async () => {
+  it('an over-long non-Latin answer is refused cleanly, the same as an over-long ASCII one', async () => {
     const { publicPem } = await generateEventKeyPair();
     // 2100 emoji (an astral character, 4 UTF-8 bytes each) = 8400 bytes
     // alone, already past PLAINTEXT_PAD_BYTES before the JSON envelope
@@ -238,14 +238,14 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
   });
 });
 
-describe('the pad target (Minor 2, fix round 2): bound by the shared fixture, not only by this file\'s own literal', () => {
+describe('the pad target: bound by the shared fixture, not only by this file\'s own literal', () => {
   it("pins this file's own PLAINTEXT_PAD_BYTES to governance-cases.json::event_survey_response_encryption.pad_bytes", () => {
     // Before this test, changing survey.py::_PLAINTEXT_PAD_BYTES left
     // this whole suite green: every assertion here compared against this
     // file's own separately-hardcoded PLAINTEXT_PAD_BYTES, which by
     // definition always agrees with itself. The fixture's own pad_bytes
-    // is an independent literal, written once when its R-40 case was
-    // captured, that a real cross-language disagreement now fails
+    // is an independent literal, written once when its cross-language case
+    // was captured, that a real disagreement now fails
     // against.
     expect(PLAINTEXT_PAD_BYTES).toBe(cases.event_survey_response_encryption.pad_bytes);
   });

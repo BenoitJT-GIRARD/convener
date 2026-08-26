@@ -7,7 +7,7 @@ import {
 } from '../state/consent';
 import { dateLine } from '../state/derived';
 import type { Speaker } from '../data/types';
-// Phase 10, task 3: `docs/toolkit/`'s templates used to write the
+// `docs/toolkit/`'s templates used to write the
 // organisation's name, the series' title, its forum and its contact
 // address out in full. They read them as `{{ instance.* }}` now,
 // resolved from the one declaration through the reader below --
@@ -15,7 +15,7 @@ import type { Speaker } from '../data/types';
 // engine beside it. `published.py::Identity.namespace` composes the
 // identical map for `announce.py`'s own renderer.
 import { instanceIdentity } from '../instance';
-// Phase 11, task 8: a `speaker.` token is a field of the record on
+// A `speaker.` token is a field of the record on
 // screen, and in demo mode every record on screen is the example
 // instance's. `signupBase` below is the one address composed from a
 // record, so it is the one this distinction reaches.
@@ -35,7 +35,7 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  * one path segment `site/src/event.njk`'s permalink publishes an event
  * page under (`/events/<event id>/`, D-19).
  *
- * Phase 10, task 2: the root used to be a literal here, mirrored
+ * The root used to be a literal here, mirrored
  * byte-for-byte against Python's `tools/convener_ops/registration.SIGNUP_BASE`
  * and bound to it by a shared fixture -- a binding that could say the two
  * copies still agreed, never that there was one. It now comes from
@@ -51,17 +51,17 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  * rather than composing `undefined` into a public address printed on an
  * announcement nobody can recall.
  *
- * Task 6: this used to be a `HashRouter` fragment
+ * This used to be a `HashRouter` fragment
  * (`App.tsx`'s `path="/signup/:eventId"`, the convention
  * `survey_invite.SURVEY_BASE` still uses for its own address --
- * `certificate.VERIFICATION_BASE` used to as well, until task 7 moved
- * certificate verification onto its own island too, keeping the fragment
+ * `certificate.VERIFICATION_BASE` used to as well, until
+ * certificate verification moved onto its own island too, keeping the fragment
  * for a reason this address does not share: see that constant's own
  * comment) -- registration left that route for an island mounted on the
  * public event page, so this now points at that page's own address
  * instead.
  *
- * Phase 11, task 8: the example instance's own address in demo mode, for
+ * The example instance's own address in demo mode, for
  * the reason `state/agenda.ts::editionCodePrefix` carries in full. A
  * `speaker.` token is a field of the record on screen, and every record
  * on screen in a demonstration belongs to `instances/example/` -- so this
@@ -86,7 +86,7 @@ function signupBase(): string {
 }
 
 /**
- * The R-5 rule (`tools/convener_ops/platform.py::find_speaker`) computed here
+ * The rule `tools/convener_ops/platform.py::find_speaker` states, computed here
  * rather than left for a volunteer to fill in: "`event_id` is
  * `edition_code`, lower-cased. Nothing else." A hand-filled event id in a
  * *public* announcement is exactly the shape this project refuses
@@ -236,7 +236,7 @@ function resolvePath(path: string, resolved: Resolved): { value: string; present
  * a row to carry by the time this text is drafted, so its absence should
  * make the draft look exactly that unfinished (D-13).
  *
- * Fix round 2 (`tools/convener_ops/announce.py::_render`'s own docstring carries
+ * (`tools/convener_ops/announce.py::_render`'s own docstring carries
  * the argument in full; mirrored here so the two engines cannot show a
  * volunteer two different things for the identical template): a field that
  * is *ordinarily* absent -- `public.bio`, waiting on a consent nobody is
@@ -289,7 +289,7 @@ const WITHOUT_SPEAKER = /\{\{\s*(consent|instance)\.(\w+)\s*\}\}/g;
  * loud: a host reading the intro script on the Templates screen must see the
  * sentence, not the token, because a placeholder in the middle of spoken
  * prose is either read aloud or improvised around, and both are worse than
- * the drift this replaced. The `instance.…` group (phase 10, task 3) is the
+ * the drift this replaced. The `instance.…` group is the
  * same argument made about a different constant: the organisation's own name
  * is not a field of any record, it is the same on every page, and a
  * volunteer reading a template to decide whether to send it must see whose

@@ -261,8 +261,8 @@ describe('the repository this app actually reads', () => {
   // that is on trial rather than what happens to be in it.
   //
   // It used to open on `expect(speakers.length).toBeGreaterThan(0)`, as the
-  // non-vacuity guard for the row assertion under it. Phase 12 task 4
-  // cleared the records of personal data and the list became empty, so that
+  // non-vacuity guard for the row assertion under it. The records were
+  // cleared of personal data and the list became empty, so that
   // line would now pin this repository to holding rows -- and re-adding
   // records is an ordinary cockpit operation, not a repair. An empty list is
   // a shape the model has to accept. The check still fails on its own the
@@ -276,7 +276,7 @@ describe('the repository this app actually reads', () => {
     const cfg = parseConfig(dataFile('config.yml'));
     expect(cfg.board.length).toBeGreaterThan(0);
     expect(cfg.sla_days.invitation_follow_up).toBeGreaterThan(0);
-    // The board's decision deadline is this one and no other (F-13).
+    // The board's decision deadline is this one and no other.
     expect(cfg.vote_window_days).toBeGreaterThan(0);
   });
 });

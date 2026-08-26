@@ -1,7 +1,7 @@
 /**
  * The settings screen, driven.
  *
- * Phase 11, task 5. What is being held here is one claim and its two
+ * What is being held here is one claim and its two
  * halves: **a file cannot refuse a value; a form can** -- so the screen has
  * to refuse an illegal one *at the point of entry*, on both ends of the
  * coupling, with a sentence naming the bound and where it comes from; and
@@ -273,7 +273,7 @@ describe('the settings screen', () => {
     );
     // The file still argues its own case -- every comment line it had,
     // whatever this instance's copy happens to say. One of its sentences
-    // was quoted here until phase 12 task 6, and `config/registration-
+    // was quoted here once, and `config/registration-
     // lanes.yml` is the *instance's* file: quoting its prose made a
     // product test an assertion about which repository was running it.
     const lanes = readFileSync(resolve(ROOT, 'config/registration-lanes.yml'), 'utf8');

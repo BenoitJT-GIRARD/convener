@@ -28,8 +28,8 @@
  * `dist/` with a seventh `copy-*.mjs` and fetching them at run time --
  * would have made the demonstration's own data asynchronous where it is
  * resolved synchronously today (`DataContext`'s own `initialState`), put a
- * request on the wire in the one mode phase 11's first task had just
- * narrowed to "reads only from the origin that served it", and published
+ * request on the wire in the one mode narrowed to
+ * "reads only from the origin that served it", and published
  * one instance's example data at another instance's public address.
  *
  * Throws rather than defaulting, the same rule `published.mjs` follows: a

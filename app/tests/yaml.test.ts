@@ -78,7 +78,7 @@ describe('the JS/Python YAML boundary (D-14)', () => {
   // To regenerate after a deliberate schema change: run the suite, read the
   // diff the assertion prints, and update the fixture to match. Never the
   // other way round -- the fixture is not hand-typed, and a hand-typed
-  // approximation is what let `time: 12:30` through in phase 1.
+  // approximation is what once let `time: 12:30` through.
   it('writes speakers.yml exactly as the checked-in fixture', () => {
     expect(withSpeakersHeader(serializeSpeakers(SPEAKERS))).toBe(
       fixture('speakers-from-app.yml'),

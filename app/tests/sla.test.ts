@@ -95,7 +95,7 @@ describe('dueDate', () => {
   });
 
   it('follows the config when it is the recording that is given the tighter target', () => {
-    // The four values are adjustable without code (spec section 7), so which
+    // The four values are adjustable without code, so which
     // of the two wrap-up steps comes first must not be baked in here.
     const tighter: Config = {
       ...config,
@@ -332,7 +332,7 @@ describe('the wording a volunteer reads', () => {
     expect(Object.keys(STEP_LABELS).sort()).toEqual([...SLA_STEPS].sort());
     // Three of the four steps are read off `sla_days`; the board's decision
     // is timed by `vote_window_days`, so the config has exactly one number
-    // per deadline and no key a second one could live in (F-13).
+    // per deadline and no key a second one could live in.
     expect(Object.keys(STEP_LABELS).sort()).toEqual(
       [...Object.keys(config.sla_days), 'lead_decision'].sort(),
     );

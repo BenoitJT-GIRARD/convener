@@ -22,8 +22,7 @@
  * (`PUBLIC_DIR`) both live in `certificates-projection.mjs` now, not
  * here -- this file is a thin wrapper around them so
  * `app/tests/copy-certificates.test.ts` can run the real write against a
- * temporary directory without triggering this file's own side effect
- * (Important 2, fix round 1).
+ * temporary directory without triggering this file's own side effect.
  *
  * Runs before `vite dev` and `vite build`, alongside the other copy
  * scripts.

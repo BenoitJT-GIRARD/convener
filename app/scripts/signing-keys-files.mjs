@@ -11,8 +11,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** The manifest filename `copy-signing-keys.mjs` writes, and
- *  `src/verify/publicKeys.ts::KEYS_INDEX_FILENAME` fetches. Minor 6 (fix
- *  round 1): these are two literals in two files, not one constant
+ *  `src/verify/publicKeys.ts::KEYS_INDEX_FILENAME` fetches. These are
+ *  two literals in two files, not one constant
  *  imported by both -- `app/tests/copy-signing-keys.test.ts` pins them
  *  equal directly, which is a weaker, but honestly-described, guarantee
  *  than "defined once, imported by both" would be. */
@@ -23,9 +23,9 @@ export const INDEX_FILENAME = 'index.json';
  *  `copy-signing-keys.mjs` writes into and `publicKeys.ts`'s `keysUrl()`
  *  is relative to. Exported (pure path math, no I/O) so a test can assert
  *  it resolves to that same directory, not merely that a filename
- *  constant matches one imported elsewhere (Important 2, fix round 1:
- *  before this, `copy-signing-keys.mjs`'s own `DST` could move to a
- *  different subtree entirely and every existing test stayed green). */
+ *  constant matches one imported elsewhere. Before this,
+ *  `copy-signing-keys.mjs`'s own `DST` could move to a
+ *  different subtree entirely and every existing test stayed green. */
 export const PUBLIC_KEYS_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -89,7 +89,7 @@ export async function readPublicKeys(dir) {
  * recreated), the same "no stale key left behind after one is retired"
  * discipline the script always had.
  *
- * Important 2 (fix round 1): exported so
+ * Exported so
  * `app/tests/copy-signing-keys.test.ts` can run this for real, against a
  * temporary directory, and assert the path it actually produces --
  * before this, no test ever exercised the destination path at all.

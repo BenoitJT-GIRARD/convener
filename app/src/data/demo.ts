@@ -9,8 +9,9 @@
  * What it shows is `instances/example/` -- a whole second instance,
  * invented, that the product already ships and that
  * `tools/tests/test_second_instance.py` already lays into this
- * repository's own holes on every run to prove the separation of phase 10.
- * Until this task this module held five speaker records and a governance
+ * repository's own holes on every run to prove the instance is separable
+ * from the code.
+ * This module used to hold five speaker records and a governance
  * configuration of its own invention instead, and two of that invention's
  * strings named *this* organisation's forum and its LinkedIn page: an
  * instance written in code, compiled into the cockpit, shipped by every

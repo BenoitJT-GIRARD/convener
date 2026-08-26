@@ -10,7 +10,7 @@
  * the whole object into every bundle through Vite's own `define`, exactly
  * as it already does for the published address.
  *
- * Phase 10, task 3. Before it, the organisation's name, the series' title,
+ * Before this reader existed, the organisation's name, the series' title,
  * the forum and the contact address were typed out in the cockpit's chrome,
  * in three islands, in the content registry's repository URL and in the
  * role check's organisation -- a hundred and fifty-six times in all,
@@ -89,7 +89,7 @@ let cachedEditionPrefix: string | null = null;
  * The prefix this instance numbers its editions under -- `MRG`, so `MRG-05`
  * and, lower-cased, the event id `/events/mrg-05/` (D-19).
  *
- * Phase 11, task 4. `state/agenda.ts::nextEditionCode` used to compose
+ * `state/agenda.ts::nextEditionCode` used to compose
  * `MRG-${n}` from a literal, and `validate.py::EDITION_RE` fixed the same
  * two letters on the other side of the language boundary -- the initials
  * of the series that happens to run this repository, in the product's own
@@ -109,8 +109,8 @@ let cachedEditionPrefix: string | null = null;
  * key filename.
  *
  * The `MRG-` form an edition code actually starts with is deliberately
- * *not* here, and that absence is the correction phase 11's own bilan
- * asked for: composing it needs the prefix of the instance whose records
+ * *not* here, and that absence is deliberate:
+ * composing it needs the prefix of the instance whose records
  * are on screen, which in demo mode is the example's and not this one's
  * (`state/agenda.ts::editionCodePrefix`). A second function here
  * returning this instance's prefix with a hyphen on it would be a trap
@@ -146,8 +146,8 @@ let cachedUnconfigured: string[] | null = null;
  * instance somebody has configured, and the names of the offending keys
  * for one nobody has.
  *
- * Phase 11, task 6. The first thing anybody does with a template is
- * deploy it before configuring it, and until this the result was a public
+ * The first thing anybody does with a template is
+ * deploy it before configuring it, and the result used to be a public
  * cockpit whose masthead named the example collective, whose footer
  * linked its invented forum and whose every check stayed green -- a
  * declaration that belongs to somebody else is still a perfectly valid

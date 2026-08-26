@@ -25,7 +25,7 @@
  * percentage by nine points. The only proportion this module will produce is
  * `share`, which returns a count and its denominator so the reader always sees
  * both -- and which refuses to produce even that below
- * `MIN_REPORTING_BASIS` (P2-8: the misleading form is absent, not guarded).
+ * `MIN_REPORTING_BASIS`: the misleading form is absent, not guarded.
  *
  * **Only what the speaker told us.** `gender` and `career_stage` are declared
  * values with `undisclosed` as a real, first-class answer. Nothing here
@@ -298,7 +298,7 @@ export interface ReportRow<K extends string> {
  * the decision is taken here and the *result* is what crosses the boundary:
  * below the basis there are **no rows at all**, so there is nothing for a
  * screen to render as a zero or an empty bar. The misleading state is absent,
- * not guarded (P2-8).
+ * not guarded.
  *
  * `too-few` carries `declared` and `total` so the screen can say what is
  * missing -- "none of the twenty-four told us" -- which is a sentence, not a

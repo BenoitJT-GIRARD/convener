@@ -4,15 +4,15 @@ import { encryptRegistration, importEventPublicKey } from '../../signup/encrypt'
 import type { Registration } from '../../signup/encrypt';
 
 /**
- * Task 6: extracted from the operators' application package
+ * Extracted from the operators' application package
  * (`app/src/signup/SignupForm.tsx`, now deleted -- see git history) into
  * an island mounted on the public event page (`site/src/event.njk`), per
- * D-18 ("static pages, interactivity in islands") and P-2 ("islands are
- * built in the cockpit"). Before this, a visitor who wanted to register
+ * D-18 ("static pages, interactivity in islands"), and built in the
+ * cockpit like every other island. Before this, a visitor who wanted to register
  * downloaded the whole operators' cockpit -- its routing, its
  * authentication, every screen -- to fill in four fields.
  *
- * Everything phase 4 established about this form holds unchanged: the
+ * Everything this form ever promised holds unchanged: the
  * public key comes from the same origin the island itself is served from,
  * encryption happens in the browser under `encrypt.ts` -- shared, never
  * reimplemented (the rule this whole file exists to honour) -- there are
@@ -26,7 +26,7 @@ import type { Registration } from '../../signup/encrypt';
  *   one static page per event (D-19), not a fragment this script
  *   re-parses. `main.tsx` reads it off the mount element's own
  *   `data-event-id` attribute.
- * - The data-protection notice (`Notice()`, phase 4 spec §4) is gone from
+ * - The data-protection notice (`Notice()`) is gone from
  *   this file. `site/src/event.njk` now renders that text itself, as
  *   plain static HTML, ahead of this island's own mount point -- D-18's
  *   own logic applied literally: text that needs no interactivity stays
@@ -52,8 +52,8 @@ import type { Registration } from '../../signup/encrypt';
 // see that script's own comment for why a missing file here is a normal
 // state, not a build failure. `base` for this island's own Vite build
 // (`app/vite.config.ts`, `mode === 'island-signup'`) is the app's own
-// published base, the same value the main app build uses -- Fix round 4
-// correction: this used to read `/app/`, deliberately distinct, on the
+// published base, the same value the main app build uses. This used to
+// read `/app/`, deliberately distinct, on the
 // reasoning that this bundle runs on a page served by the *site*, whose
 // own templates already addressed the app's assets root-relative to the
 // site's own root. That reasoning assumed the site's own root-relative
@@ -78,16 +78,16 @@ function relayUrl(): string | undefined {
   return import.meta.env.VITE_SIGNUP_RELAY_URL as string | undefined;
 }
 
-// The address a participant writes to about their own data. Phase 10,
-// task 3: declared once in `config/instance.json` and carried into this
+// The address a participant writes to about their own data. Declared
+// once in `config/instance.json` and carried into this
 // bundle by `vite.config.ts`'s own define, because this runs in a
 // participant's browser. A duplicate that left this literal here would
 // send its own participants' data-protection requests to the previous
 // instance's inbox.
 const contactEmail = () => instanceIdentity().contact;
 
-// Mirrors `tools/convener_ops/registration.py::_MAX_FIELD_LENGTH` (Important 1,
-// branch review). Bound here too, not only server-side: before this, a
+// Mirrors `tools/convener_ops/registration.py::_MAX_FIELD_LENGTH`.
+// Bound here too, not only server-side: before this, a
 // 201-character field was accepted by this form and by the relay,
 // encrypted, shown as sent, and only then dropped by `to_registration` as
 // "could not be read" -- `convener-handle-registration` exits non-zero, no
@@ -239,13 +239,13 @@ export function SignupForm({ eventId }: { eventId?: string }) {
     if (submitState === 'sent') sentPanelRef.current?.focus();
   }, [submitState]);
 
-  // Fix round 1 (task 11's manual pass, "how error messages are
-  // announced" -- flagged, not fixed, there; fixed here). Setting
+  // A manual accessibility pass asked how error messages are announced,
+  // and this is the answer. Setting
   // `submitState` to `'sending'` disables the button that still held
   // focus a moment earlier -- a disabled element cannot hold focus, so
   // the browser drops it to `<body>` immediately, before this component
   // ever gets to render anything about what happened (confirmed against
-  // real Chrome in task 11's report). The `role="alert"` below already
+  // real Chrome, not assumed). The `role="alert"` below already
   // gets a screen-reader user this sentence read aloud the instant it is
   // inserted, live-region delivery needs no focus to move at all -- but a
   // keyboard user with no screen reader is left at `<body>` with no

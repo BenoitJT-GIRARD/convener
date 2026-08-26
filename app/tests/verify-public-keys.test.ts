@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 describe('loadSigningPublicKeys -- requests the published index, same-origin', () => {
-  it('fetches exactly BASE/keys/signing/index.json, not merely a URL ending in that filename (Important 2)', async () => {
+  it('fetches exactly BASE/keys/signing/index.json, not merely a URL ending in that filename', async () => {
     // A regex suffix match alone would still pass if `keysUrl()` grew an
     // extra path segment (e.g. BASE/signing-keys/index.json still ends in
     // "index.json") -- exact equality against BASE, independently

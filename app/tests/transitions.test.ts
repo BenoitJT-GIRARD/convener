@@ -163,7 +163,7 @@ describe('transitions v2', () => {
     // approved this speaker, and one of them steps back afterwards. The count
     // drops below the threshold, but the speaker stays `approved` and
     // `decided_on` stands -- a decision announced is not silently reversed.
-    // Only the concealed-conflict procedure (task 9) reopens a vote.
+    // Only the concealed-conflict procedure reopens a vote.
     const decided: Speaker = {
       ...base,
       status: 'approved',

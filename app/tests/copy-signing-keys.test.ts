@@ -25,13 +25,13 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
 // app/tests/.. = app/
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-describe('the manifest filename copy-signing-keys.mjs writes and publicKeys.ts fetches (Minor 6: two literals, pinned equal, not one shared import)', () => {
+describe('the manifest filename copy-signing-keys.mjs writes and publicKeys.ts fetches -- two literals, pinned equal, not one shared import', () => {
   it('pins scripts/signing-keys-files.mjs::INDEX_FILENAME to src/verify/publicKeys.ts::KEYS_INDEX_FILENAME', () => {
     expect(INDEX_FILENAME).toBe(KEYS_INDEX_FILENAME);
   });
 });
 
-describe('PUBLIC_KEYS_DIR is the exact directory publicKeys.ts fetches from (Important 2)', () => {
+describe('PUBLIC_KEYS_DIR is the exact directory publicKeys.ts fetches from', () => {
   it('resolves to app/public/keys/signing, independent of cwd', () => {
     // Independently re-derived from this test file's own location. Before
     // this test, no test ever ran either copy script or asserted its
@@ -91,7 +91,7 @@ describe('readPublicKeys', () => {
   });
 });
 
-describe('writeSigningKeys -- the real write, run against a temporary tree (Important 2)', () => {
+describe('writeSigningKeys -- the real write, run against a temporary tree', () => {
   let root: string;
 
   afterEach(async () => {

@@ -1,7 +1,7 @@
 /**
  * Whose series this is, and whether anything still assumes it is this one.
  *
- * Phase 10, task 3. A hundred and fifty-six occurrences across sixty-six
+ * A hundred and fifty-six occurrences across sixty-six
  * files -- `docs/` (its own specs and plans aside), `site/src/`,
  * `app/src/`, `tools/convener_ops/` and the two publishing workflows -- wrote
  * one instance's `organisation`, `short_name`, `forum_host` or `contact`
@@ -17,7 +17,7 @@
  * every assertion would pass just as well if the values were still typed
  * into the templates. So everything below renders with a **second,
  * manifestly invented instance** and refuses anything of the first --
- * which is the shape task 5 will apply to a whole build, made here against
+ * which is the shape a whole-build sweep applies later, made here against
  * the one surface that is finished today.
  *
  * The copied handbook is checked separately and on purpose. `copy-handbook`

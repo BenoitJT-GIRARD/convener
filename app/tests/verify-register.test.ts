@@ -13,7 +13,7 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
 // tools/convener_ops/cli.py::certificates_public_data writes a *bare array* --
 // see that function's own test,
 // test_certificates_public_data_aggregates_every_events_register.
-// Important 4 (fix round 1): projection_example used to be nested under a
+// projection_example used to be nested under a
 // `{"certificates": [...]}` key, which read as the wire shape and was
 // not; the fixture itself was corrected, so this is the real, bare-array
 // shape directly. `{ certificates: [...] }` is still deliberately
@@ -42,9 +42,9 @@ describe('isProjection', () => {
     expect(isProjection(REAL_PROJECTION)).toBe(true);
   });
 
-  it('rejects a nested {"certificates": [...]} envelope as a wire shape (Important 4)', () => {
+  it('rejects a nested {"certificates": [...]} envelope as a wire shape', () => {
     // The shape certificate-verification.json's own `projection_example`
-    // wrongly nested rows under before fix round 1 -- kept here as an
+    // once wrongly nested rows under -- kept here as an
     // explicit literal, not read from the fixture (which is now correct
     // and so can no longer demonstrate the shape it used to wrongly
     // suggest), as the cheapest guard against this reader accepting it.
@@ -66,7 +66,7 @@ describe('isProjection', () => {
   });
 });
 
-describe('IDENTIFIER_PATTERN / isValidIdentifierShape (Minor 3)', () => {
+describe('IDENTIFIER_PATTERN / isValidIdentifierShape', () => {
   it('matches certificate._CERTIFICATE_ID_RE via the shared fixture (D-14)', () => {
     expect(IDENTIFIER_PATTERN.source).toBe(cases.identifier_pattern);
   });
@@ -96,8 +96,8 @@ describe('IDENTIFIER_PATTERN / isValidIdentifierShape (Minor 3)', () => {
 });
 
 describe('lookupCertificateState -- fetches the whole projection, from the right URL', () => {
-  it('requests exactly BASE/certificates.json, not merely a URL ending in that filename (Important 2), carrying no identifier', async () => {
-    // Important 2 (fix round 1): a suffix-only match here is exactly what
+  it('requests exactly BASE/certificates.json, not merely a URL ending in that filename, carrying no identifier', async () => {
+    // A suffix-only match here is exactly what
     // let register.ts's own URL directory drift with a green suite --
     // `${BASE}/data/${REGISTER_FILENAME}` still ends in
     // "/certificates.json". Exact equality against BASE, independently

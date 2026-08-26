@@ -9,8 +9,8 @@
  *
  * **`assignee` is not `assigned_to`, and neither is ever read from the other.**
  * `Speaker.assigned_to` is the board member who looks after the *lead*;
- * `ChecklistAssignee.assignee` is the person who owes *one line*. Phase 2 paid
- * for merging two notions into one field once already -- `assignLead` wrote
+ * `ChecklistAssignee.assignee` is the person who owes *one line*. This project
+ * has paid for merging two notions into one field once already -- `assignLead` wrote
  * over `proposed_by`, and the handbook makes whoever proposed a speaker the
  * person who has to tell them if the board declines, so the overwrite destroyed
  * the record of who owed that message. The non-derivation is not a convention

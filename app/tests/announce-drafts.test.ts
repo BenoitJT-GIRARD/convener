@@ -1,11 +1,11 @@
 /**
- * Task 7 -- the ready-to-publish texts, and the two properties that make
+ * The ready-to-publish texts, and the two properties that make
  * them safe to draft from the live record rather than a pre-gated feed:
  *
  * - a speaker's biography, portrait and online identities may not appear in
  *   a drafted text until the publication gate has actually opened, exactly
  *   the rule `tools/convener_ops/public_data.py` applies to the public feed
- *   itself (P-4, applied to prose rather than an image);
+ *   itself, applied to prose rather than an image;
  * - a room link must never reach a draft, under any name -- structurally,
  *   not merely by the discipline of nobody typing `zoom_link` into a
  *   template.
@@ -195,7 +195,7 @@ describe('the recording announcement (docs/toolkit/recording-announce.md)', () =
     'drops the biography line (no marker, no gap) and notes it stays withheld, while the ' +
       'video -- a genuinely required field once the gate is closed -- still shows the loud marker',
     () => {
-      // Fix round 2: this was the finding itself -- `«missing: public.bio»`
+      // This was the finding itself -- `«missing: public.bio»`
       // used to render straight into the body of a page whose own "Copy to
       // clipboard" button copies exactly that text. A withheld biography now
       // leaves no trace in the body a volunteer pastes, and is named, as
@@ -259,7 +259,7 @@ describe('the recording announcement (docs/toolkit/recording-announce.md)', () =
 });
 
 describe('an unopened forum thread (linkedin-post.md, mailing-list-announce.md)', () => {
-  // Fix round 2: `speaker.forum_thread` shares the same shape as
+  // `speaker.forum_thread` shares the same shape as
   // `public.forum_thread` above in both templates -- a sentence written
   // only to carry the link. `forum_announcement` (forum-post-announce.md)
   // is not covered here: it never reads `forum_thread` at all, since it is
@@ -287,7 +287,7 @@ describe('an unopened forum thread (linkedin-post.md, mailing-list-announce.md)'
 });
 
 describe('a drafted date names the real Paris offset, never a hard-coded one', () => {
-  // D-14, fix round 1: this used to be a hand-typed SUMMER/WINTER pair of
+  // D-14: this used to be a hand-typed SUMMER/WINTER pair of
   // date lists, pinned independently of `tools/tests/test_visual.py`'s own
   // -- and they had already drifted (this list once pinned `2026-06-11` as
   // its "CEST" case, while the Python list pins `2025-06-12`; two different

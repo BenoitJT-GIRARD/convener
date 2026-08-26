@@ -12,7 +12,7 @@
  * lines back; `tools/tests/fixtures/governance-cases.json` pins the two
  * copies together, so a phrase changed on one side fails on the other.
  *
- * P2-8, applied to prose. No caller of this module ever assembles a message:
+ * Absent, not guarded, applied to prose. No caller of this module ever assembles a message:
  * there is no slot for one. A caller names a `kind` from a closed union, the
  * two identifiers, and -- only where the act has one -- a qualifier from that
  * act's own closed union. A message missing its actor, carrying two acts,

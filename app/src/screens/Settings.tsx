@@ -1,7 +1,7 @@
 /**
  * This instance's own settings -- settled where they can be checked.
  *
- * Phase 11, task 5. **A file cannot refuse a value; a form can.** That is
+ * **A file cannot refuse a value; a form can.** That is
  * the whole argument for this screen, and there is one case that proves it
  * rather than illustrating it: `config/queue-drain.yml`'s
  * `alarm_after_hours` is bounded on *both* sides by other declarations --
@@ -31,7 +31,7 @@
  * **Accept a secret.** The cockpit is a static bundle, served publicly,
  * writing with the signed-in person's token; a token that could write a
  * repository secret would be a right every Board member held, which is
- * precisely what the 2026-08-23 security audit named and declined to close
+ * precisely what a security review named and declined to close
  * at zero cost. So there is no field for one anywhere below. What there is
  * instead is a report -- which integrations are configured, which are not,
  * and what the code does without each -- built from

@@ -86,7 +86,7 @@ export function Board() {
     // against whatever is actually there.
     write(
       current => declareUnavailability(current, me, until),
-      // Through the grammar, not around it (F-16). This writes
+      // Through the grammar, not around it. This writes
       // `unavailable_until`, which `activeBoard` reads and the vote
       // threshold is computed from, so it is a decision and the register
       // records it as one. The day is in the diff; the subject names the

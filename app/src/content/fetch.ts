@@ -37,8 +37,7 @@ const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
  * function stands in for). `SpeakerPage` uses it directly for a
  * candidate's own `links` field, entered through the public, unreviewed
  * proposal intake (`tools/convener_ops/proposal.py`) and rendered as a plain
- * `<a href>` with no sanitiser of its own between the two -- security
- * audit 2026-08-23, M3.
+ * `<a href>` with no sanitiser of its own between the two.
  */
 export function isSafeHref(href: string): boolean {
   return !HAS_SCHEME.test(href) || SAFE_SCHEME.test(href);

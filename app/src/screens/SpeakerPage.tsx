@@ -248,7 +248,7 @@ function SpeakerDetails({ speaker: s }: { speaker: Speaker }) {
                 already applies to handbook markdown) is the guard: an
                 unsafe scheme still shows the board what was submitted,
                 just never as a clickable href a board member's own
-                click could execute (security audit 2026-08-23, M3). */}
+                click could execute. */}
             {s.links.map(l => (
               <li key={l}>
                 {isSafeHref(l) ? (

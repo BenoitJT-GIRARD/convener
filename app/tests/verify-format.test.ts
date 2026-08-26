@@ -3,7 +3,7 @@ import { formatDurationHours, asDisplayCertificate } from '../src/verify/format'
 import cases from '../../tools/tests/fixtures/certificate-verification.json';
 
 describe('formatDurationHours', () => {
-  // Minor 10 (task 12, fix round 1): a naive template literal or
+  // A naive template literal or
   // `String(hours)` collapses 2.0 to "2" -- a cosmetic mismatch against
   // what the certified document itself prints (Python's `json.dumps(2.0)`
   // is "2.0"). Every quarter-hour grain value must show its exact

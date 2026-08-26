@@ -15,8 +15,8 @@
  * change. The extension allowlist covered `.png`, and `docs/assets/` was
  * never skipped, so a `.png` dropped there shipped too -- verified the same
  * way, and one such file was a past speaker's own photograph and name (see
- * `PUBLIC_ASSETS`'s own comment on `docs/assets/flyer-example.png`, fix
- * round 1 of this task). The allowlist that decides what the app *renders*
+ * `PUBLIC_ASSETS`'s own comment on `docs/assets/flyer-example.png`).
+ * The allowlist that decides what the app *renders*
  * already existed -- `CONTENT_REGISTRY` -- it just was not the thing
  * deciding what this script *copied*. It is now: see
  * `handbook-registry.mjs::publishedPaths`, and the sweep in

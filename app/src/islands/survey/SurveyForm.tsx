@@ -5,23 +5,23 @@ import type { SurveyResponse } from '../../survey/encrypt';
 import { surveyStatusUrl } from '../../survey/surveyStatus';
 
 /**
- * Task 5 (phase 7, "dette et hygiène"): extracted from the operators'
+ * Extracted from the operators'
  * application (`app/src/survey/SurveyForm.tsx`, now deleted -- see git
  * history) into an island mounted on the post-event survey's own static
  * page (`site/src/survey.njk`), per D-18 ("static pages, interactivity in
- * islands") -- the identical move task 6 made for registration
- * (`app/src/islands/signup/`) and task 7 made for certificate
- * verification (`app/src/islands/verify/`). Before this, `/survey/:eventId`
- * lived in the same document and the same JavaScript realm as the
- * authenticated cockpit -- the security audit's own web surface review
- * named this the one asymmetry left after those two extractions.
+ * islands") -- the identical move registration
+ * (`app/src/islands/signup/`) and certificate
+ * verification (`app/src/islands/verify/`) each made. `/survey/:eventId`
+ * used to live in the same document and the same JavaScript realm as the
+ * authenticated cockpit -- a review of this project's web surface
+ * named that the one asymmetry left after those two extractions.
  *
  * `encrypt.ts` and `surveyStatus.ts` stay exactly where they were, at
  * `app/src/survey/` -- only the *view* moved, imported from their
  * original location the same way `islands/verify/VerifyPage.tsx` still
  * imports `../../verify/verify`, `../../verify/register`, and the rest of
- * that package unmoved. No second implementation of the encryption (P-2,
- * phase 5) -- there is exactly one `encryptSurveyResponse`, called from
+ * that package unmoved. No second implementation of the encryption --
+ * there is exactly one `encryptSurveyResponse`, called from
  * here.
  *
  * What changed in the extraction, and why
@@ -32,11 +32,11 @@ import { surveyStatusUrl } from '../../survey/surveyStatus';
  *   this script re-parses. `main.tsx` reads it off the mount element's
  *   own `data-event-id` attribute, the identical contract
  *   `islands/signup/main.tsx` already uses.
- * - The data-protection notice (`Notice()`, phase 4 spec §S:6) is gone
+ * - The data-protection notice (`Notice()`) is gone
  *   from this file. `site/src/survey.njk` now renders that text itself,
  *   as plain static HTML, ahead of this island's own mount point --
- *   D-18's own logic applied literally, the same choice task 6 made for
- *   registration's own notice: text that needs no interactivity stays
+ *   D-18's own logic applied literally, the same choice
+ *   registration's own notice took: text that needs no interactivity stays
  *   static, so it reads even with JavaScript disabled and never depends
  *   on this bundle loading at all.
  * - Class names are plain, semantic strings (`survey-form__field`, ...)
@@ -46,11 +46,11 @@ import { surveyStatusUrl } from '../../survey/surveyStatus';
  *   site-wide to elements this form does not own -- the same reasoning
  *   `islands/signup/SignupForm.tsx`'s own module comment gives.
  *
- * Everything else phase 4 task 16 and phase 4's fix rounds established
- * about this form holds unchanged: the public key and the survey switch
- * (`survey-status.json`, R-37) are fetched under one shared timeout, both
+ * Everything else this form ever promised holds unchanged: the public key
+ * and the survey switch
+ * (`survey-status.json`) are fetched under one shared timeout, both
  * fail closed, the free-text field is padded before encryption
- * (`encrypt.ts::padPlaintext`, R-39) so its ciphertext length carries no
+ * (`encrypt.ts::padPlaintext`) so its ciphertext length carries no
  * information about what was typed, and nothing about a response --
  * including the relay it posts to -- names who sent it.
  */
@@ -75,15 +75,15 @@ function surveyRelayUrl(): string | undefined {
   return `${base.replace(/\/$/, '')}/survey`;
 }
 
-// The address a participant writes to about their own data. Phase 10,
-// task 3: declared once in `config/instance.json` and carried into this
+// The address a participant writes to about their own data. Declared
+// once in `config/instance.json` and carried into this
 // bundle by `vite.config.ts`'s own define, because this runs in a
 // participant's browser. A duplicate that left this literal here would
 // send its own participants' data-protection requests to the previous
 // instance's inbox.
 const contactEmail = () => instanceIdentity().contact;
 
-// R-37 (phase 4, fix round 1): the page-level layer of the switch
+// The page-level layer of the switch
 // enforcement. `'closed'` means the key loaded fine but this event's
 // survey is not enabled -- distinct from `'unavailable'`, a technical
 // failure to fetch or validate the public key itself (which also covers
@@ -130,7 +130,7 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
 
 /**
  * Whether `eventId` currently has the survey switch on, read from the
- * published, build-time-derived `survey-status.json` (R-37).
+ * published, build-time-derived `survey-status.json`.
  *
  * Fails closed on every ambiguity, the same direction
  * `tools/convener_ops/cli.py::_survey_enabled`'s own docstring commits to on

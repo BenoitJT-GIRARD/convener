@@ -28,7 +28,7 @@ describe('PUBLIC_DIR is the exact directory the survey island fetches from', () 
   });
 });
 
-describe('the filename copy-survey-status.mjs writes and the survey island fetches (R-42, fix round 2: two literals, pinned equal, not one shared import)', () => {
+describe('the filename copy-survey-status.mjs writes and the survey island fetches -- two literals, pinned equal, not one shared import', () => {
   it('pins scripts/survey-status-projection.mjs::DEST_FILENAME to src/survey/surveyStatus.ts::SURVEY_STATUS_FILENAME', () => {
     // Not one shared import -- survey-status-projection.mjs reaches into
     // node:fs, node:path and node:url, none of which exist in a browser
@@ -38,7 +38,7 @@ describe('the filename copy-survey-status.mjs writes and the survey island fetch
     // the build would still publish under the old name, the page would
     // still fetch under the new one, both would 404, and the survey
     // switch would read as closed for every event, forever, with nothing
-    // turning red anywhere -- the exact failure R-42 named.
+    // turning red anywhere.
     expect(DEST_FILENAME).toBe(SURVEY_STATUS_FILENAME);
   });
 });

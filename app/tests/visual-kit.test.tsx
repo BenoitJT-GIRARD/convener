@@ -36,7 +36,7 @@ const KIT_KEY = 'toolkit/visual-kit';
 const DOCS = resolve(__dirname, '../../docs');
 const TEMPLATES = ['assets/announcement-template.svg', 'assets/flyer-template.svg'];
 const BACKGROUND = 'assets/zoom-background.png';
-// Fix round 1: this used to be a fourth published asset. It was a real
+// This used to be a fourth published asset. It was a real
 // speaker's own photograph and name, kept without a later, separate
 // consent to use them as a sample -- see `PUBLIC_ASSETS`'s own comment.
 // Named here so the tests below assert its absence rather than simply

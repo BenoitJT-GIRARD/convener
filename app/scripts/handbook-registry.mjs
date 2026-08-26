@@ -14,7 +14,7 @@
  * That leaves a narrower, real gap: whatever these two functions capture
  * from that text must actually be the object and array literals
  * `registry.ts` declares, not any string that merely appears somewhere in
- * the file. Fix round 1 found the first version of this file did not make
+ * the file. The first version of this file did not make
  * that distinction -- `/\bfile:\s*'([^']+)'/g` ran over the *entire* source,
  * so an ordinary explanatory comment mentioning `file: 'reference/operations.md'`
  * anywhere in `registry.ts` -- even one written to warn against exactly

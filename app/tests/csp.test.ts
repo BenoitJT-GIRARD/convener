@@ -1,14 +1,14 @@
 /**
  * `scripts/csp.mjs::cspMetaContent` -- the Content-Security-Policy this
- * project's operators' cockpit ships as a `<meta http-equiv>` (security
- * audit 2026-08-23, M4). `vite.config.ts`'s own `cspHtmlPlugin` is what
+ * project's operators' cockpit ships as a `<meta http-equiv>`.
+ * `vite.config.ts`'s own `cspHtmlPlugin` is what
  * actually injects the result into `app/index.html`; this suite holds the
  * pure string-builder to account directly, the same split
  * `copy-fonts.test.ts` and its siblings already use for their own
  * `*-files.mjs` logic.
  *
- * Phase 7 task 5 moved the last public route this document carried (the
- * post-event survey) onto its own island on `site/src/survey.njk` --
+ * The last public route this document carried (the
+ * post-event survey) moved onto its own island on `site/src/survey.njk` --
  * `connect-src` here no longer admits the signup relay's origin at all;
  * see `tools/tests/test_site.py`'s own
  * `test_content_security_policys_connect_src_admits_the_configured_signup_relay`
@@ -62,7 +62,7 @@ describe('cspMetaContent', () => {
   });
 
   it('leaves no class of subresource to the browser\'s own default', () => {
-    // The defect phase 11 found: four directives, not one of them a
+    // A real defect, found late: four directives, not one of them a
     // fallback, so an image, a frame, a font, a stylesheet, a media file
     // or a worker was admitted from any origin at all -- on a document
     // whose demonstration a stranger drives. Held as a property of the
@@ -113,7 +113,7 @@ describe('cspMetaContent', () => {
     );
   });
 
-  it('never admits the signup relay\'s origin, configured or not (phase 7 task 5)', () => {
+  it('never admits the signup relay\'s origin, configured or not', () => {
     // The post-event survey (`islands/survey/SurveyForm.tsx`, the one caller
     // this bundle ever had for VITE_SIGNUP_RELAY_URL) moved onto its own
     // island on site/src/survey.njk -- nothing left in this document
@@ -157,7 +157,7 @@ describe('cspMetaContent', () => {
 });
 
 describe('devCspMetaContent', () => {
-  // Phase 11: `transformIndexHtml` runs on the development server too, so
+  // `transformIndexHtml` runs on the development server too, so
   // the shipped policy was being injected there -- and `script-src 'self'`
   // refuses `@vitejs/plugin-react`'s inline React Refresh preamble, so
   // `npm run dev` served a blank page from the day the policy landed. See
@@ -289,7 +289,7 @@ describe('the real built app/dist/index.html', () => {
       // <script>/<link rel=stylesheet>, it would protect nothing real.
       expect(cspAt, html).toBeLessThan(scriptAt);
       expect(cspAt, html).toBeLessThan(charsetAt);
-      // Phase 11: the development server's own relaxations must not have
+      // The development server's own relaxations must not have
       // followed the plugin into a build. Asserted on the artefact and on
       // both halves of the reason it is safe there -- the policy names no
       // `'unsafe-inline'`, and the document carries no inline script for

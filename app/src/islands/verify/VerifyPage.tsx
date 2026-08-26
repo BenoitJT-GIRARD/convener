@@ -21,14 +21,14 @@ import type { LookupResult } from '../../verify/register';
  * page -- see `VerifyTokenless` below) -- no account, no request to us for
  * the payload.
  *
- * Task 7: extracted from the operators' application package
+ * Extracted from the operators' application package
  * (`app/src/verify/VerifyPage.tsx`, now deleted -- see git history) into
  * an island mounted on its own static page (`site/src/verify.njk`), the
- * identical move task 6 made for registration. Everything phase 4
- * established about verification holds unchanged: `verify.ts`,
+ * identical move registration made. Everything this project
+ * promised about verification holds unchanged: `verify.ts`,
  * `register.ts`, `publicKeys.ts` and `format.ts` stay exactly where they
  * were, in `app/src/verify/`, imported here rather than reimplemented
- * (P-2) -- this file changed, the crypto and the register lookup did not.
+ * -- this file changed, the crypto and the register lookup did not.
  *
  * What changed in the extraction, and why
  * -----------------------------------------
@@ -55,7 +55,7 @@ import type { LookupResult } from '../../verify/register';
  * an HTTP request, and stripped from `Referer` before this page ever
  * navigates away. `?token=` carries the holder's own **name**
  * (`signing.PAYLOAD_FIELDS`), so serving this page from a bare path
- * instead -- the way task 6 moved registration's own address -- would
+ * instead -- the way registration's own address moved -- would
  * silently start sending every verified participant's name to GitHub's
  * servers in a query string, and to whatever site a link is clicked from
  * after, through `Referer`. A router is not what made that safe: a static
@@ -108,7 +108,7 @@ import type { LookupResult } from '../../verify/register';
  * - `StateUnknown` (info) -- the signature *is* genuine, and either the
  *   register could not be reached, or (a distinct, rarer cause) the
  *   confirmed payload carries no `identifier` field to look one up with
- *   at all (Minor 1 -- this system's own bug, never a forger's). The body
+ *   at all -- this system's own bug, never a forger's. The body
  *   text names which, so it never claims to have reached a register it
  *   never asked.
  * - `NotInRegister` (info) -- the signature is genuine, the register
@@ -128,8 +128,8 @@ import type { LookupResult } from '../../verify/register';
  * is no payload in scope for it to read one from.
  */
 
-// The address a participant writes to about their own data. Phase 10,
-// task 3: declared once in `config/instance.json` and carried into this
+// The address a participant writes to about their own data. Declared
+// once in `config/instance.json` and carried into this
 // bundle by `vite.config.ts`'s own define, because this runs in a
 // participant's browser. A duplicate that left this literal here would
 // send its own participants' data-protection requests to the previous
@@ -275,7 +275,7 @@ function CannotCheckSignature() {
  * Important 1a: the signature is genuine, and the register either could
  * not be reached (`reason: 'register_unreachable'`) or the confirmed
  * payload carries no `identifier` field to look one up with at all
- * (`reason: 'no_identifier'`, Minor 1 -- this system's own bug, never a
+ * (`reason: 'no_identifier'` -- this system's own bug, never a
  * forger's). Same title and tone either way -- in both cases the honest
  * claim is "we do not know" -- but the body text names which is true,
  * since "we could not reach our register" would be false for the second.
@@ -330,7 +330,7 @@ function NotInRegister({ cert }: { cert: DisplayCertificate }) {
  * The certificate carries a machine-readable code (the token, in the
  * URL); the printed page also carries the 32-character identifier alone,
  * on its own, for someone with only the paper in hand. This is where that
- * open question from task 12 is answered: a visit with no token answers
+ * open question is answered: a visit with no token answers
  * from the register alone, and says plainly that it has confirmed a
  * record, not a document -- never a name, never an implied signature
  * check.
@@ -395,7 +395,7 @@ function RecordUnknown({ identifier }: { identifier: string }) {
 }
 
 /**
- * Minor 3: the token-less flow's only input is the raw identifier this
+ * The token-less flow's only input is the raw identifier this
  * page was given, never confirmed by any signature -- unlike
  * `VerifyWithToken`, below, which always uses the token's own
  * cryptographically-confirmed `identifier` field instead of the given one
@@ -499,7 +499,7 @@ function VerifyTokenless({ identifier }: { identifier: string }) {
   const validShape = isValidIdentifierShape(identifier);
 
   useEffect(() => {
-    // Minor 3: an identifier that is not even shaped like one of ours has
+    // An identifier that is not even shaped like one of ours has
     // nothing worth looking up -- never asks the register for it.
     if (!validShape) return;
     let cancelled = false;

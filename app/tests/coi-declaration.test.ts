@@ -285,8 +285,8 @@ describe('two registration checks, a week apart, that cannot be read for each ot
     const day = itemByKey(FINAL_REMINDER)!.label;
     expect(week).not.toBe(day);
     // The bare phrase "registration check" belonged to both, and so, once
-    // phase 4 gave the app's own signup page the same name, did "registration
-    // link". Critical 2 (branch review) renamed the T-1 line to "room link" --
+    // the app's own signup page took the same name, did "registration
+    // link". The T-1 line was renamed to "room link" --
     // neither line now carries the word "registration" at all, so no wording
     // either could be mistaken for the other survives.
     for (const label of [week, day]) {

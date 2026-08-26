@@ -15,7 +15,7 @@
  * timezone for them to get wrong: the caller supplies the day, already anchored
  * on Europe/Paris the way `tools/convener_ops/sweep.py::_paris_today` anchors it. A
  * signature taking a `Date` would have made a UTC-versus-Paris off-by-one day
- * *representable*; this one does not (P2-8).
+ * *representable*; this one does not.
  *
  * Public holidays are deliberately not modelled -- see
  * `tools/tests/fixtures/governance-cases.json`. The board's members do not all
@@ -63,7 +63,7 @@ function epochOf(day: string): number {
   return parsedDay(day);
 }
 
-/** The inverse of `epochOf`. UTC here is not the P2-9 defect: the epoch being
+/** The inverse of `epochOf`. UTC here is not the UTC-day defect: the epoch being
  *  formatted is one this module built from an ISO day at midnight UTC, never a
  *  reading of the clock, so `parisToday()` would be the wrong tool. */
 function isoOf(epoch: number): string {

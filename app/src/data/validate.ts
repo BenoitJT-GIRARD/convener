@@ -119,7 +119,7 @@ function text(at: Cursor, raw: Record<string, unknown>, key: string): string {
   return value;
 }
 
-/** A plain yes/no. No field before `survey_enabled` (phase 4 spec S:6) was
+/** A plain yes/no. No field before `survey_enabled` was
  *  ever a bare top-level boolean -- `runbook_progress`'s own values are
  *  booleans, but `ticks()` reads them one map entry at a time, never as a
  *  single field of a record. `typeof value !== 'boolean'` alone is enough
@@ -142,7 +142,7 @@ function whole(at: Cursor, raw: Record<string, unknown>, key: string): number {
 }
 
 /** A bounded fraction, `]0, 1]`: above zero, at most one. Nothing in this
- *  model was this shape before `eligibility_share` (phase 4 S:5) -- every
+ *  model was this shape before `eligibility_share` -- every
  *  other number here is a whole count `whole()` above actively rejects a
  *  fraction from, pinned by a test that a fractional window is refused
  *  rather than rounded. No `isinstance(value, bool)`-style guard is needed
@@ -582,8 +582,8 @@ function readChannels(at: Cursor, raw: Record<string, unknown>): Channel[] {
   return channels;
 }
 
-/** Three, not four: the board's decision deadline is `vote_window_days`
- *  (F-13), the number the sweep parks an expired lead on. A file that still
+/** Three, not four: the board's decision deadline is `vote_window_days`,
+ *  the number the sweep parks an expired lead on. A file that still
  *  carries `lead_decision` is refused by `keys()` below rather than having
  *  the key quietly dropped -- whoever set it to 20 has to be told it was
  *  never read. */
@@ -619,7 +619,7 @@ const CONFIG_KEYS = [
  * threshold and board seat would have to be invented by the reader. The app
  * used to invent them, from a constant in `DataContext`; a screen then
  * showed a vote threshold computed from a board nobody had elected. Failing
- * the load is the honest answer, and the one a P2-8 reading demands: the
+ * the load is the honest answer: the
  * made-up config is not guarded, it does not exist.
  */
 export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {

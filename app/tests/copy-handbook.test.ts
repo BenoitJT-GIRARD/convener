@@ -73,8 +73,8 @@ describe('the two extractors that read registry.ts as text agree with the real m
   });
 });
 
-describe('the extraction reads each export\'s own literal, not the whole file -- fix round 1', () => {
-  // The reviewer proved by execution that the first version of these two
+describe('the extraction reads each export\'s own literal, not the whole file', () => {
+  // A reviewer proved by execution that the first version of these two
   // functions ran `/\bfile:\s*'([^']+)'/g` over the *entire* source text:
   // an ordinary explanatory comment mentioning `file: 'reference/operations.md'`
   // anywhere in registry.ts -- inside the object literal, outside it,
@@ -162,7 +162,7 @@ describe('a real run against the real docs/ tree', () => {
     expect(publishedAssets).toEqual([...PUBLIC_ASSETS].sort());
   });
 
-  it('never republishes docs/assets/flyer-example.png -- fix round 1: a real, named speaker\'s photograph, withdrawn from PUBLIC_ASSETS, not a synthetic example', async () => {
+  it('never republishes docs/assets/flyer-example.png -- a real, named speaker\'s photograph, withdrawn from PUBLIC_ASSETS, not a synthetic example', async () => {
     // Hard-coded, deliberately not derived from PUBLIC_ASSETS: the test
     // above would still agree with itself if this path were ever added
     // back there, which is exactly the silent-reinstatement this
@@ -179,7 +179,7 @@ describe('a real run against the real docs/ tree', () => {
     // need updating -- which is the point: it is pinned to the
     // registry's current, deliberate silence about them, not to an
     // assumption that they are harmless. (`governance/register.md` was a
-    // third such page until fix round 1 registered it -- see
+    // third such page until it was registered -- see
     // `registry.ts`'s own comment on that entry, and
     // `app/tests/registered-links.test.ts`.)
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));

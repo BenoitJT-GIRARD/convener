@@ -1,5 +1,5 @@
 /**
- * How the programme is composed (G-13, spec §6).
+ * How the programme is composed (G-13).
  *
  * This screen is where a careful measure can become a careless impression. A
  * board member reads it for fifteen seconds and leaves with one sentence, so

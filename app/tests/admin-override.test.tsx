@@ -239,7 +239,7 @@ describe('AdminOverride EditFields', () => {
     expect(backend.current()[0].metrics.youtube_views_30d).toBe(250);
   });
 
-  it('Minor 9 (fix round 1, task 16): flips survey_enabled through its own checkbox and persists it', async () => {
+  it('flips survey_enabled through its own checkbox and persists it', async () => {
     const original = speaker({ survey_enabled: false });
     const backend = makeSpeakersBackend([original]);
     vi.stubGlobal('fetch', backend.fetchMock);

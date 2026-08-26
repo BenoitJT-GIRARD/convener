@@ -81,7 +81,7 @@ describe('verify -- the fixture\'s real signed token', () => {
   });
 
   it('carries an exact whole-number duration_hours through as a number, not a rounded string', async () => {
-    // Minor 10 (task 12, fix round 1): duration_hours: 2.0, the case a
+    // duration_hours: 2.0, the case a
     // naive re-serialisation would round-trip differently between Python
     // and JS. verify() never re-serialises anything -- see its own
     // docstring -- so this must survive untouched.
@@ -157,7 +157,7 @@ describe('verify -- malformed input the fixture does not enumerate', () => {
   });
 });
 
-describe('verify -- a corrupt or unparsable key in the list must not stop the rest from being tried (Minor 2)', () => {
+describe('verify -- a corrupt or unparsable key in the list must not stop the rest from being tried', () => {
   // signing-keys-files.mjs:61 copies whatever .pub text it finds under
   // keys/signing/ with no validation at all, so a truncated or corrupted
   // key file is a reachable input in production. verifiesWith's two

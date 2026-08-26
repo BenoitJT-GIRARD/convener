@@ -1,5 +1,5 @@
 /* Copy ../../keys/events/*.pub into public/keys/events/ so the registration
- * page (`src/signup/SignupForm.tsx`) -- and, since task 16, the post-event
+ * page (`src/signup/SignupForm.tsx`) -- and the post-event
  * survey page (`src/survey/SurveyForm.tsx`), which fetches the identical
  * file under the identical event id -- can fetch an event's published
  * public half from the same origin the app itself is served from -- the same

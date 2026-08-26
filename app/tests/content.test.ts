@@ -131,16 +131,16 @@ describe('substitute v2 context', () => {
   });
 });
 
-// Fix wave 2 correction: wave 1 published `registration.SIGNUP_BASE` as a
+// `registration.SIGNUP_BASE` was once published as a
 // literal with the event id left for a volunteer to fill in by hand, on the
-// mistaken belief that no Speaker-to-event-id mapping existed. R-5
-// (`tools/convener_ops/platform.py::find_speaker`) is that mapping -- `event_id`
+// mistaken belief that no Speaker-to-event-id mapping existed.
+// `tools/convener_ops/platform.py::find_speaker` is that mapping -- `event_id`
 // is `edition_code`, lower-cased -- and this file's `speaker.signup_link`
 // now computes it. Bound here against the same shared, worked fixture
 // `tools/tests/test_confirmation.py` reads on the Python side (D-14),
 // rather than trusting two lower-casing implementations to agree.
 describe('speaker.signup_link matches the shared D-14 fixture', () => {
-  // Phase 10 task 2: the fixture states paths, not addresses. The root
+  // The fixture states paths, not addresses. The root
   // comes from `config/instance.json`, which `vite.config.ts` substitutes
   // into this bundle (and into this test run, which reads the same
   // configuration) as `import.meta.env.VITE_PUBLISHED_URL` -- Python reads

@@ -8,7 +8,7 @@
  * this repository has ever committed into `app/public/keys/signing/`
  * at build time -- the exact idiom `scripts/copy-event-keys.mjs` already
  * uses for `keys/events/`, adapted the way `keys/signing/README.md`'s own
- * "What task 13 needs from this directory" section asks for: one ordered
+ * "How a verifier should use this directory" section asks for: one ordered
  * list, embedded at build time, not one file fetched per event id (a
  * verification page has no single event to key a fetch off of, and
  * `verify()` may need to try more than one key -- rotation must never
@@ -48,15 +48,15 @@ const KEYS_FETCH_TIMEOUT_MS = 15_000;
  * not be fetched or parsed at all; `[]` only for a manifest that was
  * fetched and read successfully and genuinely lists no key. Never throws.
  *
- * Important 1b (fix round 1): these two failure-shaped outcomes used to
+ * These two failure-shaped outcomes used to
  * both return `[]`, on the reasoning that `verify([], token)`
  * deterministically returns `NO_MATCHING_KEY` either way (see verify.ts),
  * so a keys request that failed outright folded into the same "not
  * verifiable" appearance a page with zero *published* keys already shows.
  * That conflated two different facts: "no key we publish confirms this"
  * (true once a manifest was actually read, even an empty one --
- * `keys/signing/README.md`'s own "What task 13 needs from this
- * directory" section names an empty directory as the current, real,
+ * `keys/signing/README.md`'s own "What the verification page actually
+ * does with this directory" section names an empty directory as the current, real,
  * normal state) and "we could not check, because we could not even load
  * our own key list" (a transient failure that says nothing about the
  * certificate at all). Painting a genuine certificate the same shade of

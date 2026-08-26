@@ -10,8 +10,8 @@
  * instead of a webfont request, which discloses every visitor's address.
  * `site/` already serves this same directory (`site/.eleventy.js`'s own
  * passthrough copy, `{'../fonts': 'fonts'}`); this is the application's
- * side of that one shared source -- before fix round 1 of task 3, the
- * application kept no copy of its own at all and asked Google for these
+ * side of that one shared source -- the
+ * application once kept no copy of its own at all and asked Google for these
  * faces instead, on the exact pages (signup, certificate verification, the
  * survey) that exist to keep personal data out of third-party hands.
  */

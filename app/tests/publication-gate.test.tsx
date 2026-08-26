@@ -38,7 +38,7 @@ function config(overrides: Partial<Config> = {}): Config {
     board_min: 3,
     board_max: 9,
     vote_window_days: 14,
-    // The value data/config.yml carries, and the one spec G-10 states:
+    // The value data/config.yml carries, and the one G-10 states:
     // three *working* days.
     objection_window_working_days: 3,
     inactivity_months: 6,
@@ -266,7 +266,7 @@ describe('publication transitions', () => {
   const cfg = config();
 
   it('has no vocabulary for assuming consent', () => {
-    // P2-8, Task 11's shape: the ambiguous value is not guarded, it is
+    // The ambiguous value is not guarded, it is
     // absent. Nothing a transition can carry means "pending", so no code
     // path -- and no elapsed delay -- can arrive at one.
     expect([...CONSENT_DECISIONS]).toEqual(['granted', 'refused']);

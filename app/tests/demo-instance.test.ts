@@ -7,7 +7,7 @@
  * `instances/example/` already is. Two of its strings named *this*
  * organisation's forum and its LinkedIn page, compiled into the cockpit's
  * own bundle, which is why `tools/tests/instance_identity.py`'s deferred
- * register carried an entry for the file until phase 11 task 2.
+ * register once carried an entry for the file.
  *
  * The assertions below read `instances/example/data/` off the disk and
  * compare it with what the bundle actually holds. That is deliberately not
@@ -59,8 +59,8 @@ describe('the demonstration', () => {
   });
 
   it('renders the states the invention it replaced never reached', () => {
-    // Phase 11 spec, § 3: a demonstration with only a nominal case is what
-    // phases 5 and 6 lost five defects to. The example was written to
+    // A demonstration with only a nominal case is what this project has
+    // lost five defects to. The example was written to
     // exercise states rather than to be plausible, and this is the clause
     // that stops it being thinned back to one.
     const speakers = demoSpeakers();

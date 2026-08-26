@@ -59,7 +59,7 @@ export function parisDayOf(instant: Date): string {
  * record with the wrong day and every later comparison would inherit it.
  * `tools/convener_ops/sweep.py::_paris_today` anchors the unattended job the same
  * way; an ESLint rule in `eslint.config.js` keeps the UTC form from coming
- * back (P2-9).
+ * back.
  */
 export function parisToday(): string {
   return parisDayOf(new Date());
@@ -91,8 +91,8 @@ const _MONTHS = [
  * neither of the other two reads this file either; the five fixture editions
  * in `site/src/_data/events.json`, three of them in daylight-saving time, are
  * what all three implementations are checked against). A hand-typed "CET"
- * regardless of season was the reference poster's own defect (phase 5's
- * fix round 1), reproduced here for a third possible place to reintroduce it:
+ * regardless of season was the reference poster's own defect,
+ * recalled here for a third possible place to reintroduce it:
  * a drafted announcement text.
  *
  * `timeZoneName: 'shortOffset'` is stable across locales ('GMT+1', 'GMT+2');

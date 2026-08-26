@@ -73,7 +73,7 @@ const latenessCases = cases.lateness_cases as unknown as LatenessCase[];
 /** The two windows the case names, in a config the reader will take. Both
  *  come from the fixture, so a case that moves the vote window moves the
  *  board-decision deadline with it -- there is no second number here that
- *  could stay at 14 (F-13). */
+ *  could stay at 14. */
 function configFor(c: LatenessCase): Config {
   return {
     season: 2026, next_edition_number: 5, overlap_window_days: 7,

@@ -21,8 +21,8 @@
  * **`channelsOf` is the only way to reach the list.** No caller rebuilds it,
  * no constant restates it, and there is no default seven anywhere in this
  * repository to fall back on. That is what makes the configuration real
- * rather than decorative: phase 3 already found Python's classification sets
- * bypassed by a hand-written `if`, which left the sets standing as
+ * rather than decorative: Python's classification sets have already been
+ * found bypassed by a hand-written `if`, which left the sets standing as
  * documentation of a rule the code no longer followed.
  *
  * **A list that cannot be read is refused, never silently emptied.**

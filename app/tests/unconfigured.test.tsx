@@ -1,9 +1,8 @@
 /**
  * A duplicate that has not been configured says so, on its own pages.
  *
- * Phase 11, task 6. The inventory (`docs/superpowers/inventaire-instance.
- * md` § 5) asks for it in those words -- "pour qu'un duplicata non
- * configuré le dise, fort, plutôt que de publier silencieusement
+ * The rule, in as many words: a duplicate that has not been configured
+ * says so, loudly, rather than publishing silently as somebody else's
  * l'identité du gabarit" -- and it is the direct continuation of a rule
  * this project already settled: a default that leaks when you forget it
  * is not a default, it is a trap.

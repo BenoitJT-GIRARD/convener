@@ -1,8 +1,8 @@
 /* Copies `../../fonts` -- the one, shared copy of the self-hosted Archivo
  * and JetBrains Mono files `site/` already serves -- into `public/fonts/`,
  * so the application can declare `@font-face` against a same-origin path
- * instead of requesting them from Google (fix round 1, task 3: the
- * application's `tokens.css` and `index.html` both still asked
+ * instead of requesting them from Google (the
+ * application's `tokens.css` and `index.html` both once asked
  * fonts.googleapis.com/fonts.gstatic.com for these faces, on the exact
  * pages -- signup, certificate verification, the survey -- that exist to
  * keep personal data out of third-party hands).

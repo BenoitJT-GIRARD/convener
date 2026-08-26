@@ -2,7 +2,7 @@
  * Which paths this instance owns, and what each declared integration is
  * for -- read in the browser, from the same two files the tooling reads.
  *
- * Phase 11, task 5. The settings screen has to say what it is settling, and
+ * The settings screen has to say what it is settling, and
  * the honest answer to "what is the instance's?" is already written down
  * once: `config/boundary.yml` names the paths outside `config/`, and each
  * file *inside* `config/` states its own answer in its own `owner:` key.

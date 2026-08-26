@@ -6,7 +6,8 @@
  * present, an item owner absent), and once as a rule over the source of
  * `state/assignment.ts` itself. The first would pass again the day somebody
  * adds `?? speaker.host_1`; the second would not, and neither would any other
- * fallback to a name field the record already holds. Phase 2 lost the record
+ * fallback to a name field the record already holds. This project once lost
+ * the record
  * of who had to write to a declined speaker because two notions shared one
  * field, so the guarantee here is that the derivation cannot be written, not
  * that one particular derivation was tried and found absent.
@@ -157,7 +158,7 @@ describe('writing an owner', () => {
   });
 
   it('puts an owner on a promotion channel, which is a line of the journey too', () => {
-    // The blocker Task 6 left behind: the channel list is configuration, and
+    // The blocker this once ran into: the channel list is configuration, and
     // a guard that only knew the static table refused every one of its keys.
     const [after] = assignItem([scheduled()], 'spk-001', CHANNEL, 'bob', config());
     expect(itemAssignee(after, CHANNEL)).toBe('bob');

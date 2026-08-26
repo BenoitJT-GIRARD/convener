@@ -54,8 +54,8 @@
  * There is no decrypt function here, and there must never be one: a static
  * registration page holds only the published public half (see
  * `SignupForm.tsx`), which cannot decrypt anything by construction -- that
- * is the property the whole design in the phase 4 spec (S:4, "Protection
- * des données") rests on. `app/tests/signup-encrypt.test.ts` asserts this
+ * is the property this project's whole data-protection design rests on.
+ * `app/tests/signup-encrypt.test.ts` asserts this
  * directly, not just by this file's shape.
  */
 

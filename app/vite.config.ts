@@ -12,7 +12,7 @@ import {
 } from './scripts/published.mjs';
 
 /**
- * Phase 10, task 2: the address this project is published at, read once
+ * The address this project is published at, read once
  * from `config/instance.json` -- the instance's own declaration -- rather
  * than typed into this file four times as `base: '/<repository>/app/'`.
  *
@@ -37,7 +37,7 @@ import {
 const PUBLISHED = published();
 
 /**
- * Phase 10, task 3: who runs this series, read from the same declaration
+ * Who runs this series, read from the same declaration
  * and carried into the bundle the same way.
  *
  * `src/content/render.ts` resolves the `{{ instance.* }}` namespace that
@@ -55,7 +55,7 @@ const PUBLISHED = published();
 const IDENTITY = identity();
 
 /**
- * Phase 11, task 2: the instance the *demonstration* shows, read from
+ * The instance the *demonstration* shows, read from
  * `instances/example/` and carried into the bundle the same way again.
  *
  * `src/data/demo.ts` used to be an instance written in code -- five
@@ -77,7 +77,7 @@ const IDENTITY = identity();
 const EXAMPLE = exampleInstance();
 
 /**
- * Phase 11, task 4: the prefix this instance numbers its editions under,
+ * The prefix this instance numbers its editions under,
  * read from the same declaration and carried in the same way.
  *
  * `src/state/agenda.ts::nextEditionCode` composes the next edition code
@@ -92,7 +92,7 @@ const EXAMPLE = exampleInstance();
  * single value, not a vocabulary that grows by a word.
  */
 /**
- * Phase 11, task 5: the six declarations the settings screen reads, for the
+ * The six declarations the settings screen reads, for the
  * demonstration only.
  *
  * Signed in, that screen reads `config/` and the drain's workflow straight
@@ -114,7 +114,7 @@ const EXAMPLE_SETTINGS = exampleSettings();
 const EDITION_PREFIX = editionPrefix();
 
 /**
- * Phase 11, task 6: which of this instance's declared values are still
+ * Which of this instance's declared values are still
  * the ones the product ships in `instances/example/config/instance.json`,
  * carried into the bundle the same way as everything above it.
  *
@@ -151,7 +151,7 @@ const INSTANCE_DEFINE = {
 };
 
 /**
- * Security audit 2026-08-23, M4: injects this project's Content-Security-
+ * Injects this project's Content-Security-
  * Policy as a `<meta http-equiv>` into `app/index.html` at build time --
  * `<meta>` is the only delivery mechanism available at all (GitHub Pages
  * sets no response headers). `scripts/csp.mjs::cspMetaContent` is the one
@@ -165,9 +165,9 @@ const INSTANCE_DEFINE = {
  * `index.html` for `transformIndexHtml` to ever see, so this plugin is
  * deliberately not added to any of them.
  *
- * Phase 7 task 5 moved the last public route this document carried
- * (`App.tsx`'s own former `SurveyRoute`, `/survey/:eventId`) onto its own
- * island, mounted on `site/src/survey.njk` instead -- this document is now
+ * The last public route this document carried
+ * (`App.tsx`'s own former `SurveyRoute`, `/survey/:eventId`) moved onto its
+ * own island, mounted on `site/src/survey.njk` instead -- this document is now
  * the operators' cockpit alone, gated on sign-in behind `Shell`. See
  * `scripts/csp.mjs`'s own module comment for what that means for
  * `connect-src`.
@@ -180,10 +180,10 @@ function cspHtmlPlugin(): Plugin {
     // inside the hook, and read here rather than kept as plugin state so
     // that nothing has to stay in step with a `configResolved`.
     //
-    // Phase 11: this used to inject the shipped policy in both, and
+    // This used to inject the shipped policy in both, and
     // `script-src 'self'` refuses `@vitejs/plugin-react`'s inline React
     // Refresh preamble -- so `npm run dev` served a blank page from the
-    // day the policy landed (2026-08-23) until this. `apply: 'build'`
+    // day the policy landed until this. `apply: 'build'`
     // would have fixed the page by removing the policy from the only
     // place a violation is actually looked at; see `scripts/csp.mjs`'s own
     // "The development server needs two of these loosened" for why the
@@ -211,9 +211,9 @@ function cspHtmlPlugin(): Plugin {
 }
 
 /**
- * Task 6: `mode === 'island-signup'` builds the registration island as its
- * own, separate artefact -- P-2 ("islands are built in the cockpit ... and
- * published as a compiled artefact, exactly like the application"), not a
+ * `mode === 'island-signup'` builds the registration island as its
+ * own, separate artefact -- islands are built in the cockpit and
+ * published as a compiled artefact, exactly like the application, not as a
  * second entry folded into the operators' app's own SPA bundle. `npm run
  * build`'s own two `vite build` invocations pick this apart at the
  * command line (`--mode island-signup`), the one lever this file exposes
@@ -228,7 +228,7 @@ function cspHtmlPlugin(): Plugin {
  * build to build.
  *
  * `base: PUBLISHED.appBase`, the *same* value the main app build below
- * uses -- Fix round 4 correction: this used to read `'/app/'`, deliberately
+ * uses. This used to read `'/app/'`, deliberately
  * distinct from the main app's own base, on the reasoning that this bundle
  * runs on a page the *site* serves, whose own templates already addressed
  * the app's published assets root-relative to the site's own root
@@ -248,7 +248,7 @@ function cspHtmlPlugin(): Plugin {
  * repository's own `app/` subtree, `deploy.yml`'s own push step) -- so
  * both now share the one value that actually describes it, rather than two
  * that happened to agree only by not yet having been tested against a real
- * deployment. Phase 10 task 2 made that literally one value:
+ * deployment. It is now literally one value:
  * `PUBLISHED.appBase`, derived from `config/instance.json`.
  * `SignupForm.tsx`'s own key fetch reads it back through
  * `import.meta.env.BASE_URL`, landing on
@@ -289,9 +289,9 @@ function islandSignupConfig() {
 }
 
 /**
- * Task 7: `mode === 'island-verify'` builds the certificate-verification
+ * `mode === 'island-verify'` builds the certificate-verification
  * island the same way `islandSignupConfig` above builds the registration
- * one -- its own, separate artefact (P-2), picked apart at the command
+ * one -- its own, separate artefact, picked apart at the command
  * line by `npm run build`'s third `vite build` call. Everything
  * `islandSignupConfig`'s own comment explains about fixed output names,
  * `base: PUBLISHED.appBase`, and skipping `copyPublicDir` applies
@@ -333,9 +333,9 @@ function islandVerifyConfig() {
 }
 
 /**
- * Task 5 (phase 7): `mode === 'island-survey'` builds the post-event
+ * `mode === 'island-survey'` builds the post-event
  * survey island the same way `islandSignupConfig`/`islandVerifyConfig`
- * above build their own -- its own, separate artefact (P-2), picked apart
+ * above build their own -- its own, separate artefact, picked apart
  * at the command line by `npm run build`'s fourth `vite build` call.
  * Everything `islandSignupConfig`'s own comment explains about fixed
  * output names, `base: PUBLISHED.appBase`, and skipping `copyPublicDir`
@@ -397,12 +397,11 @@ export default defineConfig(({ mode }) => {
         // percentage — a threshold there buys assertions nobody reads.
         // `signup/encrypt.ts` and `survey/encrypt.ts` are the two files named
         // individually rather than their whole directories: each is pure
-        // crypto the phase 4 promise rests on (task 16's own survey intake is
-        // the same promise, made a second time for a second page), while
+        // crypto the encryption promise rests on (the survey intake makes
+        // the same promise a second time for a second page), while
         // `islands/signup/SignupForm.tsx`, `islands/verify/VerifyPage.tsx`
-        // (moved here from `verify/VerifyPage.tsx` by task 7) and
-        // `islands/survey/SurveyForm.tsx` (moved here from
-        // `survey/SurveyForm.tsx` by phase 7 task 5) are all excluded for
+        // and
+        // `islands/survey/SurveyForm.tsx` are all excluded for
         // the same reason -- UI like every other screen; the rest of
         // `verify/` and `survey/` is pure logic (crypto, register lookup,
         // published-key loading, display formatting, the survey-status
@@ -413,11 +412,11 @@ export default defineConfig(({ mode }) => {
           'src/data/**',
           'src/github/**',
           'src/auth/**',
-          // Phase 11 task 1: the one door out of this bundle. Pure logic
+          // The one door out of this bundle. Pure logic
           // the demo-mode promise rests on, exactly as directly as
           // `verify/register.ts` rests on the certificate promise.
           'src/net/**',
-          // Phase 11 task 5: the bounds a settings field refuses on, the
+          // The bounds a settings field refuses on, the
           // reader of the boundary declaration, and the surgical edit that
           // keeps a config file's own argument for itself. Pure logic a
           // promise rests on, in the same class -- a bound computed

@@ -4,7 +4,7 @@ import { SurveyForm } from '../src/islands/survey/SurveyForm';
 import { SURVEY_STATUS_FILENAME } from '../src/survey/surveyStatus';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 
-// Phase 7 task 5: this suite replaces `survey-form.test.tsx`, which tested
+// This suite replaces `survey-form.test.tsx`, which tested
 // `app/src/survey/SurveyForm.tsx` (the operators' application's own
 // `/survey/:eventId` route -- see git history). The form is now
 // `app/src/islands/survey/SurveyForm.tsx`, an island with no router of its
@@ -67,7 +67,7 @@ async function decryptEnvelopeFields(
     aesKey,
     base64ToBytes(envelope.ciphertext),
   );
-  // R-39: the plaintext is padded with trailing zero bytes to a fixed
+  // The plaintext is padded with trailing zero bytes to a fixed
   // size before encryption (see encrypt.ts::padPlaintext) -- everything
   // up to the first 0x00 is the real JSON, the same unpad
   // `survey-encrypt.test.ts::unpadPlaintext` performs.
@@ -82,7 +82,7 @@ function renderSurvey(eventId: string | undefined = 'mrg-042') {
 }
 
 /** Stubs both fetches `SurveyForm` makes before it can render a form: the
- *  event's public key, and R-37's own `survey-status.json` membership
+ *  event's public key, and the `survey-status.json` membership
  *  check. `enabledIds` defaults to `['mrg-042']`, matching `renderSurvey`'s
  *  own default event id -- pass a different (or empty) list to exercise
  *  the 'closed' state. */
@@ -166,7 +166,7 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
     expect(calls.some(u => /\/keys\/events\/mrg-042\.pub$/.test(u))).toBe(true);
   });
 
-  it('fetches survey-status.json before rendering the form -- R-37', async () => {
+  it('fetches survey-status.json before rendering the form', async () => {
     stubFetchReady();
 
     renderSurvey('mrg-042');
@@ -176,11 +176,11 @@ describe('SurveyForm -- what it asks, and nothing else', () => {
     expect(calls.some(u => u.endsWith('/survey-status.json'))).toBe(true);
   });
 
-  it('requests exactly BASE/survey-status.json, not merely a URL ending in that filename (R-42, fix round 2)', async () => {
-    // R-42: a suffix-only match here is exactly what let SurveyForm.tsx's
+  it('requests exactly BASE/survey-status.json, not merely a URL ending in that filename', async () => {
+    // A suffix-only match here is exactly what let SurveyForm.tsx's
     // own fetch URL drift while every test in this file (including the
     // one just above) stayed green -- `${BASE}/data/survey-status.json`
-    // still ends in "/survey-status.json", and the round proved
+    // still ends in "/survey-status.json", and a review proved
     // `surveyStatusUrl` pointed at an arbitrary third-party origin passed
     // too. Exact equality against BASE, independently recomputed rather
     // than imported from SurveyForm.tsx, actually pins the whole URL, not
@@ -246,7 +246,7 @@ describe('SurveyForm -- the public key cannot be fetched', () => {
   });
 });
 
-describe('SurveyForm -- R-37: the survey switch, checked at the page layer', () => {
+describe('SurveyForm -- the survey switch, checked at the page layer', () => {
   it('renders a closed message, never the form, when the event is not in survey-status.json', async () => {
     stubFetchReady([]); // key is fine; nothing is enabled
     renderSurvey('mrg-042');
@@ -473,7 +473,7 @@ describe('SurveyForm -- sending', () => {
     );
   });
 
-  it('an answer that would overflow the pad target once encrypted is refused cleanly, not an unhandled crash (R-40)', async () => {
+  it('an answer that would overflow the pad target once encrypted is refused cleanly, not an unhandled crash', async () => {
     // `maxLength` on the real textarea caps this in the browser, but
     // `fireEvent.change` sets the DOM value directly the same way an
     // adversarial or buggy caller bypassing that attribute would --

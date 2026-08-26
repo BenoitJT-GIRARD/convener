@@ -2,7 +2,7 @@
  * The example instance's own settings, on their way into the
  * demonstration.
  *
- * Phase 11, task 5. The settings screen reads six files: the two in
+ * The settings screen reads six files: the two in
  * `config/` the *product* owns (`boundary.yml`, which says what an instance
  * owns, and `integrations.yml`, which says what every external dependency
  * is for) and the four that instance owns. Signed in, it reads all six from

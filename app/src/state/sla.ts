@@ -1,9 +1,9 @@
 /**
  * Which step of the pipeline has been waiting longer than the series planned
- * for it (G-14, spec section 7).
+ * for it.
  *
  * **What this module is about, and what it is deliberately not about.** A lead
- * can sleep for months without anyone noticing; the spec's own words. The fix
+ * can sleep for months without anyone noticing. The fix
  * is to make the *waiting* visible. It is not to publish how long each
  * volunteer took. Everyone in this series is unpaid and has a day job, and a
  * screen that reads as a performance record over named people gets either
@@ -49,7 +49,7 @@
  * sweep.py` remains the only automated hand on the pipeline, and parking a
  * lead there is not a rejection either.
  *
- * **A deadline that cannot be computed is absent, not guessed** (P2-8). Every
+ * **A deadline that cannot be computed is absent, not guessed.** Every
  * clock here starts from a day the record actually holds. Where that day is
  * empty -- a record migrated from a spreadsheet, or one whose window has not
  * been opened yet -- `dueDate` returns `null`, and `byUrgency` sorts those
@@ -70,8 +70,9 @@ import type { Config, Speaker } from '../data/types';
  *
  *  Three are keyed as in `config.sla_days`. `lead_decision` is not a key of
  *  it: the board's deadline is `config.vote_window_days`, the number
- *  `tools/convener_ops/sweep.py` parks an expired lead on, and holding it twice is
- *  what F-13 was. */
+ *  `tools/convener_ops/sweep.py` parks an expired lead on, and holding it
+ *  twice let a file say the board was on time the very morning the job
+ *  parked the lead. */
 export const SLA_STEPS = [
   'lead_decision',
   'invitation_follow_up',
@@ -219,7 +220,7 @@ export function dueDate(s: Speaker, config: Config): Deadline | null {
 
   if (s.status === 'lead') {
     if (!s.selection.opened_on) return null;
-    // `vote_window_days`, not an `sla_days` key of its own (F-13): the day
+    // `vote_window_days`, not an `sla_days` key of its own: the day
     // this step becomes late is the day `tools/convener_ops/sweep.py` parks the
     // lead, and while those were two numbers a config could set one to 20 and
     // have this screen call the board on time the morning the job parked it.
@@ -268,7 +269,7 @@ export function overdueDays(s: Speaker, config: Config, today: string): number {
  *
  * Three arms, and the `days` count exists on exactly one of them. A caller
  * cannot render a lateness for a step that is not late, because there is no
- * number on the other two arms to render (P2-8: absent, not guarded).
+ * number on the other two arms to render: absent, not guarded.
  */
 export type Lateness =
   | { state: 'none' }

@@ -2,7 +2,7 @@
  * `copy-certificates.mjs` needs to. Kept apart from that script, the same
  * reason `handbook-files.mjs` is kept apart from `copy-handbook.mjs`: a
  * rule `app/tests/copy-certificates.test.ts` can call directly, including
- * the write itself (Important 2, fix round 1 -- see `writeProjection`'s
+ * the write itself (see `writeProjection`'s
  * own comment).
  */
 import { existsSync } from 'node:fs';
@@ -11,8 +11,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** The filename `copy-certificates.mjs` writes under `public/`, and
- *  `src/verify/register.ts::REGISTER_FILENAME` fetches. Minor 6 (fix
- *  round 1): these are two literals in two files, not one constant
+ *  `src/verify/register.ts::REGISTER_FILENAME` fetches. These are
+ *  two literals in two files, not one constant
  *  imported by both -- `app/tests/copy-certificates.test.ts` pins them
  *  equal directly, which is a weaker, but honestly-described, guarantee
  *  than "defined once, imported by both" would be. */
@@ -23,9 +23,9 @@ export const DEST_FILENAME = 'certificates.json';
  *  into and Vite serves at `BASE_URL`'s own root. Exported (pure path
  *  math, no I/O) so a test can assert it resolves to the same directory
  *  `register.ts`'s fetch URL is relative to, not merely that a filename
- *  constant matches one imported elsewhere (Important 2, fix round 1:
- *  before this, `copy-certificates.mjs`'s own `DST_DIR` could move to a
- *  different subtree entirely and every existing test stayed green). */
+ *  constant matches one imported elsewhere. Before this,
+ *  `copy-certificates.mjs`'s own `DST_DIR` could move to a
+ *  different subtree entirely and every existing test stayed green. */
 export const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
 /**
@@ -63,7 +63,7 @@ export async function readProjection(srcPath) {
  * `<dstDir>/DEST_FILENAME`, creating `dstDir` if needed. Returns the rows
  * written and the resolved destination path.
  *
- * Important 2 (fix round 1): this is the whole write, not only the read
+ * This is the whole write, not only the read
  * -- exported so `app/tests/copy-certificates.test.ts` can run it for
  * real, against a temporary directory, and assert the path it actually
  * produces. Before this, no test ever exercised the destination path at

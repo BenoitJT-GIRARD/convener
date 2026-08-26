@@ -7,7 +7,7 @@
  * `javascript:` URI submitted through that same form would sit in a
  * board member's own click, in the operators' cockpit.
  *
- * Security audit 2026-08-23, M3: this codebase already had the fix for the
+ * This codebase already had the fix for the
  * identical problem -- `content/fetch.ts::handbookUrl`'s scheme allowlist
  * -- it was simply not reused here. `isSafeHref`, the allowlist pulled out
  * of that function, is what this test holds `SpeakerPage` to: an unsafe

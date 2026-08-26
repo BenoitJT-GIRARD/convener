@@ -13,8 +13,8 @@
  * the failure silent in the worst way: a demonstration quietly talking to
  * GitHub, or quietly writing to it. It is the shape this project keeps
  * finding. The branch invariant was true by thirteen coincidences until
- * phase 9 pinned it; the instance boundary by five scattered constants
- * until phase 10 pinned it.
+ * something pinned it; the instance boundary by five scattered constants
+ * until something pinned that.
  *
  * What is actually held
  * ---------------------
@@ -75,7 +75,7 @@
  *   the policy, not a sweep -- and when this file was written the policy
  *   this application ships had no `default-src` and no `img-src`, so
  *   nothing at all was holding it. That gap was the reason this paragraph
- *   existed, and phase 11 closed it: `scripts/csp.mjs` now emits
+ *   existed, and it is closed: `scripts/csp.mjs` now emits
  *   `default-src 'none'` with `img-src 'self'` beside it, so the browser
  *   refuses that portrait rather than fetching it. This paragraph stays
  *   because the *sweep* still cannot see such an element -- what changed

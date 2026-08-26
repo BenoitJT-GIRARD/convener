@@ -2,7 +2,7 @@
  * What the settings form offers, and -- for each value -- *when* changing
  * it changes anything.
  *
- * Phase 11, task 5. The second half of this module is the half that is easy
+ * The second half of this module is the half that is easy
  * to leave out and expensive to leave out. `.github/workflows/deploy.yml`
  * ignores `config/**`, so committing a threshold here starts nothing at
  * all: the number sits in the repository, correct and inert, until

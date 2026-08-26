@@ -250,7 +250,7 @@ describe('the grammar of decision commits', () => {
         // `'data: add lead ' + fields.name` through, and a split template
         // (`` `data:` `` then the rest) with it.
         //
-        // `config:` joined `data:` in phase 11 task 5, when the settings
+        // `config:` joined `data:` when the settings
         // screen gained a domain of its own: those commits change a
         // threshold in `config/`, name no record and no person, and are
         // deliberately not decisions -- but they are still permanent

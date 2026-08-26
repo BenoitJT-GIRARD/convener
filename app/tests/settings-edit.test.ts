@@ -50,7 +50,7 @@ describe('one number, changed in place', () => {
     // Every comment line the file had, still there. A YAML round trip
     // takes all of them out and nothing would have said so.
     //
-    // Two of its sentences were quoted here until phase 12 task 6, and
+    // Two of its sentences were quoted here once, and
     // they were one instance's: `config/queue-drain.yml` is the
     // instance's file, so a product test quoting its prose asserted
     // which repository it was running in. The example instance's copy

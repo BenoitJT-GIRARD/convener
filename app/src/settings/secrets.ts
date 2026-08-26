@@ -6,8 +6,8 @@
  * not negotiable. **The cockpit can never hold a secret.** It is a static
  * bundle, served publicly, and it writes with the signed-in person's own
  * token; a token that could write a repository secret would be a right
- * every Board member held, which is exactly the problem the 2026-08-23
- * security audit named and declined to close at zero cost. So this screen
+ * every Board member held, which is exactly the problem a security review
+ * named and declined to close at zero cost. So this screen
  * has no field for a secret, no place to paste one, and no code path that
  * could send one anywhere.
  *

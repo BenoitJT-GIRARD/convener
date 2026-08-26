@@ -84,8 +84,9 @@ export interface CandidateDate {
  *
  * **`assignee` is not `assigned_to`.** `Speaker.assigned_to` is the board
  * member who looks after the *lead*; this is the person who owes *one line of
- * the runbook*. They are different people at different grains, and phase 2
- * already paid for merging two notions into one field -- `assignLead` wrote
+ * the runbook*. They are different people at different grains, and this
+ * project has already paid for merging two notions into one field --
+ * `assignLead` wrote
  * over `proposed_by`, and with it the record of who had to tell the speaker
  * if the board declined. Nothing in this repository derives one from the
  * other: `state/assignment.ts` reads this block and nothing else.
@@ -202,8 +203,8 @@ export type PublicationConsent = 'granted' | 'refused' | 'pending' | '';
  * `pending` is a legal stored value -- it is where the migration starts every
  * delivered speaker -- but it is deliberately absent from this vocabulary, so
  * no transition can write it. Consent is only ever moved by relaying an answer
- * the speaker actually gave (P2-8: the ambiguous value is not guarded, it does
- * not exist here to be written).
+ * the speaker actually gave: the ambiguous value is not guarded, it does
+ * not exist here to be written.
  */
 export const CONSENT_DECISIONS = ['granted', 'refused'] as const;
 export type ConsentDecision = (typeof CONSENT_DECISIONS)[number];
@@ -398,9 +399,9 @@ export interface Speaker {
   /** Link to the forum announcement thread. */
   forum_thread: string;
 
-  /** Whether the post-event survey (phase 4 spec S:6) is open for this
-   *  event. A per-event fact, not a `data/config.yml` setting: the spec
-   *  says the survey is switched on per event, and every other per-event
+  /** Whether the post-event survey is open for this
+   *  event. A per-event fact, not a `data/config.yml` setting: the survey
+   *  is switched on per event, and every other per-event
    *  fact -- the room link, the recording, the forum thread -- already
    *  lives on the speaker record rather than in the shared config. The
    *  three questions themselves are fixed for every event
@@ -467,7 +468,7 @@ export interface Config {
   /** How long a seminar runs, in minutes. */
   seminar_duration_minutes: number;
   /** A share of `seminar_duration_minutes` a matched attendee's summed
-   *  duration must reach to earn a certificate (phase 4 S:5), in `]0, 1]`:
+   *  duration must reach to earn a certificate, in `]0, 1]`:
    *  above zero, at most one. Configuration, not a constant: the real
    *  number has to align with accreditation requirements this project does
    *  not yet know, and alignment happens by editing this file, not by
@@ -494,7 +495,7 @@ export interface Config {
    *  `selection.opened_on`.
    *
    *  Also the board's decision deadline, which is why `sla_days` has no
-   *  `lead_decision` (F-13): `tools/convener_ops/sweep.py::expire_votes` parks a
+   *  `lead_decision`: `tools/convener_ops/sweep.py::expire_votes` parks a
    *  lead the day after this window closes, and a second key holding the same
    *  deadline let a file say the board was on time that very morning. */
   vote_window_days: number;
@@ -517,7 +518,7 @@ export interface Config {
    *  number, an access code, anything the room needs that the URL alone
    *  does not say. `''` is a legal answer: nothing more to add.
    *
-   *  One value for the whole series, not one per event (phase 4, D-06):
+   *  One value for the whole series, not one per event (D-06):
    *  the chosen platform's account *is* the permanent room, so these
    *  instructions describe a room that never changes. Read by
    *  `tools/convener_ops/platform.py::ManualPlatform.get_room`, which pairs

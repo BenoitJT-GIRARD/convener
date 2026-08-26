@@ -182,7 +182,7 @@ export const PHASES: PhaseDef[] = [
       },
       {
         // TEATIME, institute newsletters and internal messaging, and the
-        // RISC newsletter (F-03) are three different destinations but one
+        // RISC newsletter are three different destinations but one
         // message: none of them is a social feed with its own house style,
         // so one drafted text covers all three rather than tripling a
         // volunteer's copy-and-paste for no difference a reader would see.
@@ -244,9 +244,9 @@ export const PHASES: PhaseDef[] = [
         window: 7,
       },
       {
-        // Decided at phase 4's task 3 (docs/reference/operations.md,
-        // "Meeting platform" -> "Renewing the token"), wired here at task
-        // 17: the chosen meeting platform's access token is short-lived
+        // Decided in docs/reference/operations.md
+        // ("Meeting platform" -> "Renewing the token") and wired here:
+        // the chosen meeting platform's access token is short-lived
         // (roughly a month) and cannot be renewed unattended -- the
         // provider's refresh token rotates on every use, so whatever holds
         // it must be rewritten by a human each time, never by a scheduled
@@ -275,7 +275,7 @@ export const PHASES: PhaseDef[] = [
         // settled on, nothing reads whether it was followed, and a pair who
         // agree a different split tick this line exactly the same way.
         //
-        // T-1 week, which is what spec F-02 says and what the page this line
+        // T-1 week, which is what the page this line
         // hands over opens with ("At T-1 week, in ten minutes"). It sat at
         // T-3 because the existing T-3 line was reused rather than a T-7 one
         // added, so the app and the page disagreed about when the thing
@@ -298,10 +298,10 @@ export const PHASES: PhaseDef[] = [
         // This line always meant the room link the audience joins by --
         // never the speaker's own sign-up, which is the T-14 line above and
         // a different piece of work a week earlier. It used to read
-        // "registration link checked", which was fine until phase 4 gave
-        // "registration" a second, unrelated meaning of its own: the
-        // participant-facing `#/signup/:eventId` page. Renamed (Critical 2,
-        // branch review) so this line cannot be misread as ticking that
+        // "registration link checked", which was fine until
+        // "registration" gained a second, unrelated meaning of its own: the
+        // participant-facing `#/signup/:eventId` page. Renamed
+        // so this line cannot be misread as ticking that
         // instead, or as a claim that the room link was published anywhere
         // beyond the confirmation e-mail -- see
         // `docs/toolkit/emails/registration-confirmed.md`'s own pinned claim
@@ -345,8 +345,8 @@ export const PHASES: PhaseDef[] = [
     label: 'Delivered — wrap-up',
     items: [
       {
-        // Task 17 fix round 1 (Important 2): the one manual step task 17
-        // itself created had no journey item and no handbook line, though
+        // Encrypting the attendance export is a manual step this project
+        // created and then left with no journey item and no handbook line, though
         // every other new certification step is either automated or
         // visible from the Actions tab -- download the attendance export
         // off the meeting platform, run convener-encrypt-attendance-export
@@ -366,7 +366,7 @@ export const PHASES: PhaseDef[] = [
         label: 'Attendance export encrypted and committed (manual implementation only)',
       },
       {
-        // Phase 4, task 10/17. The key -- 'delivered/recording-retrieved',
+        // The key -- 'delivered/recording-retrieved',
         // not renamed here -- is `tools/convener_ops/platform_fcc.py::RETRIEVED_TICK`,
         // read by `convener-release-recording` before it will let the meeting
         // platform's own copy be deleted (its own storage quota is a

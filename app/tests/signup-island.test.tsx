@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { SignupForm } from '../src/islands/signup/SignupForm';
 import cases from '../../tools/tests/fixtures/governance-cases.json';
 
-// Task 6: this suite replaces `signup-form.test.tsx`, which tested
+// This suite replaces `signup-form.test.tsx`, which tested
 // `app/src/signup/SignupForm.tsx` (the operators' application's own
 // `/signup/:eventId` route -- see git history). The form is now
 // `app/src/islands/signup/SignupForm.tsx`, an island with no router of its
@@ -197,7 +197,7 @@ describe('SignupForm -- what it collects, and nothing else', () => {
     expect(optIn).not.toBeChecked();
   });
 
-  it('caps every text field at the same length the relay and the handler enforce (Important 1, branch review)', async () => {
+  it('caps every text field at the same length the relay and the handler enforce', async () => {
     stubKeyFetchOk();
     renderSignup();
 
@@ -516,8 +516,8 @@ describe('SignupForm -- sending', () => {
   });
 });
 
-// Fix round 1 (task 11's manual pass flagged this; task 11's own report
-// names the "sent" panel's `sentPanelRef.current?.focus()`, a few lines
+// A manual accessibility pass flagged this, and named the "sent" panel's
+// `sentPanelRef.current?.focus()`, a few lines
 // above `submit` in SignupForm.tsx, as the exact precedent the error
 // path was missing). Real Chrome drops `document.activeElement` to
 // `<body>` the instant its focused element becomes `disabled` -- jsdom

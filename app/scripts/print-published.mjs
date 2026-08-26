@@ -1,5 +1,5 @@
 /**
- * Phase 10, task 2: what this application's build actually resolves its
+ * What this application's build actually resolves its
  * `base` to, for each of the four configurations `npm run build` invokes,
  * printed as JSON for `tools/tests/test_published.py` to compare against
  * the same declaration read from Python.
@@ -47,21 +47,21 @@ for (const mode of MODES) {
   if (!loaded) throw new Error(`vite.config.ts did not load for mode ${mode}`);
   bases[mode] = loaded.config.base;
   defines[mode] = loaded.config.define?.['import.meta.env.VITE_PUBLISHED_URL'];
-  // Phase 10, task 3: the identity define, read the same way and for the
+  // The identity define, read the same way and for the
   // same reason. `src/content/render.ts` resolves `{{ instance.* }}` in a
   // volunteer's browser and the cockpit's chrome names the organisation,
   // so a configuration that carried the address but not the identity
   // would build four bundles that throw on their first render.
   identityDefines[mode] =
     loaded.config.define?.['import.meta.env.VITE_INSTANCE_IDENTITY'];
-  // Phase 11, task 4: the edition prefix, read the same way and for the
+  // The edition prefix, read the same way and for the
   // same reason. `src/state/agenda.ts::nextEditionCode` composes the next
   // edition code in a volunteer's browser, and an edition code is the one
   // value in this repository nothing can renumber afterwards -- it is in
   // a published address, on an issued certificate and in a key filename.
   editionPrefixDefines[mode] =
     loaded.config.define?.['import.meta.env.VITE_INSTANCE_EDITION_PREFIX'];
-  // Phase 11, task 6: whether this instance has been configured at all,
+  // Whether this instance has been configured at all,
   // read the same way and for a reason the other three do not have --
   // the ordinary answer is the empty list, so a configuration that lost
   // this define would look exactly like a configured instance and the

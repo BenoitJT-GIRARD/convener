@@ -19,7 +19,7 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
 // tools/convener_ops/cli.py::certificates_public_data writes a bare JSON array
 // -- see that function's own
 // test_certificates_public_data_aggregates_every_events_register.
-// Important 4 (fix round 1): projection_example itself used to be nested
+// projection_example itself used to be nested
 // under a `{"certificates": [...]}` key, which read as the wire shape and
 // was not -- corrected in the fixture directly, so this is now the same
 // bare array `readProjection` and `isProjection` actually accept.
@@ -28,13 +28,13 @@ const REAL_PROJECTION = cases.projection_example;
 // app/tests/.. = app/
 const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-describe('the filename copy-certificates.mjs writes and register.ts fetches (Minor 6: two literals, pinned equal, not one shared import)', () => {
+describe('the filename copy-certificates.mjs writes and register.ts fetches -- two literals, pinned equal, not one shared import', () => {
   it('pins scripts/certificates-projection.mjs::DEST_FILENAME to src/verify/register.ts::REGISTER_FILENAME', () => {
     expect(DEST_FILENAME).toBe(REGISTER_FILENAME);
   });
 });
 
-describe('PUBLIC_DIR is the exact directory register.ts fetches from (Important 2)', () => {
+describe('PUBLIC_DIR is the exact directory register.ts fetches from', () => {
   it('resolves to app/public, independent of cwd', () => {
     // Independently re-derived from this test file's own location,
     // rather than compared against nothing -- if copy-certificates.mjs's
@@ -86,7 +86,7 @@ describe('readProjection', () => {
   });
 });
 
-describe('writeProjection -- the real write, run against a temporary tree (Important 2)', () => {
+describe('writeProjection -- the real write, run against a temporary tree', () => {
   let root: string;
 
   afterEach(async () => {

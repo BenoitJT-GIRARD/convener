@@ -10,7 +10,7 @@
  * as **a bare JSON array** of `{"identifier", "state"}` objects, e.g.
  * `[{"identifier":"...","state":"issued"}, ...]`, confirmed against that
  * function's own `test_certificates_public_data_aggregates_every_events_register`.
- * (Important 4, fix round 1: `certificate-verification.json`'s own
+ * (`certificate-verification.json`'s own
  * `projection_example` key used to nest the same two worked rows under a
  * `{"certificates": [...]}` envelope, which read as the wire shape and
  * was not -- the fixture itself was corrected, not merely documented
@@ -64,7 +64,7 @@ function registerUrl(): string {
 
 /** A hung fetch has no other end -- the same reasoning
  *  `SignupForm.tsx::SUBMIT_TIMEOUT_MS` gives for its own submit POST
- *  (Minor 7, fix round 1: this used to cite `KEY_FETCH_TIMEOUT_MS`, which
+ *  (this used to cite `KEY_FETCH_TIMEOUT_MS`, which
  *  actually uses `AbortController` + `setTimeout`, a different idiom for
  *  the same intent -- `AbortSignal.timeout` is `SUBMIT_TIMEOUT_MS`'s own),
  *  applied here so a flaky connection resolves to "state unknown" rather
@@ -83,7 +83,7 @@ export const STATE_REVOKED = 'revoked';
  * sides of the language boundary, bound by one fixture read from both,
  * never hand-retyped and left to drift).
  *
- * Minor 3 (fix round 1): before this, the token-less flow (below) printed
+ * The token-less flow (below) used to print
  * whatever text sat in the URL's `:identifier` segment as page text under
  * an official heading, with no shape check -- unable to tell a mistyped
  * identifier from a genuinely absent one, and (though React already

@@ -184,7 +184,7 @@ describe('Board screen', () => {
     );
     expect(backend.current().board.map(m => m.login)).toEqual(['alice', 'bob', 'carol', 'dan']);
 
-    // F-16. `unavailable_until` is read by `activeBoard`, so an absence
+    // `unavailable_until` is read by `activeBoard`, so an absence
     // moves `N` and with it the majority a speaker needs: it is a decision,
     // and its subject comes out of `formatDecision` like every other one.
     // It used to be the free prose `data: mark alice unavailable until ...`,

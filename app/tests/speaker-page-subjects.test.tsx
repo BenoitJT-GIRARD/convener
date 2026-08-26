@@ -111,8 +111,8 @@ describe('what the record screen writes down', () => {
     const b = backend([delivered()]);
     vi.stubGlobal('fetch', b.fetchMock);
     show(delivered());
-    // Found by its own label, not by position in the list: task 17 gave
-    // the wrap-up phase an earlier checkbox of its own
+    // Found by its own label, not by position in the list: the wrap-up
+    // phase gained an earlier checkbox of its own
     // (delivered/recording-retrieved), so "the first checkbox" stopped
     // meaning "the forum summary" -- the subject below still has to name
     // the key belonging to *this* label, whichever position it sits at.

@@ -13,7 +13,7 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
  * register-unavailable to "state unknown" -- not merely that the pure
  * functions are correct in isolation.
  *
- * Task 7: this used to mount `VerifyPage` on a `MemoryRouter` path
+ * This used to mount `VerifyPage` on a `MemoryRouter` path
  * (`/verify/:identifier?token=…`), reading `identifier`/`token` through
  * `useParams`/`useSearchParams` -- the extraction into an island dropped
  * the router (see `VerifyPage.tsx`'s own module comment), so every case
@@ -24,7 +24,7 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
  */
 
 const SIGNED = cases.signed_example;
-// Important 4 (fix round 1): projection_example is the real, bare-array
+// projection_example is the real, bare-array
 // wire shape directly -- it used to be nested under a "certificates" key,
 // which read as the wire shape and was not; the fixture itself was
 // corrected.
@@ -56,7 +56,7 @@ function renderVerify(identifier?: string, token?: string) {
   return render(<VerifyPage identifier={identifier} token={token} />);
 }
 
-// Minor 1 (fix round 1) needs a genuinely-signed payload with no
+// The no-identifier case needs a genuinely-signed payload with no
 // `identifier` field, which the shared fixture cannot supply --
 // `signing.py::sign` always writes one, by construction. Same small,
 // independent key-pair helpers `verify-crypto.test.ts` keeps for its own
@@ -183,7 +183,7 @@ describe('VerifyPage -- with a token', () => {
   });
 });
 
-describe('VerifyPage -- a signature-confirmed payload with no identifier field (Minor 1)', () => {
+describe('VerifyPage -- a signature-confirmed payload with no identifier field', () => {
   it('renders "we cannot confirm the current state", never "certificate verified" -- this is our own bug, never a forger\'s', async () => {
     const { publicPem, privateKey } = await generateSigningKeyPair();
     const payload = { event: 'A workshop', name: 'Someone', date: '2026-01-01', duration_hours: 1.5 };
@@ -249,7 +249,7 @@ describe('VerifyPage -- no token (the printed-page flow, ruling 5)', () => {
     expect(screen.queryByText('Not found in our register')).not.toBeInTheDocument();
   });
 
-  it('refuses an identifier not shaped like one of ours, without ever asking the register (Minor 3)', async () => {
+  it('refuses an identifier not shaped like one of ours, without ever asking the register', async () => {
     stubFetch({});
     renderVerify('not-a-real-identifier');
 

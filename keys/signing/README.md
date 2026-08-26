@@ -158,7 +158,7 @@ verifier skip straight to one file -- see `signing.py`'s module docstring
 for why that was considered and rejected. Reading every `.pub` file here
 and trying each is the whole mechanism.
 
-## What the verification page actually does with this directory (corrected, carried item 5)
+## What the verification page actually does with this directory
 
 This section used to describe a design where every published public half
 is bundled straight into the verification page's own JS at build time.

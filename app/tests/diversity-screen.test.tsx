@@ -131,7 +131,7 @@ describe('Diversity screen', () => {
     expect(bodyText()).toContain('7 speakers carry no application date');
   });
 
-  // Task 17 refused to compute intersections because over ~30 speakers an
+  // This project refuses to compute intersections because over ~30 speakers an
   // intersection names one person. A screen that puts two dimensions on
   // screen together, row for row, hands the reader the same intersection.
   it('shows one dimension at a time, so no cross-tabulation can be read off it', () => {

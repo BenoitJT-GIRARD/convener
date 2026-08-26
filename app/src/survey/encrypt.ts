@@ -73,7 +73,7 @@ const AES_KEY_BYTES = 32;
 /** Mirrors `eventkeys.GCM_NONCE_BYTES`. */
 const GCM_NONCE_BYTES = 12;
 /** Mirrors `survey.py::_PLAINTEXT_PAD_BYTES` -- see that constant's own
- *  docstring (R-39, fix round 1) for why every plaintext is padded to this
+ *  docstring for why every plaintext is padded to this
  *  one fixed size before AES-GCM: unpadded, the ciphertext's length is a
  *  deterministic function of `feedback`'s length, which is a real
  *  quasi-identifier against the organiser, the only party who can ever

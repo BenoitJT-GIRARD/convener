@@ -55,7 +55,7 @@ export function App() {
       <HashRouter>
         <Routes>
           {/* Registration used to be a public route here too
-              (`/signup/:eventId`) -- task 6 extracted it into an island
+              (`/signup/:eventId`) -- it was extracted into an island
               mounted on `site/src/event.njk` instead
               (`app/src/islands/signup/`), per D-18 ("static pages,
               interactivity in islands"): a visitor who wants to register no
@@ -64,7 +64,7 @@ export function App() {
 
               Certificate verification used to be a public route here too
               (`/verify/:identifier`, reading `?token=` off the URL) --
-              task 7 extracted it into an island mounted on its own static
+              it was extracted into an island mounted on its own static
               page instead (`site/src/verify.njk`,
               `app/src/islands/verify/`), the identical move for the
               identical D-18 reason. That extraction did *not* also move
@@ -78,17 +78,17 @@ export function App() {
               left did not lose that property. See git history for the
               route this replaced.
 
-              The post-event survey (spec S:6) used to be the last public
-              route left here (`/survey/:eventId`) -- phase 7 task 5
-              extracted it too, into an island mounted on its own static
+              The post-event survey used to be the last public
+              route left here (`/survey/:eventId`) -- it was
+              extracted too, into an island mounted on its own static
               page (`site/src/survey.njk`, `app/src/islands/survey/`), the
               identical D-18 move a third time. Unlike verification and
               like registration, this one *did* move onto a real, bare
               path: `survey_invite.SURVEY_BASE` carries only an event id,
               never a name or a token, so there was never a Referer-leak
               property tying it to a fragment in the first place (see that
-              constant's own comment). This was the one asymmetry the
-              security audit's web surface review named -- with this
+              constant's own comment). That was the one asymmetry a
+              review of this project's web surface named -- with this
               route gone, `App` (below) mounts nothing a visitor with no
               account is ever meant to reach; every route left is gated by
               `Shell`. */}

@@ -4,8 +4,8 @@
  * transports what it signs" and "verify before you parse". This file has
  * to reproduce its *behaviour* exactly (not its bytes: nothing here ever
  * re-serialises anything -- see below), or a certificate that verifies on
- * one side and not the other silently breaks the one promise phase 4's
- * whole certificate design rests on.
+ * one side and not the other silently breaks the one promise this
+ * certificate design rests on.
  *
  * Why this never re-derives the signed bytes
  * --------------------------------------------
@@ -53,7 +53,7 @@
  * certificate signed under a key this page's embedded list does not (yet)
  * include -- see `signing.py`'s own "three outcomes" section. `VerifyPage`
  * shows one neutral "cannot confirm" appearance for both `MALFORMED` and
- * `NO_MATCHING_KEY` (task 13's own ruling: "four answers, four
+ * `NO_MATCHING_KEY` ("four answers, four
  * appearances", not five) -- but the two spellings themselves stay
  * distinct values all the way through this module, never collapsed into a
  * boolean, so a test can still tell them apart.

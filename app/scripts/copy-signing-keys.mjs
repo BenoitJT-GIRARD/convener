@@ -2,7 +2,7 @@
  * committed into `public/keys/signing/`, for `src/verify/publicKeys.ts` to
  * fetch at runtime -- the same idiom `copy-event-keys.mjs` already applies
  * to `keys/events/`, adapted for a page with no single event id to key a
- * fetch off of (see `keys/signing/README.md`'s "What task 13 needs from
+ * fetch off of (see `keys/signing/README.md`'s "How a verifier should use
  * this directory").
  *
  * Two things are written, not one:
@@ -18,8 +18,7 @@
  * (`PUBLIC_KEYS_DIR`) both live in `signing-keys-files.mjs` now, not
  * here -- this file is a thin wrapper around them so
  * `app/tests/copy-signing-keys.test.ts` can run the real write against a
- * temporary directory without triggering this file's own side effect
- * (Important 2, fix round 1).
+ * temporary directory without triggering this file's own side effect.
  *
  * Runs before `vite dev` and `vite build`, alongside the other copy
  * scripts. `keys/signing/` legitimately holds no key at all until an

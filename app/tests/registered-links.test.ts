@@ -3,7 +3,7 @@
  * the repository entirely (an absolute URL, a mailto:, or an anchor within
  * itself).
  *
- * Fix round 1 found this was not true: `docs/reference/operations.md` was
+ * This was once not true: `docs/reference/operations.md` was
  * linked from eight registered pages, and `docs/governance/register.md`
  * from two, neither of them registered. Fixing those nine links one at a
  * time -- rewriting the prose, or registering the two pages that turned out

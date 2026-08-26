@@ -1,7 +1,7 @@
 /**
  * Which field of a speaker record may leave this repository, and on what.
  *
- * The publication gate delivered in phase 2 decides whether *the recording*
+ * The publication gate decides whether *the recording*
  * goes out. It says nothing about the rest of the record, because when it was
  * written the record held nothing that needed saying: a name, an affiliation,
  * a title and a date are the programme of a public seminar. The fields added
@@ -63,7 +63,7 @@ import { standingObjections } from './governance';
  * a personal disclosure needing the speaker's own consent. It used to be
  * published, whilst the seminar was scheduled, as `registration_link` -- a
  * name that read as exactly the opposite of what it carried once the event
- * page (phase 5, task 5) gained its own registration form. Nothing reads it
+ * page gained its own registration form. Nothing reads it
  * any more: registration happens on the event page's own address, and the
  * room link now reaches a participant only through the confirmation e-mail.
  * `tools/convener_ops/public_data.py::PUBLIC_FIELD_SOURCES` maps no column to it,
@@ -93,7 +93,7 @@ export const PUBLISHABLE_ALWAYS = [
  * presence, which is a thing one may want and a thing one may refuse.
  * `seed_questions` are sentences they wrote to start a discussion, addressed to
  * a forum and not to the open web. `youtube_url` is a recording of them
- * speaking, the field the phase 2 gate was built for.
+ * speaking, the field the publication gate was built for.
  *
  * None of these is needed to announce a seminar. Every one of them is a
  * disclosure a reasonable person could accept for one talk and refuse for the
@@ -132,7 +132,7 @@ export const PUBLISHABLE_ON_CONSENT = [
  *   `selection`, `publication`, `candidate_dates`, `survey_enabled`,
  *   `runbook_progress`, `metrics`, `notes` and `conflicts_of_interest`. These
  *   are how a decision was reached, not what was decided. `survey_enabled`
- *   (task 16, phase 4 spec S:6) is an operational switch a participant never
+ *   is an operational switch a participant never
  *   needs to read off the public feed: they learn it exists by receiving the
  *   survey itself, never by looking it up. `candidate_dates` in particular records
  *   which slots a speaker turned down and why -- their availability, not the
@@ -338,7 +338,7 @@ export function answeredList(speakers: readonly Speaker[]): Speaker[] {
 }
 
 /* ------------------------------------------------------------------ *
- * The public projection (P-4) -- what a *drafted announcement text* may
+ * The public projection -- what a *drafted announcement text* may
  * quote, as distinct from what an authenticated volunteer may read on this
  * record's own pages.
  *

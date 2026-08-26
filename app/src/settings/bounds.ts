@@ -1,7 +1,7 @@
 /**
  * What an instance threshold may be, computed where somebody types it.
  *
- * Phase 11, task 5. Three of the four files `config/boundary.yml` hands to
+ * Three of the four files `config/boundary.yml` hands to
  * the instance are numbers a maintainer edits, and every one of those
  * numbers is bounded by something *else* in the repository -- the drain's
  * own cron, the lane threshold next door. A file cannot refuse a value: it

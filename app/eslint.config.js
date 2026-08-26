@@ -35,7 +35,7 @@ export default defineConfig([
     },
   },
   {
-    // P2-9: `new Date().toISOString().slice(0, 10)` is a *UTC* calendar day, and
+    // `new Date().toISOString().slice(0, 10)` is a *UTC* calendar day, and
     // this series runs on Europe/Paris time -- late in the evening the two are
     // different days, and several call sites persist the value (`opened_on`,
     // `joined_on`, `decided_on`, every working-day deadline) rather than merely
@@ -52,7 +52,7 @@ export default defineConfig([
           selector:
             "CallExpression[callee.object.callee.property.name='toISOString'][callee.property.name='slice']",
           message:
-            'A UTC calendar day, not a Paris one (P2-9). Use parisToday() from ' +
+            'A UTC calendar day, not a Paris one. Use parisToday() from ' +
             'src/state/derived.ts, or parisDayOf(instant) for an instant other than now.',
         },
         {
@@ -78,7 +78,7 @@ export default defineConfig([
   },
   {
     // Where the brand is applied, and the only place a cast to `Subject` is
-    // one. The P2-9 selector is restated because a flat-config block
+    // one. The UTC-day selector is restated because a flat-config block
     // replaces a rule's options rather than adding to them.
     files: ['src/state/decisions.ts'],
     rules: {
@@ -88,7 +88,7 @@ export default defineConfig([
           selector:
             "CallExpression[callee.object.callee.property.name='toISOString'][callee.property.name='slice']",
           message:
-            'A UTC calendar day, not a Paris one (P2-9). Use parisToday() from ' +
+            'A UTC calendar day, not a Paris one. Use parisToday() from ' +
             'src/state/derived.ts, or parisDayOf(instant) for an instant other than now.',
         },
       ],
@@ -96,7 +96,7 @@ export default defineConfig([
   },
   {
     // The tests may build a fixed calendar day any way they like -- that is
-    // why P2-9 is scoped to `src/` -- but a subject cast into existence here
+    // why that rule is scoped to `src/` -- but a subject cast into existence here
     // would be a subject the app could be given.
     files: ['tests/**/*.{ts,tsx}'],
     rules: {

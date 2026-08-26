@@ -1,7 +1,7 @@
 /**
  * Asking the speakers whose recordings are still unpublished (G-15).
  *
- * Phase 2 built a gate that cannot publish a recording without a recorded
+ * This project built a gate that cannot publish a recording without a recorded
  * `granted`, and left thirty-one real researchers on the other side of it,
  * none of them ever asked. This screen is the means to ask. It does not ask
  * on anybody's behalf -- a person writes to a person -- and it is built so
