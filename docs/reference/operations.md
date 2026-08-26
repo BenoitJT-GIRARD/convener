@@ -2237,9 +2237,10 @@ unanimity. This is a known, accepted, temporary state.
 
 ### 1. Replace the Board identifiers with real GitHub logins
 
-`data/config.yml` currently lists the Board as `Anonymous`, `Anonymous`,
-`Anonymous`, `Anonymous` and `Anonymous`. Only `Anonymous` is a GitHub login; the
-other four are first names. Role detection matches the signed-in GitHub
+`data/config.yml` lists five Board members, and only one of the five
+`login` values is a GitHub login — the other four are first names. The
+file is the only place that says which is which, and it is the file you
+will be editing anyway. Role detection matches the signed-in GitHub
 account against these values, so today it recognises nobody but that one
 account — every other member is treated as a visitor.
 
@@ -2248,10 +2249,10 @@ in step:
 
 1. `data/config.yml` — every `board[].login`.
 2. `data/speakers.yml` — every `selection.ballots[].voter`, using exactly
-   the same mapping. The ballots carry the same first-name identifiers, and
-   a vote is tallied only from ballots whose voter is on the Board
-   (`tools/convener_ops/governance.py`), so a Board renamed on its own would
-   silently discard every vote cast so far.
+   the same mapping. A ballot on record carries the same first-name
+   identifiers, and a vote is tallied only from ballots whose voter is on
+   the Board (`tools/convener_ops/governance.py`), so a Board renamed on its
+   own would silently discard every vote already cast.
 
 Nothing else in `data/speakers.yml` holds a Board identifier today:
 `assigned_to` and `publication.approved_by` are empty everywhere, and
@@ -2262,9 +2263,11 @@ must not be rewritten. Check that this is still true before starting.
 
 ### 2. Merge the duplicate member and lower `board_min`
 
-`Anonymous` and `Anonymous` are the same person, recorded twice. Delete one of
-the two entries, keeping that person's real GitHub login. The Board then
-goes from five members to four, and the threshold from four to three.
+Two of the five entries are the same person, recorded twice: one under a
+GitHub login, one under a first name. Step 1 is what makes that visible —
+once the logins are in, both entries carry the same one. Delete one of
+them, keeping that person's real GitHub login. The Board then goes from
+five members to four, and the threshold from four to three.
 
 `board_min` is `5` in `data/config.yml` and should become `3` in the same
 change — not because anything breaks otherwise, but because it is the
@@ -2280,8 +2283,8 @@ and still not be able to decide anything.
 Rewrite the ballots of whichever identifier disappears to the surviving
 one. If any lead ends up with two ballots from the merged person, keep one:
 one person casts one voice, and a repeated voter is a validation error.
-No lead carries ballots from both identifiers at the time of writing —
-`Anonymous` has never voted — but confirm it rather than assume it.
+Do not assume that no lead carries ballots from both identifiers: search
+`data/speakers.yml` for each of the two before you merge, and confirm it.
 
 ### 3. Fill in `joined_on` for every Board member
 

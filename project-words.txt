@@ -4,8 +4,6 @@ Archivo
 argjson
 assertable
 autoprefixer
-Anonymous
-Anonymous
 bilan
 bypassable
 Bézier

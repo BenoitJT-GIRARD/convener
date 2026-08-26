@@ -155,12 +155,15 @@ DEFERRED: Final = (
             "and lints no `.json` at all -- so they came out and the run "
             "stayed green. Dead weight that happened to be somebody's "
             "name is the worst kind to leave in a shipped file. Two "
-            "remain, and each is held by exactly one open decision: "
-            "`docs/reference/contacts.md` and `docs/reference/"
-            "operations.md` name the founding board, both are linted, and "
-            "cspell fails on seven occurrences the moment either word "
-            "goes. They are not this entry's to remove -- they leave with "
-            "those pages or not at all."
+            "outlived that pass, each held by exactly one open decision, "
+            "and both left with it: `docs/reference/contacts.md` and "
+            "`docs/reference/operations.md` named four founders between "
+            "them, both are linted, and cspell failed on seven "
+            "occurrences the moment either word went. Those two pages "
+            "name roles now, nothing linted spells either word, and the "
+            "entries came out with the prose that held them. What is "
+            "left in this file that names anybody is this organisation, "
+            "which is the whole of the reason above."
         ),
     ),
 )

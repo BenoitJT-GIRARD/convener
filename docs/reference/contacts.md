@@ -22,14 +22,18 @@ There is no Board mailbox to write to, and that is a choice rather than an omiss
 - **For anything about one speaker or one session** — say it on that record, in the workspace. It is where whoever picks the question up will already be looking.
 - **For anything else** — open an issue here, or comment on the standing *Board notifications* thread, and mention the editorial-board team. GitHub sends the email; that is the whole mechanism, and it is the same path the nightly digest takes.
 
-A team is mentioned rather than a person, always. The channel has to keep working on the day any one volunteer stops reading their notifications, and a message addressed to a name does not. Which thread and which team handle are set up once, per repository, and written down in `docs/reference/operations.md` ("Board notifications").
+Address the team, never one volunteer. The channel has to keep working on the day any one person stops reading their notifications, and a message addressed to a name does not. Which thread and which team handle are set up once, per repository, and written down in `docs/reference/operations.md` ("Board notifications").
 
 If you are not on GitHub, ask any volunteer to open it for you. Nothing here requires that the person with the question is the person who types it.
 
 ## The organising team
 
-Anonymous, Anonymous, Anonymous and Anonymous started the series; they are its founding Editorial Board, and between them they hold the accounts described above.
+The series is run by its Editorial Board; between them, its members hold the accounts described above.
 
-**Who sits on the Board today is not kept on this page.** It is the `board` list in `data/config.yml`, and the Board screen in the workspace shows it. A list of names typed here would be a second answer to that question, and a second answer is one that is eventually wrong — quietly, and in the place a newcomer happens to read first. Two things worth knowing before you read that list are the [temporary states the Board's rules describe](../governance/board-rules.md#two-temporary-states-so-nothing-here-misleads-you): it holds five entries for four people, and only one of the five identifiers is a real GitHub login. Both are dated, deliberate, and being fixed together at the September meeting.
+**Who sits on it is not kept on this page** — not the Board of today, and not the one that started the series. It is the `board` list in `data/config.yml`, and the Board screen in the workspace shows it. A list of names typed here would be a second answer to that question, and a second answer is one that is eventually wrong — quietly, and in the place a newcomer happens to read first.
+
+Two rules, one reason. The one above is about whom a message is addressed to; this one is about where a fact is kept. Neither makes an exception for the names that feel permanent, and a founding board is the clearest case there is: it is the list that looks safest to type, and the one nobody ever comes back to check.
+
+If that list is in a temporary state — an identifier that is not yet a GitHub login, a seat declared and not filled — that state is dated and argued in `docs/reference/operations.md` ("After the September collaborators' meeting"), and nowhere else.
 
 What each of the four roles does is in [Roles](../roles.md); what the Board itself is for is in [The Editorial Board](../governance/editorial-board.md).
