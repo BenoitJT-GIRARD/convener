@@ -18,7 +18,7 @@ put forward at all. That file has its own record:
 
 ## What we hold
 
-- **Registration**, per event, encrypted (`data/events/<id>/registrations.enc`):
+- **Registration (G-18)**, per event, encrypted (`data/events/<id>/registrations.enc`):
   first name, surname, email address, an optional institution, and an
   announce-list opt-in — exactly the fields the event page's form asks for,
   and nothing else.

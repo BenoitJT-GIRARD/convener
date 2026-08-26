@@ -181,7 +181,7 @@ its own deletion — makes it unreadable (D-22, D-23); and every public
 address is verified in its actually-published form, not a local
 convenience (D-26).
 
-## Handover
+## Handover (G-11)
 
 This project's governance requires that no account or secret ever belongs
 to one person (D-11, G-11): an email address owned by the organisation,

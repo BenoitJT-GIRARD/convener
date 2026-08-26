@@ -46,7 +46,7 @@ three separate steps on the day; this is the same sequence, in the room:
   discussion is still not published — stopping in between is what keeps it out
   of the recording that goes online.
 
-## The conflict-of-interest slide
+## The conflict-of-interest slide (G-16)
 
 Slide 5 belongs to the speaker, and the hosts ask for it when they send the
 [talk details email](emails/talk-details.md). A declaration that is real is

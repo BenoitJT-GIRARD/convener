@@ -2001,7 +2001,7 @@ Three things the rule will not do:
   members go, and `board_min` is a target rather than a rule (see
   *The Board's target size* below).
 
-## The Board's target size
+## The Board's target size (G-07)
 
 `board_min` is a **target**, not a rule. No code refuses anything because the
 Board is short of it: a nomination may be opened
