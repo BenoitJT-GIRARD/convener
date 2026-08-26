@@ -193,13 +193,12 @@ code needed to enforce it.
 ## Abuse protection
 
 No shared secret is possible — a browser cannot hold one — so this
-endpoint is open by construction. Of the three options this task's brief
-named:
+endpoint is open by construction. Of the three options available:
 
 | Option | Why not, here |
 |---|---|
 | Cloudflare rate-limiting rules | Configured in the dashboard, outside version control — a setting a successor inherits with no record of why it has the value it has, unlike everything else in this repository. It also targets traffic through a Cloudflare-proxied zone; this worker, like the other two, deploys to a plain `*.workers.dev` route with no custom domain, so the product would need one added first. |
-| Turnstile | Costs nothing and stays on the same account, but it is a third-party script embedded in the registration page itself — outside this worker's own files, widening a diff this task does not own — on a page whose whole design argument (`SignupForm.tsx`'s own comments) is that nothing runs there beyond what the participant strictly needs. |
+| Turnstile | Costs nothing and stays on the same account, but it is a third-party script embedded in the registration page itself — outside this worker's own files, widening the change beyond this worker — on a page whose whole design argument (`SignupForm.tsx`'s own comments) is that nothing runs there beyond what the participant strictly needs. |
 | **A limiter inside the worker** | **Chosen** — but the first pass at this, Workers KV alone, turned out not to hold against the exact scenario it was written to defend. What replaced it is below. |
 
 ### What Workers KV alone did not do

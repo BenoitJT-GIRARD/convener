@@ -174,9 +174,8 @@ jobs:
       # skips a missing toolchain on a developer's machine and *fails* it
       # here, because `CI` is set -- so deleting, renaming or reordering
       # either install below turns this job red by name instead of turning
-      # the acceptance criterion into a row of skips inside a green suite
-      # (D-25 -- and a review has already found exactly that row of skips
-      # sitting inside a green suite here once).
+      # the whole check into a row of skips inside a green suite (D-25 --
+      # exactly that row of skips has sat inside a green suite here once).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
@@ -347,7 +346,7 @@ jobs:
       # only on a CI runner or a maintainer's machine, over this
       # repository's own first-party source, and ships in no built output
       # at all. Blocking on those would fail this job on a class of finding
-      # that cannot reach the surface this task is actually protecting;
+      # that cannot reach the surface this step is actually protecting;
       # never checking them would hide the day one of them stops being
       # theoretical. `continue-on-error` prints the finding and marks the
       # step visibly (D-25: a check that cannot fail is not a check, and

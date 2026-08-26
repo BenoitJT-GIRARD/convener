@@ -32,9 +32,9 @@ name: Visuals
 #   bug in how the three pages are actually written to disk is a real way
 #   this check could start comparing the wrong thing -- accepted even
 #   though this is a large file most of whose other commands have nothing
-#   to do with this task, because a path filter has no finer grain than a
+#   to do with rendering, because a path filter has no finer grain than a
 #   file, and the alternative is silently not re-checking the one function
-#   in it that this task depends on.
+#   in it this job depends on.
 # - `instances/example/config/instance.json` -- the declaration the
 #   fixture is rendered from. The composition reads
 #   one: the wordmark band is `identity.forum_host`, the hero band is
@@ -185,9 +185,9 @@ on:
 # this block for the full reasoning, and why `github.ref` would be the
 # wrong expression.
 #
-# The plan for this change named five pull-request workflows and missed
-# this one, which pays a real browser download per superseded push --
-# the most expensive run of the six to leave running for nothing.
+# This is easy to miss when counting the pull-request workflows by hand,
+# and it pays a real browser download per superseded push -- the most
+# expensive run of the six to leave running for nothing.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
@@ -195,8 +195,8 @@ concurrency:
 jobs:
   visuals:
     runs-on: ubuntu-latest
-    # Render + compare alone measures under 5 seconds on a warm machine
-    # (this task's own report); this allowance covers a cold cache miss
+    # Render + compare alone measures under 5 seconds on a warm machine;
+    # this allowance covers a cold cache miss
     # that has to fetch the ~430MB Chrome-for-Testing build besides.
     timeout-minutes: 10
     permissions:
@@ -228,8 +228,8 @@ jobs:
           # puppeteer 25.8.0's own declared floor (`engines.node`); every
           # other job in this repository still targets Node 20, which is
           # exactly why this dependency was isolated to its own package
-          # rather than joining `site/package.json` (this task's own
-          # report) -- nothing else in this repository is held back by
+          # rather than joining `site/package.json` -- nothing else in
+          # this repository is held back by
           # this job using a newer Node than the rest.
           node-version: '22'
           cache: 'npm'

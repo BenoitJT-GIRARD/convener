@@ -16,9 +16,8 @@
  * wave the island pages through or tight enough to fail every static page
  * on the first paragraph of added copy. `STATIC_PAGE_BUDGET_GZIP_BYTES` and
  * `ISLAND_PAGE_BUDGET_GZIP_BYTES` are set and justified separately, below,
- * against this task's own measurement of the real built site on
- * 2026-08-22 -- see this task's own report for the full reasoning; the
- * short version is in each constant's own comment.
+ * against a measurement of the real built site taken on 2026-08-22; each
+ * constant's own comment carries the reasoning for its number.
  *
  * A page's class is read from what it actually references, not from a
  * hardcoded list of page names: any page whose HTML loads a script under
@@ -46,11 +45,11 @@
  *
  * Proving this can fail (D-25)
  * --------------------------------
- * A budget that cannot fail is not a budget -- this phase has already paid
- * for that shape six times (D-25's own tally). This task deliberately
- * lowered each threshold below a real measurement and watched this script
- * exit 1 with the right page named, before setting the real numbers below
- * -- see this task's own report for the transcript. It is not re-proven at
+ * A budget that cannot fail is not a budget -- this project has already
+ * paid for that shape six times (D-25's own tally). Each threshold was
+ * deliberately lowered below a real measurement and this script watched to
+ * exit 1 with the right page named, before the real numbers below were
+ * set. It is not re-proven at
  * every run (that would defeat the point of a fixed budget), but the
  * technique is named here for the next person who changes a number: lower
  * it, watch it fail, then set it back.

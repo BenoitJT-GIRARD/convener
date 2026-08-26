@@ -35,8 +35,8 @@ name: Visuals production
 # carries it the same way it already carries every other file `site/`
 # writes -- never a second publisher racing that workflow's own wipe.
 #
-# `square.png` and `print.png` stay exactly what this task's own original
-# reasoning already settled: a downloadable run artefact, never committed
+# `square.png` and `print.png` stay what they have always been: a
+# downloadable run artefact, never committed
 # -- an operator's own forum post or a printed poster is a one-off action,
 # not a standing address anything links to, so there is nothing there for
 # a stable address to serve. `banner.png` is different in kind, not degree:
@@ -328,10 +328,10 @@ jobs:
       # is what tells an edition with only announcement texts (an archived
       # recording, no scheduled edition at all) apart from one with a real
       # banner to carry.
-      # `git add site/src/banners 2>/dev/null || true`: the one path this
-      # repository has never committed anything under before this task
-      # lands is not a valid pathspec at all (confirmed by hand -- see
-      # this task's own report) -- `git add` on a pathspec that matches
+      # `git add site/src/banners 2>/dev/null || true`: a path this
+      # repository has never committed anything under is not a valid
+      # pathspec at all (confirmed by hand) -- `git add` on a pathspec that
+      # matches
       # nothing it has ever tracked exits non-zero even under `set -e`'s
       # relaxed context here, which would abort this step on the ordinary,
       # ongoing "still nothing scheduled" case (D-13) rather than let the

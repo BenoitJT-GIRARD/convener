@@ -69,8 +69,7 @@ name: Preview
 # perfectly normal app one), and both island bundles present and
 # non-empty -- and fails the job loudly before "Refuse to package a preview
 # that leaks a room link" and the upload step ever run. Both refusals were
-# proved by hand against a deliberately broken build; see this task's own
-# report.
+# proved by hand against a deliberately broken build.
 #
 # No room link, the same guard applied to what this job publishes
 # --------------------------------------------------------------------
@@ -204,7 +203,7 @@ jobs:
       # pressing "submit" in this preview cannot reach any relay, real or
       # otherwise -- it reports "Registration is not open for this event
       # yet." and nothing leaves the browser. Confirmed by reading that
-      # function, not assumed; see this task's own report.
+      # function, not assumed.
       - name: Install app
         working-directory: app
         run: npm ci

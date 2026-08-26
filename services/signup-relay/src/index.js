@@ -291,8 +291,7 @@ function validatedEventId(parsed) {
 
 /**
  * Whether `keys/events/<eventId>.pub` exists in the repository -- the
- * "identifiant d'événement connu" check the plan names alongside the field
- * checks above. Reuses `token`, the same GitHub credential the dispatch
+ * "is this a known event" check, alongside the field checks above. Reuses `token`, the same GitHub credential the dispatch
  * below sends with: the "Contents: read & write" scope README.md documents
  * already covers a read. No second secret, no second account.
  *
@@ -422,9 +421,8 @@ function counterKey(eventId) {
 /** The survey's own cumulative-ceiling counter key -- deliberately distinct
  *  from `counterKey`'s (`count:<id>` vs `count:survey:<id>`) rather than a
  *  shared prefix scheme, specifically so an event's *existing*, already
- *  live `count:<id>` registration counter is untouched by this task: no
- *  in-flight registration count is renumbered or reset by this route's
- *  addition. */
+ *  live `count:<id>` registration counter is untouched: no in-flight
+ *  registration count is renumbered or reset by this route. */
 function surveyCounterKey(eventId) {
   return `count:survey:${eventId}`;
 }

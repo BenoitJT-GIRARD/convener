@@ -107,23 +107,23 @@ const MIME = {
 /** Tags this project treats as "AA": WCAG 2.1's own level A and AA rules
  *  (AA is defined to include A -- a page failing an A rule is not AA
  *  either), plus 2.1's own AA additions. Never the whole of `best-practice`:
- *  axe bundles opinions there that are not part of the standard this task
+ *  axe bundles opinions there that are not part of the standard this checker
  *  targets, and failing the build on one would blur "not AA" with "a
- *  maintainer's taste", exactly the "false positive, named and justified"
- *  case this task's own brief warns against manufacturing accidentally. */
+ *  maintainer's taste" -- manufacturing a false positive rather than
+ *  finding one. */
 const WCAG_AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21aa'];
 
 /** One `best-practice`-only rule opted back in by name, not by tag: axe
  *  classifies `heading-order` ("heading levels should only increase by
  *  one") as `best-practice`, never a `wcag2a`/`wcag2aa`/`wcag21aa` rule, so
  *  `WCAG_AA_TAGS` alone never runs it -- confirmed by reproducing the gap
- *  (this task deliberately broke a page's own heading order and watched
- *  the run stay green before adding this). A correct reading order is
- *  exactly what lets a screen reader user skim a page's own structure
- *  the way a sighted visitor skims its headings, which is what this
- *  task's own brief means by "heading order" among the violations to
- *  prove the checker against -- so this one rule is named individually,
- *  rather than pulling in the rest of `best-practice` to get it. */
+ *  (a page's own heading order was deliberately broken and the run stayed
+ *  green before this was added). A correct reading order is exactly what
+ *  lets a screen reader user skim a page's own structure the way a sighted
+ *  visitor skims its headings, which is why heading order is one of the
+ *  violations this checker has to be proven against -- so this one rule is
+ *  named individually, rather than pulling in the rest of `best-practice`
+ *  to get it. */
 const EXTRA_RULES = ['heading-order'];
 
 
@@ -206,8 +206,8 @@ function serveStatic(root) {
 /** Every `*.html` file this build wrote, under the site's own root --
  *  never under `app/`, which this checker deliberately does not scan: the
  *  operators' cockpit requires a GitHub sign-in and is not a page the
- *  public ever lands on, so it is out of this task's own brief ("the
- *  pages the site now generates"). A recursive walk, not a hand-typed
+ *  public ever lands on, so it is out of scope here -- what is in scope is
+ *  the pages this site generates. A recursive walk, not a hand-typed
  *  list of routes -- the exact difference between a crawler that notices
  *  a fifteenth page appearing and one that would not. */
 async function discoverHtmlPages(root) {
@@ -294,10 +294,10 @@ async function runAxe(page, axeSource) {
 
 /** axe-core's own `incomplete` category means "a human must look", not "a
  *  violation" -- but treating every incomplete result as a mere warning,
- *  forever, would be exactly the wholesale suppression this task's own
- *  brief refuses: "if a tool reports something you judge to be a false
- *  positive, say so with the measurement, and suppress it named and
- *  justified, never wholesale." So only these specific, reviewed
+ *  forever, would be exactly the wholesale suppression this project
+ *  refuses: a finding judged to be a false positive is suppressed named
+ *  and justified, with the measurement beside it, never wholesale. So only
+ *  these specific, reviewed
  *  `color-contrast` *nodes* are ever waved through; anything else axe
  *  reports as incomplete fails the build like a real violation, because
  *  nobody has looked at it yet.

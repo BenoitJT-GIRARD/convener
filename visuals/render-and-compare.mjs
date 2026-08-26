@@ -55,7 +55,7 @@
  *    image already committed to this repository. Decoded through the
  *    *browser's own* `<canvas>`/`getImageData` -- no image-diffing
  *    dependency was added for this (no `pixelmatch`, no `pngjs`): the
- *    engine this task already pins to render is the same engine asked to
+ *    engine already pinned to render is the same engine asked to
  *    decode both PNGs, so nothing new was installed to make the
  *    comparison possible at all.
  * 5. Fails loudly on a regression -- see PER_CHANNEL_THRESHOLD and
@@ -92,16 +92,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  covered edge pixel against its background. 24 is comfortably above
  *  that kind of single-digit blending noise (confirmed empirically: two
  *  renders of this exact fixture on this machine, nothing changed between
- *  them, differ by exactly 0 pixels at any threshold -- see this task's
- *  own report for the transcript) and comfortably below the smallest gap
+ *  them, differ by exactly 0 pixels at any threshold) and comfortably
+ *  below the smallest gap
  *  between any two colours this composition actually paints next to each
  *  other -- `data/brand.json`'s own palette (purple #012765, cream
  *  #F4F0F1, turquoise #FECAC1, white, black) differs by dozens to
  *  hundreds of levels per channel between any pair, so a real colour
  *  swap, a moved element revealing a different background underneath it,
  *  or a moved element's own edge crossing into new territory clears this
- *  threshold by a wide margin -- proven, not assumed: this task's own
- *  report quotes the real numbers a five-pixel translation produced.
+ *  threshold by a wide margin -- proven against a real five-pixel
+ *  translation, not assumed.
  */
 const PER_CHANNEL_THRESHOLD = 24;
 
@@ -118,8 +118,7 @@ const PER_CHANNEL_THRESHOLD = 24;
  *  real element -- this project's own proof, not a hypothetical -- shifts
  *  a filled region's own boundary across a much larger area than an
  *  anti-aliasing halo ever occupies, and clears this budget by well over
- *  an order of magnitude; see this task's own report for the measured
- *  fraction.
+ *  an order of magnitude, measured rather than estimated.
  */
 const MAX_DIFF_PIXEL_FRACTION = 0.001;
 
@@ -181,7 +180,7 @@ function serveStatic(root) {
 }
 
 /** Decodes two PNG buffers and diffs them, entirely inside the same pinned
- *  browser this task already launched to render them -- see the module
+ *  browser already launched to render them -- see the module
  *  comment for why this needed no new dependency. Runs inside the page
  *  (`page.evaluate`) rather than serialising the raw pixel arrays back to
  *  Node: a 1200x1200 RGBA buffer is ~5.7MB, and returning only the small

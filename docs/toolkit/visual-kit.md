@@ -105,7 +105,7 @@ the one the next person starts from.
 
 ## A note on where this is going
 
-The plan of record is for the announcement image and the flyer to be
+The direction of travel is for the announcement image and the flyer to be
 **generated from the event's own data**, so that a changed date or a changed
 registration link means a regenerated image rather than an evening of manual
 work. This kit is the fallback that keeps working whatever happens to that:

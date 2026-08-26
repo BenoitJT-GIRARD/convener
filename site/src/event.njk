@@ -64,9 +64,8 @@ eleventyComputed:
   affiliation, country -- and nothing a consent gate would still be
   withholding (`photo_url`, `bio`, `linkedin`): this object must never grow
   a fourth key. And no `zoom_link`/`registration_link` field is read here at
-  all -- the room link never reaches this template in the first place
-  (acceptance criterion 2), so there is nothing this block could leak even
-  by mistake.
+  all -- the room link never reaches this template in the first place, so
+  there is nothing this block could leak even by mistake.
 #}
 {% set eventUrl = page.url | absoluteUrl %}
 {#
@@ -250,7 +249,7 @@ eleventyComputed:
     downloads the cockpit (D-18's own argument). Nothing renders
     `event.registration_link` anywhere on this page, or anywhere else in
     this site: the room link is delivered only by the confirmation
-    e-mail, never published (acceptance criterion 2).
+    e-mail, never published.
 
     `#registration-form` is `app/src/islands/signup/main.tsx`'s own mount
     point -- kept as the exact id this page reserved for it, which

@@ -1107,8 +1107,8 @@ verifying: `convener_ops.signing.verify` is handed every published
 in turn (see the module docstring's "how a verifier chooses" section for
 the recommended, but not required, newest-first order). **Never remove a
 `.pub` file from `keys/signing/`** — doing so is exactly what would make an
-already-issued certificate stop verifying, the one outcome §7 of the phase
-4 spec exists to prevent. Do not generate two signing keys on the same
+already-issued certificate stop verifying, the one outcome this whole
+design exists to prevent. Do not generate two signing keys on the same
 calendar day: the filename collides (see the module docstring).
 
 **Secrets to set:** `CONVENER_SIGNING_KEY`.
@@ -1497,8 +1497,8 @@ actually follow, since the private key it needs never touches a laptop by
 design; both headers now name this workflow instead.
 
 `unmatched-attendance.md` -- the only artefact naming what could not be
-matched, and the only place acceptance criterion 9's unmatched/unreachable
-distinction ever reaches a human -- is uploaded by this workflow's own
+matched, and the only place the unmatched/unreachable distinction ever
+reaches a human -- is uploaded by this workflow's own
 last step as a short-retention (14 days), access-controlled build
 artefact. That restriction is defence in depth now, not the reason the
 file is safe: the file itself carries no name and no address any more
@@ -1583,8 +1583,7 @@ in the other direction -- see that module's own docstring and
   certificate fingerprint may never be computed without a real salt, so
   an absent salt forbids writing rather than licensing an unsafe write.
   Nothing used to populate the FCC path's own `conference_ids`
-  at all, so it could never issue a single certificate -- see that
-  round's own report for the full finding.
+  at all, so it could never issue a single certificate.
 - **Reissue a certificate** (`.github/workflows/reissue-certificate.yml`,
   `convener-reissue-certificate`). Inputs: the event id, the certificate id to
   correct, and the same optional conference id as above. An operator's
@@ -1766,7 +1765,7 @@ cascade could not tie the address it saw to any registration) nor an
 **unreachable** one (joined by phone, no address on file, at any point) is
 invited — not by policy, but by fact: neither has an address this pipeline
 holds. See `tools/convener_ops/survey_invite.py`'s own module docstring,
-"ruling 1", for the argument in full.
+"Who gets invited, and why the other two do not", for the argument in full.
 
 **The invitation carries no per-person token, on purpose.** Every matched
 attendee of the same event receives the exact same link
@@ -1846,7 +1845,7 @@ three attempts** (`::error::push failed after 3 attempts -- the invitation
 was sent but not recorded`), the invitation itself already went out — only
 the record that stops a re-dispatch from doing it again did not land. This
 is the one state where re-dispatching the workflow re-invites every
-currently matched attendee, which is exactly what ruling 3's whole bound
+currently matched attendee, which is exactly what the per-event bound
 exists to prevent. **Do not re-dispatch to recover from it.** Instead,
 commit `data/survey-invitations.yml` by hand, adding this event's own
 `event_id`/`invited_on` row (`convener-record-survey-invitation`, run locally
