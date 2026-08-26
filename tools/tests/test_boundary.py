@@ -69,10 +69,11 @@ discovered:
 
 from __future__ import annotations
 
+import ast
 import pkgutil
 from importlib import import_module
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import pytest
 import yaml
@@ -367,6 +368,26 @@ def test_the_kept_exceptions_are_the_two_this_task_found() -> None:
     assert kept == {"data/schema.md", "keys/signing/README.md"}
 
 
+def test_a_directory_is_the_instance_s_only_when_all_of_it_is() -> None:
+    """`owns_directory`, added for the derivation guard, which meets
+    directories as tree objects whose path has no trailing slash and
+    cannot spell the question `owner_of` answers.
+
+    The second half is the one that earns the method: a directory holding
+    a file the product keeps cannot be dropped without dropping that file
+    with it, so it is not the instance's however the entry above it
+    reads. `keys/signing/README.md` is the verification page's own
+    contract, and it is meant to ship."""
+    board = load()
+    assert board.owns_directory("public-data")
+    assert board.owns_directory("public-data/")
+    assert not board.owns_directory("site")
+    for kept in (kept for entry in board.handed for kept in entry.kept):
+        parent = kept.path.rsplit("/", 1)[0]
+        assert board.owner_of(parent + "/") == INSTANCE
+        assert not board.owns_directory(parent), parent
+
+
 def test_a_kept_file_outside_its_own_entry_is_refused() -> None:
     with pytest.raises(ValueError, match="is not a file inside"):
         declaration_from_data(
@@ -632,3 +653,94 @@ def test_the_two_halves_are_one_list() -> None:
 def test_a_directory_entry_is_told_from_a_file_entry() -> None:
     assert Handed(path="data/", reason="r").is_directory
     assert not Handed(path="data/config.yml", reason="r").is_directory
+
+
+# ------------------------------------------------------------------ #
+# What a derived repository meets first: this suite's own imports
+# ------------------------------------------------------------------ #
+
+#: The calls that make a statement a *read* rather than a mention.
+#: `DELIBERATELY_ABSENT` in `test_second_instance.py` names every instance
+#: path there is, with a reason beside each, and names nothing it opens --
+#: a sweep that could not tell the two apart would have to be argued with
+#: rather than obeyed.
+_READERS: Final = frozenset(
+    {"read_text", "read_bytes", "open", "load", "loads", "safe_load"}
+)
+
+
+def _module_level_reads(source: str) -> list[tuple[int, str]]:
+    """Every module-level statement that opens a path spelt as a run of
+    string literals, as (line, path).
+
+    The run has to start at the statement's first literal, which is what
+    `_ROOT / "config" / "instance.json"` looks like and what
+    `ROOT / "instances" / "example" / "config" / "instance.json"` does
+    not: the second names the example's own file, which is the product's,
+    and reading it at import is exactly right.
+    """
+    found: list[tuple[int, str]] = []
+    tree = ast.parse(source)
+    for node in tree.body:
+        if isinstance(
+            node,
+            (
+                ast.Import,
+                ast.ImportFrom,
+                ast.FunctionDef,
+                ast.AsyncFunctionDef,
+                ast.ClassDef,
+            ),
+        ):
+            continue
+        calls = [
+            call.func.attr
+            if isinstance(call.func, ast.Attribute)
+            else getattr(call.func, "id", "")
+            for call in ast.walk(node)
+            if isinstance(call, ast.Call)
+        ]
+        if not _READERS & set(calls):
+            continue
+        literals = sorted(
+            (child.lineno, child.col_offset, child.value)
+            for child in ast.walk(node)
+            if isinstance(child, ast.Constant) and isinstance(child.value, str)
+        )
+        run = ""
+        for _line, _column, value in literals:
+            run = value if not run else f"{run}/{value}"
+            found.append((node.lineno, run))
+    return found
+
+
+def test_no_test_module_reads_an_instance_path_while_it_loads() -> None:
+    """Phase 12, task 5. A read at module scope is not a failing test, it
+    is a module that never collects: in a derived repository, where these
+    paths are the derivation's to lay back in, every test in the file goes
+    down together and the report is a stack trace rather than a sentence.
+    Four modules did it, and each now reads behind a function, so what
+    fails is the assertion that is actually about the declaration.
+
+    **What this sweep cannot see, stated rather than left to be found.** A
+    path nobody spells: `published.load()` and
+    `actions_usage.budget_path()` each open an instance file and name
+    none, and both were among the four. A list of such readers here would
+    be the copy this whole module exists against, so the sweep holds the
+    spelt half and this docstring holds the rest. It also stops at
+    `tools/tests/`: `services/*/test/index.test.js` read the same
+    declaration at module scope until this task, and nothing offline
+    parses JavaScript here.
+    """
+    board = load()
+    offending: list[str] = []
+    for path in sorted((ROOT / "tools" / "tests").glob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        for line, candidate in _module_level_reads(source):
+            if board.owner_of(candidate) == INSTANCE or board.owns_directory(candidate):
+                offending.append(f"{path.name}:{line} reads {candidate}")
+    assert offending == [], (
+        "a test module opens a path the boundary hands to the instance "
+        "before pytest has a test to fail: move the read into a function "
+        f"so that only the tests needing it go red -- {offending}"
+    )

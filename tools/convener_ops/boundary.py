@@ -199,6 +199,32 @@ class Boundary:
             return INSTANCE
         return PRODUCT
 
+    def owns_directory(self, relative: str | Path) -> bool:
+        """Whether the instance owns a *directory*, everything in it
+        included.
+
+        `owner_of` answers about one path, and a caller that has a
+        directory rather than a file cannot always spell it as one: `git
+        rev-list --objects` names a directory by its tree object, whose
+        path carries no trailing slash, and `data` does not start with
+        `data/`. This asks the question the caller actually has.
+
+        A directory holding a file the product keeps is **not** the
+        instance's, whatever the entry above it says: `keys/signing/`
+        cannot be dropped without dropping `keys/signing/README.md` with
+        it, and that file is the product's by this same declaration. So
+        the answer is the `kept:` answer again, applied to the only other
+        kind of thing a repository holds.
+        """
+        directory = str(relative).replace("\\", "/").rstrip("/") + "/"
+        if self.owner_of(directory) != INSTANCE:
+            return False
+        return not any(
+            kept.path.startswith(directory)
+            for entry in self.handed
+            for kept in entry.kept
+        )
+
     @property
     def regenerated_paths(self) -> tuple[str, ...]:
         """Every instance path a scheduled job rewrites in full, upstream's
