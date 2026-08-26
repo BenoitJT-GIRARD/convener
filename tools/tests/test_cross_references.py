@@ -77,6 +77,54 @@ the citations now state the rule instead. The same is true today of the
 ballot comment, the absence of a separate quorum rule, and the
 British-English check: they are real rules of this project that no
 published page states, so nothing here resolves a number for them.
+
+**The prose half**
+==================
+An identifier is the easy half. The same document gets cited in running
+English too -- "the spec's S:4 rights section", "acceptance criterion 8 of
+the spec", "see this task's own report" -- and a reader who follows one of
+those finds exactly what they find for `R-27`. `WORKING_RECORD_PHRASE`
+refuses four phrases, and only four:
+
+* `this task` / `the task's`
+* `the brief` / `own brief` / `task brief`
+* `the spec` (abbreviated and unqualified)
+* `acceptance criterion` / `acceptance criteria`
+
+**What this deliberately does not refuse, and why the list is short.**
+A phrase belongs above only if it *can only* mean the working record.
+Everything below reads the same way and does not, so refusing it would
+buy coverage at the price of an exemption list longer than the rule --
+which is the shape this project treats as a failed control, not as a
+thorough one:
+
+* **`the plan`.** `plan_queue_drain` computes one and `derivation.py`
+  prints one; `validate.py` and `app/src/state/channels.ts` both mean the
+  promotion plan a volunteer edits. It is a noun this product owns.
+* **`the review`.** `docs/governance/editorial-board.md` says a member
+  "reviews edits to the handbook"; `commit_format.py` means "the commits
+  under review"; `docs/toolkit/run-of-show.md` means peer review. Ordinary
+  English three ways over, in a repository that uses the word 123 times.
+* **`the audit`.** `register.py` calls the git history "the audit trail",
+  and `test_dependency_audit_workflow.py` means the dependency audit a
+  published workflow actually runs.
+* **`the report`.** Every guard, checker and sweep in this repository
+  prints one, and says so in its own docstring.
+* **bare `task`, `phase`, `round`.** `docs/start-here/index.md` is headed
+  "Pick a first task", the event journey has four phases, a Markdown
+  checklist has tasks, and `yaml.test.ts` has a round-trip. `COORDINATE`
+  above already catches the citing use, because that one carries a number.
+* **`§N` on its own.** Sixteen of the eighteen in this repository are RFC
+  5545 sections, and the RFC that governs one is often named a sentence
+  earlier rather than beside it. Telling those apart needs more context
+  than a sweep has; the two that named this project's own documents were
+  rewritten instead.
+
+`this task` is the one entry above that takes the same trade
+`SEVERITY_TOKEN` takes: a volunteer-facing page that genuinely meant a
+checklist item would fail here and would have to say "this step". That is
+a one-word fix, and the alternative was a hundred and twenty citations of
+a document nobody can open.
 """
 
 from __future__ import annotations
@@ -140,12 +188,15 @@ RULE_LEAD = re.compile(
 IDENTIFIER = re.compile(r"(?<![A-Za-z0-9_-])([A-Z]{1,3})-(\d{1,3})(?![A-Za-z0-9_-])")
 
 #: A coordinate into a numbered thing: `phase 8`, `task 3`, `fix round 1`,
-#: `Minor 2`, `Important 1b`. Resolved against the titles of published
-#: pages, which is what lets the event journey's own `Phase 3` through and
-#: stops a construction plan's `phase 8`.
+#: `ruling 6`, `Minor 2`, `Important 1b`. Resolved against the titles of
+#: published pages, which is what lets the event journey's own `Phase 3`
+#: through and stops a construction plan's `phase 8`. `ruling` belongs in
+#: this list rather than beside the phrases below because a *numbered*
+#: ruling is a coordinate and nothing else: "a design ruling", carrying no
+#: number, names a settled decision and never matches.
 COORDINATE = re.compile(
     r"(?<![A-Za-z0-9_-])"
-    r"(phase|task|round|wave|minor|major|important|critical)"
+    r"(phase|task|round|wave|ruling|minor|major|important|critical)"
     r"s?[ \-]+(\d{1,2}[a-z]?)\b",
     re.IGNORECASE,
 )
@@ -176,8 +227,42 @@ SECURITY_AUDIT = re.compile(r"(?i)\bsecurity audit\b")
 #: loud, one-line fix; the alternative is leaving the commonest citation
 #: shape in this repository's history held by nothing.
 SEVERITY_TOKEN = re.compile(
-    r"(?<![A-Za-z0-9_-])(C[1-9]|H[1-9]|M[1-9]|L[1-9]|AC\d|S\d|P2-\d)"
+    r"(?<![A-Za-z0-9_-])(C[1-9]|H[1-9]|M[1-9]|L[1-9]|AC\d|S\d|P2-\d{1,2})"
     r"(?![A-Za-z0-9_-])"
+)
+
+#: The working record named in words instead of in codes: `this task`, `the
+#: brief's step 3`, `the spec's table`, `acceptance criterion 8`. Every one
+#: of them points at the same unpublishable documents `SPEC_SECTION` and
+#: `SEVERITY_TOKEN` above point at; the only difference is that a reader
+#: meets them in running English, so nothing shaped like an identifier
+#: catches them.
+#:
+#: **Deliberately four phrases and not more.** Each is refused because it
+#: can only mean the working record -- see the module docstring's "The
+#: prose half" for what is left out, and why a longer list would be worse
+#: than this one:
+#:
+#: * `this task` / `the task's`, but never a bare `the task`, which is
+#:   ordinary English and this product's own vocabulary besides
+#:   (`docs/start-here/index.md` is headed "Pick a first task").
+#: * `the brief`, `own brief`, `task brief` -- always the noun. `brief`
+#:   alone is left out because it is usually the adjective.
+#: * `the spec`, abbreviated and bare. A public standard is always named
+#:   where it is cited -- "the CSP specification", "Tally's OpenAPI spec",
+#:   "the Fetch spec" -- so an unqualified `the spec` is this project's
+#:   own. `the specification` is *not* refused: `docs/reference/
+#:   operations.md` uses it four times for CSP.
+#: * `acceptance criterion` / `criteria` -- a numbered requirements list.
+#:   This product has no such thing of its own to confuse it with.
+WORKING_RECORD_PHRASE = re.compile(
+    r"(?i)(?<![A-Za-z0-9_-])("
+    r"this task(?:'s)?"
+    r"|the task's"
+    r"|(?:the|own|task) brief(?:'s)?"
+    r"|the spec(?:'s)?"
+    r"|acceptance criteri(?:on|a)"
+    r")(?![A-Za-z0-9_-])"
 )
 
 _LINE_COMMENT = re.compile(r"^[ \t]*//.*$", re.MULTILINE)
@@ -643,6 +728,30 @@ def test_no_comment_cites_a_phase_or_a_task_that_is_not_published() -> None:
     )
 
 
+def working_record_phrases(body: str) -> list[str]:
+    """Every phrase in `body` that can only name the working record."""
+    return [match.group(1) for match in WORKING_RECORD_PHRASE.finditer(body)]
+
+
+def test_no_comment_names_the_working_record_in_words() -> None:
+    """The same rule as the three sweeps above, for the half of it written
+    in English rather than in codes.
+
+    "the spec's S:4 rights section", "acceptance criterion 8 of the spec",
+    "see this task's own report" -- a reader who goes looking finds exactly
+    what they find for `R-27`. Say what the code guarantees; if a document
+    really is the point, name one this repository publishes.
+    """
+    found = _offenders(lambda name, body: working_record_phrases(body))
+    assert not found, (
+        f"{_report(found)}. The specifications, the plans and the briefs "
+        "are this project's own working record and never ship. State the "
+        "guarantee, the measurement or the rule, never the document that "
+        "asked for it. See this module's own docstring for the phrases "
+        "this sweep deliberately does not refuse."
+    )
+
+
 def _unpublished_sources(name: str, body: str) -> list[str]:
     """A section of an unpublished specification, a review named by its
     date, and a review finding written as a bare severity."""
@@ -729,6 +838,68 @@ def test_a_python_svg_path_is_not_read_as_prose() -> None:
     `M9` as a review finding. The parser is what keeps that out."""
     source = 'MARK = """<path d="M9 15 V22 H24"/>"""\n'
     assert "M9" not in prose_of("probe.py", source)
+
+
+#: What the prose sweep must refuse, and what it must let through. The
+#: second half is the load-bearing one: every entry there is a real
+#: sentence this repository ships today, and each names a thing this
+#: product genuinely has -- a plan a command computes, a report a guard
+#: prints, an audit a workflow runs, a task a volunteer picks up. A rule
+#: that refused those would need an exemption list longer than itself.
+PROSE_CASES: tuple[tuple[str, list[str]], ...] = (
+    ("acceptance criterion 8 of the spec", ["acceptance criterion", "the spec"]),
+    ("the spec's S:4 rights section", ["the spec's"]),
+    ("see this task's own report", ["this task's"]),
+    ("the brief's own step 1", ["the brief's"]),
+    ("this task's own brief warns against", ["this task's", "own brief"]),
+    ("the task brief names it verbatim", ["task brief"]),
+    ("the acceptance criteria the phase rests on", ["acceptance criteria"]),
+    # Left alone, and each is a sentence from a shipped file.
+    ("the plan the two imply", []),
+    ("the report a person reads, refusals and blind spots alike", []),
+    ("the git history is the audit trail", []),
+    ("Pick up a task and move it forward", []),
+    ("Detection is what the scheduled task operates", []),
+    ("the whole of the exception the specification names", []),
+    ("checked against Tally's own OpenAPI spec", []),
+    ("a plain, dependency-free Node script rather than a spec", []),
+    ("the two-trace shape is a design ruling carried into code", []),
+    ("a brief note beside the value", []),
+)
+
+
+def test_the_prose_sweep_refuses_a_citation_and_keeps_the_domain_noun() -> None:
+    """Both halves, because only the second one can go quietly wrong.
+
+    A sweep that refused `the plan` would be right about
+    `tools/tests/test_registration.py` and wrong about
+    `convener_ops/derivation.py`, which computes one and prints it -- and
+    the way that failure shows up is a maintainer adding an exemption
+    rather than a citation being removed.
+    """
+    for line, refused in PROSE_CASES:
+        assert working_record_phrases(line) == refused, line
+
+
+def test_a_prose_citation_of_the_working_record_is_caught(tmp_path: Path) -> None:
+    """Read through the same extractor as everything else, from a file
+    written to fail: "the repository is clean today" is also what a broken
+    sweep reports."""
+    probe = tmp_path / "probe.py"
+    probe.write_text(
+        '"""Rounds down, per acceptance criterion 8 of the spec."""\n', "utf-8"
+    )
+    body = prose_of("probe.py", probe.read_text(encoding="utf-8"))
+    assert working_record_phrases(body) == ["acceptance criterion", "the spec"]
+
+
+def test_a_numbered_ruling_is_caught_and_an_unnumbered_one_is_not() -> None:
+    """`ruling 6` is a coordinate into a list this repository never
+    publishes. "a design ruling", which is how `docs/reference/
+    operations.md` and `platform_fcc.py` both name a settled decision,
+    carries no number and is not a citation at all."""
+    assert unresolvable_coordinates("Ruling 6: inviting people to") == ["Ruling 6"]
+    assert unresolvable_coordinates("a settled design ruling about") == []
 
 
 def test_a_fixture_host_placeholder_is_not_read_as_prose() -> None:
