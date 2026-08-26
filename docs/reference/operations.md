@@ -372,9 +372,8 @@ drifting, so this paragraph is the only mechanism that gets it corrected.
 **To verify:** push to `main`; both *Publish vitrine* and *Deploy app* end
 green, and the showcase and the cockpit answer at the addresses above.
 
-**Not currently reachable.** No remote is connected to this repository yet
-(`docs/superpowers/mise-en-ligne.md`) — nothing has ever been pushed to
-GitHub, so every gate on this page has been verified by reproducing its
+**Not currently reachable.** No remote is connected to this repository
+yet — nothing has ever been pushed to GitHub, so every gate on this page has been verified by reproducing its
 command locally, never by a real deployment, and the honest current state
 is that none of the four addresses above answers anything today. Two
 things are worth keeping separate once a push does happen:
@@ -395,8 +394,7 @@ things are worth keeping separate once a push does happen:
   removes the cause rather than working around it, exactly as described
   above — but that removal has not yet been checked against a real
   deployment, so treat it as the most likely first thing to verify once
-  this repository is finally connected to GitHub, not as settled. See
-  `docs/superpowers/deferred-work.md` for the fuller history.
+  this repository is finally connected to GitHub, not as settled.
 
 ## Content-Security-Policy and the security headers GitHub Pages cannot serve
 
@@ -613,9 +611,8 @@ message and the record's own `publication.consent` value before deciding
 whether to wait for an answer or to use `convener-discard-recording` instead.
 
 The two-trace shape checked once consent is granted is a design ruling
-recorded in `.superpowers/sdd/phase-4-prep-notes.md` ("2026-08-19 —
-DESIGN RULING for the spec: who deletes the recording, and on what
-evidence"), carried into code rather than re-derived: it refuses to
+— *who deletes the recording, and on what evidence* — carried into code
+rather than restated anywhere it could drift from the code: it refuses to
 delete unless both
 
 1. the `delivered/recording-retrieved` step is ticked on the event's own
@@ -1513,8 +1510,8 @@ file is safe: the file itself carries no name and no address any more
 no `CONVENER_MEETING_API_TOKEN`, the manual implementation looked only for
 `data/events/<event id>/attendance-import.csv`, which `.gitignore` keeps
 out of every checkout -- there was nowhere to run this command *from* that
-could hold that file, and `docs/superpowers/deferred-work.md` entry 10
-recorded the resulting contradiction with acceptance criterion 8 in full.
+could hold that file, and the resulting contradiction with acceptance
+criterion 8 stood recorded until it was fixed.
 `ManualPlatform.get_attendance` now reads
 `data/events/<event id>/attendance-import.csv.enc` first: a host encrypts
 the raw export under the event's own published public key with
@@ -1958,8 +1955,8 @@ That matters because `Write` is what lets a collaborator push a branch, add
 a step to a workflow that reads a sensitive secret, and dispatch that
 workflow against the branch — the exact path the audit's C1/C2 fix narrows
 with `.github/workflows/secret-workflow-monitor.yml` (detection, not
-prevention; see `docs/superpowers/mise-en-ligne.md` Sec 4 for why
-prevention itself is not available at zero cost here). Every person who
+prevention — prevention itself needs a paid tier this project does not
+have). Every person who
 keeps write after they stop being active is a needless widening of that
 population, at zero benefit to anyone.
 
@@ -1992,9 +1989,9 @@ Three things the rule will not do:
 
 - name anyone whose record cannot say when the silence began. Every
   `joined_on` in `data/config.yml` is empty today, so on the live data the
-  proposal is empty — by design, not by accident. Step 3 of the September
-  list below is what ends that, and until it is done this rule cannot say
-  anything at all.
+  proposal is empty — by design, not by accident. *`joined_on`, empty
+  everywhere* under **Deferred governance configuration** below is what
+  ends that, and until it is done this rule cannot say anything at all.
 - name a member who declared an absence covering today, or one carrying a
   nomination the Board has not settled. Either of those is a live question
   already.
@@ -2218,91 +2215,87 @@ not decisions and follow no such shape. The `Commit messages` step of the
 `python` CI job checks only the commits under review, and only those that
 open with one of the acts above; it also refuses an attribution trailer in
 any message.
+## Deferred governance configuration
 
-## After the September collaborators' meeting
+Three settings in the governance data are ordinarily left unfinished
+until an instance's people are in a room together. They are a **deferred
+configuration** in the sense of decision D-13 — the state below is normal
+and expected, not a defect to be rediscovered and not something to fix
+piecemeal by guessing. All three touch `data/config.yml`, the first two
+`data/speakers.yml` as well, and they are easiest done together, in one
+commit, with `cd tools && uv run convener-validate` run before it is
+pushed.
 
-Three changes to the governance data are deliberately deferred until the
-collaborators' meeting in September. They are a deferred configuration in
-the sense of decision D-13 — the state below is normal and expected, not a
-defect to be rediscovered and not something to fix piecemeal beforehand.
-All three touch `data/config.yml`, the first two `data/speakers.yml` as
-well, and they are easiest done together, in one commit, with
-`cd tools && uv run convener-validate` run before it is pushed.
+**What each costs while it is deferred** is below with the change that
+ends it. **Which of them a particular instance still owes** is that
+instance's own business and is not recorded here: this page is the
+product's, and a duplicate that read its predecessor's unfinished
+business here would be reading somebody else's to-do list.
 
-**What this costs until then:** the Board is declared as five members while
-only four people sit on it (see step 2), so the threshold — two thirds of
-the eligible board, rounded up — is four, and only four people ever vote.
-A lead therefore needs every available voice to be approved: effective
-unanimity. This is a known, accepted, temporary state.
+### 1. Board identifiers that are not GitHub logins
 
-### 1. Replace the Board identifiers with real GitHub logins
+`data/config.yml` lists the Board, and each entry's `login` is meant to be
+a GitHub login. Entries are often seeded with first names instead — the
+file is the only place that says which is which. Role detection matches
+the signed-in GitHub account against these values, so an entry that is not
+a login recognises nobody, and that member is treated as a visitor.
 
-`data/config.yml` lists five Board members, and only one of the five
-`login` values is a GitHub login — the other four are first names. The
-file is the only place that says which is which, and it is the file you
-will be editing anyway. Role detection matches the signed-in GitHub
-account against these values, so today it recognises nobody but that one
-account — every other member is treated as a visitor.
-
-Collect each member's GitHub login at the meeting, then rewrite both files
-in step:
+Collect each member's GitHub login, then rewrite both files in step:
 
 1. `data/config.yml` — every `board[].login`.
 2. `data/speakers.yml` — every `selection.ballots[].voter`, using exactly
-   the same mapping. A ballot on record carries the same first-name
-   identifiers, and a vote is tallied only from ballots whose voter is on
-   the Board (`tools/convener_ops/governance.py`), so a Board renamed on its
-   own would silently discard every vote already cast.
+   the same mapping. A ballot on record carries whatever identifier was
+   current when it was cast, and a vote is tallied only from ballots whose
+   voter is on the Board (`tools/convener_ops/governance.py`), so a Board
+   renamed on its own would silently discard every vote already cast.
 
-Nothing else in `data/speakers.yml` holds a Board identifier today:
-`assigned_to` and `publication.approved_by` are empty everywhere, and
-`host_1` and `host_2` hold people's display names, which are not logins and
-must not be rewritten. Check that this is still true before starting.
+Check before starting that nothing *else* in `data/speakers.yml` holds a
+Board identifier: `assigned_to` and `publication.approved_by` do, when
+they are filled in, and `host_1` and `host_2` hold people's display names,
+which are not logins and must not be rewritten.
 
-`convener-validate` reports any voter you miss as `ballot from a non-member`.
+`convener-validate` reports any voter you miss as `ballot from a
+non-member`.
 
-### 2. Merge the duplicate member and lower `board_min`
+### 2. A member recorded twice, and `board_min`
 
-Two of the five entries are the same person, recorded twice: one under a
-GitHub login, one under a first name. Step 1 is what makes that visible —
-once the logins are in, both entries carry the same one. Delete one of
-them, keeping that person's real GitHub login. The Board then goes from
-five members to four, and the threshold from four to three.
+Step 1 is what makes a duplicate visible: one person seeded under a first
+name and later added under their GitHub login is two entries until both
+carry the same one. Delete one of them, keeping the real GitHub login, and
+rewrite the ballots of whichever identifier disappears to the surviving
+one. If any lead ends up with two ballots from the merged person, keep
+one: one person casts one voice, and a repeated voter is a validation
+error. Do not assume no lead carries ballots from both identifiers —
+search `data/speakers.yml` for each of the two before you merge, and
+confirm it.
 
-`board_min` is `5` in `data/config.yml` and should become `3` in the same
-change — not because anything breaks otherwise, but because it is the
-Board's stated target and the Board is choosing a new one. Nothing fails if
-you forget: `convener-validate` prints `board has 4 active members, below its
-target of 5 (board_min)` and still exits `0`. The count is of *active*
-members: an entry marked `inactive` stays in the file, keeps its `login` and
-`joined_on`, and does not occupy a seat. Three is also the floor set by
-decision G-03 — a vote is suspended rather than decided below three eligible
-members — so a target below three would be a target the Board could meet
-and still not be able to decide anything.
+`board_min` is the Board's stated target, and a Board that has just
+changed size is choosing a new one. Nothing fails if you forget:
+`convener-validate` prints `board has N active members, below its target
+of M (board_min)` and still exits `0`. The count is of *active* members:
+an entry marked `inactive` stays in the file, keeps its `login` and
+`joined_on`, and does not occupy a seat. Three is the floor set by
+decision G-03 — a vote is suspended rather than decided below three
+eligible members — so a target below three would be a target the Board
+could meet and still not be able to decide anything.
 
-Rewrite the ballots of whichever identifier disappears to the surviving
-one. If any lead ends up with two ballots from the merged person, keep one:
-one person casts one voice, and a repeated voter is a validation error.
-Do not assume that no lead carries ballots from both identifiers: search
-`data/speakers.yml` for each of the two before you merge, and confirm it.
+### 3. `joined_on`, empty everywhere
 
-### 3. Fill in `joined_on` for every Board member
+`board[].joined_on` is what the inactivity rule measures silence from:
+with no start date there is no window to count, so the rule proposes
+nobody and goes on proposing nobody for as long as the field stays empty.
+It is not a rule that has been switched off — it runs nightly, reads every
+member, and declines to name anyone, which reads exactly like a Board
+where everybody has voted recently. **That is the cost of deferring this
+one, and it is the least visible of the three.**
 
-Every `board[].joined_on` in `data/config.yml` is the empty string. The
-field is what the inactivity rule measures silence from: with no start
-date there is no window to count, so the rule proposes nobody and will go
-on proposing nobody for as long as the field stays empty. It is not a rule
-that has been switched off — it runs nightly, reads every member, and
-declines to name anyone, which reads exactly like a Board where everybody
-has voted recently.
+Ask each member when they joined and record it as `YYYY-MM-DD`. An
+approximate month is better than an empty field, because the window the
+rule counts is twelve months long and a proposal is only ever a prompt for
+a meeting to consider — nothing is applied automatically. Do not fill
+these in from guesswork: a date nobody confirmed would start a silence the
+member never had.
 
-Ask each member at the meeting when they joined and record it as
-`YYYY-MM-DD`. An approximate month is better than an empty field, because
-the window the rule counts is twelve months long and a proposal is only
-ever a prompt for the annual meeting to consider — nothing is applied
-automatically. Do not fill these in from guesswork beforehand: a date
-nobody confirmed would start a silence the member never had.
-
-Once the dates are in, run `cd tools && uv run convener-sweep` and read what it
-prints under `Board inactivity (G-09)`. Nothing there is applied; it is the
-list the meeting discusses.
+Once the dates are in, run `cd tools && uv run convener-sweep` and read
+what it prints under `Board inactivity (G-09)`. Nothing there is applied;
+it is the list the meeting discusses.

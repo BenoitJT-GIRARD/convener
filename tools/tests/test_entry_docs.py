@@ -30,6 +30,7 @@ here on its own.
 from __future__ import annotations
 
 import re
+import subprocess  # nosec B404
 from pathlib import Path
 
 from convener_ops.paths import repo_root
@@ -218,3 +219,59 @@ def test_the_diagram_carries_the_personal_data_lifecycle() -> None:
         "nothing can decrypt it",
     ):
         assert label in block, label
+
+
+#: The two prefixes that name this project's own working record: the
+#: tracked half (specifications, plans, phase reviews, the inventory) and
+#: the untracked half (`.gitignore` keeps it out of every clone). Neither
+#: exists for a reader who did not write them -- one because
+#: `convener_ops.derivation_guard.KEPT_BACK` never lets it leave, the
+#: other because it was never in a clone at all.
+WORKING_RECORD = ("docs/superpowers/", ".superpowers/")
+
+
+def _shipping_markdown() -> list[Path]:
+    """Every tracked Markdown page except the working record itself."""
+    listed = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files", "*.md"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    return [
+        ROOT / name
+        for name in listed
+        if not name.startswith("docs/superpowers/") and (ROOT / name).is_file()
+    ]
+
+
+def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
+    """Phase 12, task 6.
+
+    `app/tests/decisions-records.test.ts` already holds this of
+    `docs/decisions/`: a published record may not send a reader into
+    `docs/superpowers/`, because that directory never leaves this
+    repository. The same sentence is true of every other page that ships,
+    and nothing held them to it -- so `README.md` and `docs/README.md`
+    both pointed a public reader at a design specification that will not
+    exist in the derived repository, `site/README.md` at a decision whose
+    published form sits in `docs/decisions/`, and
+    `docs/reference/operations.md` at four such paths plus one under
+    `.superpowers/`, which `.gitignore` keeps out of *every* clone and
+    which was therefore already unfollowable here.
+
+    Prose or link makes no difference: none of those five was a link, and
+    every one of them was a dead end for the reader who met it.
+    """
+    offending = {
+        path.relative_to(ROOT).as_posix(): prefix
+        for path in _shipping_markdown()
+        for prefix in WORKING_RECORD
+        if prefix in path.read_text(encoding="utf-8")
+    }
+    assert not offending, (
+        f"{sorted(offending)} name this project's own working record, which "
+        "no reader of the published repository has. Say the fact, or point "
+        "at the published form of it under docs/decisions/."
+    )

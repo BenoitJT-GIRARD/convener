@@ -88,8 +88,8 @@ See [`docs/architecture.md`](docs/architecture.md) for how these pieces
 fit together, the diagram of where personal data goes, and the handover
 procedure, and [`docs/decisions/`](docs/decisions/index.md) for why each
 structural choice was made — one record per decision, what was rejected,
-and what it costs. The cockpit's own original design is
-`docs/superpowers/specs/2026-05-23-convener-app-refonte-design.md`.
+and what it costs. There is no separate design document to read after
+them: why the cockpit is shaped the way it is *is* those records.
 
 ## Contributing
 

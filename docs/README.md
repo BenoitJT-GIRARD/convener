@@ -5,8 +5,8 @@ are no longer built into a separate static site — the React app fetches
 them at runtime via the GitHub API and renders them inline (at the point
 of action for templates, in the Handbook tab for long-form reading).
 
-See the design spec at
-`docs/superpowers/specs/2026-05-23-convener-app-refonte-design.md`.
+Why they are rendered that way rather than built into a site of their
+own is `docs/decisions/d-18-static-pages-with-islands.md`.
 
 Layout:
 
