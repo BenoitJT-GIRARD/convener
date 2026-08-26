@@ -72,6 +72,14 @@ on:
       # entry, changing that address would leave the showcase published at
       # the old one until some unrelated commit happened to run this.
       - 'config/instance.json'
+      # And `site/.eleventy.js` reads the product's own Appropriate Legal
+      # Notice from here, through `site/scripts/notice.cjs`: the copyright
+      # line, the terms, the warranty and the licence link every page of
+      # this showcase carries in its colophon. Same reasoning as the entry
+      # above, and the same failure without it -- correcting the notice
+      # would leave every published page showing the old one until some
+      # unrelated commit happened to run this.
+      - 'NOTICE.json'
   workflow_dispatch:
 
 jobs:
