@@ -77,17 +77,27 @@ def test_the_contact_address_matches_confirmation_pys_own_constant() -> None:
     assert load_identity().namespace["contact"] == CONTACT_EMAIL
 
 
-def test_the_record_names_every_one_of_the_six_required_fields() -> None:
-    """The six a processing record has to name: what is held, the purpose,
-    the legal basis, the recipients, the duration and the measures. A
-    one-page record with a heading missing one of the six is not a
-    processing record, even if every
+def test_the_record_names_every_one_of_the_seven_required_fields() -> None:
+    """The seven a processing record has to name: the controller, what is
+    held, the purpose, the legal basis, the recipients, the duration and
+    the measures. A one-page record with a heading missing one of the seven
+    is not a processing record, even if every
     sentence under the headings it does have is accurate. Matched as a
     whole line, not a substring --
     "## Measures" is also a substring of "## Measures Renamed", which this
-    test must not silently accept as still having a "Measures" heading."""
+    test must not silently accept as still having a "Measures" heading.
+
+    `## Controller` was the one this page did not have, and its absence was
+    not cosmetic: this page ships with the product, so a duplicate inherits
+    it, and a record naming no controller is a record every reader is free
+    to assume names the software's author. It answers for whoever runs the
+    instance, which is why the heading below names the instance's own
+    declaration rather than a person -- see
+    `test_the_controller_is_the_instance_and_not_the_author`.
+    """
     headings = {line.strip() for line in _page().splitlines() if line.startswith("## ")}
     for heading in (
+        "## Controller",
         "## What we hold",
         "## Purpose",
         "## Legal basis",
@@ -96,6 +106,29 @@ def test_the_record_names_every_one_of_the_six_required_fields() -> None:
         "## Measures",
     ):
         assert heading in headings, f"{PAGE.as_posix()} is missing {heading!r}"
+
+
+def test_the_controller_is_the_instance_and_not_the_author() -> None:
+    """The controller has to be named the way every other identity on this
+    page is named -- by the instance's own declaration, resolved when the
+    cockpit renders the page -- and not written out.
+
+    A literal organisation name here would be the whole defect this section
+    exists to prevent, arriving from the other direction: a duplicate would
+    publish somebody else's organisation as the controller of its own
+    participants' data, on a page that reads as authoritative because every
+    other claim on it is true.
+    """
+    controller = _page().split("## Controller", 1)[1].split("\n## ", 1)[0]
+    assert "{{ instance.organisation }}" in controller, (
+        f"{PAGE.as_posix()}'s Controller section no longer names the "
+        "instance's own declared organisation; a duplicate inheriting this "
+        "page would name whoever wrote the section instead"
+    )
+    assert "{{ instance.contact }}" in controller, (
+        f"{PAGE.as_posix()}'s Controller section gives no contact address "
+        "for the controller, which is half of what naming one is for"
+    )
 
 
 def test_the_record_does_not_overclaim_the_fingerprints_irreversibility() -> None:
