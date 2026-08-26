@@ -4,7 +4,7 @@ The Editorial Board is the small group that **steers the series**: it validates 
 
 ## Who is on it
 
-- A small, named group — not a crowd. To start: the four current organisers. Aim: about six.
+- A small, named group — not a crowd. The size it aims for, and the size it may not exceed, are declared once as `board_min` and `board_max` in `data/config.yml`; the Board screen shows today's headcount against both. Why the first is a target and the second a rule is in `docs/reference/operations.md` ("The Board's target size").
 - It is reviewed once a year (see below).
 - Being on the Board is a real commitment: you take part in the speaker votes. The Board is the dependable core of the series.
 
@@ -48,16 +48,29 @@ counts. Noticing that needs a call to GitHub with a token, so it is an
 operator's check rather than a test — and it belongs with the "what is
 configured, what is missing" command this project still owes itself.
 
-## The Board as it stands today
+## Where the Board as it stands today is read
 
-Both of these are known, accepted and dated. Neither is a defect to be
-rediscovered, and neither is a rule: the rules are on
-[the Board's rules, in detail](board-rules.md), written against whoever the
-Board happens to be.
+Not here. This page is the product's, and the rules on it are written against
+whoever the Board happens to be; a sentence about who that is right now would
+be a second answer to a question `data/config.yml` already answers, and the
+second answer is the one that goes quietly out of date.
 
-**The Board is declared with five entries for four people, using first names rather than GitHub logins.** Until that is corrected at the September meeting, the bar is four out of four available voices — effective unanimity — and the app recognises only one of the five identifiers as a signed-in member. What has to change, and in what order, is written up in `docs/reference/operations.md` ("After the September collaborators' meeting"). Do not fix it piecemeal beforehand.
+**Who is on the Board, whether every entry is a real GitHub login yet, and how
+today's headcount sits against the target** are all read from `data/config.yml`
+— on the Board screen in the workspace, and by `cd tools && uv run
+convener-validate`, which prints the headcount against the target as a plain
+`Note:` line beside its verdict. **Whether any speaker has been asked for
+publication consent** is read the same way, from `data/speakers.yml`: nothing
+may be published for a speaker until they are asked and their answer is
+recorded, and an unanswered field is the gate working rather than the gate
+being broken.
 
-**No speaker on record has given publication consent.** All 31 have it empty or not yet answered, and none of them has been asked. Nothing may be published for any of them until they are asked and their answer is recorded — which is the gate working, not the gate being broken.
+A governance file that is not finished yet is a normal, expected state and not
+a defect to be rediscovered. `docs/reference/operations.md` ("Deferred
+governance configuration") names each setting that is ordinarily left
+unfinished until an instance's people are in a room together, what it costs
+while it stands, and the change that ends it. Do not fix one of them piecemeal
+by guessing.
 
 ## Once a year — the start-of-season meeting
 

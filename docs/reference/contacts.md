@@ -34,6 +34,6 @@ The series is run by its Editorial Board; between them, its members hold the acc
 
 Two rules, one reason. The one above is about whom a message is addressed to; this one is about where a fact is kept. Neither makes an exception for the names that feel permanent, and a founding board is the clearest case there is: it is the list that looks safest to type, and the one nobody ever comes back to check.
 
-If that list is in a temporary state — an identifier that is not yet a GitHub login, a seat declared and not filled — that state is dated and argued in `docs/reference/operations.md` ("After the September collaborators' meeting"), and nowhere else.
+If that list is in a temporary state — an identifier that is not yet a GitHub login, a seat declared and not filled — the file itself is the only thing that says so, and `convener-validate` is what reports it. What such a state costs while it stands, and the change that ends it, are in `docs/reference/operations.md` ("Deferred governance configuration").
 
 What each of the four roles does is in [Roles](../roles.md); what the Board itself is for is in [The Editorial Board](../governance/editorial-board.md).
