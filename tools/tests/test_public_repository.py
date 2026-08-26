@@ -468,6 +468,35 @@ def test_contributing_states_what_a_sign_off_certifies() -> None:
     )
 
 
+def test_the_separate_licence_is_offered_and_its_condition_is_stated() -> None:
+    """Both halves, because either alone is misleading.
+
+    A holder who is the sole author of every line can licence the work
+    again, on terms the public licence does not carry, to somebody the
+    public licence does not suit. That stops being true the moment part
+    of the work belongs to somebody else, and under a certificate of
+    origin every contributor keeps their own copyright.
+
+    So `README.md` makes the offer and `CONTRIBUTING.md` states what
+    ends it. The offer without the condition would outlive the fact that
+    made it possible; the condition without the offer would explain the
+    cost of something nobody was told about.
+    """
+    assert "a separate licence can be negotiated" in _unwrapped(README), (
+        f"{README.name} no longer offers a licence other than the public "
+        "one. Nobody who needs different terms can tell that asking is a "
+        "route rather than an imposition."
+    )
+    contributing = _unwrapped(CONTRIBUTING)
+    for needle in ("holding their own copyright", "substantive contribution"):
+        assert needle in contributing, (
+            f"{CONTRIBUTING.name} no longer states what a sign-off leaves "
+            f"with the contributor ({needle!r}). The separate licence "
+            f"{README.name} offers then closes on the first merge, with "
+            "nobody having decided anything."
+        )
+
+
 def test_contributing_states_the_support_expectation() -> None:
     assert "No response is guaranteed" in _unwrapped(CONTRIBUTING), (
         f"{CONTRIBUTING.name} no longer says that no response is "

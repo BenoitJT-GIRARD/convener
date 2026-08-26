@@ -45,6 +45,20 @@ academic has to route past an institution's legal office before they can
 fix a typo, and it asks them to grant rights the AGPL does not need granted.
 The certificate asks for a line in a commit message instead.
 
+**One consequence of that, written here rather than discovered later.** The
+sign-off leaves every contributor holding their own copyright, licensed to
+this project under the AGPL and nothing else. While the whole repository is
+one person's work, that person can also grant a different licence to somebody
+whose use the AGPL does not fit, which is what `README.md` offers under
+*Licence*. The first substantive contribution of code ends that, because a
+licence nobody can grant over somebody else's copyright is not a licence.
+
+That is not a reason to refuse a contribution. It is a reason to know, on the
+day one arrives, that merging it is a decision with two sides: take it as it
+stands and the separate-licence route closes, or ask that contributor for the
+right to relicense their part and keep it open. Either is defensible.
+Finding out afterwards is not.
+
 **Nothing automated enforces it, and that is a decision rather than an
 omission.** `convener-check-commits` was the obvious place to put it, and
 it is the wrong one twice over. It reads every commit in the range on every
