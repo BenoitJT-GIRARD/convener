@@ -1,7 +1,66 @@
+# Which dependency trees Dependabot watches, and what a duplicate does with
+# this file.
+#
+# Every surface with a lockfile is audited, and only two were updated
+# ------------------------------------------------------------------
+# Seven dependency trees are committed here, and every one of them already
+# gets an audit on the way in: `.github/workflows/quality.yml` runs `npm
+# audit` over `app/`, `site/` and the three relays under `services/`, and
+# `pip-audit` over `tools/`; `visuals.yml` and `visuals-production.yml`
+# audit `visuals/` in both jobs that install it. That rule is written into
+# those files in as many words -- "every surface with a lockfile gets an
+# audit in this same quality chain".
+#
+# This file watched two of the seven. An audit that reports a vulnerable
+# package while nothing opens the pull request replacing it is half a
+# control: the finding arrives, and then it stays, because bumping a
+# lockfile by hand is the work nobody does. So the list below is the same
+# seven, and `tools/tests/test_public_repository.py` derives it from `git
+# ls-files` rather than reading it -- a manifest committed without an entry
+# here fails that test instead of going unwatched until somebody notices.
+#
+# What this costs, accepted rather than discovered
+# ------------------------------------------------
+# One grouped pull request per directory per month, each running the same
+# gates a human pull request runs. `groups:` is what keeps that to one per
+# directory rather than one per package, and `interval: monthly` to twelve
+# rounds a year rather than fifty-two. Measured against the allowance
+# `config/actions-budget.yml` reads, that is the price of not carrying a
+# known-vulnerable package from one advisory to the next time somebody
+# thinks to look, and it is worth paying here.
+#
+# What a duplicate does with it: turns it off
+# -------------------------------------------
+# Every manifest and every lockfile named below belongs to the **product**,
+# by `config/boundary.yml`'s default -- and for a duplicate an update is a
+# merge. A duplicate whose Dependabot bumps `app/package-lock.json` has
+# edited a product file, and upstream's own bump of that same generated
+# file is then a conflict with no readable resolution, arriving monthly
+# until somebody stops merging. That is precisely the failure the boundary
+# exists to prevent.
+#
+# So version updates belong upstream and nowhere else: one bump there
+# reaches every instance through the merge each of them already does. A
+# duplicate switches them off in its own settings (Code security ->
+# Dependabot version updates) and keeps Dependabot *alerts*, which are
+# enabled in settings rather than configured here, cost no Actions minutes,
+# and tell an operator what they are running without proposing to rewrite a
+# file they do not own.
+
 version: 2
 updates:
+  # `directories:` rather than six near-identical entries: one statement of
+  # the schedule and the grouping, six paths under it. Dependabot still
+  # opens one pull request per directory, so this is a shorter file and not
+  # a cheaper one.
   - package-ecosystem: npm
-    directory: /app
+    directories:
+      - /app
+      - /site
+      - /visuals
+      - /services/auth-proxy
+      - /services/form-relay
+      - /services/signup-relay
     schedule:
       interval: monthly
     groups:
@@ -14,6 +73,9 @@ updates:
     groups:
       all:
         patterns: ['*']
+  # Not a lockfile, and watched for the same reason the trees above are: a
+  # pinned action is a dependency with a digest instead of a version, and
+  # `.github/workflows/` pins every one of them.
   - package-ecosystem: github-actions
     directory: /
     schedule:
