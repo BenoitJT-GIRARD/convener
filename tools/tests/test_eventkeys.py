@@ -55,8 +55,8 @@ def test_a_payload_encrypted_with_the_public_half_is_read_by_the_private_half() 
 def test_the_public_half_alone_cannot_decrypt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """C'est la propriete sur laquelle repose tout le reste : le navigateur, qui
-    ne detient que la moitie publiee, ne peut pas relire ce qu'il a chiffre.
+    """The property everything else rests on: the browser, which holds
+    only the published half, cannot read back what it encrypted.
 
     Not "decrypt() raises when handed the public PEM" -- that is a type
     check that never reaches any cryptography. The property that actually
@@ -108,8 +108,8 @@ def test_decrypt_refuses_a_public_pem_passed_as_the_private_key() -> None:
 
 
 def test_a_ciphertext_from_another_event_does_not_decrypt() -> None:
-    """Une cle par evenement n'est une cle par evenement que si elle ne lit pas
-    les autres."""
+    """A key per event is only a key per event if it cannot read the
+    others."""
     private_b, _ = generate()
     _, public_a = generate()
     ciphertext = encrypt(public_a, b"event a's registration")

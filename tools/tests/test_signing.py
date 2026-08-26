@@ -106,8 +106,8 @@ def test_a_token_signed_with_the_private_half_verifies_with_the_public_half() ->
 
 
 def test_a_certificate_signed_by_a_retired_key_still_verifies() -> None:
-    """Le test sur lequel repose toute la conception : la rotation ne doit
-    jamais invalider un certificat deja emis.
+    """The test the whole design rests on: rotation must never invalidate
+    a certificate already issued.
 
     `retired_private` signs the token below and is never used again --
     exactly what "no longer in service" means. Its public half stays
@@ -131,7 +131,7 @@ def test_a_certificate_signed_by_a_retired_key_still_verifies() -> None:
 
 
 def test_verifying_against_a_key_that_never_signed_the_token_fails() -> None:
-    """Signer avec une cle, verifier avec une autre : l'echec est le point."""
+    """Sign with one key, verify against another: the failure is the point."""
     private_a, _public_a = generate()
     _private_b, public_b = generate()
 

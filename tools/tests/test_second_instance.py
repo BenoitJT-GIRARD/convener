@@ -952,9 +952,9 @@ def test_this_tree_is_what_an_unconfigured_duplicate_looks_like(
 def test_the_second_instances_showcase_says_it_has_not_been_configured(
     second_instance: Built,
 ) -> None:
-    """The banner the inventory (S 5) asks for, on a build rather than in
-    a template: "pour qu'un duplicata non configure le dise, fort, plutot
-    que de publier silencieusement l'identite du gabarit".
+    """The banner on a build rather than in a template, so that a
+    duplicate that has not been configured says so, loudly, rather than
+    publishing silently under the template's identity.
 
     Every page, not one: `_includes/layout.njk` is the one piece of chrome
     the whole showcase shares, and a warning on the home page alone is a

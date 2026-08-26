@@ -97,10 +97,10 @@ def test_is_due_for_destruction_stays_true_well_past_the_boundary() -> None:
 
 
 def test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever() -> None:
-    """Le test qui justifie tout le schema : on chiffre, on detruit, on
-    essaie de relire, et l'echec est le resultat attendu. Sans lui, "les
-    donnees deviennent definitivement illisibles" est une phrase et non
-    une garantie.
+    """The test that justifies the whole scheme: encrypt, destroy, try to
+    read back, and the failure is the expected result. Without it, "the
+    data becomes permanently unreadable" is a sentence and not a
+    guarantee.
 
     There is no separate cryptographic "destroy" call to invoke
     (`eventkeys.py`'s own module docstring): the private key IS the
@@ -332,9 +332,9 @@ def test_erase_skips_an_entry_it_cannot_decrypt() -> None:
 
 
 def test_erase_leaves_every_other_entrys_ciphertext_byte_for_byte_unchanged() -> None:
-    """The test the erasure guarantee calls for by its own reasoning:
-    "reecriture du fichier chiffre sans l'enregistrement concerne, et rien
-    d'autre ne bouge." Not "the file still decrypts" -- a rewrite that
+    """The test the erasure guarantee calls for by its own reasoning: the
+    encrypted file is rewritten without the record concerned, and nothing
+    else moves. Not "the file still decrypts" -- a rewrite that
     re-encrypted every survivor under fresh AES keys would still pass that
     weaker check. Ada's and Marie's entries must be the identical `dict`,
     key for key and byte for byte, both before and after Grace's is

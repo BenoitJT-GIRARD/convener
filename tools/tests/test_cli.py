@@ -4843,11 +4843,11 @@ def test_revoke_certificate_only_revokes_the_named_identifier(
 
 # ------------------------------------------------------------------ #
 # deliver_certificates() / deliver_certificate(): the only step in this
-# project that sends a nominative document anywhere (by e-mail, never as a
-# named document deposited in a
-# depot."). Like the certificate tests above, these check that no name or
-# address ever reaches stdout or the certificate register -- and that the
-# *rendered document* never reaches disk either, that a replay reproduces
+# project that sends a nominative document anywhere (by e-mail, never as
+# a named document deposited in a repository). Like the certificate tests
+# above, these check that no name or address ever reaches stdout or the
+# certificate register -- and that the *rendered document* never reaches
+# disk either, that a replay reproduces
 # the identical document rather than regenerating one, and that the
 # already-registered
 # path leaks nothing, not only the freshly-issued one -- a real defect
@@ -5153,7 +5153,7 @@ def test_deliver_certificates_never_writes_anything_to_disk(
 def test_deliver_certificates_replays_the_identical_document_on_a_second_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A failed remise must replay
+    """A failed delivery must replay
     without regenerating -- the identifier, the payload and the signature
     must not change. Simulated here by calling `deliver_certificates`
     twice in a row (the same recovery path a real retry takes: re-running

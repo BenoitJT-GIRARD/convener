@@ -1,11 +1,11 @@
 """The whole registration-to-certificate chain, and the one property that
-matters most -- "les echecs partiels sont la norme, pas l'exception" -- each
+matters most -- partial failures are the norm, not the exception -- each
 step replayable on its own, without the step before it having just run.
 
-    inscription -> confirmation -> evenement -> recuperation presence
-      -> appariement -> eligibilite -> generation -> remise
-      -> ecriture au registre -> recuperation et suppression de
-      l'enregistrement -> (+90 j) destruction de la cle
+    registration -> confirmation -> event -> attendance retrieval
+      -> matching -> eligibility -> issuance -> delivery
+      -> register write -> recording retrieval and deletion
+      -> (+90 days) key destruction
 
 Every test below builds the *intermediate state* a step needs by writing
 the files that step reads directly -- through the same pure functions
@@ -21,15 +21,15 @@ accident.
 
 The order above is a narrative, not a transaction
 --------------------------------------------------
-Four of these eleven words are not separate commands at all.
-`appariement`, `eligibilite`, `generation` and `ecriture au registre` are
-one call to `convener-issue-certificates`: the register is written *at
+Four of these eleven steps are not separate commands at all. `matching`,
+`eligibility`, `issuance` and `register write` are one call to
+`convener-issue-certificates`: the register is written *at
 issuance*, never after delivery -- idempotence requires it
 (`convener-deliver-certificates` re-derives and
 re-signs but never grows the register; see `certificate.issue`'s own
 "idempotent without being deterministic" section). So there is one test
-below for issuance (covering all four words at once) and a separate one
-for `remise`, in the order they actually run, not four separate tests
+below for issuance (covering all four steps at once) and a separate one
+for `delivery`, in the order they actually run, not four separate tests
 pretending a paragraph of prose is a call graph.
 
 The manual implementation, closed end to end
@@ -216,7 +216,7 @@ def test_confirmation_resend_replays_from_a_committed_registration_alone(
 
 
 # ------------------------------------------------------------------ #
-# recuperation presence -- the manual export, encrypted.
+# attendance retrieval -- the manual export, encrypted.
 # Replays from a plaintext drop alone -- no registration, no other
 # command, ever needs to have run first.
 # ------------------------------------------------------------------ #
@@ -260,7 +260,7 @@ def test_encrypt_attendance_export_replays_from_a_plaintext_drop_alone(
 
 
 # ------------------------------------------------------------------ #
-# recuperation presence -- matching. Replays from a committed
+# attendance retrieval -- matching. Replays from a committed
 # registration and a committed encrypted export alone.
 # ------------------------------------------------------------------ #
 
@@ -290,9 +290,9 @@ def test_match_attendance_replays_from_committed_registrations_and_export_alone(
 
 
 # ------------------------------------------------------------------ #
-# appariement + eligibilite + generation + ecriture au registre --
+# matching + eligibility + issuance + register write --
 # one command, convener-issue-certificates (see the module docstring's "the
-# order above is a narrative" section for why these four words share
+# order above is a narrative" section for why these four steps share
 # one test). Replays from committed registrations and a committed,
 # encrypted attendance export alone -- the central proof.
 # ------------------------------------------------------------------ #
@@ -331,7 +331,7 @@ def test_issue_certificates_replays_from_committed_registrations_and_export_alon
 
 
 # ------------------------------------------------------------------ #
-# generation -- correction path. reissue_certificate replays from a
+# issuance -- correction path. reissue_certificate replays from a
 # revoked register entry alone, never from having called
 # convener-issue-certificates or convener-revoke-certificate in this process.
 # ------------------------------------------------------------------ #
@@ -423,10 +423,10 @@ def test_revoke_certificate_replays_from_an_issued_register_entry_alone(
 
 
 # ------------------------------------------------------------------ #
-# remise -- replays from an issued, undelivered register entry alone.
-# The example: "une remise echouee se rejoue sans
-# regenerer" -- this is that replay, from a register `issue_certificates`
-# never wrote in this process.
+# delivery -- replays from an issued, undelivered register entry alone.
+# A failed delivery is replayed, never regenerated -- this is that
+# replay, from a register `issue_certificates` never wrote in this
+# process.
 # ------------------------------------------------------------------ #
 
 
@@ -480,9 +480,8 @@ def test_deliver_certificate_replays_from_an_issued_undelivered_entry_alone(
     # The exit code alone proved nothing here; inserting `raise
     # RuntimeError` immediately before `sign_for` used to leave this test
     # green. Asserting the printed outcome and that nothing was
-    # regenerated is what actually demonstrates the "une remise
-    # echouee se rejoue sans regenerer" this module docstring cites this
-    # test for.
+    # regenerated is what actually demonstrates the replay without
+    # regeneration this module docstring cites this test for.
     assert deliver_certificate() == 0
     out = capsys.readouterr().out
     assert f"certificate {first.entry.identifier} not delivered for event mrg-042" in out
@@ -571,7 +570,7 @@ def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
 
 
 # ------------------------------------------------------------------ #
-# recuperation et suppression de l'enregistrement -- the manual chain's
+# recording retrieval and deletion -- the manual chain's
 # own answer, replayed from a speaker record alone: nothing to release,
 # nothing to discard, because ManualPlatform holds no recording storage
 # at all (D-13's ordinary state, and the manual implementation's own
@@ -609,7 +608,7 @@ def test_discard_recording_replays_from_a_speaker_record_alone(
 
 
 # ------------------------------------------------------------------ #
-# (+90 j) destruction de la cle -- retention_sweep replays from a
+# (+90 days) key destruction -- retention_sweep replays from a
 # published key and a due event alone; record_destructions replays
 # from DESTROYED_IDS/DESTROYED_ON alone, the "operator recovering a
 # wedged sweep" case its own docstring names -- never from having read

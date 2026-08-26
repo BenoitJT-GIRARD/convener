@@ -78,9 +78,10 @@ def test_the_contact_address_matches_confirmation_pys_own_constant() -> None:
 
 
 def test_the_record_names_every_one_of_the_six_required_fields() -> None:
-    """The six a processing record has to name: données, finalité, base
-    légale, destinataires, durée, mesures. A one-page record with a heading
-    missing one of the six is not a processing record, even if every
+    """The six a processing record has to name: what is held, the purpose,
+    the legal basis, the recipients, the duration and the measures. A
+    one-page record with a heading missing one of the six is not a
+    processing record, even if every
     sentence under the headings it does have is accurate. Matched as a
     whole line, not a substring --
     "## Measures" is also a substring of "## Measures Renamed", which this

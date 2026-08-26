@@ -645,9 +645,10 @@ def test_deploy_workflow_builds_survey_status_before_the_npm_build() -> None:
 # There was a time when a revocation -- a change to
 # data/events/<id>/certificates.yml -- did not even fire this workflow,
 # and the file it would have built was never copied to the showcase, so
-# "le registre fait foi sur l'état" had no observable effect on
-# any verifier. Text assertions on the parsed `run:` block, the same idiom
-# test_notify.py uses for notify.yml, because running the script means a
+# the register being what settles a certificate's state had no observable
+# effect on any verifier. Text assertions on the parsed `run:` block, the
+# same idiom test_notify.py uses for notify.yml, because running the
+# script means a
 # real clone of a real repository -- exactly the network access this
 # suite must not take on (see this module's own docstring).
 # ------------------------------------------------------------------ #
@@ -1125,11 +1126,11 @@ def test_evasion_5_dot_yaml_workflow_is_still_swept(tmp_path: Path) -> None:
 # ------------------------------------------------------------------ #
 # No repo-wide lint enforces SHA pinning
 # or timeout-minutes. Deleting timeout-minutes from survey.yml, or
-# swapping a pinned checkout SHA for actions/checkout@v7, leaves
-# everything green." Both mutations were real when that finding was
-# written -- confirmed against this same `_workflow_files()` sweep before
-# either check below existed. Text-scanned, the same idiom every other
-# scan in this module uses, never parsed and executed.
+# swapping a pinned checkout SHA for actions/checkout@v7, left everything
+# green. Both mutations were real before these checks existed --
+# confirmed against this same `_workflow_files()` sweep. Text-scanned,
+# the same idiom every other scan in this module uses, never parsed and
+# executed.
 # ------------------------------------------------------------------ #
 
 #: A `uses:` line naming an action and a ref: `owner/repo@REF`, optionally
@@ -1948,7 +1949,7 @@ def test_revoke_certificate_workflow_carries_every_env_var_the_command_reads() -
 # their command reads, including all five CONVENER_SMTP_* secrets -- a
 # workflow once shipped passing three of nine and its whole suite stayed
 # green, so the derived-environment test covers
-# the new jobs rather than writing a hand-copied list."
+# the new jobs rather than restating a hand-copied list.
 # ------------------------------------------------------------------ #
 
 

@@ -39,9 +39,10 @@ _PACKAGE_JSON = (_ROOT / "site" / "package.json").read_text(encoding="utf-8")
 
 
 def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
-    """D-26: "on vérifie à la forme déployée, jamais à une forme locale
-    commode." `config/instance.json` is the one place this project's
-    published address is written down -- a second, hand-typed prefix here
+    """D-26: "Verify the shape that will actually be deployed, never a
+    convenient local one". `config/instance.json` is the one place this
+    project's published address is written down -- a second, hand-typed
+    prefix here
     could drift from it exactly the way the site's own templates once
     could. This checker's own regular expression
     over `.eleventy.js` gave way to the same reader the build itself uses, so

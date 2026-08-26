@@ -563,10 +563,10 @@ def test_a_telephone_row_can_still_be_matched_by_code() -> None:
 
 
 def test_two_connections_by_the_same_person_sum_to_one_duration() -> None:
-    """Une deconnexion suivie d'un retour produit deux lignes. Les compter
-    separement priverait de certificat quelqu'un qui a suivi la seance
-    entiere avec une coupure reseau -- exactement la personne qu'il faut
-    ne pas punir."""
+    """A disconnection followed by a return produces two rows. Counting
+    them separately would deny a certificate to somebody who sat through
+    the whole session with a dropped connection -- exactly the person not
+    to punish."""
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     event = MatchEvent(event_id=_EVENT_ID, salt=_SALT)
     # Reconnection: capitalisation drifted between the two connections,

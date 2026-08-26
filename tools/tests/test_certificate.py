@@ -77,11 +77,12 @@ def test_the_register_holds_no_name_and_no_address() -> None:
     field check -- a field added one day must make this test fall, not
     pass unnoticed.
 
-    "Identifiant de certificat, identifiant d'événement,
-    date d'émission, empreinte salée de l'adresse, état. Aucun nom, aucune
-    adresse." This asserts the register's field set is *exactly* that, on
-    both the in-memory type (`CertificateEntry`) and its serialised form
-    (`register_to_data`) -- so a future change that adds anything else, a
+    The register holds a certificate identifier, an event identifier, an
+    issue date, a salted fingerprint of the address and a state -- no
+    name, no address. This asserts the register's field set is *exactly*
+    that, on both the in-memory type (`CertificateEntry`) and its
+    serialised form (`register_to_data`) -- so a future change that adds
+    anything else, a
     display name kept "just for debugging", an unsalted address, a
     free-text note, fails this test the moment it lands, whatever the new
     field is named. A check that instead asserted `not hasattr(entry,

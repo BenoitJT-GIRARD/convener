@@ -617,10 +617,10 @@ def test_matching_code_differs_by_address() -> None:
 
 
 def test_matching_code_differs_by_event() -> None:
-    """Une cle par evenement n'est une cle par evenement que si elle ne
-    laisse pas deviner les autres -- meme propriete que
-    test_eventkeys.py::test_a_ciphertext_from_another_event_does_not_decrypt,
-    pour le code plutot que pour le chiffre."""
+    """A code per event is only a code per event if it gives away nothing
+    about the others -- the same property
+    test_eventkeys.py::test_a_ciphertext_from_another_event_does_not_decrypt
+    holds for the ciphertext, held here for the matching code."""
     event_a = matching_code("mrg-042", "ada@example.org", "sh")
     event_b = matching_code("mrg-043", "ada@example.org", "sh")
     assert event_a != event_b
