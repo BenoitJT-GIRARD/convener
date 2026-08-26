@@ -1,12 +1,12 @@
 {#
-  Task 8: one row-rendering macro shared by every archive page -- the full
+  One row-rendering macro shared by every archive page -- the full
   listing, each year page, and the two field-presence pages ("with a
   recording", "with a discussion") -- so the row markup (title, speaker,
   date, Watch/Discuss pills) is written once. `index.njk`'s own inline
-  archive loop (task 2) is left exactly as it stood rather than rewritten
+  archive loop is left exactly as it stood rather than rewritten
   onto this macro: it is a different, already-reviewed page, and
   duplicating a dozen lines of markup here costs less than the regression
-  risk of touching a page this task does not need to change.
+  risk of touching a page that needs no change.
 #}
 {% macro archiveRow(e) %}
 <li class="archive__row">

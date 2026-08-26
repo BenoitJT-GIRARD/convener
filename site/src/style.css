@@ -36,7 +36,7 @@
  * originals used two.
  * See data/brand.json for the full reasoning.
  *
- * Fix round 4 (the path-prefix defect): the three `url(...)` references
+ * The path-prefix defect: the three `url(...)` references
  * below are deliberately relative (`fonts/...`, no leading slash), not
  * `| url`-filtered like an `href`/`src` in a template. A relative URL
  * inside a stylesheet resolves against *the stylesheet's own address*, not
@@ -168,7 +168,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   padding-right: var(--gutter);
 }
 
-/* ── Not configured (phase 11, task 6) ────────────
+/* ── Not configured ───────────────────────────────
  * The band an unconfigured duplicate publishes above its own masthead --
  * `_includes/layout.njk` emits it only while `site.unconfigured` is not
  * empty, so a configured instance carries neither the markup nor a
@@ -382,8 +382,8 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 .event-lead__back a { border-bottom: 0; }
 .event-lead__back a:hover { text-decoration: underline; }
 
-/* The one-screen data-protection notice, phase 4 spec §4: "before the
- * form" -- surface, not paper, so it reads as a distinct panel against
+/* The one-screen data-protection notice, which the event page carries
+ * before the form -- surface, not paper, so it reads as a distinct panel against
  * the turquoise field, the same role .feature__rail's border plays. */
 .notice {
   border: 2px solid var(--rule-strong);
@@ -403,7 +403,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 .notice p + p { margin-top: .85rem; }
 
-/* ── Registration island (task 6) ────────────────────────────
+/* ── Registration island ─────────────────────────────────────
  * `app/src/islands/signup/SignupForm.tsx`'s own class names -- plain,
  * semantic strings, not Tailwind utilities: this component renders inside
  * a page that already loads this stylesheet, and pulling in the app's own
@@ -471,13 +471,14 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
    * `data/brand.json` already measures (7.93, AAA) -- `--purple-d` is
    * used elsewhere only as a background or a hover border, never as text
    * on this ground, and introducing it here would be a new pairing no
-   * measurement covers yet (task 4's own rule). */
+   * measurement covers yet: every text-on-ground pairing introduced is
+   * measured before it is used. */
   color: var(--purple);
   font-weight: 700;
   margin-top: .85rem;
 }
 
-/* ── Certificate verification island (task 7) ────────────────
+/* ── Certificate verification island ─────────────────────────
  * `app/src/islands/verify/VerifyPage.tsx`'s own class names -- plain,
  * semantic strings, the same reasoning `.signup-form`'s own comment gives:
  * this component renders inside a page that already loads this
@@ -503,10 +504,10 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 }
 /* `--purple` on `--surface` is `purple_on_cream`, already measured at
  * 11.26 (data/brand.json). `--turquoise-d` on `--surface` is a new
- * pairing this task introduces -- turquoise_text_on_cream, 5.41, recorded
- * in data/brand.json alongside the rest of that table (task 4's own
- * rule: every text-on-ground pairing introduced is measured, and the
- * table updated). `--danger`/`--info` are measured on the same ground
+ * newer pairing -- turquoise_text_on_cream, 5.41, recorded
+ * in data/brand.json alongside the rest of that table, under the standing
+ * rule that every text-on-ground pairing introduced is measured and the
+ * table updated. `--danger`/`--info` are measured on the same ground
  * too, recorded in data/brand.json's contrast._comment rather than as a
  * recomputed pairing, since neither is a data/brand.json colour. */
 .verify__eyebrow--primary { color: var(--turquoise-d); }
@@ -525,7 +526,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 .verify__details dd { display: inline; margin: 0; }
 .verify__checking { color: var(--ink-mute); }
 
-/* ── Post-event survey island (phase 7, task 5) ──────────────
+/* ── Post-event survey island ────────────────────────────────
  * `app/src/islands/survey/SurveyForm.tsx`'s own class names -- plain,
  * semantic strings, the same reasoning `.signup-form`'s own comment
  * gives: this component renders inside a page that already loads this
@@ -614,7 +615,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   margin-top: .85rem;
 }
 
-/* Fix round 2: the "Discuss" pill an upcoming edition carries once
+/* The "Discuss" pill an upcoming edition carries once
  * `forum_thread` is set -- reuses `.archive__action--alt`, the same pill
  * the past section below and the homepage archive already render, just
  * spaced clear of the registration island above it (event.njk's own
@@ -869,9 +870,9 @@ a.btn--ghost:hover { border-color: var(--purple); }
   color: var(--ink);
 }
 /* The row's own colour, inherited rather than left to the default link
- * purple (task 5): the title became a link to the edition's own page
- * without changing the row's visual weight -- only the hover signals
- * that it now goes somewhere. */
+ * purple: the title is a link to the edition's own page
+ * and must not change the row's visual weight -- only the hover signals
+ * that it goes somewhere. */
 .archive__title a { color: inherit; }
 .archive__title a:hover { color: var(--purple); }
 .archive__meta {
@@ -917,8 +918,8 @@ a.btn--ghost:hover { border-color: var(--purple); }
   transition: background .15s, color .15s;
 }
 .archive__action:hover {
-  /* Task 11: carried since task 4 as a known defect (that task's own
-   * report flagged it rather than fixing it out of scope) -- a solid
+  /* Carried for a long time as a known, recorded defect rather than
+   * fixed on the spot -- a solid
    * turquoise fill under white text measures 1.61 (data/brand.json's
    * `_forbidden`), badly below the 4.5 floor for normal text; a browser's
    * own rendering measured it at 2.54. Purple, not turquoise, for the
@@ -963,7 +964,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
   .archive__actions { grid-column: 2 / -1; margin-top: .4rem; }
 }
 
-/* ── Archive filters (task 8) ─────────────────────────────── */
+/* ── Archive filters ─────────────────────────────── */─────────
 /* Every option here is a link to a statically generated page (D-18's
  * "static pages, interactivity in islands", extended to a listing rather
  * than a form) -- no script decides what is shown, so the archive stays

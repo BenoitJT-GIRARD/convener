@@ -7,7 +7,7 @@ permalink: "/feed.xml"
   The `<?xml ...?>` declaration above must be the very first thing this
   file writes -- see sitemap.njk's own comment on this same point.
 
-  Task 10: a syndication feed of the editions -- not of every page this
+  A syndication feed of the editions -- not of every page this
   site generates. Its item universe is `events` (site/src/_data/
   events.json) directly, so the archive index, its year and filter pages,
   and the three other static pages are excluded by construction: none of
@@ -33,9 +33,8 @@ permalink: "/feed.xml"
   An edition with no `abstract` yet falls back to naming its speaker --
   `event | eventDescription` (site/.eleventy.js), the one rule event.njk's
   own `pageDescription` and structured-data block call too, so the two
-  cannot state the description of the same edition two different ways
-  (fix wave, branch review minor 2: they once did -- this filter is what
-  closes that).
+  cannot state the description of the same edition two different ways.
+  They once did; this filter is what closed it.
 #}
 <rss version="2.0">
 <channel>

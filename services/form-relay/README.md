@@ -13,9 +13,9 @@ refuses it with `401` or forwards it, byte-identical, as
 the abuse-protection counter described below, and a counter is a count,
 never the data that produced it.
 
-## Abuse protection (C4, 2026-08-23 security audit)
+## Abuse protection
 
-Before this fix this worker had no body-size bound, no rate limiter and no
+This worker once had no body-size bound, no rate limiter and no
 counter at all — unlike `services/signup-relay`, which has all three (that
 service's own README.md, "Abuse protection"). `.github/workflows/
 candidate-form.yml` had no `concurrency:` block either, so its own runs
@@ -47,7 +47,7 @@ nothing here to slow it down or bound it. Three bounds, mirroring
   seconds. Keyed on one fixed, literal string (`'proposal'`), never on
   anything a caller sends: there is only one form here, so there is no
   legitimate reason to key this any finer, and a key derived from
-  caller-supplied data is exactly M5's own gap — `services/signup-relay`'s
+  caller-supplied data is exactly the gap next door — `services/signup-relay`'s
   limiter was keyed on the attacker-supplied event id, which let a caller
   who varies that field evade it entirely (see that service's own README.md
   for the fix). Checked only once a request's signature already verifies,

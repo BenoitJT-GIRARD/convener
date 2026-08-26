@@ -10,11 +10,11 @@ pagination:
   data: "archive.years"
   size: 1
   alias: yearInfo
-  # Task 10: without this, only the first year page would join
+  # Without this, only the first year page would join
   # `collections.all` -- see event.njk's own comment on this same key.
   addAllPagesToCollections: true
 permalink: "/archives/{{ yearInfo.year }}/"
-# Task 10: see event.njk's own front-matter comment for why this is
+# See event.njk's own front-matter comment for why this is
 # `eleventyComputed` rather than a plain string -- this template is
 # paginated over `archive.years`, so `yearInfo` only exists once Eleventy
 # has resolved which year a given generated page is for.

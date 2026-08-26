@@ -1,7 +1,7 @@
-/* Task 6 (phase 6): the production render step -- screenshots each real,
+/* The production render step -- screenshots each real,
  * scheduled edition `convener-render-visuals` (Python, `tools/convener_ops/cli.py`)
  * already wrote as a self-contained HTML page, on the identical pinned
- * engine task 5's own `render-and-compare.mjs` uses for its regression
+ * engine `render-and-compare.mjs` uses for its regression
  * check.
  *
  * Deliberately its own file, not a mode flag on `render-and-compare.mjs`:

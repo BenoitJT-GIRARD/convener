@@ -27,8 +27,8 @@ in `proposal.py` changes the live form the next time this script runs, and
 a label renamed in one place without the other breaks a test rather than
 breaking the form in production.
 
-Gender and Career stage are DROPDOWNs, and the ids are resolved -- R-9
-------------------------------------------------------------------------
+Gender and Career stage are DROPDOWNs, and the ids are resolved
+----------------------------------------------------------------
 `proposal.py` compares a submission's `Gender` and `Career stage` literally
 against `GENDERS` and `CAREER_STAGES`, falling back to `"undisclosed"` on
 anything else. An earlier version of this script answered that by asking
@@ -49,8 +49,8 @@ resolved, delivers the exact vocabulary token every time. Free text over a
 closed six-token vocabulary does the opposite: a respondent who types
 `Postdoc`, `post-doc` or `Senior Lecturer` fails the literal membership
 test in `to_lead` and is written as `"undisclosed"`, silently, with no log
-line and no signal -- precisely the outcome R-2 exists to prevent, and at a
-steady rate rather than as an edge case.
+line and no signal -- precisely the outcome a closed vocabulary exists to
+prevent, and at a steady rate rather than as an edge case.
 
 So `Gender` and `Career stage` are `DROPDOWN` questions here, and the
 resolution the earlier design avoided lives in `convener_ops.proposal.field_value`
@@ -59,9 +59,9 @@ reaches `to_lead`, so `to_lead`'s `fields: dict[str, str]` stays an honest
 contract. Each option's `text` is the bare vocabulary token (`phd`, `NB`,
 `group-leader`, ...) and nothing else: any friendly gloss belongs in the
 question's own wording, never smuggled into the option text, or the next
-"helpful" rewording of an option silently breaks the build (R-3, again).
+"helpful" rewording of an option silently breaks the build.
 `undisclosed` is offered as an ordinary option among the others, not singled
-out or worded as a refusal -- R-2 again: it is a real answer.
+out or worded as a refusal: it is a real answer.
 
 Option order matters and is not incidental
 -------------------------------------------
@@ -258,11 +258,12 @@ class _Question:
 
 #: What each non-`"undisclosed"` token in `GENDER_ORDER`/`CAREER_STAGE_ORDER`
 #: means, for `_dropdown_placeholder` below to fold into a disambiguating
-#: placeholder. R-9 made the vocabulary arrive intact; it does not make a
+#: placeholder. Resolving the option ids makes the vocabulary arrive
+#: intact; it does not make a
 #: respondent pick the *right* token -- "independent" and "group-leader"
 #: read as near-synonyms side by side, and "NB" means nothing to a
 #: respondent who has never seen the abbreviation. The gloss lives here,
-#: never in the option `text` itself (R-3: a "helpful" rewording of an
+#: never in the option `text` itself (a "helpful" rewording of an
 #: option's own text would silently break the build, since option text is
 #: what `test_the_gender_options_are_exactly_the_imported_vocabulary_in_order`
 #: pins against the shared vocabulary). A token present in the order tuple
@@ -288,7 +289,7 @@ def _dropdown_placeholder(order: tuple[str, ...], gloss: dict[str, str]) -> str:
     not say' -- built from the live vocabulary and its gloss rather than a
     second hand-typed sentence, so the wording always lists whatever the
     vocabulary actually is. `undisclosed` is named last and framed as a
-    choice, never omitted -- R-2: it must read as a legitimate answer, not
+    choice, never omitted: it must read as a legitimate answer, not
     a refusal to answer."""
     named = [f"{value} ({gloss[value]})" for value in order if value != "undisclosed"]
     return ", ".join(named) + ", or undisclosed if you'd rather not say"

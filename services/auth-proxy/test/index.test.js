@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { handle } from '../src/index.js';
 
-// Phase 10, task 2: the origin this worker answers CORS preflights for
+// The origin this worker answers CORS preflights for
 // is the one address `config/instance.json` declares this project is
 // published at. A Worker can read none of that -- it runs on Cloudflare
 // with no repository in reach -- so the deployed value lives in this
@@ -12,8 +12,8 @@ import { handle } from '../src/index.js';
 // See `services/signup-relay/test/index.test.js`'s own copy of this
 // block for the reasoning in full, including why the one TOML line is
 // matched rather than parsed.
-// Read inside the one test that needs it, never while this module loads
-// (phase 12, task 5). `config/instance.json` is a path
+// Read inside the one test that needs it, never while this module loads.
+// `config/instance.json` is a path
 // `config/boundary.yml` hands to the instance, and a derived repository
 // is entitled not to have it: a read at module scope would have taken
 // this whole suite down at import -- every test in it, including the

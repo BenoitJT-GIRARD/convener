@@ -1,10 +1,10 @@
-/* Task 11 (phase 5): the automatic half of "AA accessibility, verified" --
- * criterion 4. Runs axe-core (Deque's rule engine, MIT-licensed, no
+/* The automatic half of "AA accessibility, verified".
+ * Runs axe-core (Deque's rule engine, MIT-licensed, no
  * account, no third-party call at run time) against every page the
  * showcase actually generates, rendered in a real, JavaScript-executing
  * browser -- not a static-HTML sweep, which would report the three
  * islands (the registration form, the certificate-verification panel,
- * the post-event survey, added phase 7 task 5) as empty `<div>`s and pass
+ * the post-event survey) as empty `<div>`s and pass
  * for the wrong reason (D-25: "a control that cannot fail loudly is not a
  * control").
  *
@@ -28,8 +28,8 @@
  * the one place that address is written down, and every template's
  * `| url` filter call resolves against the prefix `.eleventy.js` derives
  * from it. D-26 ("on vérifie à la forme déployée, jamais à une forme
- * locale commode") is exactly the lesson phase 5's own screenshot rounds
- * paid for: seven earlier passes, all served at a bare `localhost` root,
+ * locale commode") is exactly the lesson this project's own screenshot
+ * passes paid for: seven of them, all served at a bare `localhost` root,
  * all green, on a site where every relative path -- style sheet, fonts,
  * every island's own fetches -- would have 404'd once actually published.
  * This script reads that same declaration, through the same
@@ -42,7 +42,7 @@
  * `app/dist` (the main SPA, skipped by the crawl below -- it is the
  * operators' cockpit, not a public page) plus its three island bundles
  * (`app/dist/islands/signup`, `app/dist/islands/verify`,
- * `app/dist/islands/survey`, added phase 7 task 5) and the static files
+ * `app/dist/islands/survey`) and the static files
  * they fetch at runtime (`keys/events/*.pub`, `certificates.json`,
  * `keys/signing/index.json`, `survey-status.json`) -- into one tree, at
  * the one subtree (`app/`) every real deployment already uses.
@@ -238,7 +238,7 @@ async function discoverHtmlPages(root) {
  *  plus two fixed facets (recordings, discussions, `archives-filter.njk`'s
  *  own front matter -- always generated, not data-derived) plus one page
  *  per distinct past year plus one event page per event (`event.njk`)
- *  plus one survey page per event (`survey.njk`, phase 7 task 5 -- one
+ *  plus one survey page per event (`survey.njk` -- one
  *  static page per event, the same D-19 addressing `event.njk` already
  *  uses).
  */
@@ -334,7 +334,7 @@ async function runAxe(page, axeSource) {
  *  after a legitimate refactor costs one line and a rebuild; a silent
  *  false pass costs nobody ever noticing.
  *
- *  All ten were found and measured during task 11 or this review, by
+ *  All ten were found and measured against the real thing, by
  *  rendering the real built pages and reading axe's own explanation for
  *  each flagged node (`node.any[].data.messageKey`), not assumed from the
  *  rule's name:
@@ -362,8 +362,8 @@ async function runAxe(page, axeSource) {
  *    *designed* background clears AA with room to spare either way:
  *    purple on cream (`purple_on_cream`, 11.26) for the masthead;
  *    turquoise on purple (`turquoise_on_purple`, 7.93 -- added to
- *    `data/brand.json` by task 11's own review, since the pairing had
- *    existed, unmeasured by name, since task 4) for `.coda__text em`.
+ *    `data/brand.json` on review, since the pairing had
+ *    existed unmeasured by name) for `.coda__text em`.
  *  - `elmPartiallyObscuring` -- `.coda__text` itself (the element `em`
  *    sits inside, not the `em` alone), where `.coda__loops` sits in a
  *    lower stacking position than `.coda__inner` (`z-index: 1`): white on

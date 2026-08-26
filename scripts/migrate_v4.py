@@ -19,8 +19,8 @@ hosts', which is exactly what every line meant before this field existed, so
 an empty checklist is the migration preserving today's behaviour rather than
 declining to guess at one. Nothing here reads `assigned_to` to fill it --
 that is the board member who owns the *lead*, a different notion at a
-different grain, and deriving one from the other is the defect phase 2 paid
-for.
+different grain, and deriving one from the other is a defect this project
+has already paid for once.
 
 What it deliberately does not do: it never overwrites a key that is already
 there, and it never touches `publication.consent`. Asking the speakers for

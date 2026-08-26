@@ -10,7 +10,7 @@ module.exports = [
       globals: {
         module: 'writable',
         require: 'readonly',
-        // Task 8 (phase 6): `icsFoldLine`'s own UTF-8-aware line folding
+        // `icsFoldLine`'s own UTF-8-aware line folding
         // needs byte access a JavaScript string does not give directly --
         // `Buffer`, Node's own built-in, no new dependency. The only file
         // this bare, unscoped block actually lints is `.eleventy.js`
@@ -25,13 +25,13 @@ module.exports = [
       eqeqeq: 'error',
     },
   },
-  // Fix round 1: scripts/check-paris-standing-start.cjs -- a plain
+  // scripts/check-paris-standing-start.cjs -- a plain
   // CommonJS Node script (`.cjs`, so it parses as CommonJS regardless of
   // this package.json's own missing "type": "module", the same guarantee
   // the `.mjs` extension gives the block below for the opposite case), but
   // one that (unlike `.eleventy.js` above) actually reads a file and
   // reports to the console, so it needs the Node globals the bare
-  // CommonJS block does not declare. Phase 10 task 2 added two more under
+  // CommonJS block does not declare. Two more sit under
   // the same override -- `published.cjs`, this package's own reader of
   // `config/instance.json`, and `print-published.cjs`, which prints what
   // that reader and the real `.eleventy.js` resolve for the Python suite
@@ -58,7 +58,7 @@ module.exports = [
       eqeqeq: 'error',
     },
   },
-  // Task 11: scripts/check-a11y.mjs -- an `.mjs` file, always parsed as an
+  // scripts/check-a11y.mjs -- an `.mjs` file, always parsed as an
   // ES module by Node regardless of this package.json's own missing
   // "type": "module" (that field only decides how a bare `.js` extension
   // is read), so it needs `sourceType: 'module'` and Node's own runtime

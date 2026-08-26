@@ -13,15 +13,15 @@ silently. This script closes it: the custom properties are generated, and
 `--check` makes the generation a fact about the repository rather than a
 habit somebody might keep up.
 
-A third file, `app/src/design/tokens.ts`, used to be generated here too. Fix
-round 1 of this task found it dead -- nothing under `app/src` imports it --
-and retired it instead: a generated file nobody reads still drifts, exactly
+A third file, `app/src/design/tokens.ts`, used to be generated here too. It
+turned out to be dead -- nothing under `app/src` imports it --
+and was retired instead: a generated file nobody reads still drifts, exactly
 as a hand-typed one would, except it now looks maintained. If a real
 consumer ever needs it again, it should be wired up and regenerated, not
 resurrected as an unread copy.
 
-What the charter is, after phase 10
--------------------------------------
+What the charter is
+--------------------
 `data/brand.json` is no longer *the* source of fact; it is *this
 instance's*. `config/boundary.yml` hands `data/` to the instance, so a
 duplicate writes its own values there and never merges a conflict with
@@ -86,7 +86,7 @@ The two downloadable templates are generated whole
 files `docs/toolkit/visual-kit.md` hands a volunteer. Nothing in them is
 hand-authored any more, so there are no markers and no splice: they are
 written entire, from the charter and from `config/instance.json`. They
-were drawn by hand until phase 10 task 4 and had drifted onto the palette
+were drawn by hand once, and had drifted onto the palette
 D-16 discarded -- including one line set in the page's own ground colour,
 invisible in every poster ever downloaded. See
 `convener_ops/brand_templates.py` for the measurements and for why the mark is
@@ -129,7 +129,7 @@ from convener_ops.brand import rgb_triplet, rgba
 from convener_ops.paths import repo_root
 
 #: The instance's own values, relative to the repository root. Not "the one
-#: source of fact" any more, and that is phase 10's doing: an instance that
+#: source of fact" any more: an instance that
 #: has not chosen its colours has no such file, and `brand.load` reads the
 #: product's own charter (`brand/convener/brand.json`) instead. Kept under
 #: this name because every failure message and both generated stylesheets'
@@ -207,12 +207,13 @@ def _splice(current: str, inner: str) -> str:
 
 
 #: `site/src/style.css`'s tokens. Names and values match the file as it
-#: stood before this script existed -- task 2 already restored the charter's
-#: measured values by hand -- plus `--white`/`--white-rgb`, added here because
+#: stood before this script existed, once the charter's
+#: measured values had been restored by hand, plus `--white`/`--white-rgb`,
+#: added here because
 #: `#fff` was hand-typed more than a dozen times below the block for plain
 #: white text and borders, and a value `data/brand.json` carries cannot be
-#: one this stylesheet retypes either. `--danger`/`--info` joined in a later
-#: fix round: the certificate-verification page needed them and got them
+#: one this stylesheet retypes either. `--danger`/`--info` joined later:
+#: the certificate-verification page needed them and got them
 #: hand-typed outside this block instead, the same duplication `--white`
 #: was added here to avoid -- so they generate from `_DANGER`/`_INFO` below,
 #: same as `app/src/design/tokens.css`'s own two, rather than being retyped.
@@ -391,8 +392,8 @@ def main(argv: list[str] | None = None) -> int:
     # The palette first, and unconditionally -- writing or checking. A
     # measurement that no longer recomputes, or one that recomputes below
     # AA, is not a file that needs regenerating: it is a palette that must
-    # not build, whichever of the two files it came from. Phase 7 put the
-    # `--check` here precisely so that a default palette could ship at all
+    # not build, whichever of the two files it came from. The
+    # `--check` is here precisely so that a default palette could ship at all
     # (see brand/convener/brand.json's own `_why_a_default`), and a check
     # that only compared files against a JSON document would have carried
     # none of that promise.

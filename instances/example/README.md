@@ -20,7 +20,7 @@ directory takes the default.
 
 ## What it is for
 
-**Proving phase 10.** The separation of instance from code is not a claim
+**Proving the separation.** Instance from code is not a claim
 anybody can read their way to. `tools/tests/test_second_instance.py`
 copies this repository into a scratch tree, deletes every file the
 boundary hands to the instance, lays these files into the holes, runs the
@@ -29,13 +29,13 @@ generated templates, the published feeds, the posters — and sweeps the
 result for every written form of the *first* instance's name, addresses,
 series and charter. If any survives, the build fails and names the file.
 
-**Being the product's first consumer.** Phase 11 turns this into the
+**Being the product's first consumer.** This is the
 example instance a visitor can click through and the fixture `convener`'s
 own test suite runs against. It is not a test double written for a
 demonstration; it is what a duplicate looks like on the day it is made.
 
-**Being what "not configured" is measured against.** Phase 11 task 6 makes
-the declaration here the thing every instance's own declaration is compared
+**Being what "not configured" is measured against.** The declaration here
+is the thing every instance's own declaration is compared
 with, value by value: while any of the eleven values in
 `config/instance.json` is still one of these, the showcase prints a band
 above its masthead on every page and the cockpit prints one above its

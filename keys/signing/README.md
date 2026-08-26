@@ -52,7 +52,7 @@ Rotating the signing key never means deleting a `.pub` file from this
 directory. A signing key's whole reason for existing separately from an
 event key (`keys/events/`) is that retiring one from *service* -- no
 longer used to sign new certificates -- must never invalidate a
-certificate it already signed (phase 4 spec, §7). The only thing that ever
+certificate it already signed. The only thing that ever
 changes on rotation is which private key is loaded into the
 `CONVENER_SIGNING_KEY` secret; every public half ever committed here keeps
 being published, unconditionally, for as long as this repository exists.
@@ -145,7 +145,7 @@ It is deliberately tolerant of order: a certificate signed under *any* key
 whose public half is somewhere in the list still verifies, regardless of
 where in the list that key sits.
 
-The recommended order, for task 13's build step and any other caller, is
+The recommended order, for the build step and any other caller, is
 **newest first**: list every `*.pub` file here, sort filenames in
 *descending* order, and build the `public_pems` list from that. Most
 verifications are of a certificate signed under the key currently in

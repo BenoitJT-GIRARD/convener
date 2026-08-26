@@ -4,7 +4,7 @@ pagination:
   data: events
   size: 1
   alias: event
-  # Task 10: without this, Eleventy adds only the *first* page a paginated
+  # Without this, Eleventy adds only the *first* page a paginated
   # template generates to `collections.all` -- so `sitemap.njk`'s own loop
   # over that collection would have listed just one edition, not five. The
   # same flag is added to archives-year.njk and archives-filter.njk below,
@@ -19,22 +19,22 @@ pagination:
 # speaker's talk is retitled and would move the page a QR code or a shared
 # link already points at.
 permalink: "/events/{{ event.id | lower }}/"
-# Task 10: `pageTitle`/`pageDescription` feed layout.njk's `<title>`, Open
-# Graph and Twitter Card metadata (acceptance criterion 6). `eleventyComputed`
+# `pageTitle`/`pageDescription` feed layout.njk's `<title>`, Open
+# Graph and Twitter Card metadata. `eleventyComputed`
 # rather than a plain front-matter string: this template is paginated
 # (`pagination.alias: event` above), so these values only exist once Eleventy
 # has resolved *which* event a given generated page is for -- a plain string
 # here would render before that happens and could not read `event` at all.
 eleventyComputed:
   pageTitle: "{{ event.title }}"
-  # Fix wave (branch review, minor 2): this used to restate the fallback
+  # This used to restate the fallback
   # inline; it now calls the one shared rule (site/.eleventy.js::
   # eventDescriptionFallback) the body below and feed.njk both call too.
   pageDescription: "{{ event | eventDescription }}"
-  # Task 9 (phase 6): the share image, when this edition currently has one
+  # The share image, when this edition currently has one
   # ready (`.eleventy.js::eventBannerUrl` / `src/_data/banners.js`) --
   # empty string otherwise, which `layout.njk`'s own `{% if pageImage %}`
-  # treats as "no tag at all", the same absence phase 5's own task 10
+  # treats as "no tag at all", the same absence the metadata block
   # already chose over a broken pointer. `banners` is this page's own
   # global data, read here the same way `site` already is elsewhere.
   pageImage: "{{ event | eventBannerUrl(banners) }}"
@@ -43,7 +43,7 @@ eleventyComputed:
 {% set isUpcoming = event.status == "scheduled" %}
 
 {#
-  Task 10: structured event data (schema.org Event, JSON-LD), so a search
+  Structured event data (schema.org Event, JSON-LD), so a search
   engine shows this edition's date correctly rather than reading this page
   as an ordinary article. Built as a plain object and serialised with the
   `jsonLd` filter (site/.eleventy.js), which drops any key set to `null` at
@@ -70,7 +70,7 @@ eleventyComputed:
 #}
 {% set eventUrl = page.url | absoluteUrl %}
 {#
-  Fix round 1: the series' standing start time is 12:30 *Europe/Paris
+  The series' standing start time is 12:30 *Europe/Paris
   local time*, not a fixed UTC offset -- `+01:00` (CET) roughly late
   October to late March, `+02:00` (CEST) the rest of the year.
   `parisStandingStart` (site/.eleventy.js) derives both the JSON-LD
@@ -84,7 +84,7 @@ eleventyComputed:
 {% set parisTime = event.date | parisStandingStart %}
 
 {#
-  Fix wave (branch review, minor 2): this same fallback -- abstract, else
+  This same fallback -- abstract, else
   speaker name plus optional affiliation plus the closing sentence -- also
   feeds `pageDescription` above (Open Graph/Twitter Card) and feed.njk's
   per-item `<description>`. One shared filter (site/.eleventy.js::
@@ -170,7 +170,7 @@ eleventyComputed:
   not happened") as if it were news, which "Upcoming" in the rail above
   already said better.
 
-  Fix round 2 -- `forum_thread` is not the same claim. Nothing gates it by
+  `forum_thread` is not the same claim. Nothing gates it by
   status the way `RECORDING_STATUSES` gates a recording
   (`public_data.py::PUBLISHABLE_ALWAYS`): an operator can open a
   discussion thread ahead of the seminar, and the field is published
@@ -192,12 +192,12 @@ eleventyComputed:
   </header>
 
   {#
-    Phase 4 spec section 4 ("Formalities"): a one-screen notice on the
-    event page, before the form. The wording below is the one phase 4
-    already settled and shipped, originally at `app/src/signup/
-    SignupForm.tsx`'s own `Notice()` component (quoted here at task 5,
-    rather than redrafted). Task 6 removed that component's own copy once
-    it mounted the registration island beneath this notice: D-18 keeps
+    A one-screen data-protection notice on the
+    event page, before the form. The wording below is the one this project
+    settled on and shipped, originally at `app/src/signup/
+    SignupForm.tsx`'s own `Notice()` component (quoted here,
+    not redrafted). That component's own copy went once
+    the registration island mounted beneath this notice: D-18 keeps
     text that needs no interactivity as plain static HTML, so this block
     is now the *only* copy, not a second one kept in step with a first --
     see `app/src/islands/signup/SignupForm.tsx`'s own module comment.
@@ -226,12 +226,12 @@ eleventyComputed:
       To access, correct or erase your data before that date, write to
       <a href="mailto:{{ site.contact }}">{{ site.contact }}</a>.
       Read the full
-      {# Fix round 4: this used to link the private source repository
+      {# This used to link the private source repository
          directly (D-15), which returns GitHub's own 404 to a public
          visitor. `donnees.njk` already linked the same record at its
          published handbook address; this matches it exactly, rather than
          stating a second, disagreeing answer to the same question.
-         Phase 10 task 2: the address itself is no longer typed here at
+         The address itself is no longer typed here at
          all -- `absoluteUrl` (site/.eleventy.js) builds it from
          `config/instance.json`, so a duplicate publishing under its own
          address gets its own link with nothing to edit here.
@@ -244,7 +244,7 @@ eleventyComputed:
   </div>
 
   {#
-    Task 6: the registration island itself, mounted here, beneath this
+    The registration island itself, mounted here, beneath this
     notice -- extracted from the operators' application into its own
     small, self-contained bundle, so a visitor who wants to register never
     downloads the cockpit (D-18's own argument). Nothing renders
@@ -253,7 +253,7 @@ eleventyComputed:
     e-mail, never published (acceptance criterion 2).
 
     `#registration-form` is `app/src/islands/signup/main.tsx`'s own mount
-    point -- kept as the exact id task 5 already reserved and
+    point -- kept as the exact id this page reserved for it, which
     `tools/tests/test_site.py::test_the_notice_precedes_the_reserved_
     place_for_the_registration_form` already pins, so that test needed no
     change here. `data-event-id` is how the island learns which event
@@ -273,13 +273,13 @@ eleventyComputed:
   <script type="module" src="{{ '/app/islands/signup/signup.js' | url }}"></script>
 
   {#
-    Fix round 2: `forum_thread` carries no status gate at all
+    `forum_thread` carries no status gate at all
     (`public_data.py::PUBLISHABLE_ALWAYS`), so an operator can open this
     thread before the seminar happens -- the same "Discuss" pill the past
     section below already renders, attached here instead of a new band,
     and only when there is a thread to link. No disabled placeholder: an
     upcoming edition with no thread yet is not news, the same reasoning
-    that dropped the recording half of this section in round 1.
+    that dropped the recording half of this section.
   #}
   {% if event.forum_thread %}
   <div class="event__discuss">

@@ -11,7 +11,7 @@ pagination:
   data: facets
   size: 1
   alias: facet
-  # Task 10: without this, Eleventy would add only the first facet page to
+  # Without this, Eleventy would add only the first facet page to
   # `collections.all` -- which would make both facets look excluded from
   # the sitemap below whether or not `sitemap: false` (this front matter's
   # own next key) were even present. Set explicitly, alongside that flag,
@@ -19,7 +19,7 @@ pagination:
   # pagination's own default.
   addAllPagesToCollections: true
 permalink: "/archives/{{ facet.slug }}/"
-# Task 10: excluded from the sitemap (site/sitemap.njk) -- see that
+# Excluded from the sitemap (site/sitemap.njk) -- see that
 # template's own comment for why. Both facets restate a subset of what
 # `/archives/` and each year page already list in full, and every edition
 # in either one also has its own canonical page -- a crawler gains nothing

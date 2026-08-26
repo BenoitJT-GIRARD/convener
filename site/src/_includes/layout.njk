@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 {#
-  Security audit 2026-08-23, M4 + L3. `csp.meta` (site/src/_data/csp.js) is
+  `csp.meta` (site/src/_data/csp.js) is
   this project's Content-Security-Policy -- see that file's own header
   comment for what each directive is doing here and why the rest
   (X-Content-Type-Options, Permissions-Policy, HSTS, COOP/COEP/CORP,
@@ -20,7 +20,7 @@
 <meta http-equiv="Content-Security-Policy" content="{{ csp.meta }}">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 {#
-  Task 10: referencing and sharing. `pageTitle`/`pageDescription` are set by
+  Referencing and sharing. `pageTitle`/`pageDescription` are set by
   the content template this layout wraps -- a short fragment (e.g. an
   event's own title) rather than the full `<title>` text, composed once here
   so every consumer of it (the title tag, Open Graph, Twitter Card) states
@@ -44,19 +44,19 @@
 <link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="{{ '/feed.xml' | absoluteUrl }}">
 {# Fonts are self-hosted from /fonts/ — see the @font-face block in style.css.
    This head previously carried two preconnects and a stylesheet link to
-   Google, which handed every visitor's address to a third party. The phase 5
-   specification forbids exactly that, and this page also carries the data
+   Google, which handed every visitor's address to a third party. This
+   showcase admits no such request, and this page also carries the data
    notice, so the contradiction was visible from the page itself. #}
 <link rel="preload" href="{{ '/fonts/archivo-latin-standard-normal.woff2' | url }}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{{ '/style.css' | url }}">
 {#
-  Open Graph / Twitter Card: acceptance criterion 6, a shared event page
-  shows a correct preview. Phase 5's own task 10 left `og:image`/
-  `twitter:image` out entirely rather than point either at a file that did
-  not exist yet -- a link-preview bot rendering a correct text-only card
-  (title, description, address) is "a fallback that is not broken",
-  a broken image is not. Task 9 (phase 6) is what makes the tag safe to
-  restore: `pageImage` (event.njk's own `eleventyComputed`, empty string
+  Open Graph / Twitter Card, so a shared event page
+  shows a correct preview. `og:image`/
+  `twitter:image` were left out entirely at first rather than point either
+  at a file that did not exist yet -- a link-preview bot rendering a
+  correct text-only card (title, description, address) is "a fallback that
+  is not broken", a broken image is not. What makes the tag safe to
+  carry is `pageImage` (event.njk's own `eleventyComputed`, empty string
   when this page sets none) is this edition's real, published banner
   address, only ever set once a file actually exists there
   (`.eleventy.js::eventBannerUrl`) -- so the `{% if %}` below still chooses
@@ -83,7 +83,7 @@
 <body>
 
 {#
-  Phase 11, task 6. A duplicate that has not been configured says so, on
+  A duplicate that has not been configured says so, on
   its own pages, before anything else on them.
 
   `site.unconfigured` (site/.eleventy.js, from

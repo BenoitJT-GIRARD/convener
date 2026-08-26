@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2026-01-01"
 
 # The application's origin -- the only one this worker answers CORS
-# preflights for. Phase 10, task 2: this is the one address
+# preflights for. This is the one address
 # `config/instance.json` declares this project is published at, written
 # out here because a Worker deploys from this file and can read nothing
 # else. `test/index.test.js` reads both and refuses them disagreeing; see

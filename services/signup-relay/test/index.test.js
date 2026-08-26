@@ -29,7 +29,7 @@ const VALID_BODY = JSON.stringify({ event_id: EVENT_ID, ...VALID_ENVELOPE });
 const SURVEY_ENVELOPE = JSON.parse(SURVEY_CASES[0].envelope);
 const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 
-// Phase 10, task 2: the origin this worker answers CORS preflights for is
+// The origin this worker answers CORS preflights for is
 // the one address `config/instance.json` declares this project is
 // published at -- the same declaration `tools/convener_ops/published.py`, the
 // application's build and the showcase's build all read (D-14). A Worker
@@ -43,8 +43,8 @@ const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 // constraint forbids adding, so the one line is matched out of it -- and
 // a `wrangler.toml` that stopped declaring it fails loudly below rather
 // than silently exercising this suite against a value nothing deploys.
-// Read inside the one test that needs it, never while this module loads
-// (phase 12, task 5). `config/instance.json` is a path
+// Read inside the one test that needs it, never while this module loads.
+// `config/instance.json` is a path
 // `config/boundary.yml` hands to the instance, and a derived repository
 // is entitled not to have it: a read at module scope would have taken
 // this whole suite down at import -- every test in it, including the
@@ -80,7 +80,7 @@ const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cock
 const CONTENTS_URL = (id) =>
   `https://api.github.com/repos/example-instance/example-cockpit/contents/keys/events/${id}.pub`;
 
-// Phase 9, task 2: a survey response is written to the queue branch
+// A survey response is written to the queue branch
 // through the Contents API instead of being dispatched. These mirror
 // `src/index.js`'s own constants, which in turn mirror
 // `tools/convener_ops/submission_queue.py`'s -- a branch name that disagreed
@@ -89,7 +89,7 @@ const QUEUE_BRANCH = 'submission-queue';
 const QUEUE_ROOT =
   'https://api.github.com/repos/example-instance/example-cockpit/contents/queue/';
 const QUEUE_PREFIX = `${QUEUE_ROOT}survey/`;
-// Phase 9, task 3: the second kind the same queue now carries. A branch of
+// The second kind the same queue carries. A branch of
 // its own under the same directory, mirroring
 // `submission_queue.REGISTRATION_KIND`.
 const REGISTRATION_QUEUE_PREFIX = `${QUEUE_ROOT}registration/`;
@@ -102,15 +102,15 @@ const REFS_URL = 'https://api.github.com/repos/example-instance/example-cockpit/
  *  two are pinned against each other by the entry-id test below. */
 const QUEUE_ENTRY_RE = /^[0-9a-z]{1,16}-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.json$/;
 
-// R-41 (fix round 2): the survey switch is read through the same Contents
+// The survey switch is read through the same Contents
 // API `CONTENTS_URL` above already exercises, just a different path in
 // this repository -- not a second, deployed URL any more (that was
-// SURVEY_STATUS_URL, fix round 1, removed along with wrangler.toml's own
+// SURVEY_STATUS_URL, removed along with wrangler.toml's own
 // var of the same name; see that file's comment for why).
 const SURVEY_STATUS_CONTENTS_URL =
   'https://api.github.com/repos/example-instance/example-cockpit/contents/public-data/survey-status.json';
 
-// Phase 9, task 3: the registration lane cutoffs, read the same way from
+// The registration lane cutoffs, read the same way from
 // the same API. `tools/convener_ops/registration_routing.py` is what writes it
 // and `deploy.yml` what commits it; this file only ever stands in for it.
 const ROUTING_CONTENTS_URL =
@@ -176,9 +176,9 @@ function env(overrides = {}) {
     CONVENER_DISPATCH_TOKEN: 'ghp_test-token',
     SIGNUP_RELAY_KV: makeKv(),
     SIGNUP_RATE_LIMITER: makeRateLimiter(),
-    // M5 (2026-08-23 security audit): a second, independent limiter mock
-    // by default, so every test written before this fix (which knows
-    // nothing about it) keeps passing unmodified.
+    // A second, independent limiter mock
+    // by default, so a test that knows nothing about it
+    // keeps passing unmodified.
     GLOBAL_RATE_LIMITER: makeRateLimiter(),
     ALLOWED_ORIGIN,
     ...overrides,
@@ -186,8 +186,7 @@ function env(overrides = {}) {
 }
 
 /** Routes the mocked fetch by URL: the `.pub` existence check answers
- *  `known` (default true), the dispatch answers 204, and (R-37, fix round
- *  1; reworked for R-41, fix round 2) a GET to
+ *  `known` (default true), the dispatch answers 204, and a GET to
  *  SURVEY_STATUS_CONTENTS_URL -- the Contents API, not a deployed URL --
  *  answers a Contents-API-shaped `{content: <base64>}` body encoding the
  *  array `surveyStatus` names (default: just EVENT_ID, so a survey test
@@ -207,7 +206,7 @@ function stubFetch({
   surveyStatusHttpStatus = 200,
   surveyStatusContent,
   surveyStatusRawBody,
-  // Phase 9, task 2. `queueStatus` is what a queue write answers with
+  // `queueStatus` is what a queue write answers with
   // (201 is what the Contents API answers a created file with);
   // `queueStatusAfterBranch` is what the *retry* answers once the branch
   // has been created, so a test can make the first write fail with 404
@@ -218,10 +217,10 @@ function stubFetch({
   refStatus = 200,
   refSha = '0'.repeat(40),
   createRefStatus = 201,
-  // Phase 9, task 3. `routing` is the object the routing file decodes to;
+  // `routing` is the object the routing file decodes to;
   // `undefined` (the default) makes the read answer 404, i.e. "nothing has
-  // ever been published", which is the immediate lane -- so every test
-  // written before this task keeps dispatching, unmodified, and does so
+  // ever been published", which is the immediate lane -- so a test that
+  // says nothing about lanes keeps dispatching, and does so
   // through the same code path a real unpublished file would take.
   // `routingHttpStatus`, `routingContent` and `routingRawBody` are the
   // same three escape hatches the survey-status stub already offers, in
@@ -363,7 +362,7 @@ describe('signup relay -- the happy path', () => {
     expect(res.status).toBe(204);
 
     const calls = globalThis.fetch.mock.calls;
-    // Three, not two, since phase 9's task 3: the known-event check, the
+    // Three, not two: the known-event check, the
     // lane read, and the dispatch. The lane read answers 404 here (nothing
     // published), which is the immediate lane -- see `stubFetch`'s own
     // `routing` option.
@@ -456,9 +455,9 @@ describe('signup relay -- shape validation (a shape check, not a content check)'
     expect(rateLimiter.limit).not.toHaveBeenCalled();
   });
 
-  // Important 2 (fix round 1): the module docstring's own claim --
+  // The module docstring's own claim --
   // "validatedEventId below makes no distinction between the two routes
-  // at all" -- was enforced by nothing before this: nothing ever sent
+  // at all" -- was enforced by nothing for a while: nothing ever sent
   // `/survey` a malformed envelope. The same table, run against both
   // routes, closes that gap for good; each malformed body is refused with
   // 400 on `/survey` exactly as it already was on `/`.
@@ -538,9 +537,9 @@ describe('signup relay -- shape validation (a shape check, not a content check)'
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  // Important 2 (fix round 1): hasDuplicateKey, specifically, on /survey --
-  // the reviewer's own second mutant (skipping this guard only on the new
-  // route) survived all 60 tests before this.
+  // hasDuplicateKey, specifically, on /survey --
+  // a mutant that skipped this guard on the newer
+  // route alone survived all 60 tests before this case existed.
   it('refuses a body with a duplicated key on /survey too, not only on /', async () => {
     const dup = SURVEY_BODY.replace('"v":1,', '"v":1,"v":1,');
     expect(() => JSON.parse(dup)).not.toThrow();
@@ -619,7 +618,7 @@ describe('signup relay -- the burst limiter', () => {
   });
 });
 
-describe('signup relay -- the global limiter (M5, 2026-08-23 security audit)', () => {
+describe('signup relay -- the global limiter', () => {
   it('refuses once the global limiter trips, with Retry-After, and never calls GitHub', async () => {
     const globalRateLimiter = makeRateLimiter(false);
     const kv = makeKv();
@@ -640,7 +639,7 @@ describe('signup relay -- the global limiter (M5, 2026-08-23 security audit)', (
     expect(globalRateLimiter.limit).toHaveBeenCalledWith({ key: 'global' });
   });
 
-  it('shares one global bucket across different event ids -- the M5 gap this closes', async () => {
+  it('shares one global bucket across different event ids -- the gap this closes', async () => {
     // The whole point: unlike the per-event limiter, varying event_id
     // must not buy a fresh bucket. A limiter that answers false only once
     // it has seen the fixed 'global' key at least twice proves the same
@@ -794,23 +793,23 @@ describe('signup relay -- the per-event cumulative ceiling', () => {
   });
 });
 
-describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
+describe('signup relay -- the /survey route', () => {
   it('accepts a well-shaped, known-event survey envelope, and queues it instead of dispatching', async () => {
     const kv = makeKv();
     const res = await handle(postSurvey(SURVEY_BODY), env({ SIGNUP_RELAY_KV: kv }));
 
     expect(res.status).toBe(204);
 
-    // Three calls, not two, and not four: the known-event check, R-37's
-    // own survey-status check (R-41, fix round 2: the Contents API, not a
-    // deployed URL), and the queue write. Phase 9, task 2 replaced the
-    // dispatch with the write and spends exactly the same number of API
-    // calls doing it -- a queue that cost the relay more per submission
+    // Three calls, not two, and not four: the known-event check, the
+    // survey-status check (the Contents API, not a
+    // deployed URL), and the queue write. The write replaced a
+    // dispatch and spends exactly the same number of API
+    // calls -- a queue that cost the relay more per submission
     // than the thing it replaced would be the wrong shape.
     const calls = globalThis.fetch.mock.calls;
     expect(calls).toHaveLength(3);
     expect(String(calls[1][0])).toBe(SURVEY_STATUS_CONTENTS_URL);
-    // R-41: the same credential eventKeyExists already sends, not a
+    // The same credential eventKeyExists already sends, not a
     // second, token-free read -- committing survey-status.json (rather
     // than serving it from a public URL) is what makes reading it require
     // one in the first place.
@@ -837,7 +836,7 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     // share -- or corrupt -- one budget.
     expect(kv.put).toHaveBeenCalledWith('count:survey:mrg-042', '1');
 
-    // Minor 6 (fix round 2): exact, not a range -- R-39/R-40's fixed-size
+    // Exact, not a range -- the fixed-size
     // padding makes every stored-and-transmitted ciphertext the same
     // length regardless of content (8192 bytes of padded plaintext plus
     // the 16-byte GCM tag), so the fixture's own envelope is a fact this
@@ -879,7 +878,7 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     expect(res.status).toBe(404);
   });
 
-  describe('R-37 (fix round 1, reworked for R-41 fix round 2): the relay checks the survey switch itself, not only the page', () => {
+  describe('the relay checks the survey switch itself, not only the page', () => {
     it('refuses with 404 when the event is not in survey-status.json', async () => {
       globalThis.fetch = stubFetch({ surveyStatus: [] });
       const res = await handle(postSurvey(SURVEY_BODY), env());
@@ -891,7 +890,7 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
     });
 
     it('refuses with 404 when survey-status.json does not exist yet in this repository', async () => {
-      // R-41's own edge case: before deploy.yml's "Commit survey status"
+      // The edge case: before deploy.yml's "Commit survey status"
       // step has ever landed a commit, the file is simply absent -- a
       // clean 404 from the Contents API, not an error. Reads exactly like
       // "no event is open", the same as an empty array would.
@@ -968,7 +967,7 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
       expect(calls.every(([url]) => String(url) !== SURVEY_STATUS_CONTENTS_URL)).toBe(true);
     });
 
-    it('never depends on the published site at all -- R-41 removed that dependency entirely', async () => {
+    it('never depends on the published site at all', async () => {
       await handle(postSurvey(SURVEY_BODY), env());
       const calls = globalThis.fetch.mock.calls;
       // Built from the declaration rather than typed: the address this
@@ -1044,7 +1043,7 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
   });
 });
 
-describe('signup relay -- the submission queue (phase 9, task 2)', () => {
+describe('signup relay -- the submission queue', () => {
   it('names each entry so the drain can order it and never collide', async () => {
     await handle(postSurvey(SURVEY_BODY), env());
     const [queueUrl] = globalThis.fetch.mock.calls[2];
@@ -1146,7 +1145,7 @@ describe('signup relay -- the submission queue (phase 9, task 2)', () => {
 });
 
 // -------------------------------------------------------------------- //
-// Phase 9, task 3 -- which lane a registration takes
+// Which lane a registration takes
 // -------------------------------------------------------------------- //
 
 describe('signup relay -- the registration lane', () => {

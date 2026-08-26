@@ -1,6 +1,6 @@
 'use strict';
 
-/* Phase 10, task 2: what the showcase's own build actually resolves this
+/* What the showcase's own build actually resolves this
  * project's published address to, printed as JSON for
  * `tools/tests/test_published.py` to compare against the same declaration
  * read from Python.
@@ -29,7 +29,7 @@ const { publishedAddress, identity } = require('./published.cjs');
 
 const noop = () => {};
 // `addGlobalData` is recorded rather than dropped: `site.*` is composed in
-// `.eleventy.js` itself (phase 10 task 3), so what the real, committed
+// `.eleventy.js` itself, so what the real, committed
 // config hands every template is only observable by watching it register
 // it. Everything else genuinely has no bearing on the returned object.
 const globals = {};
@@ -48,7 +48,7 @@ console.log(
   JSON.stringify({
     reader: publishedAddress(),
     eleventyPathPrefix: resolved.pathPrefix,
-    // Phase 10, task 3: who this side thinks runs the series, and what
+    // Who this side thinks runs the series, and what
     // `.eleventy.js` -- the real, committed config, called here the way
     // Eleventy calls it -- actually registers as the global `site`. Same
     // distinction as `eleventyPathPrefix` above: a reader

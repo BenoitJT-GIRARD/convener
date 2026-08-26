@@ -15,8 +15,8 @@
 # where the derivation guard reads it. It is not repeated here.
 #
 # Without this file the `secrets` job is red on its first run and stays red.
-# That is where it stood until phase 12: nothing had ever run, so nobody had
-# seen it -- which is the whole argument for a check being executed rather
+# That is where it stood for a long time: nothing had ever run, so nobody
+# had seen it -- which is the whole argument for a check being executed rather
 # than configured.
 #
 # Keyed on the value, and narrowed by the path -- never the path alone

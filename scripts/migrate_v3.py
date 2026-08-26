@@ -1,6 +1,6 @@
 """One-shot migration of `data/` from schema v2 to schema v3 (governance).
 
-What it does, per the phase-2 specification, section 8:
+What it does:
 
 1. `selection.votes_for: [login]` becomes a list of `yes` ballots, each
    carrying `decided_on` as its date when there is one and an empty string
@@ -43,10 +43,10 @@ from convener_ops.yaml_safe import safe_load
 PUBLISHABLE = frozenset({"delivered", "archived"})
 
 #: Values for the schema-v3 configuration keys that did not exist in v2.
-#: Every one of them comes from the phase-2 specification unless noted:
-#: board size 5..9 (section 3), vote window 14 days and objection window 3
-#: working days (sections 2 and 4), balance window 24 months (section 6),
-#: and the four SLA delays of section 7. `inactivity_months` is the one
+#: Every one of them is a governance rule this project had already settled:
+#: board size 5..9, vote window 14 days, objection window 3
+#: working days, balance window 24 months,
+#: and the four SLA delays. `inactivity_months` is the one
 #: value the specification leaves open; 6 months is what the test fixtures
 #: already assume, and it is a configuration key precisely so the Board can
 #: change it without code.

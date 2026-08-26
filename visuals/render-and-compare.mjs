@@ -1,19 +1,19 @@
-/* Task 5 (phase 6): the pinned render step and its image comparison.
+/* The pinned render step and its image comparison.
  *
- * P-2's own argument, restated because it is the reason this file exists:
+ * The argument for it, restated because it is the reason this file exists:
  * "a picture comparison that gets regenerated every time it fails is not a
  * check -- it is D-25 in slow motion." Pinning the engine is not a belt
  * beside a brace; it is what gives a red result its meaning -- "the visual
  * changed", never "the runner changed". `puppeteer` (full, this package's
  * one dependency, isolated here rather than added to `site/package.json`
  * so its ~430MB Chrome-for-Testing download is paid for only by the one
- * job that needs it -- see this project's own task 5 report for the
- * measured footprint) downloads a Chromium build pinned by this package's
+ * job that needs it, a footprint measured rather than
+ * estimated) downloads a Chromium build pinned by this package's
  * own committed lockfile: the same input renders matching output on every
  * machine that installs this exact lock, within the tolerance this file's
  * own comparison already carries for ordinary anti-aliasing noise
  * (`PER_CHANNEL_THRESHOLD`, `MAX_DIFF_PIXEL_FRACTION` below) -- not
- * "byte-identical" stated flatly. Branch review, fix round 1: measured,
+ * "byte-identical" stated flatly. Measured,
  * not assumed, and the two are not the same claim. `BANNER` -- the one
  * format this project actually diffs byte-for-byte with zero tolerance
  * (`site/src/banners/<event id>.png`, `visuals-production.yml`'s own
@@ -41,8 +41,8 @@
  * 2. Serves that directory over a local, ephemeral HTTP server -- never
  *    `file://`. A `file://` origin cannot load a relative `@font-face url`
  *    without `--allow-file-access-from-files` (a flag this project has no
- *    reason to carry), and every earlier render in this phase (tasks 1-4's
- *    own reports) already used a local server for exactly that reason.
+ *    reason to carry), and every earlier render of this composition
+ *    already used a local server for exactly that reason.
  * 3. Launches this package's own pinned Chromium and screenshots each
  *    named format at its own real pixel size, waiting for the self-hosted
  *    webfonts to finish loading (`document.fonts.ready`) before the
@@ -88,7 +88,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  sub-pixel positioning decisions the rasteriser makes, and those can
  *  shift by a level or two between two runs that agree on every design
  *  decision -- the self-hosted webfont fixes *which* glyph outlines are
- *  used (task 2's own report), not how a rasteriser blends one partially-
+ *  used, not how a rasteriser blends one partially-
  *  covered edge pixel against its background. 24 is comfortably above
  *  that kind of single-digit blending noise (confirmed empirically: two
  *  renders of this exact fixture on this machine, nothing changed between

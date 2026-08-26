@@ -21,7 +21,7 @@
 // further from the answer for no gain.
 //
 // There is deliberately no reader here for the declaration's third key,
-// `edition_prefix` (phase 11, task 4). This build never composes an
+// `edition_prefix`. This build never composes an
 // edition code: it prints the ones `src/_data/events.json` hands it, and
 // lower-cases them for the event page's own permalink (D-19). A reader
 // nothing called would be a third statement of a rule with two
@@ -29,8 +29,8 @@
 // jobs, `app/scripts/published.mjs` for the cockpit's own build, bound to
 // each other by `tools/tests/fixtures/edition-prefix.json`.
 //
-// Phase 11 task 6 does not change that, and the distinction is worth
-// keeping: `unconfigured` at the foot of this file reads the key, but only
+// The unconfigured banner does not change that, and the distinction is
+// worth keeping: `unconfigured` at the foot of this file reads the key, but only
 // to compare the string against the example's. It derives nothing from it,
 // validates nothing about it and hands it to no template -- which is what
 // "no reader here" means.

@@ -52,10 +52,10 @@ function makeRateLimiter(success = true) {
   return { limit: vi.fn(async () => ({ success })) };
 }
 
-// C4 (2026-08-23 security audit): FORM_RELAY_KV and FORM_RATE_LIMITER join
+// FORM_RELAY_KV and FORM_RATE_LIMITER join
 // TALLY_WEBHOOK_SECRET and CONVENER_DISPATCH_TOKEN here -- a working mock of
-// both by default, so every test written before this fix (which knows
-// nothing about either) keeps passing unmodified; `overrides` is how a
+// both by default, so a test that knows
+// nothing about either keeps passing unmodified; `overrides` is how a
 // new test replaces one on its own.
 function env(secret, token = 'ghp_test-token', overrides = {}) {
   return {
@@ -89,13 +89,13 @@ describe('form relay', () => {
     expect(init.headers['Content-Type']).toBe('application/json');
     expect(init.headers.Authorization).toBe('Bearer ghp_test-token');
     // Neither GitHub call in this suite is left to hang on this worker's
-    // own invocation forever (C4 mirrors services/signup-relay's own
+    // own invocation forever (mirroring services/signup-relay's own
     // GITHUB_FETCH_TIMEOUT_MS).
     expect(init.signal).toBeInstanceOf(AbortSignal);
 
     const sent = JSON.parse(init.body);
     expect(sent.event_type).toBe('proposal-submitted');
-    // R-7: body must be a JSON string, never a nested object -- the
+    // Body must be a JSON string, never a nested object -- the
     // workflow reads it as a bare ${{ github.event.client_payload.body }}.
     expect(typeof sent.client_payload.body).toBe('string');
     expect(sent.client_payload.body).toBe(VALID_CASE.body);
@@ -120,7 +120,7 @@ describe('form relay', () => {
   ])(
     'refuses every request when TALLY_WEBHOOK_SECRET is %s, even one with a signature that would otherwise verify',
     async (_label, secret) => {
-      // R-6: fail closed. proposal.py::verify_signature is deliberately
+      // Fail closed. proposal.py::verify_signature is deliberately
       // tolerant with no secret configured -- safe there only because it
       // sits behind a repository_dispatch that already required an
       // authenticated token. This worker is the internet-facing boundary,
@@ -134,7 +134,7 @@ describe('form relay', () => {
   );
 
   it('refuses to dispatch, without calling GitHub, when CONVENER_DISPATCH_TOKEN is not configured', async () => {
-    // Same reasoning as R-6, extended to the second secret: sending
+    // Same fail-closed reasoning, extended to the second secret: sending
     // "Bearer undefined" to GitHub is not an option, so this is refused
     // locally -- 502, not 401, since it is this worker's own
     // misconfiguration and not a bad Tally-Signature.
@@ -207,8 +207,8 @@ describe('form relay', () => {
 });
 
 // ====================================================================== //
-// C4 (2026-08-23 security audit): body-size bound, burst limiter,
-// cumulative counter -- none of the three existed before this fix.
+// The body-size bound, the burst limiter and the cumulative counter --
+// none of the three existed at first.
 // ====================================================================== //
 
 describe('form relay -- the body-size bound', () => {
@@ -263,7 +263,7 @@ describe('form relay -- the burst limiter', () => {
     expect(kv.put).not.toHaveBeenCalled();
   });
 
-  it('keys the limiter by a fixed literal, never anything the caller sent -- the fix for M5\'s own gap', async () => {
+  it('keys the limiter by a fixed literal, never anything the caller sent -- the gap next door', async () => {
     const rateLimiter = makeRateLimiter(true);
     await handle(
       post(VALID_CASE.body, VALID_CASE.signature),

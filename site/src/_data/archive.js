@@ -1,5 +1,5 @@
 /**
- * Global data derived from `events.json` for the archive pages (task 8):
+ * Global data derived from `events.json` for the archive pages:
  *
  * - `archive.past` -- delivered/archived editions, each augmented with the
  *   four-digit `year` its `date` falls in (`events.json`'s own dates are

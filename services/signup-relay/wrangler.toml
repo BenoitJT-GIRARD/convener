@@ -7,7 +7,7 @@ compatibility_date = "2026-01-01"
 # subpath of this host does not change it. Not a secret -- it ships in
 # every CORS response header already.
 #
-# Phase 10, task 2: this is the one address `config/instance.json`
+# This is the one address `config/instance.json`
 # declares this project is published at, and it is written out here
 # because a Worker deploys from this file and can read nothing else --
 # TOML has no include, and this package has no parser for the declaration
@@ -18,10 +18,10 @@ compatibility_date = "2026-01-01"
 [vars]
 ALLOWED_ORIGIN = "https://example-instance.github.io"
 
-# R-37 (fix round 1, task 16) checked the survey switch against a plain
+# The survey switch was once checked against a plain
 # public HTTPS URL here (SURVEY_STATUS_URL), because it seemed like the
-# cheaper read: no token, no GitHub API budget. R-41 (fix round 2) removed
-# it: that URL pointed at a published deployment this project had never
+# cheaper read: no token, no GitHub API budget. That is gone:
+# the URL pointed at a published deployment this project had never
 # actually wired up, so the check depended on a site that did not exist,
 # carried a build-to-live latency the relay had no reason to inherit on
 # top of the handler's, and was a hardcoded cross-origin literal nothing
@@ -68,7 +68,7 @@ namespace_id = "1"
   limit = 30
   period = 60
 
-# M5 (2026-08-23 security audit): GLOBAL_RATE_LIMITER -- a second binding,
+# GLOBAL_RATE_LIMITER -- a second binding,
 # not a second key on SIGNUP_RATE_LIMITER above, because Cloudflare's
 # Workers Rate Limiting binding applies one limit/period to every key
 # checked against it; a global ceiling distinct from the per-event one
@@ -77,7 +77,7 @@ namespace_id = "1"
 # (README.md, "Abuse protection") -- see src/index.js's own
 # GLOBAL_RATE_LIMITER_KEY comment for the full reasoning. "2" is the next
 # unused rate-limiter namespace id on this account; services/form-relay's
-# own FORM_RATE_LIMITER (C4, same audit) takes "3", so no two limiters
+# own FORM_RATE_LIMITER takes "3", so no two limiters
 # declared anywhere in this account silently share one bucket.
 [[ratelimits]]
 name = "GLOBAL_RATE_LIMITER"

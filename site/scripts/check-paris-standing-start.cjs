@@ -1,6 +1,6 @@
 'use strict';
 
-/* D-14, fix round 1: the shared cross-language fixture for the Europe/Paris
+/* D-14: the shared cross-language fixture for the Europe/Paris
  * seasonal-offset rule (`tools/tests/fixtures/paris-standing-start.json`),
  * checked here against `.eleventy.js::parisStandingStart` -- the third of
  * three independent implementations of the identical rule

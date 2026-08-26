@@ -3,13 +3,13 @@ eleventyExcludeFromCollections: true
 permalink: "/agenda.ics"
 ---
 {#-
-  Task 8 (phase 6): the public agenda feed -- iCalendar (RFC 5545), a
+  The public agenda feed -- iCalendar (RFC 5545), a
   different format for a different consumer from feed.njk's own RSS
   syndication feed above. A calendar client subscribes to this address
   once; the scheduled editions it lists, their times and the event page
   each one points to arrive on their own at every later rebuild, with
-  nothing to administer and no account -- the shared-calendar request
-  named in F-06 (spec §4).
+  nothing to administer and no account -- the shared calendar a series
+  needs and nobody wants to maintain by hand.
 
   All the real work -- filtering to `scheduled` editions, the Europe/Paris
   DST-aware start time, RFC 5545 TEXT escaping and 75-octet line folding,

@@ -12,7 +12,7 @@
  * with -- a static page cannot hold one -- so this endpoint is open by
  * construction. README.md ("Abuse protection") records the choice made for
  * that and why -- a per-event burst limiter, a per-event cumulative
- * ceiling, and (M5, 2026-08-23 security audit) a global burst limiter on
+ * ceiling, and a global burst limiter on
  * top of the per-event one, closing the gap a caller who varies event_id
  * could otherwise use to evade it entirely -- each with its own storage
  * binding. Unlike services/auth-proxy,
@@ -31,8 +31,8 @@
  * README.md describes -- and a counter is a count, never the data that
  * produced it.
  *
- * A second route, not a second worker (task 16, phase 4 spec S:6)
- * -------------------------------------------------------------------
+ * A second route, not a second worker
+ * -----------------------------------
  * `POST /survey` accepts a post-event survey response -- `app/src/survey/
  * SurveyForm.tsx` and `app/src/survey/encrypt.ts`, the sibling of the
  * registration page and its own `encrypt.ts`. It is the *same* worker, not
@@ -47,13 +47,13 @@
  * for -- there is no second trust boundary here.
  *
  * Where the two routes *do* part company is what they do with an accepted
- * body (phase 9, tasks 2 and 3). `/survey` always writes the envelope to
+ * body. `/survey` always writes the envelope to
  * the `submission-queue` branch and starts nothing at all: a survey
  * response sends nothing back to anybody, so waiting for the daily drain
  * costs the person who submitted it precisely nothing.
  *
  * `/` has two lanes, and **the distance to the event is the only thing that
- * chooses between them** (task 3). The confirmation e-mail a registration
+ * chooses between them**. The confirmation e-mail a registration
  * produces is not a receipt, it is the entry ticket -- it carries the room
  * link and the matching code, and there is no other channel for either --
  * so a fixed delay is out. Further from the event than the published
@@ -98,7 +98,7 @@ const DISPATCH_URL = `https://api.github.com/repos/${REPO}/dispatches`;
 const CONTENTS_URL = `https://api.github.com/repos/${REPO}/contents/`;
 const USER_AGENT = 'convener-signup-relay';
 
-// Phase 9, task 2: where a survey response goes instead of straight to a
+// Where a survey response goes instead of straight to a
 // `repository_dispatch`. Mirrors `tools/convener_ops/submission_queue.py`'s own
 // QUEUE_BRANCH / QUEUE_DIR / SURVEY_KIND, which the drain reads from -- a
 // branch name that disagreed between the two would be a queue nothing ever
@@ -129,7 +129,7 @@ const DEFAULT_BRANCH = 'main';
 const REF_URL = `https://api.github.com/repos/${REPO}/git/ref/heads/${DEFAULT_BRANCH}`;
 const REFS_URL = `https://api.github.com/repos/${REPO}/git/refs`;
 
-// Phase 9, task 3. Mirrors `registration_routing.ROUTING_PATH` and
+// Mirrors `registration_routing.ROUTING_PATH` and
 // `ROUTING_FILE_VERSION`; a version this worker does not know is read as
 // "no answer", which routes to the immediate lane rather than guessing at a
 // shape somebody changed.
@@ -338,15 +338,15 @@ function base64DecodeContentsApi(value) {
 }
 
 /**
- * Whether `eventId` currently has the post-event survey switch on
- * (R-37, fix round 1) -- checked only on `/survey`, never on `/`.
+ * Whether `eventId` currently has the post-event survey switch on --
+ * checked only on `/survey`, never on `/`.
  *
- * R-41 (fix round 2): reads `public-data/survey-status.json` through the
+ * Reads `public-data/survey-status.json` through the
  * GitHub Contents API against *this* repository -- the same credential
  * (`token`) and the same call shape `eventKeyExists` already uses for
  * `keys/events/<id>.pub`, just a different path -- rather than a second
- * URL on the published site. That URL (`env.SURVEY_STATUS_URL`, fix round
- * 1) depended on a deployment this project has never actually wired up,
+ * URL on the published site. That URL (`env.SURVEY_STATUS_URL`)
+ * depended on a deployment this project has never actually wired up,
  * carried a build-to-live latency this repository's own commit does not,
  * and was a hardcoded cross-origin literal nothing derived. Reading the
  * repository's own copy makes this worker's answer agree with the
@@ -438,7 +438,7 @@ function surveyRateLimiterKey(eventId) {
   return `survey:${eventId}`;
 }
 
-// M5 (2026-08-23 security audit): the per-event/per-route keys above
+// The per-event/per-route keys above
 // (`eventId`, `surveyRateLimiterKey`) are exactly what let this limiter be
 // evaded -- a caller who varies event_id on every request gets a fresh
 // bucket every time, so SIGNUP_RATE_LIMITER never actually bounds a flood
@@ -760,7 +760,7 @@ export async function handle(request, env) {
   const token = env.CONVENER_DISPATCH_TOKEN;
   const kv = env.SIGNUP_RELAY_KV;
   const rateLimiter = env.SIGNUP_RATE_LIMITER;
-  // M5: GLOBAL_RATE_LIMITER joins the fail-closed set -- a deploy missing
+  // GLOBAL_RATE_LIMITER joins the fail-closed set -- a deploy missing
   // this binding must refuse every request, the same as one missing the
   // per-event limiter, rather than silently running with only half the
   // abuse protection this worker now claims.
@@ -785,7 +785,7 @@ export async function handle(request, env) {
   const rateLimiterKey = isSurvey ? surveyRateLimiterKey(eventId) : eventId;
   const eventCounterKey = isSurvey ? surveyCounterKey(eventId) : counterKey(eventId);
 
-  // M5: the global limiter, checked first -- one fixed key, shared by
+  // The global limiter, checked first -- one fixed key, shared by
   // both routes and every event, bounding this worker's total request
   // rate regardless of what event_id a caller sends. Checked before the
   // per-event limiter deliberately: it is the cheaper, coarser bound, and
@@ -840,7 +840,7 @@ export async function handle(request, env) {
     return respond(404, env, 'Not Found');
   }
 
-  // R-37 (fix round 1): the relay's own layer of the survey switch,
+  // The relay's own layer of the survey switch,
   // checked only on `/survey` -- never on `/`, where it has no meaning --
   // and only once the event is already known to exist, so a stranger
   // guessing at event ids never learns anything new from this check that
@@ -859,7 +859,7 @@ export async function handle(request, env) {
     }
   }
 
-  // The one place the routes part company (phase 9, tasks 2 and 3).
+  // The one place the routes part company.
   //
   // A survey response always goes in the queue: nothing is ever sent back
   // to whoever submitted it, so the slowest cadence costs them nothing.

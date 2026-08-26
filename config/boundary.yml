@@ -35,17 +35,18 @@
 # ----------------------------------------
 # `site/src/_data/site.json` was an entry in the list below: four keys --
 # the series' title, its tagline, its forum, its proposal form -- read by
-# the showcase's build through Eleventy's global-data convention. Phase 10
-# task 3 folded all four into `config/instance.json`'s own `identity`,
+# the showcase's build through Eleventy's global-data convention. All four
+# were folded into `config/instance.json`'s own `identity`,
 # alongside the organisation's name, and `site/.eleventy.js` composes them
-# from there for every template. The file entry went with the file. That is S-2 applied
+# from there for every template. The file entry went with the file. That is
+# one-notion-one-home applied
 # to this declaration itself: leaving four identity keys in `site/` and
 # putting the rest in `config/` would have given one notion two homes and
 # a duplicate two files to edit before its first build. Nothing under
 # `site/` is the instance's now.
 #
 # `config/instance.json` is JSON rather than YAML for a reason that is not
-# taste: phase 10 task 2 made it the one declaration of this project's
+# taste: it is the one declaration of this project's
 # published address, and Python, the application's build and the showcase's
 # build all read it. JSON is the only format all three parse without a
 # dependency `site/` and `services/` do not have. `boundary.py` reads both

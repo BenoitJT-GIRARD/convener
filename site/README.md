@@ -14,7 +14,7 @@ overwritten from `public-data/events-public.json` (`uv run convener-public-data`
 `site.*` is derived, not written down here: `.eleventy.js` composes it --
 title, tagline, the forum, the proposal form, the organisation's own name
 -- from `config/instance.json`, the one file that says whose series this
-is. It replaced a hand-typed `src/_data/site.json` in phase 10 task 3, for
+is. It replaced a hand-typed `src/_data/site.json`, for
 the reasons that file's own successor comment gives.
 
 Fonts are self-hosted, from `../fonts/` at the repository root -- shared with

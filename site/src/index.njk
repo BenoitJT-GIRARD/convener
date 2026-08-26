@@ -43,7 +43,7 @@ layout: layout.njk
         <p class="feature__vol">Upcoming</p>
         <p class="feature__code">{{ e.id }}</p>
         {#
-          Fix round 1: the same `parisStandingStart` derivation event.njk
+          The same `parisStandingStart` derivation event.njk
           uses for its own rail, so this card cannot state a different
           season's offset for the same edition -- see that template's
           own comment.
@@ -63,9 +63,9 @@ layout: layout.njk
         {% endif %}
         {#
           The event page, never `e.registration_link` -- that field carries
-          the room link (D-19, acceptance criterion 2: no room link on any
-          public page). The event page is the edition's own address and
-          the one place a form will ever sit (task 6); this CTA always
+          the room link (D-19, and the rule that no room link appears on
+          any public page). The event page is the edition's own address and
+          the one place a form will ever sit; this CTA always
           points there, whether or not a room link has been set yet.
         #}
         <div class="feature__action">

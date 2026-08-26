@@ -5,8 +5,8 @@
 *.xlsx binary
 *.woff2 binary
 # RFC 5545 requires CRLF line endings; the blanket `eol=lf` rule above would
-# silently renormalise them to LF on every commit otherwise (task 8, phase
-# 6 -- the one file of this shape this repository ever commits).
+# silently renormalise them to LF on every commit otherwise. It is the one
+# file of this shape this repository ever commits.
 public-data/agenda-internal.ics binary
 
 # `config/boundary.yml` declares this path `regenerated:` -- rewritten in

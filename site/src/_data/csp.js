@@ -1,8 +1,8 @@
 /**
  * This project's Content-Security-Policy for every page Eleventy builds,
  * delivered as a `<meta http-equiv>` in `layout.njk` -- the one mechanism
- * available at all here. GitHub Pages sets no response headers of its own
- * (security audit 2026-08-23): `X-Content-Type-Options`,
+ * available at all here. GitHub Pages sets no response headers of its
+ * own: `X-Content-Type-Options`,
  * `Permissions-Policy`, HSTS and COOP/COEP/CORP are categorically
  * unavailable, not merely undone, and `frame-ancestors` is ignored outright
  * when delivered by `<meta>` -- nothing can stop this site being framed. See
@@ -19,7 +19,7 @@
  * `<meta>`, and are what this file actually emits", in the place where the
  * reason for that selection belonged -- and it was not a reason, since
  * `default-src`, `img-src`, `style-src` and `font-src` work by `<meta>`
- * just as well. Until phase 11 this policy therefore admitted an image, a
+ * just as well. This policy therefore once admitted an image, a
  * frame, a font, a stylesheet or a media file from *any origin at all*, on
  * every page a stranger loads and on the three that carry an island
  * handling somebody's registration, certificate lookup or survey answer.
@@ -39,11 +39,11 @@
  * - `script-src 'self'`: every script this build ever emits is same-origin.
  *   No page under `site/` carries an inline `<script>` at all --
  *   `tools/tests/test_site.py::test_archive_pages_carry_no_script_tag_at_all`
- *   already held the archive pages to that, and the audit's own search
+ *   already held the archive pages to that, and a sweep of the rest
  *   found the same true of every other page; `event.njk`'s JSON-LD block is
  *   `application/ld+json`, which `script-src` does not govern at all. The
  *   three islands (`event.njk`'s `signup.js`, `verify.njk`'s `verify.js`,
- *   `survey.njk`'s `survey.js`, added phase 7 task 5) are all loaded from
+ *   `survey.njk`'s `survey.js`) are all loaded from
  *   this same origin.
  * - `style-src 'self'`: one stylesheet, `style.css`, from this origin. No
  *   page carries a `<style>` block or a `style="..."` attribute, and the
@@ -66,7 +66,7 @@
  *   `VITE_SIGNUP_RELAY_URL` is configured: the registration island
  *   (`app/src/islands/signup/SignupForm.tsx`) posts a registration to that
  *   address from `event.njk`, and the survey island
- *   (`app/src/islands/survey/SurveyForm.tsx`, phase 7 task 5) posts a
+ *   (`app/src/islands/survey/SurveyForm.tsx`) posts a
  *   response to that same worker's `/survey` route from `survey.njk` --
  *   two islands, one configured origin, never a second one. Read from the
  *   identical repository variable `deploy.yml` already forwards into the

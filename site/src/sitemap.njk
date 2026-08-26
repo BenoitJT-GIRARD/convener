@@ -12,7 +12,7 @@ permalink: "/sitemap.xml"
   comment first and produced a leading blank line ahead of `<?xml ...?>`,
   which every XML parser -- `xml.etree.ElementTree` included -- rejects).
 
-  Task 10: a plain, hand-written sitemap -- no new dependency (no
+  A plain, hand-written sitemap -- no new dependency (no
   `@11ty/eleventy-plugin-sitemap`), because `collections.all` plus one
   exclusion flag already says everything a sitemap needs to here.
 
@@ -29,7 +29,7 @@ permalink: "/sitemap.xml"
   JavaScript") -- this only decides what a crawler is pointed at, never
   what exists.
 
-  Phase 7 task 5 added a second exclusion for the identical reason, a
+  A second exclusion follows for the identical reason, in a
   different shape: every survey page (`survey.njk`, also `sitemap: false`
   in its own front matter) is reached exactly one way, a link in an
   e-mail sent after the event to people this project already has a

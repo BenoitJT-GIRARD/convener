@@ -1,4 +1,4 @@
-// Fix round 4 (the path-prefix defect): GitHub Pages serves this project's
+// The path-prefix defect: GitHub Pages serves this project's
 // build output one path segment below a bare domain root -- there is no
 // CNAME and no custom domain (`publish-vitrine.yml`'s own "already-active
 // GitHub Pages setting" is "branch main, folder root" on the published
@@ -16,7 +16,7 @@
 // `url('fonts/...')` inside a stylesheet already resolves against the
 // stylesheet's own address, at any prefix.
 //
-// Phase 10, task 2: both constants below used to be hand-typed literals,
+// Both constants below used to be hand-typed literals,
 // bound to `tools/convener_ops/registration.py::SIGNUP_BASE`, to
 // `certificate.py::VERIFICATION_BASE` and to `app/vite.config.ts`'s own
 // `base` by tests that could say the copies still agreed but never that
@@ -40,7 +40,7 @@ const PATH_PREFIX = PUBLISHED.pathPrefix;
 // `scripts/published.cjs` this file already reads the published address
 // from.
 //
-// This was `src/_data/site.json` until phase 10 task 3: four hand-typed
+// This was `src/_data/site.json` once: four hand-typed
 // keys -- the series' title, its tagline, its forum, its proposal form --
 // declared an instance path by `config/boundary.yml`. Clean as far as it
 // went, and still a second home for the same notion, with the
@@ -80,7 +80,7 @@ const SITE = {
   // a duplicate has not built its form before its first publish, and this
   // instance had not built one at all -- `identity.proposal_form` was
   // `https://forms.example.test/propose`, published as that page's one call to
-  // action (phase 10 bilan, section 7.2). Mirrors
+  // action. Mirrors
   // `published.py::Identity.proposal_form_url`, and
   // `test_published.py::test_the_showcase_feeds_its_templates_the_declared_
   // identity` compares this value against that one.
@@ -98,7 +98,7 @@ const SITE = {
   publishRepository: PUBLISHED.publishRepository,
   publishRepositoryName: PUBLISHED.publishRepository.split('/')[1],
   repository: IDENTITY.repository,
-  // Phase 11, task 6: which declared values this instance has not made
+  // Which declared values this instance has not made
   // its own yet -- empty for an instance that has been configured, and
   // the names of the offending keys for one that has not. `_includes/
   // layout.njk` prints a banner across every page while it is not empty.
@@ -115,7 +115,7 @@ const SITE = {
   unconfigured: unconfigured(),
 };
 
-// Phase 5, task 10: structured event data, share metadata, the sitemap and
+// Structured event data, share metadata, the sitemap and
 // the feed all need this project's real, *absolute* published address --
 // a root-relative link, even one already carrying PATH_PREFIX, is nonsense
 // outside a browser that already has this page open: a search engine's
@@ -125,7 +125,7 @@ const SITE = {
 // which deployment they describe.
 const SITE_ORIGIN = PUBLISHED.origin;
 
-// Fix round 1: the series' one standing start time, Europe/Paris *local*
+// The series' one standing start time, Europe/Paris *local*
 // -- what a recurring seminar series means by "the seminar starts at
 // 12:30" is 12:30 in Paris, not a fixed UTC offset that happens to be
 // right for half the year. `data/speakers.yml` carries a `time` field
@@ -145,7 +145,7 @@ const SITE_ORIGIN = PUBLISHED.origin;
 // below.
 const STANDING_START_LOCAL = '12:30';
 
-// Fix round 1: Europe/Paris's own UTC offset and abbreviation for the
+// Europe/Paris's own UTC offset and abbreviation for the
 // *edition's own date*, at the standing local time above -- +01:00/CET
 // from late October to late March, +02:00/CEST the rest of the year.
 // This used to be a hand-typed `+01:00`/`CET` regardless of season,
@@ -205,7 +205,7 @@ function parisStandingStart(isoDate) {
   };
 }
 
-// Fix wave (branch review, minor 2): the fallback description for an
+// The fallback description for an
 // edition that carries no `abstract` yet -- the speaker's name, optionally
 // `, affiliation`, then " — a <organisation> virtual seminar." -- has to
 // read the same way in three places about the same edition: event.njk's
@@ -234,7 +234,7 @@ function eventDescriptionFallback(event) {
 // handful of places a URL leaves this document for a context with no address
 // of its own to resolve a relative link against: canonical links, Open
 // Graph/Twitter Card metadata, JSON-LD, the sitemap, the syndication feed and
-// (task 8) the agenda feed below. A plain function, not only a filter (like
+// the agenda feed below. A plain function, not only a filter (like
 // `parisStandingStart` and `eventDescriptionFallback` above), so this file's
 // own agenda-calendar code can call it directly with no Nunjucks pipeline of
 // its own -- see `eventPageUrl` below. Never chain the two (`x | url |
@@ -245,15 +245,15 @@ function absoluteUrl(path) {
 }
 
 // ------------------------------------------------------------------ //
-// Task 9 (phase 6): the share image reaches the showcase.
+// The share image reaches the showcase.
 //
-// Phase 5's own task 10 left `og:image`/`twitter:image` out of layout.njk
-// entirely rather than point either at a file that did not exist yet (see
-// that file's own comment, still there, on the block this feeds). Phase 6
-// built the banner (`tools/convener_ops/formats.py::BANNER`) but nothing carried
-// it to a stable public address until now -- `.github/workflows/
+// `og:image`/`twitter:image` were left out of layout.njk
+// entirely at first rather than point either at a file that did not exist
+// yet (see that file's own comment, still there, on the block this feeds).
+// The banner (`tools/convener_ops/formats.py::BANNER`) existed before anything
+// carried it to a stable public address -- `.github/workflows/
 // visuals-production.yml` renders every currently *scheduled* real
-// edition's own banner on its one pinned-browser job (P-2: that cost is
+// edition's own banner on its one pinned-browser job (that cost is
 // paid there, never here) and commits exactly that set under
 // `src/banners/<event id>.png`, regenerated whole on every run so an
 // edition that is no longer scheduled loses its file the same run --
@@ -267,7 +267,7 @@ function absoluteUrl(path) {
 // `layout.njk`'s `{% if pageImage %}` treats the empty string exactly like
 // "unset", so a page with no banner ready emits no `og:image`/
 // `twitter:image` tag at all, the identical "a correct absence, not a
-// broken pointer" choice task 10 already made.
+// broken pointer" choice the metadata block already made.
 // ------------------------------------------------------------------ //
 
 function eventBannerUrl(event, banners) {
@@ -288,7 +288,7 @@ const SHARE_IMAGE_WIDTH = 1200;
 const SHARE_IMAGE_HEIGHT = 630;
 
 // ------------------------------------------------------------------ //
-// Task 8 (phase 6): the public agenda feed -- iCalendar (RFC 5545), a
+// The public agenda feed -- iCalendar (RFC 5545), a
 // second and unrelated feed format from the syndication one above
 // (`feed.njk`): a calendar client subscribes to this one, an RSS reader
 // to that one. Every function below builds towards `agendaCalendar`, the
@@ -386,7 +386,7 @@ function icsUtcStamp(isoWithOffset, minutes) {
 }
 
 // One VEVENT block for a scheduled edition: title, start, end, timezone
-// and the event page's address -- task 8's own list in full.
+// and the event page's address -- the whole of what a subscriber needs.
 //
 // UTC (`Z`), not a `VTIMEZONE` component: a `VTIMEZONE` would carry its
 // own copy of Europe/Paris's DST transition rule, which is exactly the
@@ -473,10 +473,10 @@ module.exports = function (cfg) {
 
   cfg.addPassthroughCopy('src/style.css');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
-  // at runtime: the phase 5 specification forbids any third-party dependency,
+  // at runtime: this showcase admits no third-party dependency,
   // and a webfont request is one — it discloses every visitor's address.
   //
-  // Fix round 1 (task 3): the files themselves moved from `src/fonts/` to
+  // The files themselves moved from `src/fonts/` to
   // `../fonts/` -- one repository root shared with `app/`'s own copy step
   // (`app/scripts/copy-fonts.mjs`), rather than each side keeping its own
   // committed set that could drift apart the way the colour tokens already
@@ -485,7 +485,7 @@ module.exports = function (cfg) {
   // (style.css's relative `url('fonts/...')`, layout.njk's `| url`-filtered
   // preload) had to change.
   cfg.addPassthroughCopy({ '../fonts': 'fonts' });
-  // Phase 5, task 2: the public showcase repository now receives this
+  // The public showcase repository receives this
   // project's own build output at its root, alongside `app/`, which is
   // exactly what its already-active GitHub Pages setting ("branch main,
   // folder root") serves. Without this file, GitHub's default Jekyll
@@ -503,8 +503,8 @@ module.exports = function (cfg) {
   // The ignore file is stored under a neutral name because a real
   // `.gitignore` here would apply to this build's own directory.
   //
-  // The front page itself is no longer a passthrough copy: phase 10 task 3
-  // made it `src/publish-readme.njk`, a template with `permalink:
+  // The front page itself is no longer a passthrough copy: it is
+  // `src/publish-readme.njk`, a template with `permalink:
   // "/README.md"`, because it names the organisation and both repositories
   // and those are the instance's, declared once in `config/instance.json`.
   // A passthrough copy renders nothing, so a `{{ }}` in it would have been
@@ -513,10 +513,10 @@ module.exports = function (cfg) {
   // is in `templateFormats` as a page-producing extension whose permalink
   // would have landed at `/README/`.
   cfg.addPassthroughCopy({ 'publish/gitignore-for-vitrine': '.gitignore' });
-  // Task 9 (phase 6): the share banner(s) `visuals-production.yml` commits
+  // The share banner(s) `visuals-production.yml` commits
   // under `src/banners/`. A plain string, anchored to this project's own
   // root exactly like the three passthrough copies above -- confirmed
-  // empirically (see this task's own report) that Eleventy neither errors
+  // empirically, not assumed, that Eleventy neither errors
   // nor writes anything when the source directory does not exist yet,
   // which is the ordinary state whenever no real edition is currently
   // scheduled (D-13): zero editions is zero banners, not a build failure.
@@ -575,7 +575,7 @@ module.exports = function (cfg) {
     return new Date(parisStandingStart(isoDate).startDate).toUTCString();
   });
 
-  // `events | agendaCalendar` for `src/agenda.njk` (task 8) -- see
+  // `events | agendaCalendar` for `src/agenda.njk` -- see
   // `agendaCalendar`'s own comment above for the feed in full.
   cfg.addFilter('agendaCalendar', agendaCalendar);
 
@@ -608,7 +608,7 @@ module.exports = function (cfg) {
   };
 };
 
-// D-14, fix round 1: `parisStandingStart` above is one of three independent
+// D-14: `parisStandingStart` above is one of three independent
 // implementations of the identical Europe/Paris seasonal-offset rule --
 // `tools/convener_ops/visual.py::paris_standing_start` and `app/src/state/
 // derived.ts::parisStandingStart` are the other two -- and nothing bound

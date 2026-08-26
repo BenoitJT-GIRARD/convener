@@ -25,9 +25,9 @@
  * dispatch token and a forged submission would look identical in Tally's
  * webhook log, and an operator would go rotate the wrong secret.
  *
- * C4 (2026-08-23 security audit): bounds, at last
- * -------------------------------------------------
- * Before this fix this worker had no body-size bound, no rate limiter and
+ * Bounds, at last
+ * ---------------
+ * This worker once had no body-size bound, no rate limiter and
  * no counter at all -- unlike services/signup-relay, which has all three
  * (README.md there, "Abuse protection"). A caller who already holds
  * TALLY_WEBHOOK_SECRET (a leak, an insider, a brute-forced weak secret)
@@ -63,7 +63,7 @@ const PROPOSAL_COUNTER_KEY = 'count:proposal';
 
 // One shared burst limiter across the whole endpoint -- see README.md for
 // why a single fixed key, not one derived from anything a caller sends: a
-// key an attacker chooses is exactly M5's own gap (services/signup-relay's
+// key an attacker chooses is exactly the gap next door (services/signup-relay's
 // limiter, keyed on the attacker-supplied event id, let a caller who
 // varies that field evade it entirely). There is nothing on this form to
 // vary a key by that would not repeat that mistake.
@@ -111,7 +111,7 @@ export async function handle(request, env) {
     return new Response('Not Found', { status: 404 });
   }
 
-  // C4: refuse an oversized body before it is even read into memory, when
+  // Refuse an oversized body before it is even read into memory, when
   // the caller was honest enough to say how big it is -- the same
   // pre-parse guard services/signup-relay's own MAX_BODY_BYTES check uses.
   // The authoritative check is the real-byte-length check below; this only
@@ -122,7 +122,7 @@ export async function handle(request, env) {
     return new Response('Bad Request', { status: 400 });
   }
 
-  // R-6: fail closed. An unconfigured secret refuses every request here,
+  // Fail closed. An unconfigured secret refuses every request here,
   // the opposite of proposal.py::verify_signature's tolerance -- that
   // tolerance is safe only because it sits behind a repository_dispatch
   // that already required an authenticated token. This worker is the
@@ -149,7 +149,7 @@ export async function handle(request, env) {
     return new Response('Bad Request', { status: 400 });
   }
 
-  // C4: `body.length` is UTF-16 code units, not bytes -- the same
+  // `body.length` is UTF-16 code units, not bytes -- the same
   // real-byte-length guard services/signup-relay's own index.js applies,
   // for the identical reason (a multi-byte-heavy body could pass a
   // byte-denominated MAX_BODY_BYTES compared against that count).
@@ -162,8 +162,8 @@ export async function handle(request, env) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // R-6, extended to the second secret and the two abuse-protection
-  // bindings (C4): a missing CONVENER_DISPATCH_TOKEN must not round-trip a
+  // Failing closed, extended to the second secret and the two
+  // abuse-protection bindings: a missing CONVENER_DISPATCH_TOKEN must not round-trip a
   // literal "undefined" Authorization header to GitHub, and a missing KV
   // or rate-limiter binding must refuse rather than silently skip the
   // check it exists for -- the same fail-closed discipline
@@ -178,11 +178,11 @@ export async function handle(request, env) {
     return new Response('Bad Gateway', { status: 502 });
   }
 
-  // C4: the burst limiter, checked before anything else touches GitHub or
+  // The burst limiter, checked before anything else touches GitHub or
   // the cumulative counter -- the same ordering services/signup-relay's
   // own index.js uses for its per-event limiter. One shared key across the
   // whole endpoint (RATE_LIMITER_KEY, a fixed literal -- see this worker's
-  // own module comment and README.md for why M5's mistake, a
+  // own module comment and README.md for why the neighbouring mistake, a
   // caller-chosen key, is not repeated here): there is only one form, so
   // there is no legitimate reason to key this any finer, and any key
   // derived from caller-supplied data is exactly the gap that let
@@ -197,7 +197,7 @@ export async function handle(request, env) {
     return new Response('Too Many Requests', { status: 429, headers: { 'Retry-After': '60' } });
   }
 
-  // C4: the cumulative ceiling, checked before the dispatch to GitHub --
+  // The cumulative ceiling, checked before the dispatch to GitHub --
   // cheaper to refuse here than to spend a GitHub API call on a request
   // that will be refused anyway. A KV read failure is treated as "no count
   // yet" rather than refusing the request, the same accepted trade-off
@@ -227,7 +227,7 @@ export async function handle(request, env) {
       // `body` must be a JSON *string*, never a nested object: the workflow
       // reads it as a bare ${{ github.event.client_payload.body }}
       // interpolation, which only renders raw JSON when the value is a
-      // string (R-7). It is the exact bytes received, untouched.
+      // string. It is the exact bytes received, untouched.
       body: JSON.stringify({
         event_type: 'proposal-submitted',
         client_payload: { body, signature: given },
@@ -250,7 +250,7 @@ export async function handle(request, env) {
     return new Response('Bad Gateway', { status: 502 });
   }
 
-  // C4: best-effort, after a confirmed dispatch -- a submission that
+  // Best-effort, after a confirmed dispatch -- a submission that
   // reached GitHub must not be un-sent because the counter could not be
   // written afterwards. Mirrors services/signup-relay's own
   // write-failure trace: a fixed message and no data that could identify

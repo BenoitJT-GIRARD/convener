@@ -20,7 +20,7 @@ workflow run starts for it. That stays true because the confirmation
 e-mail a registration produces carries the room link and the matching
 code, and there is no other channel for either.
 
-`/survey` **writes it to the submission queue instead** (phase 9, task 2):
+`/survey` **writes it to the submission queue instead**:
 one Contents-API `PUT` of `queue/survey/<entry id>.json` on the
 `submission-queue` branch, and no run starts at all. One daily drain
 handles everything waiting — see `docs/reference/operations.md`, "Draining
@@ -38,8 +38,7 @@ it.
 
 ## A second route, not a second worker
 
-`app/src/islands/survey/SurveyForm.tsx` (moved here from `app/src/survey/`
-by phase 7 task 5) — the post-event survey (phase 4 spec S:6, task 16) —
+`app/src/islands/survey/SurveyForm.tsx` — the post-event survey —
 encrypts a response in the browser exactly the way
 `SignupForm.tsx` encrypts a registration (`app/src/survey/encrypt.ts` is the
 sibling of `app/src/signup/encrypt.ts`, same wire format), and POSTs it to
@@ -53,10 +52,10 @@ worker, not a route on either of the other two" below applies a second time
 between `/` and `/survey`: there is no second trust boundary here, only a
 second `client_payload.body` destination and a second `event_type`.
 
-What genuinely is *also* separate, since fix round 1 (R-37): `/survey`
+What genuinely is *also* separate: `/survey`
 checks a second fact `/` never needs to, once the event is known to
-exist — whether that event's survey switch is actually on. Before this,
-the switch was enforced in exactly one of four layers (the CI handler,
+exist — whether that event's survey switch is actually on. That check
+used to be enforced in exactly one of four layers (the CI handler,
 last), which meant a participant answering a closed survey was thanked and
 had the answer discarded with no one told. `surveyEnabled` (`src/index.js`)
 reads `public-data/survey-status.json` through the same GitHub Contents API
@@ -66,9 +65,9 @@ already spends one read of for `keys/events/<id>.pub`, just a different
 path, and refuses (`404`, the same bucket "no such event" already falls
 into) when the event is not in the array it decodes.
 
-Fix round 1 originally read that file from a plain public HTTPS URL
-instead (a page on the published site, no token, no GitHub API budget). Fix
-round 2 (R-41) removed that: the URL pointed at a deployment this project
+That file was once read from a plain public HTTPS URL
+instead (a page on the published site, no token, no GitHub API budget).
+That is gone: the URL pointed at a deployment this project
 had never actually wired up, so the relay's own answer depended on a site
 that did not exist; it also carried a build-to-live latency the handler's
 own read of `data/speakers.yml` does not have, on top of which the relay
@@ -181,8 +180,8 @@ unset `TALLY_WEBHOOK_SECRET` there just skips a check a forged dispatch
 could not have passed anyway. This worker has no such shelter: it is the
 first thing a request from the open internet reaches. So a missing
 `CONVENER_DISPATCH_TOKEN`, a `SIGNUP_RELAY_KV` binding that was never set up, a
-`SIGNUP_RATE_LIMITER` binding that was never set up, or (M5, 2026-08-23
-security audit) a `GLOBAL_RATE_LIMITER` binding that was never set up,
+`SIGNUP_RATE_LIMITER` binding that was never set up, or a
+`GLOBAL_RATE_LIMITER` binding that was never set up,
 refuses every request with `502` rather than falling back to "no
 ceiling," "no burst limit" or "no known-event check" — none of GitHub,
 the counter or either limiter is ever touched on a misconfigured deploy.
@@ -302,7 +301,7 @@ identifier every dispatch and every workflow run already names) and a
 fixed message, never the body, so a counter that stops advancing leaves a
 trace instead of just going quiet — the one thing a signal must not do.
 
-### M5 (2026-08-23 security audit): the per-event key was itself the gap
+### The per-event key was itself the gap
 
 `SIGNUP_RATE_LIMITER` above is keyed on `eventId` — attacker-supplied,
 read straight from the request body before this worker has any way to
@@ -397,7 +396,7 @@ The caller only ever sees one of these seven:
 - `404` — the route (a `POST`/`OPTIONS` to any path but `/` or `/survey`;
   a method other than those two is `405` regardless of path, checked
   first), a well-shaped `event_id` naming an event whose public key does
-  not exist in the repository, or — on `/survey` only, since R-37 — an
+  not exist in the repository, or — on `/survey` only — an
   event whose survey switch is not on. A caller cannot tell any of these
   apart and does not need to; all three mean "there is nothing here to
   send this to."

@@ -1,9 +1,9 @@
 /**
- * Task 9 (phase 6): which event ids currently have a share banner ready to
+ * Which event ids currently have a share banner ready to
  * publish -- `event.njk`'s own `eleventyComputed.pageImage` reads this list
  * (via `.eleventy.js::eventBannerUrl`) to decide whether an edition gets an
  * `og:image`/`twitter:image` tag at all, rather than always emitting one
- * that might not resolve. Phase 5's own task 10 left the tag out entirely
+ * that might not resolve. The tag was left out entirely at first
  * for exactly that reason -- see `layout.njk`'s own comment on the block
  * this feeds.
  *

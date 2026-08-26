@@ -4,7 +4,7 @@ pagination:
   data: events
   size: 1
   alias: event
-  # Task 10 (phase 5) established this flag for event.njk, for the
+  # event.njk carries this flag for the
   # identical reason it is needed here: without it, Eleventy adds only the
   # *first* page a paginated template generates to `collections.all`, and
   # `sitemap.njk`'s own loop over that collection would list one survey
@@ -33,7 +33,7 @@ eleventyComputed:
 ---
 
 {#
-  Phase 7 task 5: the post-event survey's own static page, one per event
+  The post-event survey's own static page, one per event
   (D-19), the same per-event addressing `event.njk` already uses for
   registration -- this is *why* that page is the closer mechanical
   analogue, even though this page's own layout (a dedicated hero plus one
@@ -44,9 +44,9 @@ eleventyComputed:
   event, to people this project has no other reason to send back to the
   event page itself.
 
-  Before this task, `/survey/<event id>` lived inside the operators'
+  `/survey/<event id>` used to live inside the operators'
   own application bundle (`App.tsx`'s former `SurveyRoute`) -- the one
-  asymmetry the security audit's web surface review named: registration
+  asymmetry a review of this project's web surface named: registration
   and certificate verification were both already extracted (D-18); the
   survey was not. This page, and the island it mounts
   (`app/src/islands/survey/`), close that gap.
@@ -68,11 +68,11 @@ eleventyComputed:
   </p>
 
   {#
-    Phase 4 spec S:6, the wording `app/src/survey/SurveyForm.tsx::Notice`
-    used to carry before this task (quoted here unchanged, not redrafted)
+    The wording `app/src/survey/SurveyForm.tsx::Notice`
+    used to carry (quoted here unchanged, not redrafted)
     -- moved to plain static HTML ahead of this island's own mount point,
-    the identical D-18 move task 6 made for registration's own notice on
-    `event.njk`. `tools/tests/test_site.py` pins the ordering, the
+    the identical D-18 move `event.njk` made for registration's own
+    notice. `tools/tests/test_site.py` pins the ordering, the
     retention figure and the anonymity claim against this copy now,
     the same way it already pins `event.njk`'s.
   #}
@@ -107,8 +107,8 @@ eleventyComputed:
   {#
     The survey island itself, mounted here -- extracted from the
     operators' application into its own small, self-contained bundle
-    (`app/src/islands/survey/`), the same move task 6 made for
-    registration and task 7 made for certificate verification. A
+    (`app/src/islands/survey/`), the same move registration and
+    certificate verification each made before it. A
     participant answering this survey never downloads the operators'
     cockpit to do it.
 

@@ -1,7 +1,7 @@
 """One-shot migration of `data/speakers.yml` from schema v4 to schema v5.
 
 Schema v5 adds one field: `survey_enabled`, the post-event survey's
-per-event switch (task 16, phase 4 spec S:6). It is a fact about a speaker
+per-event switch. It is a fact about a speaker
 record, not a `data/config.yml` setting, for the reasoning
 `app/src/data/types.ts::Speaker.survey_enabled`'s own doc comment gives --
 so every existing record, real data older than the field itself, has to
@@ -13,8 +13,8 @@ What it does, and the whole of what it does: every speaker gains
 `forum_thread` -- the last of the event-mechanics fields (`zoom_link`,
 `youtube_url`, `forum_thread`) the switch belongs beside.
 
-`false`, never `true`: task 16's own ruling 1 is explicit that "facultatif
-veut dire absent par defaut" -- an existing event never silently gains an
+`false`, never `true`: optional means absent by default, so
+an existing event never silently gains an
 open survey it never asked for. Turning the survey on for a real event is a
 deliberate, later, per-event edit, not something this migration should ever
 decide on an organiser's behalf.

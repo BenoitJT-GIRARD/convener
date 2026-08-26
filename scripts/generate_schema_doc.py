@@ -2,9 +2,9 @@
 
 `docs/reference/schema.md` is the page a volunteer opens to find out what a
 record holds. It was written by hand, next to a model that kept moving, and it
-drifted every time the model did: during phase 2 it defined `proposed_by` as
+drifted every time the model did: it once defined `proposed_by` as
 the board member handling the lead, then went on listing fields the model had
-dropped; phase 3 corrected it twice more and it still named a thirty-day view
+dropped; two more corrections later it still named a thirty-day view
 count under a window that had become configuration. Every one of those was
 found by a person reading two files side by side, which is not a control.
 
@@ -311,10 +311,10 @@ _NESTED: dict[str, Interface] = {}
 
 #: How a TypeScript type is spelled for a volunteer.
 #:
-#: "number" stays "number" rather than becoming "int" (round 2 review of
-#: phase 4 task 9). It used to become "int": every "number" field this
+#: "number" stays "number" rather than becoming "int". It used to become
+#: "int": every "number" field this
 #: schema had ever declared happened to be a whole count, so the word was
-#: an editorialisation that was, until eligibility_share (phase 4 S:5),
+#: an editorialisation that was, until eligibility_share existed,
 #: always true. eligibility_share can only ever hold a bounded fraction,
 #: and calling it an int would be a false statement on the one page whose
 #: entire purpose is that it cannot drift from the types it is generated
@@ -326,10 +326,11 @@ _NESTED: dict[str, Interface] = {}
 #: `]0, 1]` range check in tools/convener_ops/validate.py). So the type column
 #: says only what the type itself says.
 #:
-#: A round 2 draft of this comment went on to claim each field's own doc
+#: A draft of this comment went on to claim each field's own doc
 #: comment "already carries the real constraint" -- sla_days's stating
-#: whole numbers, eligibility_share's stating ]0, 1]. Round 3 review found
-#: that false by checking the live files, not by trusting the sentence: no
+#: whole numbers, eligibility_share's stating ]0, 1]. That turned out
+#: false, found by checking the live files rather than trusting the
+#: sentence: no
 #: field in app/src/data/types.ts says "whole number", anywhere, and
 #: eligibility_share's own bound lived in its doc comment's *second*
 #: paragraph -- which _paragraph() below deliberately never reads, so it

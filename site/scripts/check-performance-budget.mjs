@@ -1,5 +1,5 @@
-/* Task 12 (phase 5): acceptance criterion 7 -- "the site must stay usable on
- * a poor connection, verified automatically". This is that verification: it
+/* The site must stay usable on a poor connection, and that has to be
+ * verified automatically. This is that verification: it
  * sums the real bytes a visitor's browser downloads to render one of this
  * project's public pages, gzip-compressed (D-26's own "measure the deployed
  * shape" applied to weight, not just to address: GitHub Pages serves gzip on
@@ -31,7 +31,7 @@
  * -----------------------------------------
  * D-17: the self-hosted font family is a deliberate, non-negotiable choice
  * -- a webfont request to a third party discloses every visitor's address,
- * which the phase 5 brief and this project's own data notice both forbid.
+ * which this project's own data notice forbids.
  * It is also, by a wide margin, the largest static weight on this site
  * (~193 KB across two Archivo subsets and one JetBrains Mono weight, all
  * already woff2-compressed -- see `FONT_PAYLOAD_BUDGET_RAW_BYTES`'s own
@@ -94,22 +94,22 @@ const STATIC_PAGE_BUDGET_GZIP_BYTES = 40 * 1024;
 
 /** Pages carrying a client-side island -- the one event page accepting
  *  registrations, the certificate-verification page, and every survey
- *  page (`survey.njk`, phase 7 task 5): HTML plus the shared stylesheet
+ *  page (`survey.njk`): HTML plus the shared stylesheet
  *  plus the one island bundle the page mounts, gzip.
  *
  *  Measured on the real built output, 2026-08-22: the heavier of the two
  *  islands then in existence was the verify page, 72,968 B gzip (1,462 B
  *  HTML + 9,523 B CSS + 61,983 B for `verify.js`); the registration
  *  island's own event page comes out within a few hundred bytes of it.
- *  The survey island, measured phase 7 task 5's own report, comes out
+ *  The survey island, measured the same way, comes out
  *  close to the same weight as its two siblings (one shared HTML/CSS
- *  shape, one island bundle of comparable size) -- see that report for
- *  the exact figure. This budget allows roughly 50% growth over the
+ *  shape, one island bundle of comparable size).
+ *  This budget allows roughly 50% growth over the
  *  2026-08-22 measurement -- a dependency bump, more form fields, more
  *  verification detail -- while staying well under half of what a visitor
- *  downloaded before tasks 6 and 7 moved these forms out of the operators'
- *  cockpit (183.65-189.53 KB gzip for the whole application; see those
- *  tasks' own reports). The regression this budget exists to catch is a
+ *  downloaded before these forms moved out of the operators'
+ *  cockpit (183.65-189.53 KB gzip for the whole application).
+ *  The regression this budget exists to catch is a
  *  visitor silently going back to downloading something close to that,
  *  not a few hundred bytes of copy.
  */
@@ -203,7 +203,7 @@ async function discoverHtmlPages(root) {
  *  these are two independent, single-purpose scripts, and neither needs
  *  the other's dependencies. See that file's own comment for the full
  *  breakdown this formula encodes, including `survey.njk`'s own one page
- *  per event (phase 7 task 5). */
+ *  per event. */
 function expectedPageCount(events) {
   const pastYears = new Set(
     events

@@ -56,7 +56,7 @@ Measured from the original artwork, WCAG 2.1 relative luminance.
 | navy | `#012765` | **14.19** | — |
 | coral | `#fd6b52` | 2.84 | **5.00** |
 
-Navy read **14.23** here until phase 10 recomputed it with the repository's own
+Navy read **14.23** here until it was recomputed with the repository's own
 WCAG 2.1 arithmetic (`tools/convener_ops/brand.py`), which gives 14.194. Nothing
 turns on the difference — it clears AAA either way — but a measurement nobody
 rechecks is exactly what D-16 was decided over, so the figure the build asserts
