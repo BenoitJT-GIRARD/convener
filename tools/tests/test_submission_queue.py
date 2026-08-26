@@ -244,9 +244,8 @@ def test_secret_names_fills_every_slot_even_when_the_drain_needs_none() -> None:
 
 
 def test_one_drain_of_two_gives_what_two_drains_of_one_gave() -> None:
-    """Acceptance criterion, stated as an experiment rather than as prose:
-    the batched path and the one-at-a-time path have to agree on the file
-    they leave behind."""
+    """Stated as an experiment rather than as prose: the batched path and
+    the one-at-a-time path have to agree on the file they leave behind."""
     private_pem, public_pem = eventkeys.generate()
     first, second = _name("m0000001"), _name("m0000002")
     both = {first: _envelope(_EVENT, public_pem, overall_rating=4)}
@@ -524,8 +523,8 @@ def test_an_interrupted_drain_loses_nothing_and_doubles_nothing() -> None:
 
 
 def test_a_replayed_drain_records_nothing_a_second_time() -> None:
-    """The acceptance criterion in its own right: a drain run twice over a
-    queue it has already drained produces no second record."""
+    """Idempotence in its own right: a drain run twice over a queue it has
+    already drained produces no second record."""
     private_pem, public_pem = eventkeys.generate()
     name = _name()
     entries = {name: _envelope(_EVENT, public_pem)}

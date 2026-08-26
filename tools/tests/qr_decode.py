@@ -5,8 +5,8 @@
 that module's own docstring for why reusing it, rather than hand-rolling a
 second one, is the right call). Nothing in this project's dependency tree
 reads a QR code back, and no test may reach a network service to ask one
-to. "A code nobody has decoded is a rectangle of noise" (this task's own
-brief) -- so this module is that decoder: given the exact `<svg>` fragment
+to. A code nobody has decoded is a rectangle of noise, so this module is
+that decoder: given the exact `<svg>` fragment
 `registration_code_svg` returns, it recovers the original string, using
 nothing from `segno` except the handful of *structural* constants the ISO
 standard itself defines (`segno.consts`'s own `FORMAT_INFO`,
@@ -19,9 +19,8 @@ string -- the module matrix, the format-info read, the data mask, the
 zigzag placement order, the block deinterleave, the byte-mode segment
 parse -- is implemented independently below, verified by round-tripping
 against `segno.make` for several hundred generated strings spanning every
-QR version and error level before this module was trusted (see the task's
-own report for the numbers) rather than assumed correct from the first
-render that happened to work.
+QR version and error level before this module was trusted, rather than
+assumed correct from the first render that happened to work.
 
 Scope, deliberately narrow: byte mode only, no error *correction*
 ------------------------------------------------------------------

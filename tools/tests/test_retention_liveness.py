@@ -12,9 +12,8 @@ Two layers, mirroring `test_retention.py`'s own split:
   would actually hit.
 * `cli.py`'s `record_retention_run` and `check_retention_liveness` -- the
   two commands `retention.yml` and `retention-watchdog.yml` actually run.
-  The second half is the "prove it" this task's brief asks for by name:
-  simulate the silence and show it firing, then show it silent when
-  retention is healthy.
+  The second half is the "prove it": simulate the silence and show the
+  watchdog firing, then show it silent when retention is healthy.
 """
 
 from __future__ import annotations
@@ -170,9 +169,8 @@ def test_record_retention_run_advances_the_date_on_a_later_day(
 
 
 # -------------------------------------------------------------------- #
-# check_retention_liveness(): the "prove it" pair this task's brief asks
-# for by name -- the watchdog firing on real silence, and staying silent
-# on real health.
+# check_retention_liveness(): the "prove it" pair -- the watchdog firing
+# on real silence, and staying silent on real health.
 # -------------------------------------------------------------------- #
 
 

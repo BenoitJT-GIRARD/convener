@@ -67,8 +67,8 @@ _EXPECTED_REGISTER_FIELDS = frozenset(
 
 
 # ------------------------------------------------------------------ #
-# Step 1 -- the register's own guarantee. Written first, per the brief:
-# "C'est le test le plus important de la tâche."
+# The register's own guarantee -- the most important property in this
+# module, and the one every other test here is built around.
 # ------------------------------------------------------------------ #
 
 
@@ -112,8 +112,8 @@ def test_the_register_holds_no_name_and_no_address() -> None:
 
 def test_the_public_projection_holds_no_fingerprint_either() -> None:
     """The same sweep, aimed at `public_register`'s output rather than the
-    internal register: ruling 5 says the public projection carries
-    identifiers and states *only* -- never a fingerprint, even though the
+    internal register: the public projection carries identifiers and
+    states *only* -- never a fingerprint, even though the
     internal register (which is not published) does hold one."""
     entry = CertificateEntry(
         identifier="a" * 32,
@@ -129,7 +129,7 @@ def test_the_public_projection_holds_no_fingerprint_either() -> None:
 
 # ------------------------------------------------------------------ #
 # The fingerprint: salted, domain-separated from matching_code, and
-# never the same value as it (ruling 4).
+# never the same value as it.
 # ------------------------------------------------------------------ #
 
 
@@ -207,7 +207,7 @@ def test_fingerprints_digest_bytes_cannot_be_reduced_to_the_mailed_matching_code
 
 # ------------------------------------------------------------------ #
 # duration_hours -- the written rounding rule, both sides of the
-# boundary, and the exact tie (ruling 10).
+# boundary, and the exact tie.
 # ------------------------------------------------------------------ #
 
 
@@ -317,8 +317,8 @@ def test_issue_produces_a_token_that_verifies_and_carries_the_right_payload() ->
 def test_issue_mints_a_fresh_random_identifier_each_time_no_register_matches() -> None:
     """Two different people, issued against an empty register each time:
     their identifiers must differ, and neither may be derivable from the
-    other -- this is the negative half of ruling 3's "identifier must not
-    be deterministic": nothing here ties the identifier to the address by
+    other -- this is the negative half of "the identifier must not be
+    deterministic": nothing here ties the identifier to the address by
     formula.
 
     Also pins the identifier's own shape:
@@ -492,14 +492,13 @@ def test_a_different_address_for_the_same_event_gets_its_own_identifier() -> Non
 
 # ------------------------------------------------------------------ #
 # Revocation -- the signature stays valid, the register alone says
-# "no longer good" (ruling 11, brief step 4).
+# "no longer good".
 # ------------------------------------------------------------------ #
 
 
 def test_a_revoked_certificate_still_verifies_but_reports_revoked() -> None:
-    """Both halves, in one test, per the brief: "un test doit vérifier
-    qu'un certificat révoqué se vérifie toujours cryptographiquement ET se
-    rapporte comme révoqué."."""
+    """Both halves, in one test: a revoked certificate still verifies
+    cryptographically *and* reports itself revoked."""
     private_pem, public_pem = generate()
     issued = issue(
         _attendee(), _EVENT, private_pem, "salt", (), issued_on=date(2026, 8, 20)
@@ -582,8 +581,8 @@ def test_issuing_again_after_revocation_refuses_rather_than_resurrecting() -> No
     `reissue`'s own docstring). This is the test the obvious mutation
     calls for: "make the three-way lookup two-way (skip revoked
     rows and mint) -- a test must fail, and it must be the one about a
-    routine re-run after a revocation." Reverting this round's fix to the
-    old reuse-the-revoked-row behaviour, or to a two-way skip-and-mint
+    routine re-run after a revocation." Reverting to the old
+    reuse-the-revoked-row behaviour, or to a two-way skip-and-mint
     behaviour, both fail this test."""
     private_pem, _ = generate()
     issued = issue(
@@ -732,10 +731,10 @@ def test_sign_for_signs_the_row_it_is_given_not_one_it_resolves_itself() -> None
     fingerprint (the exact shape a revoke-and-reissue leaves behind) --
     `sign_for` must sign whichever one it is handed, never look the other
     up itself. Mutating this to resolve `entry` from a register instead of
-    signing the argument directly is the mutation the brief's own list
-    names: "make deliver_certificate sign something other than the row it
-    resolved -- a test must fail"; this is that property, pinned at the
-    unit level, one layer below the CLI test of the same name."""
+    signing the argument directly -- making `deliver_certificate` sign
+    something other than the row it resolved -- has to fail; this is that
+    property, pinned at the unit level, one layer below the CLI test of
+    the same name."""
     private_pem, public_pem = generate()
     attendee = _attendee()
     revoked = CertificateEntry(
@@ -1050,7 +1049,7 @@ def test_public_register_of_an_empty_tuple_is_an_empty_list() -> None:
 
 
 # ------------------------------------------------------------------ #
-# The verification address (ruling 7).
+# The verification address.
 # ------------------------------------------------------------------ #
 
 
@@ -1107,7 +1106,7 @@ def test_verification_url_carries_the_token_after_the_fragment_not_before_it() -
 
 
 # ------------------------------------------------------------------ #
-# ORGANISER: a module constant, not configuration (ruling 8).
+# ORGANISER: a module constant, not configuration.
 # ------------------------------------------------------------------ #
 
 

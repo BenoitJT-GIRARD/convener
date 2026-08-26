@@ -9,8 +9,8 @@ layers that make the measurement mean something:
   actually bills by, the split into the half that cannot surprise anyone
   and the halves that can, and the boundaries the alarm turns on.
 * `cli.py`'s three commands, driven end to end against a temporary
-  repository root and a fixture file. **The "prove it" the brief asks for
-  by name lives here**: data that crosses the line, watched going off, and
+  repository root and a fixture file. **The "prove it" lives here**: data
+  that crosses the line, watched going off, and
   data one unit below it, watched staying quiet -- for both alarms.
 * The two workflow files, read as text, pinned against the properties no
   offline command can see: that this feature added no job and no workflow,
@@ -620,8 +620,8 @@ def _instance(tmp_path: Path, payloads: list[Any]) -> Path:
 def test_record_actions_usage_writes_the_record_and_stays_green_when_quiet(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """One half of the proof the brief asks for: data just below the line,
-    watched staying quiet."""
+    """One half of the proof: data just below the line, watched staying
+    quiet."""
     _instance(tmp_path, _minute_runs(_rate_boundary() - 1))
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_today(monkeypatch, date(2026, 8, 24))

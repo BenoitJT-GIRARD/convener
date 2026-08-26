@@ -90,7 +90,7 @@ def test_compose_body_carries_the_survey_link_and_the_notice() -> None:
 
 
 def test_compose_body_never_carries_the_surname_or_the_institution() -> None:
-    """Ruling 4: nothing this module composes should carry more personal
+    """Nothing this module composes should carry more personal
     data than the greeting needs -- a surname or an institution in the
     body would be surplus, never checked or used by anything downstream."""
     message = compose(_registration(), "On analytical engines", "mrg-042")
@@ -105,7 +105,7 @@ def test_compose_is_deterministic() -> None:
 
 
 def test_compose_the_same_event_gives_every_recipient_the_identical_link() -> None:
-    """Ruling 2: no per-person token -- the survey link inside the body is
+    """No per-person token -- the survey link inside the body is
     a pure function of `event_id` alone, never of the registration."""
     ada = compose(_registration(), "On analytical engines", "mrg-042")
     grace = compose(

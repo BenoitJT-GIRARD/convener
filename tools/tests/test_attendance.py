@@ -223,7 +223,7 @@ def test_normalized_name_ignores_accents() -> None:
 
 
 def test_two_marie_martins_with_no_deciding_address_land_unmatched() -> None:
-    """The exact case the review named: two registrants share a normalised
+    """The case this refuses to guess at: two registrants share a normalised
     name, the row's own address matches neither, and nothing in the
     cascade may pick a winner by position in the registrations list --
     that would let who signed up first decide who was in the room."""
@@ -391,13 +391,12 @@ def test_a_display_name_that_normalises_to_nothing_never_matches_by_name() -> No
 
 
 def test_a_mistyped_code_still_lets_level_3_match_on_the_name_beside_it() -> None:
-    """The perverse case the review traced through two tasks: a
-    participant who followed the confirmation e-mail's instruction and
-    typed their real name plus a mistyped code must still be reachable at
-    level 3 -- refusing to strip the code token would make following the
-    instruction the reason the match fails, while someone who ignored the
-    e-mail entirely and joined under a different address would still
-    match at the same level."""
+    """The perverse case: a participant who followed the confirmation
+    e-mail's instruction and typed their real name plus a mistyped code
+    must still be reachable at level 3 -- refusing to strip the code token
+    would make following the instruction the reason the match fails, while
+    someone who ignored the e-mail entirely and joined under a different
+    address would still match at the same level."""
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     event = MatchEvent(event_id=_EVENT_ID, salt=_SALT)
     real_code = _code_for(ada.email)
@@ -613,7 +612,8 @@ def test_unmatched_rows_sharing_an_address_are_summed_too() -> None:
 def test_unreachable_rows_are_never_summed_together() -> None:
     """No address exists to group telephone rows by, so two of them are
     never folded into one -- inventing a shared identity for them would be
-    exactly the kind of manual-recovery invention the task rules out."""
+    exactly the kind of manual-recovery invention this module rules
+    out."""
     event = MatchEvent(event_id=_EVENT_ID, salt=_SALT)
     first = _row("+1 555 0100", None, duration_seconds=600)
     second = _row("+1 555 0100", None, duration_seconds=900)
@@ -691,8 +691,8 @@ def _attendee(duration_seconds: int) -> MatchedAttendee:
 
 
 def test_a_duration_exactly_at_the_threshold_is_eligible() -> None:
-    """The brief's own boundary case: exactly the fraction asked for
-    counts, not only strictly more than it."""
+    """The boundary case: exactly the fraction asked for counts, not only
+    strictly more than it."""
     threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)
 
     assert eligible(_attendee(2700), threshold) is True

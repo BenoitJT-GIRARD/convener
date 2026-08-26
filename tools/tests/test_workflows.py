@@ -7,7 +7,7 @@ can never succeed here. Nothing in this repository read workflow YAML before
 this module, which made that a config file no test could catch drifting back
 in.
 
-Two things are asserted instead of the two things the brief names:
+Two things are asserted, and neither is the obvious one:
 
 * Rather than running `npm run build` and grepping `app/dist/index.html`
   (slow, and this suite runs on every push), the base path is asserted
@@ -61,7 +61,7 @@ VITE_CONFIG = Path("app/vite.config.ts")
 APP_TSX = Path("app/src/App.tsx")
 
 
-#: The base path the brief names verbatim: the app is served from the
+#: The base path this repository publishes under: the app is served from the
 #: public showcase repository, under its own `app/` subtree, not from the
 #: private cockpit repo's own Pages site (which cannot exist on the free
 #: plan). Derived from `config/instance.json` rather
@@ -1459,9 +1459,9 @@ def test_re_deriving_on_a_rejected_push_loses_no_entry(tmp_path: Path) -> None:
     workflows face on every burst of concurrent public submissions.
     Re-deriving (fetch, reset --hard, re-run the handler against the
     refreshed file, recommit, retry) is exactly registration.yml's and
-    survey.yml's own retry loop, and -- after this task -- candidate-
-    form.yml's, deploy.yml's, register.yml's, sweep.yml's and visuals-
-    production.yml's too. Both entries must survive."""
+    survey.yml's own retry loop, and candidate-form.yml's, deploy.yml's,
+    register.yml's, sweep.yml's and visuals-production.yml's too. Both
+    entries must survive."""
     clone_a, clone_b = _local_repo_pair(tmp_path)
 
     _append_entry(clone_a, "run-a")
@@ -2284,7 +2284,7 @@ def _guarded_block(script: str, if_line: str) -> str:
 def test_certificate_workflow_dispatches_deploy_only_after_a_real_push(
     workflow_path: Path, job: str, run_contains: str
 ) -> None:
-    """The mutation this round's own ruling names directly: "make the
+    """The mutation this pins directly: "make the
     publication dispatch step unconditional, or delete it. A test must
     fail." Two halves, both required: the dispatch must be reachable once
     a push genuinely succeeds, and must not be reachable on the "nothing
@@ -3125,7 +3125,7 @@ def test_match_attendance_workflow_has_its_own_concurrency_group() -> None:
 
 def test_match_attendance_workflow_uploads_the_unmatched_list_privately() -> None:
     """The only artefact naming who could not be matched, and the only
-    place acceptance criterion 9's own distinction ever reaches a human --
+    place the unmatched/unreachable distinction ever reaches a human --
     must be a short-retention, access-controlled build artefact, never a
     public one, the same restriction `cli.py::UNMATCHED_ATTENDANCE`'s own
     comment requires."""
@@ -3852,10 +3852,9 @@ def test_the_secret_workflow_monitor_declares_no_yaml_anchor() -> None:
 # a CI step, not a test: it downloads a pinned release, reaching the
 # network the same way `npm audit`/`pip-audit`/`cspell` already do
 # elsewhere in this same chain, which this suite must never do. This test
-# pins that the step exists and is wired the way the task report
-# describes, without ever running the tool itself -- the same "pin the
-# step, run the tool for real in the task report" split
-# test_dependency_audit_workflow.py already uses for `npm audit`.
+# pins that the step exists and is wired correctly, without ever running
+# the tool itself -- the same "pin the step, let CI run the tool for real"
+# split test_dependency_audit_workflow.py already uses for `npm audit`.
 # ------------------------------------------------------------------ #
 
 QUALITY_WORKFLOW = Path(".github/workflows/quality.yml")
@@ -3921,9 +3920,9 @@ def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() 
 # `push:` trigger outside `branches: [main]`) rather than on anything the
 # platform promises -- so the day one of those files loses its branch
 # filter, the monitor would stop looking exactly where it had started to
-# matter, and in silence. The audit files that under its arbitration C
-# and the plan settles it on the side that keeps the control; this is
-# what keeps it settled.
+# matter, and in silence. That trade -- minutes saved against a control
+# that keeps looking -- is settled on the side that keeps the control;
+# this is what keeps it settled.
 # ------------------------------------------------------------------ #
 
 #: A comparison of the *triggering run's* own event against a literal --
@@ -3982,8 +3981,8 @@ def test_the_monitor_skips_only_the_two_events_that_cannot_leave_main() -> None:
     """The two events GitHub can only ever start from the default branch,
     and no third. `push` in particular stays watched on purpose: a watched
     workflow that one day loses its `branches: [main]` has to still be
-    seen, and that is the whole difference between this guard and the
-    wider one the audit costed and the plan refused."""
+    seen, and that is the whole difference between this guard and a
+    wider one that would save minutes by no longer looking."""
     monitor = safe_load((ROOT / SECRET_WORKFLOW_MONITOR).read_text(encoding="utf-8"))
     guard = monitor["jobs"]["monitor"]["if"]
     assert isinstance(guard, str) and guard, (
@@ -4113,10 +4112,10 @@ def test_the_group_evaluator_reproduces_the_trap_it_exists_to_catch() -> None:
 
 def _pull_request_workflows() -> list[Path]:
     """Every workflow that runs on a pull request -- derived from the
-    trigger each file declares, never a list of names. The plan for this
-    change named five and there were six: `visuals.yml` runs on pull
-    requests too, and pays a real browser download to render a commit
-    already superseded."""
+    trigger each file declares, never a list of names. Counting by hand
+    gives five; there are six, because `visuals.yml` runs on pull requests
+    too and pays a real browser download to render a commit already
+    superseded."""
     return [
         workflow
         for workflow in _workflow_files()
@@ -5220,8 +5219,9 @@ def test_every_ignored_path_still_names_something_in_this_repository(
 def _workflows_triggered_by_a_push() -> list[Path]:
     """Every workflow declaring `push:`, whatever else it declares --
     derived from each file's own trigger block, never a list of names.
-    That is the point of the task rather than a stylistic preference: a
-    workflow written next month has to be covered without anyone
+    That is the point of the derivation rather than a stylistic
+    preference: a workflow written next month has to be covered without
+    anyone
     remembering it exists, and a list of names is precisely the thing
     that would not cover it."""
     return [
@@ -5233,7 +5233,7 @@ def _workflows_triggered_by_a_push() -> list[Path]:
 
 
 def test_the_push_sweep_reaches_the_workflows_the_double_run_sweep_cannot() -> None:
-    """Non-vacuity, in the form that also pins the gap this task exists
+    """Non-vacuity, in the form that also pins the gap this sweep exists
     to close.
 
     A parametrisation that silently found nothing would report green

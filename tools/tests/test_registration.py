@@ -602,9 +602,9 @@ def test_matching_code_is_deterministic() -> None:
 
 
 def test_matching_code_does_not_change_when_only_case_or_whitespace_differs() -> None:
-    """The property step 3 of the plan names directly: a resend that
-    corrects only casing must not invalidate the code the first
-    confirmation email already sent."""
+    """The property a resend depends on directly: correcting only casing
+    must not invalidate the code the first confirmation email already
+    sent."""
     canonical = matching_code("mrg-042", "ada@example.org", "sh")
     resent = matching_code("mrg-042", " Ada@Example.ORG ", "sh")
     assert canonical == resent

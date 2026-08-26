@@ -1,8 +1,8 @@
 """The registration code -- proving it decodes, and proving a room link can
 never reach it.
 
-"A code nobody has decoded is a rectangle of noise" (this task's own
-brief): every test below that touches an actual QR code decodes it with
+A code nobody has decoded is a rectangle of noise, so every test below
+that touches an actual QR code decodes it with
 `qr_decode.decode_registration_qr` -- an independent decoder, written for
 this suite alone (see that module's own docstring) -- and compares the
 recovered string against `registration.signup_url`, never merely checking

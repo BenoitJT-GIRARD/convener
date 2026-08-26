@@ -30,13 +30,13 @@ re-signs but never grows the register; see `certificate.issue`'s own
 "idempotent without being deterministic" section). So there is one test
 below for issuance (covering all four words at once) and a separate one
 for `remise`, in the order they actually run, not four separate tests
-pretending the brief's prose is a call graph.
+pretending a paragraph of prose is a call graph.
 
 The manual implementation, closed end to end
 ----------------------------------------------
-Acceptance criterion 8 -- "toute la chaine est executable de bout en bout
-avec l'implementation manuelle, sans aucun compte externe" -- used to be
-undemonstrable for the one step that reads a meeting platform's export:
+The whole chain has to be executable end to end with the manual
+implementation and no external account. That used to be undemonstrable for
+the one step that reads a meeting platform's export:
 `ManualPlatform.get_attendance` read a plaintext CSV `.gitignore` refuses
 to commit (personal data), so the manual path could run neither in CI (the
 file is never there) nor locally (the event's private key must never be
@@ -122,7 +122,7 @@ def _write_registrations_directly(
 ) -> None:
     """`data/events/<id>/registrations.enc`, built through `upsert` alone
     -- never through `convener-handle-registration`. This is the "a register
-    with one entry" intermediate state the brief's step 1 names."""
+    with one entry" intermediate state."""
     file = _load_registration_file(None)
     for registration in registrations:
         file, _replaced = _upsert_registration(

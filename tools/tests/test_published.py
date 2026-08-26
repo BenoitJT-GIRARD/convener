@@ -38,7 +38,7 @@ What this module does **not** cover, stated rather than left to be found:
   builds this whole repository as a *different* instance and sweeps the
   showcase, all four bundles, the handbook copied into them, the
   generated templates, the published feeds and the posters. That is the
-  acceptance criterion the whole phase rests on, and it is a different
+  property the whole separation rests on, and it is a different
   claim from this module's -- a source can be clean while what a reader
   receives is not. `test_site.py` covers today's instance at the
   built-page level besides
@@ -416,7 +416,7 @@ def test_the_relays_deploy_the_address_this_project_is_published_at() -> None:
 def test_no_build_configuration_reads_the_address_out_of_another_readers_source() -> (
     None
 ):
-    """The shape this task replaced, refused so it cannot come back.
+    """The shape this replaced, refused so it cannot come back.
 
     Two checkers and one workflow used to recover the prefix by running a
     regular expression over `site/.eleventy.js`, because that file was

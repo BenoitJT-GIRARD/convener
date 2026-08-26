@@ -249,7 +249,7 @@ def test_an_event_id_over_the_length_cap_is_refused_before_touching_the_filesyst
 
 
 # ------------------------------------------------------------------ #
-# get_attendance -- the email boundary is the point of this task
+# get_attendance -- the email boundary is the point
 # ------------------------------------------------------------------ #
 
 
@@ -275,7 +275,7 @@ def test_get_attendance_reads_the_csv_rows(tmp_path: Path) -> None:
 
 
 def test_a_participant_who_joins_by_telephone_has_no_email(tmp_path: Path) -> None:
-    """The boundary the revalidation wrote into 5: a telephone joiner has no
+    """A boundary, not a matching weakness: a telephone joiner has no
     address, the platform never collects one, and no matching cascade can
     ever reach them. `email` must be `None`, never `''` -- a caller that
     matches on `row.email == other.email` must not be able to make two
@@ -431,7 +431,7 @@ def test_duplicate_column_message_names_the_count_and_position_never_the_text(
 def test_a_malformed_row_is_reported_and_dropped_the_rest_still_read(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The one test the brief's mutation check bites on: a row this
+    """The one test the mutation check bites on: a row this
     malformed must be reported (printed to the job log) and excluded, never
     silently dropped, and never allowed to abort the whole import."""
     event_dir = tmp_path / "events" / "mrg-918"
@@ -1034,7 +1034,7 @@ def test_get_recording_raises_when_no_speaker_record_matches_the_event(
 
 def test_delete_recording_is_a_documented_no_op(tmp_path: Path) -> None:
     """`delete_recording` exists because of the chosen platform's storage
-    quota (spec SS2): a manual recording lives wherever it was uploaded by
+    quota: a manual recording lives wherever it was uploaded by
     hand, under nobody's quota this project manages, so there is nothing
     for the manual implementation to reclaim. No speaker record is needed
     either -- unlike `get_room` / `get_recording`, this never looks one up."""

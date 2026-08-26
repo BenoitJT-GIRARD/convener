@@ -537,12 +537,12 @@ def test_the_safe_area_clears_every_ribbon_waypoint() -> None:
     this test the way it could if this re-derived the same numbers through
     the function under test.
 
-    This is "the property, not a pixel" this task's own fix-round brief
-    asks for: nothing here renders an image or opens a browser (no test in
-    this module does -- see the module docstring), because the collisions
-    the brief reported were only ever visible in a screenshot, not in this
-    module's own generated markup -- checking the geometry that produces
-    the collision is what makes the property visible to a test at all.
+    This pins the property, not a pixel: nothing here renders an image or
+    opens a browser (no test in this module does -- see the module
+    docstring), because the collisions were only ever visible in a
+    screenshot, not in this module's own generated markup -- checking the
+    geometry that produces the collision is what makes the property visible
+    to a test at all.
 
     Checked at three aspect ratios, not only the square:
     `_ribbon_safe_margins` is built to survive a change of aspect ratio
@@ -592,9 +592,9 @@ def test_the_safe_area_is_not_the_whole_canvas() -> None:
 
 def test_every_text_bearing_rule_reads_the_derived_safe_area() -> None:
     """`_ribbon_safe_margins` returning the right numbers is not enough on
-    its own -- every rule this task's fix-round brief named a collision in
-    (the wordmark and talk-title bands share `.band`, the hero section, the
-    date line) has to actually spend them, not fall back to a fixed `vw`
+    its own -- every rule a collision was ever traced to (the wordmark and
+    talk-title bands share `.band`, the hero section, the date line) has to
+    actually spend them, not fall back to a fixed `vw`
     that happens to look similar. `.content` and `.register` (the
     band sibling to `.content` -- see that module's own "Why the code can
     never be clipped" section) are the two rules that read a *narrower*
@@ -731,9 +731,9 @@ def test_the_series_title_is_centred_like_the_talk_title_and_date() -> None:
 # Three formats, one template (`formats.py` names the three real
 # sizes). Every property established above for the square is re-checked
 # here at the banner's and the print poster's own real dimensions, not
-# assumed to carry over -- the banner is exactly where this task's own
-# brief says the known defect lived ("the banner overflows at the bottom"),
-# and a test that only ever renders the square proves nothing about it.
+# assumed to carry over -- the banner is exactly where the known defect
+# lived (it overflowed at the bottom), and a test that only ever renders
+# the square proves nothing about it.
 # ---------------------------------------------------------------------------
 
 
@@ -809,10 +809,9 @@ def test_the_banner_still_shows_title_date_frame_and_register() -> None:
 
 
 def test_a_long_real_title_composes_without_clipping_in_every_format() -> None:
-    """The real fixture's own longest title (MRG-04) -- the exact case this
-    task's own brief names ("a title that already needed four lines in the
-    square") -- reaches the page whole in every one of the three named
-    formats: never truncated, never ellipsised, and never at the cost of
+    """The real fixture's own longest title (MRG-04), which already needed
+    four lines in the square -- it reaches the page whole in every one of
+    the three named formats: never truncated, never ellipsised, and never at the cost of
     the registration code."""
     title = _real_long_title()
     for fmt in FORMATS:
@@ -832,7 +831,7 @@ def test_a_long_real_title_composes_without_clipping_in_every_format() -> None:
 def test_the_safe_area_clears_every_ribbon_waypoint_at_each_named_format() -> None:
     """The same property `test_the_safe_area_clears_every_ribbon_waypoint`
     already pins at three generic aspect ratios, re-checked here at the
-    three real, named sizes this task settles on (`formats.py`) -- pinning
+    three real, named sizes (`formats.py`) -- pinning
     the actual numbers a caller really renders at, not only placeholders
     that happen to share their shape."""
     for fmt in FORMATS:
@@ -916,8 +915,7 @@ def test_the_register_row_never_shrinks_in_the_wide_grid() -> None:
     print_keep_both` is the one that actually bites -- it checks whether the
     rendered `<div>` at banner dimensions *carries* the `poster--wide`
     class, which the mutation above removes; four tests fail against that
-    mutation in total (checked by hand, not committed; see this task's own
-    report for the full list)."""
+    mutation in total, checked by hand and not committed."""
     doc = render_announcement(
         _announcement(), width=BANNER.width, height=BANNER.height, root=ROOT
     )
@@ -959,8 +957,7 @@ def test_the_talk_title_band_runs_the_full_canvas_width_in_every_format() -> Non
     fail against the pre-fix banner, which carried no backdrop at all
     (`'<div class="band--talk-title__backdrop"' in doc` is false there).
     Checked by hand: reverting the backdrop rule's own `width: 100vw` to
-    `width: 50vw` reproduces exactly that failure -- see this task's own
-    fix-round report for the full mutation record."""
+    `width: 50vw` reproduces exactly that failure."""
     for fmt in FORMATS:
         doc = render_announcement(
             _announcement(), width=fmt.width, height=fmt.height, root=ROOT

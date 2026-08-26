@@ -3,9 +3,9 @@ form that now offers those thresholds for editing.
 
 Three of the four files in `config/` that
 `config/boundary.yml` hands to the instance are numbers a maintainer
-edits, and until this task the only thing standing between a maintainer
-and an illegal one was a test -- run later, somewhere else, by somebody
-else. `config/queue-drain.yml`'s `alarm_after_hours` is the sharp case:
+edits, and until this check existed the only thing standing between a
+maintainer and an illegal one was a test -- run later, somewhere else, by
+somebody else. `config/queue-drain.yml`'s `alarm_after_hours` is the sharp case:
 **both** its bounds are derived from other declarations, and with this
 repository's current settings they meet exactly at 48, so there is
 precisely one legal value and nothing in the file says so. A file cannot

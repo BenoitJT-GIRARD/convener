@@ -7,11 +7,11 @@ Read as text and (for the properties a plain substring check would trip
 over its own explanatory comments for -- the path filter's contents, a
 step's own `if:`) parsed as YAML/JSON instead. Never executed: running
 this for real needs a real browser download and a real GitHub Actions
-runner, exactly the network access this suite must not take on. This
-task's own report records the hand-run transcript (every `run:` step in
-the workflow, executed directly, against the real committed lockfile and
-reference images) and the mutation proof (an element moved a few pixels,
-the check turning red, then green again on revert).
+runner, exactly the network access this suite must not take on. Every
+`run:` step in the workflow has been executed directly by hand against the
+real committed lockfile and reference images, and the mutation proved the
+same way (an element moved a few pixels, the check turning red, then green
+again on revert).
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ def test_puppeteer_core_still_lives_only_with_the_accessibility_checker() -> Non
     the a11y checker; the full `puppeteer` package added here must not
     also creep into `site/package.json`, which would make every one of
     that package's five other workflows pay the Chrome-for-Testing
-    download too (this task's own report)."""
+    download too."""
     site_package = json.loads(
         (_ROOT / "site" / "package.json").read_text(encoding="utf-8")
     )
@@ -232,9 +232,9 @@ def test_job_permissions_are_read_only() -> None:
 
 def test_node_version_meets_puppeteers_own_floor() -> None:
     """puppeteer 25.8.0 declares `engines.node: >=22.12.0`; every other
-    workflow in this repository still targets Node 20 (this task's own
-    report is why this dependency was isolated to its own package rather
-    than joining `site/package.json`, which those other jobs share)."""
+    workflow in this repository still targets Node 20, which is why this
+    dependency was isolated to its own package rather than joining
+    `site/package.json`, which those other jobs share."""
     assert "node-version: '22'" in _WORKFLOW
 
 
@@ -254,7 +254,7 @@ def test_a_dependency_audit_step_exists_for_the_new_lockfile() -> None:
 def test_the_chrome_download_is_cached_by_the_lockfile_hash() -> None:
     """Without this, every run -- even one a path filter judged worth
     running -- re-fetches the ~430MB Chrome-for-Testing build the
-    postinstall step downloads (this task's own report). Keyed on the
+    postinstall step downloads. Keyed on the
     lockfile so a puppeteer version bump changes the key and fetches the
     new build exactly once, rather than serving a stale cached browser
     forever."""
@@ -312,15 +312,15 @@ def test_per_pixel_threshold_is_a_named_justified_constant() -> None:
 def test_the_comparison_decodes_pngs_through_the_pinned_browser_itself() -> None:
     """No image-diffing dependency was added: both PNGs are decoded with
     the browser's own <canvas>/getImageData, inside `page.evaluate`, using
-    the same pinned Chromium this task already launched to render them."""
+    the same pinned Chromium already launched to render them."""
     assert "getImageData" in _SCRIPT
     assert "page.evaluate(" in _SCRIPT
     assert "new Image()" in _SCRIPT
 
 
 def test_a_regression_reports_what_differs_and_where() -> None:
-    """ "Fail on a regression. Loudly, naming what differs and where." --
-    pins that a failing comparison's own report names the format, the
+    """A regression has to fail loudly, naming what differs and where:
+    this pins that a failing comparison names the format, the
     fraction of differing pixels, the worst channel delta and a bounding
     box, not merely "images differ"."""
     assert "diffCount" in _SCRIPT

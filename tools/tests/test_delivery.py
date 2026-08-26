@@ -103,7 +103,7 @@ def test_render_certificate_carries_the_verification_url_as_text_and_as_a_qr() -
     still pass. `segno.make(url, ...)` -> `segno.make(identifier, ...)`
     survived 330 tests against the original test; this pins the embedded
     SVG to a byte-identical re-encoding of the verification URL, the same
-    way the review proved it by hand."""
+    way it was first proved by hand."""
     doc = _document()
     url = verification_url(_IDENTIFIER, _TOKEN)
     assert url in doc
@@ -172,8 +172,8 @@ def test_render_certificate_a_different_token_produces_a_different_document() ->
 
 
 def test_render_certificate_never_writes_anything_to_disk(tmp_path: Path) -> None:
-    """The brief's own step 1: nothing this function does may place a
-    rendered certificate under version control, or under any directory at
+    """Nothing this function does may place a rendered certificate under
+    version control, or under any directory at
     all -- it only ever returns a string."""
     before = sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*"))
     _document()
@@ -289,7 +289,7 @@ def test_delivery_result_has_no_document_or_body_field() -> None:
     """The design choice the module docstring argues for at length: a
     caller cannot write the rendered certificate to a file through this
     type, because the type has nowhere to carry it -- see
-    `DeliveryResult`'s own docstring, "ruling 1, ruling 2"."""
+    `DeliveryResult`'s own docstring."""
     fields = DeliveryResult(sent=False).__dataclass_fields__
     assert set(fields) == {"sent"}
 

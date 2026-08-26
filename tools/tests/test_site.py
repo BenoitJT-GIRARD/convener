@@ -521,7 +521,7 @@ def test_every_event_has_exactly_one_page_addressed_by_its_lower_cased_edition_c
 
 
 def test_a_built_public_page_never_carries_a_room_link(built_site: Path) -> None:
-    """Acceptance criterion 2, absolute: no room link on any public page
+    """Absolute: no room link on any public page
     -- the room link is delivered only by the confirmation e-mail. Swept
     across every file the build wrote, not only the event page's own
     output: the claim is about *any* public page, and a leak from, say,
@@ -925,8 +925,8 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 # The data page cites the data-protection record rather than
 # restating it -- in particular it never repeats a retention figure, on
 # purpose (two documents stating the same number independently disagree
-# the day one changes and the other does not). What is pinned hard here,
-# per the task brief, is that its link to that record actually resolves
+# the day one changes and the other does not). What is pinned hard here
+# is that its link to that record actually resolves
 # to something the app publishes: built from the same two constants that
 # decide where the record lands (`registry.ts`'s own file path,
 # `vite.config.ts`'s own published base) rather than a literal URL nothing
@@ -1129,8 +1129,8 @@ def test_discussions_filter_includes_only_editions_with_a_thread(
 
 
 def test_archive_pages_carry_no_script_tag_at_all(built_site: Path) -> None:
-    """The design decision this task's own brief asks to be pinned hard:
-    filtering the archive never needs JavaScript. Every page the filter
+    """The design decision pinned hard here: filtering the archive never
+    needs JavaScript. Every page the filter
     bar can possibly link to -- the full listing, each year, and both
     field-presence filters -- is swept, not only the base page, since a
     script added to any one of them would just as surely gate real
@@ -1411,11 +1411,11 @@ def test_every_built_page_that_offers_the_contact_address_gives_the_real_one(
 
 
 def test_the_data_page_never_restates_the_retention_figure() -> None:
-    """The task brief's own reasoning, checked: this page cites the
-    governance record rather than restating it, and in particular never
-    repeats the "90 days" retention figure that record gives -- a second
-    copy of that number here is precisely the drift risk the brief warns
-    against, whether or not it agrees with the record today."""
+    """One notion, one home, checked: this page cites the governance
+    record rather than restating it, and in particular never repeats the
+    "90 days" retention figure that record gives -- a second copy of that
+    number here is precisely the drift risk, whether or not it agrees
+    with the record today."""
     source = _DONNEES_TEMPLATE.read_text(encoding="utf-8")
     assert "90" not in source
 
@@ -1465,8 +1465,8 @@ _GOVERNANCE_LINK_TEMPLATES = (_DONNEES_TEMPLATE, _EVENT_TEMPLATE)
 
 
 def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None:
-    """One of the two things the task brief asks to be pinned hard: every
-    page's link to the governance record resolves to something published,
+    """One of the two things pinned hard here: every page's link to the
+    governance record resolves to something published,
     not to the private repository it actually lives in the source of.
 
     The templates no longer write the address at all --
@@ -1535,7 +1535,7 @@ def published_handbook(tmp_path_factory: pytest.TempPathFactory) -> Path:
     to is actually among what the app publishes, not merely named
     correctly by the regex check above. `app/tests/copy-handbook.test.ts`
     already proves this exhaustively from the TypeScript side; this is
-    the one file this task's own page depends on, checked once more from
+    the one file the data page depends on, checked once more from
     the Python side that owns `donnees.njk`, by a real copy rather than a
     second reading of the same registry text.
     """
@@ -1599,10 +1599,10 @@ def test_the_governance_record_is_actually_among_what_the_app_publishes(
 # needs no prefix at all -- a relative URL inside a stylesheet resolves
 # against the stylesheet's own address, at any prefix; and both islands'
 # Vite `base` (`app/vite.config.ts`) now matches the main app's published
-# address rather than diverging from it. The two tests below are the
-# deliverable the task brief asks for: a built-output sweep that closes the
-# whole class of defect (not just the instances one review happened to
-# enumerate), and a cross-boundary pin that keeps the site's own prefix
+# address rather than diverging from it. The two tests below are what
+# closes it: a built-output sweep over the whole class of defect (not just
+# the instances anybody happened to enumerate), and a cross-boundary pin
+# that keeps the site's own prefix
 # from becoming a fourth, independent literal.
 # -------------------------------------------------------------------------- #
 
@@ -1713,9 +1713,8 @@ def test_absolute_urls_share_the_one_origin_this_project_already_pins() -> None:
 # need the real host too, not only the path Eleventy's `pathPrefix`
 # supplies. `_built_file_for_absolute_url`, below, is the inverse
 # operation: given one of these absolute URLs, the file `built_site`
-# should already contain for it -- the check the task brief calls out
-# specifically ("confirm every URL in the sitemap and the feed resolves
-# against the served tree").
+# should already contain for it, so that every URL in the sitemap and the
+# feed can be confirmed to resolve against the served tree.
 # -------------------------------------------------------------------------- #
 
 _JSON_LD_RE = re.compile(
@@ -1840,8 +1839,8 @@ def test_the_paris_offset_and_label_agree_across_every_edition_and_the_dst_bound
 def test_an_upcoming_events_structured_data_offers_registration_a_past_ones_does_not(
     built_site: Path,
 ) -> None:
-    """The state the task brief names explicitly: a past seminar is not
-    still accepting registrations. `potentialAction` (schema.org
+    """A past seminar is not still accepting registrations.
+    `potentialAction` (schema.org
     RegisterAction) appears on an upcoming edition's structured data and
     on no other -- mutate event.njk to emit it unconditionally, ahead of
     `isUpcoming`, and this is the test that objects.
@@ -1865,8 +1864,8 @@ def test_an_upcoming_events_structured_data_offers_registration_a_past_ones_does
 def test_a_recordings_structured_data_names_it_a_recordingless_editions_does_not(
     built_site: Path,
 ) -> None:
-    """The other state the task brief names explicitly: an edition with a
-    recording and one without must not read the same in structured data.
+    """The other state: an edition with a recording and one without must
+    not read the same in structured data.
     """
     with_recording_id = _an_archived_event_with_recording_id()
     without_recording_id = _a_past_event_id()
@@ -1941,7 +1940,7 @@ _OG_IMAGE_RE = re.compile(r'<meta property="og:image" content="([^"]*)"')
 def test_every_page_carries_a_canonical_link_and_matching_open_graph_metadata(
     built_site: Path,
 ) -> None:
-    """Acceptance criterion 6: a shared page shows a correct preview.
+    """A shared page shows a correct preview.
     Checked on the home page, an event page, and one of every other kind
     of page this project generates -- `og:url`/the canonical link must be
     this project's real, absolute address, and title/description must be
@@ -2045,8 +2044,8 @@ def test_every_addressable_page_is_in_the_sitemap_and_the_two_archive_filters_ar
 def test_every_sitemap_and_feed_url_resolves_to_a_file_the_build_actually_wrote(
     built_site: Path,
 ) -> None:
-    """The check the task brief calls out specifically: confirm every URL
-    in the sitemap and the feed resolves against the served tree. Also the
+    """Every URL in the sitemap and the feed resolves against the served
+    tree. Also the
     worked mutation "break one absolute URL so it loses its prefix": strip
     `SITE_ORIGIN` (or `PATH_PREFIX`) out of `site/.eleventy.js`'s
     `absoluteUrl` filter and every assertion below fails, since none of
@@ -2261,8 +2260,8 @@ def test_feed_publication_dates_come_from_the_editions_own_date_never_the_clock(
 
 @pytest.fixture(scope="module")
 def built_site_no_events(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A wholly empty `events.json` -- the "empty feed" state the task
-    brief names explicitly, distinct from `built_site_no_past_editions`
+    """A wholly empty `events.json` -- the "empty feed" state, distinct
+    from `built_site_no_past_editions`
     above (every event `scheduled`, i.e. zero *past* editions): this
     fixture has no editions at all, upcoming or past, which the committed
     fixture (never empty) can never exercise on its own. Same scratch-copy
@@ -2303,10 +2302,9 @@ def built_site_no_events(tmp_path_factory: pytest.TempPathFactory) -> Path:
 def test_the_feed_still_renders_valid_and_empty_with_no_editions_at_all(
     built_site_no_events: Path,
 ) -> None:
-    """The empty-feed state the task brief names explicitly: zero editions
-    at all still produces a valid, well-formed RSS document with a channel
-    and no items -- not a build error, and not malformed XML from an empty
-    `{% for %}` loop.
+    """The empty-feed state: zero editions at all still produces a valid,
+    well-formed RSS document with a channel and no items -- not a build
+    error, and not malformed XML from an empty `{% for %}` loop.
     """
     tree = ET.parse(built_site_no_events / "feed.xml")
     channel = tree.find("./channel")
@@ -2558,8 +2556,8 @@ def test_agenda_feed_long_title_folds_and_round_trips_intact(
 # resolve to real content only once a banner file actually exists at the
 # address the tag names -- and the committed fixture this module's own
 # `built_site` builds from can never exercise that on its own: no fixture
-# banner is committed to this repository (see this task's own report for
-# why not -- a committed image is in git history for ever, and the real
+# banner is committed to this repository (a committed image is in git
+# history for ever, and the real
 # pipeline that produces one, `visuals-production.yml`, only ever commits
 # a *real*, currently-scheduled edition's banner; there is nothing this
 # project should carry permanently as a stand-in for that).
@@ -2568,8 +2566,8 @@ def test_agenda_feed_long_title_folds_and_round_trips_intact(
 # every other scratch-copy fixture above is (`--input=<scratch>/src`
 # against the real, unmodified `site/`): `.eleventy.js`'s own
 # `addPassthroughCopy('src/banners')` resolves its source relative to the
-# *project root* (Eleventy's own documented behaviour -- confirmed by hand,
-# see this task's own report), never relative to a CLI `--input` override,
+# *project root* (Eleventy's own documented behaviour, confirmed by hand),
+# never relative to a CLI `--input` override,
 # so a fixture that only swapped `src/` while still running the *real*
 # `site/.eleventy.js` would carry the real repository's own (currently
 # empty) `src/banners/`, not the scratch one this fixture writes a file
@@ -2724,7 +2722,7 @@ def test_the_share_banners_tagged_address_resolves_to_the_exact_bytes_committed(
     filter built a plausible-looking URL. Mutate this away (comment out
     `.eleventy.js::addPassthroughCopy('src/banners')`) and this is the
     test that notices the image has vanished from the built tree --
-    proven by hand, see this task's own report.
+    proven by hand.
     """
     event_id = _the_one_scheduled_event_id()
     page = (

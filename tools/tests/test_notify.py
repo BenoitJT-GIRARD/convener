@@ -764,7 +764,7 @@ def test_the_lead_goes_overdue_on_the_morning_the_sweep_parks_it(window: int) ->
 
     `sweep.expire_votes` parks a lead whose window ran out; `notify.overdue`
     (and `app/src/state/sla.ts`, its twin) say the board decision is late.
-    Until this task those read two different config keys, both set to 14 in
+    Those used to read two different config keys, both set to 14 in
     `data/config.yml` with nothing saying they had to agree: setting
     `sla_days.lead_decision` to 20 made the app call the board on time on the
     very morning the job parked the lead, and neither CI nor a reader had any
@@ -1321,7 +1321,8 @@ def test_the_digest_writes_nothing_when_no_channel_is_configured(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The whole point of the task. Today's repository is exactly this case."""
+    """The whole point of the digest. Today's repository is exactly this
+    case."""
     root = _repo(tmp_path, OVERDUE_YML, CONFIG_YML)
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
     monkeypatch.setattr("convener_ops.cli.sys.argv", ["convener-notify-digest"])

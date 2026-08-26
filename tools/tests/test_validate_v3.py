@@ -2,8 +2,8 @@
 
 Eleven cases, each pinned on the exact substring its
 error message must contain (the migration's own tests and CI both grep for
-these strings). A twelfth case (board_members obsolete) is added per the
-task's decision 2, which is not itself in the brief's table.
+these strings), plus a twelfth (board_members obsolete) that carries the
+same loud treatment for the same reason.
 """
 
 from __future__ import annotations
@@ -129,9 +129,9 @@ def test_vote_threshold_still_present_is_obsolete() -> None:
 
 
 def test_board_members_still_present_is_obsolete() -> None:
-    # Not in the brief's table, but decision 2 of the task requires the same
-    # loud treatment for board_members as for vote_threshold: a file that
-    # still carries the flat login list has not been migrated to `board`.
+    # The same loud treatment for board_members as for vote_threshold: a
+    # file that still carries the flat login list has not been migrated to
+    # `board`.
     errors = validate_config(config(board_members=["carol"]))
     assert any("board_members is obsolete" in e for e in errors)
 
@@ -497,7 +497,7 @@ def test_nomination_objection_date_must_be_a_date() -> None:
 
 
 def test_assigned_to_must_be_present_and_a_string() -> None:
-    # Ruling P2-15: every migrated speaker carries the field, empty when no
+    # Every migrated speaker carries the field, empty when no
     # board member owns the lead yet. A missing one is an unmigrated record.
     s = speaker()
     del s["assigned_to"]
@@ -573,7 +573,7 @@ def test_an_empty_proposed_by_is_accepted() -> None:
 
 
 def test_a_speaker_without_career_stage_is_rejected() -> None:
-    # Unconditional since the migration (ruling P2-12): before it, absence
+    # Unconditional since the migration: before it, absence
     # was a legacy state; after it, absence means a field was dropped.
     s = speaker()
     del s["career_stage"]

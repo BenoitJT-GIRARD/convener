@@ -19,8 +19,8 @@ now, not by a generation test for a file that no longer exists.
 it for the handbook appendix: the tests below read the committed files off
 disk and compare them with what today's `data/brand.json` derives. That
 catches a token hand-edited without regenerating, and a `data/brand.json`
-value changed without regenerating -- the two mutations named in this task's
-own brief.
+value changed without regenerating -- the two ways the committed copies
+and their source can drift apart.
 
 **Contrast is recomputed, not re-read.** `data/brand.json` carries measured
 ratios; `test_every_measured_contrast_ratio_is_recomputed_from_its_colours`
@@ -37,8 +37,7 @@ directly into markup no generator ever touches. Two further guards cover
 that: one asks whether any of `data/brand.json`'s own colours are hand-typed
 in either template (they must come from a generated CSS custom property or
 a Tailwind class instead), and one asks whether the reconstruction's three
-known-wrong values have reappeared anywhere across every file this task
-touched.
+known-wrong values have reappeared anywhere across the guarded files.
 """
 
 from __future__ import annotations
@@ -88,8 +87,8 @@ _RIBBON_TEMPLATES = (
     Path("app") / "src" / "auth" / "Login.tsx",
 )
 
-#: Every file this task touched. None of them may ever carry the
-#: reconstruction's palette again.
+#: Every file the palette reaches. None of them may ever carry the
+#: reconstruction's values again.
 _GUARDED_FILES = (
     Path("site") / "src" / "style.css",
     Path("site") / "src" / "index.njk",
@@ -253,8 +252,8 @@ def test_hex_to_rgb_and_the_css_literals_built_from_it() -> None:
 
 def test_the_page_ground_is_turquoise_not_white() -> None:
     """D-18: the showcase's ground is turquoise, crossed by cream bands --
-    the inverse of the white-ground/turquoise-accent design that stood
-    before this task. `body`'s own background is the one declaration that
+    the inverse of the white-ground/turquoise-accent design it replaced.
+    `body`'s own background is the one declaration that
     carries it; a reversion to `--paper` would put the whole composition
     back the wrong way round without any generated-token test noticing,
     since that check only covers the `:root` block, not how the rest of
@@ -297,7 +296,7 @@ def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> No
         block = _rule_block(css, selector)
         assert bad_value not in block, (
             f"{selector} carries {bad_value}, which fails AA on the "
-            "turquoise field this task made the page's ground"
+            "turquoise field that is now the page's ground"
         )
 
 
@@ -322,9 +321,9 @@ def test_no_brand_colour_is_hand_typed_in_the_ribbon_templates() -> None:
 
 
 def test_the_reconstructions_palette_never_reappears() -> None:
-    """The mutation this task exists to catch: `stroke="#3D2D7C"` restored
-    in a ribbon, or any of the reconstruction's three values typed back in
-    anywhere this task removed them from.
+    """The mutation this module exists to catch: `stroke="#3D2D7C"`
+    restored in a ribbon, or any of the reconstruction's three values typed
+    back in anywhere they were taken out of.
     """
     pattern = re.compile(
         "|".join(re.escape(v) for v in _RECONSTRUCTION_VALUES), re.IGNORECASE
@@ -635,9 +634,9 @@ def test_the_default_motif_is_the_products_own_mark() -> None:
 
 
 def test_the_default_palette_is_not_this_instances_wearing_a_new_name() -> None:
-    """A "default" shipping this organisation's own colours would make the
-    acceptance criterion true only for duplicates that remember to
-    configure something.
+    """A "default" shipping this organisation's own colours would leave a
+    duplicate wearing them until somebody remembered to configure
+    something.
     """
     default = _charter_colours(brand.DEFAULT_PATH)
     instance = _charter_colours(BRAND_PATH)

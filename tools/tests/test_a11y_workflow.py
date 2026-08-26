@@ -1,7 +1,7 @@
 """Pins `.github/workflows/a11y.yml` and
 `site/scripts/check-a11y.mjs` against the properties a green run does not,
-by itself, prove -- the exact gap acceptance criterion 4's own report has
-to close: "a green accessibility job proves nothing by itself."
+by itself, prove. A green accessibility job proves nothing on its own;
+these are the checks that make it mean something.
 
 Three things a passing job could still be wrong about, each with its own
 test below:
@@ -22,8 +22,8 @@ every other workflow file in this project -- never parsed and executed,
 which would mean a real GitHub Actions runner and a real browser, exactly
 the network access this suite must not take on. Running the checker for
 real -- building `site/` and `app/`, launching Chrome, rendering every
-page -- is `site/scripts/check-a11y.mjs`'s own job, exercised by hand for
-this task's report, not by this module.
+page -- is `site/scripts/check-a11y.mjs`'s own job, exercised by hand,
+not by this module.
 """
 
 from __future__ import annotations
@@ -78,8 +78,7 @@ def test_the_checker_computes_its_expected_page_count_from_the_fixture() -> None
     """The page count this checker demands a match against is derived
     from `events.json` at run time (`expectedPageCount`), not a bare `14`
     that would silently stop matching reality the day a sixth event or a
-    third archive year is added -- the exact shape of check this task's
-    own brief asks to be proven, not merely argued for.
+    third archive year is added -- proven, not merely argued for.
     """
     assert "function expectedPageCount(events)" in _CHECKER
     assert "htmlFiles.length !== expected" in _CHECKER
@@ -140,7 +139,7 @@ def test_the_reviewed_allow_list_is_scoped_by_element_not_only_by_message_key() 
         "\nfunction ", 1
     )[0]
     # The match must read the node's own selector, not just its
-    # messageKey -- the exact gap the review found.
+    # messageKey: a messageKey alone would wave through a different node.
     assert "node.target" in body
     assert "entry.selector" in body
     assert "entry.messageKey" in body
@@ -192,7 +191,7 @@ def test_the_workflow_locates_an_installed_browser_rather_than_downloading_one()
 
 
 def test_the_workflow_builds_both_the_site_and_the_app() -> None:
-    """D-26's own consequence for this task: the two islands live in the
+    """D-26's own consequence here: the two islands live in the
     app's build, not the site's, so a checker that only ever built
     `site/` could never reach `ready` state for the registration form or
     render the verify island's real markup at all -- both would be

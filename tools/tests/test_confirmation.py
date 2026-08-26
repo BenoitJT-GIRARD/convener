@@ -212,8 +212,8 @@ def test_compose_says_something_sensible_with_no_room_link_yet() -> None:
 def test_compose_carries_the_matching_code_and_its_exact_instruction() -> None:
     """The load-bearing content: both the instruction
     sentence and the live code itself must be in the message, verbatim --
-    this is the test the task's own mutation exercise is built to kill by
-    dropping the code from `compose`."""
+    this is the test that dies the moment `compose` stops carrying the
+    code."""
     message = compose(_registration(), _EVENT, "WXYZ-2345")
     assert MATCHING_INSTRUCTION in message.body
     assert "WXYZ-2345" in message.body
@@ -299,8 +299,8 @@ def test_compose_never_quotes_the_institution_value_in_an_update_notice() -> Non
 def test_compose_is_deterministic_so_a_resend_reproduces_it_exactly() -> None:
     """The property a manual resend depends on directly: composing twice
     from the same inputs, including the same code, must give byte-identical
-    output -- this is the test the task's own mutation exercise is built to
-    kill by making a resend derive a different code."""
+    output -- this is the test that dies the moment a resend derives a
+    different code."""
     first = compose(_registration(), _EVENT, "WXYZ-2345")
     second = compose(_registration(), _EVENT, "WXYZ-2345")
     assert first == second

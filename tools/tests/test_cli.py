@@ -681,7 +681,7 @@ def test_handle_proposal_never_writes_a_stringified_list_for_an_unresolvable_opt
 #
 # The job that decrypts a registration is the one place in this project a
 # stranger's name and address ever exist as plaintext. These tests are the
-# ones the task exists for: no name and no address may appear anywhere the
+# ones that hold that line: no name and no address may appear anywhere the
 # job prints, on any path -- success, a fresh registration, a resend that
 # updates one, or a failure -- and the same address must never produce a
 # second record.
@@ -722,7 +722,7 @@ def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, 
 #: can legitimately contain a short substring like "ada" by pure chance;
 #: `eventkeys.py`'s own tests already cover the file's confidentiality
 #: property directly, and a leak test on this job belongs on what the job
-#: prints, exactly what the task asks for.
+#: prints.
 _LEAK_STRINGS = (
     "Ada",
     "Lovelace",
@@ -894,7 +894,7 @@ def test_handle_registration_refuses_a_field_over_the_length_cap_honestly(
 def test_handle_registration_writes_the_record_and_prints_no_name_or_address(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The test the task exists for: a job that decrypts a registration
+    """The test this whole section exists for: a job that decrypts a registration
     and then prints even one of its fields would pass every other test in
     this file and still leak personal data into a public Actions log."""
     private_pem, public_pem = _publish_event_key(tmp_path)
@@ -1405,7 +1405,7 @@ def test_send_confirmation_refuses_a_field_over_the_length_cap_honestly(
 def test_resend_confirmation_reproduces_the_original_code(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The property S:9's manual resend depends on directly: it must
+    """The property a manual resend depends on directly: it must
     reproduce the *same* code the original confirmation carried, or the
     first message becomes a lie about which code is current. Inspected on
     the *sent* messages -- an unsent confirmation
@@ -2471,8 +2471,7 @@ def _assert_survey_leak_sweep(captured_text: str) -> None:
     """The sweep every `invite_survey` test in
     this section now runs, on every path including a refusal -- took the
     already-captured text as a plain string, never `capsys` itself, the
-    exact fix the harness bug (found during the first round, and again by
-    the review) needs: a helper that re-reads `capsys.readouterr()` after
+    exact fix the harness bug needs: a helper that re-reads `capsys.readouterr()` after
     the caller already drained it observes nothing and passes vacuously.
     Asserting the text is non-empty first is what makes that failure mode
     itself fail loudly here, rather than pass silently forever."""
@@ -2535,7 +2534,7 @@ def test_invite_survey_with_an_invalid_event_id_returns_1(
 def test_invite_survey_refuses_when_the_switch_is_off(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Ruling 6: inviting people to a closed survey would be a fourth
+    """Inviting people to a closed survey would be a fourth
     hole beside the three `_survey_enabled` already guards."""
     _prepare_survey_event(tmp_path, survey_enabled=False)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2594,7 +2593,7 @@ def test_invite_survey_catches_a_platform_request_failure(
     """The `except` in `invite_survey` re-prints
     whatever `platform.py`/`platform_fcc.py` composed -- text this module
     does not control. Mutating that line to append every decrypted
-    address (`Reproduction A` in the review) survived the full suite
+    address survived the full suite
     before this sweep existed; it does not now."""
     private_pem = _prepare_survey_event(tmp_path, registrations=(_ADA_REG,))
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2613,7 +2612,8 @@ def test_invite_survey_catches_a_platform_request_failure(
 def test_invite_survey_only_invites_the_matched_attendee(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Ruling 1's own mutant: an attendance export naming a matched
+    """The mutant behind "only the matched attendee": an attendance export
+    naming a matched
     attendee, an unmatched one (an address the cascade cannot tie to any
     registration) and an unreachable one (a telephone joiner, no address
     at all) -- only the first is ever composed or sent, and never invited,
@@ -2799,7 +2799,8 @@ def test_invite_survey_writes_record_true_to_github_output_when_something_sent(
 def test_invite_survey_refuses_a_second_time_without_resend_all(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Ruling 3's own mutant: once this event is on record as invited, a
+    """The mutant behind "invited once": once this event is on record as
+    invited, a
     routine re-dispatch sends nothing further -- and touches no
     registration at all, so it cannot leak anything either. It also
     asserts `record=false` was actually written -- mutating that
@@ -3040,7 +3041,7 @@ def test_record_survey_invitation_rejects_a_malformed_committed_file(
 # check eligibility, issue (or reproduce) a certificate per eligible
 # attendee, and keep the register. Like match_attendance above, these
 # tests check that no name or address ever reaches stdout or the
-# certificate register file, plus the two guarantees this task exists
+# certificate register file, plus the two guarantees this section exists
 # for: no certificate is issued without both CONVENER_SIGNING_KEY and
 # CONVENER_MATCHING_SALT configured, and reissuing an already-registered
 # attendee never grows the register.
@@ -3075,8 +3076,8 @@ def _certificates_register_path(tmp_path: Path, event_id: str = "mrg-042") -> Pa
 #: `revoke_certificate` do anything else with it, so every certificate id
 #: a test hands either command through this env var must have
 #: `_new_identifier`'s own shape -- 32 lowercase hex characters -- where
-#: the old, human-readable "cert-under-test" would have done just as well
-#: before this round. `_CERT_ID` is reused everywhere a test only needs
+#: the old, human-readable "cert-under-test" would once have done just as
+#: well. `_CERT_ID` is reused everywhere a test only needs
 #: *some* valid id; `_CERT_ID_OTHER` is a second, distinct one for the few
 #: tests that need two.
 _CERT_ID = "1" * 32
@@ -3181,7 +3182,7 @@ def test_issue_certificates_with_an_unloadable_signing_key_returns_1(
 def test_issue_certificates_without_a_matching_salt_issues_nothing_and_returns_0(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The one deliberate exception this task adds to D-13: an absent
+    """The one deliberate exception to D-13 here: an absent
     CONVENER_MATCHING_SALT is not the ordinary state `config/integrations.yml`
     documents for `matching_code` -- a certificate fingerprint cannot be
     computed safely without it, so this run issues nothing rather than
@@ -3550,8 +3551,7 @@ def test_issue_certificates_clamps_a_double_counted_duration_at_the_seminar_leng
     a reconnection and a genuinely simultaneous second device look
     identical to `attendance.match`, and both sum -- must never sign more
     credit than the seminar's own scheduled length: 90 minutes, `config()`'s
-    default, against 180 minutes of summed attendance here, the exact
-    reproduction the review ran.
+    default, against 180 minutes of summed attendance here.
 
     The register never carries a duration and the signed token is
     deliberately never printed or returned by `issue_certificates` (see
@@ -4789,7 +4789,7 @@ def test_revoke_certificate_revokes_the_named_certificate_and_returns_0(
 def test_revoke_certificate_only_revokes_the_named_identifier(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The mutation this round's review runs directly: a
+    """The mutation this runs directly: a
     `convener-revoke-certificate` that revoked the wrong identifier, or flipped
     every row instead of one, would still pass a single-entry register
     test. Two rows, only one named -- the other must come back
@@ -4846,10 +4846,10 @@ def test_revoke_certificate_only_revokes_the_named_identifier(
 # project that sends a nominative document anywhere (by e-mail, never as a
 # named document deposited in a
 # depot."). Like the certificate tests above, these check that no name or
-# address ever reaches stdout or the certificate register -- and, new for
-# this task, that the *rendered document* never reaches disk either (the
-# brief's own step 1), that a replay reproduces the identical document
-# rather than regenerating one (step 2), and that the already-registered
+# address ever reaches stdout or the certificate register -- and that the
+# *rendered document* never reaches disk either, that a replay reproduces
+# the identical document rather than regenerating one, and that the
+# already-registered
 # path leaks nothing, not only the freshly-issued one -- a real defect
 # once found in certificate.py, guarded here in a second module.
 # ------------------------------------------------------------------ #
@@ -5108,8 +5108,8 @@ def test_deliver_certificates_already_registered_path_leaks_nothing(
 def test_deliver_certificates_never_writes_anything_to_disk(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The brief's own step 1 test: no path this function takes may place
-    a rendered certificate under the repository, committed or not."""
+    """No path this function takes may place a rendered certificate under
+    the repository, committed or not."""
     event_private_pem, signing_private_pem = _prepare_event(
         tmp_path, registrations=(_ADA,), attendance_rows=(_ADA_ATTENDANCE_ROW,)
     )
@@ -5209,11 +5209,11 @@ def test_deliver_certificates_replays_the_identical_document_on_a_second_run(
 def test_deliver_certificates_never_delivers_a_revoked_certificate_with_no_reissue(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The brief's own mutation 3, for the bulk command: issue, revoke, no
+    """The revocation guarantee, for the bulk command: issue, revoke, no
     reissue -- a routine re-run of `convener-issue-certificates` (and the
     delivery step immediately after it) must mint and deliver nothing for
-    this attendee, not resurrect the revoked document. Also the brief's
-    own mutation 1's CLI-level counterpart: reverting the three-way lookup
+    this attendee, not resurrect the revoked document. Also the CLI-level
+    counterpart of the lookup mutation: reverting the three-way lookup
     to two-way (skip revoked rows and mint) would deliver a *fresh*
     certificate here instead of refusing -- this test's `sent == 0` and
     unchanged register both catch that too."""
@@ -5323,8 +5323,8 @@ def test_deliver_certificates_delivers_the_reissued_certificate_not_the_revoked_
 def test_deliver_certificate_refuses_a_revoked_certificate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The brief's own mutation 3, for the singular command: a revoked
-    certificate must never be delivered, by any path."""
+    """The same guarantee for the singular command: a revoked certificate
+    must never be delivered, by any path."""
     event_private_pem, signing_private_pem = _prepare_event(
         tmp_path, registrations=(_ADA,), attendance_rows=(_ADA_ATTENDANCE_ROW,)
     )
@@ -5360,10 +5360,10 @@ def test_deliver_certificate_refuses_a_revoked_certificate(
 def test_deliver_certificate_delivers_the_reissued_certificate_not_the_revoked_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The reproduction (c): the singular resend must name and
+    """The singular resend must name and
     deliver the same certificate -- the row `CERTIFICATE_ID` actually
     named, never a different one `issue`'s fingerprint lookup happens to
-    resolve. The brief's own mutation 2: make `deliver_certificate` sign
+    resolve. The mutation this catches: make `deliver_certificate` sign
     something other than the row it resolved -- this test's own identifier
     check, pulled out of the attachment itself, is what catches that."""
     event_private_pem, signing_private_pem = _prepare_event(
@@ -5489,7 +5489,7 @@ def test_issue_certificates_github_output_is_empty_when_nothing_is_freshly_issue
 def test_deliver_certificates_with_deliver_only_targets_just_those_identifiers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The brief's own mutation 4: make the delivery step ignore the
+    """The mutation this catches: make the delivery step ignore the
     identifiers the issue step handed it and deliver everyone -- removing
     the `DELIVER_ONLY` filter check in `deliver_certificates` would send
     Grace's certificate too, which the `sent == [ada]` assertion below
@@ -5996,7 +5996,7 @@ def test_deliver_certificate_delivers_the_named_certificate_and_leaks_nothing(
 def test_deliver_certificate_signs_the_row_it_resolved_not_a_different_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The brief's own mutation 2, pinned so it cannot be satisfied by
+    """The signing mutation, pinned so it cannot be satisfied by
     coincidence: two eligible attendees, two issued certificates, resend
     the *second* one by its own `CERTIFICATE_ID`. A version of
     `deliver_certificate` that signed some other row it holds a reference
@@ -7012,8 +7012,7 @@ def test_release_recording_refuses_a_200_that_looks_like_an_error_page(
 def test_release_recording_does_not_delete_when_get_recording_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The mutation-B guard this task's own brief asks for: a failed
-    retrieval must never still delete."""
+    """The guard on a failed retrieval: it must never still delete."""
     _write_speaker_for_recording(
         tmp_path, event_id="mrg-042", retrieved=True, consent_granted=True
     )
@@ -7404,7 +7403,7 @@ def test_discard_recording_returns_1_when_no_conference_id_is_configured(
 def test_discard_recording_ignores_the_retrieval_tick_and_still_needs_confirmation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The review's own second constraint, behaviourally: a ticked
+    """The second constraint on discarding, behaviourally: a ticked
     `RETRIEVED_TICK` must not let a missing or wrong confirmation through."""
     _write_speaker_for_recording(tmp_path, event_id="mrg-042", retrieved=True)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -7543,7 +7542,7 @@ def test_discard_recording_reports_when_the_post_delete_check_fails(
 def test_discard_recording_refuses_a_self_consistent_typo_into_a_nonexistent_event(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The residual the review named: an operator who fat-fingers the same
+    """The residual risk: an operator who fat-fingers the same
     wrong event id into both `event_id` and `confirm_discard` produces a
     self-consistent pair that sails past the confirmation check alone --
     but `find_speaker` still refuses it, because the typo does not name a
@@ -7590,8 +7589,7 @@ def _delete_recording_call_sites(package_dir: Path) -> list[str]:
     declarations). `rglob`, not `glob`:
     `convener_ops` is flat today, but a non-recursive glob would silently stop
     looking the day it grows a subpackage -- reproduced against a
-    synthetic one below, the same way the review that found this built
-    one."""
+    synthetic one below."""
     return [
         str(path.relative_to(package_dir))
         for path in sorted(package_dir.rglob("*.py"))
@@ -7602,7 +7600,7 @@ def _delete_recording_call_sites(package_dir: Path) -> list[str]:
 
 
 def test_delete_recording_has_exactly_two_call_sites_both_in_cli() -> None:
-    """The ruling, pinned rather than left to a docstring, covering
+    """The rule, pinned rather than left to a docstring, covering
     both routes: the only calls to
     `Platform.delete_recording` anywhere in `convener_ops` are inside
     `release_recording` and `discard_recording`, both in `cli.py`. A third
@@ -7670,7 +7668,7 @@ def _code_body_excluding_docstring(func: object) -> str:
 
 
 def test_discard_recording_never_reads_the_retrieval_tick_or_evidence() -> None:
-    """The review's own second constraint, pinned structurally: a ticked
+    """The second constraint on discarding, pinned structurally: a ticked
     `RETRIEVED_TICK` must never be able to substitute for the typed
     confirmation, because `discard_recording`'s own code body never
     mentions `runbook_progress`, `RETRIEVED_TICK`, or

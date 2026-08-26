@@ -291,8 +291,8 @@ def test_sign_rejects_a_payload_with_an_unexpected_field() -> None:
 
 
 def test_sign_rejects_a_payload_with_two_unexpected_fields() -> None:
-    """The exact scenario the review named: a payload carrying both
-    `address` and `postal_address` must not sign cleanly."""
+    """The exact scenario this refuses: a payload carrying both `address`
+    and `postal_address` must not sign cleanly."""
     private_pem, _ = generate()
     bad_payload = {**CERT_PAYLOAD, "address": "x", "postal_address": "y"}
 

@@ -1,7 +1,7 @@
 """The promotion channels, on the side that writes the file.
 
-The list is configuration and not a constant: whether the seven channels the
-spec named are still the right seven cannot be confirmed without asking the
+The list is configuration and not a constant: whether the seven channels
+are still the right seven cannot be confirmed without asking the
 collaborators, which this project never does. Nothing here counts them and
 nothing here names one -- a channel added, renamed or dropped in
 `data/config.yml` passes this validator unchanged, and the test that would

@@ -82,9 +82,9 @@ def test_is_due_for_destruction_is_false_the_day_before_the_boundary() -> None:
 
 
 def test_is_due_for_destruction_is_true_on_the_boundary_day() -> None:
-    """Day 90 itself: the spec's own deadline ("date de l'evenement + 90
-    jours"), inclusive. Catches a mutant that shifts the deadline to
-    `event_date + 91` -- that mutant would still say `False` here."""
+    """Day 90 itself -- the event date plus ninety days, inclusive.
+    Catches a mutant that shifts the deadline to `event_date + 91` -- that
+    mutant would still say `False` here."""
     event_date = date(2026, 1, 1)
     assert (
         eventkeys.is_due_for_destruction(event_date, date(2026, 4, 1)) is True
@@ -438,7 +438,7 @@ def test_find_by_matching_code_refuses_a_collision_instead_of_returning_the_firs
     elsewhere (`attendance._settle` refuses the identical situation by
     tying rather than guessing). A real collision is not reproducible
     without astronomical luck, so `matching_code` itself is monkeypatched
-    to force one, the same technique the review used.
+    to force one.
 
     Also asserts `tied` carries both colliding entries: `cli.py::erase_
     registration` reads this to attempt resolving the tie from a second
@@ -640,7 +640,7 @@ def test_retention_sweep_uses_the_paris_day_not_the_utc_day(
     Every other delivered clock in this suite is fixed at 03:00 or 12:00
     UTC, where the Paris day and the UTC day happen to agree, which is
     exactly why that mutant survived the whole suite at 100% branch
-    coverage (the review's own finding). An event held 2026-01-01, swept
+    coverage. An event held 2026-01-01, swept
     at 2026-03-31 22:30Z: still day 89 in UTC (not due), already day 90 in
     Paris, which is 2026-04-01 00:30 CEST after the spring change -- so
     the correct implementation reports it due, and the mutant does not.
@@ -848,7 +848,7 @@ def test_record_destructions_calls_eventkeys_destroy_and_refuses_a_malformed_id(
     `retention_sweep` itself ever produces. Calling `eventkeys.destroy`
     (rather than a bare `dict.setdefault`) is what makes its own
     `_validate_event_id` guard apply here too, and this is the
-    reproduction from the review: `DESTROYED_IDS="vw 042 oops"` must
+    reproduction: `DESTROYED_IDS="vw 042 oops"` must
     refuse rather than write a registry entry `registry_from_data` (the
     reader every other command shares) then permanently refuses to load."""
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))

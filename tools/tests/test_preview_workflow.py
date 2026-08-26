@@ -14,7 +14,7 @@ their own checkers):
 * it could upload an empty or broken build and call that a preview --
   D-25's own "a control that cannot fail loudly is not a control", applied
   here to three distinct emptiness failures: no site at all, a site with
-  no islands (the "empty box" this task's own brief warns against), and a
+  no islands (an "empty box" where the form belongs), and a
   room link that reached a built page;
 * it could assemble the preview at a bare `localhost` root rather than the
   path prefix GitHub Pages actually serves this project under (D-26) --
@@ -83,8 +83,8 @@ def test_the_workflow_triggers_only_on_pull_request() -> None:
     resolver reads a bare `on:` key as the boolean `True`, not the string
     `"on"` -- the same gotcha `test_workflows.py::
     test_publish_vitrine_paths_trigger_includes_the_certificate_register`
-    already documents and works around for the identical reason. S:7 asks
-    for a preview *on a pull request*; this must never also fire on a push
+    already documents and works around for the identical reason. A preview
+    belongs *on a pull request*; this must never also fire on a push
     to `main` (that is `quality.yml`'s and `a11y.yml`'s own job), or every
     merge would spend a build assembling and uploading an artefact nobody
     asked for and nobody will ever download."""
@@ -115,8 +115,7 @@ def test_the_workflow_reads_no_repository_secret() -> None:
     handed a repository secret by GitHub, no matter what this file asks
     for in its own `permissions:` or `env:` blocks -- so a preview that
     depended on one would work for a same-repo PR and silently do
-    something different for a fork one, exactly the asymmetry this task's
-    own brief refuses. Asserted the strong way: no `secrets.` reference
+    something different for a fork one. Asserted the strong way: no `secrets.` reference
     anywhere in the file, not merely "no secret named `VITRINE_DEPLOY_
     TOKEN`" (`test_a11y_workflow.py::
     test_the_workflow_never_pushes_or_writes_repository_state` checks only
@@ -137,12 +136,12 @@ def test_the_workflow_never_writes_or_pushes_repository_state() -> None:
 
 
 def test_the_workflow_builds_both_the_site_and_the_app() -> None:
-    """D-26's own consequence for this task, the identical property
+    """D-26's own consequence here, the identical property
     `test_a11y_workflow.py::test_the_workflow_builds_both_the_site_and_
     the_app` pins for that checker: the two islands live in the app's
     build, never the site's, so a job that only ever built `site/` could
     not assemble a preview showing either one -- exactly the "empty box"
-    failure this task's own brief warns against."""
+    failure."""
     for working_directory in ("site", "app"):
         marker = f"working-directory: {working_directory}"
         assert marker in _WORKFLOW_TEXT, (
@@ -269,8 +268,8 @@ def test_the_empty_site_guard_checks_index_html_and_can_fail_the_run() -> None:
 def test_the_guard_checks_both_island_bundles_by_name_and_refuses_an_empty_one() -> (
     None
 ):
-    """The exact failure this task's own brief names as worse than no
-    preview at all: an "empty box where the form belongs". `[ ! -s ... ]`
+    """The failure that is worse than no preview at all: an "empty box
+    where the form belongs". `[ ! -s ... ]`
     (not `-f` or `-e`) is required -- a bundle that exists but was
     truncated to zero bytes by a broken build must still trip this,
     which a mere existence check would not catch."""
@@ -301,8 +300,8 @@ def test_the_leak_guard_reads_the_fixture_never_the_private_speakers_file() -> N
 
 
 def test_the_leak_guard_sweeps_the_assembled_artefact_and_can_fail_the_run() -> None:
-    """ "The same guard that sweeps the built site applies to anything you
-    publish" (this task's own brief, verbatim): the sweep below must run
+    """The same guard that sweeps the built site applies to anything this
+    workflow publishes: the sweep below must run
     against `preview` -- the exact directory the upload step below reads
     from -- not only `site/_site`, the intermediate build. And it must be
     able to fail the job, not merely log a hit (D-25)."""
@@ -319,8 +318,7 @@ def test_the_readme_documents_the_non_obvious_serving_step() -> None:
     build writes. Nothing about that is obvious from a downloaded zip, so
     the artefact must say so itself -- this asserts the instructions are
     actually written into `preview/README.txt` by the workflow, not left
-    to tribal knowledge or a task report nobody reading the artefact will
-    ever see."""
+    to tribal knowledge nobody reading the artefact will ever meet."""
     assemble = _step_run(_ASSEMBLE_STEP)
     assert "cat > preview/README.txt <<EOF" in assemble
     readme_body = assemble.split("cat > preview/README.txt <<EOF", 1)[1]
@@ -376,7 +374,7 @@ def test_the_upload_step_targets_the_assembled_tree_and_refuses_an_empty_one() -
 # time. This does not replace `test_workflows.py::
 # test_every_action_reference_is_pinned_to_a_full_commit_sha` (which
 # already sweeps this file too, generically); it pins the stronger
-# property this task's own brief asks for: reusing an SHA another
+# property: reusing an SHA another
 # workflow already relies on is one less thing that has never executed
 # in any form, versus a SHA nobody else in this project has ever used.
 # ------------------------------------------------------------------ #

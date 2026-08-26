@@ -215,8 +215,8 @@ def test_every_path_this_package_names_is_classified() -> None:
 
 
 def test_a_config_file_with_no_owner_is_refused_by_name(tmp_path: Path) -> None:
-    """The state `config/` was in until this task: a file that works,
-    reads, and says nothing about who it belongs to."""
+    """The state `config/` was in before `owner:` existed: a file that
+    works, reads, and says nothing about who it belongs to."""
     root = _write_root(tmp_path)
     (root / "config" / "thresholds.yml").write_text("v: 1\n", encoding="utf-8")
 
@@ -242,8 +242,8 @@ def test_a_json_config_file_answers_the_same_question(tmp_path: Path) -> None:
 
 
 def test_a_config_file_with_an_invented_owner_is_refused(tmp_path: Path) -> None:
-    """Two answers, and only two. `owner: both` is the mixing this task
-    exists to end, spelled out."""
+    """Two answers, and only two. `owner: both` is the mixing this
+    declaration exists to end, spelled out."""
     root = _write_root(tmp_path, owners={"thresholds.yml": "both"})
 
     with pytest.raises(ValueError, match="declares no owner"):
@@ -363,7 +363,7 @@ def test_the_kept_exceptions_are_the_two_this_task_found() -> None:
     """Named, so that a third cannot appear without somebody deciding to
     let it. Both are documentation of a contract that lives where an
     operator will meet it, and both are candidates for a move later --
-    which is a maintainer's call, not this task's."""
+    which is a maintainer's call, not this module's."""
     kept = {kept.path for entry in load().handed for kept in entry.kept}
     assert kept == {"data/schema.md", "keys/signing/README.md"}
 
@@ -728,9 +728,9 @@ def test_no_test_module_reads_an_instance_path_while_it_loads() -> None:
     none, and both were among the four. A list of such readers here would
     be the copy this whole module exists against, so the sweep holds the
     spelt half and this docstring holds the rest. It also stops at
-    `tools/tests/`: `services/*/test/index.test.js` read the same
-    declaration at module scope until this task, and nothing offline
-    parses JavaScript here.
+    `tools/tests/`: `services/*/test/index.test.js` used to read the same
+    declaration at module scope, and nothing offline parses JavaScript
+    here.
     """
     board = load()
     offending: list[str] = []

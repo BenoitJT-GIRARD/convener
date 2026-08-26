@@ -1,7 +1,7 @@
 """Build this repository as a second instance, and refuse anything of the
 first in what comes out.
 
-The acceptance criterion separating the instance from the code rests on.
+This is what the separation between the instance and the code rests on.
 Several earlier passes each drove a second-instance build by hand and
 each found something a single-instance run could not: two sentences the
 substitution made ungrammatical, a GitHub team named wrongly in the
@@ -51,8 +51,8 @@ a step of `quality.yml`'s own `python` job installs exactly those before
 `pytest` starts. There a missing toolchain fails by name
 (`_toolchain_absent`), because a skip in the one environment that was set
 up for this test is a green suite reporting a coverage it does not have,
-and what silently would not have run is the acceptance criterion of the
-whole phase.
+and what silently would not have run is the one property this whole module
+exists to hold.
 
 Two claims are held below the build line so that they hold everywhere:
 `test_the_example_instance_answers_every_path_an_instance_owns` reads the
@@ -269,8 +269,8 @@ def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
     purpose. `quality.yml`'s own `python` job sets up node 20 and runs
     `npm ci` in both `app/` and `site/` before it runs `pytest`, so on a
     runner their absence means that install stopped happening -- and a
-    skip there would let the acceptance criterion the whole separation
-    rests on not run at all while the suite reported green.
+    skip there would let the property the whole separation rests on not
+    run at all while the suite reported green.
 
     That is the failure D-25 names, and this module was committing it:
     a review found a fresh clone
@@ -553,8 +553,8 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
     formality, proved rather than trusted.
 
     Every test in this module needs a build, a build needs `node_modules`,
-    and until this branch existed a machine without them turned the whole
-    acceptance criterion into six skips inside a green suite. It is the
+    and until this branch existed a machine without them turned this
+    whole module into six skips inside a green suite. It is the
     one branch here nothing else exercises -- a runner that has its
     toolchain never reaches it -- so it is exercised directly, with the
     environment a runner sets and with the environments that only look
@@ -722,7 +722,7 @@ def _leaks(
 def test_a_second_instances_build_carries_nothing_of_this_one(
     second_instance: Built,
 ) -> None:
-    """The acceptance criterion separating the instance from the code.
+    """What the separation between the instance and the code rests on.
 
     Everything a reader receives, swept for every writable form of this
     instance's name, its addresses, its series and its charter. The only

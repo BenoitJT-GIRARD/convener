@@ -1,8 +1,7 @@
 """Pins `.github/workflows/quality.yml`'s own `site` lane
 and `site/scripts/check-performance-budget.mjs` against the properties a
-green run does not, by itself, prove -- acceptance criterion 7's own "the
-budget is tenu and verified automatically" only means something if the
-check that enforces it can actually turn red.
+green run does not, by itself, prove. A budget verified automatically only
+means something if the check that enforces it can actually turn red.
 
 Three things a passing job could still be wrong about, each with its own
 test below (the identical three-part shape
@@ -16,8 +15,8 @@ accessibility checker):
   resource reference against the wrong address, or not noticing one that
   is missing this project's own published prefix (D-26);
 * it could be a budget nobody could ever breach -- D-25's "a control that
-  cannot fail loudly is not a control" -- which this task proved by hand
-  (see its own report) and which the tests below pin structurally, so a
+  cannot fail loudly is not a control" -- proved by hand once and pinned
+  structurally by the tests below, so a
   future edit cannot quietly turn the ceiling into a floor high enough to
   never matter.
 
@@ -28,7 +27,7 @@ executed, which here would also mean a real `npm ci` and a real build,
 exactly the network access and runtime this suite must not take on.
 Running the checker for real -- against the actual built `site/_site` and
 `app/dist` -- is `site/scripts/check-performance-budget.mjs`'s own job,
-exercised by hand for this task's report, not by this module.
+exercised by hand, not by this module.
 """
 
 from __future__ import annotations
@@ -124,8 +123,8 @@ def test_the_checker_classifies_a_page_by_what_it_actually_references() -> None:
 
 def test_the_checker_measures_gzip_transfer_weight_not_raw_disk_weight() -> None:
     """GitHub Pages serves gzip on every compressible response -- a raw
-    byte count would be wrong in the direction that flatters this check
-    (this task's own brief, verbatim). Both a page's own HTML and every
+    byte count would be wrong in the direction that flatters this check.
+    Both a page's own HTML and every
     resource it references are passed through `gzipSize` before being
     added to its total; only the font payload (already woff2-compressed,
     see the module comment) is compared in raw bytes."""
@@ -155,10 +154,10 @@ def test_the_checker_refuses_a_resource_reference_missing_the_path_prefix() -> N
 def test_a_page_over_its_budget_fails_the_run() -> None:
     """D-25: the per-page budget comparison must actually be able to fail
     the job, not merely be printed. `failed` is set from `withinBudget`
-    and the run's own exit code is driven by it -- this task proved the
-    concrete case by hand (lowering each threshold below a real
-    measurement and watching the run exit 1 with the right page named;
-    see this task's own report), and this pins the wiring so a future
+    and the run's own exit code is driven by it -- proved by hand once
+    (lowering each threshold below a real measurement and watching the
+    run exit 1 with the right page named), and this pins the wiring so a
+    future
     edit cannot quietly remove the ability to fail while leaving the
     printed numbers looking the same."""
     assert "if (!withinBudget) failed = true;" in _CHECKER
@@ -188,8 +187,8 @@ def test_the_font_payload_is_measured_separately_from_the_page_budgets() -> None
 
 
 def test_the_two_page_budgets_are_measured_independently_of_each_other() -> None:
-    """A static page and an island page are, in this task's own words,
-    "different problems" -- this asserts the two budgets are in fact two
+    """A static page and an island page are different problems -- this
+    asserts the two budgets are in fact two
     distinct constants, an island page's budget is the larger of the two
     (it carries a real bundle a static page does not), and neither
     constant is zero, which would make that budget impossible to pass
@@ -240,8 +239,8 @@ def test_the_workflow_lints_the_new_checker_script() -> None:
 
 def test_the_workflow_audits_site_dependencies() -> None:
     """The quality chain holds Python to `pip-audit` (this same
-    workflow's `python` job); `site/`'s own dependencies had never been
-    audited before this task. `npm audit` with no flags added -- never
+    workflow's `python` job); `site/`'s own dependencies went unaudited
+    until this step existed. `npm audit` with no flags added -- never
     `--omit=dev`, which would exempt every dependency this package
     declares (all of them are `devDependencies`: Eleventy, axe-core,
     puppeteer-core, all build-time tooling) and make the step pass
@@ -255,10 +254,10 @@ def test_the_generator_version_is_pinned_exactly() -> None:
     declared Eleventy dependency must equal the version actually
     resolved, never a caret range that could silently install a
     different major version on a fresh lock regeneration -- which is
-    exactly how this task found the site's own dependency tree carrying
-    known high-severity vulnerabilities in Eleventy 2's transitive
-    dependencies (`markdown-it`/`linkify-it`; see this task's own
-    report) with no version bump ever surfacing as a diff to review."""
+    exactly how the site's own dependency tree was found carrying known
+    high-severity vulnerabilities in Eleventy 2's transitive dependencies
+    (`markdown-it`/`linkify-it`) with no version bump ever surfacing as a
+    diff to review."""
     assert '"@11ty/eleventy": "3.1.6"' in _PACKAGE_JSON, (
         "site/package.json's @11ty/eleventy dependency is no longer an exact "
         "pin at 3.1.6 -- a caret or tilde range here can float across a "

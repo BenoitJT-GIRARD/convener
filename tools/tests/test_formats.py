@@ -41,8 +41,8 @@ def test_square_and_banner_are_the_seven_channels_own_first_two_shapes() -> None
 
 
 def test_print_is_a4_portrait_at_300dpi_in_real_pixels() -> None:
-    """The deliberate choice this task's own brief asks to state and
-    justify: A4 (210mm x 297mm -- every office printer's own default, not
+    """The deliberate choice, stated and justified rather than assumed:
+    A4 (210mm x 297mm -- every office printer's own default, not
     just a wide-format one), at 300dpi. `_mm_to_px` turns that into the
     same whole-pixel figures the print industry already uses for "A4 at
     300dpi" (2480x3508) -- not an approximation this test invents

@@ -129,8 +129,8 @@ def test_the_stored_file_is_the_one_the_immediate_lane_writes() -> None:
 
 
 def test_a_registration_and_its_update_in_one_drain_give_what_two_drains_gave() -> None:
-    """The property the plan names outright. Applied in name order, which
-    is submission order, so the later entry wins -- and the confirmation
+    """The property a single drain has to hold outright. Applied in name
+    order, which is submission order, so the later entry wins -- and the confirmation
     for it names what changed, exactly as `registration.yml` would have."""
     private_pem, public_pem = eventkeys.generate()
     first, second = _name("m0000001"), _name("m0000002")

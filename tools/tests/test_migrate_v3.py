@@ -130,7 +130,7 @@ def test_a_speaker_who_never_delivered_gains_an_empty_consent() -> None:
 
 
 def test_assigned_to_is_added_empty_and_proposed_by_is_left_alone() -> None:
-    # Ruling P2-15: proposed_by is the submitter, self-reported and often
+    # proposed_by is the submitter, self-reported and often
     # not a board login at all. The migration adds the owner field beside
     # it; it never derives one from the other.
     migrated = migrate_speaker(v2_speaker())

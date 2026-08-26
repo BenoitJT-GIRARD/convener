@@ -35,8 +35,8 @@ and executed, which here would mean a real `npm ci` against the live
 registry, exactly the network access this suite must not take on.
 Running the real audits for real -- against the real installed trees, on
 both the current state and (reverted afterwards) the state before this
-fix -- is this task's own report, not this module: see
-Each command below was run for real, and what it printed was read.
+fix -- is a hand-run job, not this module's. Each command below was run
+for real once, and what it printed was read.
 """
 
 from __future__ import annotations
@@ -120,7 +120,7 @@ def test_the_app_lane_audits_production_dependencies() -> None:
 def test_the_app_lane_surfaces_development_findings_without_blocking() -> None:
     """The 19 findings that are `devDependencies`-only (eslint,
     typescript-eslint, `@babel/core`, the autoprefixer/postcss/tailwindcss
-    chain -- see the report) never reach any built output, but a finding
+    chain) never reach any built output, but a finding
     nothing ever surfaces is just as much the D-25 shape as a check that
     cannot fail: this step is not the gate, but it must exist, run the
     *full* audit (no `--omit=dev`, or it would just repeat the production
@@ -219,7 +219,7 @@ def test_app_production_dependencies_that_were_the_finding_are_still_declared() 
     the fact that made the finding real (they ship in the
     built cockpit bundle) rather than academic. This does not pin a
     version (the fix was a lockfile-only bump within the existing caret
-    ranges, not a package.json edit -- see the report); a floating range
+    ranges, not a package.json edit); a floating range
     drifting back to a vulnerable version is exactly what the CI audit
     step above exists to catch on every push, not something a static
     text match on a version string could ever guarantee."""

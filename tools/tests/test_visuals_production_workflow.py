@@ -9,10 +9,10 @@ explanatory comments deliberately name `data/speakers.yml`, `pull_request`
 and `og:image` to say why each is absent or handled the way it is, and a
 plain substring check would trip over its own prose. Never executed here:
 running it for real needs a real browser download, exactly the network
-access this suite must not take on -- this task's own report records the
-hand-run transcript (`convener-render-visuals` and `render-production.mjs`, both
-executed for real against a throwaway fixture repository, screenshots
-produced and inspected) and the two mutation proofs (the path filter, and
+access this suite must not take on. It was instead run by hand once
+(`convener-render-visuals` and `render-production.mjs`, both executed for real
+against a throwaway fixture repository, screenshots produced and
+inspected), with two mutation proofs beside it (the path filter, and
 the JS file-count guard).
 """
 
@@ -438,8 +438,8 @@ def test_an_empty_manifest_is_a_normal_exit_not_an_error() -> None:
 
 
 def test_the_file_count_guard_exists_and_refuses_success_on_a_mismatch() -> None:
-    """The property this task's own mutation proved by hand: a run that
-    wrote fewer images than the manifest promised must fail, not report
+    """The property a mutation proved by hand: a run that wrote fewer images
+    than the manifest promised must fail, not report
     success -- `actions/upload-artifact`'s own `if-no-files-found: error`
     cannot see this (it only ever sees "some" or "none")."""
     assert "written !== manifest.length" in _SCRIPT

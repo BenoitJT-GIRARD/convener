@@ -32,7 +32,7 @@ from convener_ops.platform_fcc import (
 # (GET /api/v4/conferences/{id}/calls). No test in this module opens a
 # socket: every response below is a Python literal shaped exactly like
 # what was empirically verified against the real provider, never a live
-# call. `_call` mirrors the fields the brief names: custom_name, email,
+# call. `_call` mirrors the fields the API returns: custom_name, email,
 # service_types, time_created_utc, time_disconnected_utc, audio_duration
 # -- plus is_host, which the API also returns but AttendanceRow has no
 # field for, so it is present in the fixtures (to prove it is ignored,
@@ -204,7 +204,7 @@ def test_platform_fcc_satisfies_the_platform_protocol() -> None:
 
 
 # ------------------------------------------------------------------ #
-# get_attendance -- the endpoint mapping is the point of this task
+# get_attendance -- the endpoint mapping is the point
 # ------------------------------------------------------------------ #
 
 

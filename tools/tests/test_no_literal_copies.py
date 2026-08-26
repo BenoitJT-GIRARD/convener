@@ -1,7 +1,8 @@
 """No passage of the handbook is written twice.
 
-The information architecture asks for one home per notion. The review of the
-handbook asked for the opposite and was right: a volunteer who lands halfway
+The information architecture asks for one home per notion. Reading the
+handbook as a volunteer asks for the opposite, and rightly: whoever lands
+halfway
 down a page needs the rule in front of them, not a link to it. The two meet in
 one rule -- a repeated passage is *included* from its source (see
 ``app/src/content/transclude.ts``) -- and this module is what makes that rule

@@ -54,8 +54,8 @@ def test_a_body_signed_the_way_tally_signs_it_verifies() -> None:
 
 
 def test_a_hex_signature_is_refused() -> None:
-    """The regression this task exists to fix: hexdigest was what the code
-    computed, and base64 is what Tally sends."""
+    """The regression this refuses: hexdigest was what the code computed,
+    and base64 is what Tally sends."""
     secret = "s3cr3t"
     body = '{"data":{"fields":[]}}'
     hexsig = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()

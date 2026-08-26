@@ -38,7 +38,7 @@ from convener_ops.eventkeys import (
 _LEGAL_SECRET_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 # ------------------------------------------------------------------ #
-# The four tests the brief names -- the second is the one the whole
+# The four tests that matter here -- the second is the one the whole
 # design rests on.
 # ------------------------------------------------------------------ #
 

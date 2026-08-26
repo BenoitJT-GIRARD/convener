@@ -77,11 +77,12 @@ def test_the_contact_address_matches_confirmation_pys_own_constant() -> None:
     assert load_identity().namespace["contact"] == CONTACT_EMAIL
 
 
-def test_the_record_names_every_field_spec_4_asks_for() -> None:
-    """S:4's own words: "données, finalité, base légale, destinataires,
-    durée, mesures" -- a one-page record with a heading missing one of the
-    six is not what §4 asks for, even if every sentence under the headings
-    it does have is accurate. Matched as a whole line, not a substring --
+def test_the_record_names_every_one_of_the_six_required_fields() -> None:
+    """The six a processing record has to name: données, finalité, base
+    légale, destinataires, durée, mesures. A one-page record with a heading
+    missing one of the six is not a processing record, even if every
+    sentence under the headings it does have is accurate. Matched as a
+    whole line, not a substring --
     "## Measures" is also a substring of "## Measures Renamed", which this
     test must not silently accept as still having a "Measures" heading."""
     headings = {line.strip() for line in _page().splitlines() if line.startswith("## ")}
