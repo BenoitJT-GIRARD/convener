@@ -128,8 +128,8 @@ PUBLISHED_URL_KEY: Final = "published_url"
 IDENTITY_KEY: Final = "identity"
 
 #: The key the third part is about: the prefix this instance numbers its
-#: editions under. `MRG-05` here, `MRG` being the initials of *Virtual
-#: Workshop*, which is this series' name and nobody else's.
+#: editions under -- an abbreviation of the series' own name, declared
+#: by the instance and by nothing in the product.
 #:
 #: **Its own key, beside `identity` rather than inside it.** Everything
 #: under `identity` is prose, checked the one uniform way prose can be
@@ -143,8 +143,8 @@ IDENTITY_KEY: Final = "identity"
 #: `path_prefix`, `app_base`) rather than declared a second time.
 #:
 #: **And not derived from `short_name` either.** The two must be free to
-#: differ: a series can want "TEC" in an e-mail subject and something else
-#: in an identifier, and deriving one from the other ties two decisions
+#: differ: a series can want one abbreviation in an e-mail subject and
+#: another in an identifier, and deriving one from the other ties two decisions
 #: that have no reason to move together. Worse, `short_name` is prose and
 #: prose gets reworded -- and this value cannot be reworded, see
 #: `EditionPrefix` below for the three places that make it permanent.
@@ -418,12 +418,12 @@ class Identity:
     the talk's title (`visual.py::_series_html`). Setting a sentence
     there wraps to three lines at 4vw and pushes the composition into the
     ribbon, which is the failure D-08 already names; setting a strapline
-    in the feed's `<description>` says nothing a reader can act on. This
-    instance's two are "Read together" and "A community series
-    of online behavioural-science webinars." -- neither substitutes for
-    the other, and until phase 11 the first was typed into `visual.py`
-    with no key at all, which is why a second instance's poster carried
-    this one's motto (`docs/superpowers/inventaire-instance.md`).
+    in the feed's `<description>` says nothing a reader can act on. The
+    example instance's two -- `instances/example/config/instance.json` --
+    are a two-word display line and a full sentence, and neither
+    substitutes for the other. Until phase 11 the strapline was typed
+    into `visual.py` with no key at all, which is why a second
+    instance's poster carried the first instance's motto.
     """
 
     organisation: str

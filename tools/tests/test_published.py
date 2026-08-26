@@ -67,12 +67,12 @@ series -- and closed the gap this module used to name:
    named with the phase that owns it.
 
 What clause 8 does **not** sweep, stated rather than left to be found:
-the series' *title* and the organisation's *short name*. "Monthly Reading Group
-Series" is at present also this product's own name -- `convener_ops`,
-`convener-register` -- and "TEC" is in the two downloadable SVG templates,
-which derive it (phase 10 task 4), and in the demo instance (phase 11).
-Sweeping either here would fail for a reason no source edit can fix, so
-each is left to the phase that renames it.
+the series' *title* and the organisation's *short name*. Both are in the
+two downloadable SVG templates, which *derive* them (phase 10 task 4) and
+are committed here as this instance rendered them, and both are in the
+demo instance (phase 11). Sweeping either here would fail on a generated
+artefact rather than on a source edit, so each is left to the phase that
+regenerates it.
 
 **Task 5 sweeps both, and can, because it compares two instances rather
 than looking for one.** `test_second_instance.py` builds this repository
@@ -958,7 +958,7 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
         ("V.W", "other than ASCII capitals and digits"),
         ("V_W", "other than ASCII capitals and digits"),
         ("V W", "other than ASCII capitals and digits"),
-        ("ConvenerÉ", "other than ASCII capitals and digits"),
+        ("ABCÉ", "other than ASCII capitals and digits"),
     ],
 )
 def test_a_prefix_that_reads_plausibly_and_is_wrong_is_refused_at_declaration(

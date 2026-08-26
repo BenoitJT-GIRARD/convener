@@ -245,8 +245,8 @@ jobs:
           cp -r app/dist/. "preview/$segment/app/"
 
           cat > preview/README.txt <<EOF
-          Convener showcase -- pull request preview
-          =====================================
+          Showcase -- pull request preview
+          ================================
 
           This is a build of the public showcase, assembled from
           this pull request's branch. It is not published anywhere -- download

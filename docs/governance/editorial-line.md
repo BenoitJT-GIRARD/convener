@@ -2,7 +2,7 @@
 
 What the series stands for.
 
-## What the Convener is
+## What this series is
 
 A community-run series of online seminars centred on **behaviour** — its mechanisms, its measurement, and the tools and methods used to study it. It exists to make behavioural science **accessible, discussed, and connected across labs**, around a real conversation rather than a one-way lecture.
 

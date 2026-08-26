@@ -15,7 +15,7 @@
     { "value": "V.W", "accepted": false, "why": "secret_name folds `.` to `_`" },
     { "value": "V_W", "accepted": false, "why": "an underscore is not a code separator" },
     { "value": "V W", "accepted": false, "why": "a space is not a path segment" },
-    { "value": "ConvenerÉ", "accepted": false, "why": "non-ASCII lower-cases into a percent-encoding" },
+    { "value": "ABCÉ", "accepted": false, "why": "non-ASCII lower-cases into a percent-encoding" },
     { "value": "", "accepted": false, "why": "there is nothing to number an edition with" }
   ]
 }

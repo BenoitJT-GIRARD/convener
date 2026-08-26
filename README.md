@@ -1,4 +1,4 @@
-# Monthly Reading Group
+# Convener
 
 The operational workspace for our community webinar series, from finding a
 speaker to certifying attendance — and the source of the public showcase

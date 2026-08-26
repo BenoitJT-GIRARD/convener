@@ -139,8 +139,8 @@ def forms(needle: str) -> tuple[str, ...]:
     stylesheet generated from it. The two are the same leak and a
     case-sensitive search sees only one of them, so anything sweeping raw
     text asks for both forms through here rather than lower-casing the
-    haystack -- which would also fold `TEC` into `tec` and make a short
-    needle fire on prose.
+    haystack -- which would also fold a declared abbreviation into its
+    lower-case spelling and make a short needle fire on prose.
 
     A build sweep does not need this: it compares a *built* artefact with
     the values that built it, and both sides went through the same

@@ -62,8 +62,8 @@ const PATH_PREFIX = PUBLISHED.pathPrefix;
 const IDENTITY = identity();
 
 /** Everything a template reads as `site.*`. `title` is composed, not
- *  declared: it was "TEC Monthly Reading Group", which is exactly
- *  `short_name` and `series` with a space between them, and declaring it
+ *  declared. Every instance that declared one wrote exactly its own
+ *  `short_name` and `series` with a space between them, so declaring it
  *  as well would have been a third way to spell one fact. */
 const SITE = {
   title: `${IDENTITY.short_name} ${IDENTITY.series}`,

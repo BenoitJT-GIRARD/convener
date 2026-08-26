@@ -1,4 +1,4 @@
-# Convener handbook content
+# Handbook content
 
 These markdown files are the source of truth for handbook content. They
 are no longer built into a separate static site — the React app fetches

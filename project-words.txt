@@ -94,7 +94,6 @@ Vite
 Vitest
 Anonymous
 Anonymous
-Convener
 WCAG
 Wellcome
 wordmark

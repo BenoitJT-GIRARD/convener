@@ -55,7 +55,7 @@ ROOT = repo_root()
 #: after it. Written as text rather than dumped, because text is what this
 #: migration reads and the comments are half of what it has to preserve.
 V5_CONFIG = (
-    "# Repo-wide config for the Convener app\n"
+    "# Repo-wide config for the convener app\n"
     "# A second comment line, so the test notices if a rewrite eats one.\n"
     "season: 2026\n"
     f"{OLD_KEY}: 5\n"
@@ -85,7 +85,7 @@ def test_the_rename_happens_in_place_rather_than_at_the_end() -> None:
 
 def test_the_comments_survive() -> None:
     out = migrate_config_text(V5_CONFIG)
-    assert "# Repo-wide config for the Convener app" in out
+    assert "# Repo-wide config for the convener app" in out
     assert "# A second comment line" in out
 
 

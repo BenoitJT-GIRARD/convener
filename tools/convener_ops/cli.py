@@ -127,7 +127,7 @@ from convener_ops.yaml_safe import safe_load as yaml_safe_load
 #: same two strings: it is the browser's half of this file format, and the
 #: YAML-boundary fixture is written by one side and read by the other.
 SPEAKERS_HEADER = "# Speakers (unified schema v6 — see docs/reference/schema.md)\n"
-CONFIG_HEADER = "# Repo-wide config for the Convener app\n"
+CONFIG_HEADER = "# Repo-wide config for the convener app\n"
 #: certificates.yml holds no name and no address by construction -- see
 #: tools/convener_ops/certificate.py's module docstring for why this file
 #: survives task 15's retention sweep on registrations.enc, in the same

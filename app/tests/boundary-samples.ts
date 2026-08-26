@@ -127,7 +127,7 @@ export const SPEAKERS: Speaker[] = [
       'delivered/forum-summary': { assignee: '' },
     },
     metrics: { registrations: 0, live_peak: 60, youtube_views_30d: 148, forum_replies: 3 },
-    notes: 'TEC review: Y',
+    notes: 'Board review: Y',
   },
   {
     id: 'spk-102',
