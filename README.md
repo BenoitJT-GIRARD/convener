@@ -1,5 +1,43 @@
 # Convener
 
+## Two repositories, not one
+
+Running this needs **two repositories on GitHub**: one **private**, holding
+the cockpit and the participant data it works on, and one **public**, whose
+only job is to be the thing that gets published.
+
+The split is forced, not preferred. `data/speakers.yml` and the per-event
+registration files hold personal data, so whatever repository holds them
+has to be private — and GitHub Pages will not serve a private repository
+without a paid plan, which this project's no-cost constraint rules out. The
+public repository is therefore the publication target and nothing else:
+continuous integration in the private one builds `site/` and `app/` and
+pushes the result into its root. Nobody edits anything there. Every byte in
+it is reproducible from the private one, so losing it costs a rebuild.
+
+Anyone standing this up for themselves needs both before anything else
+works. `docs/reference/operations.md` says which settings each one needs.
+
+### Which repository is which
+
+| Repository | Visibility | What it is |
+|---|---|---|
+| `convener` | public | The product — the origin every instance is derived from. Public, so it serves its own demonstration out of itself. |
+| `example-cockpit` | private | This instance. Holds the real data. |
+| `example-showcase` | public | This instance's publication target. Nobody works in it. |
+
+There is no `convener-vitrine`, and the asymmetry is the whole explanation:
+`example-showcase` exists **only** because `example-cockpit` is private and Pages
+will not serve a private repository without that paid plan. `convener` is
+public already, so Pages serves its pages from the repository itself and a
+second one would hold a copy of what the first can already publish.
+
+Locally the picture is smaller than that table: the product, and — only
+where one person happens to hold both roles — the instance beside it. **An
+ordinary instance is one repository on a working machine, not two.**
+
+## What this is
+
 The operational workspace for our community webinar series, from finding a
 speaker to certifying attendance — and the source of the public showcase
 those webinars are announced and registered on. See
