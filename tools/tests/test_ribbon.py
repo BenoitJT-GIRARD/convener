@@ -16,6 +16,7 @@ import re
 
 import pytest
 
+from convener_ops import brand
 from convener_ops.paths import repo_root
 from convener_ops.ribbon import (
     Point,
@@ -64,10 +65,16 @@ def test_ribbon_stroke_colour_reads_brand_json() -> None:
 
 
 def test_ribbon_width_ratio_reads_brand_json() -> None:
-    # See data/brand.json::motif._ribbon_width_ratio for how this was
-    # measured against the reference poster (task 1's correction from the
-    # 0.0075 the field held before, which draws a stroke a third as thick).
-    assert ribbon_width_ratio(ROOT) == 0.024
+    """It reads the charter, which is the whole claim in the name.
+
+    The expected value was `0.024` until phase 12 task 6 -- one instance's
+    measured ratio, in a test of the *product's* reader, which therefore
+    said nothing about reading and everything about which repository it
+    ran in. See `data/brand.json::motif._ribbon_width_ratio` for how a
+    ratio is measured against a reference poster.
+    """
+    charter = brand.load(ROOT)
+    assert ribbon_width_ratio(ROOT) == charter["motif"]["ribbon_width_ratio"]
 
 
 # ---------------------------------------------------------------------------

@@ -143,10 +143,15 @@ def test_the_edition_pattern_follows_the_declaration() -> None:
     assert (
         validate_speakers([speaker(edition_code="MRG-1")], editions=reading_group) == []
     )
+    # A prefix that is nobody's. This was the prefix of the instance
+    # running the repository until phase 12 task 6, which made the
+    # counter-example the one string a derivation is bound to rewrite --
+    # and rewriting it turned the negative case into a second copy of the
+    # positive one, silently.
     assert any(
         "edition_code must match MRG-N" in error
         for error in validate_speakers(
-            [speaker(edition_code="MRG-1")], editions=reading_group
+            [speaker(edition_code="ZZZ-1")], editions=reading_group
         )
     )
 

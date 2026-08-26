@@ -205,14 +205,30 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
 
 
 def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
-    """The one number this whole task exists over. The reconstruction's
-    shipped value was 4.44, below AA for normal text; the measured charter
-    gives 7.93, AAA. This pins the arithmetic to that fact directly, rather
-    than through whatever `data/brand.json` currently claims.
+    """The one number this whole task exists over: a reconstruction that
+    darkened the ground under dark text shipped 4.44, below AA for normal
+    text, and the measured charter that replaced it clears it.
+
+    The two colours are read from the charter in force rather than typed.
+    They were typed until phase 12 task 6, and the two hexadecimal values
+    in them were `data/brand.json`'s own -- one instance's declared
+    palette, written into a test of the *product's* arithmetic, where the
+    derivation quite correctly replaced them with another instance's and
+    left the expected figure behind. Nothing was hurt by that here; what
+    it showed is that this test was pinned to a repository rather than to
+    a claim. The claim is that the figure beside the colours is the one
+    the colours compute to, and that it clears AA -- true of whichever
+    charter is in force, and the thing `generate_brand_css.py --check`
+    stops a build over.
     """
-    computed = round(contrast_ratio("#012765", "#fecac1"), 2)
-    assert computed == 7.93
-    assert computed != 4.44
+    charter = brand.load(ROOT)
+    palette = brand.colours(charter)
+    computed = round(contrast_ratio(palette["purple"], palette["turquoise"]), 2)
+    assert computed == charter["contrast"]["purple_on_turquoise"]
+    assert computed >= 4.5
+    # And the arithmetic itself, against a pair that is nobody's: black on
+    # white is 21 by definition, and 21 is the only value it can be.
+    assert round(contrast_ratio("#000000", "#ffffff"), 2) == 21.0
 
 
 def test_relative_luminance_of_white_and_black_are_the_extremes() -> None:
@@ -222,8 +238,11 @@ def test_relative_luminance_of_white_and_black_are_the_extremes() -> None:
 
 
 def test_hex_to_rgb_and_the_css_literals_built_from_it() -> None:
-    assert hex_to_rgb("#fecac1") == (130, 219, 215)
-    assert rgba("#fecac1", 0.35) == "rgba(130, 219, 215, 0.35)"
+    # A colour that is nobody's: this read one instance's declared
+    # turquoise until phase 12 task 6, which made a test of six lines of
+    # arithmetic depend on which instance was running the repository.
+    assert hex_to_rgb("#0080ff") == (0, 128, 255)
+    assert rgba("#0080ff", 0.35) == "rgba(0, 128, 255, 0.35)"
     assert rgb_triplet("#ffffff") == "255, 255, 255"
 
 
@@ -734,15 +753,28 @@ def test_a_palette_that_measures_below_aa_does_not_build(
     regenerate; it is a palette that must not ship.
     """
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
-    data["colour"]["turquoise"] = "#3fb1c2"
+    ground = "#3fb1c2"
+    data["colour"]["turquoise"] = ground
+    # Recomputed against the charter in force rather than written out.
+    # The five figures were literals until phase 12 task 6, and they were
+    # honest only for one instance's purple and ink: under another's the
+    # generator reported a *mismatch* first and this test lost its
+    # subject, which is not the failure it exists to provoke.
+    colours = brand.colours(data)
     data["contrast"].update(
         {
-            "purple_on_turquoise": 5.02,
-            "black_on_turquoise": 8.28,
-            "ink_on_turquoise": 4.52,
-            "ink_muted_on_turquoise": 2.93,
-            "turquoise_on_purple": 5.02,
+            name: round(contrast_ratio(colours[over], ground), 2)
+            for name, over in (
+                ("purple_on_turquoise", "purple"),
+                ("black_on_turquoise", "black"),
+                ("ink_on_turquoise", "ink"),
+                ("ink_muted_on_turquoise", "ink_muted"),
+            )
         }
+    )
+    data["contrast"]["turquoise_on_purple"] = data["contrast"]["purple_on_turquoise"]
+    assert data["contrast"]["ink_muted_on_turquoise"] < 4.5, (
+        "the palette this test is about has to be one that fails AA"
     )
     _write_json(fake_repo / BRAND_PATH, data)
     assert main([]) == 1
