@@ -1783,8 +1783,8 @@ def test_encrypt_attendance_export_never_reads_the_private_key(
 ) -> None:
     """Never touches `EVENT_PRIVATE_KEY` -- the whole reason this command
     can run on a host's own laptop with no CI job and no secret at all
-    (the private half `n'est utilisee qu'en integration
-    continue`). Asserted by monkeypatching `os.environ.get` and failing
+    (the private half is used in continuous integration and nowhere
+    else). Asserted by monkeypatching `os.environ.get` and failing
     the moment this name is asked for through it, not merely by leaving
     it unset (which a bug reading it with `or ''` would pass silently).
     This guards the one way `convener_ops` actually reads

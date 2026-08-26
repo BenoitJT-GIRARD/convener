@@ -95,8 +95,8 @@ Same destruction, and nothing new to destroy
 `survey-responses.enc` for that event permanently unreadable in the same
 one operation, on the same 90-day schedule the sweep already runs. Nothing
 in `tools/convener_ops/cli.py::retention_sweep` or `record_destructions` needed
-to change for this file to be covered -- that is the point of "meme
-destruction de cle" being a design property of the key, not a second
+to change for this file to be covered -- that is the point of the same
+key destruction being a design property of the key, not a second
 procedure this module would otherwise have had to add and then keep in
 sync with the sweep's.
 
