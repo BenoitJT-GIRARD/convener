@@ -1,5 +1,5 @@
-"""H4 (2026-08-23 security audit): `a11y.yml` and `preview.yml` ran on
-every push and every pull request before this fix, including one touching
+"""`a11y.yml` and `preview.yml` ran on
+every push and every pull request once, including one touching
 only `docs/`, `data/`, or an unrelated relay -- neither check can possibly
 have anything to say about most of those. Both are path-filtered now, the
 same deliberate discipline `visuals.yml` already established and

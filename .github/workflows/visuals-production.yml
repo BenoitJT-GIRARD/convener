@@ -1,7 +1,7 @@
 name: Visuals production
 
-# Task 6 (phase 6): the trigger. Renders task 6's own production seam
-# (`convener-render-visuals`, `tools/convener_ops/cli.py`) against real, *scheduled*
+# The trigger for the production seam
+# (`convener-render-visuals`, `tools/convener_ops/cli.py`), run against real, *scheduled*
 # editions in `data/speakers.yml` -- locking a date, receiving a
 # portrait's consent, or correcting a title all land here through that one
 # file -- plus a GitHub-side manual command (`workflow_dispatch`)
@@ -9,13 +9,13 @@ name: Visuals production
 # no workflow at all (`uv run --project tools convener-render-visuals
 # OUTPUT_DIR`).
 #
-# Fix round 1 (task 7's own follow-up): also runs `convener-render-announcements`
+# It also runs `convener-render-announcements`
 # and uploads its output into the identical artefact, one subdirectory per
 # edition alongside that edition's own images
 # (`OUTPUT_DIR/<event id>/<channel>.md` next to `<event id>/<format>.png`).
-# Task 7 shipped this command with no consumer at all -- a real, tested CLI
+# That command shipped with no consumer at all -- a real, tested CLI
 # nothing ever invoked, the same "unreachable feature" shape this project
-# has already shipped five times across its phases. This is that consumer:
+# has already shipped five times. This is that consumer:
 # an operator downloading the poster for a scheduled edition now gets the
 # forum, professional-network and mailing-list drafts in the same download,
 # and an archived edition whose recording just cleared the gate gets its
@@ -43,14 +43,14 @@ name: Visuals production
 # it is the one format a link-preview bot fetches on its own, unprompted,
 # every time someone shares an event page -- an artefact download link
 # needs a GitHub session and a run that has not expired, which is worse
-# than the tag phase 5 deliberately left out rather than point at
-# (`site/src/_includes/layout.njk`'s own comment). So task 9 (phase 6)
+# than the tag the showcase deliberately left out rather than point at
+# (`site/src/_includes/layout.njk`'s own comment). So this workflow
 # commits *only* that one format, under `site/src/banners/<event id>.png`,
 # regenerated whole on every run (an edition no longer scheduled loses its
 # file the same run -- see the "Sync the share banner" step below) rather
 # than accumulated into. This is a binary diff on every edition change,
 # same as any other committed image in this repository (`visuals/
-# references/*.png`, task 5) -- accepted for the one file an unattended
+# references/*.png`) -- accepted for the one file an unattended
 # bot actually reads, not for the two a human downloads on demand.
 #
 # Why this exact path list, and why `data/speakers.yml` is in it (unlike
@@ -63,7 +63,7 @@ name: Visuals production
 # the one disk-writing module, the brand source, the self-hosted fonts and
 # the Python lockfile pinning the QR renderer all change what a *real*
 # rendered edition looks like just as much as they change the fixture
-# visuals.yml checks. Fix round 1 adds `tools/convener_ops/announce.py`,
+# visuals.yml checks. The list also carries `tools/convener_ops/announce.py`,
 # `tools/convener_ops/registration.py` (the registration address every drafted
 # text points at, D-19) and the four `docs/toolkit/*.md` pages themselves
 # -- `announce.py` now renders those files rather than composing its own
@@ -72,7 +72,7 @@ name: Visuals production
 # and none of the four was a dependency of this workflow before this
 # command had a consumer in it.
 #
-# Phase 11 task 3 adds `config/instance.json` and
+# It also carries `config/instance.json` and
 # `tools/convener_ops/published.py`, and this pair *is* shared with visuals.yml
 # for once: the composition reads the instance's own declaration now (the
 # wordmark band is `identity.forum_host`, the hero band is
@@ -81,12 +81,12 @@ name: Visuals production
 # `forum_host` from it changes every rendered edition and the pinned
 # fixture alike.
 #
-# Branch review, fix round 1: `tools/convener_ops/public_data.py` is in this
+# `tools/convener_ops/public_data.py` is in this
 # list too, and deliberately *not* in visuals.yml's -- re-derived from what
 # each job's own render actually calls, not copied across the two.
 # `render_visuals` and `render_announcements` (this job's own two commands,
 # `cli.py`) each call `public_data.to_public` directly, before either one
-# reads a row -- the P-4 consent gate (`_gate_closed`,
+# reads a row -- the consent gate (`_gate_closed`,
 # `personal_disclosure_withheld`, `recording_withheld`) every one of
 # `cli.py`'s, `announce.py`'s and `visual.py`'s own docstring names as the
 # reason a portrait or a room link cannot reach a rendered page. Harmless
@@ -160,14 +160,14 @@ jobs:
   visuals-production:
     runs-on: ubuntu-latest
     # Render + compare alone measures under 5 seconds on a warm machine
-    # for a single edition (task 5's own report gives the identical figure
-    # for the regression fixture, which this job's own render step
-    # shares); this allowance covers a cold cache miss that has to fetch
+    # for a single edition (the regression fixture measures the same, and
+    # this job's own render step shares that path); this allowance covers
+    # a cold cache miss that has to fetch
     # the ~430MB Chrome-for-Testing build besides, the same figure
     # visuals.yml's own job budgets for the identical download.
     timeout-minutes: 10
     permissions:
-      # Task 9 (phase 6): `contents: write` is this job's own `GITHUB_TOKEN`
+      # `contents: write` is this job's own `GITHUB_TOKEN`
       # committing `site/src/banners/` back to this same repository (never
       # a repository secret -- see this file's own "reads no repository
       # secret" test); `actions: write` is what lets it dispatch
@@ -193,7 +193,7 @@ jobs:
       - name: Render the scheduled editions (pure Python/HTML, no browser yet)
         run: |
           uv run --project tools convener-render-visuals "${{ runner.temp }}/production-visuals"
-      # Fix round 1: writes straight into `production-visuals-out`, the
+      # Writes straight into `production-visuals-out`, the
       # same directory `render-production.mjs` writes each edition's own
       # `<format>.png` into below -- one Markdown file per channel, nested
       # under `<event id>/`, so `<event id>/forum.md` lands beside
@@ -261,7 +261,7 @@ jobs:
         if: steps.pages.outputs.count != '0'
         working-directory: visuals
         run: npm ci
-      # Task 12 (phase 5) established that every surface with a lockfile
+      # Every surface with a lockfile
       # gets an audit in this same quality chain -- visuals/ already gets
       # one in visuals.yml; this is a second job installing the identical
       # lockfile, so it gets one too rather than becoming the one
@@ -304,7 +304,7 @@ jobs:
           # accumulate storage indefinitely. GitHub's own maximum.
           retention-days: 90
 
-      # Task 9 (phase 6): the one format a link-preview bot fetches on its
+      # The one format a link-preview bot fetches on its
       # own, carried to this repository's own `site/src/banners/` -- see
       # this file's own header comment for why this one format, and why
       # here rather than publish-vitrine.yml. Unconditional (no `if:`),
@@ -341,7 +341,7 @@ jobs:
       - name: Sync and commit the share banner
         env:
           GH_TOKEN: ${{ github.token }}
-        # Phase 7, task 2: on a rejected push, re-derive against the
+        # On a rejected push, re-derive against the
         # refreshed tip rather than `git pull --rebase`. `git reset --hard`
         # would discard the local commit's own site/src/banners changes
         # along with it, so the sync itself (`sync_banners` below) has to

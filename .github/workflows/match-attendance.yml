@@ -1,6 +1,6 @@
 name: Match attendance
 
-# I-4, branch review: `convener-match-attendance` (`docs/reference/operations.md`,
+# `convener-match-attendance` (`docs/reference/operations.md`,
 # "Matching attendance") had no workflow of its own -- two other workflows'
 # own header comments told a volunteer to "run convener-match-attendance by hand
 # first" before either issuing certificates or inviting the survey, but
@@ -17,7 +17,7 @@ name: Match attendance
 # same command and had nowhere to be read from either. Uploaded here as a
 # short-retention, access-controlled build artefact.
 #
-# M1, fix wave 2 (security audit 2026-08-23): that artefact used to carry
+# That artefact used to carry
 # display names and addresses in the clear -- readable by anyone with
 # repository read access, a wider set than those holding the event's own
 # decryption key, and outside the encryption/erasure/key-destruction
@@ -111,7 +111,7 @@ jobs:
         #
         # Short-retention and access-controlled, never a public artefact --
         # defence in depth, kept even though the file itself no longer
-        # carries a name or an address (M1, fix wave 2; see
+        # carries a name or an address (see
         # `cli.py::UNMATCHED_ATTENDANCE`'s own comment).
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

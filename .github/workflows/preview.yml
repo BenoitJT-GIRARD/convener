@@ -1,7 +1,7 @@
 name: Preview
 
-# Task 13 (phase 5): spec S:7 -- "a preview mode on a pull request, to
-# reread an event page before publication". Zero cost, by construction: no
+# A preview mode on a pull request, so an event page can be reread
+# before publication. Zero cost, by construction: no
 # third-party preview host, no account, GitHub's own build-artefact storage
 # only (D-13). A reviewer downloads this run's own artefact from the run
 # summary page; nothing here publishes anywhere, and nothing links to what
@@ -22,10 +22,9 @@ name: Preview
 # private event data, which this job has no access to and does not need:
 # reviewing a template or layout change is exactly what a fixture build is
 # for. The two islands (the registration form, the certificate-verification
-# panel) are P-2's own reason the phase exists at all, and a preview that
+# panel) are the reason a public showcase exists at all, and a preview that
 # left them out would show an event page with an empty box where the form
-# belongs -- exactly the failure this task's own brief warns against, and
-# worse than showing nothing: a reviewer would have to guess whether the
+# belongs. That is worse than showing nothing: a reviewer would have to guess whether the
 # box is broken. So `app/` is built too, using the same throw-away-event-key
 # recipe `a11y.yml` already established (a fresh key pair per fixture
 # event, generated here, never committed, discarded with the runner), so
@@ -42,8 +41,8 @@ name: Preview
 # root (no CNAME, no custom domain) -- `config/instance.json` is the one
 # place that address is written down, and every template's `| url` filter
 # call, plus all four `base` values in `app/vite.config.ts`, resolve
-# against what each build derives from it. D-26 exists because phase 5's
-# own seven earlier screenshot rounds were all taken at a bare `localhost`
+# against what each build derives from it. D-26 exists because seven
+# earlier screenshot passes were all taken at a bare `localhost`
 # root and all green, on a site where the stylesheet, the fonts, internal
 # navigation and both islands would have 404'd once actually published.
 # "Assemble the preview" below reads that same prefix from its one source
@@ -81,11 +80,11 @@ name: Preview
 # from that exact fixture, so the same sweep `publish-vitrine.yml` runs
 # against the real data applies here too, against the assembled preview
 # rather than a checkout of a second repository.
-# H4 (2026-08-23 security audit): unfiltered before this fix, so every
+# This workflow was unfiltered once, so every
 # pull request -- including one touching only `docs/`, `data/`, or an
 # unrelated relay -- paid a full site+app build and packaged an artefact
 # nobody asked to review. Path-filtered now, deliberately the identical
-# list a11y.yml's own fix just adopted (both build the same fixture-based
+# list a11y.yml carries (both build the same fixture-based
 # site and app, from the same inputs): see that file's own header comment
 # for the path-by-path reasoning (D-25: a filter that silently omits a
 # path means a real regression ships an unreviewable preview, so prefer
@@ -97,7 +96,7 @@ on:
   pull_request:
     paths:
       - 'site/**'
-      # Phase 10, task 2: both builds resolve their published
+      # Both builds resolve their published
       # address from here, and D-26 is about checking at the address
       # a build is actually served under.
       - 'config/instance.json'
@@ -107,7 +106,7 @@ on:
       - 'tools/uv.lock'
       - '.github/workflows/preview.yml'
 
-# Phase 8, task 3, change D: a newer push to a pull request supersedes
+# A newer push to a pull request supersedes
 # the commit an older run is still checking, so that run is cancelled --
 # grouped by the source branch, `github.head_ref`. That field is empty
 # for anything that is not a pull request, so a push to `main` falls
@@ -138,10 +137,10 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
-          # H4 (2026-08-23 security audit): caches uv's own download/resolve
-          # step, keyed on tools/uv.lock -- part of reducing this project's
-          # self-inflicted Actions-minute cost, alongside this fix's path
-          # filters. Reduces run time only; changes nothing this job checks.
+          # Caches uv's own download/resolve step, keyed on tools/uv.lock --
+          # part of holding this project's self-inflicted Actions-minute
+          # cost down. Reduces run time only; changes nothing this job
+          # checks.
           enable-cache: true
       # The registration island only renders its real <input>/<label>
       # markup once it reaches its own 'ready' key state

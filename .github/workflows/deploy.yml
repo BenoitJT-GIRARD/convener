@@ -3,7 +3,7 @@ name: Deploy app
 on:
   push:
     branches: [main]
-    # Phase 8, task 3, change C. `paths-ignore:`, never `paths:`, and the
+    # `paths-ignore:`, never `paths:`, and the
     # direction is the whole decision.
     #
     # This build's inputs cover very nearly the whole repository:
@@ -25,8 +25,8 @@ on:
     # its own deploy workflow), and the four repository-root files nothing
     # under `app/` reads.
     #
-    # `config/**` was on this list until phase 10 task 2 put the one
-    # address this project is published at in `config/instance.json`,
+    # `config/**` was on this list until the one
+    # address this project is published at moved into `config/instance.json`,
     # which `app/vite.config.ts` now reads for every bundle's `base`.
     # `test_workflows.py::test_no_path_the_deploy_ignores_can_reach_the_
     # deployed_bundle` is what noticed, and it is exactly right to: with
@@ -35,8 +35,8 @@ on:
     # editing an unrelated threshold now runs this workflow -- which is
     # the direction this list is chosen to fail in.
     #
-    # `.superpowers/**` was a fourteenth entry here until phase 12 task 6
-    # and it filtered nothing, on any machine: that directory is untracked
+    # An untracked working directory was a fourteenth entry here, and it
+    # filtered nothing, on any machine: an untracked directory
     # -- `git ls-files` returns nothing for it -- and `paths-ignore:` is
     # evaluated against the files a push carries, which are tracked by
     # definition. It read like a decision, enforced nothing, and passed
@@ -57,10 +57,10 @@ on:
 # ordinary, not exotic. That is a different race from the one the retry loop
 # below handles: this job and `publish-vitrine.yml` write disjoint subtrees
 # of the published repository (`app/` here, the site's own root-level files there --
-# `index.html`, `style.css`, `fonts/`, `.nojekyll`, task 2), so re-deriving
+# `index.html`, `style.css`, `fonts/`, `.nojekyll`), so re-deriving
 # against a push made by the other one always reproduces cleanly and both
 # pushes must land -- which is exactly what that loop (now re-deriving
-# rather than rebasing, phase 7 task 2) is for. Two *deploy* runs are not
+# rather than rebasing) is for. Two *deploy* runs are not
 # disjoint: both rewrite all of `app/`, so racing here either conflicts on
 # `index.html` (different hashed asset names from the same base, a red job,
 # under a rebase) or lets the *older* build silently overwrite the newer
@@ -83,11 +83,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    # Every job in this repository declares a ceiling --
+    # test_workflows.py::test_every_job_declares_a_timeout guards that.
     timeout-minutes: 15
     permissions:
-      # write, not read (fix round 2, R-41): this job now commits
+      # write, not read: this job commits
       # public-data/survey-status.json back to this repository itself --
       # see the "Commit survey status" step below for why.
       contents: write
@@ -96,7 +96,7 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
-      # Task 13 (certificate verification page): `certificates.json`, part
+      # The certificate verification page reads `certificates.json`, part
       # of the app's own `public/` -- so it ships inside `app/dist/` and
       # `deploy.yml`'s existing "Push to the published repository" step below carries it
       # into the showcase for free, with no second, separate write into
@@ -108,7 +108,7 @@ jobs:
       # one -- `scripts/copy-certificates.mjs`, below, is equally tolerant
       # of this step never having run at all.
       #
-      # Critical 1 (fix round 1, task 13): this step is what actually
+      # This step is what actually
       # keeps the register a verifier reads current, and it only runs when
       # this workflow does -- which a certificate issuance or revocation's
       # own push (made with the checkout's own GITHUB_TOKEN) can never
@@ -116,17 +116,17 @@ jobs:
       # `publish-vitrine.yml`'s own header comment explains). Each of
       # issue-certificates.yml, reissue-certificate.yml and
       # revoke-certificate.yml dispatches this workflow directly with
-      # `gh workflow run deploy.yml` as its own last step -- carried item
-      # 4 (fix wave 2) removed the `publish-vitrine.yml` dispatch each of
-      # those three used to send alongside it, once and for all: after
-      # Minor 5, that workflow no longer touches certificate data at all,
+      # `gh workflow run deploy.yml` as its own last step. The
+      # `publish-vitrine.yml` dispatch each of those three used to send
+      # alongside it is gone, once and for all: that workflow no longer
+      # touches certificate data at all,
       # so the dispatch was always a no-op run there, never a second
       # publication anything depended on. This step, and this dispatch,
       # are what a verifier's page actually depends on.
       - name: Build public data
         working-directory: tools
         run: uv run convener-certificates-public-data
-      # R-37 (fix round 1, task 16): the post-event survey's per-event
+      # The post-event survey's per-event
       # switch, published as an operational fact rather than baked into
       # SurveyForm.tsx's own knowledge -- see convener_ops.cli.survey_status_
       # public_data's own docstring for why this is a second file and a
@@ -138,7 +138,7 @@ jobs:
       - name: Build survey status
         working-directory: tools
         run: uv run convener-survey-status-public-data
-      # R-41 (fix round 2): committed here, not only baked into dist/ --
+      # Committed here, not only baked into dist/ --
       # services/signup-relay reads this exact file, at this exact path,
       # through the GitHub Contents API against this repository (the same
       # credential and the same call shape it already uses for
@@ -156,14 +156,14 @@ jobs:
       # after "Build" would let a reset silently discard app/dist along
       # with it.
       #
-      # Fix round 3: the retry on a rejected push is a fetch-and-reset-
+      # The retry on a rejected push is a fetch-and-reset-
       # hard followed by *re-running the projection command*, not `git
       # rebase` -- the same rule `registration.yml`'s own retry loop
       # follows, and for the identical reason (see that workflow's own
       # comment at length). `public-data/survey-status.json` is a
       # generated JSON array, the same shape `registrations.enc` is:
       # `git rebase` replays a diff over that array's own closing lines,
-      # which is exactly task 6's Critical 1 -- two runs each rewriting
+      # which is a defect this repository has already had once -- two runs each rewriting
       # the array's tail, `git rebase` returns 1 on the conflict, and
       # `set -e` kills the step before the `::error::` line below is ever
       # reached, leaving the tree mid-rebase with no annotation at all.
@@ -199,7 +199,7 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- survey-status.json was not published to this repo"
           exit 1
-      # Phase 9, task 3: the registration lane cutoffs, published the same
+      # The registration lane cutoffs, published the same
       # way and to the same reader. `services/signup-relay` decides whether
       # an arriving registration waits for the daily drain or is dispatched
       # at once, and the only thing that decides is the distance to the
@@ -223,8 +223,8 @@ jobs:
       #
       # Note what this file's *staleness* can and cannot cost, because it
       # is the one thing worth knowing before editing the threshold:
-      # editing the threshold starts this workflow since phase 10 task 2
-      # took `config/**` off `paths-ignore` above, so the change lands on
+      # editing the threshold starts this workflow now that `config/**`
+      # is off `paths-ignore` above, so the change lands on
       # the next push rather than at the next unrelated run. Nothing was
       # lost by the lag it used to carry either -- a stale cutoff only
       # routes a registration to the wrong *lane*, and
@@ -253,7 +253,7 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- registration-routing.json was not published to this repo"
           exit 1
-      # Task 8 (phase 6): the internal agenda feed -- everything the
+      # The internal agenda feed -- everything the
       # public `/agenda.ics` carries (site/, built entirely on the
       # JavaScript side) plus the preparation deadlines `notify.due_date`
       # is already tracking, generated from `data/speakers.yml` directly
@@ -327,7 +327,7 @@ jobs:
           # GitHub Pages serves a project repository at
           # `https://<owner>.github.io/<repository>/` and nowhere else, so
           # the address a visitor sees and the repository this push writes
-          # into are one fact, not two. Before phase 10 task 3 they were
+          # into are one fact, not two. They used to be
           # two, and changing the declared address moved every public URL
           # while still publishing into the previous instance's repository.
           # Read through the Python reader that owns the derivation
@@ -368,7 +368,7 @@ jobs:
           #
           # The retry re-derives rather than rebases, the same shape
           # publish-vitrine.yml's own "Publish" step uses for the identical
-          # race (phase 7, task 2). A rebase would in fact replay cleanly
+          # race. A rebase would in fact replay cleanly
           # here -- the two subtrees never overlap, so there is nothing for
           # it to conflict on -- but it stays a second shape for a problem
           # this repository solves one way everywhere else, and re-deriving

@@ -1,8 +1,8 @@
 name: Deliver a certificate
 
-# Task 14, ruling 4: a manual resend for the one document spec S:9's own
-# risk table names ("a certificate sitting in spam does not exist"),
-# for the one document R-22 forbids ever accepting an address to redeliver.
+# A manual resend for the one document whose loss is silent -- a
+# certificate sitting in a spam folder does not exist -- and the one
+# document this project never accepts an address to redeliver.
 #
 # The input is CERTIFICATE_ID, never an address -- exactly the same
 # reasoning `reissue-certificate.yml` and `revoke-certificate.yml` already
@@ -19,10 +19,10 @@ name: Deliver a certificate
 # rather than a second lookup of its own.
 #
 # Read only: unlike the three certificate workflows, this one never writes
-# certificates.yml (delivery is not a register state -- R-20) and never
+# certificates.yml (delivery is not a register state) and never
 # commits anything, so it needs no write permission and no concurrency
-# group shared with them. It does need its own, narrower group (Minor 7,
-# fix round 1): two concurrent dispatches for the *same* certificate would
+# group shared with them. It does need its own, narrower group:
+# two concurrent dispatches for the *same* certificate would
 # otherwise send two e-mails -- keyed on certificate_id alone, so two
 # dispatches for two different certificates still run in parallel.
 on:
@@ -85,7 +85,7 @@ jobs:
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
           # A public certificate identifier, never an address -- see this
-          # workflow's own header comment (R-22).
+          # workflow's own header comment.
           CERTIFICATE_ID: ${{ inputs.certificate_id }}
           # email_transport's five secrets -- absent is ordinary D-13 here
           # too: the attempt is simply reported as not sent. See

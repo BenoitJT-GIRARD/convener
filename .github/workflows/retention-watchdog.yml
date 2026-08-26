@@ -1,7 +1,7 @@
-# H2 (2026-08-23 security audit) / AF-2: D-25 makes every control inside a
+# D-25 makes every control inside a
 # run fail loudly. It says nothing about a run that never starts --
-# `retention.yml` is exactly the job whose silence has legal weight (spec
-# P-2, D-22): it is what makes an event's registrations permanently
+# `retention.yml` is exactly the job whose silence has legal weight
+# (D-22): it is what makes an event's registrations permanently
 # unreadable once the retention window has elapsed. GitHub disables a
 # workflow's own `schedule:` trigger after 60 days without any activity in
 # the repository, and an exhausted Actions minute budget simply stops
@@ -46,8 +46,8 @@
 # than hidden: a committed record legible without any CI running, plus a
 # second, independent schedule that reports on it for as long as any
 # schedule in this repository still runs at all.
-# A second record, watched the same way (phase 8, task 4)
-# --------------------------------------------------------
+# A second record, watched the same way
+# --------------------------------------
 # This job now asks the same question twice, about two different daily
 # jobs. The second is `data/actions-usage.yml`, written at the bottom of
 # `sweep-and-notify.yml`'s own daily job (05:00 UTC, so a healthy day's
@@ -58,10 +58,10 @@
 # thing the alarm exists to warn about, is one of the reasons a scheduled
 # job stops running at all.
 #
-# A third record, and the reason it is here and not there (phase 9, task 4)
-# -------------------------------------------------------------------------
+# A third record, and the reason it is here and not there
+# --------------------------------------------------------
 # `data/queue-watch.yml` is what the public submission queue still held the
-# last time a drain looked at it. Since phase 9 a survey response and a
+# last time a drain looked at it. A survey response and a
 # far-off registration no longer start a run each: they wait in a branch,
 # and one drain a day -- steps of `sweep-and-notify.yml`'s daily job again
 # -- handles everything waiting. Every failure *inside* a drain is already
@@ -137,7 +137,7 @@ jobs:
         id: retention
         working-directory: tools
         run: uv run convener-check-retention-liveness
-      # Phase 8, task 4. The Actions budget alarm lives inside
+      # The Actions budget alarm lives inside
       # sweep-and-notify.yml's own daily job, and a control hosted inside
       # the job it watches cannot report that job going quiet -- least of
       # all when the thing it exists to warn about, an exhausted minute
@@ -158,7 +158,7 @@ jobs:
         if: always() && steps.retention.conclusion != 'skipped'
         working-directory: tools
         run: uv run convener-check-actions-usage-liveness
-      # Phase 9, task 4 -- see this file's own header for why the "an entry
+      # See this file's own header for why the "an entry
       # is stuck" half of that control lives in the daily job and only this
       # half can live out here.
       #

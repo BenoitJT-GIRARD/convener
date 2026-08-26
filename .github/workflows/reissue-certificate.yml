@@ -1,29 +1,29 @@
 name: Reissue a certificate
 
-# R-18 (fix round 1): an operator's deliberate correction to one
+# An operator's deliberate correction to one
 # already-issued certificate -- a mis-typed name fixed in a re-submitted
 # registration, a corrected attendance export -- mints a fresh identifier
 # and never touches the row it replaces, and requires that row to already
-# be revoked (`revoke-certificate.yml`, this same round's R-21). Reusing
+# be revoked (`revoke-certificate.yml`). Reusing
 # `convener-issue-certificates`'s own idempotent lookup for this would let a
 # routine re-run silently resurrect a correction nobody asked for; see
 # `tools/convener_ops/certificate.py::reissue`'s own docstring.
 #
-# R-22 (fix round 2): the input is CERTIFICATE_ID, never an address. A
+# The input is CERTIFICATE_ID, never an address. A
 # `workflow_dispatch` input is rendered on the run page and retained with
 # the run for as long as its own history exists -- longer than the
 # 14-day artefact this project uses everywhere else it has to carry
-# personal data at all, and exactly the exposure task 7's own Important 4
-# named. The certificate identifier is random, public by design, already
+# personal data at all. That exposure is why the input is not an address.
+# The certificate identifier is random, public by design, already
 # printed on the document and already published in
 # certificates-public.json -- it names exactly one certificate without
 # naming a person. `convener-reissue-certificate` resolves it to a
 # registration the same way `certificate.issue` does, run in reverse: see
 # that command's own docstring in tools/convener_ops/cli.py.
 #
-# Critical B (fix round 3): also takes an optional `conference_id`, the
-# same provider identifier -- never an address -- `recording.yml` and, as
-# of this round, `issue-certificates.yml` already take. Without it, the
+# It also takes an optional `conference_id`, the
+# same provider identifier -- never an address -- `recording.yml` and
+# `issue-certificates.yml` already take. Without it, the
 # FCC path (CONVENER_MEETING_API_TOKEN configured) could not resolve any
 # attendance at all; see issue-certificates.yml's own comment for the
 # full reasoning, shared verbatim by both workflows' underlying command
@@ -61,7 +61,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-      # Critical A, fix round 3: see issue-certificates.yml's own comment
+      # See issue-certificates.yml's own comment
       # on this same addition -- this job's commit below also pushes with
       # GITHUB_TOKEN and needs `actions: write` to dispatch deploy.yml
       # directly afterwards.
@@ -91,13 +91,13 @@ jobs:
           CONVENER_SIGNING_KEY: ${{ secrets.CONVENER_SIGNING_KEY }}
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
-          # Critical B, fix round 3: see issue-certificates.yml's own
+          # See issue-certificates.yml's own
           # comment on this same env var.
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
           # A public certificate identifier, never an address -- see this
-          # workflow's own header comment (R-22).
+          # workflow's own header comment.
           CERTIFICATE_ID: ${{ inputs.certificate_id }}
-          # Critical A, fix round 3: see issue-certificates.yml's own
+          # See issue-certificates.yml's own
           # comment on this same env var.
           GH_TOKEN: ${{ github.token }}
         # Re-derive rather than rebase on a rejected push, the same shape
@@ -120,7 +120,7 @@ jobs:
               git add "data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
-              # Small item 1, fix round 3: see issue-certificates.yml's
+              # See issue-certificates.yml's
               # own comment on this same warning -- an absent
               # CONVENER_SIGNING_KEY or CONVENER_MATCHING_SALT is the only way this
               # branch is reached for reissue (a resolved correction
@@ -130,9 +130,9 @@ jobs:
             fi
             git commit -m "data: reissue a certificate for $EVENT_ID"
             if git push; then
-              # Critical A, fix round 3: see issue-certificates.yml's own
-              # comment on this same dispatch. Carried item 4 (fix wave
-              # 2): no publish-vitrine.yml dispatch beside this one any
+              # See issue-certificates.yml's own
+              # comment on this same dispatch. There is no
+              # publish-vitrine.yml dispatch beside this one any
               # more -- see issue-certificates.yml's own comment on why
               # that was dead motion for every certificate workflow.
               gh workflow run deploy.yml --ref "$TARGET_BRANCH" ||

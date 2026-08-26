@@ -1,13 +1,13 @@
 name: Quality
 
-# H4 (2026-08-23 security audit): considered for a path filter alongside
-# a11y.yml and preview.yml, and deliberately left unfiltered -- stated
-# here rather than by omission (consolidation.md's own arbitration rule
-# for anything accepted without a fix).
+# No path filter, and that is a decision rather than an oversight. It is
+# written here rather than left to be read out of its absence: a11y.yml
+# and preview.yml were filtered, this file was weighed alongside them and
+# deliberately left alone.
 #
 # A path filter here would either cover so much of the repository that it
-# saved nothing, or risk exactly the "regression ships green" failure this
-# audit keeps naming: the `python` job's own "Decision register" step
+# saved nothing, or risk exactly the "regression ships green" failure a
+# path filter exists to avoid: the `python` job's own "Decision register" step
 # (`uv run convener-register --check`) compares `docs/governance/register.md`
 # against the *entire* commit history, not against any one file's diff --
 # a decision-grammar commit whose only change sits outside whatever a
@@ -27,7 +27,7 @@ name: Quality
 # time without touching what it checks -- see that step's own comment.
 #
 # ---------------------------------------------------------------------
-# Phase 8, task 2: eight jobs became four, and nothing was removed.
+# Eight jobs became four, and nothing was removed.
 #
 # GitHub bills a job by the minute, rounded *up*: a job doing twenty
 # seconds of useful work still bills a whole minute, and eight of them
@@ -78,7 +78,7 @@ on:
     branches: [main]
   pull_request:
 
-# Phase 8, task 3, change D. A newer push to a pull request replaces the
+# A newer push to a pull request replaces the
 # commit an older run of this workflow is still checking: that run is
 # verifying code nobody will ever merge. Three pushes in a quarter of an
 # hour cost three full chains of checks before this block, where only the
@@ -111,10 +111,10 @@ concurrency:
 jobs:
   python:
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    # Every job in this repository declares a ceiling --
+    # test_workflows.py::test_every_job_declares_a_timeout guards that.
     #
-    # 12, not 10, since phase 10 task 5: this job now also installs
+    # 12, not 10: this job also installs
     # `app/`'s own `node_modules` and runs a whole second-instance build
     # inside `pytest` (see the "Install app" step below). Raised rather
     # than left to run close to the edge -- a timeout that trips on a slow
@@ -134,22 +134,22 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
-          # H4 (2026-08-23 security audit): caches uv's own download/resolve
-          # step, keyed on tools/uv.lock -- part of reducing this project's
-          # self-inflicted Actions-minute cost, alongside this fix's path
-          # filters. Reduces run time only; changes nothing this job checks.
+          # Caches uv's own download/resolve step, keyed on tools/uv.lock --
+          # part of holding this project's self-inflicted Actions-minute
+          # cost down. Reduces run time only; changes nothing this job
+          # checks.
           enable-cache: true
       - name: Install
         working-directory: tools
         run: uv sync --all-extras
-      # Phase 5, task 5: `tests/test_site.py` now builds the real `site/`
+      # `tests/test_site.py` builds the real `site/`
       # project itself (a genuine Eleventy build, into a scratch directory)
-      # to sweep the *rendered* event pages for a leaked room link --
-      # acceptance criterion 2 cannot be checked any other way, because a
+      # to sweep the *rendered* event pages for a leaked room link. Nothing
+      # cheaper can check that, because a
       # room link never appears in a template's own source under the
       # internal name `zoom_link` (the public feed used to carry it as
-      # `registration_link`, task 9 stopped publishing it under any name at
-      # all), so a template-source scan would stay green even with a leak.
+      # `registration_link`, and publishes it under no name at
+      # all now), so a template-source scan would stay green even with a leak.
       # That build needs `site/`'s own `node_modules`, which this job
       # otherwise never installs -- the `web` job below does, but it never
       # runs `pytest`, and it is a separate runner with a separate
@@ -158,25 +158,25 @@ jobs:
       # idiom (`publish-vitrine.yml`, `deploy.yml`), not a pattern
       # introduced here.
       #
-      # Phase 10, task 5 added the second install below for the same
+      # The second install below is there for the same
       # reason. `tests/test_second_instance.py` builds this repository as
       # a *different* instance -- all four bundles, the showcase, the
       # handbook copy, the generated templates, the published feeds and
       # the posters -- and sweeps what comes out for anything of this
-      # instance's. That is the acceptance criterion the whole of phase 10
-      # rests on (spec § 6), so it has to run on every change rather than
+      # instance's. That is the property separating the instance from the
+      # code rests on, so it has to run on every change rather than
       # only where somebody remembers to look; the build itself takes
       # about ten seconds once `node_modules` is there, and it makes no
       # network call of any kind.
       #
-      # Phase 10, task 7: these two steps are now load-bearing rather than
+      # These two steps are load-bearing rather than
       # convenient. `tests/test_second_instance.py::_toolchain_absent`
       # skips a missing toolchain on a developer's machine and *fails* it
       # here, because `CI` is set -- so deleting, renaming or reordering
       # either install below turns this job red by name instead of turning
       # the acceptance criterion into a row of skips inside a green suite
-      # (D-25, and the defect `docs/superpowers/phase-10-bilan.md` § 4.3
-      # found).
+      # (D-25 -- and a review has already found exactly that row of skips
+      # sitting inside a green suite here once).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
@@ -223,8 +223,8 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -e
-          # Only the commits under review. Phase 1 is already written and does
-          # not follow this grammar; a check that demanded the past be
+          # Only the commits under review. The oldest commits predate this
+          # grammar and do not follow it; a check that demanded the past be
           # rewritten would be turned off instead of obeyed.
           #
           # The range is computed by `commit_format.log_range` rather than
@@ -272,11 +272,11 @@ jobs:
         # site/src/style.css, app/src/design/tokens.css and tokens.ts each
         # carried data/brand.json's colours retyped by hand -- the shape
         # that let the application drift to a reconstruction's palette
-        # unnoticed (docs/superpowers/deferred-work.md, entry 1). Same
+        # unnoticed. Same
         # assertion-only run as the schema check above: writes nothing,
         # fails if a committed file is not what the charter derives.
         #
-        # Phase 10 task 4 gave it two more things to fail on. It now also
+        # It has two more things to fail on beyond the stylesheet. It also
         # derives the two SVG templates a collaborator downloads
         # (docs/assets/), which had drifted onto the same discarded
         # palette where no check could see them; and it recomputes every
@@ -286,7 +286,7 @@ jobs:
         # at all, so it has to run here and not only in pytest.
         run: uv run python ../scripts/generate_brand_css.py --check
 
-  # Phase 8, task 2: the former `typescript`, `site` and `spelling` jobs.
+  # The former `typescript`, `site` and `spelling` jobs, merged.
   # Three jobs, one Node 20, one checkout -- and `app/`'s own `npm ci` run
   # twice between them. See this file's header for the reasoning, and for
   # why the ceiling below is their sum rather than anything smaller.
@@ -320,15 +320,15 @@ jobs:
             site/package-lock.json
 
       # ---- app/ ------------------------------------------------------
-      # Installed once. Before phase 8 task 2 this `npm ci` ran twice, in
+      # Installed once. This `npm ci` used to run twice, in
       # two jobs, on two runners, for one tree.
       - name: Install app
         id: install-app
         working-directory: app
         run: npm ci
-      # Fix round 1 (task 12 follow-up): task 12 wired `npm audit` into
-      # `site/`'s own steps only -- `app/`'s own tree (React, Vite, the whole
-      # application toolchain) had never been audited at all, and it is the
+      # `npm audit` reached `site/`'s own steps before it reached
+      # `app/`'s -- `app/`'s own tree (React, Vite, the whole
+      # application toolchain) went unaudited, and it is the
       # larger surface: `react-router`/`react-router-dom` and `js-yaml` are
       # `dependencies`, not `devDependencies`, so they ship in the built
       # `dist/assets/index-*.js` the operators' cockpit serves at
@@ -382,10 +382,10 @@ jobs:
         run: npm ci
       # site/eslint.config.js, the same minimal, plugin-free flat config
       # services/auth-proxy's own already uses -- Eleventy's own CommonJS
-      # config file, plus (task 11) the accessibility checker's own ES
-      # module, (task 12) the performance-budget checker's own, (fix
-      # round 1, phase 6 task 7) the shared Paris-offset fixture's own
-      # CommonJS check script, and (phase 10 task 2) this package's reader
+      # config file, plus the accessibility checker's own ES
+      # module, the performance-budget checker's own, the shared
+      # Paris-offset fixture's own
+      # CommonJS check script, and this package's reader
       # of `config/instance.json` and the script that prints what it and
       # `.eleventy.js` resolve, each under its own scoped override in that
       # same config file.
@@ -393,9 +393,9 @@ jobs:
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
         run: npx --yes eslint@9 .eleventy.js scripts/check-a11y.mjs scripts/check-performance-budget.mjs scripts/check-paris-standing-start.cjs scripts/published.cjs scripts/print-published.cjs
-      # Task 12: the same quality chain phase 1 already holds Python to
+      # The same quality chain this project already holds Python to
       # (`uv run pip-audit`, above) -- `site/`'s own dependencies (Eleventy,
-      # axe-core, puppeteer-core) had never been audited before this task.
+      # axe-core, puppeteer-core) went unaudited until this step existed.
       # Queries npm's own advisory database, the identical shape of network
       # call `pip-audit` already makes in this same chain; not a test, and
       # no account or paid service involved.
@@ -403,8 +403,8 @@ jobs:
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
         run: npm audit
-      # Task 2: the showcase's templates moved into this repository (D-15)
-      # without the construction that reads them ever running in CI --
+      # The showcase's templates live in this repository (D-15), and for a
+      # while the construction that reads them never ran in CI --
       # this is that construction. `site/src/_data/events.json` is
       # committed as a fixture (see site/README.md), so this build needs
       # no data generated by `tools/`, unlike publish-vitrine.yml's own.
@@ -413,7 +413,7 @@ jobs:
         if: always() && steps.install-site.outcome == 'success'
         working-directory: site
         run: npm run build
-      # Task 12: the performance budget below covers two page classes --
+      # The performance budget below covers two page classes --
       # static pages (site/ alone) and pages carrying a client-side island
       # (event.njk's registration form, verify.njk's own panel) -- so it
       # needs the app's real built islands, the same fixture-based build
@@ -421,13 +421,13 @@ jobs:
       # here, and none are needed: the check below weighs the built
       # `signup.js`/`verify.js` bundles themselves, not their behaviour).
       # The install this build needs is the app lane's own, above -- the
-      # duplicate `npm ci` phase 8 task 2 removed.
+      # duplicate `npm ci` that merging these jobs removed.
       - name: Build app
         id: build-app
         if: always() && steps.install-app.outcome == 'success'
         working-directory: app
         run: npm run build
-      # Task 12: acceptance criterion 7 -- a performance budget, verified
+      # A performance budget, verified
       # automatically against the real built output (D-26), never a source
       # directory or an estimate. See site/scripts/check-performance-
       # budget.mjs's own module comment for the two budgets, the reasoning
@@ -453,13 +453,13 @@ jobs:
         if: always() && steps.node.outcome == 'success'
         run: npx --yes cspell@8 lint --no-progress
 
-  # Phase 8, task 2: the former `auth-proxy`, `form-relay` and
+  # The former `auth-proxy`, `form-relay` and
   # `signup-relay` jobs. One runner, one checkout -- but *two*
   # `setup-node` steps, because `signup-relay` runs on Node 22 and the
   # other two on Node 20. Two `setup-node` steps in one job is still one
   # billed job; putting all three relays on a single Node version to make
   # this file look tidier would change what is tested, which is not a
-  # trade this task is allowed to make. The Node 22 step comes last
+  # trade a tidy-up is allowed to make. The Node 22 step comes last
   # because `setup-node` changes the version for every step after it.
   relays:
     runs-on: ubuntu-latest
@@ -485,7 +485,7 @@ jobs:
         id: install-auth-proxy
         working-directory: services/auth-proxy
         run: npm ci
-      # Fix round 1 (task 12 follow-up): this relay declares no
+      # This relay declares no
       # `dependencies` at all -- `src/` imports nothing from `node_modules`,
       # only the Worker runtime's own standard `fetch` API -- so nothing
       # `npm audit` could find here ever reaches the deployed Worker.
@@ -517,7 +517,7 @@ jobs:
         if: always() && steps.node-20.outcome == 'success'
         working-directory: services/form-relay
         run: npm ci
-      # Fix round 1 (task 12 follow-up): same shape as services/auth-proxy's
+      # Same shape as services/auth-proxy's
       # own step above -- no `dependencies`, `wrangler`/`vitest` are the
       # whole tree, no flag, never `--omit=dev` (D-25).
       - name: Dependency audit form-relay
@@ -552,7 +552,7 @@ jobs:
         if: always() && steps.node-22.outcome == 'success'
         working-directory: services/signup-relay
         run: npm ci
-      # Fix round 1 (task 12 follow-up): same shape as services/auth-proxy's
+      # Same shape as services/auth-proxy's
       # own step above -- no `dependencies`, `wrangler`/`vitest` are the
       # whole tree, no flag, never `--omit=dev` (D-25).
       - name: Dependency audit signup-relay
@@ -570,10 +570,10 @@ jobs:
 
   workflow-schema:
     runs-on: ubuntu-latest
-    # Phase 7, task 1: nothing else in this chain checks that a workflow is
+    # Nothing else in this chain checks that a workflow is
     # valid *for GitHub*. `test_workflows.py` and every other check above
     # parse these files with PyYAML, which accepts syntax GitHub's own
-    # parser rejects outright -- phase 6 learned this the hard way with a
+    # parser rejects outright -- this project learned that the hard way with a
     # YAML anchor that would have kept the visual-regression workflow from
     # ever triggering, found by reading the file, not by a tool
     # (test_workflows.py's own hand-rolled anchor/alias sweep exists
@@ -589,8 +589,8 @@ jobs:
     # test_quality_workflow_validates_workflows_against_github_actions_schema pins
     # the version string below without ever running the tool itself).
     #
-    # Phase 8, task 2 left this job alone on purpose while merging the
-    # other seven into three: the two tests named in this file's header pin
+    # This job was left alone on purpose while the other seven merged
+    # into three: the two tests named in this file's header pin
     # a job *called* `workflow-schema` whose only `uses:` is
     # `actions/checkout`, so folding it into another job means rewriting
     # the guards themselves in exchange for one minute of rounding.

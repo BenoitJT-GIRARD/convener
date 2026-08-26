@@ -2,9 +2,8 @@
 # Later patterns override earlier ones.
 #
 # One-off setup, once per instance, and stated here rather than pointed at:
-# this file used to send a reader to TODO.md, which phase 1 deleted, so the
-# only guidance it carried pointed at nothing (found by phase 10's own
-# bilan, section 7).
+# this file used to send a reader to a TODO.md that no longer exists, so
+# the only guidance it carried pointed at nothing.
 #
 # 1. Create an organisation team and add the Board members to it. Name it
 #    `editorial-board`, exactly: that slug is the one `app/src/auth/role.ts`

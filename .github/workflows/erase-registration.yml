@@ -1,16 +1,16 @@
 name: Erase a registration early
 
-# Task 15: the operator-facing side of spec S:4's "Erasure before the
-# deadline" -- a participant's registration removed from
-# registrations.enc before the retention window ends, without touching
-# any other registrant's own entry (R-31; tools/convener_ops/registration.py::
-# erase). Acceptance criterion 7 requires this procedure to be both
-# documented and tested; this workflow is what makes it reachable, the
+# The operator-facing side of erasure before the retention deadline --
+# a participant's registration removed from
+# registrations.enc before the window ends, without touching
+# any other registrant's own entry (tools/convener_ops/registration.py::
+# erase). The procedure has to be both
+# documented and reachable; this workflow is what makes it reachable, the
 # same way resend-confirmation.yml and revoke-certificate.yml make their
 # own manual procedures reachable rather than a script nobody can run.
 #
-# MATCHING_CODE, in preference to ENCRYPTED_IDENTIFIER (R-32). The code
-# is already in the participant's own confirmation e-mail (task 7) and is
+# MATCHING_CODE, in preference to ENCRYPTED_IDENTIFIER. The code
+# is already in the participant's own confirmation e-mail and is
 # never stored anywhere on our side -- recomputing it and comparing is
 # tools/convener_ops/registration.py::find_by_matching_code's own job.
 # encrypted_identifier is accepted as a fallback for someone who no
@@ -18,7 +18,7 @@ name: Erase a registration early
 # resend-confirmation.yml's own header comment already makes for an
 # identical reason.
 #
-# H1, fix wave 2 (security audit 2026-08-23): this input used to be
+# This input used to be
 # `email`, a bare address -- GitHub renders and retains a
 # workflow_dispatch input's own value on the run page for as long as the
 # run's history exists, so the one command whose entire purpose is
@@ -53,11 +53,11 @@ on:
           registrant's e-mail address, encrypted for this event with
           `cd tools && EVENT_ID=<id> REGISTRATION_EMAIL=<address> uv run
           convener-encrypt-identifier` -- never the address itself. See this
-          file's own header comment for why (R-32, D-24, H1).
+          file's own header comment for why (D-24).
         required: false
         type: string
 
-# Important 5: every other writing dispatch workflow in this repository
+# Every other writing dispatch workflow in this repository
 # has one; this one shares registration.yml's own group name rather than
 # a name of its own, deliberately -- registrations.enc is the file both
 # workflows write, so an erasure racing a submission for the same event
@@ -112,7 +112,7 @@ jobs:
         # the command recomputes the identical erasure rather than trying
         # to re-push a commit `git reset --hard` just discarded.
         # `convener_ops.registration.erase` never re-encrypts a surviving
-        # entry (R-31), so re-running this against the same starting file
+        # entry, so re-running this against the same starting file
         # twice produces byte-identical output both times.
         run: |
           set -e
@@ -124,9 +124,9 @@ jobs:
             if [ -f "data/events/$EVENT_ID/registrations.enc" ]; then
               git add "data/events/$EVENT_ID/registrations.enc"
             fi
-            # Critical 1: convener-erase-registration also rewrites the
+            # convener-erase-registration also rewrites the
             # committed attendance export when the erased person has rows
-            # there (R-45, tools/convener_ops/cli.py:1422-1457) -- staging only
+            # there (tools/convener_ops/cli.py) -- staging only
             # the registration file left that rewrite dying with the
             # runner while the log reported it committed. Guarded the same
             # way: the file may not exist for an event with no attendance

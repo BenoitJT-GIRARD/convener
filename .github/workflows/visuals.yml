@@ -1,10 +1,10 @@
 name: Visuals
 
-# Task 5 (phase 6): renders the announcement composition on a pinned engine
+# Renders the announcement composition on a pinned engine
 # and compares it against a versioned reference image, so a visual
-# regression fails loudly in CI instead of shipping unnoticed (acceptance
-# criterion 3). See `visuals/render-and-compare.mjs`'s own module comment
-# for the full argument (P-2): the comparison only means something because
+# regression fails loudly in CI instead of shipping unnoticed.
+# See `visuals/render-and-compare.mjs`'s own module comment
+# for the full argument: the comparison only means something because
 # the engine that renders it is pinned by this repository's own lockfile,
 # not whatever Chrome happens to be on the machine that runs it.
 #
@@ -18,10 +18,10 @@ name: Visuals
 #   `render_announcement` builds) and `FIXTURE_ANNOUNCEMENT`, the fixed
 #   identity the reference images are rendered from.
 # - `tools/convener_ops/ribbon.py` -- the ribbon's own path, colour and stroke
-#   width (task 1); painted last, on top of everything else.
-# - `tools/convener_ops/registration_code.py` -- the QR code generator (task 3);
+#   width; painted last, on top of everything else.
+# - `tools/convener_ops/registration_code.py` -- the QR code generator;
 #   its own pixels are part of every rendered format.
-# - `tools/convener_ops/formats.py` -- the three named canvas sizes (task 4) and
+# - `tools/convener_ops/formats.py` -- the three named canvas sizes and
 #   the registration-slot geometry it shares with `visual.py`.
 # - `tools/convener_ops/governance.py` -- `PARIS`, the one `ZoneInfo` the date
 #   line's own text is computed from (`visual.paris_standing_start`); a
@@ -36,7 +36,7 @@ name: Visuals
 #   file, and the alternative is silently not re-checking the one function
 #   in it that this task depends on.
 # - `instances/example/config/instance.json` -- the declaration the
-#   fixture is rendered from. Phase 11 task 3 made the composition read
+#   fixture is rendered from. The composition reads
 #   one: the wordmark band is `identity.forum_host`, the hero band is
 #   `identity.strapline`, and two of the three "what to expect" rows name
 #   the forum. Editing any of those changes every rendered pixel of the
@@ -44,8 +44,8 @@ name: Visuals
 #   exactly the change this job exists to catch ship without the job
 #   running at all.
 #
-#   The *example's* declaration, and not `config/instance.json`, since
-#   phase 12 task 1: the committed reference images used to be a frozen
+#   The *example's* declaration, and not `config/instance.json`:
+#   the committed reference images used to be a frozen
 #   photograph of whichever instance ran this repository -- its palette,
 #   its ribbon, its strapline, its wordmark, and its published address
 #   inside the QR code -- sitting in `visuals/`, which is the product's.
@@ -72,8 +72,8 @@ name: Visuals
 #
 # Deliberately absent, and each is a decision rather than an omission:
 # `config/instance.json` and `data/brand.json`, this instance's own
-# declaration and charter, which this job has not rendered since phase 12
-# task 1 -- reacting to them would be running a comparison whose result
+# declaration and charter, which this job does not render any more
+# -- reacting to them would be running a comparison whose result
 # cannot change. `visuals-production.yml` carries both, and must: that job
 # renders *real* editions, as this instance. And `brand/convener/
 # brand.json`, the product's default charter -- palette and `motif` both,
@@ -97,15 +97,15 @@ name: Visuals
 #
 # Deliberately absent: `data/speakers.yml`, the real per-edition data, and
 # `tools/convener_ops/public_data.py`, the module that gates it (`to_public`,
-# `_gate_closed`, the P-4 consent check). `render_visual_fixtures` never
+# `_gate_closed`, the consent check). `render_visual_fixtures` never
 # reads any of the three -- this check renders one fixed, fictional
 # fixture (Ada Lovelace, no photograph, `FIXTURE_ANNOUNCEMENT` built by
 # hand) that never goes through `to_public` at all, so a change to real
 # speaker data or to the gate that filters it has nothing for this job to
-# see. Task 6 is where the *production* pipeline (real editions, real
-# portraits under consent) gets its own trigger, `public_data.py` included
-# in its own path filter for exactly that reason (branch review, fix round
-# 1 -- see that workflow's own comment); this one stays a pure regression
+# see. `visuals-production.yml` is where the *production* pipeline (real
+# editions, real portraits under consent) gets its own trigger, with
+# `public_data.py` in its own path filter for exactly that reason
+# (see that workflow's own comment); this one stays a pure regression
 # check against a fixture that never changes on its own.
 #
 # example-cockpit is private (D-15): Actions minutes are metered, not
@@ -175,7 +175,7 @@ on:
       - 'visuals/**'
       - '.github/workflows/visuals.yml'
 
-# Phase 8, task 3, change D: a newer push to a pull request supersedes
+# A newer push to a pull request supersedes
 # the commit an older run is still checking, so that run is cancelled --
 # grouped by the source branch, `github.head_ref`. That field is empty
 # for anything that is not a pull request, so a push to `main` falls
@@ -237,7 +237,7 @@ jobs:
       - name: Install the pinned renderer
         working-directory: visuals
         run: npm ci
-      # Task 12 (phase 5) established that every surface with a lockfile
+      # Every surface with a lockfile
       # gets an audit in this same quality chain -- this package is a new
       # surface with a new lockfile, so it gets one too rather than
       # becoming the one exception.

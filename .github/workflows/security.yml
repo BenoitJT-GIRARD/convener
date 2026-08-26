@@ -1,12 +1,12 @@
 name: Security
 
-# H4 (2026-08-23 security audit): considered for a path filter alongside
+# Considered for a path filter alongside
 # a11y.yml and preview.yml, and deliberately left unfiltered on `push` and
 # `pull_request` -- stated here rather than by omission. The `secrets`
 # job (gitleaks) exists to catch a real secret pasted into *any* file, not
-# only one whose type or directory usually carries code -- S-9 of the
-# audit's own spec is explicit that this project's prior secret sweep
-# already relied on hand-picked patterns and named its own limit; a path
+# only one whose type or directory usually carries code. This project's
+# earlier secret sweep already relied on hand-picked patterns and named
+# its own limit; a path
 # filter narrowing which pushes even get scanned would be a second,
 # broader version of the same limit, self-inflicted this time. A stray
 # credential pasted into a documentation file is exactly the shape this
@@ -14,8 +14,8 @@ name: Security
 # one next". The `codeql` job's own weekly schedule (below) is
 # unaffected either way -- `schedule:` triggers ignore `paths:` entirely,
 # so this is a trade-off about the `push`/`pull_request` runs only, not
-# about the scheduled sweep this file already carries in H4's own
-# scheduled-cost figure.
+# about the scheduled sweep, whose cost this file already carries either
+# way.
 on:
   push:
     branches: [main]
@@ -23,7 +23,7 @@ on:
   schedule:
     - cron: '0 4 * * 1'
 
-# Phase 8, task 3, change D: a newer push to a pull request supersedes
+# A newer push to a pull request supersedes
 # the commit an older run is still checking, so that run is cancelled --
 # grouped by the source branch, `github.head_ref`. That field is empty
 # for anything that is not a pull request, so a push to `main` falls
@@ -39,8 +39,8 @@ concurrency:
 jobs:
   secrets:
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    # Every job in this repository declares a ceiling --
+    # test_workflows.py::test_every_job_declares_a_timeout guards that.
     timeout-minutes: 5
     permissions:
       contents: read

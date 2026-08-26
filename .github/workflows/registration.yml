@@ -4,7 +4,7 @@ on:
   repository_dispatch:
     types: [registration-submitted]
 
-# Phase 7, task 2 (spec 6 ter): this workflow used to serialise same-event
+# This workflow used to serialise same-event
 # runs with `group` plus a `queue: max` meant to queue up to 100 pending
 # runs behind the one in progress. `actionlint` (2026-08-24) found
 # `queue: max` is not a valid `concurrency` key at all -- the citation
@@ -53,7 +53,7 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
-          # H3 (2026-08-23 security audit): the useful question was not
+          # The useful question was not
           # "limit harder" -- 30 requests/minute and 500 total per event
           # are already the relay's own advertised, deliberately generous
           # limits (services/signup-relay/README.md) -- but "what should
@@ -141,7 +141,7 @@ jobs:
       - name: Send the registration confirmation
         # `if: success()` -- the default for a step with no `if:` at all,
         # spelled out here because what it buys is the point of this step
-        # existing on its own (review round 1, Important 2): the step
+        # existing on its own: the step
         # above retries on a rejected push, so a step that both stored and
         # sent would send once per attempt, and could send a confirmation
         # for a registration a later, failed attempt then discarded. This
@@ -156,7 +156,7 @@ jobs:
           # re-decrypting is correct, not wasted work.
           REGISTRATION_PAYLOAD: ${{ github.event.client_payload.body }}
           EVENT_PRIVATE_KEY: ${{ secrets[steps.resolve.outputs.secret_name] }}
-          # The R-9 diff `convener-handle-registration` already worked out --
+          # The diff `convener-handle-registration` already worked out --
           # field labels, never values, so this is not personal data
           # travelling through a build log's own output mechanism.
           CHANGED_FIELDS: ${{ steps.handle.outputs.changed }}
@@ -165,7 +165,7 @@ jobs:
           # by `convener-send-confirmation` itself -- see
           # `tools/convener_ops/confirmation.py`'s module docstring.
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
-          # Fix round 1, M1: `_send_confirmation` calls `platform_from_env`
+          # `_send_confirmation` calls `platform_from_env`
           # to resolve the room link (`confirmation.event_details`) --
           # without this, an FCC-configured event silently falls back to
           # the manual `zoom_link` for the confirmation's own room link

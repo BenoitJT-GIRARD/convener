@@ -1,6 +1,6 @@
 name: Issue certificates
 
-# Task 12 fix round 2's own finding: spec S:7's certificate design had no
+# The certificate design had no
 # observable effect until something in CI actually called
 # certificate.issue -- until this workflow, nothing did (1604 green tests,
 # and no caller for any of it). The signing key lives only in this
@@ -9,13 +9,13 @@ name: Issue certificates
 # to happen here, on an operator's own decision once an event's attendance
 # data is ready -- run match-attendance.yml first to review the join
 # before certificates are minted from it (docs/reference/operations.md).
-# I-4, branch review: this used to say "run convener-match-attendance by hand",
+# This used to say "run convener-match-attendance by hand",
 # which nobody could ever actually do -- EVENT_PRIVATE_KEY never touches a
 # laptop by design -- until that command had a workflow of its own.
 #
 # No input carries an address: `EVENT_ID` and, optionally, `conference_id`
 # are the only things an operator names -- a provider identifier, not
-# personal data, none of R-22's "never an address" reasoning applies to it
+# personal data, so the "never an address" reasoning does not apply to it
 # (see `conference_id`'s own description below). Attendance and
 # eligibility are both re-derived from data already on file
 # (registrations.enc, decrypted here; the platform's own attendance API,
@@ -39,7 +39,7 @@ on:
         type: string
       resend_all:
         description: >-
-          R-27 (fix round 1): by default the delivery step below mails
+          By default the delivery step below mails
           only the certificates this run's own issuance step just minted
           or reproduced -- never every past attendee again. Tick this for
           a deliberate batch retry (e.g. after fixing outbound mail) that
@@ -68,7 +68,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-      # Critical A, fix round 3: this job's own commit below pushes with
+      # This job's own commit below pushes with
       # this same job's `GITHUB_TOKEN`, which cannot fire deploy.yml's own
       # `push` trigger (GitHub's recursion guard). `workflow_dispatch` is
       # the documented exception to that guard, and dispatching one
@@ -97,7 +97,7 @@ jobs:
           REGISTRATION_PAYLOAD: ${{ toJSON(inputs) }}
         run: uv run convener-registration-secret-name
       - name: Issue certificates for this event
-        # R-27, fix round 1: `id` so the delivery step below can read this
+        # `id` so the delivery step below can read this
         # step's own `issued_ids` output (written by
         # convener-issue-certificates itself, straight to $GITHUB_OUTPUT --
         # the runner provides that env var to every step already, no
@@ -119,18 +119,18 @@ jobs:
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           # Absent is ordinary D-13 too: platform_from_env falls back to
           # ManualPlatform, reading
-          # data/events/<id>/attendance-import.csv -- which R-24 (fix
-          # round 2) records this repository cannot populate in CI at all
-          # yet (see docs/superpowers/deferred-work.md).
+          # data/events/<id>/attendance-import.csv -- which this
+          # repository cannot populate in CI at all yet, and that gap is
+          # known rather than overlooked.
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
-          # Critical B, fix round 3: folded into `conference_ids` by
+          # Folded into `conference_ids` by
           # `cli.py::_conference_ids_from_env`, the same way
           # recording.yml's own `conference_id` input already reaches
-          # `release_recording` (task 10). Blank when the operator leaves
+          # `release_recording`. Blank when the operator leaves
           # the input empty -- the ordinary D-13 shape for the manual
           # implementation, which never reads this at all.
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
-          # Critical A, fix round 3: authenticates the `gh workflow run`
+          # Authenticates the `gh workflow run`
           # call at the end of the script below. `github.token` is this
           # job's own `GITHUB_TOKEN`, scoped by `permissions:` above --
           # `workflow_dispatch` is one of the documented exceptions to the
@@ -142,7 +142,7 @@ jobs:
         # so re-running it after a fetch-and-reset-hard reproduces
         # whatever a concurrent writer just landed, plus this run's own
         # certificates, rather than replaying a diff that file's own
-        # closing lines would conflict on (task 6's own lesson, spelled
+        # closing lines would conflict on (the reasoning is spelled
         # out in full in registration.yml).
         run: |
           set -e
@@ -155,7 +155,7 @@ jobs:
               git add "data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
-              # Small item 1, fix round 3: an operator pressed this
+              # An operator pressed this
               # button and nothing was written -- no eligible attendee
               # yet, or CONVENER_SIGNING_KEY / CONVENER_MATCHING_SALT not
               # configured. Right for a scheduled job, wrong for one a
@@ -167,7 +167,7 @@ jobs:
             fi
             git commit -m "data: issue certificates for $EVENT_ID"
             if git push; then
-              # Critical A, fix round 3: this push used GITHUB_TOKEN, so
+              # This push used GITHUB_TOKEN, so
               # it cannot have fired deploy.yml's own `push` trigger
               # (GitHub's recursion guard) -- dispatch it directly
               # instead. Only reached once a change was genuinely pushed,
@@ -176,13 +176,13 @@ jobs:
               # data/events/*/certificates.yml and pushes it into
               # the published repository's own app/ -- see that workflow's own "Build public
               # data" step; it is the one file the verification page
-              # actually fetches (Critical 1, fix round 1, task 13). A
+              # actually fetches. A
               # failure here does not fail this job: the certificates
               # themselves are already safely committed and pushed; only
               # the public register's refresh would need a manual rerun
               # of deploy.yml.
               #
-              # Carried item 4 (fix wave 2): this used to *also* dispatch
+              # This used to *also* dispatch
               # publish-vitrine.yml. Deliberately not, any more: nothing
               # this job writes touches data/speakers.yml, the only input
               # publish-vitrine.yml's own "Build public data" step turns
@@ -202,9 +202,9 @@ jobs:
           done
           echo "::error::push failed after 3 attempts -- certificates were computed but not saved"
           exit 1
-      # Task 14: deliver every currently eligible attendee's certificate by
-      # e-mail (spec S:7, "Delivery": "By e-mail. Never a named document
-      # placed in a repository."). Runs after the step above, in
+      # Deliver every currently eligible attendee's certificate by
+      # e-mail. Delivery is by e-mail and never by a named document
+      # placed in a repository. Runs after the step above, in
       # the same job and the same checkout, so convener-deliver-certificates
       # reads whatever certificates.yml this run's own commit just wrote
       # (or, on a re-run, whatever an earlier run already committed) --
@@ -212,11 +212,11 @@ jobs:
       # touches git at all. A failed delivery is reported in this step's
       # own summary, by identifier, never stashed anywhere: an operator
       # names a specific failure to convener-deliver-certificate, or ticks
-      # resend_all above for a deliberate batch retry (R-27, fix round 1)
+      # resend_all above for a deliberate batch retry
       # -- which is why this step carries no retry loop of its own the way
       # the commit-and-push step above does.
       #
-      # Minor 8, fix round 1: `continue-on-error: true` -- a transient
+      # `continue-on-error: true` -- a transient
       # platform failure here (the same re-derived attendance fetch the
       # issuance step above already made) must not mark the whole run red
       # after the certificates were already committed and pushed. The
@@ -235,7 +235,7 @@ jobs:
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
-          # R-27, fix round 1: restrict this run to what the issuance step
+          # Restrict this run to what the issuance step
           # above just minted or reproduced -- never every past attendee
           # again -- unless the operator explicitly ticked resend_all.
           # Identifiers are public by design (certificate.py's own module
@@ -248,8 +248,8 @@ jobs:
           # failed step. See delivery.py's own module docstring for why an
           # unsent certificate is never written anywhere -- the same
           # "reported, not retained" rule an unsent registration
-          # confirmation now follows too (Critical 3, branch review;
-          # `confirmation.py`'s own module docstring).
+          # confirmation follows too
+          # (`confirmation.py`'s own module docstring).
           CONVENER_SMTP_HOST: ${{ secrets.CONVENER_SMTP_HOST }}
           CONVENER_SMTP_PORT: ${{ secrets.CONVENER_SMTP_PORT }}
           CONVENER_SMTP_USER: ${{ secrets.CONVENER_SMTP_USER }}

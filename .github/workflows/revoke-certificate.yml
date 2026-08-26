@@ -1,9 +1,8 @@
 name: Revoke a certificate
 
-# R-21 (fix round 2): the operation spec S:7 names by itself
-# ("Revocation"), and the one this module always had a tested, correct
-# pure function for (`certificate.revoke`) and no caller at all until
-# this round. A hand edit of the committed-clear register was ruled out
+# Revocation: the one operation this module always had a tested, correct
+# pure function for (`certificate.revoke`) and, for a long time, no caller
+# at all. A hand edit of the committed-clear register was ruled out
 # (see `tools/convener_ops/cli.py::revoke_certificate`'s own docstring): it
 # depends on a volunteer having a working checkout, finding the right
 # file, editing the right row, and committing it correctly -- exactly the
@@ -12,7 +11,7 @@ name: Revoke a certificate
 # naming an identifier that is not on record is unreachable from a text
 # editor, which is precisely where that mistake gets made.
 #
-# CERTIFICATE_ID, never an address (R-22; see reissue-certificate.yml's
+# CERTIFICATE_ID, never an address (see reissue-certificate.yml's
 # own header comment for the full reasoning, which applies here
 # unchanged). No signing key and no matching salt: revocation touches the
 # register alone -- the token a revoked certificate's holder still
@@ -45,7 +44,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-      # Critical A, fix round 3: see issue-certificates.yml's own comment
+      # See issue-certificates.yml's own comment
       # on this same addition -- this job's commit below also pushes with
       # GITHUB_TOKEN and needs `actions: write` to dispatch deploy.yml
       # directly afterwards.
@@ -63,7 +62,7 @@ jobs:
         env:
           EVENT_ID: ${{ inputs.event_id }}
           CERTIFICATE_ID: ${{ inputs.certificate_id }}
-          # Critical A, fix round 3: see issue-certificates.yml's own
+          # See issue-certificates.yml's own
           # comment on this same env var.
           GH_TOKEN: ${{ github.token }}
         # Re-derive rather than rebase on a rejected push, the same shape
@@ -83,7 +82,7 @@ jobs:
               git add "data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
-              # Small item 1, fix round 3: see issue-certificates.yml's
+              # See issue-certificates.yml's
               # own comment on this same warning. For revoke this branch
               # is reached only when the named certificate was already
               # revoked -- an idempotent no-op an operator still deserves
@@ -94,11 +93,11 @@ jobs:
             fi
             git commit -m "data: revoke a certificate for $EVENT_ID"
             if git push; then
-              # Critical A, fix round 3: see issue-certificates.yml's own
+              # See issue-certificates.yml's own
               # comment on this same dispatch. deploy.yml is what rebuilds
               # the file the verification page fetches -- a revocation is
               # exactly the case this matters most for: the holder's own
-              # signature still verifies (spec S:7's own "the signature
+              # signature still verifies (see "the signature
               # remains valid"), and only the register's own state can
               # tell a visitor it was revoked. Carried item 4 (fix wave
               # 2): no publish-vitrine.yml dispatch beside this one any

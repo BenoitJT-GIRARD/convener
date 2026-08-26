@@ -1,13 +1,13 @@
 name: Publish vitrine
 
-# R-19 (fix round 1, task 12): a revocation is a change to
+# A revocation is a change to
 # data/events/<id>/certificates.yml, and until this trigger named that
 # path, such a change would not even fire this workflow at all. The
 # `paths:` trigger below still names certificates.yml for that reason,
 # even though nothing in this job's own steps depends on that path any
-# more -- see the Minor 5 comment further down for what changed and why.
+# more -- see the comment further down for what changed and why.
 #
-# Critical A (fix round 3): the `paths:` trigger above is still correct,
+# The `paths:` trigger above is still correct,
 # but it is unreachable in the one case it exists for. GitHub does not
 # start a new workflow run from a push made with the checkout's own
 # `GITHUB_TOKEN` -- the recursion guard -- and issue-certificates.yml,
@@ -20,7 +20,7 @@ name: Publish vitrine
 # workflows' own "Trigger public data publication" step for the other half
 # of this fix.
 #
-# Minor 5 (fix round 1, task 13): this workflow used to also write
+# This workflow used to also write
 # `public-data/certificates-public.json` to the showcase's own
 # `src/_data/certificates.json` -- a file no Eleventy template in that
 # repository ever reads (`grep -rn certificates src/` there is empty).
@@ -32,13 +32,13 @@ name: Publish vitrine
 # `dist/` -- see that workflow's own comment for why that, and not a
 # second write here, is the one writer for that file.
 #
-# Carried item 4 (fix wave 2): the three certificate workflows used to
-# still dispatch this workflow too, beside their own deploy.yml dispatch
-# (Critical 1), even though nothing they change affects
-# `events-public.json` either -- flagged as dead motion rather than
-# pruned when Critical 1 was fixed, since that ruling asked only for the
-# new dispatch beside the existing one, not a scope to remove it in.
-# Fixed now: `issue-certificates.yml`, `reissue-certificate.yml` and
+# The three certificate workflows used to
+# still dispatch this workflow too, beside their own deploy.yml dispatch,
+# even though nothing they change affects
+# `events-public.json` either. That dead motion outlived the fix that
+# added the deploy.yml dispatch, because that fix asked for the new
+# dispatch beside the existing one and not for a scope to remove it in.
+# It is gone: `issue-certificates.yml`, `reissue-certificate.yml` and
 # `revoke-certificate.yml` no longer dispatch this workflow at all --
 # each dispatched run used to find nothing changed here and exit as a
 # no-op (the ordinary D-13 shape, not a defect, but motion with no
@@ -46,9 +46,9 @@ name: Publish vitrine
 # this workflow, unaffected: the sweep genuinely can change
 # `data/speakers.yml`, this workflow's own input.
 #
-# Phase 5, task 2: renamed from "Publish vitrine data" -- P-1 moved the
-# showcase's own templates (`index.njk`, `layout.njk`, `style.css`,
-# `.eleventy.js`, fonts) from the published repository into this repository's own
+# Renamed from "Publish vitrine data" when
+# the showcase's own templates (`index.njk`, `layout.njk`, `style.css`,
+# `.eleventy.js`, fonts) moved from the published repository into this repository's own
 # `site/`, so that repository holds no source any more (D-15: private
 # source, public artefact). This job used to copy one generated data file
 # into a checkout of the published repository; it now builds the whole site here and
@@ -66,7 +66,7 @@ on:
       - 'data/events/*/certificates.yml'
       - 'tools/**'
       - 'site/**'
-      # Phase 10, task 2: `site/.eleventy.js` reads the one address this
+      # `site/.eleventy.js` reads the one address this
       # project is published at from here, so every internal link and
       # every absolute URL this build emits depends on it. Without this
       # entry, changing that address would leave the showcase published at
@@ -77,9 +77,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
-    # Bumped from 10 to 15 (task 2): this job now also runs `npm ci` and
+    # Every job in this repository declares a ceiling --
+    # test_workflows.py::test_every_job_declares_a_timeout guards that.
+    # 15 rather than 10, because this job also runs `npm ci` and
     # an Eleventy build, the same allowance deploy.yml's own mixed
     # Python/Node job already gets.
     timeout-minutes: 15
@@ -93,7 +93,7 @@ jobs:
       - name: Build public data
         working-directory: tools
         run: uv run convener-public-data
-      # Task 2: site/src/_data/events.json is committed as a build fixture
+      # site/src/_data/events.json is committed as a build fixture
       # only (see site/README.md) -- overwritten here from the file the
       # step above just generated, so the build below always reflects
       # the current private data, never the fixture a contributor last
@@ -108,7 +108,7 @@ jobs:
       - name: Install site
         working-directory: site
         run: npm ci
-      # Security audit 2026-08-23, M4: the registration island this build
+      # The registration island this build
       # mounts (event.njk) posts straight to the signup relay from this
       # same document, so site/src/_data/csp.js's own connect-src needs
       # that relay's origin at build time -- the identical repository
@@ -122,9 +122,9 @@ jobs:
         env:
           VITE_SIGNUP_RELAY_URL: ${{ vars.VITE_SIGNUP_RELAY_URL }}
         run: npm run build
-      # Phase 5, task 5: acceptance criterion 2 is absolute -- no room
+      # The rule is absolute -- no room
       # link on any public page, ever; it is delivered only by the
-      # confirmation e-mail, and the event page this task adds is what
+      # confirmation e-mail, and the event page is what
       # replaces it in every announcement instead.
       # `tools/tests/test_site.py` already proves the templates keep a
       # room link off a build made from a committed fixture, on every
@@ -136,13 +136,13 @@ jobs:
       # mode. A field can be non-empty in production and still be empty
       # in every fixture a test happens to carry.
       #
-      # Phase 5, task 9: reads `data/speakers.yml`'s own `zoom_link`
+      # Reads `data/speakers.yml`'s own `zoom_link`
       # directly, never `public-data/events-public.json` -- that file no
       # longer carries the room link under any name. It used to, as
       # `registration_link` (`public_data.py::PUBLIC_FIELD_SOURCES`), a
       # name that read as exactly the opposite of what it carried once
-      # the event page gained its own registration form, and task 5's own
-      # implementer nearly rendered it believing it was the one to
+      # the event page gained its own registration form. Somebody working
+      # on that page nearly rendered it believing it was the address to
       # register at. The mapping is gone rather than renamed, so the one
       # place left to learn what a leak would look like is the private
       # record the room link actually lives in.
@@ -193,7 +193,7 @@ jobs:
           # GitHub Pages serves a project repository at
           # `https://<owner>.github.io/<repository>/` and nowhere else, so
           # the address a visitor sees and the repository this push writes
-          # into are one fact, not two. Before phase 10 task 3 they were
+          # into are one fact, not two. They used to be
           # two, and changing the declared address moved every public URL
           # while still publishing into the previous instance's repository.
           # Read through the Python reader that owns the derivation
@@ -208,7 +208,7 @@ jobs:
             "https://x-access-token:${DEPLOY_TOKEN}@github.com/${target}.git" /tmp/vit
           SITE_OUTPUT="$GITHUB_WORKSPACE/site/_site"
 
-          # D-25 (fix round 1): "a control that cannot fail loudly is not a
+          # D-25: "a control that cannot fail loudly is not a
           # control." Eleventy exits 0 on "Wrote 0 files" -- a wrong
           # dir.input, a template error that skips every page, or any config
           # change that makes the build emit nothing all "succeed" as far as
@@ -228,7 +228,7 @@ jobs:
           # workspace -- unlikely on a fresh runner, but this floor is the
           # cheap second check that does not rely on that being true. Five,
           # not the current count of eight: low enough that adding a page
-          # (task 5, task 8) never needs this number touched, high enough
+          # never needs this number touched, high enough
           # that a build producing only one or two files still trips it.
           site_file_count=$(find "$SITE_OUTPUT" -type f | wc -l)
           if [ "$site_file_count" -lt 5 ]; then
@@ -240,9 +240,8 @@ jobs:
           # entry except .git and app/, Deploy app's own disjoint subtree --
           # then lay the fresh build over it whole. A wipe-then-copy, not a
           # diff, so a page removed from site/ disappears from the
-          # publication too; task 5 and later extend this by adding pages
-          # under site/, never by editing this step (progress.md's own
-          # inter-task scan: "task 5 extends, it does not rewrite").
+          # publication too. New pages extend this by appearing under
+          # site/, never by editing this step.
           refresh_published_site() {
             find /tmp/vit -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'app' -exec rm -rf {} +
             cp -r "$SITE_OUTPUT/." /tmp/vit/

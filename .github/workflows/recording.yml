@@ -1,9 +1,9 @@
 name: Release a recording
 
-# Task 10 (D-05, spec Section 2/9): retrieve, verify the retrieval, then
+# D-05: retrieve, verify the retrieval, then
 # delete -- freeing the meeting provider's ~1 GB free quota, which a
-# 90-minute recording alone consumes 1.6x over on its own
-# (phase-4-prep-notes.md, 2026-08-19). `convener-release-recording` is one of
+# 90-minute recording alone consumes 1.6x over on its own, measured
+# against the provider rather than assumed. `convener-release-recording` is one of
 # exactly two places in the whole tools/ package allowed to call
 # `Platform.delete_recording`, and it refuses unless both the event's
 # `RETRIEVED_TICK` runbook step is ticked and the provider's own converted

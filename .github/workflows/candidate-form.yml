@@ -4,13 +4,13 @@ on:
   repository_dispatch:
     types: [proposal-submitted]
 
-# C4 (2026-08-23 security audit): this workflow had no concurrency block at
+# This workflow had no concurrency block at
 # all, so two proposals landing at once could each read data/speakers.yml,
 # append their own lead, and race the "Commit" step's own `git pull
-# --rebase` -- L2 of the same audit already named that rebase as a real,
-# if low-frequency, defect and deferred fixing it.
+# --rebase`. That rebase was a real, if low-frequency, defect, known and
+# left unfixed for a while.
 #
-# Phase 7, task 2 (spec 6 ter) closes both together, and not with a
+# Both are closed together here, and not with a
 # concurrency group. `actionlint` (2026-08-24) found the `queue: max` this
 # block used to carry is not a valid `concurrency` key at all, and what a
 # `group` plus `cancel-in-progress: false` leaves behind cancels a
@@ -26,9 +26,9 @@ on:
 jobs:
   handle:
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): no job in this repository declared
-    # timeout-minutes before this sweep -- see test_workflows.py's own
-    # test_every_job_declares_a_timeout for the guard this closes.
+    # No job in this repository declared
+    # timeout-minutes at all once -- see test_workflows.py's own
+    # test_every_job_declares_a_timeout for the guard that closed it.
     timeout-minutes: 10
     permissions:
       contents: write
@@ -43,10 +43,10 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
-          # H4 (2026-08-23 security audit): caches uv's own download/resolve
-          # step, keyed on tools/uv.lock -- part of reducing this project's
-          # self-inflicted Actions-minute cost, alongside this fix's path
-          # filters. Reduces run time only; changes nothing this job checks.
+          # Caches uv's own download/resolve step, keyed on tools/uv.lock --
+          # part of holding this project's self-inflicted Actions-minute
+          # cost down. Reduces run time only; changes nothing this job
+          # checks.
           enable-cache: true
       - name: Process and commit the proposal
         env:

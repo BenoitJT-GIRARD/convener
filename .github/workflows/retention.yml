@@ -1,15 +1,15 @@
 name: Retention sweep
 
-# Task 15: the job that makes the phase 4 spec's central promise true.
-# S:4's cycle-of-life table ends "key destruction -- the event's data
-# becomes permanently unreadable" 90 days after the event
-# (tools/convener_ops/eventkeys.py::is_due_for_destruction); acceptance
-# criterion 6 requires this to actually run, not merely be documented.
-# Scheduled (R-33 -- a retention job that only runs when somebody
-# remembers is the failure this task exists to prevent), with
+# The job that makes this project's central retention promise true. The
+# cycle of life ends in "key destruction -- the event's data becomes
+# permanently unreadable" 90 days after the event
+# (tools/convener_ops/eventkeys.py::is_due_for_destruction), and that has
+# to actually run rather than merely be documented.
+# Scheduled -- a retention job that only runs when somebody
+# remembers is the failure this exists to prevent -- with
 # workflow_dispatch for an operator to run it by hand.
 #
-# R-28: CONVENER_RETENTION_TOKEN is deliberately not GITHUB_TOKEN. Deleting a
+# CONVENER_RETENTION_TOKEN is deliberately not GITHUB_TOKEN. Deleting a
 # repository secret needs a credential GITHUB_TOKEN does not carry, no
 # matter what this job's own `permissions:` grants -- a fine-grained
 # personal access token, scoped to this repository, with the 'Secrets'
@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-      # Important 2, branch review: this job's own commit below (deleting
+      # This job's own commit below (deleting
       # a destroyed event's `keys/events/<id>.pub` among it) pushes with
       # `GITHUB_TOKEN`, the recursion guard `publish-vitrine.yml`'s own
       # header comment names -- GitHub does not start a new workflow run
@@ -68,10 +68,10 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
-          # H4 (2026-08-23 security audit): caches uv's own download/resolve
-          # step, keyed on tools/uv.lock -- part of reducing this project's
-          # self-inflicted Actions-minute cost, alongside this fix's path
-          # filters. Reduces run time only; changes nothing this job checks.
+          # Caches uv's own download/resolve step, keyed on tools/uv.lock --
+          # part of holding this project's self-inflicted Actions-minute
+          # cost down. Reduces run time only; changes nothing this job
+          # checks.
           enable-cache: true
       - name: Compute what is due for destruction
         id: sweep
@@ -88,8 +88,8 @@ jobs:
           DESTROYED_SECRETS: ${{ steps.sweep.outputs.destroyed_secrets }}
         # Deliberately not inside the commit-and-push retry loop below:
         # deleting an already-deleted secret with `gh secret delete`
-        # cannot be relied on to behave one particular way (R-34 -- two
-        # earlier drafts of this diff assumed opposite exit codes for
+        # cannot be relied on to behave one particular way -- two
+        # earlier drafts of this file assumed opposite exit codes for
         # that case, and nobody could settle which without a live call,
         # which this suite must never make), so this step does not trust
         # `gh secret delete`'s own exit code at all. It attempts the
@@ -99,7 +99,7 @@ jobs:
         # converges under either behaviour, and is assertable offline
         # against a stubbed `gh` on `PATH`.
         #
-        # R-36: the listing itself can fail (an expired PAT mid-run, a
+        # The listing itself can fail (an expired PAT mid-run, a
         # 403, `gh` missing, an API blip) -- a failed listing is a
         # failure for that event, never an absence: reading "the
         # question could not be answered" as "the answer is no" recorded
@@ -108,7 +108,7 @@ jobs:
         # skip-if-already-recorded rule then made that permanent -- the
         # exact inverse of what this job exists to guarantee.
         #
-        # Round 3: `listing="$(...)"; list_status=$?` looked right and
+        # `listing="$(...)"; list_status=$?` looked right and
         # was not -- GitHub's default `run:` shell is `bash -e {0}`
         # (the neighbouring step below sets `-e` explicitly for the same
         # reason), and under `-e` a failing command substitution inside a
@@ -121,7 +121,7 @@ jobs:
         # `-e`; a bare assignment is not. `if ! listing="$(...)"; then`
         # below is that exemption, not a style choice.
         #
-        # One event's failure must not abandon the others (R-34): the
+        # One event's failure must not abandon the others: the
         # loop below `continue`s past a secret still present after the
         # attempt, rather than `break`ing the whole batch, and collects
         # every id that *did* end up confirmed absent into `recorded_ids`
@@ -131,7 +131,7 @@ jobs:
         # same batch still gets recorded even if an earlier one failed.
         # The recording step below runs on `if: always()` and reads only
         # `recorded_ids`, so the registry never claims a destruction that
-        # did not happen (R-30) and never fails to record one that did.
+        # did not happen, and never fails to record one that did.
         # `status` still ends non-zero if anything failed, so the job
         # itself is red.
         run: |
@@ -170,7 +170,7 @@ jobs:
         env:
           DESTROYED_IDS: ${{ steps.delete.outputs.recorded_ids }}
           DESTROYED_ON: ${{ steps.sweep.outputs.destroyed_on }}
-          # Important 2, branch review: authenticates the `gh workflow run`
+          # Authenticates the `gh workflow run`
           # dispatches below -- the same addition the three certificate
           # workflows already carry, for the identical reason.
           GH_TOKEN: ${{ github.token }}
@@ -182,13 +182,13 @@ jobs:
         # discarded. Safe to re-run because `record_destructions` is
         # idempotent by construction -- see its own docstring.
         #
-        # R-35: `record_destructions` itself now also removes each
+        # `record_destructions` itself also removes each
         # recorded event's `keys/events/<id>.pub`, in that order --
         # `git add`ing `keys/events` here as well as the registry file is
         # what puts that removal in the same commit as the registry entry
-        # (spec S4, Important 2: a destroyed event must stop accepting
+        # -- a destroyed event must stop accepting
         # new registrations too, and the published `.pub` is the signup
-        # relay's only "this event is open" gate).
+        # relay's only "this event is open" gate.
         run: |
           set -e
           git config user.name "convener-retention"
@@ -204,7 +204,7 @@ jobs:
             fi
             git commit -m "data: record the destruction of an event registration key"
             if git push; then
-              # Important 2, branch review: publish-vitrine.yml watches
+              # publish-vitrine.yml watches
               # data/speakers.yml and data/events/*/certificates.yml, not
               # keys/ or the destruction registry, so this dispatch finds
               # nothing changed and exits as a no-op -- dispatched anyway,
@@ -231,7 +231,7 @@ jobs:
           echo "::error::push failed after 3 attempts -- the event key(s) were already destroyed, but the record was not saved; rerun this workflow to record it, or write data/event-key-destructions.yml by hand"
           exit 1
       - name: Record that the retention workflow ran today
-        # H2 (2026-08-23 security audit, AF-2): D-25 makes every control
+        # D-25 makes every control
         # above fail loudly *inside* this run. It says nothing about a run
         # that never starts -- GitHub disables a workflow's own
         # `schedule:` trigger after 60 days without any activity in the

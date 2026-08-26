@@ -1,15 +1,15 @@
 name: Discard a recording
 
-# The other route task 10's fix round 2 added, beside recording.yml: for
+# The other route beside recording.yml: for
 # a recording that must never be retrieved, because retrieving it (per
 # release_recording's own guard) means converting it to MP4, and a
 # converted file stays publicly reachable at its own URL forever, even
-# after the conference is deleted (verified empirically,
-# phase-4-prep-notes.md). Two cases only, both named in
+# after the conference is deleted -- verified against the provider, not
+# assumed. Two cases only, both named in
 # tools/convener_ops/platform_fcc.py's module docstring's "Which recordings
 # take which route" section: the discussion segment, recorded on purpose
-# by phase 3's own three-step discipline but never published; and a talk
-# whose publication consent was withheld.
+# by the hosting runbook's three-step discipline but never published; and
+# a talk whose publication consent was withheld.
 #
 # `convener-discard-recording` asks for no proof of retrieval at all -- none
 # may exist, on purpose -- and instead requires `confirm_discard` to be

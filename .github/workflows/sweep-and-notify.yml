@@ -7,8 +7,8 @@
 # no subscription, and nothing tied to one volunteer's account -- the mention
 # is a *team*, so the channel keeps working when any individual stops reading.
 #
-# Why these two are one workflow (phase 8, task 3, change E)
-# ----------------------------------------------------------
+# Why these two are one workflow
+# ------------------------------
 # They were two files on two crons: *Sweep elapsed events* at 05:00 and
 # *Notify the board* at 06:00. That hour was never a schedule, it was a
 # dependency -- the digest reports the transitions the sweep has just
@@ -59,8 +59,8 @@
 # composed text is visible in the job log for anyone who wants to check what
 # the channel would have said.
 #
-# And a third thing this job does (phase 8, task 4)
-# --------------------------------------------------
+# And a third thing this job does
+# --------------------------------
 # The `daily` job also measures what this repository's own Actions runs
 # actually billed over the last week, commits it to
 # `data/actions-usage.yml`, and goes red -- and posts on the same thread --
@@ -85,14 +85,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Spec section 7 reserves this for what calls for a quick reaction: a lead
-  # from the public form, a vote reaching its threshold, an objection on a
-  # publication. Everything else waits for the digest.
+  # Immediate notification is reserved for whatever calls for a quick
+  # reaction -- a lead from the public form, a vote reaching its
+  # threshold, an objection on a publication. Everything else waits for
+  # the digest.
   immediate:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    # Minor 2 (fix round 1, task 16): closes the project-wide gap
-    # test_workflows.py::test_every_job_declares_a_timeout now guards.
+    # Every job in this repository declares a ceiling --
+    # test_workflows.py::test_every_job_declares_a_timeout guards that.
     timeout-minutes: 10
     permissions:
       # Read-only, and only so actions/checkout can fetch the repository.
@@ -112,10 +113,10 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
-          # H4 (2026-08-23 security audit): caches uv's own download/resolve
-          # step, keyed on tools/uv.lock -- part of reducing this project's
-          # self-inflicted Actions-minute cost, alongside this fix's path
-          # filters. Reduces run time only; changes nothing this job checks.
+          # Caches uv's own download/resolve step, keyed on tools/uv.lock --
+          # part of holding this project's self-inflicted Actions-minute
+          # cost down. Reduces run time only; changes nothing this job
+          # checks.
           enable-cache: true
       - name: Compose
         working-directory: tools
@@ -138,19 +139,19 @@ jobs:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
     # The sweep's own 10 plus the digest's own 10, plus 5 for the budget
-    # measurement task 4 added at the bottom of this job: a merged job's
+    # measurement at the bottom of this job: a merged job's
     # ceiling has to cover the sum of what it does, so this number going
-    # up is the expected shape of the change and not a regression to hunt
+    # up is the expected shape of such a change and not a regression to hunt
     # for.
     #
-    # That last 5 is a real cost of task 4 and is named rather than
+    # That last 5 is a real cost and is named rather than
     # buried: it is +5 of *ceiling* a day. It is not +5 of bill -- the
     # step it covers is two `uv run`s and about two hundred `gh api`
     # calls -- and the difference between those two sentences is the
-    # whole reason the step exists (P-5). It buys no new billed job:
+    # whole reason the step exists. It buys no new billed job:
     # a workflow of its own would have cost one every single day.
     #
-    # Phase 9, task 2 adds 5 more for the four queue steps, on the same
+    # The four queue steps add 5 more, on the same
     # terms: a ceiling, not a bill. The work itself is a shallow fetch of
     # one branch, one RSA decrypt and one re-encrypt per queued response,
     # and two pushes -- seconds, for a day's submissions. The ceiling is
@@ -158,14 +159,14 @@ jobs:
     # times out half way is exactly the interruption the ledger exists to
     # survive and not one anybody should be inviting.
     #
-    # Phase 9, task 3 adds 5 more again, for the confirmation step: one SMTP
+    # The confirmation step adds 5 more again: one SMTP
     # conversation per queued registration, and that is the one part of this
     # job whose duration depends on something outside this repository. Same
     # terms once more -- a ceiling, not a bill: with no transport configured
     # (this project's ordinary state) the step composes and reports and
     # spends no network time at all.
     #
-    # Phase 9, task 4 adds 5 more for the step that records what the queue
+    # Another 5 covers the step that records what the queue
     # still holds: one shallow fetch of the queue branch, one `git ls-tree`
     # of it, one `uv run` over that listing, and one push. Same terms
     # again, and the same argument for why it is a step here rather than a
@@ -193,20 +194,20 @@ jobs:
         id: uv
         with:
           version: '0.5.x'
-          # H4 (2026-08-23 security audit): caches uv's own download/resolve
-          # step, keyed on tools/uv.lock -- part of reducing this project's
-          # self-inflicted Actions-minute cost, alongside this fix's path
-          # filters. Reduces run time only; changes nothing this job checks.
+          # Caches uv's own download/resolve step, keyed on tools/uv.lock --
+          # part of holding this project's self-inflicted Actions-minute
+          # cost down. Reduces run time only; changes nothing this job
+          # checks.
           enable-cache: true
-      # Critical A, fix round 3: the commit below pushes with this job's
+      # The commit below pushes with this job's
       # own GITHUB_TOKEN, which cannot fire publish-vitrine.yml's `push`-
       # triggered `paths:` trigger (`data/speakers.yml` is one of the paths
-      # it names) -- GitHub's recursion guard. The re-review found
-      # `events-public.json` had therefore never been republished after a
-      # nightly sweep, a live phase-3 defect fixed by the explicit dispatch
-      # here, alongside the identical one in the three certificate
-      # workflows (see issue-certificates.yml's own comment on the same
-      # mechanism).
+      # it names) -- GitHub's recursion guard. That is not a hypothetical:
+      # `events-public.json` had in fact never been republished after a
+      # nightly sweep, and went unnoticed until somebody ran the wired job.
+      # The explicit dispatch here is the fix, alongside the identical one
+      # in the three certificate workflows (see issue-certificates.yml's own
+      # comment on the same mechanism).
       - name: Sweep and commit
         id: sweep
         # Nothing upstream of this step can be skipped for it to be
@@ -217,7 +218,7 @@ jobs:
         if: always() && steps.uv.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
-        # Phase 7, task 2: on a rejected push, re-derive against the
+        # On a rejected push, re-derive against the
         # refreshed tip rather than `git pull --rebase` -- the same shape
         # registration.yml's own retry loop uses. `convener-sweep` rewrites
         # data/speakers.yml as a pure function of the current time and the
@@ -252,7 +253,7 @@ jobs:
           echo "::error::push failed after 3 attempts -- sweep result was not saved"
           exit 1
       # ----------------------------------------------------------------
-      # The submission queue, drained (phase 9, task 2)
+      # The submission queue, drained
       # ----------------------------------------------------------------
       #
       # Here, as steps of a job that already runs, for the identical reason
@@ -267,10 +268,10 @@ jobs:
       # deleted). The relay writes the encrypted envelope to the
       # `submission-queue` branch instead -- a branch no workflow watches,
       # held by `tools/tests/test_workflows.py`'s directory-wide sweep
-      # (phase 9, task 1) -- and these steps handle everything waiting in
+      # -- and these steps handle everything waiting in
       # one commit, once a day.
       #
-      # Phase 9, task 3 added the second kind: a registration whose event is
+      # There is a second kind: a registration whose event is
       # still further away than `config/registration-lanes.yml`'s threshold
       # comes here too. A registration closer than that is still dispatched
       # the instant it arrives and still handled by `registration.yml`,
@@ -364,13 +365,13 @@ jobs:
           CONVENER_QUEUE_CLEAR_FILE: ${{ runner.temp }}/queue-clear.txt
           # Where the drain lists the registrations it stored whose
           # confirmation has not gone out yet, for the step below. Entry
-          # paths and R-9 field *labels* only -- never a value a registrant
+          # paths and form-field *labels* only -- never a value a registrant
           # typed -- the same thing `registration.yml` passes between its
           # own two steps for the same reason.
           CONVENER_QUEUE_CONFIRM_FILE: ${{ runner.temp }}/queue-confirm.txt
           # Where the drain lists the entries it could not finish and the
           # reason for each, for the record step at the bottom of this
-          # block (phase 9, task 4). The drain is the only thing in this
+          # block. The drain is the only thing in this
           # run that knows *why* an entry is still waiting, and the fix
           # differs by reason -- a key nobody configured is not the same
           # problem as more open events than there are slots.
@@ -577,7 +578,7 @@ jobs:
           echo "::error::$DEFERRED queued submission(s) could not be handled and are still waiting -- see the annotations above"
           exit 1
       # ----------------------------------------------------------------
-      # A queue that stops emptying (phase 9, task 4)
+      # A queue that stops emptying
       # ----------------------------------------------------------------
       #
       # Everything above is loud about a drain that *ran* and could not
@@ -697,7 +698,7 @@ jobs:
           echo "::error::a public submission has been waiting past config/queue-drain.yml's alarm_after_hours -- see the annotations above and data/queue-watch.yml"
           exit 1
       # ----------------------------------------------------------------
-      # The lane rule that quietly stops applying (phase 9, task 6)
+      # The lane rule that quietly stops applying
       # ----------------------------------------------------------------
       #
       # Everything above is about a submission that reached the queue. This
@@ -801,7 +802,6 @@ jobs:
 
       # ----------------------------------------------------------------
       # What the runs really cost, and the alarm before the budget goes
-      # (phase 8, task 4)
       # ----------------------------------------------------------------
       #
       # Here rather than in a workflow of its own, and this is the whole
@@ -844,7 +844,7 @@ jobs:
         # factor of eight and overstate a single job that queued.
         #
         # A failed listing fails this step rather than being read as "no
-        # runs" -- R-36's own lesson, one file over in retention.yml: a
+        # runs" -- the same lesson retention.yml carries one file over: a
         # question that could not be answered is not the answer "nothing",
         # and reading it as one is how a control reports that everything
         # is fine while it is not.
