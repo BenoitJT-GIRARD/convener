@@ -658,6 +658,10 @@ def test_every_value_the_declaration_holds_is_swept() -> None:
     )
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_the_two_instances_disagree_about_every_needle(
     second_instance_tree: Path,
 ) -> None:
@@ -703,6 +707,10 @@ def _leaks(
     return offending
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_a_second_instances_build_carries_nothing_of_this_one(
     second_instance: Built,
 ) -> None:
@@ -750,6 +758,10 @@ def test_every_needle_is_found_in_the_second_instances_own_output(
     )
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_the_sweep_sees_what_the_deferred_register_accounts_for(
     second_instance: Built,
 ) -> None:

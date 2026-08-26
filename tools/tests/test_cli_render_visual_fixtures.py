@@ -10,6 +10,7 @@ import json
 import sys
 from pathlib import Path
 
+import instance_identity
 import pytest
 
 from convener_ops import brand, published
@@ -135,6 +136,10 @@ def test_the_fixture_is_rendered_as_the_example_instance(
     assert brand.motif(EXAMPLE)["ribbon_stroke"] in page
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_no_value_of_the_instance_running_this_repository_reaches_the_page(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -162,6 +167,10 @@ def test_no_value_of_the_instance_running_this_repository_reaches_the_page(
     assert brand.motif(ROOT)["ribbon_stroke"] not in page
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_the_two_charters_this_test_compares_are_actually_different() -> None:
     """Guards the pair above. If the example ever adopted this instance's
     palette or its forum, both tests would still pass and neither would

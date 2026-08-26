@@ -29,6 +29,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import instance_identity
 import pytest
 import yaml
 from conftest import config as minimal_config
@@ -361,6 +362,10 @@ def test_the_two_trees_it_names_are_the_two_this_repository_ships() -> None:
     )
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_the_example_instance_declares_a_number_of_its_own() -> None:
     """Guards the fixture the test above stands on: if the example's own
     counter ever became this instance's, migrating it would prove nothing

@@ -335,6 +335,10 @@ def _tracked_files() -> list[str]:
     return listing
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_no_source_file_writes_the_published_address_a_second_time() -> None:
     """The clause that makes "one declaration" a fact rather than a
     claim.
@@ -771,6 +775,10 @@ _IDENTITY_DEFERRED = {entry.path: entry.owner for entry in instance_identity.DEF
 _IDENTITY_UNSWEPT_TREES = ("tools/tests/", "app/tests/", "services/")
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_no_source_file_writes_this_instances_identity_a_second_time() -> None:
     """The clause that makes "one declaration" a fact for the identity
     the way `test_no_source_file_writes_the_published_address_a_second_
@@ -821,6 +829,10 @@ def test_no_source_file_writes_this_instances_identity_a_second_time() -> None:
     )
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_the_identity_sweep_would_see_a_second_copy_if_there_were_one() -> None:
     """A sweep that matched nothing would pass for free. Each needle is
     found where a copy legitimately is, rather than trusted for coming
@@ -1112,6 +1124,10 @@ def _example_declaration() -> dict[str, Any]:
     return loaded
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_this_repository_has_been_configured() -> None:
     """The control that makes every other case here mean something: this
     instance shares no declared value with the example, so the banner is
@@ -1160,6 +1176,10 @@ def test_a_half_configured_duplicate_is_still_unconfigured(tmp_path: Path) -> No
     assert f"{published.IDENTITY_KEY}.contact" in remaining
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_a_placeholder_in_a_degradable_field_is_not_this_warning(
     tmp_path: Path,
 ) -> None:

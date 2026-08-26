@@ -32,11 +32,32 @@ from __future__ import annotations
 
 import re
 
+import pytest
+
 from convener_ops.paths import repo_root
 
 ROOT = repo_root()
 SUPERPOWERS = ROOT / "docs" / "superpowers"
 MAP = SUPERPOWERS / "README.md"
+
+#: This whole module is about a document that never leaves this
+#: repository: `derivation_guard.KEPT_BACK` keeps `docs/superpowers/`
+#: back, so a repository derived from this one has no delivery map, no
+#: specs and no phase reviews -- and four tests that read them fail with
+#: `FileNotFoundError` rather than saying so. Phase 12 task 6 found that
+#: by running the derived repository's own suite.
+#:
+#: The module is still the product's and still ships, deliberately: a
+#: duplicate that starts keeping a working record of its own gets the
+#: check that holds it against the files, without having to write one.
+pytestmark = pytest.mark.skipif(
+    not MAP.is_file(),
+    reason=(
+        f"{MAP.name} is part of this project's own working record, which "
+        "never leaves this repository -- there is nothing here to read it "
+        "against"
+    ),
+)
 
 #: The header row of the one table this module is about. The file carries a
 #: second table ("Quel fichier répond à quoi"), so the table is found by

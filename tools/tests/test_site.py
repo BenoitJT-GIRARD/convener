@@ -31,6 +31,7 @@ from typing import Any
 from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
+import instance_identity
 import pytest
 from ics_reader import parse_calendar
 
@@ -2842,6 +2843,10 @@ def test_the_build_emits_the_published_repositorys_own_readme(
     )
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_no_page_of_a_configured_instance_carries_the_unconfigured_banner(
     built_site: Path,
 ) -> None:

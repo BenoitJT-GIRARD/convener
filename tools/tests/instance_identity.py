@@ -57,6 +57,7 @@ from pathlib import Path
 from typing import Final
 
 from convener_ops.needles import contains, forms, needles
+from convener_ops.published import unconfigured
 
 __all__ = [
     "BINARY_SUFFIXES",
@@ -235,3 +236,45 @@ def claimed_by_any(relative: str) -> bool:
         for entry in DEFERRED
         for pattern in entry.carried_into
     )
+
+
+# ------------------------------------------------------------------ #
+# When the instance running this repository is the product's example
+# ------------------------------------------------------------------ #
+
+#: Why a test about the separation of two instances cannot run in a
+#: repository that ships only one.
+#:
+#: `convener_ops.derivation` lays `instances/example/` into every path
+#: the boundary hands to the instance, because a product repository with
+#: those paths merely deleted neither starts its own suite nor builds --
+#: `paths.repo_root` finds a repository by `data/config.yml` and the
+#: product's default charter has no `motif`. The consequence is exact and
+#: not a compromise: **in the derived repository the instance and the
+#: example are the same instance**, so every needle agrees with itself,
+#: every "second copy" is the example's own file, and a build made as the
+#: example legitimately carries the example's identity.
+#:
+#: A test whose subject is the *difference* between two instances
+#: therefore has no subject there, and asserting it anyway would make it
+#: fail for the one reason it cannot fix. It comes back the moment a
+#: duplicate edits its own declaration -- which is the same moment
+#: `published.unconfigured` stops naming anything, and the same moment
+#: the showcase's own banner goes quiet. One condition, three readers.
+ONE_INSTANCE: Final = (
+    "the instance running this repository is the product's own example "
+    "(published.unconfigured names every declared value), so there is no "
+    "second instance for this to be about -- it runs again as soon as a "
+    "duplicate declares its own"
+)
+
+
+def ships_the_example_as_its_instance(root: Path | None = None) -> bool:
+    """Whether `root`'s declaration is still the example's, value for value.
+
+    Asked of `published.unconfigured`, which is product code and the
+    definition rather than a second opinion on it: the same answer drives
+    the banner the showcase prints and the one the cockpit prints above
+    its sign-in screen.
+    """
+    return bool(unconfigured(root))
