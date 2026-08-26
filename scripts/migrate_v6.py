@@ -2,11 +2,17 @@
 
 Schema v6 renames one configuration key and changes nothing else. The
 counter that says which edition number to assign next was called
-`vw_counter`: the initials of *Monthly Reading Group*, this one series' name,
-written into the **product's** own schema. Every duplicate of this
-repository was therefore forced to carry another series' initials in its
-own `data/config.yml`, in the validator that reads it, in the model the
-browser narrows against, and in the schema appendix every duplicate ships.
+`vw_counter`: two letters taken from the name of the one series that
+happened to be running this repository, written into the **product's**
+own schema. Every duplicate of this repository was therefore forced to
+carry another series' initials in its own `data/config.yml`, in the
+validator that reads it, in the model the browser narrows against, and in
+the schema appendix every duplicate ships.
+
+*(The old name is left spelled out above and in the code below, and it is
+the one place in this repository where that is deliberate. A migration
+record that cannot say what it renamed cannot be run by anybody who still
+has the old key.)*
 
 **It is renamed rather than frozen because nothing outside a repository
 carries it.** The edition *prefix* was left alone for the opposite reason,
