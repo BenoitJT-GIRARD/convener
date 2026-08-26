@@ -2642,6 +2642,13 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
     example = scratch_root / published.EXAMPLE_INSTANCE_PATH
     example.parent.mkdir(parents=True)
     shutil.copy2(ROOT / published.EXAMPLE_INSTANCE_PATH, example)
+    # And the product's own Appropriate Legal Notice, which
+    # `.eleventy.js` reads from the repository root through
+    # `scripts/notice.cjs` and hands every template. Same reasoning again:
+    # `notice()` refuses rather than rendering a colophon with three
+    # quarters of a notice in it, because three quarters of a notice is
+    # not one (D-29).
+    shutil.copy2(ROOT / "NOTICE.json", scratch_root / "NOTICE.json")
     banners_dir = scratch_site / "src" / "banners"
     banners_dir.mkdir(parents=True, exist_ok=True)
     (banners_dir / f"{_the_one_scheduled_event_id()}.png").write_bytes(
@@ -2882,3 +2889,55 @@ def test_no_page_of_a_configured_instance_carries_the_unconfigured_banner(
         "these pages warn that this instance has not been configured, and "
         f"it has: {shouting[:10]}"
     )
+
+
+# -------------------------------------------------------------------------- #
+# The licence notice, on the pages a visitor actually gets
+# -------------------------------------------------------------------------- #
+
+
+def test_every_published_page_carries_the_whole_licence_notice(
+    built_site: Path,
+) -> None:
+    """D-29: what makes the colophon's last line carry any weight is that
+    it is an Appropriate Legal Notice in the sense section 0 of the
+    licence defines -- a copyright notice, the absence of a warranty, the
+    permission to convey, and a link to the licence itself. Section 5 then
+    obliges every modified version's interfaces to display one, **because
+    this one's do**.
+
+    Which is why this is asserted against the built pages and against
+    every one of them, rather than against `_includes/layout.njk`. A
+    template that references a field is not a page that displays it; a
+    page added later with a layout of its own would carry no notice at all
+    while the template check stayed green; and the decay this guards
+    against is a clause at a time, so each field is looked for
+    separately.
+
+    `tools/tests/test_notice.py` holds the declaration itself and the
+    cockpit's own footer is held by `app/tests/notice.test.tsx` -- two
+    interfaces, two obligations, and neither test says anything about the
+    other's.
+    """
+    notice = json.loads((ROOT / "NOTICE.json").read_text(encoding="utf-8"))
+    pages = sorted(built_site.rglob("*.html"))
+    assert len(pages) > 5, f"the showcase built almost no pages: {pages}"
+
+    fields = ("product", "copyright", "terms", "warranty", "licence_name")
+    for page in pages:
+        rendered = page.read_text(encoding="utf-8")
+        where = page.relative_to(built_site).as_posix()
+        missing = [name for name in fields if notice[name] not in rendered]
+        assert missing == [], (
+            f"{where} displays no {missing} -- a page carrying part of a "
+            "notice carries no Appropriate Legal Notice at all"
+        )
+        assert notice["licence_url"] in rendered, (
+            f"{where} does not say where to read the licence"
+        )
+        # `rel="license"` rather than the bare address: the link has to be
+        # the licence link, not the same address happening to appear in a
+        # sentence somewhere on the page.
+        assert 'rel="license"' in rendered, (
+            f"{where} carries the licence address but not as its licence link"
+        )

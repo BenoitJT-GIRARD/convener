@@ -156,6 +156,36 @@
       <a href="{{ site.forum }}" class="unstyled">Forum</a>
       <a href="{{ '/app/' | url }}" class="unstyled">Organizer access</a>
     </nav>
+    {#
+      The product's own Appropriate Legal Notice, in the sense section 0 of
+      the licence gives that phrase: whose work the software is, that a
+      licensee may convey it and under what, that there is no warranty, and
+      where to read a copy of the licence. Section 5 is what makes displaying
+      it worth doing rather than merely shipping a LICENSE file -- an
+      interactive interface that displays such a notice obliges every
+      modified version's interface to display one too, and a decorative
+      credit line obliges nobody.
+
+      `notice.*` is its own namespace and never a key of `site.*`
+      (`.eleventy.js`, from `scripts/notice.cjs`, from `NOTICE.json` at the
+      repository root). Everything under `site.*` is this instance's and a
+      duplicate rewrites all of it; nothing here is a duplicate's to edit,
+      which is the difference the two namespaces are carrying.
+
+      Below the credit and the navigation, and separated from them by a rule:
+      the lines above name whoever runs this series, and this one names
+      whoever wrote the software they run it on.
+
+      The licence link leaves this site. It has to: what is published here is
+      the built showcase, which carries no LICENSE file of its own, so a
+      relative link would answer "where do I read the licence" with a missing
+      page.
+    #}
+    <p class="colophon__legal">
+      <strong>{{ notice.product }}</strong> &middot; {{ notice.copyright }}.
+      {{ notice.terms }} {{ notice.warranty }}
+      <a href="{{ notice.licence_url }}" rel="license">{{ notice.licence_name }}</a>
+    </p>
   </div>
 </footer>
 

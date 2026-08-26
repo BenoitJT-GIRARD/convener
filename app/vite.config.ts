@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
 import { exampleInstance } from './scripts/example-instance.mjs';
 import { exampleSettings } from './scripts/example-settings.mjs';
+import { notice } from './scripts/notice.mjs';
 import {
   editionPrefix,
   identity,
@@ -141,6 +142,30 @@ const EDITION_PREFIX = editionPrefix();
  */
 const UNCONFIGURED = unconfigured();
 
+/**
+ * What this *product* says about itself, read from `NOTICE.json` at the
+ * repository root and carried into every bundle the same way everything
+ * above it is.
+ *
+ * `components/Layout.tsx` displays it in the cockpit's footer, and it has to
+ * be a define for the reason the identity is one: that footer renders in a
+ * volunteer's browser, which can read no file.
+ *
+ * Its own constant rather than a seventh key of `INSTANCE_DEFINE`, and the
+ * separation is the whole point. Everything in that object is the
+ * instance's -- a duplicate edits `config/instance.json` before its first
+ * build and every one of those values changes. Nothing here changes, in any
+ * duplicate, ever: it names the software, its author, its licence and the
+ * absence of a warranty. Section 5 of that licence is what obliges a
+ * modified version to keep displaying it, and a notice filed among an
+ * instance's own settings is a notice somebody eventually edits.
+ */
+const NOTICE = notice();
+
+const PRODUCT_DEFINE = {
+  'import.meta.env.VITE_PRODUCT_NOTICE': JSON.stringify(JSON.stringify(NOTICE)),
+};
+
 const INSTANCE_DEFINE = {
   'import.meta.env.VITE_PUBLISHED_URL': JSON.stringify(PUBLISHED.url),
   'import.meta.env.VITE_INSTANCE_IDENTITY': JSON.stringify(JSON.stringify(IDENTITY)),
@@ -149,6 +174,12 @@ const INSTANCE_DEFINE = {
   'import.meta.env.VITE_EXAMPLE_SETTINGS': JSON.stringify(JSON.stringify(EXAMPLE_SETTINGS)),
   'import.meta.env.VITE_INSTANCE_UNCONFIGURED': JSON.stringify(JSON.stringify(UNCONFIGURED)),
 };
+
+/** What every one of the four configurations below substitutes. Both halves,
+ *  always: a value present in one configuration and absent from another is
+ *  exactly the shape that passes a test suite and ships broken, and that
+ *  applies to the notice as much as to the address. */
+const DEFINE = { ...PRODUCT_DEFINE, ...INSTANCE_DEFINE };
 
 /**
  * Injects this project's Content-Security-
@@ -269,7 +300,7 @@ function islandSignupConfig() {
   return {
     plugins: [react()],
     base: PUBLISHED.appBase,
-    define: INSTANCE_DEFINE,
+    define: DEFINE,
     build: {
       outDir: 'dist/islands/signup',
       emptyOutDir: true,
@@ -313,7 +344,7 @@ function islandVerifyConfig() {
   return {
     plugins: [react()],
     base: PUBLISHED.appBase,
-    define: INSTANCE_DEFINE,
+    define: DEFINE,
     build: {
       outDir: 'dist/islands/verify',
       emptyOutDir: true,
@@ -357,7 +388,7 @@ function islandSurveyConfig() {
   return {
     plugins: [react()],
     base: PUBLISHED.appBase,
-    define: INSTANCE_DEFINE,
+    define: DEFINE,
     build: {
       outDir: 'dist/islands/survey',
       emptyOutDir: true,
@@ -384,7 +415,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), cspHtmlPlugin()],
     base: PUBLISHED.appBase,
-    define: INSTANCE_DEFINE,
+    define: DEFINE,
     build: { outDir: 'dist' },
     test: {
       environment: 'jsdom',

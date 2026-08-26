@@ -5,6 +5,7 @@ import { useRole } from '../auth/useRole';
 import { useData } from '../data/DataContext';
 import { isDemoMode, exitDemoMode } from '../data/demo';
 import { instanceIdentity } from '../instance';
+import { productNotice } from '../notice';
 import { UnconfiguredBanner } from './UnconfiguredBanner';
 
 function exitDemo() {
@@ -14,6 +15,7 @@ function exitDemo() {
 
 export function Layout() {
   const instance = instanceIdentity();
+  const notice = productNotice();
   const demo = isDemoMode();
   const { login, signOut } = useAuth();
   const role = useRole();
@@ -119,6 +121,35 @@ export function Layout() {
           >
             {instance.forum_host} →
           </a>
+        </div>
+        {/* The product's own Appropriate Legal Notice, in the sense section 0
+            of the licence gives that phrase: whose work this is, that a
+            licensee may convey it and under what, that there is no warranty,
+            and where to read the licence. Section 5 is why it is worth
+            displaying rather than merely shipping -- an interface that
+            displays one obliges every modified version's interface to
+            display one too. A line saying only who wrote this would oblige
+            nobody.
+
+            Below the line that names this instance, and separated from it by
+            a rule, because the two say different kinds of thing: everything
+            above comes from `config/instance.json` and belongs to whoever
+            runs this cockpit, and nothing here does. `NOTICE.json` is the one
+            declaration, read by `scripts/notice.mjs` and carried into this
+            bundle by `vite.config.ts`'s own define -- see `src/notice.ts`. */}
+        <div className="max-w-content mx-auto px-6 pb-6 pt-4 border-t border-border text-xs text-ink-muted">
+          <p>
+            <span className="font-display font-bold tracking-wide">{notice.product}</span>
+            {' · '}
+            {notice.copyright}. {notice.terms} {notice.warranty}{' '}
+            <a
+              href={notice.licence_url}
+              rel="license"
+              className="underline underline-offset-2 hover:text-accent"
+            >
+              {notice.licence_name}
+            </a>
+          </p>
         </div>
       </footer>
     </>

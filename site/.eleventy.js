@@ -31,6 +31,7 @@ const {
   isPlaceholder,
   unconfigured,
 } = require('./scripts/published.cjs');
+const { notice } = require('./scripts/notice.cjs');
 
 const PUBLISHED = publishedAddress();
 
@@ -123,6 +124,19 @@ const SITE = {
 // document of their own, not this one. The origin and the prefix come out
 // of the one declaration together, which is why they cannot disagree about
 // which deployment they describe.
+// What this *product* says about itself, read from `NOTICE.json` at the
+// repository root: whose work the software is, that a licensee may convey it
+// and under what, that there is no warranty, and where to read the licence.
+//
+// Beside `SITE` above rather than inside it, and the separation is the whole
+// point. Every value in `SITE` answers "who runs this series" and a duplicate
+// changes all of them before its first build. Nothing here changes in any
+// duplicate: it is the product's own Appropriate Legal Notice, in the sense
+// section 0 of the licence gives that phrase, and section 5 is what obliges a
+// modified version's own pages to keep displaying one. Folding it into
+// `site.*` would file it among the values an instance is invited to edit.
+const NOTICE = notice();
+
 const SITE_ORIGIN = PUBLISHED.origin;
 
 // The series' one standing start time, Europe/Paris *local*
@@ -470,6 +484,9 @@ module.exports = function (cfg) {
   // `src/_data/` file -- see `SITE`'s own comment above for why that is
   // not a matter of taste here.
   cfg.addGlobalData('site', () => SITE);
+  // `notice.*`, for `_includes/layout.njk`'s colophon -- its own namespace,
+  // never a key of `site`, for the reason `NOTICE` above gives.
+  cfg.addGlobalData('notice', () => NOTICE);
 
   cfg.addPassthroughCopy('src/style.css');
   // Self-hosted fonts and their licences. Copied rather than pulled from a CDN
