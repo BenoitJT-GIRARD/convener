@@ -30,6 +30,7 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | What each screen of the app is for | `docs/reference/the-workspace.md` |
 | Live speaker & event data | `data/speakers.yml` |
 | External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
+| How somebody with no repositories and no accounts gets a running instance | `STANDING-UP.yml`, read by `scripts/generate_standing_up_doc.py` into `docs/reference/standing-up.md` and by the agent that carries the same sequence out |
 | Which paths belong to this series rather than to the code | `config/boundary.yml`, and each `config/` file's own `owner:` key |
 | The address this project is published at | `config/instance.json`, read by `tools/convener_ops/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
 | A second, invented instance to build as | `instances/example/`, one file per path `config/boundary.yml` hands to the instance |
