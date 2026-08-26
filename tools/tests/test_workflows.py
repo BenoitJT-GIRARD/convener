@@ -4500,9 +4500,9 @@ def test_narrowing_the_push_trigger_left_the_default_branch_covered(
 #   2. `_published_handbook_paths` -- the one input directory whose
 #      contents are filtered rather than copied wholesale. `docs/` is
 #      reached by `copy-handbook.mjs`, but only the pages
-#      `app/src/content/registry.ts` names actually ship, which is the
-#      whole reason `docs/superpowers/**` can sit in the ignore list at
-#      all.
+#      `app/src/content/registry.ts` names actually ship, so the set of
+#      inputs under that directory is the registry's answer, not the
+#      directory listing.
 #   3. `_repository_paths_in_source` -- the `tools/` commands `deploy.yml`
 #      runs, read from the entry point each `uv run convener-...` names in
 #      `tools/pyproject.toml` and parsed for the `repo_root() / ...`
@@ -4766,8 +4766,8 @@ def _published_handbook_paths() -> set[str]:
     `copy-handbook.mjs` reaches `docs/` as a whole, but publishes only
     what `app/src/content/registry.ts` names -- `CONTENT_REGISTRY`'s own
     `file:` values and the `PUBLIC_ASSETS` array beside them. That filter
-    is the entire reason `docs/superpowers/**` can sit in `deploy.yml`'s
-    ignore list without contradicting the fact that `docs/` is an input.
+    is what makes `docs/` an input in full while only some of its pages
+    reach the bundle, and it is the only thing that decides which.
 
     Read from the registry's own source text with the two markers and the
     two expressions `handbook-registry.mjs::publishedPaths` uses, because
@@ -4977,10 +4977,9 @@ def _bundle_inputs() -> set[str]:
     assert docs_readers == {"app/scripts/copy-handbook.mjs"}, (
         f"`docs/` is reached by {sorted(docs_readers)} -- this check knows "
         "one filter over that directory, `copy-handbook.mjs`'s own "
-        "registry allowlist, and it is only that filter which lets "
-        "`docs/superpowers/**` sit in deploy.yml's ignore list. A second "
-        "reader of `docs/`, or none at all, means the substitution below "
-        "no longer describes the build"
+        "registry allowlist, and that filter is what decides which of its "
+        "pages are inputs at all. A second reader of `docs/`, or none at "
+        "all, means the substitution below no longer describes the build"
     )
     inputs |= _published_handbook_paths()
 
@@ -5076,11 +5075,11 @@ def _overlaps(one: str, other: str) -> bool:
 
 def test_the_overlap_rule_reproduces_the_distinction_it_exists_to_draw() -> None:
     """Positive control. The whole of this filter's correctness sits on one
-    distinction: `docs/superpowers` and `docs/governance/board-rules.md`
+    distinction: `docs/reference` and `docs/governance/board-rules.md`
     do *not* overlap even though both live under `docs/`, while `config`
     and `config/integrations.yml` do. A rule that could not draw that
     line would either pass on a broken list or fail on the correct one."""
-    assert not _overlaps("docs/superpowers", "docs/governance/board-rules.md")
+    assert not _overlaps("docs/reference", "docs/governance/board-rules.md")
     assert not _overlaps("site", "site-map.md")
     assert _overlaps("config", "config/integrations.yml")
     assert _overlaps("data/events", "data")
@@ -5145,30 +5144,22 @@ def test_every_ignored_path_still_names_something_in_this_repository(
     leaves a line that reads like a decision and enforces nothing.
 
     **Against what git tracks, not against a working tree**, and that is
-    a correction made after finding two ways the old
-    reading was wrong. It said "including an untracked working directory, which git
-    does not track but which is present in a working tree" -- true on the
-    machine it was written on and false in every fresh checkout,
-    including the runner that decides whether a pull request merges. And
-    `docs/superpowers/**` names something here and nothing in a
-    repository derived from this one, because that is the directory the
-    derivation keeps back.
+    a correction made after finding the old reading was wrong. It said
+    "including an untracked working directory, which git does not track
+    but which is present in a working tree" -- true on the machine it was
+    written on and false in every fresh checkout, including the runner
+    that decides whether a pull request merges.
 
-    So an entry naming nothing *tracked* is reported as what it is -- a
-    line that filters nothing on the only machine whose filtering matters
-    -- unless the whole subtree is one this repository does not carry at
-    all, which is a fact about the repository rather than about the line.
-    The last assertion is what stops the exemption from swallowing the
-    test: at least one entry has to resolve, or this proves nothing.
+    An entry naming nothing tracked is therefore reported as what it is:
+    a line that filters nothing on the only machine whose filtering
+    matters. It used to be excused when the whole subtree was missing,
+    for the sake of one entry naming a directory a derived repository
+    would not carry; that entry is gone, every remaining one names a
+    subtree the product itself owns, and an exemption no case reaches is
+    an exemption that only hides the next dead line.
     """
     ignored = _ignored_subtree(entry)
     tracked = _git_ls_files(ignored)
-    if not tracked and not (ROOT / ignored).exists():
-        pytest.skip(
-            f"this repository carries no {ignored!r} at all -- the entry is "
-            "about a subtree that is not here, which is not the same fact as "
-            "a line that names nothing"
-        )
     assert tracked, (
         f"deploy.yml ignores {entry!r}, which matches nothing this "
         "repository tracks -- the line reads as a decision and filters "

@@ -28,4 +28,3 @@ repos:
     hooks:
       - id: cspell
         files: ^(docs|instances|README|INFORMATION-ARCHITECTURE).*\.md$
-        exclude: ^docs/superpowers/
