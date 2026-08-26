@@ -25,6 +25,7 @@ etree
 eventkeys
 HMAC
 HSTS
+hyperscaler
 Inkscape
 inspectable
 isinstance

@@ -99,6 +99,10 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     file: 'decisions/d-28-architect-and-board-permissions.md',
     anchor: null,
   },
+  'decisions/d-29': {
+    file: 'decisions/d-29-licence-and-attribution.md',
+    anchor: null,
+  },
 
   // toolkit — emails
   'toolkit/emails/invitation': { file: 'toolkit/emails/invitation.md', anchor: null },

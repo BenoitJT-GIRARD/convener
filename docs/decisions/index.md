@@ -1,6 +1,6 @@
 # Architecture decisions
 
-Why this system is shaped the way it is: twenty-eight decisions, each one a
+Why this system is shaped the way it is: twenty-nine decisions, each one a
 short record of the decision itself, what was rejected, and what it costs.
 Governance rules (who votes, what the bar is, what happens if nobody acts)
 are documented separately in [the Board's rules](../governance/board-rules.md)
@@ -70,6 +70,12 @@ decision rather than one long register.
 |---|---|
 | [D-20 — A certificate transports the exact bytes it signs](d-20-certificate-wire-format.md) | How does a certificate's signature actually get verified? |
 | [D-21 — A certificate's lifecycle](d-21-certificate-lifecycle.md) | What happens when a certificate needs to be corrected? |
+
+## The licence and the name
+
+| Decision | Answers the question |
+|---|---|
+| [D-29 — The licence is the AGPL; the name is not licensed at all](d-29-licence-and-attribution.md) | What may somebody else do with this software, and what may they not call the result? |
 
 ## Verification discipline
 
