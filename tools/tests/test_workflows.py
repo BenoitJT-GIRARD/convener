@@ -34,6 +34,7 @@ import sys
 import textwrap
 import tomllib
 from collections.abc import Callable
+from functools import cache
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Final
@@ -59,6 +60,7 @@ DEPLOY_WORKFLOW = Path(".github/workflows/deploy.yml")
 VITE_CONFIG = Path("app/vite.config.ts")
 APP_TSX = Path("app/src/App.tsx")
 
+
 #: The base path the brief names verbatim: the app is served from the
 #: public showcase repository, under its own `app/` subtree, not from the
 #: private cockpit repo's own Pages site (which cannot exist on the free
@@ -66,7 +68,15 @@ APP_TSX = Path("app/src/App.tsx")
 #: than typed here, so this module pins the *shape* of the address
 #: (`<published prefix>app/`) and never becomes a second statement of
 #: what that prefix is.
-EXPECTED_BASE_PATH = published.load().app_base
+#: Read on demand, never while this module loads (phase 12, task 5).
+#: `published.load` reads `config/instance.json`, a path
+#: `config/boundary.yml` hands to the instance, and a derived repository is
+#: entitled not to have it until the derivation lays an example's own file
+#: there. At module scope that read took this whole module down at
+#: collection, with a stack trace in place of the one failing assertion.
+@cache
+def _expected_base_path() -> str:
+    return published.load().app_base
 
 
 def _load_workflow() -> dict[str, Any]:
@@ -165,7 +175,7 @@ def test_vite_config_base_path_targets_the_vitrine_app_subtree() -> None:
     """Phase 10, task 2: `base` is no longer a literal in this file, so
     what is checked here is that it is *derived* -- from the declaration,
     through the same reader the build runs. That it resolves to
-    `EXPECTED_BASE_PATH` is checked by actually loading all four
+    `_expected_base_path()` is checked by actually loading all four
     configurations, in `test_published.py`: a source text agreeing with a
     value proves nothing about what a build does with it.
     """
@@ -190,7 +200,7 @@ def test_vite_config_base_no_longer_points_at_the_private_repo() -> None:
 def test_all_islands_share_the_apps_published_base_not_a_divergent_one() -> None:
     """Fix round 4 (the path-prefix defect): `islandSignupConfig` and
     `islandVerifyConfig` used to set `base: '/app/'`, deliberately distinct
-    from the main config's own published base (`EXPECTED_BASE_PATH`,
+    from the main config's own published base (`_expected_base_path()`,
     above), on the reasoning that the *site* pages
     hosting these islands already addressed
     the app's assets root-relative to the site's own root. That reasoning
@@ -299,8 +309,8 @@ def test_certificate_verification_base_no_longer_targets_the_app_subtree() -> No
     verification off the app's own route onto the static verify page
     above, so a published certificate's address should no longer carry the
     app's own asset subtree."""
-    assert EXPECTED_BASE_PATH not in certificate.VERIFICATION_BASE, (
-        f"certificate.VERIFICATION_BASE still carries {EXPECTED_BASE_PATH!r} "
+    assert _expected_base_path() not in certificate.VERIFICATION_BASE, (
+        f"certificate.VERIFICATION_BASE still carries {_expected_base_path()!r} "
         "-- task 7 moved verification off the app's own route onto the "
         "verify page; every printed certificate should target that page "
         "instead"
@@ -345,11 +355,11 @@ def test_survey_base_no_longer_targets_the_app_subtree() -> None:
     app_subtree` and `test_registration_signup_base_no_longer_targets_
     the_app_subtree` guard for their own bases, applied here now that the
     survey has the identical shape registration's own base already has: a
-    published survey link that still carried `EXPECTED_BASE_PATH` after
+    published survey link that still carried `_expected_base_path()` after
     task 5 would point at the now-deleted `App.tsx` route's own asset
     subtree, not at the survey page that replaced it."""
-    assert EXPECTED_BASE_PATH not in survey_invite.SURVEY_BASE, (
-        f"survey_invite.SURVEY_BASE still carries {EXPECTED_BASE_PATH!r} -- "
+    assert _expected_base_path() not in survey_invite.SURVEY_BASE, (
+        f"survey_invite.SURVEY_BASE still carries {_expected_base_path()!r} -- "
         "task 5 moved the survey off the app's own route onto the survey "
         "page; every survey invitation link should target that page instead"
     )
@@ -392,11 +402,11 @@ def test_registration_signup_base_no_longer_targets_the_app_subtree() -> None:
     app_subtree` and `test_survey_base_targets_the_vitrine_app_subtree`
     guard for their own bases, inverted for this one: unlike verification
     and the survey, which still live on `App.tsx` routes, a published
-    signup link that still carried `EXPECTED_BASE_PATH` after task 6 would
+    signup link that still carried `_expected_base_path()` after task 6 would
     point at the now-deleted `/signup/:eventId` route's own asset
     subtree, not at the event page that replaced it."""
-    assert EXPECTED_BASE_PATH not in registration.SIGNUP_BASE, (
-        f"registration.SIGNUP_BASE still carries {EXPECTED_BASE_PATH!r} -- "
+    assert _expected_base_path() not in registration.SIGNUP_BASE, (
+        f"registration.SIGNUP_BASE still carries {_expected_base_path()!r} -- "
         "task 6 moved registration off the app's own route onto the event "
         "page; every published signup link should target that page instead"
     )

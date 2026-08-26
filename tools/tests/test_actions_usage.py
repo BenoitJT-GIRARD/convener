@@ -26,6 +26,7 @@ payload below is a fixture written in this file.
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -46,12 +47,21 @@ _SWEEP_PATH = _ROOT / ".github" / "workflows" / "sweep-and-notify.yml"
 _WATCHDOG_PATH = _ROOT / ".github" / "workflows" / "retention-watchdog.yml"
 _WORKFLOWS = _ROOT / ".github" / "workflows"
 
+
 #: The thresholds this repository actually ships. The simulations below run
 #: against these rather than against numbers invented here, so "it fires"
 #: means it fires on the file a maintainer would edit.
-_REAL_BUDGET = actions_usage.budget_from_data(
-    safe_load(actions_usage.budget_path(_ROOT).read_text(encoding="utf-8"))
-)
+#: Read on demand, never while this module loads (phase 12, task 5).
+#: `config/actions-budget.yml` is a path `config/boundary.yml` hands to the
+#: instance, and a derived repository is entitled not to have it until the
+#: derivation lays an example's own file there. At module scope the read
+#: took this whole module down at collection -- eighty tests, none of them
+#: about where the file is -- with a stack trace instead of a sentence.
+@cache
+def _real_budget() -> actions_usage.Budget:
+    return actions_usage.budget_from_data(
+        safe_load(actions_usage.budget_path(_ROOT).read_text(encoding="utf-8"))
+    )
 
 
 def _run(
@@ -98,7 +108,7 @@ def _summarise(
     return actions_usage.summarise(
         payloads,
         observed_on=today,
-        budget=budget or _REAL_BUDGET,
+        budget=budget or _real_budget(),
         truncated=truncated,
     )
 
@@ -113,10 +123,10 @@ def test_the_committed_thresholds_parse() -> None:
     one file that decides when the alarm goes off. If it stops parsing,
     every command below refuses to run rather than falling back to a
     number written in Python."""
-    assert _REAL_BUDGET.monthly_minutes == 2000
-    assert _REAL_BUDGET.window_days >= 1
-    assert 0 < _REAL_BUDGET.warn_at_share <= 1
-    assert _REAL_BUDGET.submissions_per_day >= 1
+    assert _real_budget().monthly_minutes == 2000
+    assert _real_budget().window_days >= 1
+    assert 0 < _real_budget().warn_at_share <= 1
+    assert _real_budget().submissions_per_day >= 1
 
 
 def test_the_thresholds_are_not_constants_in_a_python_file() -> None:
@@ -183,8 +193,8 @@ def test_window_start_counts_today_in() -> None:
     and the seven before it -- the collector fetches from this day and the
     projection divides by the same number."""
     today = date(2026, 8, 24)
-    since = actions_usage.window_start(today, _REAL_BUDGET)
-    assert (today - since).days == _REAL_BUDGET.window_days - 1
+    since = actions_usage.window_start(today, _real_budget())
+    assert (today - since).days == _real_budget().window_days - 1
     assert since.isoformat() == "2026-08-18"
 
 
@@ -385,21 +395,21 @@ def _rate_boundary() -> int:
     while True:
         minutes += 1
         usage = _summarise(_minute_runs(0))
-        projected = round(minutes / _REAL_BUDGET.window_days * 30.4)
-        if projected >= actions_usage.warn_at(_REAL_BUDGET):
+        projected = round(minutes / _real_budget().window_days * 30.4)
+        if projected >= actions_usage.warn_at(_real_budget()):
             assert usage.billed_minutes == 0
             return minutes
 
 
 def test_the_rate_alarm_fires_at_the_line() -> None:
     usage = _summarise(_minute_runs(_rate_boundary()))
-    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _REAL_BUDGET)}
+    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _real_budget())}
     assert actions_usage.RATE_ALARM in kinds
 
 
 def test_the_rate_alarm_stays_quiet_one_minute_below_the_line() -> None:
     usage = _summarise(_minute_runs(_rate_boundary() - 1))
-    assert actions_usage.alarms(usage, _REAL_BUDGET) == ()
+    assert actions_usage.alarms(usage, _real_budget()) == ()
 
 
 def test_the_submission_alarm_fires_on_the_days_burst_not_on_the_month() -> None:
@@ -407,18 +417,20 @@ def test_the_submission_alarm_fires_on_the_days_burst_not_on_the_month() -> None
     nothing at all against a 2,000-minute month -- which is the entire
     reason this alarm is separate from the rate one."""
     usage = _summarise(
-        _minute_runs(_REAL_BUDGET.submissions_per_day, event="repository_dispatch")
+        _minute_runs(_real_budget().submissions_per_day, event="repository_dispatch")
     )
-    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _REAL_BUDGET)}
+    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _real_budget())}
     assert kinds == {actions_usage.SUBMISSIONS_ALARM}
-    assert usage.projected_monthly_minutes < actions_usage.warn_at(_REAL_BUDGET)
+    assert usage.projected_monthly_minutes < actions_usage.warn_at(_real_budget())
 
 
 def test_the_submission_alarm_stays_quiet_one_submission_below() -> None:
     usage = _summarise(
-        _minute_runs(_REAL_BUDGET.submissions_per_day - 1, event="repository_dispatch")
+        _minute_runs(
+            _real_budget().submissions_per_day - 1, event="repository_dispatch"
+        )
     )
-    assert actions_usage.alarms(usage, _REAL_BUDGET) == ()
+    assert actions_usage.alarms(usage, _real_budget()) == ()
 
 
 def test_the_submission_alarm_names_the_phase_that_this_number_decides() -> None:
@@ -426,9 +438,9 @@ def test_the_submission_alarm_names_the_phase_that_this_number_decides() -> None
     has stopped being a precaution. The pointer belongs where the number
     is read, not only in a plan nobody has open at 6am."""
     usage = _summarise(
-        _minute_runs(_REAL_BUDGET.submissions_per_day, event="repository_dispatch")
+        _minute_runs(_real_budget().submissions_per_day, event="repository_dispatch")
     )
-    fired = actions_usage.alarms(usage, _REAL_BUDGET)
+    fired = actions_usage.alarms(usage, _real_budget())
     assert "phase 9" in fired[0].text
 
 
@@ -439,7 +451,7 @@ def test_an_uncosted_run_is_its_own_loud_alarm() -> None:
     payload = _run(run_id=1)
     payload["timing"] = "not a mapping"
     usage = _summarise([payload])
-    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _REAL_BUDGET)}
+    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _real_budget())}
     assert actions_usage.UNREADABLE_ALARM in kinds
 
 
@@ -447,7 +459,7 @@ def test_a_truncated_collection_is_its_own_loud_alarm() -> None:
     """Reaching the cap takes a burst, so the cap being reached is a
     signal rather than a shrug."""
     usage = _summarise(_minute_runs(3), truncated=True)
-    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _REAL_BUDGET)}
+    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _real_budget())}
     assert kinds == {actions_usage.TRUNCATED_ALARM}
 
 
@@ -456,13 +468,13 @@ def test_a_runner_this_arithmetic_cannot_price_is_its_own_loud_alarm() -> None:
     module adds every runner's minutes at one each, so a non-Linux runner
     makes it an undercount -- reported, never quietly mis-added."""
     usage = _summarise([_run(runner="MACOS")])
-    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _REAL_BUDGET)}
+    kinds = {alarm.kind for alarm in actions_usage.alarms(usage, _real_budget())}
     assert actions_usage.RUNNER_ALARM in kinds
 
 
 def test_a_quiet_window_composes_no_message_at_all() -> None:
     usage = _summarise(_minute_runs(2))
-    assert actions_usage.alarms(usage, _REAL_BUDGET) == ()
+    assert actions_usage.alarms(usage, _real_budget()) == ()
     assert actions_usage.message(usage, ()) is None
 
 
@@ -471,7 +483,7 @@ def test_the_message_carries_the_caveat_that_this_is_not_the_bill() -> None:
     every other private repository it owns. A reader must not be able to
     mistake a per-repository sum for an invoice."""
     usage = _summarise(_minute_runs(_rate_boundary()))
-    body = actions_usage.message(usage, actions_usage.alarms(usage, _REAL_BUDGET))
+    body = actions_usage.message(usage, actions_usage.alarms(usage, _real_budget()))
     assert body is not None
     assert actions_usage.LOWER_BOUND_NOTE in body
     assert "data/actions-usage.yml" in body
@@ -484,7 +496,7 @@ def test_the_message_names_no_person() -> None:
     payload["run"]["actor"] = {"login": "a-real-person"}
     payload["run"]["head_branch"] = "a-real-person/branch"
     usage = _summarise([payload])
-    body = actions_usage.message(usage, actions_usage.alarms(usage, _REAL_BUDGET))
+    body = actions_usage.message(usage, actions_usage.alarms(usage, _real_budget()))
     assert body is not None
     assert "a-real-person" not in body
 
@@ -726,9 +738,9 @@ def test_actions_usage_window_derives_the_window_from_the_same_configuration(
 
     assert actions_usage_window() == 0
     out = capsys.readouterr().out
-    since = actions_usage.window_start(date(2026, 8, 24), _REAL_BUDGET).isoformat()
+    since = actions_usage.window_start(date(2026, 8, 24), _real_budget()).isoformat()
     assert f"since={since}" in out
-    assert f"max_runs={_REAL_BUDGET.max_runs}" in out
+    assert f"max_runs={_real_budget().max_runs}" in out
 
 
 def test_actions_usage_window_refuses_unreadable_thresholds(
@@ -785,9 +797,9 @@ def test_the_liveness_check_boundary(
     _set_today(monkeypatch, date(2026, 8, 20))
     assert record_actions_usage() == 0
 
-    _set_today(monkeypatch, date(2026, 8, 20 + _REAL_BUDGET.max_silent_days))
+    _set_today(monkeypatch, date(2026, 8, 20 + _real_budget().max_silent_days))
     assert check_actions_usage_liveness() == 0
-    _set_today(monkeypatch, date(2026, 8, 21 + _REAL_BUDGET.max_silent_days))
+    _set_today(monkeypatch, date(2026, 8, 21 + _real_budget().max_silent_days))
     assert check_actions_usage_liveness() == 1
 
 

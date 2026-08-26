@@ -43,11 +43,22 @@ const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 // constraint forbids adding, so the one line is matched out of it -- and
 // a `wrangler.toml` that stopped declaring it fails loudly below rather
 // than silently exercising this suite against a value nothing deploys.
-const DECLARED_ORIGIN = new URL(
-  JSON.parse(
-    readFileSync(new URL('../../../config/instance.json', import.meta.url), 'utf-8'),
-  ).published_url,
-).origin;
+// Read inside the one test that needs it, never while this module loads
+// (phase 12, task 5). `config/instance.json` is a path
+// `config/boundary.yml` hands to the instance, and a derived repository
+// is entitled not to have it: a read at module scope would have taken
+// this whole suite down at import -- every test in it, including the
+// dozens that exercise the worker and touch no declaration at all -- with
+// a stack trace instead of a sentence. Inside the test, exactly one
+// assertion goes red, and it is the one that is actually about the
+// declaration.
+function declaredOrigin() {
+  return new URL(
+    JSON.parse(
+      readFileSync(new URL('../../../config/instance.json', import.meta.url), 'utf-8'),
+    ).published_url,
+  ).origin;
+}
 
 const WRANGLER = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf-8');
 const DEPLOYED_ORIGIN_MATCH = /^ALLOWED_ORIGIN\s*=\s*"([^"]+)"/m.exec(WRANGLER);
@@ -61,7 +72,7 @@ const ALLOWED_ORIGIN = DEPLOYED_ORIGIN_MATCH[1];
 
 describe('the deployed origin is the address this project is published at', () => {
   it('matches config/instance.json', () => {
-    expect(ALLOWED_ORIGIN).toBe(DECLARED_ORIGIN);
+    expect(ALLOWED_ORIGIN).toBe(declaredOrigin());
   });
 });
 
@@ -963,7 +974,7 @@ describe('signup relay -- the /survey route (task 16, spec S:6)', () => {
       // Built from the declaration rather than typed: the address this
       // worker must not reach for is whatever address this project is
       // published at, which is exactly what changes under a duplicate.
-      const published = new URL(DECLARED_ORIGIN).host;
+      const published = new URL(declaredOrigin()).host;
       expect(calls.every(([url]) => !String(url).includes(published))).toBe(true);
     });
   });

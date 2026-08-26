@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -25,14 +26,28 @@ from convener_ops.public_data import to_public
 from convener_ops.visual import render_announcement
 
 _REAL_ROOT = repo_root()
-_REAL_BRAND = (_REAL_ROOT / "data" / "brand.json").read_text(encoding="utf-8")
+
+
+#: Read on demand, never while this module loads (phase 12, task 5).
+#: Both are paths `config/boundary.yml` hands to the instance, and a
+#: derived repository is entitled not to have them until the derivation
+#: lays an example's own files there. At module scope the read took this
+#: whole module down at collection; from here it fails the tests that
+#: actually build a root, and says which file is missing.
+@cache
+def _real_brand() -> str:
+    return (_REAL_ROOT / "data" / "brand.json").read_text(encoding="utf-8")
+
+
 #: Phase 11 task 3: the composition reads the instance's own declaration
 #: too, for the wordmark, the strapline and the forum the "what to expect"
 #: rows name. Copied from the real repository for the same reason
 #: `data/brand.json` above is -- a second, hand-typed identity here would
 #: be a second answer to "what does this instance call itself", free to
 #: drift from the file every other reader in this project reads.
-_REAL_INSTANCE = (_REAL_ROOT / "config" / "instance.json").read_text(encoding="utf-8")
+@cache
+def _real_instance() -> str:
+    return (_REAL_ROOT / "config" / "instance.json").read_text(encoding="utf-8")
 
 
 def _scheduled(**overrides: Any) -> dict[str, Any]:
@@ -63,9 +78,11 @@ def _fake_root(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
     (tmp_path / "data" / "speakers.yml").write_text(
         yaml.safe_dump(speakers, sort_keys=False), encoding="utf-8"
     )
-    (tmp_path / "data" / "brand.json").write_text(_REAL_BRAND, encoding="utf-8")
+    (tmp_path / "data" / "brand.json").write_text(_real_brand(), encoding="utf-8")
     (tmp_path / "config").mkdir()
-    (tmp_path / "config" / "instance.json").write_text(_REAL_INSTANCE, encoding="utf-8")
+    (tmp_path / "config" / "instance.json").write_text(
+        _real_instance(), encoding="utf-8"
+    )
     fonts = tmp_path / "fonts"
     fonts.mkdir()
     (fonts / "placeholder.woff2").write_bytes(b"not a real font, presence only")

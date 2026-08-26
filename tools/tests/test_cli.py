@@ -10,6 +10,7 @@ import urllib.parse
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, tzinfo
 from email.message import EmailMessage
+from functools import cache
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -105,7 +106,16 @@ def test_load_valid_yaml_returns_data_and_no_errors(tmp_path: Path) -> None:
 #: editions are numbered under (phase 11, task 4), and a second hand-typed
 #: declaration here would be a second answer to what this instance is --
 #: the same choice `test_cli_render_visuals.py::_fake_root` already makes.
-_REAL_INSTANCE = (repo_root() / "config" / "instance.json").read_text(encoding="utf-8")
+#: Read on demand, never while this module loads (phase 12, task 5).
+#: `config/boundary.yml` hands this path to the instance, and a derived
+#: repository is entitled not to have it until the derivation lays an
+#: example's own file there. At module scope the read took the whole
+#: module down at collection, every test in it with a stack trace; from
+#: here it fails the tests that are actually about the declaration, and
+#: says which file is missing.
+@cache
+def _real_instance() -> str:
+    return (repo_root() / "config" / "instance.json").read_text(encoding="utf-8")
 
 
 def _write_data(tmp_path: Path, speakers: object, cfg: object) -> None:
@@ -115,7 +125,7 @@ def _write_data(tmp_path: Path, speakers: object, cfg: object) -> None:
     (data_dir / "config.yml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
     config_dir = tmp_path / "config"
     config_dir.mkdir(exist_ok=True)
-    (config_dir / "instance.json").write_text(_REAL_INSTANCE, encoding="utf-8")
+    (config_dir / "instance.json").write_text(_real_instance(), encoding="utf-8")
 
 
 def test_validate_reports_ok_and_returns_0(
