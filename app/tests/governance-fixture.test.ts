@@ -161,7 +161,7 @@ function isReadSomewhere(key: string, text: string): boolean {
   return quoted || dotted;
 }
 
-describe('every top-level fixture key is read by somebody -- entry 4 of the deferred-work register', () => {
+describe('every top-level fixture key is read by somebody, in either language', () => {
   // An empty key list would pass the check below vacuously.
   it('is a real sweep: the fixture actually has top-level blocks to check', () => {
     expect(topLevelCaseKeys.length).toBeGreaterThan(0);

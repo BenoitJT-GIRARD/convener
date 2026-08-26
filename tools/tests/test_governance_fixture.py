@@ -189,7 +189,7 @@ def _is_read(key: str, corpus: str) -> bool:
 
 
 def test_every_top_level_fixture_key_is_read_by_somebody() -> None:
-    """Entry 4 of the deferred-work register.
+    """A block of the shared fixture that nobody reads proves nothing.
 
     Neither this module nor `app/tests/governance-fixture.test.ts` used to
     assert that every top-level block of `governance-cases.json` is read by

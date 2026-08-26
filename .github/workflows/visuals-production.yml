@@ -91,10 +91,10 @@ name: Visuals production
 # `cli.py`'s, `announce.py`'s and `visual.py`'s own docstring names as the
 # reason a portrait or a room link cannot reach a rendered page. Harmless
 # today only because `_scheduled_announcements` never wires a portrait
-# through regardless of what the gate decides (deferred-work #14) -- the
-# day that changes, a bug in the gate's own logic must re-render and
-# re-check real editions, not wait for an unrelated file in this list to
-# change first. `render_visual_fixtures` (visuals.yml's own command) calls
+# through regardless of what the gate decides -- an accident of today's
+# wiring, not a property anything holds. The day that changes, a bug in
+# the gate's own logic must re-render and re-check real editions, not wait
+# for an unrelated file in this list to change first. `render_visual_fixtures` (visuals.yml's own command) calls
 # none of this -- `FIXTURE_ANNOUNCEMENT` is a fixed, hand-built identity
 # that never goes through `to_public` at all -- so adding it there would
 # only trigger a fixture re-render that could never produce a different

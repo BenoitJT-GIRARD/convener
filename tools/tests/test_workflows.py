@@ -916,7 +916,7 @@ def test_publish_vitrine_site_ships_nojekyll() -> None:
 #: A scan covers a workflow nobody has written yet, which a list never can.
 WORKFLOWS_DIR = Path(".github/workflows")
 
-#: Entry 5 of the deferred-work register. The check used to look for one
+#: The check used to look for one
 #: syntax only -- `user\.email\s+"..."`, a double-quoted literal directly
 #: after `user.email` -- because that is the shape the defect it was built
 #: to catch happened to take (`deploy.yml` copying `publish-vitrine.yml`'s
@@ -1036,7 +1036,7 @@ def test_automated_commit_identity_pairs_a_name_with_its_address(
 
 
 # ------------------------------------------------------------------ #
-# Entry 5 (deferred-work register), proven by name: five shapes the
+# Proven by name: five shapes the
 # previous check -- `user\.email\s+"..."`, a double-quoted literal directly
 # after the literal text `user.email` -- would have let a foreign-domain
 # commit author through in without either test above ever seeing it. Each

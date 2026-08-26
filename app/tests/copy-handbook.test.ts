@@ -143,7 +143,7 @@ describe('a real run against the real docs/ tree', () => {
     expect(onDisk).toEqual(publishedPaths(REGISTRY_SOURCE));
   });
 
-  it('never publishes docs/reference/operations.md -- entry 2 of the deferred-work register', async () => {
+  it('never publishes docs/reference/operations.md -- it names every secret this project uses', async () => {
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-real-'));
     await copyHandbook({ docsDir: DOCS, registrySource: REGISTRY_SOURCE, dst });
     expect(slash(await walkAll(dst))).not.toContain('reference/operations.md');

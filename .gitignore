@@ -127,7 +127,7 @@ data/events/*/attendance-import.csv
 # The designer's own source material for the visual identity -- the .pptx the
 # brand values were extracted from, and the rendered examples. Reference only,
 # never published and never committed: several of these carry a real person's
-# photograph, which is exactly the defect deferred-work entry 9 records for
-# docs/assets/flyer-example.png, already in this history. Kept out of git so a
-# stray `git add` cannot repeat it. Read them from the Drive working copy.
+# photograph, which is exactly the defect docs/assets/flyer-example.png
+# already put in this history. Kept out of git so a stray `git add` cannot
+# repeat it. Read them from the Drive working copy.
 docs/assets/example_and_template_initial_assets/
