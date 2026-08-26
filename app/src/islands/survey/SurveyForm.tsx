@@ -100,9 +100,9 @@ type SubmitState = 'idle' | 'sending' | 'sent' | 'error';
 
 /** Where an event's published public half is fetched from -- identical to
  *  `islands/signup/SignupForm.tsx::eventPublicKeyUrl`: same-origin, the
- *  same key an event's registration was encrypted under ("même
- *  entrée que l'inscription"). Not exported, for the same react-refresh
- *  reason that sibling function gives. */
+ *  same key an event's registration was encrypted under -- the survey
+ *  uses the same entry point as registration. Not exported, for the same
+ *  react-refresh reason that sibling function gives. */
 function eventPublicKeyUrl(eventId: string): string {
   return `${BASE}/keys/events/${encodeURIComponent(eventId)}.pub`;
 }

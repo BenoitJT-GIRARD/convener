@@ -23,9 +23,10 @@
 /* Self-hosted, and that is a requirement rather than a preference: this site
  * previously linked fonts.googleapis.com and preconnected to fonts.gstatic.com,
  * which sends every visitor's address to a third party — on a site that carries
- * a data-protection notice and whose specification opens with "sans y
- * introduire la moindre dépendance à un service tiers". The files sit beside
- * their licences in ../fonts/ at the repository root -- shared with the
+ * a data-protection notice, and which is required to work without
+ * introducing the least dependency on a third-party service. The files
+ * sit beside their licences in ../fonts/ at the repository root -- shared
+ * with the
  * application's own copy step (app/scripts/copy-fonts.mjs) rather than a
  * second, separately committed set.
  *

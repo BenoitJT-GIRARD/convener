@@ -113,8 +113,8 @@ describe('VerifyPage -- with a token', () => {
 
     await screen.findByText('Certificate revoked');
     // Genuine and revoked is not an accusation: the name still shows,
-    // because the signature really did confirm it ("La signature reste
-    // valide": revocation touches the register, never the signature).
+    // because the signature really did confirm it: the signature stays
+    // valid, because revocation touches the register, never the signature.
     expect(screen.getByText(SIGNED.payload_decoded.name)).toBeInTheDocument();
     expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
   });

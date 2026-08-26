@@ -15,7 +15,7 @@ import {
 import type { LookupResult } from '../../verify/register';
 
 /**
- * "Vérification sans divulgation", made into a page: someone
+ * Verification without disclosure, made into a page: someone
  * who receives a certificate confirms it holding nothing but the link
  * printed on it (or the 32-character identifier alone, from the printed
  * page -- see `VerifyTokenless` below) -- no account, no request to us for

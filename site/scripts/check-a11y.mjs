@@ -27,9 +27,10 @@
  * domain root (no CNAME, no custom domain) -- `config/instance.json` is
  * the one place that address is written down, and every template's
  * `| url` filter call resolves against the prefix `.eleventy.js` derives
- * from it. D-26 ("on vérifie à la forme déployée, jamais à une forme
- * locale commode") is exactly the lesson this project's own screenshot
- * passes paid for: seven of them, all served at a bare `localhost` root,
+ * from it. D-26 ("Verify the shape that will actually be deployed, never
+ * a convenient local one") is exactly the lesson this project's own
+ * screenshot passes paid for: seven of them, all served at a bare
+ * `localhost` root,
  * all green, on a site where every relative path -- style sheet, fonts,
  * every island's own fetches -- would have 404'd once actually published.
  * This script reads that same declaration, through the same

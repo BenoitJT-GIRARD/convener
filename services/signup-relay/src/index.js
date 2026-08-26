@@ -36,8 +36,8 @@
  * `POST /survey` accepts a post-event survey response -- `app/src/survey/
  * SurveyForm.tsx` and `app/src/survey/encrypt.ts`, the sibling of the
  * registration page and its own `encrypt.ts`. It is the *same* worker, not
- * a fourth one, because the survey travels through "meme
- * entree que l'inscription": the envelope this worker validates is
+ * a fourth one, because the survey travels through the same entry point
+ * as registration: the envelope this worker validates is
  * byte-identical in shape (`validatedEventId` below makes no distinction
  * between the two routes at all), the known-event check is the same lookup
  * against the same `keys/events/<id>.pub`, and the GitHub token is the
