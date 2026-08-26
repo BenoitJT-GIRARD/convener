@@ -47,10 +47,17 @@ describe('one number, changed in place', () => {
   it('keeps every word of the argument the file makes for itself', () => {
     const before = repositoryFile('config/queue-drain.yml');
     const after = setScalar(before, 'alarm_after_hours', 72);
-    // The two sentences the whole coupling rests on. A YAML round trip
-    // would take both of them out and nothing would have said so.
-    expect(after).toContain('The floor is two drain periods');
-    expect(after).toContain('the two meet at 48');
+    // Every comment line the file had, still there. A YAML round trip
+    // takes all of them out and nothing would have said so.
+    //
+    // Two of its sentences were quoted here until phase 12 task 6, and
+    // they were one instance's: `config/queue-drain.yml` is the
+    // instance's file, so a product test quoting its prose asserted
+    // which repository it was running in. The example instance's copy
+    // of that file argues its case in four lines rather than forty.
+    const comments = before.split('\n').filter(line => line.trimStart().startsWith('#'));
+    expect(comments.length).toBeGreaterThan(2);
+    comments.forEach(line => expect(after).toContain(line));
     expect(after.length - before.length).toBe(0);
   });
 

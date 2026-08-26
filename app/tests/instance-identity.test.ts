@@ -31,6 +31,7 @@
  * second copy of it". Resolving on copy would have made it a second copy.
  */
 import { readFileSync } from 'node:fs';
+import { ONE_INSTANCE } from './one-instance';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -159,7 +160,7 @@ describe('a second instance renders nothing of the first', () => {
     expect(servedPages.length).toBeGreaterThan(30);
   });
 
-  it('leaves no page carrying this organisation once another one is declared', async () => {
+  it.skipIf(ONE_INSTANCE)('leaves no page carrying this organisation once another one is declared', async () => {
     const { substitute } = await rendererWith(SECOND);
     const offending: string[] = [];
     for (const relative of servedPages) {
@@ -202,7 +203,7 @@ describe('the handbook copied into the built bundle', () => {
     await rm(dst, { recursive: true, force: true });
   });
 
-  it('carries the second instance once rendered, and nothing of the first', async () => {
+  it.skipIf(ONE_INSTANCE)('carries the second instance once rendered, and nothing of the first', async () => {
     // The real copy step, into a scratch destination -- what actually lands
     // in `public/handbook/` and is served to a volunteer's browser.
     const { files } = await copyHandbook({

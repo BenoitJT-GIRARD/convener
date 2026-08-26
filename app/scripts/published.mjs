@@ -280,7 +280,20 @@ export function unconfigured() {
         'whether it is configured'
     );
   }
-  const ours = declaredValues(JSON.parse(readFileSync(DECLARATION, 'utf8')));
+  return unconfiguredFrom(JSON.parse(readFileSync(DECLARATION, 'utf8')), example);
+}
+
+/** The same answer, given two declarations already in hand.
+ *
+ *  Exported because reading the two files is not always possible where
+ *  the *question* is: a module transformed by the test runner has no
+ *  `file:` `import.meta.url`, so `new URL(..., import.meta.url)` above
+ *  cannot be read there at all. `published.unconfigured_from_data` is
+ *  Python's own split of the same shape, for the same reason -- one
+ *  definition of what "not configured" means, two ways of getting the
+ *  declarations to it. */
+export function unconfiguredFrom(declaration, example) {
+  const ours = declaredValues(declaration);
   const theirs = declaredValues(example);
   return Object.keys(ours)
     .filter((name) => theirs[name] === ours[name])

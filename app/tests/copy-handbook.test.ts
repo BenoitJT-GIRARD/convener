@@ -35,7 +35,7 @@
  *    this one, because the probe page sits outside all three.
  */
 import { readFileSync, existsSync } from 'node:fs';
-import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -229,6 +229,12 @@ describe('the filter is doing the work, not the current shape of docs/', () => {
 
   it('does not publish a probe file added under docs/superpowers/', async () => {
     sandbox = await sandboxDocs();
+    // Created rather than assumed: `docs/superpowers/` never leaves this
+    // repository, so in one derived from it the copy above brings no
+    // such directory and this probe used to fail on the write rather
+    // than prove anything. The claim is about the allowlist, not about
+    // which directories happen to exist.
+    await mkdir(resolve(sandbox, 'superpowers'), { recursive: true });
     await writeFile(resolve(sandbox, 'superpowers', 'zzz-probe.md'), '# probe\n');
     dst = await mkdtemp(join(tmpdir(), 'convener-handbook-mut-'));
 

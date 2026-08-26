@@ -39,6 +39,7 @@ import { ActionButtons } from '../src/components/ActionButtons';
 import { demoConfig, demoSpeakers } from '../src/data/demo';
 import { editionCodePrefix, nextEditionCode } from '../src/state/agenda';
 import { substitute } from '../src/content/render';
+import { ONE_INSTANCE } from './one-instance';
 import type { Speaker } from '../src/data/types';
 
 const ROOT = resolve(__dirname, '..', '..');
@@ -105,7 +106,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe('the edition code the demonstration offers', () => {
+describe.skipIf(ONE_INSTANCE)('the edition code the demonstration offers', () => {
   it('is numbered under the example instance own prefix, not this one', () => {
     disagree('edition_prefix');
     inDemo();
@@ -143,7 +144,7 @@ describe('the edition code the demonstration offers', () => {
   });
 });
 
-describe('the field that code is typed into', () => {
+describe.skipIf(ONE_INSTANCE)('the field that code is typed into', () => {
   function lockScreen() {
     render(
       <MemoryRouter>
@@ -185,7 +186,7 @@ describe('the field that code is typed into', () => {
   });
 });
 
-describe('the registration link a demonstration draft prints', () => {
+describe.skipIf(ONE_INSTANCE)('the registration link a demonstration draft prints', () => {
   const TEMPLATE = 'Register here: {{ speaker.signup_link }}';
 
   it('is under the example instance own published address', () => {

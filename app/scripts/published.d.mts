@@ -32,3 +32,14 @@ export declare function isEditionPrefix(value: unknown): boolean;
  *  for one nobody has. Sorted, so a bundle's own define is stable between
  *  builds. */
 export declare function unconfigured(): string[];
+
+/** The same answer as `unconfigured`, given two declarations already in
+ *  hand. Exported because reading the two files is not always possible
+ *  where the question is: a module the test runner transformed has no
+ *  `file:` `import.meta.url`, so `unconfigured`'s own reads throw there.
+ *  `unknown` on both sides because deciding what a declaration holds is
+ *  part of what it does. */
+export declare function unconfiguredFrom(
+  declaration: unknown,
+  example: unknown,
+): string[];

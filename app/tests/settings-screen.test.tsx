@@ -271,8 +271,17 @@ describe('the settings screen', () => {
         'queue_beyond_hours: 168',
       ),
     );
-    // The file still argues its own case.
-    expect(backend.files['config/registration-lanes.yml']).toContain('Two lanes, and only');
+    // The file still argues its own case -- every comment line it had,
+    // whatever this instance's copy happens to say. One of its sentences
+    // was quoted here until phase 12 task 6, and `config/registration-
+    // lanes.yml` is the *instance's* file: quoting its prose made a
+    // product test an assertion about which repository was running it.
+    const lanes = readFileSync(resolve(ROOT, 'config/registration-lanes.yml'), 'utf8');
+    const comments = lanes.split('\n').filter(line => line.trimStart().startsWith('#'));
+    expect(comments.length).toBeGreaterThan(2);
+    comments.forEach(line =>
+      expect(backend.files['config/registration-lanes.yml']).toContain(line),
+    );
     expect(backend.files['config/registration-lanes.yml']).toContain('owner: instance');
     // And the subject names the key and the file, never the value.
     expect(backend.subjects).toEqual([
