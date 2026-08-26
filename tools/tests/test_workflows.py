@@ -5090,6 +5090,25 @@ def test_the_overlap_rule_reproduces_the_distinction_it_exists_to_draw() -> None
     assert _overlaps("cspell.json", "cspell.json")
 
 
+def _git_ls_files(subtree: str) -> list[str]:
+    """What this repository tracks under `subtree`.
+
+    A runner checks out the repository and sees exactly this; a working
+    tree can hold anything beside it. `paths-ignore:` is evaluated
+    against pushed changes, so tracked is the reading that matches what
+    the filter is for.
+    """
+    # Fixed argv, shell=False; `subtree` comes out of deploy.yml.
+    listed = subprocess.run(  # nosec B603 B607
+        ["git", "ls-files", "--", subtree],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return listed.stdout.split()
+
+
 @pytest.mark.parametrize("entry", _deploy_paths_ignore())
 def test_no_path_the_deploy_ignores_can_reach_the_deployed_bundle(entry: str) -> None:
     """Phase 8, task 3, change C, pinned as the relationship rather than
@@ -5126,15 +5145,41 @@ def test_every_ignored_path_still_names_something_in_this_repository(
     An entry that names nothing is not dangerous -- `paths-ignore:` fails
     safe, and a filter matching no file merely runs the workflow -- but
     it is invisible: a typo, or a directory that has since been renamed,
-    leaves a line that reads like a decision and enforces nothing. Every
-    entry must still point at something real, including `.superpowers/**`,
-    which git does not track but which is present in a working tree.
+    leaves a line that reads like a decision and enforces nothing.
+
+    **Against what git tracks, not against a working tree**, and that is
+    a correction phase 12 task 6 made after finding two ways the old
+    reading was wrong. It said "including `.superpowers/**`, which git
+    does not track but which is present in a working tree" -- true on the
+    machine it was written on and false in every fresh checkout,
+    including the runner that decides whether a pull request merges. And
+    `docs/superpowers/**` names something here and nothing in a
+    repository derived from this one, because that is the directory the
+    derivation keeps back.
+
+    So an entry naming nothing *tracked* is reported as what it is -- a
+    line that filters nothing on the only machine whose filtering matters
+    -- unless the whole subtree is one this repository does not carry at
+    all, which is a fact about the repository rather than about the line.
+    The last assertion is what stops the exemption from swallowing the
+    test: at least one entry has to resolve, or this proves nothing.
     """
-    assert (ROOT / _ignored_subtree(entry)).exists(), (
-        f"deploy.yml ignores {entry!r}, which nothing in this repository "
-        "matches -- the line reads as a decision and filters nothing; "
-        "either it is a typo or the path it named has moved"
+    ignored = _ignored_subtree(entry)
+    tracked = _git_ls_files(ignored)
+    if not tracked and not (ROOT / ignored).exists():
+        pytest.skip(
+            f"this repository carries no {ignored!r} at all -- the entry is "
+            "about a subtree that is not here, which is not the same fact as "
+            "a line that names nothing"
+        )
+    assert tracked, (
+        f"deploy.yml ignores {entry!r}, which matches nothing this "
+        "repository tracks -- the line reads as a decision and filters "
+        "nothing on a runner, which only ever sees tracked files"
     )
+    assert any(
+        _git_ls_files(_ignored_subtree(other)) for other in _deploy_paths_ignore()
+    ), "no entry of paths-ignore names anything tracked -- this proves nothing"
 
 
 # ------------------------------------------------------------------ #

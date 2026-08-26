@@ -34,9 +34,16 @@ on:
     # published nothing and gone green. The cost of removing it is that
     # editing an unrelated threshold now runs this workflow -- which is
     # the direction this list is chosen to fail in.
+    #
+    # `.superpowers/**` was a fourteenth entry here until phase 12 task 6
+    # and it filtered nothing, on any machine: that directory is untracked
+    # -- `git ls-files` returns nothing for it -- and `paths-ignore:` is
+    # evaluated against the files a push carries, which are tracked by
+    # definition. It read like a decision, enforced nothing, and passed
+    # its own check only because the check asked the working tree it was
+    # written on rather than the repository.
     paths-ignore:
       - 'docs/superpowers/**'
-      - '.superpowers/**'
       - 'site/**'
       - 'visuals/**'
       - 'services/**'
