@@ -51,7 +51,7 @@ decision rather than one long register.
 | Decision | Answers the question |
 |---|---|
 | [D-08 — Announcement visuals are generated, not hand-drawn](d-08-visuals-generated-in-ci.md) | Why are flyers and announcement images generated instead of designed by hand each time? |
-| [D-15 — Private source, public artefact](d-15-publication-topology.md) | Why are there two repositories, and which one is which? |
+| [D-15 — A private instance, a public product](d-15-publication-topology.md) | Which repositories are there, which of them are public, and what may a public one hold? |
 | [D-16 — The visual identity has one source of fact, and it is the original artwork](d-16-brand-source-of-truth.md) | Where do the organisation's colours and type actually come from? |
 | [D-17 — Typography: one free, self-hosted family in place of two licensed ones](d-17-typography-substitution.md) | Why does the site use a different typeface from the original design? |
 | [D-18 — Static public pages, interactivity in islands](d-18-static-pages-with-islands.md) | Why is the showcase a static site rather than part of the application? |
