@@ -16,7 +16,13 @@ pushes the result into its root. Nobody edits anything there. Every byte in
 it is reproducible from the private one, so losing it costs a rebuild.
 
 Anyone standing this up for themselves needs both before anything else
-works. `docs/reference/operations.md` says which settings each one needs.
+works. `docs/reference/standing-up.md` is the whole path from nothing —
+no repositories, no accounts — to a running instance, step by step, with
+the two steps no automation can do written out in full; it is walkable
+with a web browser and a text editor, and every account it asks for has a
+free tier this project fits inside. `docs/reference/operations.md` says
+which settings each repository needs, and takes over once the instance is
+standing.
 
 ### Which repository is which
 
@@ -134,8 +140,20 @@ run, and why is worth knowing:
   repository's own commit history, rewritten by a scheduled job on every
   push. A duplicate inherits ours, and its own next push replaces it.
 
+Three files is the list for a first *build*. Deploying the three edge
+workers needs two more values that a duplicate has to correct by hand, in
+files the product otherwise owns: the published origin each of two
+`services/*/wrangler.toml` declares, and the identifier of the storage
+namespace two of them bind to. A Worker deploys from its own configuration
+file and can read nothing else, which is why those are written out there
+rather than derived — and why each worker's own test suite reads
+`config/instance.json` beside it and refuses the two disagreeing.
+`docs/reference/standing-up.md` gives that as a step of its own.
+
 `docs/reference/operations.md` covers the rest of standing an instance up —
-the accounts, the secrets, and what degrades without each.
+the accounts, the secrets, and what degrades without each — and
+`docs/reference/standing-up.md` is the ordered path through all of it, from
+a person who has neither repository to an instance that runs.
 
 ## What is here
 

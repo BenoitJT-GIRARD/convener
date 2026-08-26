@@ -15,4 +15,7 @@ Layout:
 - `workflow/`    — phase-specific instructions (sourcing, preparation, hosting, after)
 - `toolkit/`     — email and post templates
 - `governance/`  — editorial line, board, selection criteria, decision log
-- `reference/`   — the workspace, tools, contacts, operations, schema
+- `reference/`   — the workspace, tools, contacts, standing up, operations, schema
+
+`reference/standing-up.md` is generated from `STANDING-UP.yml` and is the
+one page here written for somebody who does not have an instance yet.
