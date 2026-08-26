@@ -80,12 +80,20 @@ What this module cannot see, stated rather than left to be found
   `instance_identity`). Two things this instance owns are held by
   neither, so nothing here can look for them: the **time zone** and the
   **standing start time** (`Europe/Paris` and 12:30, in `visual.py`,
-  `governance.py` and forty-odd other places), and the **names of the
-  people** who run the series -- `docs/reference/contacts.md` and
-  `docs/reference/operations.md` each name four of them, in paragraphs
-  the cockpit publishes to every instance. Each is recorded in
-  `docs/superpowers/inventaire-instance.md`; none can become a needle
+  `governance.py` and forty-odd other places). It is recorded in
+  `docs/superpowers/inventaire-instance.md`; it cannot become a needle
   until it becomes a declared value.
+
+  **The names of the people who run the series were a second until phase
+  12 task 6 read this paragraph against the files.**
+  `docs/reference/contacts.md` and `docs/reference/operations.md` each
+  named four of them, in paragraphs the cockpit publishes to every
+  instance; the reference pages name roles now, and the one page that
+  described one organisation's own deferred configuration describes the
+  configuration instead. Nothing here could have noticed either way --
+  a name is not a declared value -- which is what this list is for, and
+  also its limit: an entry stays true only for as long as somebody
+  re-reads it.
 
   `site/src/style.css` was a third until phase 12 task 2: it named the
   designer in seven comments that shipped verbatim inside the showcase's
