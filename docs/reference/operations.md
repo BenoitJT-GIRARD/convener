@@ -876,7 +876,7 @@ proved by a test (`tools/tests/test_retention.py`,
 
 **This same destruction also covers
 `data/events/<id>/survey-responses.enc`, the post-event survey's own
-storage (§6) — with no change to this job at all.** `CONVENER_EVENT_KEY_<ID>`
+storage — with no change to this job at all.** `CONVENER_EVENT_KEY_<ID>`
 is the one key both files are encrypted under; deleting the secret makes
 both permanently unreadable in the same one operation. There is no second
 retention path to remember, because none was built: the survey deliberately

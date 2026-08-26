@@ -178,8 +178,9 @@ the pair was generated, ISO 8601, the same sortable-by-filename idiom
 these filenames *is* sorting the keys by age, with no separate manifest
 file to keep in sync. Every key this project ever generates is committed
 here, forever -- rotating a key out of *service* (no longer used to sign
-new certificates) never means removing its file. §7's rotation promise is
-kept entirely by this file simply staying put; there is no companion
+new certificates) never means removing its file. The promise that an
+already-issued certificate keeps verifying after a rotation is kept
+entirely by this file simply staying put; there is no companion
 "retire" or "destroy" operation in this module, on purpose (see above). See
 `keys/signing/README.md` for the current, real state of that directory and
 what a verifier should do with it.
