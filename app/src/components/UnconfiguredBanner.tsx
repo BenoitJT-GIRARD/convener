@@ -3,10 +3,9 @@
  * own chrome.
  *
  * A duplicate that has not been configured should say so, loudly, rather
- * than publish silently as somebody else's
- * l'identité du gabarit" -- and it is the direct continuation of a rule
- * this project already settled: a default that leaks when you forget it
- * is not a default, it is a trap.
+ * than publish silently under somebody else's identity. That is the
+ * direct continuation of a rule this project already settled: a default
+ * that leaks when you forget it is not a default, it is a trap.
  *
  * `unconfiguredFields()` (src/instance.ts, from the define
  * `vite.config.ts` fills from `scripts/published.mjs::unconfigured`) is

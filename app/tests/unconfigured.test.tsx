@@ -2,10 +2,10 @@
  * A duplicate that has not been configured says so, on its own pages.
  *
  * The rule, in as many words: a duplicate that has not been configured
- * says so, loudly, rather than publishing silently as somebody else's
- * l'identité du gabarit" -- and it is the direct continuation of a rule
- * this project already settled: a default that leaks when you forget it
- * is not a default, it is a trap.
+ * says so, loudly, rather than publishing silently under somebody else's
+ * identity. That is the direct continuation of a rule this project
+ * already settled: a default that leaks when you forget it is not a
+ * default, it is a trap.
  *
  * What "not configured" means, mechanically, is decided on the other side
  * of the language boundary and stated once in
