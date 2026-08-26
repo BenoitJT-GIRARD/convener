@@ -41,7 +41,7 @@ def v3_speaker(**overrides: Any) -> dict[str, Any]:
         "name": "Alba Quennell",
         "gender": "undisclosed",
         "career_stage": "undisclosed",
-        "email": "Anonymous@example.ac.uk",
+        "email": "a.quennell@example.ac.uk",
         "affiliation": "University of Example",
         "country": "UK",
         "title": "depressive-like behaviours in rodents",
@@ -126,14 +126,14 @@ def test_the_checklist_is_never_filled_in_from_the_lead_owner() -> None:
     # who owes one line of the runbook. Two notions, two fields, and the
     # migration derives neither from the other -- the phase 2 defect that lost
     # `proposed_by` started as exactly this kind of convenience.
-    migrated = migrate_speaker(v3_speaker(assigned_to="carol", host_1="Anonymous"))
+    migrated = migrate_speaker(v3_speaker(assigned_to="carol", host_1="bob"))
     assert migrated["checklist"] == {}
     assert migrated["assigned_to"] == "carol"
 
 
 def test_each_speaker_gets_its_own_checklist() -> None:
     first, second = migrate_speakers([v3_speaker(), v3_speaker(id="spk-002")])
-    first["checklist"]["scheduled/T-30/visuals"] = {"assignee": "Anonymous"}
+    first["checklist"]["scheduled/T-30/visuals"] = {"assignee": "bob"}
     assert second["checklist"] == {}
 
 
@@ -159,16 +159,16 @@ def test_no_field_outside_the_migration_is_touched() -> None:
 
 def test_an_existing_value_is_never_overwritten() -> None:
     before = v3_speaker(
-        photo_url="https://example.org/Anonymous.jpg",
+        photo_url="https://example.org/quennell.jpg",
         bio="Reads rodents for a living.",
-        linkedin="Anonymous-Anonymous",
+        linkedin="alba-quennell",
         seed_questions="What first drew you to the model?",
         candidate_dates=[{"date": "2026-06-01", "time": "12:30", "answer": ""}],
         # A name already put against a line of the runbook. The migration
         # must not read it as an absence and blank it: `assignee` is who owes
         # that line, and it is not derived from anything -- least of all from
         # `assigned_to`, which is who owns the lead.
-        checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}},
+        checklist={"scheduled/T-30/visuals": {"assignee": "bob"}},
     )
     migrated = migrate_speaker(before)
     for field in NEW_FIELDS:
@@ -235,11 +235,11 @@ def test_a_re_run_does_not_blank_a_field_someone_filled_in_since() -> None:
     once[0]["candidate_dates"] = [
         {"date": "2026-06-01", "time": "12:30", "answer": "accepted"}
     ]
-    once[0]["checklist"] = {"scheduled/T-30/visuals": {"assignee": "Anonymous"}}
+    once[0]["checklist"] = {"scheduled/T-30/visuals": {"assignee": "bob"}}
     twice = migrate_speakers(once)
     assert twice[0]["bio"] == "Written by a volunteer after the migration."
     assert twice[0]["candidate_dates"][0]["answer"] == "accepted"
-    assert twice[0]["checklist"] == {"scheduled/T-30/visuals": {"assignee": "Anonymous"}}
+    assert twice[0]["checklist"] == {"scheduled/T-30/visuals": {"assignee": "bob"}}
 
 
 # --- the migration against the validator ----------------------------------

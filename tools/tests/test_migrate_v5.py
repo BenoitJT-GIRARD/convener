@@ -28,7 +28,7 @@ def v4_speaker(**overrides: Any) -> dict[str, Any]:
         "name": "Alba Quennell",
         "gender": "undisclosed",
         "career_stage": "undisclosed",
-        "email": "Anonymous@example.ac.uk",
+        "email": "a.quennell@example.ac.uk",
         "affiliation": "University of Example",
         "country": "UK",
         "photo_url": "",

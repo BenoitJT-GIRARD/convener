@@ -238,7 +238,7 @@ class TestChecklist:
         )
 
     def test_a_named_owner_is_accepted(self) -> None:
-        entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}})
+        entry = speaker(checklist={"scheduled/T-30/visuals": {"assignee": "bob"}})
         assert validate_speakers([entry], BOARD, editions=EDITIONS) == []
 
     def test_an_item_owner_is_not_checked_against_the_board(self) -> None:
@@ -249,9 +249,9 @@ class TestChecklist:
         # towards making one field answer to the other's value.
         entry = speaker(
             assigned_to="carol",
-            checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous"}},
+            checklist={"scheduled/T-30/visuals": {"assignee": "bob"}},
         )
-        assert "Anonymous" not in BOARD
+        assert "bob" not in BOARD
         assert validate_speakers([entry], BOARD, editions=EDITIONS) == []
 
     def test_a_blank_owner_is_an_answer(self) -> None:
@@ -266,12 +266,12 @@ class TestChecklist:
 
     def test_a_checklist_that_is_not_a_mapping_is_reported(self) -> None:
         errors = validate_speakers(
-            [speaker(checklist=["Anonymous"])], BOARD, editions=EDITIONS
+            [speaker(checklist=["bob"])], BOARD, editions=EDITIONS
         )
         assert any("checklist: must be a mapping" in e for e in errors), errors
 
     def test_a_bare_name_where_a_block_belongs_is_reported(self) -> None:
-        entry = speaker(checklist={"scheduled/T-30/visuals": "Anonymous"})
+        entry = speaker(checklist={"scheduled/T-30/visuals": "bob"})
         errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("not a mapping" in e for e in errors), errors
 
@@ -282,7 +282,7 @@ class TestChecklist:
 
     def test_a_key_this_app_does_not_use_is_reported(self) -> None:
         entry = speaker(
-            checklist={"scheduled/T-30/visuals": {"assignee": "Anonymous", "due": "soon"}}
+            checklist={"scheduled/T-30/visuals": {"assignee": "bob", "due": "soon"}}
         )
         errors = validate_speakers([entry], BOARD, editions=EDITIONS)
         assert any("unknown keys ['due']" in e for e in errors), errors
@@ -295,7 +295,7 @@ class TestChecklist:
     def test_the_line_that_is_wrong_is_named(self) -> None:
         entry = speaker(
             checklist={
-                "scheduled/T-30/visuals": {"assignee": "Anonymous"},
+                "scheduled/T-30/visuals": {"assignee": "bob"},
                 "scheduled/T-21/linkedin": {"assignee": 7},
             }
         )

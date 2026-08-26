@@ -40,7 +40,7 @@ def v2_speaker(**overrides: Any) -> dict[str, Any]:
         "id": "spk-001",
         "name": "Alba Quennell",
         "gender": "undisclosed",
-        "email": "Anonymous@example.ac.uk",
+        "email": "a.quennell@example.ac.uk",
         "affiliation": "University of Example",
         "country": "UK",
         "title": "depressive-like behaviours in rodents",
