@@ -155,15 +155,6 @@ from convener_ops.paths import repo_root
 
 ROOT = repo_root()
 
-#: This project's own working record -- specifications, plans and phase
-#: reviews. `convener_ops.derivation_guard.KEPT_BACK` keeps it out of every
-#: derived repository, so nothing in it can be the target of a citation a
-#: reader could follow. It is also where every coordinate this module
-#: refuses came from, which is why it is the one directory not swept: the
-#: refusal is about *shipped* files pointing at it, never about the record
-#: pointing at itself.
-WORKING_RECORD = "docs/superpowers/"
-
 #: Where the published architecture decision records live, one file per
 #: record, `d-NN-<slug>.md`.
 DECISIONS_DIR = "docs/decisions"
@@ -286,7 +277,13 @@ _HEADING = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 
 @cache
 def _tracked() -> list[str]:
-    """Every file git tracks, except this project's own working record."""
+    """Every file git tracks.
+
+    No directory is held out of this sweep any more. The one that used
+    to be -- this project's own working record, which is where every
+    coordinate this module refuses came from -- is not in the repository
+    at all, so every tracked file is a file somebody can be sent to.
+    """
     listing = subprocess.run(
         ["git", "ls-files"],
         cwd=ROOT,
@@ -294,9 +291,7 @@ def _tracked() -> list[str]:
         text=True,
         check=True,
     ).stdout
-    return [
-        name for name in listing.splitlines() if not name.startswith(WORKING_RECORD)
-    ]
+    return listing.splitlines()
 
 
 def _python_prose(text: str) -> str:
@@ -435,17 +430,14 @@ def edition_prefixes() -> frozenset[str]:
 def _published_pages() -> list[tuple[str, str]]:
     """Every page under `docs/` this repository publishes, with its text.
 
-    Everything except the working record: what a reader who clones this
-    repository, or opens the handbook the app serves from these same files,
-    can actually reach.
+    What a reader who clones this repository, or opens the handbook the
+    app serves from these same files, can actually reach -- which is now
+    every page under `docs/`, with nothing held back.
     """
-    pages = []
-    for path in sorted((ROOT / "docs").rglob("*.md")):
-        relative = path.relative_to(ROOT).as_posix()
-        if relative.startswith(WORKING_RECORD):
-            continue
-        pages.append((relative, path.read_text(encoding="utf-8")))
-    return pages
+    return [
+        (path.relative_to(ROOT).as_posix(), path.read_text(encoding="utf-8"))
+        for path in sorted((ROOT / "docs").rglob("*.md"))
+    ]
 
 
 def declared_rule_ids(text: str) -> set[str]:

@@ -44,10 +44,10 @@ What this module does **not** cover, stated rather than left to be found:
   built-page level besides
   (`test_no_built_page_emits_a_root_relative_link_without_the_prefix`,
   `test_the_governance_record_link_resolves_to_the_published_handbook`).
-- **`docs/superpowers/`.** The specs, the plans and the phase reports are
-  this project's own record of its own decisions, quoting the address as
-  it stood when each was written. Nothing builds them and nothing ships
-  them. The rest of `docs/` *is* swept.
+- Nothing is held out of the sweep any more. The one directory that was
+  -- this project's own record of its own decisions, quoting the address
+  as it stood when each entry was written -- is not in the repository, so
+  the whole of `docs/` is swept.
 
 The second half of the same declaration -- who runs this
 series -- closed a gap this module used to name:
@@ -310,14 +310,14 @@ _DEPLOYED_ORIGIN_FILES = (
     Path("services/signup-relay/wrangler.toml"),
 )
 
-#: This project's own record of its own decisions. Every spec, plan and
-#: phase report quotes the state of the world at the moment it was
-#: written, including addresses and names that have since moved; nothing
-#: builds them, nothing ships them, and rewriting them would be rewriting
-#: history rather than code. The rest of `docs/` is swept -- it was
-#: exempt in full until the handbook moved onto the substitution
-#: vocabulary.
-_UNSWEPT = ("docs/superpowers/",)
+#: Nothing is exempt from this sweep. The entry that used to be here
+#: named this project's own record of its own decisions -- quoting
+#: addresses and names as they stood when each was written, built by
+#: nothing and shipped by nothing. That subtree is not in the repository,
+#: so the exemption named nothing and hid the fact that every tracked
+#: file is now swept. `docs/` was exempt in full before that, until the
+#: handbook moved onto the substitution vocabulary.
+_UNSWEPT: tuple[str, ...] = ()
 
 _BINARY_SUFFIXES = frozenset(
     {".png", ".jpg", ".jpeg", ".ico", ".pdf", ".woff2", ".woff", ".ttf"}

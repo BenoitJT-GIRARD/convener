@@ -162,11 +162,11 @@ def test_a_docs_link_targets_a_published_page_or_a_known_safe_one() -> None:
 
 
 def test_the_entry_docs_link_to_the_decisions_index() -> None:
-    # mise-en-ligne.md Section 2: once the architecture decision records
-    # exist in their published form, README.md and docs/architecture.md
-    # must *link* to them, not merely name the private working register
-    # they were edited from -- naming without a link was only ever right
-    # while nothing published existed yet to point at.
+    # Once the architecture decision records exist in their published
+    # form, README.md and docs/architecture.md must *link* to them, not
+    # merely name the private working register they were edited from --
+    # naming without a link was only ever right while nothing published
+    # existed yet to point at.
     target = (ROOT / DECISIONS_INDEX).resolve()
     linked = False
     for source in (README, ARCHITECTURE):
@@ -220,17 +220,19 @@ def test_the_diagram_carries_the_personal_data_lifecycle() -> None:
         assert label in block, label
 
 
-#: The two prefixes that name this project's own working record: the
-#: tracked half (specifications, plans, phase reviews, the inventory) and
-#: the untracked half (`.gitignore` keeps it out of every clone). Neither
-#: exists for a reader who did not write them -- one because
-#: `convener_ops.derivation_guard.KEPT_BACK` never lets it leave, the
-#: other because it was never in a clone at all.
+#: The two prefixes that name this project's own working record. Neither
+#: exists for any reader of this repository: nothing is tracked under the
+#: first, and `.gitignore` has always kept the second out of every clone.
+#: They are still refused by name, because a page naming either sends its
+#: reader somewhere that is not there, and because the day somebody starts
+#: keeping a working record again is the day this matters most.
+#: `convener_ops.derivation_guard.KEPT_BACK` refuses the first the other
+#: way round, in the objects rather than in the prose.
 WORKING_RECORD = ("docs/superpowers/", ".superpowers/")
 
 
 def _shipping_markdown() -> list[Path]:
-    """Every tracked Markdown page except the working record itself."""
+    """Every tracked Markdown page."""
     listed = subprocess.run(  # nosec B603 B607
         ["git", "ls-files", "*.md"],
         cwd=ROOT,
@@ -238,23 +240,18 @@ def _shipping_markdown() -> list[Path]:
         text=True,
         check=True,
     ).stdout.split()
-    return [
-        ROOT / name
-        for name in listed
-        if not name.startswith("docs/superpowers/") and (ROOT / name).is_file()
-    ]
+    return [ROOT / name for name in listed if (ROOT / name).is_file()]
 
 
 def test_no_shipping_page_names_this_project_s_own_working_record() -> None:
     """
     `app/tests/decisions-records.test.ts` already holds this of
-    `docs/decisions/`: a published record may not send a reader into
-    `docs/superpowers/`, because that directory never leaves this
-    repository. The same sentence is true of every other page that ships,
-    and nothing held them to it -- so `README.md` and `docs/README.md`
-    both pointed a public reader at a design specification that will not
-    exist in the derived repository, `site/README.md` at a decision whose
-    published form sits in `docs/decisions/`, and
+    `docs/decisions/`: a published record may not send a reader into the
+    working record. The same sentence is true of every other page that
+    ships, and nothing held them to it -- so `README.md` and
+    `docs/README.md` both pointed a public reader at a design
+    specification no clone would ever hold, `site/README.md` at a decision
+    whose published form sits in `docs/decisions/`, and
     `docs/reference/operations.md` at four such paths plus one under
     `.superpowers/`, which `.gitignore` keeps out of *every* clone and
     which was therefore already unfollowable here.
