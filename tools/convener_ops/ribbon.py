@@ -59,10 +59,10 @@ from typing import Any, Final
 
 from . import brand
 
-#: Where the stroke's colour and width ratio are written down. Kept under
-#: this name for the call sites that still quote it; `brand.py` is what
-#: decides which file is read, and there is no default for the section
-#: this module needs -- see `_load_motif`.
+#: Where the stroke's colour and width ratio are written down when an
+#: instance writes them. Kept under this name for the call sites that
+#: still quote it; `brand.py` is what decides which file is read, and
+#: what is drawn when this one carries no `motif` -- see `_load_motif`.
 BRAND_PATH: Final = brand.INSTANCE_PATH
 
 Point = tuple[float, float]
@@ -76,11 +76,12 @@ def _load_motif(root: Path) -> dict[str, Any]:
     here, so a test can point it at a fixture without touching the
     environment.
 
-    **There is no default motif**, so this raises `brand.MissingMotifError`
-    rather than returning something for a duplicate that has configured
-    no mark of its own. The ribbon and the logo's dots are a signature:
-    everything that draws them stops here, and is told what is missing
-    and where to put it (phase 10, S-4).
+    **A duplicate that has chosen no mark is drawn with the product's
+    own** (`brand/convener/brand.json`) rather than stopped: design is
+    never something somebody has to supply before the thing will run.
+    What still raises `brand.MissingMotifError` is a `motif` that was
+    written and left incomplete, which no default may quietly finish --
+    `brand.motif` carries the reasoning and composes the message.
     """
     return brand.motif(root)
 
@@ -93,8 +94,11 @@ def ribbon_stroke_colour(root: Path) -> str:
 def ribbon_width_ratio(root: Path) -> float:
     """Stroke width as a fraction of the canvas's shorter side.
 
-    See `data/brand.json::motif._ribbon_width_ratio` for how this was
-    measured against the reference poster.
+    Each charter says where its own figure comes from, and the two do not
+    come from the same place: this instance's was measured off the
+    designer's poster (`data/brand.json::motif._ribbon_width_ratio`), and
+    the product's is carried over from the proportion its own mark's
+    inner arc is drawn at (`brand/convener/brand.json`).
     """
     return float(_load_motif(root)["ribbon_width_ratio"])
 

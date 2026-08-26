@@ -16,7 +16,7 @@
 #    `identity.repository`.
 #
 # The literal has to exist because GitHub reads this file verbatim, before
-# any code of this project's can run -- it is one of the seven files a
+# any code of this project's can run -- it is one of the six files a
 # duplicate edits by hand. It cannot drift: `tools/tests/test_published.py::
 # test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
 # refuses it naming any organisation other than the declared one.

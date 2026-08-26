@@ -30,15 +30,19 @@ nothing to stop a fourth. So they are generated here instead, from
 written one) and `config/instance.json`, and `--check` holds them exactly
 as it holds the two stylesheets.
 
-Why the mark is what makes this refuse
-----------------------------------------
+Which mark these leave the repository wearing
+-----------------------------------------------
 Both files draw the wordmark and the decorative loops, and both take their
-colour and their stroke weight from `motif` -- the one section of the
-charter with no product default (`brand.py`). That is deliberate placement
-rather than a coincidence of layout: these are the files that leave the
-repository, so they are exactly where another organisation's mark would
-leak. A duplicate that has configured no `motif` cannot build them at all,
-and is told what is missing and where to put it.
+colour and their stroke weight from `motif`. These are the files that
+travel outward, so they are exactly where another organisation's mark
+would leak -- which is why, until 2026-08-26, `motif` had no product
+default and this module could not render at all without one. It has one
+now, and the leak is closed at a better place: a duplicate that has
+configured nothing renders these two files in the *product's* mark, and
+`published.unconfigured` says on every public page that the instance is
+not configured yet. A build that refuses cannot say that, because it
+never gets as far as a page. What still stops here is a `motif` somebody
+wrote and left incomplete (`brand.py`).
 
 Every pairing is checked, not only the ones the charter names
 --------------------------------------------------------------
@@ -173,8 +177,8 @@ def _values(root: Path) -> dict[str, str]:
     """Everything both templates substitute: colours, motif, identity.
 
     Loads the charter once and refuses here rather than in each renderer,
-    so that "no motif" is one message however many files are being
-    written.
+    so that a half-written motif is one message however many files are
+    being written.
     """
     charter = brand.load(root)
     colours = brand.colours(charter)

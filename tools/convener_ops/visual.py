@@ -92,8 +92,9 @@ What is actually lost is one word: `.accent2` resolved to `var(--purple)`,
 which is the colour `.wordmark-text` already inherits, so the "two-tone"
 treatment rendered as a single turquoise `The` in an otherwise purple
 line -- not two colours meeting. The device to its left (`_WORDMARK_LOGO_SVG`)
-is untouched: it is the charter's, drawn from `motif`, and it carries no
-name.
+is untouched: it is drawn from the charter's own `--purple` and
+`--turquoise` -- not from `motif`, which only the two downloadable
+templates read for their wordmark -- and it carries no name.
 
 The ribbon itself is never redrawn here. `ribbon_path`, `ribbon_stroke_colour`
 and `ribbon_stroke_width` (task 1's own module) are called with this

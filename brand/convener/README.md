@@ -25,7 +25,7 @@ mark works: a browser tab, an avatar.
 | `convener-mark-mono.svg` | the mark in a single ink, dot included |
 | `convener-banner.svg` | mark and wordmark side by side |
 | `convener-banner-mono.svg` | the same, single ink |
-| `brand.json` | the product's own charter — the palette a duplicate builds with when it has chosen none |
+| `brand.json` | the product's own charter — the palette *and* the motif a duplicate builds with when it has chosen neither |
 
 **There are no light and dark variants, and no rasters.** There is nothing to
 keep in step, because there is only one file per shape.
@@ -88,11 +88,22 @@ Two consequences worth knowing before using it:
 - **The token names are the system's, not this palette's.** `purple` is the
   navy, `turquoise` is a coral field. They name positions in the composition,
   never hues — see `brand.json`'s own `_names`.
-- **It carries no `motif`, and that absence is the decision.** The ribbon and
-  the logo's dots are a signature; the build refuses rather than lending a
-  duplicate somebody else's mark. The mark in this directory is the *product's*,
-  which is a different thing from a default an instance would inherit by
-  forgetting.
+- **It carries a `motif`, and the motif is this mark taken apart.** The
+  ribbon's stroke is the navy; the wordmark's dots are the coral of the dot
+  above; the stroke weight is the proportion the inner arc is drawn at — 25.86
+  on a radius of 131.72, 0.196 of its own radius — carried onto the ribbon's
+  curls, which `tools/convener_ops/ribbon.py` builds at radius 0.105 and 0.103
+  of the shorter side. That gives 0.0204, and it means a curl on a poster is
+  drawn at the weight this mark's own line is drawn at, at any size.
+  **That section had no default at all until 2026-08-26**, on the reasoning
+  that a mark somebody drew must not be lent to a duplicate that forgot to
+  configure one. The mark half of that is right and has not moved. The
+  “therefore no default may exist” half did not follow from it, and what it
+  produced was a clone whose first build stopped, asking a seminar organiser
+  for a design file. Identity is what has to be supplied — an organisation's
+  name, its published address, the title of its series. Design never is, and
+  the guard against a duplicate passing for somebody else is the unconfigured
+  banner on the public pages, not a build that will not run.
 
 ## Two things that were decided rather than defaulted
 

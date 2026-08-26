@@ -1,5 +1,5 @@
 """The charter: the system ships with the product, the values stay with the
-instance, and the mark refuses rather than substituting.
+instance, and the design ships whole rather than being demanded.
 
 Three things used to read `data/brand.json`, each with its own two-line
 loader: `scripts/generate_brand_css.py` for the two stylesheets,
@@ -29,14 +29,31 @@ palette that does not build.
 `config/boundary.yml` hands that whole directory to the instance. Nothing
 about this instance's own colours moved: the file is what it was.
 
-**`motif` has no default at all.** `motif` is the ribbon's stroke and the
-logo's dots -- what somebody drew and what people recognise. A default
-mark would be worn by every duplicate that forgot to configure one, which
-is the definition of a leak rather than of a default: *a default that
-leaks when you forget it is not a default, it is a trap.* So `motif` is
-absent from `brand/convener/brand.json`, and `motif()` below raises
-`MissingMotifError` rather than substituting. Everything that draws the mark
-stops, and says what is missing and where to put it (S-4).
+**`motif` has a default too, and its absence used to be the decision.**
+`motif` is the ribbon's stroke, how wide that stroke is drawn, and the
+colour of the wordmark's dots. It carried no default at first, on the
+reasoning that a mark somebody drew must not be lent to a duplicate that
+forgot to configure one. The first half of that is right and is not
+negotiable; the second does not follow from it, and what it produced was
+a fresh clone whose build stopped, demanding a design file, before it had
+ever drawn anything. So the line sits elsewhere now, and it is a line
+about *what kind of value* it is rather than about which file it is in:
+**identity has to be supplied -- an organisation's name, its published
+address, the title of its series, none of which anything can guess -- and
+design never does.** The product's own motif is in
+`brand/convener/brand.json` beside the palette it belongs with, and what
+tells a reader an instance is not configured is `published.unconfigured`
+on the public pages, which is the better guard of the two because it
+lets somebody watch the product work while they configure it.
+
+**What still refuses is a half-written one.** A `motif` an instance did
+write and left incomplete is a mistake rather than a choice -- a ribbon
+with no colour of its own would be drawn in whatever ink happened to
+surround it -- so `motif()` names the file and the missing fields instead
+of quietly filling them from somewhere else. Absence is answered;
+incompleteness is refused. The same refusal covers the product's own
+charter losing its `motif`, which is the product being broken rather than
+an instance being unconfigured, and says so.
 
 The arithmetic lives here, not in the generator
 -------------------------------------------------
@@ -85,7 +102,9 @@ INSTANCE_PATH: Final = Path("data") / "brand.json"
 #: mark are one identity instead of two.
 DEFAULT_PATH: Final = Path("brand") / "convener" / "brand.json"
 
-#: The section that has no default, and the fields it has to carry.
+#: The design section, and the three fields it has to carry wherever it
+#: is written. `brand/convener/brand.json` carries one, so an instance
+#: never has to; what it may not do is write half of one.
 MOTIF_KEY: Final = "motif"
 MOTIF_FIELDS: Final = ("ribbon_stroke", "ribbon_width_ratio", "logo_dots")
 
@@ -99,7 +118,12 @@ _COLOUR_SECTIONS: Final = ("colour", "derived")
 
 
 class MissingMotifError(RuntimeError):
-    """No `motif` section, and there is no default for one.
+    """A `motif` that was written and left half-finished.
+
+    Not "no `motif`": an absent one is answered by the product's own, and
+    `motif` below says why. This is the case nothing can answer -- a
+    section somebody wrote, missing a field, which no default may quietly
+    complete without inventing a value that appears in no file.
 
     Carries the whole message rather than a code: the thing a person needs
     at the moment a build stops is what is missing and where to put it,
@@ -112,9 +136,10 @@ def source(root: Path) -> Path:
     """Which of the two files `load` will read, root-relative.
 
     Separate from `load` so that a message can name the file the values
-    actually came from -- "no `motif` in `data/brand.json`" and "no
-    `motif`, and you have not written a `data/brand.json` at all" are
-    different problems with different fixes.
+    actually came from: a contrast that no longer recomputes and a
+    `motif` left half-written are both reported against the file somebody
+    has to open, and which file that is depends on whether this instance
+    wrote one at all.
     """
     return INSTANCE_PATH if (root / INSTANCE_PATH).is_file() else DEFAULT_PATH
 
@@ -129,7 +154,13 @@ def load(root: Path) -> dict[str, Any]:
     an instance that overrode two colours and inherited six would be
     measured against a palette that exists in no file.
     """
-    return dict(json.loads((root / source(root)).read_text(encoding="utf-8")))
+    return _read(root, source(root))
+
+
+def _read(root: Path, rel: Path) -> dict[str, Any]:
+    """One charter file, parsed. Named so that `motif` can ask for the
+    product's own by path when the charter in force does not answer."""
+    return dict(json.loads((root / rel).read_text(encoding="utf-8")))
 
 
 def colours(brand: dict[str, Any]) -> dict[str, str]:
@@ -147,37 +178,61 @@ def colours(brand: dict[str, Any]) -> dict[str, str]:
 
 
 def motif(root: Path) -> dict[str, Any]:
-    """`motif`, or a refusal naming what is missing and where to put it.
+    """`motif`, from the charter in force or from the product's own.
 
-    The one section of the charter with no product default. A duplicate
-    that has configured nothing must not wear another organisation's
-    ribbon and dots, so everything that draws them stops here rather than
-    reaching for a substitute.
+    Three answers, and the middle one is the correction of 2026-08-26.
+
+    1. The charter in force carries a complete `motif`: that one, whole.
+    2. It carries none at all: the product's own, `DEFAULT_PATH`. An
+       instance that has chosen no mark is not a build that must stop --
+       it is a build that draws the product's, while
+       `published.unconfigured` says on every public page that this
+       instance is not configured yet. Design is never something a person
+       has to supply before the thing will run; identity is, and that is
+       where the refusals in this repository belong.
+    3. It carries a `motif` that is not a complete one: refuse, naming
+       the file and the fields. Half a section is neither a choice nor an
+       absence, and completing it from the default would hand back a
+       motif that exists in no file -- the same thing `load` refuses to
+       do with colours.
+
+    Case 2 reads the product's charter by path rather than merging it into
+    the charter in force, so this stays whole-section-or-whole-section: an
+    instance gets its own three values or the product's three, never one
+    of each.
     """
-    brand = load(root)
-    named = source(root).as_posix()
-    section = brand.get(MOTIF_KEY)
+    named = source(root)
+    section = load(root).get(MOTIF_KEY)
+    if section is None and named != DEFAULT_PATH:
+        named = DEFAULT_PATH
+        section = _read(root, DEFAULT_PATH).get(MOTIF_KEY)
+
     if isinstance(section, dict):
         missing = [field for field in MOTIF_FIELDS if field not in section]
         if not missing:
             return dict(section)
-        lacking = ", ".join(missing)
     else:
-        lacking = ", ".join(MOTIF_FIELDS)
+        missing = list(MOTIF_FIELDS)
 
-    where = (
-        f"{named} has no complete {MOTIF_KEY!r} section"
-        if named == INSTANCE_PATH.as_posix()
-        else f"there is no {INSTANCE_PATH.as_posix()}, and the product's own "
-        f"charter ({named}) deliberately carries no {MOTIF_KEY!r} section"
-    )
+    lacking = ", ".join(missing)
+    if named == DEFAULT_PATH:
+        raise MissingMotifError(
+            f"{DEFAULT_PATH.as_posix()} is the product's own charter and does "
+            f"not carry a complete {MOTIF_KEY!r}: missing {lacking}. Every "
+            "duplicate that has written no mark of its own is drawn with that "
+            "one, so this is the product being broken rather than an instance "
+            f"being unconfigured. Restore it, or write a complete {MOTIF_KEY!r} "
+            f"object carrying {', '.join(MOTIF_FIELDS)} in "
+            f"{INSTANCE_PATH.as_posix()} to stand in for it."
+        )
     raise MissingMotifError(
-        f"{where}: missing {lacking}. The ribbon's stroke and the logo's dots "
-        "are a signature, not a colour, so the product ships no default for "
-        "them -- a duplicate that configures nothing must not wear another "
-        f"organisation's mark. Add a {MOTIF_KEY!r} object carrying "
-        f"{', '.join(MOTIF_FIELDS)} to {INSTANCE_PATH.as_posix()} "
-        "(see brand/convener/README.md for what each one is)."
+        f"{named.as_posix()} has a {MOTIF_KEY!r} section and it is not a "
+        f"complete one: missing {lacking}. A ribbon with no colour of its own "
+        "would be drawn in whatever ink happened to surround it, so half a "
+        f"{MOTIF_KEY!r} is refused rather than completed. Either finish it -- "
+        f"{', '.join(MOTIF_FIELDS)}, see brand/convener/README.md for what "
+        "each one is -- or delete the section outright and the product's own "
+        f"({DEFAULT_PATH.as_posix()}) is drawn instead."
     )
 
 

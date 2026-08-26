@@ -60,11 +60,21 @@ contrast the charter records, on every run, and **a palette measuring below AA
 does not build**. The default is the product's own navy and coral, derived to
 the lightness the system measures each role at, and it clears the same table.
 
-**One section has no default and refuses instead.** `motif` — the ribbon's
-stroke, its width ratio, the logo's dots — is a signature rather than a colour.
-The build stops and names what is missing rather than lending a duplicate
-another organisation's mark. A default that leaks when you forget it is not a
-default.
+**`motif` has a default too, and the line is drawn somewhere else.** `motif`
+— the ribbon's stroke, its width ratio, the logo's dots — is design, and no
+part of a duplicate's design has to be supplied before the thing will build:
+the product ships its own, taken from its own mark, and a duplicate that has
+configured nothing draws that one. What tells a reader an instance is not
+configured is the unconfigured banner on its public pages, which is what an
+undeclared *identity* produces — the organisation's name, its published
+address, the title of its series are the values nothing can guess, and that is
+where this repository refuses. A build that refuses instead publishes no page
+on which to say anything at all.
+
+The one refusal left inside the charter is a `motif` somebody wrote and left a
+field short. An absence has an answer; half a section does not, and completing
+it from the default would hand back three values that appear in no file — the
+same reason the two charters are never merged.
 
 The two templates a collaborator downloads (`docs/assets/*.svg`) are derived
 from the charter now as well, so "nothing may hard-code a colour" finally holds

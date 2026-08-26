@@ -377,8 +377,9 @@ def _write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data), encoding="utf-8", newline="")
 
 
-#: A motif that is manifestly nobody's: enough for a build to complete,
-#: and impossible to mistake for a mark somebody drew.
+#: A motif that is manifestly nobody's -- neither this instance's nor the
+#: product's -- so that a test can tell which of the two a build reached
+#: for, and never mistake one for a mark somebody drew.
 _SYNTHETIC_STROKE = "#123456"
 _SYNTHETIC_DOTS = "#654321"
 _SYNTHETIC_MOTIF: dict[str, Any] = {
@@ -404,8 +405,9 @@ def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def default_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A duplicate that has chosen nothing: no `data/brand.json` at all.
 
-    The state phase 10 asks the product to survive -- and the state in
-    which `motif` has to refuse rather than substitute.
+    The state the product has to survive, and since 2026-08-26 the state
+    it has to *build* in: the product's own palette and the product's own
+    motif, all the way to both downloadable templates.
     """
     _skeleton(tmp_path)
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -577,9 +579,59 @@ def test_every_contrast_the_default_charter_claims_recomputes_and_clears_aa() ->
         assert stored >= brand.AA_NORMAL_TEXT, f"{name} is {stored}, below AA"
 
 
-def test_the_default_charter_carries_no_motif() -> None:
-    """The one section with no default, and its absence is the decision."""
-    assert brand.MOTIF_KEY not in _charter(brand.DEFAULT_PATH)
+def test_the_default_charter_carries_a_motif_of_its_own() -> None:
+    """Design is never something a duplicate has to supply to start.
+
+    The section carried no default until 2026-08-26, so that no duplicate
+    could wear a mark somebody else drew. The mark half of that stands;
+    "therefore no default may exist" did not follow from it, and what it
+    produced was a clone whose first build stopped asking for a design
+    file. This is the other half of that correction: the product's
+    charter answers all three fields, and the test below is what keeps
+    the answer from drifting into somebody else's.
+    """
+    section = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
+    assert [field for field in brand.MOTIF_FIELDS if field not in section] == []
+
+
+def test_the_default_motif_is_the_products_own_mark() -> None:
+    """Not a variant of this instance's, and not an invention either.
+
+    Every value is read back out of a file this repository already
+    ships -- the two colours off `convener-mark.svg`, and the stroke
+    weight the same file draws its inner arc at, carried onto the two
+    curls `ribbon.py` builds. A default motif nobody can trace is exactly
+    what the refusal it replaced was afraid of.
+    """
+    section = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
+    instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
+    for field in brand.MOTIF_FIELDS:
+        assert section[field] != instance[field], (
+            f"{field} is this instance's own value wearing the product's name"
+        )
+
+    mark = (ROOT / "brand" / "convener" / "convener-mark.svg").read_text(
+        encoding="utf-8"
+    )
+    colours = _charter_colours(brand.DEFAULT_PATH)
+    assert section["ribbon_stroke"] == colours["purple"], (
+        "the ribbon is drawn in the charter's own dominant ink, which "
+        "`colour._roles` already names as the ribbon's colour"
+    )
+    assert str(section["logo_dots"]) in mark, (
+        "the wordmark's dots are the colour of the dot in the mark itself"
+    )
+
+    inner_stroke, inner_radius = 25.86, 131.72
+    for radius in (0.105, 0.103):
+        carried = inner_stroke / inner_radius * radius
+        assert abs(section["ribbon_width_ratio"] - carried) / carried < 0.011, (
+            "the stroke weight is the mark's inner arc, at the size the "
+            "ribbon draws it: the midpoint of what the two curls give, "
+            "1.0 percent from one and 0.9 percent from the other"
+        )
+    assert f'stroke-width="{inner_stroke}"' in mark
+    assert f"A {inner_radius} " in mark
 
 
 def test_the_default_palette_is_not_this_instances_wearing_a_new_name() -> None:
@@ -615,25 +667,49 @@ def test_the_charter_in_force_is_the_products_when_the_instance_has_none(
 
 
 # --------------------------------------------------------------------------
-# `motif` refuses
+# `motif`: absence is answered, incompleteness is refused
 # --------------------------------------------------------------------------
 
 
-def test_a_duplicate_with_no_charter_at_all_is_refused_a_motif(
+def test_a_duplicate_with_no_charter_at_all_is_drawn_with_the_products_motif(
     default_repo: Path,
 ) -> None:
-    """S-4: what has no safe default must refuse. The message names the
-    section, the file to put it in, and every field it needs -- a build
-    that stops without saying which of those is missing costs an
-    afternoon.
+    """The correction of 2026-08-26, at the reader that carries it.
+
+    Nothing about a seminar series' *design* can be demanded before its
+    first build: a duplicate that has written no charter gets the
+    product's palette and the product's mark, whole, and finds out that
+    it is unconfigured from the banner on its own public pages rather
+    than from a build that would not run.
     """
-    with pytest.raises(brand.MissingMotifError) as raised:
-        brand.motif(default_repo)
-    message = str(raised.value)
-    assert brand.MOTIF_KEY in message
-    assert brand.INSTANCE_PATH.as_posix() in message
+    section = brand.motif(default_repo)
+    default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
     for field in brand.MOTIF_FIELDS:
-        assert field in message
+        assert section[field] == default[field]
+
+
+def test_an_instance_that_wrote_colours_but_no_motif_gets_the_products(
+    fake_repo: Path,
+) -> None:
+    """The same answer one step further in, and the step that matters
+    most in practice: somebody edits `data/brand.json` to set their own
+    colours and never thinks about `motif` at all. Refusing there would
+    be the same absurdity at a smaller scale.
+
+    Whole section or whole section, the rule `load` already applies to
+    the file: the product's three values, never two of theirs and one of
+    the product's.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    del data[brand.MOTIF_KEY]
+    _write_json(fake_repo / BRAND_PATH, data)
+
+    section = brand.motif(fake_repo)
+    default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
+    instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
+    for field in brand.MOTIF_FIELDS:
+        assert section[field] == default[field]
+        assert section[field] != instance[field]
 
 
 def test_a_charter_whose_motif_is_incomplete_is_refused_by_the_missing_field(
@@ -641,12 +717,19 @@ def test_a_charter_whose_motif_is_incomplete_is_refused_by_the_missing_field(
 ) -> None:
     """Half a motif is not a motif: a ribbon with no colour of its own
     would be drawn in whatever the surrounding ink happens to be.
+
+    And it is not an absence either, so the product's own may not quietly
+    complete it -- that would hand back three values that exist in no
+    file. The message says both ways out.
     """
     data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
     del data[brand.MOTIF_KEY]["logo_dots"]
     _write_json(fake_repo / BRAND_PATH, data)
-    with pytest.raises(brand.MissingMotifError, match="logo_dots"):
+    with pytest.raises(brand.MissingMotifError, match="logo_dots") as raised:
         brand.motif(fake_repo)
+    message = str(raised.value)
+    assert brand.INSTANCE_PATH.as_posix() in message
+    assert brand.DEFAULT_PATH.as_posix() in message
 
 
 def test_a_charter_whose_motif_is_not_an_object_is_refused(fake_repo: Path) -> None:
@@ -657,47 +740,95 @@ def test_a_charter_whose_motif_is_not_an_object_is_refused(fake_repo: Path) -> N
         brand.motif(fake_repo)
 
 
-def test_the_ribbon_reads_the_charter_rather_than_carrying_a_default(
+def test_the_products_own_charter_losing_its_motif_refuses_and_says_whose(
     default_repo: Path,
 ) -> None:
-    """The generated posters stop as well, not only the downloadable
+    """The one refusal a duplicate can meet without having done anything
+    wrong, so it has to say so: this is the product being broken, not an
+    instance being unconfigured, and the fix is to restore a file rather
+    than to hire a designer.
+    """
+    data = _charter(brand.DEFAULT_PATH)
+    del data[brand.MOTIF_KEY]
+    _write_json(default_repo / brand.DEFAULT_PATH, data)
+    with pytest.raises(brand.MissingMotifError) as raised:
+        brand.motif(default_repo)
+    message = str(raised.value)
+    assert brand.DEFAULT_PATH.as_posix() in message
+    for field in brand.MOTIF_FIELDS:
+        assert field in message
+
+
+def test_the_ribbon_draws_the_products_mark_when_the_instance_has_none(
+    default_repo: Path,
+) -> None:
+    """The generated posters complete as well, not only the downloadable
     templates: `ribbon.py` is the other thing that draws the mark.
     """
-    with pytest.raises(brand.MissingMotifError):
-        ribbon.ribbon_stroke_colour(default_repo)
-    with pytest.raises(brand.MissingMotifError):
-        ribbon.ribbon_width_ratio(default_repo)
+    default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
+    assert ribbon.ribbon_stroke_colour(default_repo) == default["ribbon_stroke"]
+    assert ribbon.ribbon_width_ratio(default_repo) == default["ribbon_width_ratio"]
 
 
-def test_the_command_refuses_a_duplicate_with_no_mark_and_says_what_is_missing(
+def test_a_duplicate_that_has_configured_nothing_builds_every_file(
     default_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Driven, not read: build a second instance that supplies no motif
-    and watch the build stop.
+    """Driven, not read: build a duplicate that supplies no charter at
+    all and watch the command finish.
 
-    And the other half of the same run: the two stylesheets are still
-    derived, from the product's own charter, and its contrasts still clear
-    AA. The palette appears; the mark does not.
+    Both stylesheets and both downloadable templates are written, the
+    product's palette clears AA, and the mark on the two files that
+    travel outward is the product's own -- never this instance's.
     """
-    assert main([]) == 1
+    assert main([]) == 0
     captured = capsys.readouterr()
-    assert brand.MOTIF_KEY in captured.err
-    assert brand.INSTANCE_PATH.as_posix() in captured.err
-    assert ANNOUNCEMENT_SVG_PATH.as_posix() in captured.err
-    assert not (default_repo / ANNOUNCEMENT_SVG_PATH).exists(), (
-        "a refused template must not be half-written"
-    )
     assert "clears AA" in captured.out
+    assert brand.DEFAULT_PATH.as_posix() in captured.out
+    assert main(["--check"]) == 0
+
+    default = _charter(brand.DEFAULT_PATH)[brand.MOTIF_KEY]
+    instance = _charter(BRAND_PATH)[brand.MOTIF_KEY]
+    for rel in (ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH):
+        svg = (default_repo / rel).read_text(encoding="utf-8")
+        assert str(default["ribbon_stroke"]) in svg
+        assert str(default["logo_dots"]) in svg
+        assert str(instance["ribbon_stroke"]) not in svg
+        assert str(instance["logo_dots"]) not in svg
+
     written = (default_repo / SITE_CSS_PATH).read_text(encoding="utf-8")
     assert _charter_colours(brand.DEFAULT_PATH)["turquoise"] in written
     assert _charter_colours(BRAND_PATH)["turquoise"] not in written
 
 
+def test_the_command_refuses_a_half_written_mark_and_says_what_is_missing(
+    fake_repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The refusal that is left, driven the same way: a `motif` somebody
+    wrote and left a field short stops the build, names the file, the
+    field and both ways out, and leaves no half-written template behind.
+    """
+    data = json.loads((fake_repo / BRAND_PATH).read_text(encoding="utf-8"))
+    del data[brand.MOTIF_KEY]["ribbon_stroke"]
+    _write_json(fake_repo / BRAND_PATH, data)
+    (fake_repo / ANNOUNCEMENT_SVG_PATH).unlink(missing_ok=True)
+
+    assert main([]) == 1
+    captured = capsys.readouterr()
+    assert "ribbon_stroke" in captured.err
+    assert brand.INSTANCE_PATH.as_posix() in captured.err
+    assert ANNOUNCEMENT_SVG_PATH.as_posix() in captured.err
+    assert not (fake_repo / ANNOUNCEMENT_SVG_PATH).exists(), (
+        "a refused template must not be half-written"
+    )
+    assert "clears AA" in captured.out
+
+
 def test_a_duplicate_that_brings_only_its_own_mark_builds_completely(
     default_repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The complement: the one thing a duplicate must supply is its mark,
-    and once it has, the product's own palette carries the rest.
+    """The complement: an instance may replace the product's motif with
+    one of its own without writing a palette, and the product's colours
+    carry the rest.
     """
     charter = _charter(brand.DEFAULT_PATH)
     charter[brand.MOTIF_KEY] = _SYNTHETIC_MOTIF

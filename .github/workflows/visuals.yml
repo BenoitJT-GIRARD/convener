@@ -68,7 +68,7 @@ name: Visuals
 #   `visual.py`'s `_load_colours` and `ribbon.py`'s `_load_motif`. The
 #   example's, for the reason two entries up.
 # - `tools/convener_ops/brand.py` -- the reader itself: which charter is in
-#   force, and the refusal when no `motif` is declared.
+#   force, and which `motif` is drawn when that charter declares none.
 #
 # Deliberately absent, and each is a decision rather than an omission:
 # `config/instance.json` and `data/brand.json`, this instance's own
@@ -76,9 +76,10 @@ name: Visuals
 # task 1 -- reacting to them would be running a comparison whose result
 # cannot change. `visuals-production.yml` carries both, and must: that job
 # renders *real* editions, as this instance. And `brand/convener/
-# brand.json`, the product's default charter, which the example never
-# falls back to because it declares one of its own -- and which carries no
-# `motif` by design, so nothing could render a poster from it anyway.
+# brand.json`, the product's default charter -- palette and `motif` both,
+# since 2026-08-26 -- which the example never falls back to because it
+# declares a complete charter of its own, so a change there cannot move a
+# pixel of this job's fixture.
 # - `fonts/**` -- the self-hosted web fonts every rendered glyph comes from.
 # - `tools/uv.lock` -- pins `segno` (the QR renderer) among everything
 #   else Python depends on; a version bump there can change rendered

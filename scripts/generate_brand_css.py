@@ -32,10 +32,15 @@ finished-looking site rather than a grey one. Which of the two is in force
 is `brand.py`'s answer and nobody else's; this script, `ribbon.py` and
 `visual.py` all ask it.
 
-**`motif` is the exception, and it has no default at all.** The ribbon's
-stroke and the logo's dots are a signature. `brand.motif` refuses rather
-than substituting, and this command stops with that refusal rather than
-writing a template wearing another organisation's mark.
+**`motif` has a default of its own too, since 2026-08-26.** It had none
+until then, so that no duplicate could wear a mark somebody else drew --
+right about the mark, wrong about the default, and what it produced was a
+clone whose very first build refused until a designer had been found. The
+product ships its own motif now (`brand/convener/brand.json`), and what
+says an instance is not configured is `published.unconfigured` on the
+public pages rather than a build that will not run. This command still
+stops on a `motif` written and left half-finished, which is a mistake
+nothing can complete.
 
 **AA is checked here, not only in the test suite.** Every pairing the
 charter records is recomputed from the two colours beside it at every run,
@@ -410,8 +415,10 @@ def main(argv: list[str] | None = None) -> int:
             rendered = target.render(root)
         except brand.MissingMotifError as exc:
             # Not "this file needs regenerating": nothing can regenerate
-            # it. The build stops here rather than reaching for a mark
-            # that belongs to somebody else (S-4).
+            # it. A `motif` left half-written names no colour to draw the
+            # ribbon in, and neither the charter in force nor the
+            # product's own can supply the missing half without inventing
+            # a value that appears in no file.
             print(f"{target.rel_path.as_posix()}: {exc}", file=sys.stderr)
             return 1
         except (FileNotFoundError, ValueError) as exc:
