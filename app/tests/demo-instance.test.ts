@@ -14,7 +14,7 @@
  * a comparison of one constant with itself: what reaches this bundle came
  * through `scripts/example-instance.mjs` and `vite.config.ts`'s own
  * `define`, so a copy of those records typed back into `demo.ts` -- the
- * exact regression this task exists to end -- fails here by name.
+ * exact regression this test exists to end -- fails here by name.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

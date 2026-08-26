@@ -88,9 +88,9 @@ export function channelsOf(config: Config): Channel[] {
  * `runbook_progress` exactly as it does for every other checkbox.
  *
  * The label is the channel's own, verbatim. Wrapping it in a sentence
- * written here would put back in TypeScript the one thing this task moved
- * out of it: the words a volunteer reads would stop being editable in the
- * file.
+ * written here would put back in TypeScript the one thing that belongs in
+ * the data file: the words a volunteer reads would stop being editable
+ * there.
  *
  * The `window` is not the channel's: when the promotion lines fall relative
  * to the event is where the phase places them, so it is `phaseItems` that

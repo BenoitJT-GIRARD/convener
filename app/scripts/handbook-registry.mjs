@@ -19,7 +19,7 @@
  * so an ordinary explanatory comment mentioning `file: 'reference/operations.md'`
  * anywhere in `registry.ts` -- even one written to warn against exactly
  * that path -- would have been read back out as a published file, silently
- * reopening the leak this task exists to close. `extractDeclaration` below
+ * reopening the leak this script exists to close. `extractDeclaration` below
  * locates each export's own literal by its opening and closing delimiter
  * (`{`…`};` for `CONTENT_REGISTRY`, `[`…`];` for `PUBLIC_ASSETS`) and
  * `stripComments` removes `//` and `/* *\/` comments from *that slice only*,

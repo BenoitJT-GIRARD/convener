@@ -46,8 +46,8 @@ export function config(overrides: Partial<Config> = {}): Config {
       recording_after_delivery: 14,
     },
     // Two, where `data/config.yml` lists seven: a double that restated the
-    // seven would make every screen test depend on a list this task exists
-    // to leave editable. A test about the channels states its own.
+    // seven would make every screen test depend on a list that exists to
+    // stay editable. A test about the channels states its own.
     //
     // Kept as the last field: `channels.test.ts` regex-replaces a real
     // `configYaml()` output from `channels:` to the end of the string to

@@ -150,7 +150,7 @@ describe('VerifyPage -- with a token', () => {
 
     await screen.findByText('We cannot confirm the current state');
     // The signature was genuine, so the name is still shown -- this is
-    // exactly the case ruling 2 exists for: an unreadable register must
+    // exactly the case the ordering exists for: an unreadable register must
     // never be presented the same way as an invalid certificate.
     expect(screen.getByText(SIGNED.payload_decoded.name)).toBeInTheDocument();
     expect(screen.queryByText('We cannot confirm this certificate')).not.toBeInTheDocument();
@@ -202,7 +202,7 @@ describe('VerifyPage -- a signature-confirmed payload with no identifier field',
   });
 });
 
-describe('VerifyPage -- no token (the printed-page flow, ruling 5)', () => {
+describe('VerifyPage -- no token (the printed-page flow)', () => {
   it('never runs any cryptography and never renders a name -- there is no payload in scope', async () => {
     stubFetch({});
     renderVerify(SIGNED.identifier);

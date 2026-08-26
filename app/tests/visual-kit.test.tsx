@@ -13,7 +13,7 @@
  *    step had: it walked `.md` only and skipped `docs/assets/` outright, and
  *    the video-call background had been sitting unreachable behind that.
  * 3. A template drifts into a closed format, or grows until nobody wants to
- *    clone the repository — the two ways this task's own purpose is undone.
+ *    clone the repository — the two ways this kit's own purpose is undone.
  */
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';

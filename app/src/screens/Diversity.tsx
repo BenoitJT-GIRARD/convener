@@ -53,7 +53,7 @@ const GENDER_LABEL: Record<Gender, string> = {
 };
 
 /**
- * The two natures of objective the spec insists are never merged (G-13).
+ * The two natures of objective, which must never be merged (G-13).
  *
  * A stated preference is a deliberate, published bias the board applies on
  * purpose. A balance target is indicative, bounded to the window, and nobody

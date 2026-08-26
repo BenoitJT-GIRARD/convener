@@ -4,8 +4,8 @@
  * Not that there are seven. The seven in `data/config.yml` are configuration
  * precisely because nobody here can confirm they are still the right seven --
  * that would mean asking the collaborators, which this project never does --
- * so a test counting them would freeze exactly what the task exists to leave
- * free, and the next volunteer to add a channel would meet a red suite.
+ * so a test counting them would freeze exactly what the data file exists to
+ * leave free, and the next volunteer to add a channel would meet a red suite.
  *
  * What is pinned instead is that the list *comes from the file*: a config
  * naming one channel yields that one channel, whatever it is called; the real

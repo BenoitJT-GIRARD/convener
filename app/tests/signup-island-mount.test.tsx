@@ -11,8 +11,8 @@ import cases from '../../tools/tests/fixtures/governance-cases.json';
 //
 // 1. that the bootstrap actually finds `#registration-form` and reads its
 //    `data-event-id`, the same contract `event.njk` writes to;
-// 2. the remount discipline the brief asks every task in this phase to
-//    hold -- `app/src/App.tsx`'s `SignupRoute` used to give this by
+// 2. the remount discipline every island in this project has to hold --
+//    `app/src/App.tsx`'s `SignupRoute` used to give this by
 //    keying `<SignupForm key={eventId} />` on a route match; extracting
 //    the form into a router-less island moved that responsibility here,
 //    to `mountSignupIsland`'s own `key={eventId}`, and this suite is what
@@ -277,8 +277,8 @@ describe('mountSignupIsland -- what an un-keyed render would look like (document
   it('without a key, React would keep the previous instance mounted across a prop change', async () => {
     // This does not call `mountSignupIsland` -- it renders the same way a
     // *broken* version would (no `key`), directly, so this file documents
-    // in code exactly what "break the remount" (this task's mutation 4)
-    // means, and why `mountSignupIsland`'s own `key={eventId}` is load-
+    // in code exactly what "break the remount" means, and why
+    // `mountSignupIsland`'s own `key={eventId}` is load-
     // bearing rather than decorative.
     const { SignupForm } = await import('../src/islands/signup/SignupForm');
     const { createRoot } = await import('react-dom/client');

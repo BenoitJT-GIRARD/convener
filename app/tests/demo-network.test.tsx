@@ -18,8 +18,8 @@
  *
  * What is actually held
  * ---------------------
- * Not "in demo mode nothing is requested". That is false today, and the
- * plan for this task said it in good faith. Five modules in this bundle
+ * Not "in demo mode nothing is requested". That is false today, however
+ * plausible it sounds. Five modules in this bundle
  * put a request on the wire, not four, and the fifth -- `content/fetch.ts`,
  * which loads the handbook markdown that ships inside the build -- is
  * behind no guard at all and must not be: those reads are part of the

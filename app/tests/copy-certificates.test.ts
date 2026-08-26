@@ -39,7 +39,7 @@ describe('PUBLIC_DIR is the exact directory register.ts fetches from', () => {
     // Independently re-derived from this test file's own location,
     // rather than compared against nothing -- if copy-certificates.mjs's
     // own destination directory ever moved to a different subtree (the
-    // exact mutant this round's own ruling names: `public/data`), this
+    // exact mutant this pins against: `public/data`), this
     // is what would catch it. Before this test, no test ever ran either
     // copy script or asserted its destination path at all.
     expect(PUBLIC_DIR).toBe(resolve(APP_ROOT, 'public'));

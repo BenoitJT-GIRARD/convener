@@ -36,8 +36,8 @@
  * programme. That is the state of the data today: all thirty-one speakers
  * carry `undisclosed` for both.
  *
- * **Affiliation is not a dimension here**, although the spec's list of
- * facets mentions institution. It is free text nobody normalises, so
+ * **Affiliation is not a dimension here**, obvious candidate though an
+ * institution is. It is free text nobody normalises, so
  * "Univ. of X" and "University of X" are two buckets; and across this many
  * speakers nearly every bucket would hold exactly one person, which makes an
  * "institutional distribution" a re-listing of the speaker table under a

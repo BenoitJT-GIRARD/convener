@@ -163,7 +163,7 @@ describe('encryptSurveyResponse -- the wire format eventkeys.py documents', () =
   it('the ciphertext length is the same regardless of how much feedback was written', async () => {
     // Measured before this fix: an empty `feedback` produced a
     // 92-character base64 ciphertext and a 2000-character one produced
-    // 2756 -- the exact quasi-identifier the review named. Padding every
+    // 2756 -- the exact quasi-identifier that leaked. Padding every
     // plaintext to PLAINTEXT_PAD_BYTES before AES-GCM removes it: the
     // ciphertext length is now a function of the pad target alone.
     const { publicPem } = await generateEventKeyPair();

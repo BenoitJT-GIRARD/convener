@@ -35,9 +35,8 @@ describe('PUBLIC_KEYS_DIR is the exact directory publicKeys.ts fetches from', ()
   it('resolves to app/public/keys/signing, independent of cwd', () => {
     // Independently re-derived from this test file's own location. Before
     // this test, no test ever ran either copy script or asserted its
-    // destination path at all -- the exact mutant this round's own
-    // ruling names (`DST` -> `public/keys/signing-v2`) survived a fully
-    // green suite.
+    // destination path at all -- the exact mutant this pins against
+    // (`DST` -> `public/keys/signing-v2`) survived a fully green suite.
     expect(PUBLIC_KEYS_DIR).toBe(resolve(APP_ROOT, 'public', 'keys', 'signing'));
   });
 });

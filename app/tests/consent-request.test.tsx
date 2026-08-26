@@ -5,7 +5,7 @@
  * the central one is first: there is no control anywhere on it for recording
  * an answer nobody gave. That test is not a description of the current
  * markup -- adding a "no answer yet" button to `Consent.tsx` makes it fail,
- * which is exactly the mutation this task ran.
+ * which is exactly the mutation it was checked against.
  *
  * The message is exercised through the real file on disk and the real
  * template mechanism, never through a fixture of what the file is supposed to

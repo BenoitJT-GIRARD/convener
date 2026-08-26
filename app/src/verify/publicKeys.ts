@@ -22,7 +22,7 @@
  * carries nothing that could ever identify a lookup, and (unlike
  * `certificates.json`, see register.ts) it is small and effectively fixed
  * -- a handful of keys ever, appended to, never rewritten, growing far
- * slower than the register does. That is the "embedded" in ruling 1: not
+ * slower than the register does. That is what "embedded" means here: not
  * literally zero bytes over the wire, but co-deployed with the page, no
  * dynamic backend behind it, and never varying with what is being
  * verified.

@@ -29,8 +29,8 @@
  * decision to make explicitly, not a default to fall into. Three reasons for
  * calendar here:
  *
- * 1. The spec's table (section 7) writes these as "14 j", "30 j", "7 j",
- *    "14 j", alongside windows it does spell out as working days elsewhere,
+ * 1. These windows have always been written as plain days -- "14 j", "30
+ *    j", "7 j", "14 j" -- beside others that do spell out working days,
  *    and the key is named `sla_days` rather than `sla_working_days`.
  * 2. Reading them as working days would silently stretch 14 days into 20
  *    calendar days and 30 into 42. That is the exact failure this repository
@@ -61,8 +61,8 @@
  * **The zero is not representable.** `Lateness` carries a `days` count only on
  * its `overdue` arm, so a step that is on time has no lateness number to draw
  * and no "0 days overdue" can reach the screen. `overdueDays` still returns
- * `0` before the deadline -- the brief asks for that, and it is arithmetic
- * rather than display -- but nothing renders its result directly.
+ * `0` before the deadline -- that is arithmetic rather than display --
+ * but nothing renders its result directly.
  */
 import type { Config, Speaker } from '../data/types';
 

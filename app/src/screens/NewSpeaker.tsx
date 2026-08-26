@@ -106,8 +106,8 @@ export function NewSpeaker() {
         youtube_url: '',
         forum_thread: '',
         // A new record starts with the survey off, the same "absent means
-        // off" default the migration gives every existing speaker (task
-        // 16 ruling 1) -- turning it on is a deliberate, later edit.
+        // off" default the migration gives every existing speaker --
+        // turning it on is a deliberate, later edit.
         survey_enabled: false,
         runbook_progress: {},
         // Nobody is down for any line, which is where every record starts and

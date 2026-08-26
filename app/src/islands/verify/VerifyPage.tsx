@@ -66,22 +66,22 @@ import type { LookupResult } from '../../verify/register';
  * `test_verification_url_carries_the_token_after_the_fragment_not_before_it`
  * for the Python-side half of this same guarantee.
  *
- * Signature first, register second (ruling 2)
- * -----------------------------------------------
+ * Signature first, register second
+ * --------------------------------
  * `VerifyWithToken` never asks the register anything until a token's
  * signature has already verified -- a malformed or unmatched token never
  * reaches `lookupCertificateState` at all. The register answers "is this
  * currently issued or revoked", not "is this genuine"; asking it the
  * second question, or rendering its unavailability as a verdict on the
- * first, is exactly the confusion ruling 2 exists to prevent -- "a
- * register that cannot be read must say 'I cannot confirm the state',
- * never 'invalid certificate'". `NotVerifiable` below is reachable purely
+ * first, is exactly the confusion this ordering exists to prevent: a
+ * register that cannot be read must say "I cannot confirm the state",
+ * never "invalid certificate". `NotVerifiable` below is reachable purely
  * from a signature check, with no register call involved at all.
  *
- * Every appearance states only what was actually established (ruling 1)
- * -----------------------------------------------------------------------
- * `valid` / `revoked` / `not verifiable` share their tone with what the
- * brief names (`primary` / `accent` / `danger`), but "state unknown" is
+ * Every appearance states only what was actually established
+ * ----------------------------------------------------------
+ * `valid` / `revoked` / `not verifiable` share their tone with the three
+ * intents (`primary` / `accent` / `danger`), but "state unknown" is
  * not one appearance -- it is one *shape* of honesty applied to three
  * different established facts, because "we could not reach our register"
  * and "we read it, and it does not (yet) mention this identifier" and "we

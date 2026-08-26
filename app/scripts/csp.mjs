@@ -125,10 +125,9 @@
  * environment where a violation is *seen*. A developer who adds an
  * `<img src="https://third-party.example/...">` to a screen would watch
  * it load in development and have it refused in production, where nobody
- * is reading a console -- which is the exact class of defect the audit
- * that introduced this policy was about (`tests/demo-network.test.tsx`
- * had already written down that a third-party `<img>` was held by
- * nothing). So the development server carries a policy of its own,
+ * is reading a console -- which is the exact class of defect this policy
+ * exists to catch (`tests/demo-network.test.tsx` had already written down
+ * that a third-party `<img>` was held by nothing). So the development server carries a policy of its own,
  * derived from the shipped one by `devCspMetaContent` below rather than
  * written out a second time, loosening exactly the directives Vite's own
  * development server requires and no others -- so `img-src`, `font-src`,

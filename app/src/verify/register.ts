@@ -34,11 +34,11 @@
  * the top -- there is nothing in it to correlate a request with a person.
  * The register is small (identifier and state, nothing else, one row per
  * certificate ever issued) and static-hosted, so this trade costs nothing
- * that matters and buys back the one property ruling 6 asks for: the
+ * that matters and buys back the property that is worth paying for: the
  * request this page makes carries no identifier at all.
  *
- * Signature first, register second (ruling 2)
- * -----------------------------------------------
+ * Signature first, register second
+ * --------------------------------
  * `VerifyPage` only ever calls this once a token's signature has already
  * verified -- a malformed or unmatched token never reaches this module at
  * all, because there is no state worth asking about for a certificate
@@ -46,8 +46,8 @@
  * caller, not by anything in this file, which is why it is worth saying
  * here too: this module answers "is this identifier currently issued or
  * revoked", never "is this a real certificate" -- those are different
- * questions, and confusing them is exactly the mistake ruling 2 warns
- * against.
+ * questions, and confusing them is exactly the mistake this ordering
+ * exists to prevent.
  */
 
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
@@ -99,7 +99,7 @@ export function isValidIdentifierShape(identifier: string): boolean {
 /**
  * What the register says about one identifier -- four outcomes, not two,
  * because "not recorded" and "we could not read the register" are
- * different facts a caller must never conflate (ruling 2 and ruling 5):
+ * different facts a caller must never conflate:
  *
  * - `issued` / `revoked` -- the register was read successfully and this
  *   identifier is in it.

@@ -1,8 +1,8 @@
 /**
  * A passage that belongs on two pages is written once and included twice.
  *
- * The information architecture asks for one home per notion; the review of the
- * handbook asked for the opposite, and was right: a volunteer who opens
+ * The information architecture asks for one home per notion; reading the
+ * handbook as a volunteer asks for the opposite, and rightly: whoever opens
  * "After the webinar" on the day needs the publication gate in front of them,
  * not a link to it. Both are satisfied by including the passage from the page
  * that owns it instead of copying it there.

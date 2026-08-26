@@ -5,14 +5,14 @@
  * `tools/tests/test_second_instance.py` lays into this repository's own
  * holes to prove that a build made as somebody else carries nothing of the
  * series that happens to run it. It belongs to the product rather than to
- * an instance, and this is the task that makes it the product's first
- * consumer as well as its proof: `src/data/demo.ts` used to hold five
+ * an instance, and this script makes it the product's first consumer as
+ * well as its proof: `src/data/demo.ts` used to hold five
  * speaker records and a governance configuration of its own invention, and
  * two of that invention's strings named *this* organisation's forum and
  * its LinkedIn page. They were compiled into the cockpit's bundle, so a
  * duplicate shipped them too -- which is why
  * `tools/tests/instance_identity.py`'s deferred register carried an entry
- * for that file until this task removed it.
+ * for that file until this script replaced it.
  *
  * Read as bytes, never parsed here. `src/data/demo.ts` parses them with
  * `src/data/yaml.ts`, the very reader every real `data/speakers.yml` goes

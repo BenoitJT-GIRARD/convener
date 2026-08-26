@@ -17,7 +17,7 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
 //    attribute, not a URL) but this island does, since the whole reason
 //    it exists is to read a fragment safely;
 // 2. the bootstrap actually finds `#verify-app` and reads `location.hash`;
-// 3. the remount discipline the brief asks every task in this phase to
+// 3. the remount discipline every island in this project has to
 //    hold -- `App.tsx`'s old `VerifyRoute` used to give this by keying on
 //    a route match, and a second verification link opened in the same tab
 //    (same origin, same path, different fragment) is a same-document
