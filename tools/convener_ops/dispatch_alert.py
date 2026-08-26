@@ -8,7 +8,7 @@ refused the secret before any step ran -- real prevention. That control
 requires GitHub Team or GitHub Pro on a private repository (verified against
 GitHub's own documentation, not assumed); this repository is on GitHub Free,
 and the project's own zero-cost constraint does not suspend for security.
-`docs/superpowers/mise-en-ligne.md` Sec 4 records what that leaves open.
+What that leaves open is recorded rather than glossed over.
 
 What is left, at zero cost, is **detection**: `.github/workflows/
 secret-workflow-monitor.yml` watches every workflow this repository's own

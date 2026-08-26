@@ -40,8 +40,8 @@ undemonstrable for the one step that reads a meeting platform's export:
 `ManualPlatform.get_attendance` read a plaintext CSV `.gitignore` refuses
 to commit (personal data), so the manual path could run neither in CI (the
 file is never there) nor locally (the event's private key must never be
-there, spec S:7). `docs/superpowers/deferred-work.md` entry 10 records
-this in full. `platform.py` now offers a second, committed source --
+there). That gap was recorded rather than glossed over.
+`platform.py` now offers a second, committed source --
 `attendance-import.csv.enc`, encrypted under the event's own public key by
 `convener-encrypt-attendance-export`, needing no secret to produce -- and
 `test_match_attendance_replays_from_committed_registrations_and_export_alone`
@@ -424,7 +424,7 @@ def test_revoke_certificate_replays_from_an_issued_register_entry_alone(
 
 # ------------------------------------------------------------------ #
 # remise -- replays from an issued, undelivered register entry alone.
-# Spec S:8's own example: "une remise echouee se rejoue sans
+# The example: "une remise echouee se rejoue sans
 # regenerer" -- this is that replay, from a register `issue_certificates`
 # never wrote in this process.
 # ------------------------------------------------------------------ #
@@ -480,7 +480,7 @@ def test_deliver_certificate_replays_from_an_issued_undelivered_entry_alone(
     # The exit code alone proved nothing here; inserting `raise
     # RuntimeError` immediately before `sign_for` used to leave this test
     # green. Asserting the printed outcome and that nothing was
-    # regenerated is what actually demonstrates spec S:8's "une remise
+    # regenerated is what actually demonstrates the "une remise
     # echouee se rejoue sans regenerer" this module docstring cites this
     # test for.
     assert deliver_certificate() == 0

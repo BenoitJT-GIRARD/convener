@@ -35,7 +35,7 @@ import type { Registration } from '../../signup/encrypt';
  *   would put two copies of the same legal notice on one page. See
  *   `tools/tests/test_site.py::test_the_notice_precedes_the_reserved_
  *   place_for_the_registration_form`, already checking the static copy.
- * - `AttendanceBoundaries()` (spec S:5's two matching boundaries) stays:
+ * - `AttendanceBoundaries()` (the two matching boundaries) stays:
  *   `event.njk` never carries that text, so nothing is duplicated by
  *   keeping it here.
  * - Class names are plain, semantic strings (`signup-form__field`, ...)
@@ -155,8 +155,8 @@ async function fetchEventPublicKey(eventId: string, signal: AbortSignal): Promis
   }
 }
 
-// Two boundaries `tools/convener_ops/attendance.py` draws and spec S:5 asks to be
-// written "on the event page, in the same place as 'present without having
+// Two boundaries `tools/convener_ops/attendance.py` draws, written
+// "on the event page, in the same place as 'present without having
 // registered'" -- not only in `docs/reference/operations.md`, which a
 // participant never reads. Neither is a matching weakness to keep
 // improving; both are stated here exactly as the matching cascade actually

@@ -74,8 +74,8 @@ That scope is what keeps this quiet when it should be quiet:
 * **An event the file names that `data/speakers.yml` no longer dates** is
   in scope only while its published cutoff is still in the future -- the
   one shape of that case where somebody could still be queued for an event
-  this repository can no longer place in time (Q-1's direction, not the
-  bill's).
+  this repository can no longer place in time -- a question about routing,
+  not about the bill.
 
 A missing or unreadable file is the one unconditional finding
 ---------------------------------------------------------------

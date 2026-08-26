@@ -1302,7 +1302,7 @@ describe('signup relay -- the registration lane', () => {
   });
 
   it('leaves the survey route queuing whatever the routing file says', async () => {
-    // Q-3: the delay rule is the registration's alone. A survey response
+    // The delay rule is the registration's alone. A survey response
     // never reads this file at all.
     globalThis.fetch = stubFetch({ routing: routingFor(-2 * 3600 * 1000) });
     const res = await handle(postSurvey(SURVEY_BODY), env());

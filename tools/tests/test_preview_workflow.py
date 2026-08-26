@@ -28,9 +28,8 @@ never parsed and executed, which here would mean a real `npm ci` and a
 real build, exactly the network access this suite must not take on.
 Running the workflow's own steps for real -- extracted with `safe_load` and
 executed byte-for-byte, including the four mutations that prove each guard
-above actually fails the run -- is this task's own report, not this
-module: see `.superpowers/sdd/2026-08-22-phase-5-vitrine-publique/
-task-13-report.md`.
+above actually fails the run -- was done once, by hand, and is not this
+module's job.
 """
 
 from __future__ import annotations

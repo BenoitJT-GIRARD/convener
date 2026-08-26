@@ -86,7 +86,7 @@ Best regards,
   a step that both stored and sent would have sent one confirmation per
   retry. `resend_confirmation` (the `convener-resend-confirmation` command)
   re-sends the same, current message by hand — a certificate in the spam
-  folder does not exist (spec S:9) — without regenerating the matching
+  folder does not exist — without regenerating the matching
   code: it is a pure function of the event, the address and a secret salt,
   so calling it again reproduces exactly the code the first message
   carried.

@@ -4,8 +4,8 @@
 announcement SVGs already in this repository stand in four bare `<circle>`
 elements for the purple stroke that runs through the designer's own poster
 (`docs/assets/example_and_template_initial_assets/announcement-template_initial.png`,
-gitignored -- it carries a real person's photograph, entry 9 of
-`docs/superpowers/deferred-work.md`). A poster built from circles does not
+gitignored -- it carries a real person's photograph). A poster built from
+circles does not
 read as that mark, no matter how faithfully every other measurement passes.
 
 What the reference actually shows

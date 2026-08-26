@@ -19,7 +19,7 @@ pinned here rather than trusted by inspection:
 3. The published architecture decision records
    (`docs/decisions/index.md`) are a real link from at least one of the
    two files, not merely named -- the working register they were edited
-   from stays under `docs/superpowers/`, which never ships, but the edited
+   from never ships, but the edited
    records do, so a reader must be able to click through to them.
 
 Every check is a sweep over the two files' own text, not a fixed list of
@@ -55,8 +55,7 @@ UNREGISTERED_BUT_SAFE = {"index.md", "README.md", "architecture.md"}
 OPERATIONS_REFERENCE = "docs/reference/operations.md"
 
 #: The published form of the decision register -- see
-#: `docs/decisions/index.md` itself, and `docs/superpowers/mise-en-ligne.md`
-#: Section 1 for why an edited copy exists at all.
+#: `docs/decisions/index.md` itself for what it holds.
 DECISIONS_INDEX = "docs/decisions/index.md"
 
 _LINK_RE = re.compile(r"\]\(([^)]+)\)")

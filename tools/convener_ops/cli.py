@@ -2834,7 +2834,7 @@ def encrypt_attendance_export() -> int:
     file, not a secret"), and encrypting under a public key is exactly
     the operation a stranger with no account could already perform.
     `EVENT_PRIVATE_KEY` never enters this function, and must not: the
-    matching private half stays exactly where spec S:7 requires it, in a
+    matching private half stays exactly where it belongs, in a
     CI job's own environment, never on the machine this command runs on.
 
     Reads `EVENT_ID` -- the same operator-typed, manual-trigger shape
@@ -3002,7 +3002,7 @@ def _salted_record_id(event_id: str, email: str, salt: str) -> str:
 def match_attendance() -> int:
     """`convener-match-attendance`: read the platform's attendance export for
     one event, join it against that event's stored registrations through
-    `attendance.match` (spec S:5's cascade), and report the result.
+    `attendance.match`'s cascade, and report the result.
 
     Reads `EVENT_ID` -- an operator-typed value, the same manual-trigger
     shape `resend_confirmation` already reads, since the platform's
@@ -3148,8 +3148,8 @@ def match_attendance() -> int:
                     )
                 line = f"- {label} -- {minutes} min"
                 if unmatched.tied_with:
-                    # A tie the cascade refused to guess between (spec S:5:
-                    # "empêche de revendiquer la présence d'autrui") --
+                    # A tie the cascade refused to guess between
+                    # ("empêche de revendiquer la présence d'autrui") --
                     # named here rather than left as a bare "unmatched",
                     # since the host is resolving a specific ambiguity, not
                     # starting from nothing. See attendance.py's own
@@ -3177,10 +3177,7 @@ def match_attendance() -> int:
             # count-and-duration summary line says everything a host can
             # act on: nobody, and how much total time.
             lines.append("")
-            lines.append(
-                "## Unreachable -- no address on file, not resolvable by "
-                "hand (spec S:5)"
-            )
+            lines.append("## Unreachable -- no address on file, not resolvable by hand")
             unreachable_minutes = (
                 sum(entry.duration_seconds for entry in result.unreachable) // 60
             )
@@ -3287,8 +3284,8 @@ def _load_invitation_registry(
 
 def invite_survey() -> int:
     """`convener-invite-survey`: e-mail the post-event survey link to every
-    currently *matched* attendee of one event (spec S:6) -- see
-    `survey_invite.py`'s own module docstring, "ruling 1", for why matched
+    currently *matched* attendee of one event -- see
+    `survey_invite.py`'s own module docstring for why matched
     and only matched, never a registrant, an unmatched attendee (no
     address to send to) or a telephone joiner (never had one).
 
@@ -3524,7 +3521,7 @@ def issue_certificates() -> int:
     `recording.yml`'s own header comment already reached. **The manual
     path (no `CONVENER_MEETING_API_TOKEN`) stays blocked regardless**: its own
     attendance export is `.gitignore`d and cannot exist in a CI checkout
-    at all -- see `docs/superpowers/deferred-work.md` entry 10.
+    at all.
 
     Two secrets gate whether *anything* is issued this run, checked before
     any registration is even decrypted:
@@ -4206,7 +4203,7 @@ def revoke_certificate() -> int:
 
 def deliver_certificates() -> int:
     """`convener-deliver-certificates`: e-mail every currently eligible
-    attendee's certificate for one event (spec S:7's "Remise": "Par
+    attendee's certificate for one event (the "Remise": "Par
     courriel. Jamais de document nominatif depose dans un depot.") -- the
     step `issue-certificates.yml` runs immediately after
     `convener-issue-certificates` itself, in the same job and the same
@@ -4215,7 +4212,7 @@ def deliver_certificates() -> int:
 
     Re-derives registrations, attendance and eligibility from scratch,
     exactly as `issue_certificates` does -- the same "recalcule sans
-    reinscrire" discipline (spec S:8) -- and then calls `certificate.issue`
+    reinscrire" discipline -- and then calls `certificate.issue`
     again for each eligible attendee. That second call never grows the
     register (`issue`'s own fingerprint-keyed lookup reuses the existing
     entry's `identifier`, `certificate.py`'s own module docstring,

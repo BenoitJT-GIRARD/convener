@@ -84,8 +84,8 @@ account") undemonstrable for this path: `EVENT_PRIVATE_KEY` must never
 leave a CI job's environment (`eventkeys.py`'s own module docstring), yet
 the plaintext CSV can never reach a CI checkout at all (the `.gitignore`
 rule above forbids it) -- so the manual path could run neither in CI (no
-file) nor locally (no key). `docs/superpowers/deferred-work.md` entry 10
-recorded this in full.
+file) nor locally (no key). That gap was recorded rather than glossed
+over, and stood for a long time.
 
 **The fix is the same trick this design already plays twice for
 `registrations.enc` and `survey-responses.enc`: encrypt under the event's

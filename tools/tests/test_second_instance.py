@@ -80,8 +80,8 @@ What this module cannot see, stated rather than left to be found
   `instance_identity`). Two things this instance owns are held by
   neither, so nothing here can look for them: the **time zone** and the
   **standing start time** (`Europe/Paris` and 12:30, in `visual.py`,
-  `governance.py` and forty-odd other places). It is recorded in
-  `docs/superpowers/inventaire-instance.md`; it cannot become a needle
+  `governance.py` and forty-odd other places). It is recorded rather than
+  glossed over; it cannot become a needle
   until it becomes a declared value.
 
   **The names of the people who run the series were a second, until this

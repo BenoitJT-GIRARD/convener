@@ -1,6 +1,6 @@
 """Schema v3 validation: ballots, board membership, and the publication gate.
 
-Eleven cases, from task-4-brief.md, each pinned on the exact substring its
+Eleven cases, each pinned on the exact substring its
 error message must contain (the migration's own tests and CI both grep for
 these strings). A twelfth case (board_members obsolete) is added per the
 task's decision 2, which is not itself in the brief's table.

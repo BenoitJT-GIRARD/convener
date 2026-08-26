@@ -132,8 +132,8 @@ def test_render_certificate_qr_decodes_to_the_same_url_as_the_printed_text() -> 
 
 def test_render_certificate_is_a_complete_self_contained_html_document() -> None:
     """No external stylesheet, script or image reference -- the document
-    must render identically whether or not the reader is online (spec
-    S:7's own reason a QR is drawn inline rather than referenced)."""
+    must render identically whether or not the reader is online, which is
+    why the QR is drawn inline rather than referenced."""
     doc = _document()
     assert doc.startswith("<!doctype html>")
     assert "<style>" in doc
@@ -162,7 +162,7 @@ def test_render_certificate_with_no_event_title_has_a_sensible_title_tag() -> No
 
 def test_render_certificate_is_deterministic() -> None:
     """Same inputs, same bytes -- the property `cli.py`'s replay depends
-    on (spec S:8): a retried delivery must reproduce the identical
+    on: a retried delivery must reproduce the identical
     document, not merely one carrying the same facts."""
     assert _document() == _document()
 

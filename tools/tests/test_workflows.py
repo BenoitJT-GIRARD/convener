@@ -645,7 +645,7 @@ def test_deploy_workflow_builds_survey_status_before_the_npm_build() -> None:
 # There was a time when a revocation -- a change to
 # data/events/<id>/certificates.yml -- did not even fire this workflow,
 # and the file it would have built was never copied to the showcase, so
-# spec S:7's "le registre fait foi sur l'état" had no observable effect on
+# "le registre fait foi sur l'état" had no observable effect on
 # any verifier. Text assertions on the parsed `run:` block, the same idiom
 # test_notify.py uses for notify.yml, because running the script means a
 # real clone of a real repository -- exactly the network access this
@@ -3911,7 +3911,7 @@ def test_quality_workflow_has_no_third_party_action_to_sha_pin_in_the_new_job() 
 # Pinning the *narrowness* of the secret
 # monitor's own job guard.
 #
-# Change A rests on documented platform behaviour -- GitHub starts a
+# The guard rests on documented platform behaviour -- GitHub starts a
 # `schedule:` or `repository_dispatch:` run only from the default branch
 # -- which no offline test can execute. What a test can hold is the thing
 # that would actually go wrong later: somebody widening that guard to
@@ -4244,8 +4244,8 @@ def test_two_workflows_never_share_a_concurrency_group() -> None:
 # block below touches a workflow file: both workflows are correct, they
 # were merely unguarded.
 #
-# Change B (`validate-data.yml`'s `push: branches: [main]`) is the
-# smaller one. Change C is the one that can fail silently, and the reason
+# The branch filter (`validate-data.yml`'s `push: branches: [main]`) is the
+# smaller one. The ignore list is the one that can fail silently, and the reason
 # is worth stating precisely, because it is *not* the reason
 # `paths-ignore:` was chosen over `paths:`.
 #
@@ -4280,8 +4280,8 @@ DEFAULT_BRANCH = "main"
 
 
 # ------------------------------------------------------------------ #
-# Change B: a push to a branch under review must not run the same checks
-# twice.
+# The branch filter: a push to a branch under review must not run the same
+# checks twice.
 #
 # Pinned as that property, not as the line that implements it. Without a
 # branch filter, a push to a branch with an open pull request matches
@@ -4487,8 +4487,8 @@ def test_narrowing_the_push_trigger_left_the_default_branch_covered(
 
 
 # ------------------------------------------------------------------ #
-# Change C: every path `deploy.yml` ignores really is unreachable from
-# the bundle it deploys.
+# The ignore list: every path `deploy.yml` ignores really is unreachable
+# from the bundle it deploys.
 #
 # The build's inputs are derived, never listed. Three readers, one per
 # mechanism by which a repository path becomes an input to this build:

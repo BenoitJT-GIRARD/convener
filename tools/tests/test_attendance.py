@@ -1,4 +1,4 @@
-"""Tests for `convener_ops.attendance` -- the appariement cascade (spec S:5) and
+"""Tests for `convener_ops.attendance` -- the appariement cascade and
 the summing that turns several connections into one person's duration.
 
 Historical figures at `@example.org` throughout, per project convention:
@@ -681,7 +681,7 @@ def test_no_registrations_leaves_addressed_rows_unmatched() -> None:
 
 
 # ------------------------------------------------------------------ #
-# Eligibility (spec S:5): a share of the session, not a fixed cutoff.
+# Eligibility: a share of the session, not a fixed cutoff.
 # ------------------------------------------------------------------ #
 
 
@@ -772,8 +772,8 @@ def test_eligible_attendees_returns_only_those_crossing_the_threshold() -> None:
 def test_present_without_registration_is_never_a_candidate_for_eligibility() -> None:
     """An `UnmatchedAttendee` -- present in the room, no registration the
     cascade could tie them to -- is excluded from `eligible_attendees` by
-    never being offered to it, not by a computed `False`. Spec S:9 calls
-    this person "non eligible"; this test proves the module reaches that
+    never being offered to it, not by a computed `False`. This person is
+    "non eligible"; this test proves the module reaches that
     verdict by construction rather than by asking `eligible` a question it
     has no honest answer for (see the module docstring)."""
     threshold = EligibilityThreshold(seminar_duration_minutes=90, share=0.5)

@@ -60,7 +60,7 @@ given" — and is well formed.
 | `publication.approved_on` | string | YYYY-MM-DD of that approval. |
 | `publication.objections` | list&lt;PublicationObjection&gt; | Objections raised during the objection window. An unresolved one blocks publication. |
 | `publication.outcome` | enum | Where the record ended up. `published` is written in exactly one place, the gated archiving transition, so it cannot coexist with a refused consent, a standing objection, a missing approval, or an objection window that has not run. Empty while undecided. One of `published`, `withheld` or empty. |
-| `edition_code` | string | The instance's declared `edition_prefix`, a hyphen and 1-4 digits (`AB-7`); assigned when a confirmed record is scheduled. Empty for a record that has not been scheduled. |
+| `edition_code` | string | The instance's declared `edition_prefix`, a hyphen and 1-4 digits (`MRG-7`, under the example instance's own prefix); assigned when a confirmed record is scheduled. Empty for a record that has not been scheduled. |
 | `candidate_dates` | list&lt;CandidateDate&gt; | The slots put to the speaker, with their answers. Empty until the invitation goes out; it stays populated after the lock-in, because which dates were offered and which were refused is the record of how the chosen one was chosen. |
 | `date` | string | YYYY-MM-DD of the talk, frozen at scheduling. |
 | `time` | string | HH:MM, Paris local time, frozen at scheduling. |

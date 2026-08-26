@@ -113,8 +113,8 @@ describe('VerifyPage -- with a token', () => {
 
     await screen.findByText('Certificate revoked');
     // Genuine and revoked is not an accusation: the name still shows,
-    // because the signature really did confirm it (spec S:7's own
-    // "Révocation" section: "La signature reste valide").
+    // because the signature really did confirm it ("La signature reste
+    // valide": revocation touches the register, never the signature).
     expect(screen.getByText(SIGNED.payload_decoded.name)).toBeInTheDocument();
     expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
   });
@@ -157,7 +157,7 @@ describe('VerifyPage -- with a token', () => {
     expect(screen.queryByText('Certificate verified')).not.toBeInTheDocument();
   });
 
-  it('not yet in the register: genuine signature, register read successfully but does not mention this identifier (Important 1a -- must not read as "could not reach our register")', async () => {
+  it('not yet in the register: genuine signature, register read successfully but does not mention this identifier -- must not read as "could not reach our register"', async () => {
     stubFetch({ projection: [] });
     renderVerify(SIGNED.identifier, SIGNED.token);
 
@@ -266,7 +266,7 @@ describe('VerifyPage -- no identifier at all', () => {
   });
 });
 
-describe('VerifyPage -- the keys fetch itself failing must not read as "no key confirms this" (Important 1b, mutation 3)', () => {
+describe('VerifyPage -- the keys fetch itself failing must not read as "no key confirms this"', () => {
   it('a network error fetching the signing keys renders "cannot check right now", never "not verifiable"', async () => {
     stubFetch({ keys: 'fail' });
     renderVerify(SIGNED.identifier, SIGNED.token);

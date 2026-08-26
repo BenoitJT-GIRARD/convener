@@ -109,7 +109,7 @@ beforeEach(() => {
   vi.unstubAllEnvs();
 });
 
-// Spec S:5's two matching boundaries -- "present without having
+// The two matching boundaries -- "present without having
 // registered" and "joined by telephone" -- named on the event page itself,
 // not only in docs/reference/operations.md. `event.njk` carries no copy of
 // this text (unlike the data-protection notice, which the njk template

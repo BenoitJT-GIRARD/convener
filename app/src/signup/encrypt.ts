@@ -60,7 +60,7 @@
  */
 
 /**
- * What a participant supplies, and nothing else (spec S:3): first name,
+ * What a participant supplies, and nothing else: first name,
  * surname, email address; institution is optional, `''` when not given --
  * the same "absent means blank string" idiom `Speaker` uses in
  * `data/types.ts`, not an omitted key. `membership_opt_in` is G-18's

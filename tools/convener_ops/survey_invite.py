@@ -14,12 +14,12 @@ outcomes, not two" section. Only `MatchedAttendee` is invited here:
   person we can name, and can prove was in the room.
 - An **unmatched** attendee (`UnmatchedAttendee`) was in the room but the
   cascade could not tie the address it saw to any registration on file.
-  Not invited, and not only because spec S:6 says "reconnues presentes":
+  Not invited, and not only because the rule says "reconnues presentes":
   this module has no address to send to either. `UnmatchedAttendee`
   carries the *room's* display name and address, never a
   `Registration` -- inventing an invitation from that would mean composing
   a message that names nobody's own stored consent to be written to at
-  all, for a channel spec S:3 restricts to a registration in the first
+  all, for a channel restricted to a registration in the first
   place.
 - An **unreachable** attendee (`UnreachableAttendee`) joined by telephone.
   `attendance.py`'s own module docstring calls this a boundary, not a
@@ -32,8 +32,8 @@ outcomes, not two" section. Only `MatchedAttendee` is invited here:
 So the fact this module invites *matched* attendees, not *eligible* ones
 (`attendance.eligible_attendees`, the certificate-issuing threshold), is
 deliberate too: eligibility is a share of the seminar's own
-scheduled duration, a bar spec S:5 sets for a signed attestation of
-learning-adjacent presence; "reconnue presente" (S:6) asks only whether we
+scheduled duration, a bar set for a signed attestation of
+learning-adjacent presence; "reconnue presente" asks only whether we
 recognised the person in the room at all. Someone present for five minutes
 is not eligible for a certificate, but they were, in fact, recognised
 present, and the spec's own words for who receives a survey invitation are

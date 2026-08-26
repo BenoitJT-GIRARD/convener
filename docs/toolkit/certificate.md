@@ -52,12 +52,12 @@ longer than the identifier printed above it.]
   `eligible_attendees` names for this event -- present, matched to our own
   registration (never the platform's own, self-typed name), for at least
   the configurable share of the session `data/config.yml`'s
-  `eligibility_share` sets (spec S:5). Eligible is a calculation; issuing
+  `eligibility_share` sets. Eligible is a calculation; issuing
   one is `tools/convener_ops/cli.py::issue_certificates`' own decision, made
   once per attendee, not automatic from eligibility alone.
 - **The name comes from our registration, never from the platform.** A
   display name typed into the meeting platform is never trusted directly
-  (spec S:5's whole matching cascade exists because it cannot be) -- the
+  (the whole matching cascade exists because it cannot be) -- the
   name on this certificate is `[first name] [surname]`, exactly as
   submitted at registration.
 - **The duration is rounded to the nearest quarter hour, ties rounding
@@ -92,4 +92,4 @@ longer than the identifier printed above it.]
   why the salt itself is never rotated), and its state. That register
   outlives the registration it was derived from:
   `data/events/<id>/registrations.enc` is destroyed 90 days after the
-  event (spec S:4); `certificates.yml`, in the same directory, is not.
+  event; `certificates.yml`, in the same directory, is not.

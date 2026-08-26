@@ -12,8 +12,8 @@ name: Match attendance
 # run.
 #
 # The one artefact that reaches a human at all -- `unmatched-attendance.md`,
-# the only place spec S:5's unmatched/unreachable distinction (acceptance
-# criterion 9) is ever named for a person to act on -- was produced by this
+# the only place the unmatched/unreachable distinction is ever named for a
+# person to act on -- was produced by this
 # same command and had nowhere to be read from either. Uploaded here as a
 # short-retention, access-controlled build artefact.
 #

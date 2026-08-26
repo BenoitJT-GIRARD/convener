@@ -5,7 +5,7 @@ name: Issue certificates
 # certificate.issue -- until this workflow, nothing did (1604 green tests,
 # and no caller for any of it). The signing key lives only in this
 # repository's own secrets and is used only in continuous integration
-# (spec S:7: "is used only in continuous integration"), so issuing has
+# ("is used only in continuous integration"), so issuing has
 # to happen here, on an operator's own decision once an event's attendance
 # data is ready -- run match-attendance.yml first to review the join
 # before certificates are minted from it (docs/reference/operations.md).
@@ -20,7 +20,7 @@ name: Issue certificates
 # eligibility are both re-derived from data already on file
 # (registrations.enc, decrypted here; the platform's own attendance API,
 # or -- with no CONVENER_MEETING_API_TOKEN configured -- the committed manual
-# export), the same "recalculated without re-registering" (spec S:8) every
+# export), the same "recalculated without re-registering" rule every
 # scheduled job in this repository already relies on.
 on:
   workflow_dispatch:

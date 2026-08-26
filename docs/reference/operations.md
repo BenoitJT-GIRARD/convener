@@ -711,8 +711,7 @@ the confirmation already on file for one event and address, without
 regenerating anything — the matching code is a pure function of the event,
 the address and `CONVENER_MATCHING_SALT`, so it is always exactly the code the
 first message carried. Use it when a confirmation is reported missing;
-spec S:9's own reasoning is that a certificate in the spam folder does not
-exist.
+the reasoning is that a certificate in the spam folder does not exist.
 
 One exception to the no-personal-data-in-a-retained-surface rule above: an
 address is still the only identifier for one registration
@@ -1477,8 +1476,8 @@ registrant's own confirmation code already uses -- when
 `CONVENER_MATCHING_SALT` is configured, or by its position in the list
 otherwise; a tie the cascade refused to guess between is listed by each
 candidate's own record identifier, never its address. An unreachable
-connection (a telephone joiner: never host-resolvable regardless -- spec
-S:5's own boundary) collapses to one count-and-duration line, naming
+connection (a telephone joiner: never host-resolvable regardless -- the
+matching cascade's own boundary) collapses to one count-and-duration line, naming
 nobody. This used to carry display names and addresses in the clear; the
 fix is in `cli.py::UNMATCHED_ATTENDANCE`'s own comment.
 

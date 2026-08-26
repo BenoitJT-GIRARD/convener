@@ -19,7 +19,7 @@
  * boundaries are worth the duplication (see that worker's own README,
  * "Why this is a third worker, not a route on either of the other two").
  * The survey page is the same trade at the browser layer: this form is the
- * intake for a different, optional, event-gated flow (spec S:6, "Facultatif,
+ * intake for a different, optional, event-gated flow ("Facultatif,
  * activable par evenement"), and a shared crypto helper both pages import
  * would couple a change meant for one page's field shape to a review of the
  * other's, for no gain -- neither page holds a decrypt capability either

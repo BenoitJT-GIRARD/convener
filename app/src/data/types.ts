@@ -378,7 +378,8 @@ export interface Speaker {
   publication: Publication;
 
   /** The instance's declared `edition_prefix`, a hyphen and 1-4 digits
-   *  (`AB-7`); assigned when a confirmed record is scheduled. Empty for a
+   *  (`MRG-7`, under the example instance's own prefix); assigned when a
+   *  confirmed record is scheduled. Empty for a
    *  record that has not been scheduled. */
   edition_code: string;
   /** The slots put to the speaker, with their answers. Empty until the

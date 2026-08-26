@@ -5,8 +5,8 @@ cream `#F4F0F1`, purple `#012765` -- and the contrast each pairing gives. Both
 implementations that draw the identity were still a hand-typed copy of that
 file: `site/src/style.css` and `app/src/design/tokens.css` each carried the
 same values retyped, and the application had drifted to a reconstruction's
-palette without anyone deciding that on purpose
-(`docs/superpowers/deferred-work.md`, entry 1). Purple on turquoise measured
+palette without anyone deciding that on purpose.
+Purple on turquoise measured
 4.44 there, below AA; the measured charter gives 7.93, AAA. One source of fact
 and two hand-typed copies is exactly the shape that let that drift happen
 silently. This script closes it: the custom properties are generated, and

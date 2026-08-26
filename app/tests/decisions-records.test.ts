@@ -1,8 +1,7 @@
 /**
  * The architecture decision records under `docs/decisions/`: the edited,
- * published form of the construction-time decision register
- * (`docs/superpowers/mise-en-ligne.md` Section 1). Four properties are
- * pinned here rather than trusted by inspection:
+ * published form of the decisions this project took while it was built.
+ * Four properties are pinned here rather than trusted by inspection:
  *
  * 1. Every `D-NN` file on disk is registered in `CONTENT_REGISTRY` under a
  *    `decisions/d-NN` key, and every such key names a file that exists --
@@ -16,7 +15,7 @@
  * 3. Each record carries the minimum an ADR needs: a status line, and
  *    `Context`, `Decision`, `Rejected` and `Cost` sections.
  * 4. Nothing under `docs/decisions/` links into `docs/superpowers/` --
- *    which stays local and unpublished (D-15, mise-en-ligne.md Section 2).
+ *    the working record, which stays local and is never published.
  *    `registered-links.test.ts` already forbids this indirectly, because
  *    nothing under `docs/superpowers/` is registered; this test pins the
  *    same guarantee directly, so it holds even if that indirect route ever

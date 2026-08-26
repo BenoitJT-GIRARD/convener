@@ -1,7 +1,7 @@
 """The announcement composition: a page, not a hand-drawn SVG.
 
 `docs/assets/example_and_template_initial_assets/announcement-template_initial.png`
-(gitignored -- entry 9 of `docs/superpowers/deferred-work.md`) is the designer's
+(gitignored -- it carries a real person's photograph) is the designer's
 own template. Reading it pixel by pixel, top to bottom: a cream band carrying the
 wordmark; the series title in heavy purple caps on turquoise; a two-line
 invitation to the discussion; a second cream band carrying the talk's own

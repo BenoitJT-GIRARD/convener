@@ -3,8 +3,8 @@
 `docs/assets/announcement-template.svg` and `flyer-template.svg` are the
 files `docs/toolkit/visual-kit.md` links to: a volunteer downloads one,
 opens it in Inkscape or a text editor, fills in the event and exports an
-image. They were drawn by hand, and they had drifted -- entry 1 of
-`docs/superpowers/deferred-work.md` measured it on 2026-08-24. They carried
+image. They were drawn by hand, and they had drifted -- measured, not
+suspected. They carried
 the palette D-16 discarded on accessibility grounds (`#3D2D7C` for
 `#012765`, `#3FB1C2` for `#fecac1`, `#F4F1E6` for `#f4f0f1`) plus four
 greys from no charter at all, and `generate_brand_css.py --check` could

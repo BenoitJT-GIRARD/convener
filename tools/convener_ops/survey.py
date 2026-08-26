@@ -108,7 +108,7 @@ A length cap, for the same reason registration.py has one
 signup relay's own `MAX_CIPHERTEXT_BYTES` (16 KB) already bounds the whole
 envelope, but a field-level cap keeps one field from being able to consume
 nearly all of that budget on its own, and keeps this module's validation
-honest about what "short" (spec S:6) means rather than leaving it entirely
+honest about what "short" means rather than leaving it entirely
 to the relay's coarser, envelope-wide ceiling.
 """
 

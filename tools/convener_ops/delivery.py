@@ -1,5 +1,5 @@
-"""Deliver an issued certificate by e-mail -- the only step in the whole
-phase that sends a nominative document anywhere at all (spec S:7's
+"""Deliver an issued certificate by e-mail -- the only step in this
+project that sends a nominative document anywhere at all (the
 "Remise": "Par courriel. Jamais de document nominatif depose dans un
 depot.").
 
@@ -7,7 +7,7 @@ What this module renders, and why HTML with an inline SVG code
 ------------------------------------------------------------------
 `render_certificate` builds a self-contained HTML document, entirely in
 memory: the text `docs/toolkit/certificate.md` already describes in
-square-bracket placeholders, plus a machine-readable code spec S:7 requires
+square-bracket placeholders, plus the machine-readable code a certificate carries
 -- a QR encoding the certificate's own verification address
 (`certificate.verification_url`, identifier and signed token both), so a
 reader can confirm the document offline, without an account, without
@@ -50,8 +50,8 @@ either
 ------------------------------------------------------------------------------
 `render_certificate` returns a `str`; nothing in this module, and nothing
 in `cli.py`'s own callers, ever writes that string to a file anywhere
-under the repository, at any point, on any path -- see spec S:1 and S:7
-both: "aucune donnee ... dans le depot" is not a rule this module bends
+under the repository, at any point, on any path:
+"aucune donnee ... dans le depot" is not a rule this module bends
 for a *rendered* document just because the document itself is derived
 rather than typed by a person. `test_cli.py`'s own
 `test_deliver_certificates_never_writes_anything_to_disk` is the test that
@@ -73,7 +73,7 @@ default path" -- a build artefact is still an Actions surface, retained
 and downloadable by anyone with the run's own access, and unlike a
 registration confirmation, which carries an address and a matching code
 but no cryptographic attestation of anything, what an unsent certificate
-document *is* is exactly the nominative, signed document spec S:7 says may
+document *is* is exactly the nominative, signed document that may
 never be "depose dans un depot". No retention window makes that the right
 place for it, fourteen days or otherwise.
 
@@ -100,8 +100,8 @@ and the whole command is re-run, or because the workflow itself is simply
 run twice -- reproduces the *exact same* `identifier` and the *exact same*
 token, byte for byte, and therefore the exact same rendered document from
 this module. A retry is a replay, never a second certificate for the same
-person: spec S:8 promises this in words ("une remise echouee se rejoue
-sans regenerer"); the mechanism that makes it true lives in
+person: "une remise echouee se rejoue sans regenerer" is the promise, in
+words; the mechanism that makes it true lives in
 `certificate.py` and `signing.py`, not here -- this module only has to
 avoid *breaking* that property, which is exactly what never caching or
 regenerating any part of the document from anything but its own
@@ -110,7 +110,7 @@ deterministic inputs achieves.
 **What "byte-identical" actually covers: the
 document and the token, not the envelope.** `_SmtpDeliveryTransport.send`
 now sets a `Date` header (`email.utils.formatdate`, current send time) --
-spec S:9's own risk table names the spam folder explicitly ("un certificat
+the spam folder is a named risk here ("un certificat
 dans les indesirables n'existe pas"), and a missing `Date` is a real
 spam-scoring signal, so a resend deserves one exactly as much as the first
 send did. This does not conflict with the replay guarantee above: a `Date`
@@ -133,7 +133,7 @@ left to resolve `CERTIFICATE_ID` against, or to build a fresh delivery
 for, at all -- `data/events/<id>/certificates.yml`, the certificate
 register, survives that destruction untouched (`certificate.py`'s own
 module docstring, "the register survives the data it was derived from"),
-so the certificate keeps verifying, forever, exactly as spec S:7 promises
+so the certificate keeps verifying, forever, exactly as promised
 -- but it can never be *sent* again. Replaying a delivery is bounded by
 the same 90-day window as the registration it reads; "replayable" in this
 module's own docstrings and tests means "replayable while the
@@ -241,7 +241,7 @@ def render_certificate(
     place that has to parse a signed envelope. `identifier` and `token`
     together build the verification address
     (`certificate.verification_url`), printed as text and encoded as the
-    QR -- the one machine-readable code spec S:7 requires.
+    QR -- the one machine-readable code a certificate carries.
 
     Every value that could contain a free-typed name or title is escaped
     with `html.escape` before it reaches the page: `name` (a participant's
@@ -450,8 +450,8 @@ class _SmtpDeliveryTransport:
         # one -- see the module docstring's "what byte-identical actually
         # covers" section for why this does not weaken the replay
         # guarantee (it changes the envelope, never the document or its
-        # signature) and why it belongs here at all (spec S:9's own risk
-        # table names the spam folder by name).
+        # signature) and why it belongs here at all (the spam folder is
+        # a named risk).
         email["Date"] = formatdate(localtime=True)
         # Same reasoning as confirmation.py's own transport: "reply to
         # this message" (the compose() body, implicitly, through this
@@ -494,8 +494,8 @@ class DeliveryResult:
     it the default path rather than the documented exception the record
     called it -- `confirmation.py`'s own module docstring carries that
     history -- but it would have been wrong here regardless of what that
-    module did: a signed, nominative certificate is exactly what spec S:7
-    says may never be "depose dans un depot", an Actions build artefact
+    module did: a signed, nominative certificate is exactly what may
+    never be "depose dans un depot", and an Actions build artefact
     included, and no retention window changes that. `sent` alone is
     everything `cli.py` needs to print a one-line count; the certificate
     itself is never lost by this type refusing to carry a copy, because a

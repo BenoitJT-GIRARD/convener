@@ -77,7 +77,7 @@ def test_the_register_holds_no_name_and_no_address() -> None:
     field check -- a field added one day must make this test fall, not
     pass unnoticed.
 
-    Spec S:4/S:7: "identifiant de certificat, identifiant d'événement,
+    "Identifiant de certificat, identifiant d'événement,
     date d'émission, empreinte salée de l'adresse, état. Aucun nom, aucune
     adresse." This asserts the register's field set is *exactly* that, on
     both the in-memory type (`CertificateEntry`) and its serialised form
@@ -409,7 +409,7 @@ def test_issue_never_derives_the_same_identifier_twice_from_a_fresh_register() -
 
 
 def test_reissuing_the_same_attendee_does_not_grow_the_register() -> None:
-    """Spec S:8: "un appariement corrigé se recalcule sans réinscrire."
+    """A corrected match recalculates without re-registering.
     Given the register `issue` itself returned the first time, calling it
     again for the same attendee and event must reuse the same identifier
     and report `already_registered=True` -- this is the guarantee a

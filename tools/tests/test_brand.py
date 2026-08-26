@@ -5,7 +5,7 @@ existed, two implementations each carried their own hand-typed copy of them --
 `site/src/style.css` and `app/src/design/tokens.css` -- and the application
 had drifted to a reconstruction's palette without anyone deciding that on
 purpose: purple on turquoise measured 4.44 there, below AA, where the
-measured charter gives 7.93, AAA (`docs/superpowers/deferred-work.md`, entry 1).
+measured charter gives 7.93, AAA.
 `scripts/generate_brand_css.py` derives both from the brand file instead,
 and this module holds what makes that stick.
 
@@ -103,7 +103,7 @@ _GUARDED_FILES = (
 
 #: The reconstruction's own three values, exactly as they shipped: the
 #: application's deep-purple accent, its turquoise primary, and its
-#: cyan-tinted paper. See `docs/superpowers/deferred-work.md`, entry 1.
+#: cyan-tinted paper -- measured, and recorded, before they were discarded.
 _RECONSTRUCTION_VALUES = ("#3D2D7C", "#3FB1C2", "#f7fafa")
 
 

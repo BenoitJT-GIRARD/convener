@@ -16,8 +16,8 @@ a host a name to go chase down an address that was never collected --
 `Matched` keeps the two apart so nothing built on top of this module can
 make that mistake either.
 
-The cascade, in spec S:5's order
-----------------------------------
+The cascade, in order
+-----------------------
 1. **The matching code**, found inside the display name. Tried for every
    row, *including* one with no address -- the code depends only on what
    the participant typed, never on what the platform collected about them,
@@ -27,7 +27,7 @@ The cascade, in spec S:5's order
    comparison `upsert` and `find_by_email` already use, reused rather than
    re-derived so this module cannot quietly disagree with them about what
    "the same address" means.
-3. **The normalised name** -- casse, accents, ordre des mots (spec S:5).
+3. **The normalised name** -- casse, accents, ordre des mots.
    Tried only once 1 and 2 have both found nothing.
 
 Only tried in that order, and only when the level above found nothing: a
@@ -99,7 +99,7 @@ missed for want of some punctuation this module did not anticipate becomes
 one line in the host's clean-up list -- a nuisance, corrected by looking at
 the unmatched entry next to a room roster. A code matched with a wrong
 character forgiven would bind one participant's certificate to another
-person's presence, silently, which is the one failure spec S:5's
+person's presence, silently, which is the one failure the rule
 "empêche de revendiquer la présence d'autrui" exists to rule out. Between
 "the host does a little more manual work" and "the wrong person is
 recognised as present", this module chooses to fail toward the former
@@ -129,14 +129,14 @@ sequences -- `test_attendance.py::test_no_attendance_row_is_lost...` checks
 this directly, by summing durations in against durations out and by
 counting distinct people. `unmatched` is deliberately a short, returned
 list rather than a side effect: the host resolves it after the event
-(spec S:5), and a caller (`cli.py`, later) decides how to put it in front
+by hand, and a caller (`cli.py`, later) decides how to put it in front
 of a human -- this module never prints or writes anything itself, the same
 "every module but `cli.py` is pure" rule every other module in this
 package already follows.
 
 Eligibility is a calculation, not a decision
 ---------------------------------------------------
-Spec S:5 turns a matched person's summed duration into a yes/no: eligible
+A matched person's summed duration becomes a yes/no: eligible
 when it reaches a configurable share of the session, by default two
 thirds. This is a *calculation*, kept apart from
 *issuing* a certificate (`certificate.py`): a match
@@ -149,7 +149,7 @@ module's decision, deliberately.
 
 The threshold itself is `EligibilityThreshold`: `seminar_duration_minutes`
 (`data/config.yml`, already required for every other reason this project
-reads "the session's own length") and `share`, spec S:5's configurable
+reads "the session's own length") and `share`, the configurable
 fraction -- configuration, not a constant, because the real number "devra
 s'aligner sur des exigences d'accréditation encore inconnues".
 `eligibility_share` is required in `data/config.yml` (a
@@ -175,8 +175,8 @@ deliberate, and it is this module's second boundary, built the same way
 its matching boundary already is (see "Three outcomes, not two" above): an
 `UnmatchedAttendee` and an `UnreachableAttendee` cannot be passed to
 `eligible` at all, because neither carries the `Registration` a
-certificate would have to name. Two cases follow from that, both named in
-spec S:9's own table:
+certificate would have to name. Two cases follow from that, both of them
+real risks rather than hypotheticals:
 
 - **Present without having registered** (an `UnmatchedAttendee`, or an
   `UnreachableAttendee` if the same person joined by phone) is "non
@@ -187,15 +187,15 @@ spec S:9's own table:
   caller's side, exactly like a registrant who attended too briefly:
   "we do not know who this was" collapsing into "we know who this was and
   they fell short", which are different facts the host resolving
-  `matched.unmatched` needs told apart (spec S:5's "reprise manuelle" is
+  `matched.unmatched` needs told apart (a "reprise manuelle" is
   only actionable if it still says who is unresolved, not who failed a
   duration check). `eligible_attendees` keeps them apart the same way
   `match` keeps `unmatched` apart from `unreachable`: by construction,
   never producing the first kind of answer at all. This is the deliberate
   choice the task brief asks this module to write down: excluded as
   something a caller must handle separately (the host's manual
-  resolution, or, for a telephone joiner, the platform boundary spec S:5
-  already documents on the event page), not folded into "not eligible".
+  resolution, or, for a telephone joiner, the platform boundary the event
+  page already documents), not folded into "not eligible".
 - **Registered, never attended** carries no `AttendanceRow` at all, so
   `match` itself never places them in any of the three outcomes (see
   "Nobody disappears in silence" above) -- there is no duration to compare
@@ -252,7 +252,7 @@ class MatchedAttendee:
 class UnmatchedAttendee:
     """One address the cascade could not tie to a registration -- present
     in the room, absent from every level's answer. The host's short list
-    (spec S:5's "reprise manuelle"); `display_name` is the first spelling
+    (the "reprise manuelle"); `display_name` is the first spelling
     seen for this address, kept only because a host resolving this by hand
     needs something to recognise, not because this module treats it as
     authoritative the way a matched `Registration`'s own fields are."""
@@ -310,8 +310,8 @@ def _display_name_carries_code(display_name: str, code: str) -> bool:
 
 
 def _name_tokens(text: str) -> frozenset[str]:
-    """The case-, accent- and word-order-insensitive form spec S:5 asks
-    the normalised-name level to compare on: NFKD-decompose so an accented
+    """The case-, accent- and word-order-insensitive form the
+    normalised-name level compares on: NFKD-decompose so an accented
     letter splits into its base letter plus a combining mark, drop every
     combining mark, casefold, then split into a set of words -- a set, not
     a sequence, so word order plays no part in the comparison at all.
@@ -383,7 +383,7 @@ def _address_candidates(
 def _name_candidates(
     display_name: str, registrations: Sequence[Registration]
 ) -> list[Registration]:
-    """Cascade level 3, the weakest rung by design (spec S:5 ranks it
+    """Cascade level 3, the weakest rung by design (ranked
     last): every registration whose first name and surname, as a word
     set, equal the display name's -- with any token shaped like a
     matching code dropped first (`_name_tokens_for_matching`), since the
@@ -586,7 +586,7 @@ class EligibilityThreshold:
     scheduled to run (`seminar_duration_minutes`, minutes, `data/config.yml`
     -- the same setting `sweep.py`'s auto-deliver cutoff already reads, so
     building this never re-derives what "the session's own length" means)
-    and what share of it counts (`share`, spec S:5's configurable fraction
+    and what share of it counts (`share`, the configurable fraction
     -- read once by the caller and passed in rather than read from the file
     here, this module is pure like every `convener_ops` module but `cli.py`).
 
@@ -637,7 +637,7 @@ class EligibilityThreshold:
 
 
 def eligible(attendee: MatchedAttendee, threshold: EligibilityThreshold) -> bool:
-    """Whether `attendee`'s summed duration reaches spec S:5's configurable
+    """Whether `attendee`'s summed duration reaches the configurable
     share of the session -- inclusive at the exact boundary: a duration
     equal to the threshold is eligible, not only one that exceeds it. A
     duration that lands exactly there is exactly the amount the fraction
@@ -648,13 +648,13 @@ def eligible(attendee: MatchedAttendee, threshold: EligibilityThreshold) -> bool
     module docstring's "Eligibility answers a question only a matched
     attendee can be asked" for why `UnmatchedAttendee` and
     `UnreachableAttendee` cannot be passed here at all, and what that
-    means for the two cases spec S:9 names ("présent sans s'être inscrit",
+    means for the two cases that matter ("présent sans s'être inscrit",
     a telephone joiner).
 
     Eligible is not certified: this returns a fact about a duration, never
     an act of issuing anything. See the module docstring's "Eligibility is
     a calculation, not a decision" for why that separation is load-bearing
-    (spec S:8), not stylistic."""
+    rather than stylistic."""
     return Fraction(attendee.duration_seconds) >= threshold.threshold_seconds
 
 
@@ -675,7 +675,7 @@ def eligible_attendees(
     this function needs to do to exclude them: they were never a
     candidate in the first place.
 
-    A pure calculation over whatever `matched` currently says (spec S:8):
+    A pure calculation over whatever `matched` currently says:
     re-running `match` on a corrected registration file and calling this
     again produces a fresh answer, with no registry entry, no certificate
     and no state of this function's own to undo first. Which of *these*

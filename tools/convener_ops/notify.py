@@ -636,8 +636,8 @@ def daily_digest(speakers: Any, config: Any, now: datetime) -> str | None:
     parks a day late while this still names the day the window closed. That is
     a wrong day, not a wrong record, and it is stated here rather than hidden.
 
-    **What this cannot report, and why nothing is invented to cover it.** Spec
-    section 7 also lists locked dates and settled nominations. Neither leaves a
+    **What this cannot report, and why nothing is invented to cover it.**
+    Locked dates and settled nominations belong here too. Neither leaves a
     day behind in the schema -- there is no `scheduled_on`, and a nomination's
     outcome is stored without the day it was reached -- and this function takes
     no previous file to diff against. Reporting them would mean either guessing

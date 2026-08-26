@@ -210,7 +210,7 @@ def test_compose_says_something_sensible_with_no_room_link_yet() -> None:
 
 
 def test_compose_carries_the_matching_code_and_its_exact_instruction() -> None:
-    """The load-bearing content (spec S:3, S:5): both the instruction
+    """The load-bearing content: both the instruction
     sentence and the live code itself must be in the message, verbatim --
     this is the test the task's own mutation exercise is built to kill by
     dropping the code from `compose`."""
@@ -235,7 +235,7 @@ def test_compose_gives_a_worked_example_built_from_the_registrants_name() -> Non
 
 
 def test_compose_names_the_fallback_cascade_with_no_code() -> None:
-    """Spec S:5's documented fallback when `CONVENER_MATCHING_SALT` is unset
+    """The documented fallback when `CONVENER_MATCHING_SALT` is unset
     (an ordinary D-13 absence, `registration.matching_code`'s own
     docstring) -- the message must still say *something* about how
     attendance will be matched, not simply omit the sentence."""

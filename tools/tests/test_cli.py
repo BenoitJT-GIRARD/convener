@@ -977,7 +977,7 @@ def test_handle_registration_rejects_a_malformed_committed_file(
 # out of the push-retry loop, into its
 # own step -- `send_confirmation`, `convener-send-confirmation` -- that
 # `.github/workflows/registration.yml` now runs only `if: success()`), and
-# resend_confirmation(): the manual resend spec S:9 asks for.
+# resend_confirmation(): the manual resend a lost message asks for.
 #
 # `_handle_and_send` below runs the same two calls that workflow now makes
 # -- `convener-handle-registration` writes what changed to `$GITHUB_OUTPUT`,
@@ -1783,7 +1783,7 @@ def test_encrypt_attendance_export_never_reads_the_private_key(
 ) -> None:
     """Never touches `EVENT_PRIVATE_KEY` -- the whole reason this command
     can run on a host's own laptop with no CI job and no secret at all
-    (spec S:7: the private half `n'est utilisee qu'en integration
+    (the private half `n'est utilisee qu'en integration
     continue`). Asserted by monkeypatching `os.environ.get` and failing
     the moment this name is asked for through it, not merely by leaving
     it unset (which a bug reading it with `or ''` would pass silently).
@@ -3671,7 +3671,8 @@ def test_issue_certificates_skips_an_attendee_below_the_eligibility_threshold(
 def test_issue_certificates_run_twice_does_not_grow_the_register(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Spec S:8's "recalcule sans réinscrire", exercised through the real
+    """A corrected match recalculating without re-registering, exercised
+    through the real
     CLI wiring: running the job a second time over the exact same event
     reproduces the same one register entry, reported as already on
     record, never a second row.
@@ -5137,7 +5138,7 @@ def test_deliver_certificates_never_writes_anything_to_disk(
         f"deliver_certificates() changed the file set under the repository "
         f"root: {set(after) - set(before)} appeared, "
         f"{set(before) - set(after)} disappeared -- a rendered certificate "
-        "must never be written to disk (spec S:7)"
+        "must never be written to disk"
     )
     # Belt and braces: search every file's own bytes for the tell-tale
     # marker, in case a future edit overwrote an *existing* file rather
@@ -5152,7 +5153,7 @@ def test_deliver_certificates_never_writes_anything_to_disk(
 def test_deliver_certificates_replays_the_identical_document_on_a_second_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Step 2's own test: spec S:8 requires a failed remise to replay
+    """A failed remise must replay
     without regenerating -- the identifier, the payload and the signature
     must not change. Simulated here by calling `deliver_certificates`
     twice in a row (the same recovery path a real retry takes: re-running

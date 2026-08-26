@@ -29,7 +29,7 @@ returns the token, `cli.py` mails it, and this module's own
 persistence -- the register -- only ever receives the `CertificateEntry`
 this file defines, which has no field a name could occupy. The name lives
 exactly once, in the token, in the recipient's own inbox. We do not keep a
-second copy "just in case"; that copy is what spec S:1 forbids.
+second copy "just in case"; that copy is what this project forbids.
 
 Two numbers a stranger must never be able to confuse (ruling 3)
 -------------------------------------------------------------------
@@ -95,7 +95,7 @@ first.
 
 Idempotent without being deterministic
 ------------------------------------------
-Spec S:8: "un appariement corrigé se recalcule sans réinscrire" -- a
+"Un appariement corrigé se recalcule sans réinscrire" -- a
 corrected match recalculates without re-registering. `issue` below is
 called with the *whole current register* for the event (`existing`), looks
 up `fingerprint` against every entry already in it, and reuses that
@@ -144,7 +144,7 @@ lifetime**, and the retention sweep must not treat the two alike. The whole reas
 this register holds no name and no address is so that its own survival
 past that destruction is unconditionally safe: a certificate has to remain
 checkable -- against revocation, at least -- for as long as an
-accreditation body might ask about it, which spec S:7 explicitly extends
+accreditation body might ask about it, which explicitly extends
 past the 90-day window ("les clés publiques antérieures restent
 publiées, pour que la rotation n'invalide jamais un certificat déjà
 émis"). The retention sweep must delete or rewrite
@@ -199,7 +199,7 @@ why the rounding rule above is written down rather than left as whatever
 `CONVENER_MATCHING_SALT` is an ordinary absence for `matching_code`, and not here
 --------------------------------------------------------------------------------
 `registration.matching_code` already documents its own salt as an
-ordinary D-13 absence: without it, no code is derived, and spec S:5's
+ordinary D-13 absence: without it, no code is derived, and the matching
 cascade (exact address, then normalised name) still finds the same
 attendees. `fingerprint` below takes `salt: str`, not `str | None` --
 deliberately narrower than `matching_code`'s own signature, because there
@@ -246,7 +246,7 @@ deterministic" above) stops finding any of them -- every past attendee's
 fingerprint fails to match, and the next `convener-issue-certificates` run
 mints each of them a **second** certificate, exactly the double-issue the
 fingerprint-keyed lookup exists to prevent. Unlike `CONVENER_SIGNING_KEY`,
-which spec S:7 gives an explicit rotation story ("les clés publiques
+which has an explicit rotation story ("les clés publiques
 antérieures restent publiées"), this salt has none: **the intended answer
 is that `CONVENER_MATCHING_SALT` is never rotated once any event's register
 exists.** If it ever leaks, the register's own protection depends on
@@ -273,8 +273,8 @@ itself, which is not published anywhere.
 
 The verification address: one URL, carrying the token (ruling 7)
 -----------------------------------------------------------------------
-Spec S:7 lists "adresse de vérification" as part of a certificate's
-printed content, and step 2 of this task separately asks for "un code
+"Adresse de vérification" is part of a certificate's
+printed content, and so, separately, is "un code
 lisible par machine, contenant le jeton" -- read together, this module
 treats the two as one element: `verification_url(identifier, token)`
 returns a single address, printed as readable text and encoded as this
@@ -403,7 +403,7 @@ __all__ = [
     "verification_url",
 ]
 
-#: The organisation's own name, printed on the document as spec S:7's
+#: The organisation's own name, printed on the document as the
 #: "organisateur". Not a `data/config.yml` key: it does not vary between
 #: events (ruling 8), so a config key here would buy a TypeScript ripple
 #: -- `types.ts`, `validate.ts`, `CONFIG_KEYS`, `readConfig`, every
@@ -555,7 +555,7 @@ class CertificateEvent:
     drag a `Platform` dependency into a module that otherwise touches
     nothing but plain data.
 
-    `title` becomes the signed payload's `event` field (spec S:7:
+    `title` becomes the signed payload's `event` field (the
     "intitulé de l'événement" -- the human-readable name of the talk, not
     `event_id`); `date` becomes the payload's own `date` field, sourced
     from the same speaker record field `docs/reference/schema.md` documents
@@ -759,8 +759,7 @@ def issue(
     - An `issued` row exists -> reuse it, rather than the first match in
       file order regardless of state. `already_registered=True`, the
       register never grows a second row, and a routine re-run stays
-      idempotent (spec S:8: "recalcule sans réinscrire") -- unchanged
-      behaviour from before this round.
+      idempotent ("recalcule sans réinscrire") -- and always has been.
     - Rows exist and *every one* is `STATE_REVOKED` -> refuse
       (`ValueError`), naming `convener-reissue-certificate` as the correction
       path.
@@ -784,7 +783,7 @@ def issue(
     `entry` to the register at all.
 
     Signs a payload of exactly `signing.PAYLOAD_FIELDS` -- `identifier`
-    (this entry's), `event` (`event.title`, spec S:7's "intitulé", not
+    (this entry's), `event` (`event.title`, the "intitulé", not
     `event.event_id`), `name` (`attendee.registration`'s first name and
     surname, joined by one space -- the one place in this whole pipeline a
     name is ever read, and it is never written to anything this function
@@ -908,7 +907,7 @@ def reissue(
 
     `issue` cannot do this safely: its fingerprint lookup is what makes a
     *routine* re-run of `convener-issue-certificates` refuse to grow the
-    register (spec S:8, "recalcule sans réinscrire"), and the register is
+    register ("recalcule sans réinscrire"), and the register is
     keyed on fingerprint alone, so a second `issue` call for a corrected
     attendee reuses the *same* identifier and signs a *different* token
     under it -- two contradictory documents, one register row, neither
@@ -1042,8 +1041,8 @@ def public_register(entries: Sequence[CertificateEntry]) -> list[dict[str, Any]]
 def verification_url(identifier: str, token: str) -> str:
     """The address printed on a certificate as both readable text and a
     machine-readable code -- see the module docstring's "verification
-    address" section for why one URL serves both spec S:7's "adresse de
-    vérification" and this task's own "code lisible par machine, contenant
+    address" section for why one URL serves both the "adresse de
+    vérification" and the "code lisible par machine, contenant
     le jeton"."""
     return (
         f"{VERIFICATION_BASE}{quote(identifier, safe='')}?token={quote(token, safe='')}"
@@ -1185,7 +1184,7 @@ def certificates_path(root: Path, event_id: str) -> Path:
     docstring's "the register survives the data it was derived from"
     section (ruling 2) for why the two must never be treated alike, and
     `eventkeys.py`'s own module docstring for the destruction side of that
-    boundary. A future task-15 implementation that deletes this event's
+    boundary. A retention sweep that deleted this event's
     whole directory, rather than calling `eventkeys.destroy` for
     `registrations.enc` specifically, has to walk past this function (and
     the test that pins it) to do it -- a paragraph in a docstring is

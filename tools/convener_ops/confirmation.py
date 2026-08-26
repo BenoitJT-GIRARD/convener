@@ -3,8 +3,8 @@ participant is ever sent down, and, per the ruling
 below, the only channel that can ever let a real participant notice that
 their registration was silently overwritten.
 
-What the message must carry (spec S:3)
----------------------------------------
+What the message must carry
+-----------------------------
 The room link, the matching code together with the exact instruction to put
 it in the display name used when joining, the data-protection notice, and
 the means to exercise data-protection rights. The second item is
@@ -18,7 +18,7 @@ say different things.
 
 `matching_code` (`registration.py`) returns `None` when `CONVENER_MATCHING_SALT`
 is unset, and `config/integrations.yml`'s own `matching_salt` row calls that
-an *ordinary* D-13 absence, with spec S:5's cascade (exact address, then
+an *ordinary* D-13 absence, with the matching cascade (exact address, then
 normalised name) as the documented fallback. `compose` below does not
 refuse to send without a code for that reason; it sends a message that
 names the fallback instead.
@@ -247,7 +247,7 @@ class Confirmation:
     body: str
 
 
-#: The load-bearing sentence (spec S:3, S:5): the exact instruction that
+#: The load-bearing sentence: the exact instruction that
 #: turns a participant's free-typed display name into a deterministic
 #: match. A named constant, not inlined in `compose`, so
 #: `test_confirmation.py` can pin the same words against
@@ -266,7 +266,7 @@ MATCHING_INSTRUCTION: Final = (
 
 #: What the message says instead, when no code could be generated
 #: (`CONVENER_MATCHING_SALT` unset -- an ordinary D-13 absence, see the module
-#: docstring). Names the fallback spec S:5 documents, so a participant is
+#: docstring). Names the documented fallback, so a participant is
 #: never told nothing about how they will be recognised.
 _NO_CODE_FALLBACK: Final = (
     "We could not generate a matching code for this event, so we will "
@@ -423,7 +423,7 @@ SMTP_ENV_VARS: Final = frozenset(
 
 #: SMTP's own implicit-TLS port (RFC 8314). Any other configured port uses
 #: STARTTLS instead. `CONVENER_SMTP_PORT` exists specifically so this adapter is
-#: not locked to one provider's convention -- raccordement spec S:7: Gmail
+#: not locked to one provider's convention: Gmail
 #: wants 587 with STARTTLS, other providers want 465 implicit TLS, and
 #: hard-coding either would silently exclude the other.
 _IMPLICIT_TLS_PORT: Final = 465

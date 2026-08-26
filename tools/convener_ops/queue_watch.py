@@ -34,7 +34,7 @@ entries that arrived this morning is a healthy queue on a good day; one
 entry stuck for five days is a person who will never get into the room. A
 count cannot tell those apart, and the threshold it would need is a
 guess about how popular an announcement is -- a number this project has
-no measurement for and could only ever set wrong (Q-5).
+no measurement for and could only ever set wrong.
 
 The age is measured from this repository's **own successive observations**,
 not from the millisecond the entry id carries. That timestamp is written by

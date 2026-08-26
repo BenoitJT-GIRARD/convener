@@ -15,7 +15,7 @@ import {
 import type { LookupResult } from '../../verify/register';
 
 /**
- * Spec S:7's "vérification sans divulgation", made into a page: someone
+ * "Vérification sans divulgation", made into a page: someone
  * who receives a certificate confirms it holding nothing but the link
  * printed on it (or the 32-character identifier alone, from the printed
  * page -- see `VerifyTokenless` below) -- no account, no request to us for
@@ -104,7 +104,7 @@ import type { LookupResult } from '../../verify/register';
  *   `null`, not `[]`). Nothing has been checked against anything yet, so
  *   this must never read as `NotVerifiable` -- that would paint a
  *   certificate we simply could not check the same shade of "danger" as
- *   one that is genuinely forged (Important 1b).
+ *   one that is genuinely forged.
  * - `StateUnknown` (info) -- the signature *is* genuine, and either the
  *   register could not be reached, or (a distinct, rarer cause) the
  *   confirmed payload carries no `identifier` field to look one up with
@@ -114,7 +114,7 @@ import type { LookupResult } from '../../verify/register';
  * - `NotInRegister` (info) -- the signature is genuine, the register
  *   *was* read successfully, and it simply does not list this identifier
  *   -- a decisive fact, distinct from "we do not know", and never shown
- *   with `StateUnknown`'s "we could not reach it" wording (Important 1a).
+ *   with `StateUnknown`'s "we could not reach it" wording.
  *
  * No nominative data leaves this component
  * --------------------------------------------
@@ -251,7 +251,7 @@ function NotVerifiable() {
 }
 
 /**
- * Important 1b: reachable only when `loadSigningPublicKeys()` returned
+ * Reachable only when `loadSigningPublicKeys()` returned
  * `null` -- the keys manifest itself could not be fetched or parsed, so
  * nothing has been checked against anything yet. Must never share
  * `NotVerifiable`'s copy or tone: that would tell a stranger a genuine
@@ -272,7 +272,7 @@ function CannotCheckSignature() {
 }
 
 /**
- * Important 1a: the signature is genuine, and the register either could
+ * The signature is genuine, and the register either could
  * not be reached (`reason: 'register_unreachable'`) or the confirmed
  * payload carries no `identifier` field to look one up with at all
  * (`reason: 'no_identifier'` -- this system's own bug, never a
@@ -304,7 +304,7 @@ function StateUnknown({
 }
 
 /**
- * Important 1a: the signature is genuine *and* the register was read
+ * The signature is genuine *and* the register was read
  * successfully -- unlike `StateUnknown`, this is a decisive fact ("it is
  * not there"), not "we do not know". Kept at tone `info`, not `danger`:
  * the signature already confirms this is genuinely one of ours, so this
@@ -426,7 +426,7 @@ function VerifyWithToken({ token }: { token: string }) {
     loadSigningPublicKeys()
       .then(keys => {
         if (cancelled) return undefined;
-        // Important 1b: `null` means the keys manifest itself could not
+        // `null` means the keys manifest itself could not
         // be loaded -- nothing has been checked against anything yet, so
         // this must never reach `verify()` and read as a signature that
         // genuinely failed. `[]` (a manifest that was read successfully
@@ -488,7 +488,7 @@ function VerifyWithToken({ token }: { token: string }) {
   // 'not_found': the register was read successfully and simply does not
   // (yet, or any longer) mention an identifier a signature has just
   // confirmed genuine -- a decisive fact, distinct from "we do not know"
-  // (Important 1a). 'unavailable': the register itself could not be
+  // 'unavailable': the register itself could not be
   // reached at all -- genuinely "we do not know".
   if (lookup.status === 'not_found') return <NotInRegister cert={cert} />;
   return <StateUnknown cert={cert} reason="register_unreachable" />;
