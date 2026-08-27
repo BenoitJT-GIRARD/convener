@@ -347,10 +347,6 @@ def _tracked_files() -> list[str]:
     return listing
 
 
-@pytest.mark.skipif(
-    instance_identity.ships_the_example_as_its_instance(),
-    reason=instance_identity.ONE_INSTANCE,
-)
 def _files_writing_the_address(allowed: set[str]) -> list[tuple[str, str]]:
     """Every tracked file writing any form of the published address,
     except the ones `allowed` names. Taking the exemptions as an argument
@@ -382,6 +378,10 @@ def _files_writing_the_address(allowed: set[str]) -> list[tuple[str, str]]:
     return offending
 
 
+@pytest.mark.skipif(
+    instance_identity.ships_the_example_as_its_instance(),
+    reason=instance_identity.ONE_INSTANCE,
+)
 def test_no_source_file_writes_the_published_address_a_second_time() -> None:
     """The clause that makes "one declaration" a fact rather than a
     claim.
