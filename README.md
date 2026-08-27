@@ -18,11 +18,15 @@ it is reproducible from the private one, so losing it costs a rebuild.
 Anyone standing this up for themselves needs both before anything else
 works. `docs/reference/standing-up.md` is the whole path from nothing —
 no repositories, no accounts — to a running instance, step by step, with
-the two steps no automation can do written out in full; it is walkable
-with a web browser and a text editor, and every account it asks for has a
-free tier this project fits inside. `docs/reference/operations.md` says
-which settings each repository needs, and takes over once the instance is
-standing.
+every step that exists only in a browser written out in full; it is
+walkable with a web browser and a text editor, and every account it asks
+for has a free tier this project fits inside. That page and the run sheet
+an agent follows are both generated from one declaration,
+`STANDING-UP.yml`, so an agent shortens the work without the browser route
+falling behind it — that route is the one the product is designed around.
+`AGENTS.md` says where each rendering lives.
+`docs/reference/operations.md` says which settings each repository needs,
+and takes over once the instance is standing.
 
 ### Which repository is which
 
