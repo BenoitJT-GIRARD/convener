@@ -74,7 +74,18 @@ each time for no reason other than the interpreter's own hash seed.
 
 Usage (from `tools/`, so that the `convener_ops` package is importable):
 
-    TALLY_API_KEY=tly-xxxx uv run python ../scripts/create_tally_form.py
+    set -a && . ../.env && set +a
+    uv run python ../scripts/create_tally_form.py
+    rm -f ../.env
+
+The key is read from a `.env` at the repository root, which `.gitignore`
+already refuses, rather than written on the command line, where a shell would
+keep it in its history and any terminal recording would keep it for ever. The
+deletion is unconditional, so the file exists for one command and no longer;
+`STANDING-UP.yml`'s `tally_form` step declares those three as one line, and
+this is the only credential in that whole sequence ever put in a file on the
+machine running the commands -- every other one is typed into a browser or
+into a prompt that reads it without showing it.
 
 The form is found again on every re-run by matching `FORM_TITLE` against
 each existing form's name (`_find_form_id`) -- so renaming the form inside

@@ -658,14 +658,22 @@ question, its label, whether it is required, and the closed vocabularies
 behind *Gender* and *Career stage* are read from this project's own reader
 rather than retyped, so a label renamed on one side breaks a test rather than
 breaking the live form. Re-running it finds the form by its title and updates
-it in place.
+it in place. The key reaches the command through a `.env` file at the
+repository root rather than through the command line, which a shell keeps in
+its history and every terminal recording keeps for ever; `.gitignore` already
+refuses that file, and the command below deletes it whether the run succeeded
+or not, so it exists for one command and no longer. It is the only credential
+in this sequence ever put in a file on the machine running these commands:
+every other one is typed into a browser or into a prompt that reads it without
+showing it.
 
 **Proves it is done.** Tally's dashboard shows one form, in `DRAFT`, whose
 questions match the reader's own field list. The script creates it as a draft
-deliberately — publishing is the next step, and it is a person's.
+deliberately — publishing is the next step, and it is a person's. `.env` is
+gone afterwards, whichever way the run ended.
 
 ```bash
-cd tools && TALLY_API_KEY=... uv run python ../scripts/create_tally_form.py
+cd tools && set -a && . ../.env && set +a && uv run python ../scripts/create_tally_form.py; rm -f ../.env
 ```
 
 **Without it.** The form is built by hand, which is slower and, more to the
