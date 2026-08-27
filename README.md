@@ -168,6 +168,25 @@ left uncorrected would have gone on writing into this instance's
 repository. `docs/reference/standing-up.md` gives the namespace step as a
 step of its own.
 
+**One more product file carries a value nothing can derive for it, and a
+duplicate meets it before its first pull request.**
+[`.github/CODEOWNERS`](.github/CODEOWNERS) names the team every review
+request goes to, `@<organisation>/editorial-board`, and the organisation
+half is the owner of `config/instance.json`'s `identity.repository`.
+GitHub parses that file itself, before any code of this project's can
+run, so it cannot read the declaration the way the origin and the
+repository now do; generating it with a `--check` in continuous
+integration was the alternative, and it keeps a copy honest without
+removing it, at the price of a Python toolchain in a sequence a text
+editor has to be enough for. Left uncorrected it sends every review
+request to an organisation the duplicate does not own, and
+`tools/tests/test_published.py::test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
+goes red on the first run.
+
+**Six files, then**: three the boundary declares, and three of the
+product's carrying one hand-typed value each — two storage namespace
+identifiers and one team handle.
+
 `docs/reference/operations.md` covers the rest of standing an instance up —
 the accounts, the secrets, and what degrades without each — and
 `docs/reference/standing-up.md` is the ordered path through all of it, from

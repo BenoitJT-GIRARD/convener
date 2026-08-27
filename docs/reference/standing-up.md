@@ -255,20 +255,34 @@ edition prefix your talks are numbered under, and the nine identity values a
 stranger reads — the organisation and its short form, the series, its
 strapline and its tagline, the forum, the contact address, the proposal form,
 and the cockpit's own repository. Leave `proposal_form` as it is for now; the
-intake stage writes it once the form exists.
+intake stage writes it once the form exists. Then correct the one product file
+carrying a value derived from this one that nothing can derive for it:
+`.github/CODEOWNERS` names the team every review request goes to as
+`@<organisation>/editorial-board`, and `<organisation>` is the owner half of
+the repository just declared. GitHub parses that file itself, before any code
+of this project's can run, which is why it holds a literal at all.
 
 **Proves it is done.** After the first publish, open any page of the showcase
 and the cockpit's sign-in screen: the band naming unfilled keys is gone from
 both. The band compares each value against the worked example's own
 declaration, value by value, so a half-filled file still shows it and names
-exactly which keys are left.
+exactly which keys are left. `.github/CODEOWNERS` has a check of its own, and
+it answers long before the first publish: the command below refuses any
+organisation but the declared one.
+
+```bash
+cd tools && uv run pytest tests/test_published.py -k literals
+```
 
 **Without it.** The showcase and the cockpit both announce that they are not
 configured, on every page, which is correct and is the point. Worse than the
 band is what the band exists to prevent: the published address is what every
 other address in this project is derived from, so a duplicate that renames the
 organisation and leaves that address alone publishes under somebody else's
-prefix while every page reads as its own.
+prefix while every page reads as its own. An uncorrected `.github/CODEOWNERS`
+degrades the other way, quietly: every review request goes to a team in an
+organisation this repository does not own, GitHub resolves it to nobody, and
+the pull request waits for a review that cannot arrive.
 
 ### 8. The Board, the season and the bar a vote is measured against
 

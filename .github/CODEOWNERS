@@ -16,7 +16,10 @@
 #
 # The literal has to exist because GitHub reads this file verbatim, before
 # any code of this project's can run -- it is one of the six files a
-# duplicate edits by hand. It cannot drift: `tools/tests/test_published.py::
+# duplicate edits by hand, and README.md's "What a duplicate edits"
+# enumerates all six rather than leaving the count to be trusted: three
+# the boundary declares, two relay configurations, and this file. It
+# cannot drift: `tools/tests/test_published.py::
 # test_the_literals_that_cannot_read_the_declaration_still_agree_with_it`
 # refuses it naming any organisation other than the declared one.
 #
