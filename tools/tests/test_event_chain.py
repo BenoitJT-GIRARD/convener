@@ -484,7 +484,8 @@ def test_deliver_certificate_replays_from_an_issued_undelivered_entry_alone(
     # regeneration this module docstring cites this test for.
     assert deliver_certificate() == 0
     out = capsys.readouterr().out
-    assert f"certificate {first.entry.identifier} not delivered for event mrg-042" in out
+    identifier = first.entry.identifier
+    assert f"certificate {identifier} not delivered for event mrg-042" in out
 
     after = yaml.safe_load(register_path.read_text(encoding="utf-8"))
     assert {row["identifier"] for row in after["certificates"]} == {

@@ -368,9 +368,8 @@ def built_site_with_signup_relay(tmp_path_factory: pytest.TempPathFactory) -> Pa
 def test_content_security_policys_connect_src_admits_the_configured_signup_relay(
     built_site_with_signup_relay: Path,
 ) -> None:
-    page = (built_site_with_signup_relay / "events" / "mrg-05" / "index.html").read_text(
-        encoding="utf-8"
-    )
+    event = built_site_with_signup_relay / "events" / "mrg-05" / "index.html"
+    page = event.read_text(encoding="utf-8")
     match = _CSP_META_RE.search(page)
     assert match is not None
     content = match.group(1).replace("&#39;", "'")

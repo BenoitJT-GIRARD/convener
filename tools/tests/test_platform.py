@@ -1014,15 +1014,12 @@ def test_get_recording_is_available_once_a_url_is_typed_in_by_hand(
     says this: recording URLs are entered by hand after publishing, and no
     upload is attempted -- so `size` is not knowable here (the file is not
     hosted by us) and is always 0 for the manual implementation."""
-    speakers = [
-        _speaker(edition_code="MRG-921", youtube_url="https://videos.example.org/mrg-921")
-    ]
+    address = "https://videos.example.org/mrg-921"
+    speakers = [_speaker(edition_code="MRG-921", youtube_url=address)]
 
     recording = _platform(tmp_path, speakers=speakers).get_recording("mrg-921")
 
-    assert recording == Recording(
-        url="https://videos.example.org/mrg-921", size=0, available=True
-    )
+    assert recording == Recording(url=address, size=0, available=True)
 
 
 def test_get_recording_raises_when_no_speaker_record_matches_the_event(

@@ -229,7 +229,12 @@ def test_the_two_per_event_findings_are_told_apart() -> None:
     two happened -- a file that never heard of an event is a deploy that
     never ran; a wrong cutoff is a deploy older than the data."""
     expected = _cutoffs(_LIVE)
-    other = {"id": "spk-104", "edition_code": "MRG-10", "date": "2026-10-01", "time": ""}
+    other = {
+        "id": "spk-104",
+        "edition_code": "MRG-10",
+        "date": "2026-10-01",
+        "time": "",
+    }
     expected |= _cutoffs(other)
     published = {"mrg-10": "2020-01-01T00:00:00Z"}
     fired = routing_watch.findings(routing_watch.divergences(expected, published, _NOW))

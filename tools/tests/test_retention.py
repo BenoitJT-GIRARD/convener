@@ -408,7 +408,8 @@ def test_find_by_matching_code_is_none_without_a_salt() -> None:
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     file, _replaced = upsert(RegistrationFile(), ada, private_pem=private_pem)
 
-    assert find_by_matching_code(file, "mrg-042", "ABCD-2345", None, private_pem) is None
+    found = find_by_matching_code(file, "mrg-042", "ABCD-2345", None, private_pem)
+    assert found is None
 
 
 def test_find_by_matching_code_skips_an_entry_it_cannot_decrypt() -> None:

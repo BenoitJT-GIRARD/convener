@@ -493,7 +493,8 @@ def test_key_status_is_destroyed_once_the_registry_says_so() -> None:
     # git after destruction (only the private half is gone) is exactly what
     # a real destroyed event looks like, but the registry entry alone must
     # already be enough to answer "destroyed".
-    assert key_status("mrg-042", key_was_published=False, registry=registry) == DESTROYED
+    status = key_status("mrg-042", key_was_published=False, registry=registry)
+    assert status == DESTROYED
 
 
 def test_destroy_raises_for_a_key_that_was_never_created() -> None:

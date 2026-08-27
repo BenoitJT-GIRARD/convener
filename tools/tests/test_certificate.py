@@ -555,15 +555,12 @@ def test_revoke_matches_the_right_event_when_two_share_an_identifier() -> None:
     practice -- `_new_identifier`'s 128 bits of randomness -- but the
     register type does not itself forbid it), `revoke` must touch only the
     row for the event it was asked about."""
-    this_event = CertificateEntry(
-        "shared-id", "mrg-042", date(2026, 8, 20), "fa", STATE_ISSUED
-    )
-    other_event = CertificateEntry(
-        "shared-id", "mrg-999", date(2026, 8, 20), "fb", STATE_ISSUED
-    )
+    day = date(2026, 8, 20)
+    this_event = CertificateEntry("shared-id", "mrg-042", day, "fa", STATE_ISSUED)
+    other_event = CertificateEntry("shared-id", "mrg-999", day, "fb", STATE_ISSUED)
     register = revoke((this_event, other_event), "mrg-042", "shared-id")
     assert register == (
-        CertificateEntry("shared-id", "mrg-042", date(2026, 8, 20), "fa", STATE_REVOKED),
+        CertificateEntry("shared-id", "mrg-042", day, "fa", STATE_REVOKED),
         other_event,
     )
 
