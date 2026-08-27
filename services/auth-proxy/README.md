@@ -14,12 +14,20 @@ command. That is the condition of transferability — see decision D-03.
 
 ## Deploying
 
+Run *Deploy auth relay* from the Actions tab. That workflow reads the one
+address `config/instance.json` declares this project is published at, and
+passes its origin to Wrangler:
+
 ```bash
-npm install
-npx wrangler deploy
+npx wrangler deploy --var "ALLOWED_ORIGIN:$origin"
 ```
 
-Set `ALLOWED_ORIGIN` in `wrangler.toml` to the application's origin.
+`ALLOWED_ORIGIN` is the only origin this worker answers cross-origin
+requests for, and it is deliberately not written in `wrangler.toml` — that
+file's own header says why, and what was rejected. Deploying from a laptop
+means running the same command with the same derivation; a `wrangler
+deploy` without it leaves a worker that refuses every request, which is the
+loud half of D-25 rather than a silent one.
 
 No client secret is required. The device flow's initial exchange
 (`grant_type=urn:ietf:params:oauth:grant-type:device_code`) does not need

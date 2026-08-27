@@ -43,8 +43,10 @@ fully usable; onboarding is simply slower.
    workflow's own token, not by this app -- so granting it *Issues* would be
    a permission nobody uses on a repository holding personal data.
 2. Create a Cloudflare account with the organisation address; deploy the
-   worker from `services/auth-proxy/` (`npx wrangler deploy` from that
-   folder — see its README).
+   worker in `services/auth-proxy/` by running *Deploy auth relay* from the
+   Actions tab. That workflow derives the origin the relay answers
+   cross-origin requests for from `config/instance.json` and passes it to
+   Wrangler, so there is nothing to fill in first — see the worker's README.
 
 **Secrets to set:**
 - Repository secret `CLOUDFLARE_API_TOKEN` (used by *Deploy auth relay* to
@@ -208,11 +210,13 @@ why one alone was not enough.
 **To create:**
 1. Deploy the worker from `services/signup-relay/`: `npm install`, then
    `npx wrangler kv namespace create SIGNUP_RELAY_KV` once and paste the
-   printed id into that folder's `wrangler.toml`, then `npx wrangler
-   deploy` — see its README — to the same Cloudflare account used for the
-   other two workers. `SIGNUP_RATE_LIMITER`, the burst limiter, needs no
-   equivalent creation step and ships already configured in
-   `wrangler.toml`.
+   printed id into that folder's `wrangler.toml`, then run *Deploy signup
+   relay* from the Actions tab — see its README — against the same
+   Cloudflare account used for the other two workers. The origin the relay
+   answers cross-origin requests for is derived from `config/instance.json`
+   by that workflow and passed to Wrangler, so there is no second value to
+   fill in. `SIGNUP_RATE_LIMITER`, the burst limiter, needs no equivalent
+   creation step and ships already configured in `wrangler.toml`.
 2. Set repository **variable** `VITE_SIGNUP_RELAY_URL` (Settings → Secrets
    and variables → Actions → Variables) to the deployed worker's URL. Public
    by construction, like `VITE_AUTH_PROXY_URL` above — a relay URL ships

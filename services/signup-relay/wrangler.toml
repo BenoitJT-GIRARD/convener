@@ -2,22 +2,26 @@ name = "convener-signup-relay"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
-# The application's origin -- the only one this worker answers CORS
-# preflights for. Origin carries no path, so the app being served from a
-# subpath of this host does not change it. Not a secret -- it ships in
-# every CORS response header already.
+# There is no `[vars]` table here, and the absence is the decision.
 #
-# This is the one address `config/instance.json`
-# declares this project is published at, and it is written out here
-# because a Worker deploys from this file and can read nothing else --
-# TOML has no include, and this package has no parser for the declaration
-# that would not be a new dependency. `test/index.test.js` reads both and
-# refuses them disagreeing, so the copy cannot drift even though it has
-# to exist. services/auth-proxy/wrangler.toml carries the same value for
-# the same reason, held by its own suite the same way.
-[vars]
-ALLOWED_ORIGIN = "https://example-instance.github.io"
-
+# The application's origin -- the only one this worker answers CORS
+# preflights for -- used to be written out here as `ALLOWED_ORIGIN`.
+# Origin carries no path, so the app being served from a subpath of this
+# host does not change it, and it is not a secret: it ships in every CORS
+# response header already. What it is, is the one address
+# `config/instance.json` declares this project is published at, spelled a
+# second time in a file the product owns. A Worker deploys from this file
+# and can read nothing else, so the copy looked unavoidable; what actually
+# followed from it was a published product carrying the example instance's
+# origin, and a duplicate editing a product file before its first deploy.
+#
+# `.github/workflows/deploy-signup-relay.yml` derives the origin from the
+# declaration and hands it to `wrangler deploy --var
+# ALLOWED_ORIGIN:<origin>`, which reaches `src/index.js` as
+# `env.ALLOWED_ORIGIN` exactly as an entry here would.
+# services/auth-proxy/wrangler.toml's own header carries the reasoning in
+# full, including the generator-with-a---check this was chosen over.
+#
 # The survey switch was once checked against a plain
 # public HTTPS URL here (SURVEY_STATUS_URL), because it seemed like the
 # cheaper read: no token, no GitHub API budget. That is gone:

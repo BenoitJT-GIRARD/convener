@@ -157,7 +157,10 @@ sets `content-type: application/json`, which the Fetch spec does not
 exempt from a preflight (only a handful of simple header values are).
 `services/auth-proxy/src/index.js` already solved this once for a
 different worker; this one copies that pattern rather than inventing a
-second one: an `ALLOWED_ORIGIN` var (`wrangler.toml`), a 204 answer to the
+second one: an `ALLOWED_ORIGIN` var (passed to `wrangler deploy --var` by
+`deploy-signup-relay.yml`, which derives it from `config/instance.json`;
+`services/auth-proxy/wrangler.toml`'s header says why it is written in no
+configuration file), a 204 answer to the
 preflight, and CORS headers on *every* response this worker sends, success
 or error — a caller's `fetch` cannot read a response body or even a bare
 status code cross-origin without `Access-Control-Allow-Origin` on that
@@ -421,13 +424,27 @@ for a caller to get wrong.
 
 ## Deploying
 
+Run *Deploy signup relay* from the Actions tab. Once, before the first
+run, the KV namespace has to exist:
+
 ```bash
 npm install
 npx wrangler kv namespace create SIGNUP_RELAY_KV   # once, then paste the
                                                      # printed id into
                                                      # wrangler.toml
-npx wrangler deploy
 ```
+
+The workflow's own deploy command reads the one address
+`config/instance.json` declares this project is published at and passes its
+origin to Wrangler:
+
+```bash
+npx wrangler deploy --var "ALLOWED_ORIGIN:$origin"
+```
+
+Deploying from a laptop means running that same command with the same
+derivation; a bare `wrangler deploy` leaves a worker that refuses every
+request rather than one that answers for the wrong site.
 
 `SIGNUP_RATE_LIMITER` needs no equivalent creation step — see its comment
 in `wrangler.toml`.
@@ -458,3 +475,6 @@ in `wrangler.toml`.
 
 Neither `CONVENER_DISPATCH_TOKEN` nor a KV namespace id belongs in
 `wrangler.toml` as a literal secret value — see that file's own comments.
+`ALLOWED_ORIGIN` is not there either, for a different reason: it is this
+instance's own address, and the deploy derives it rather than reading it
+from a file the product owns.

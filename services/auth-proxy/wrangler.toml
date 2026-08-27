@@ -2,11 +2,31 @@ name = "convener-auth-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
-# The application's origin -- the only one this worker answers CORS
-# preflights for. This is the one address
-# `config/instance.json` declares this project is published at, written
-# out here because a Worker deploys from this file and can read nothing
-# else. `test/index.test.js` reads both and refuses them disagreeing; see
-# services/signup-relay/wrangler.toml's own note for the full reasoning.
-[vars]
-ALLOWED_ORIGIN = "https://example-instance.github.io"
+# There is no `[vars]` table here, and the absence is the decision.
+#
+# This worker answers CORS preflights for exactly one origin: the address
+# `config/instance.json` declares this project is published at. That value
+# used to be written out below, because a Worker deploys from this file
+# and can read nothing else. It was checked -- and still a copy: a product
+# file carrying one instance's address, so the published product shipped
+# the example instance's origin, and a duplicate had a file the product
+# otherwise owns to edit before its first deploy.
+#
+# `.github/workflows/deploy-auth-proxy.yml` derives the origin from the
+# declaration instead and hands it to `wrangler deploy --var
+# ALLOWED_ORIGIN:<origin>`, which reaches `src/index.js` as
+# `env.ALLOWED_ORIGIN` exactly as a `[vars]` entry would. Generating this
+# line from the declaration with a `--check` in CI -- the shape
+# `scripts/generate_schema_doc.py` and `generate_standing_up_doc.py`
+# already use -- was the alternative, and it was rejected for what it
+# leaves behind: a generated copy is still a copy *in the file*, so the
+# product would still publish somebody's real origin and a duplicate would
+# still carry a product file in its diff, which is the merge surface
+# `config/boundary.yml` exists to keep empty. A generator can keep a copy
+# honest; only removing the copy ends it.
+#
+# `src/index.js` refuses every request when `ALLOWED_ORIGIN` is unset, so a
+# deploy that dropped the flag fails closed rather than answering for
+# anybody (D-25). `tools/tests/test_published.py` holds both halves: no
+# `services/*/wrangler.toml` names an origin, and both deploy workflows
+# derive one.

@@ -203,7 +203,7 @@ it over.
 |---|---|---|---|
 | 12 | `github_app` | hand over | The GitHub App that signs volunteers in |
 | 13 | `cloudflare_account` | hand over | The Cloudflare account, and the token CI deploys with |
-| 14 | `relay_bindings` | carry out | The two values in the workers a duplicate has to correct |
+| 14 | `relay_bindings` | carry out | The one value in the workers a duplicate has to fill in |
 | 15 | `relay_tokens` | hand over | The two dispatch tokens the relays hold |
 | 16 | `auth_relay` | carry out | The sign-in relay, deployed and pointed at |
 | 17 | `signup_relay` | carry out | The relay a registration passes through |

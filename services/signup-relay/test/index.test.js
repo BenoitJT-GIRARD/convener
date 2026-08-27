@@ -29,52 +29,22 @@ const VALID_BODY = JSON.stringify({ event_id: EVENT_ID, ...VALID_ENVELOPE });
 const SURVEY_ENVELOPE = JSON.parse(SURVEY_CASES[0].envelope);
 const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 
-// The origin this worker answers CORS preflights for is
-// the one address `config/instance.json` declares this project is
-// published at -- the same declaration `tools/convener_ops/published.py`, the
-// application's build and the showcase's build all read (D-14). A Worker
-// cannot read any of it: it runs on Cloudflare with no repository in
-// reach, so the deployed value lives in this package's own
-// `wrangler.toml` and reaches `handle` as `env.ALLOWED_ORIGIN`. That is
-// the honest arrangement, and it leaves exactly one thing for a test to
-// hold: that the value shipped for deployment is the address the project
-// is actually published at. TOML has no include and no reader here
-// without a dependency this package does not have and the zero-cost
-// constraint forbids adding, so the one line is matched out of it -- and
-// a `wrangler.toml` that stopped declaring it fails loudly below rather
-// than silently exercising this suite against a value nothing deploys.
-// Read inside the one test that needs it, never while this module loads.
-// `config/instance.json` is a path
-// `config/boundary.yml` hands to the instance, and a derived repository
-// is entitled not to have it: a read at module scope would have taken
-// this whole suite down at import -- every test in it, including the
-// dozens that exercise the worker and touch no declaration at all -- with
-// a stack trace instead of a sentence. Inside the test, exactly one
-// assertion goes red, and it is the one that is actually about the
-// declaration.
-function declaredOrigin() {
-  return new URL(
-    JSON.parse(
-      readFileSync(new URL('../../../config/instance.json', import.meta.url), 'utf-8'),
-    ).published_url,
-  ).origin;
-}
-
-const WRANGLER = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf-8');
-const DEPLOYED_ORIGIN_MATCH = /^ALLOWED_ORIGIN\s*=\s*"([^"]+)"/m.exec(WRANGLER);
-if (!DEPLOYED_ORIGIN_MATCH) {
-  throw new Error(
-    'wrangler.toml no longer declares ALLOWED_ORIGIN -- this worker would ' +
-      'deploy answering CORS preflights for nothing at all',
-  );
-}
-const ALLOWED_ORIGIN = DEPLOYED_ORIGIN_MATCH[1];
-
-describe('the deployed origin is the address this project is published at', () => {
-  it('matches config/instance.json', () => {
-    expect(ALLOWED_ORIGIN).toBe(declaredOrigin());
-  });
-});
+// The origin this worker answers CORS preflights for is not this
+// package's to know. It is the one address `config/instance.json`
+// declares this project is published at, and it reaches `handle` as
+// `env.ALLOWED_ORIGIN` -- passed to `wrangler deploy --var` by
+// `.github/workflows/deploy-signup-relay.yml`, which reads the
+// declaration through the reader that owns it. `wrangler.toml` names no
+// origin at all; `services/auth-proxy/wrangler.toml`'s own header argues
+// why, and `tools/tests/test_published.py` is where the two are held
+// together, on the side that has the declaration in reach.
+//
+// So this suite states an origin of its own instead of reading one, and
+// that is the point: every test below is about what the worker does with
+// whatever origin it was deployed for, and none of them is about which
+// origin this instance happens to use. Under `.test`, which RFC 2606
+// reserves, so it is a fixture by construction.
+const ALLOWED_ORIGIN = 'https://pages.example.test';
 
 const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cockpit/dispatches';
 const CONTENTS_URL = (id) =>
@@ -970,10 +940,11 @@ describe('signup relay -- the /survey route', () => {
     it('never depends on the published site at all', async () => {
       await handle(postSurvey(SURVEY_BODY), env());
       const calls = globalThis.fetch.mock.calls;
-      // Built from the declaration rather than typed: the address this
-      // worker must not reach for is whatever address this project is
-      // published at, which is exactly what changes under a duplicate.
-      const published = new URL(declaredOrigin()).host;
+      // Built from the origin this worker was deployed for rather than
+      // typed: the address it must not reach for is whichever site it
+      // answers preflights for, which is exactly what changes under a
+      // duplicate.
+      const published = new URL(ALLOWED_ORIGIN).host;
       expect(calls.every(([url]) => !String(url).includes(published))).toBe(true);
     });
   });

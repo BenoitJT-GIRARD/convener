@@ -1,49 +1,22 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { handle } from '../src/index.js';
 
-// The origin this worker answers CORS preflights for
-// is the one address `config/instance.json` declares this project is
-// published at. A Worker can read none of that -- it runs on Cloudflare
-// with no repository in reach -- so the deployed value lives in this
-// package's own `wrangler.toml` and reaches `handle` as
-// `env.ALLOWED_ORIGIN`; what a test can hold is that the value shipped
-// for deployment is the address the project is actually published at.
-// See `services/signup-relay/test/index.test.js`'s own copy of this
-// block for the reasoning in full, including why the one TOML line is
-// matched rather than parsed.
-// Read inside the one test that needs it, never while this module loads.
-// `config/instance.json` is a path
-// `config/boundary.yml` hands to the instance, and a derived repository
-// is entitled not to have it: a read at module scope would have taken
-// this whole suite down at import -- every test in it, including the
-// dozens that exercise the worker and touch no declaration at all -- with
-// a stack trace instead of a sentence. Inside the test, exactly one
-// assertion goes red, and it is the one that is actually about the
-// declaration.
-function declaredOrigin() {
-  return new URL(
-    JSON.parse(
-      readFileSync(new URL('../../../config/instance.json', import.meta.url), 'utf-8'),
-    ).published_url,
-  ).origin;
-}
-
-const WRANGLER = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf-8');
-const DEPLOYED_ORIGIN_MATCH = /^ALLOWED_ORIGIN\s*=\s*"([^"]+)"/m.exec(WRANGLER);
-if (!DEPLOYED_ORIGIN_MATCH) {
-  throw new Error(
-    'wrangler.toml no longer declares ALLOWED_ORIGIN -- this worker would ' +
-      'deploy answering CORS preflights for nothing at all',
-  );
-}
-const ALLOWED_ORIGIN = DEPLOYED_ORIGIN_MATCH[1];
-
-describe('the deployed origin is the address this project is published at', () => {
-  it('matches config/instance.json', () => {
-    expect(ALLOWED_ORIGIN).toBe(declaredOrigin());
-  });
-});
+// The origin this worker answers CORS preflights for is not this
+// package's to know. It is the one address `config/instance.json`
+// declares this project is published at, and it reaches `handle` as
+// `env.ALLOWED_ORIGIN` -- passed to `wrangler deploy --var` by
+// `.github/workflows/deploy-auth-proxy.yml`, which reads the declaration
+// through the reader that owns it. `wrangler.toml` names no origin at
+// all; its own header argues why, and `tools/tests/test_published.py` is
+// where the two are held together, on the side that has the declaration
+// in reach.
+//
+// So this suite states an origin of its own instead of reading one, and
+// that is the point: every test below is about what the worker does with
+// whatever origin it was deployed for, and none of them is about which
+// origin this instance happens to use. Under `.test`, which RFC 2606
+// reserves, so it is a fixture by construction.
+const ALLOWED_ORIGIN = 'https://pages.example.test';
 
 const env = { ALLOWED_ORIGIN };
 

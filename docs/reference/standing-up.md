@@ -384,8 +384,9 @@ tab.
 ## Stage 5 — The three workers
 
 Sign-in, registration intake and proposal intake each need an edge worker, and
-all three deploy to one free Cloudflare account. Two of them also need
-bindings, and two carry an origin a duplicate has to correct by hand.
+all three deploy to one free Cloudflare account. Two of them also need a
+storage namespace, which does not exist until it is created and cannot be
+shipped filled in.
 
 ### 12. The GitHub App that signs volunteers in
 
@@ -468,36 +469,32 @@ dependency the rest of this project avoids.
    secret, named `CLOUDFLARE_API_TOKEN`. Then paste it into the shared store;
    Cloudflare will not show it again either.
 
-### 14. The two values in the workers a duplicate has to correct
+### 14. The one value in the workers a duplicate has to fill in
 
 **Who:** an agent, or a person.
 
-Two of the three workers carry a value that belongs to whoever is running
-them, in a file the product otherwise owns. Set `ALLOWED_ORIGIN` in
-`services/auth-proxy/wrangler.toml` and `services/signup-relay/wrangler.toml`
-to your own published origin — the scheme and host of the published address,
-with no path — and create the two KV namespaces the form relay and the signup
-relay bind to, pasting each printed id over the placeholder in the same file.
-A Worker deploys from its own configuration file and can read nothing else,
-which is why these values are written out there rather than derived.
+Two of the three workers keep a counter in a KV namespace, and a namespace
+does not exist until somebody creates it: Cloudflare allocates the id, per
+account, so it cannot be shipped filled in. Create the two namespaces the form
+relay and the signup relay bind to, pasting each printed id over the
+placeholder in that worker's own `wrangler.toml`. Nothing else in those files
+is yours to correct: the origin each relay answers cross-origin requests for
+was the second such value until it stopped being written down anywhere but
+`config/instance.json`, and the deploy workflow now derives it from there and
+hands it to `wrangler deploy`.
 
 **Proves it is done.** No `wrangler.toml` still holds a placeholder id, and
-each worker's own test suite passes — those suites read `config/instance.json`
-and the `wrangler.toml` beside them and refuse the two disagreeing, so a
-corrected declaration and an uncorrected worker is a failing test rather than
-a silent one.
+none of them names an `ALLOWED_ORIGIN` either — an origin written back into
+one is refused by `tools/tests/test_published.py`, on the Python suite, with
+no worker's suite run.
 
 ```bash
-grep -R "REPLACE_WITH_" services/*/wrangler.toml ; (cd services/signup-relay && npm test)
+grep -RE "REPLACE_WITH_|ALLOWED_ORIGIN" services/*/wrangler.toml
 ```
 
-**Without it.** Two different failures, neither of them loud. A KV id left at
-its placeholder makes *Deploy form relay* and *Deploy signup relay* skip the
-deploy and end green, so nothing is deployed and the Actions tab says
-everything is fine. An `ALLOWED_ORIGIN` left as the previous instance's makes
-the deployed worker refuse your own pages' cross-origin preflight: a visitor's
-registration fails in their browser console and leaves no trace on your side
-at all.
+**Without it.** A failure that is not loud. A KV id left at its placeholder
+makes *Deploy form relay* and *Deploy signup relay* skip the deploy and end
+green, so nothing is deployed and the Actions tab says everything is fine.
 
 ### 15. The two dispatch tokens the relays hold
 

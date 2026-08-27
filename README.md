@@ -152,15 +152,17 @@ run, and why is worth knowing:
   repository's own commit history, rewritten by a scheduled job on every
   push. A duplicate inherits ours, and its own next push replaces it.
 
-Three files is the list for a first *build*. Deploying the three edge
-workers needs two more values that a duplicate has to correct by hand, in
-files the product otherwise owns: the published origin each of two
-`services/*/wrangler.toml` declares, and the identifier of the storage
-namespace two of them bind to. A Worker deploys from its own configuration
-file and can read nothing else, which is why those are written out there
-rather than derived — and why each worker's own test suite reads
-`config/instance.json` beside it and refuses the two disagreeing.
-`docs/reference/standing-up.md` gives that as a step of its own.
+Three files is the list for a first *build*, and it is the list for a first
+deploy too. Two of the three edge workers still need one value a duplicate
+fills in by hand, in a file the product otherwise owns: the identifier of
+the storage namespace each binds to, which does not exist until
+`wrangler kv namespace create` has printed it. The origin those workers
+answer cross-origin requests for was the other one, until it stopped being
+written down anywhere but `config/instance.json`: the deploy workflow
+derives it from that declaration and passes it to `wrangler deploy`, so
+there is nothing to correct and nothing that can disagree.
+`docs/reference/standing-up.md` gives the namespace step as a step of its
+own.
 
 `docs/reference/operations.md` covers the rest of standing an instance up —
 the accounts, the secrets, and what degrades without each — and

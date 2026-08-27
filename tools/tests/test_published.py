@@ -298,16 +298,27 @@ def test_every_bundle_the_application_builds_resolves_the_declared_base() -> Non
 # The sweep -- nowhere written twice
 # ------------------------------------------------------------------ #
 
-#: The one place the address is allowed to appear a second time, and why.
-#: A Cloudflare Worker deploys from its own `wrangler.toml` and can read
-#: nothing else -- no repository, no include, and no TOML parser here that
-#: would not be a new dependency. So the copy has to exist; what must not
-#: happen is that it drifts, which each relay's own suite refuses (see
-#: `services/*/test/index.test.js`) and which this module checks once more
-#: from the side that owns the declaration.
-_DEPLOYED_ORIGIN_FILES = (
+#: Every Worker configuration in this repository. Two of them used to be
+#: the one place the address was allowed to appear a second time: a
+#: Cloudflare Worker deploys from its own `wrangler.toml` and can read
+#: nothing else, so `ALLOWED_ORIGIN` was written out there and each
+#: relay's own suite refused it disagreeing with the declaration. The copy
+#: is gone rather than merely checked -- the deploy workflows derive the
+#: origin and pass it to `wrangler deploy --var` -- so these files are
+#: swept like every other, and what is asserted about them below is that
+#: they name no origin at all.
+_RELAY_CONFIGURATIONS = (
     Path("services/auth-proxy/wrangler.toml"),
+    Path("services/form-relay/wrangler.toml"),
     Path("services/signup-relay/wrangler.toml"),
+)
+
+#: The two workflows that deploy a relay answering CORS preflights, and
+#: therefore the two that have to hand it an origin. `deploy-form-relay.yml`
+#: is not here: that worker answers no preflight and takes no origin.
+_RELAY_DEPLOY_WORKFLOWS = (
+    Path(".github/workflows/deploy-auth-proxy.yml"),
+    Path(".github/workflows/deploy-signup-relay.yml"),
 )
 
 #: Nothing is exempt from this sweep. The entry that used to be here
@@ -340,18 +351,12 @@ def _tracked_files() -> list[str]:
     instance_identity.ships_the_example_as_its_instance(),
     reason=instance_identity.ONE_INSTANCE,
 )
-def test_no_source_file_writes_the_published_address_a_second_time() -> None:
-    """The clause that makes "one declaration" a fact rather than a
-    claim.
-
-    Every writable form of the address is swept for -- the whole URL, the
-    origin, the bare host and the path prefix -- because a copy does not
-    have to be a copy of the whole thing to drift. Not the bare
-    repository *name*: that is a different identity fact (which repository
-    a build pushes to, what the architecture diagram calls it), owned
-    elsewhere, and folding it in here would make this test fail for a
-    reason it cannot fix.
-    """
+def _files_writing_the_address(allowed: set[str]) -> list[tuple[str, str]]:
+    """Every tracked file writing any form of the published address,
+    except the ones `allowed` names. Taking the exemptions as an argument
+    is what lets the test below the sweep prove the sweep works: it runs
+    the identical loop with nothing exempt and requires the declaration
+    itself to come back."""
     address = published.load()
     needles = (
         address.url,
@@ -359,9 +364,6 @@ def test_no_source_file_writes_the_published_address_a_second_time() -> None:
         address.host,
         address.path_prefix,
     )
-    allowed = {path.as_posix() for path in _DEPLOYED_ORIGIN_FILES}
-    allowed.add(published.INSTANCE_PATH.as_posix())
-
     offending: list[tuple[str, str]] = []
     for name in _tracked_files():
         if name.startswith(_UNSWEPT) or name in allowed:
@@ -377,7 +379,28 @@ def test_no_source_file_writes_the_published_address_a_second_time() -> None:
             if needle in text:
                 offending.append((name, needle))
                 break
+    return offending
 
+
+def test_no_source_file_writes_the_published_address_a_second_time() -> None:
+    """The clause that makes "one declaration" a fact rather than a
+    claim.
+
+    Every writable form of the address is swept for -- the whole URL, the
+    origin, the bare host and the path prefix -- because a copy does not
+    have to be a copy of the whole thing to drift. Not the bare
+    repository *name*: that is a different identity fact (which repository
+    a build pushes to, what the architecture diagram calls it), owned
+    elsewhere, and folding it in here would make this test fail for a
+    reason it cannot fix.
+
+    **The declaration is the only file exempt, and there is no second
+    entry any more.** The two relay configurations were one until the
+    origin they deploy stopped being written in them
+    (`services/auth-proxy/wrangler.toml`); so a `[vars]` entry putting it
+    back fails here, on the Python suite, with no Worker suite run.
+    """
+    offending = _files_writing_the_address({published.INSTANCE_PATH.as_posix()})
     assert offending == [], (
         "these files write this project's published address a second time, "
         f"which config/instance.json exists to make impossible: {offending}"
@@ -385,31 +408,88 @@ def test_no_source_file_writes_the_published_address_a_second_time() -> None:
 
 
 def test_the_sweep_would_see_a_second_copy_if_there_were_one() -> None:
-    """A sweep that matched nothing would pass for free. This proves the
-    needles are the right shape by finding them where a copy legitimately
-    is -- the two relay configurations -- rather than by trusting an
-    empty result."""
-    address = published.load()
-    for path in _DEPLOYED_ORIGIN_FILES:
-        assert address.origin in (ROOT / path).read_text(encoding="utf-8"), path
+    """A sweep that matched nothing would pass for free.
+
+    There is no legitimate second copy left to find it in, so the proof is
+    the loop itself: run with nothing exempt at all, it must report the
+    one file that does write the address -- the declaration. A sweep that
+    had stopped reading files, or stopped matching, comes back empty here
+    and fails.
+    """
+    offending = _files_writing_the_address(set())
+    assert (published.INSTANCE_PATH.as_posix(), published.load().url) in offending, (
+        "the sweep does not find the address in the file that declares it, "
+        f"so it would not find a copy either: {offending}"
+    )
 
 
-def test_the_relays_deploy_the_address_this_project_is_published_at() -> None:
-    """The exemption above, checked rather than merely granted. Each
-    worker answers CORS preflights for one origin, handed to it as
-    `env.ALLOWED_ORIGIN` from the file it deploys from; if that stopped
-    being the address the application is served from, every request the
-    registration form makes would be refused, in production, silently
-    from the browser's point of view. Parsed with `tomllib` rather than
-    matched, so a value moved into a different table is a failure and not
-    a false pass."""
-    expected = published.load().origin
-    for path in _DEPLOYED_ORIGIN_FILES:
+def test_no_relay_configuration_names_an_origin_at_all() -> None:
+    """The binding that replaced the copy, and the one that has to bite.
+
+    Each of the two relays that answer CORS preflights takes one origin as
+    `env.ALLOWED_ORIGIN`, and that origin is the address this project is
+    published at. It used to be written into the file the Worker deploys
+    from, because a Worker can read nothing else -- checked against the
+    declaration, and still a second home for it: the published product
+    shipped the example instance's origin inside a product file, and a
+    duplicate had that file to edit before its first deploy. It is passed
+    to `wrangler deploy --var` now, so no configuration here names an
+    origin.
+
+    Parsed with `tomllib` rather than matched, so a value put back under a
+    different table is a failure and not a false pass. All three worker
+    configurations are read, not only the two: a var that is wrong to hold
+    here is wrong to hold in any of them.
+    """
+    for path in _RELAY_CONFIGURATIONS:
         config = tomllib.loads((ROOT / path).read_text(encoding="utf-8"))
-        assert config["vars"]["ALLOWED_ORIGIN"] == expected, (
-            f"{path.as_posix()} deploys ALLOWED_ORIGIN="
-            f"{config['vars']['ALLOWED_ORIGIN']!r}, which is not the origin "
-            f"this project is published at ({expected!r})"
+        assert "ALLOWED_ORIGIN" not in config.get("vars", {}), (
+            f"{path.as_posix()} declares ALLOWED_ORIGIN again "
+            f"({config['vars']['ALLOWED_ORIGIN']!r}). That value is "
+            "config/instance.json's published_url and has one home; the "
+            "deploy workflow derives it and passes it to `wrangler deploy "
+            "--var`, so nothing has to be written here"
+        )
+
+
+def _relay_deploy_scripts() -> dict[Path, str]:
+    """The `run:` block of the Deploy step of each relay deploy workflow."""
+    found: dict[Path, str] = {}
+    for name in _RELAY_DEPLOY_WORKFLOWS:
+        workflow = yaml.safe_load((ROOT / name).read_text(encoding="utf-8"))
+        for job in workflow["jobs"].values():
+            for step in job["steps"]:
+                if step.get("name") == "Deploy":
+                    found[name] = step["run"]
+        if name not in found:
+            raise AssertionError(f"{name.as_posix()} has no Deploy step to read")
+    return found
+
+
+def test_both_relay_deploys_hand_the_worker_the_declared_origin() -> None:
+    """The other half: a configuration naming no origin deploys a worker
+    that refuses everything unless the deploy supplies one.
+
+    Asserted on the `run:` block each workflow actually executes -- it
+    must reach the derivation, it must pass what it read to `--var`, and
+    it must not spell the answer out. The same three clauses
+    `test_both_publishing_workflows_read_the_push_target_rather_than_
+    naming_it` already holds for the repository a built site is pushed
+    into.
+    """
+    origin = published.load().origin
+    for name, script in _relay_deploy_scripts().items():
+        assert "convener_ops.published import load" in script, (
+            f"{name.as_posix()}'s deploy step does not read the declared "
+            "origin -- naming it in the worker's own configuration is how "
+            "the published address and the origin it answers for start "
+            "disagreeing"
+        )
+        assert "ALLOWED_ORIGIN:$origin" in script, (
+            f"{name.as_posix()} never hands what it read to wrangler"
+        )
+        assert origin not in script, (
+            f"{name.as_posix()} writes the origin out as well as deriving it"
         )
 
 
@@ -733,14 +813,15 @@ def test_both_publishing_workflows_read_the_push_target_rather_than_naming_it() 
 #: are read by something that cannot reach the declaration, and that are
 #: therefore *checked* against it below rather than merely exempted.
 #:
-#: - the two relays' `wrangler.toml` and their Worker sources: a Worker
-#:   deploys from its own package and never sees this repository, exactly
-#:   the argument already made and proved for `ALLOWED_ORIGIN`;
+#: - the two Worker sources naming the repository they dispatch into: a
+#:   Worker runs on Cloudflare and never sees this repository. That is the
+#:   argument `ALLOWED_ORIGIN` was kept on until the origin stopped being
+#:   written down at all (`services/auth-proxy/wrangler.toml`), and it is
+#:   the same argument, so the same answer is open to these two: a
+#:   deploy-time `--var`. Until one is written they are checked here.
 #: - `.github/CODEOWNERS`: GitHub reads it verbatim, with no expansion of
 #:   any kind, before any of this project's own code runs.
 _LITERAL_IDENTITY_FILES = (
-    Path("services/auth-proxy/wrangler.toml"),
-    Path("services/signup-relay/wrangler.toml"),
     Path("services/signup-relay/src/index.js"),
     Path("services/form-relay/src/index.js"),
     Path(".github/CODEOWNERS"),
