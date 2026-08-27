@@ -212,6 +212,21 @@ jobs:
           # in shell.
           target="$(uv run --project tools python -c \
             'from convener_ops.published import load; print(load().publish_repository)')"
+          # Refuse a target that is the repository this build came from.
+          # `publish_repository` derives `<owner>/<repository>` from the
+          # declared address and nothing else, so a repository served at
+          # its own GitHub Pages address derives *itself* -- and the wipe
+          # below would then remove the source and commit a built site
+          # over it. The comparison is folded because the owner arrives
+          # from the host, which GitHub lower-cases, while
+          # `GITHUB_REPOSITORY` carries the capitalisation the account was
+          # registered with. D-25: nothing inside the run that did it can
+          # put the source back, so this refuses rather than warning.
+          here="$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+          if [ "$(echo "$target" | tr '[:upper:]' '[:lower:]')" = "$here" ]; then
+            echo "::error::the published address derives $target, which is the repository this build came from -- refusing to publish a build over its own source"
+            exit 1
+          fi
           git clone --depth 1 \
             "https://x-access-token:${DEPLOY_TOKEN}@github.com/${target}.git" /tmp/vit
           SITE_OUTPUT="$GITHUB_WORKSPACE/site/_site"
