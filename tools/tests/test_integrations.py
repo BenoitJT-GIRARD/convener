@@ -220,6 +220,57 @@ def test_this_declarations_own_header_names_every_exception() -> None:
         )
 
 
+def _first_paragraph(text: str) -> str:
+    """A Markdown page's first paragraph after its title -- every line up
+    to the first blank one. The paragraphs after it discuss individual
+    integrations, including ones whose absence *is* ordinary, so sweeping
+    the whole page would be sweeping the wrong thing."""
+    paragraphs = text.split("\n\n")
+    return " ".join(paragraphs[1].split()) if len(paragraphs) > 1 else ""
+
+
+def test_the_handbook_page_names_every_exception_the_declaration_holds() -> None:
+    """The fourth copy of the same sentence.
+
+    `config/integrations.yml`'s own header and
+    `tools/convener_ops/integrations.py`'s docstring and comment were
+    corrected from one exception to three when the second and third rows
+    declared themselves; `docs/reference/operations.md` opens by making
+    the same claim and was not, because nothing read it. It is read here,
+    against the declaration rather than against a list written out again:
+    a fourth row declaring `absent_is_normal: false` fails this test by
+    name, and so does a row that stops being one.
+
+    The rows are named by their `label`, which is what
+    `convener-check-config` prints, so a reader who meets the sentence and
+    then runs the report sees the same three words. The page's own section
+    headings are not the labels -- *Retention and early erasure* holds the
+    retention credential -- and binding to those would have made this test
+    a check on a heading rather than on the claim.
+    """
+    declaration = load_declaration(repo_root() / "config" / "integrations.yml")
+    page = (repo_root() / "docs" / "reference" / "operations.md").read_text(
+        encoding="utf-8"
+    )
+    opening = _first_paragraph(page)
+
+    exceptions = [i.label for i in declaration if not i.absent_is_normal]
+    ordinary = [i.label for i in declaration if i.absent_is_normal]
+    assert exceptions and ordinary, "a declaration with only one kind of row"
+
+    assert f"{_COUNT_WORDS[len(exceptions)]} exception" in opening, (
+        f"the page does not count the {len(exceptions)} integrations that "
+        f"declare `absent_is_normal: false`: {opening!r}"
+    )
+    for label in exceptions:
+        assert label in opening, f"the page does not name the exception {label!r}"
+    for label in ordinary:
+        assert label not in opening, (
+            f"the page names {label!r} among the exceptions, but that "
+            "integration's absence is an ordinary state"
+        )
+
+
 def test_email_transport_is_absent_when_only_the_port_is_missing() -> None:
     """The port is resolved through the same generic `secrets` list as its
     four siblings -- nothing in `resolve_states` singles it out -- so an

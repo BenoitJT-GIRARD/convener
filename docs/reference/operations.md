@@ -2,9 +2,13 @@
 
 Everything the *application code* needs from the outside world. Each
 integration is optional: without it the feature degrades visibly and
-nothing breaks -- with one exception, *Event registration keys* below,
-which fails closed rather than degrading, because what it protects is
-personal data rather than a feature.
+nothing breaks -- with three exceptions, *Event registration encryption*,
+*Retention sweep credential* and *Certificate register fingerprint*, which
+fail closed rather than degrading. Those are the rows
+`config/integrations.yml` marks `absent_is_normal: false`, and each one's
+own section below says what its absence forbids and why: two of them
+protect personal data rather than a feature, and the third is a promise
+with legal weight that must not exit quietly.
 
 Run `cd tools && uv run convener-check-config` at any time to see what is
 configured and what is still waiting. That declaration
