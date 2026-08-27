@@ -2,10 +2,10 @@
 # Convener — the product's own mark
 
 **This is the product's identity, not an instance's.** It is what appears on
-Convener's README, its documentation and its demonstration site. It is **not**
-one of the themes an instance chooses. `config/boundary.yml` says why this
-directory sits outside the instance's paths, and `data/brand.json` is where an
-instance's own charter goes instead.
+Convener's README, its documentation and the demonstration built out of it.
+It is **not** one of the themes an instance chooses. `config/boundary.yml`
+says why this directory sits outside the instance's paths, and
+`data/brand.json` is where an instance's own charter goes instead.
 
 ## The mark
 

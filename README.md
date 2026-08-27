@@ -32,15 +32,23 @@ and takes over once the instance is standing.
 
 | Repository | Visibility | What it is |
 |---|---|---|
-| `convener` | public | The product — the origin every instance is derived from. Public, so it serves its own demonstration out of itself. |
+| `convener` | public | The product — the origin every instance is derived from. |
 | `example-cockpit` | private | This instance. Holds the real data. |
 | `example-showcase` | public | This instance's publication target. Nobody works in it. |
 
 There is no `convener-vitrine`, and the asymmetry is the whole explanation:
 `example-showcase` exists **only** because `example-cockpit` is private and Pages
-will not serve a private repository without that paid plan. `convener` is
-public already, so Pages serves its pages from the repository itself and a
-second one would hold a copy of what the first can already publish.
+will not serve a private repository without that paid plan. The product
+repository publishes nothing and needs no target of its own: the instance
+it carries is the invented one under `instances/example/`, whose declared
+address is reserved and answers nowhere, and both publishing workflows
+refuse a target that is the repository the build came from. Its
+demonstration is that instance, built and served out of a working copy —
+`site/README.md` gives the command, and the prefix it says to open at is
+the one a real deployment is served under. Creating and pushing that
+repository happens once and is written out in
+`docs/reference/publishing-the-product.md`, which is the one sequence
+`STANDING-UP.yml` deliberately does not declare.
 
 Locally the picture is smaller than that table: the product, and — only
 where one person happens to hold both roles — the instance beside it. **An
