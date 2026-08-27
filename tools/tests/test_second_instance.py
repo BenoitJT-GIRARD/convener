@@ -164,6 +164,7 @@ from typing import Final, NoReturn
 
 import instance_identity
 import pytest
+import toolchain
 
 from convener_ops import boundary, published
 from convener_ops.paths import repo_root
@@ -241,53 +242,18 @@ _BUILD_VARIABLES: Final = (
 )
 
 
-#: The environment variables an automated run sets for itself. GitHub's
-#: runner sets both; `CI` alone is what nearly every other service sets,
-#: and it is here so that moving this project off GitHub Actions cannot
-#: silently restore the skip `_toolchain_absent` refuses below.
-_AUTOMATED: Final = ("CI", "GITHUB_ACTIONS")
-
-
-def _automated_run() -> bool:
-    """Whether this suite is running somewhere a toolchain was installed
-    for it. `false` and `0` are read as unset, because a variable set to
-    the word "false" is how a job turns one off."""
-    return any(
-        os.environ.get(name, "").strip().lower() not in ("", "false", "0")
-        for name in _AUTOMATED
-    )
+#: What did not happen when the toolchain is absent here, in the words the
+#: failure below carries. `tools/tests/toolchain.py` takes it as an
+#: argument rather than knowing it: the same rule serves
+#: `test_published.py`, whose loss is a different one.
+_NEVER_BUILT: Final = "the second instance was never built"
 
 
 def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
-    """A skip on a laptop, a failure on a runner -- D-25.
-
-    A skip is not wrong in itself: a developer who has never run `npm ci`
-    genuinely cannot build a second instance, and this suite may not
-    install one for them because installing it is the one thing here that
-    would touch the network. What is wrong is one sentence covering that
-    machine *and* the one environment where the packages are installed on
-    purpose. `quality.yml`'s own `python` job sets up node 22 and runs
-    `npm ci` in both `app/` and `site/` before it runs `pytest`, so on a
-    runner their absence means that install stopped happening -- and a
-    skip there would let the property the whole separation rests on not
-    run at all while the suite reported green.
-
-    That is the failure D-25 names, and this module was committing it: a
-    fresh clone passed the entire suite without the one test this module
-    exists to produce ever executing. So the absence is loud where it means
-    something is broken, and quiet where it means nothing at all.
-    """
-    if _automated_run():
-        pytest.fail(
-            f"{missing}. This is an automated run "
-            f"({' or '.join(_AUTOMATED)} is set), where quality.yml's own "
-            "`python` job installs node and both node_modules before it "
-            "runs pytest -- so this is a broken pipeline rather than a "
-            "machine without a toolchain, and the second instance "
-            f"was never built. {remedy}",
-            pytrace=False,
-        )
-    pytest.skip(f"{missing} -- {remedy}")
+    """A skip on a laptop, a failure on a runner -- `toolchain.absent`
+    carries the rule and the argument for it; this is that rule with the
+    one thing this module loses when it does not run."""
+    toolchain.absent(missing, remedy, unrun=_NEVER_BUILT)
 
 
 @dataclass(frozen=True)
@@ -549,7 +515,9 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
     environment: dict[str, str], automated: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The clause that makes everything below a control rather than a
-    formality, proved rather than trusted.
+    formality, proved rather than trusted -- and the only proof
+    `tools/tests/toolchain.py` has, here rather than in a module of its
+    own because this is where the rule bites hardest.
 
     Every test in this module needs a build, a build needs `node_modules`,
     and until this branch existed a machine without them turned this
@@ -557,9 +525,10 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
     one branch here nothing else exercises -- a runner that has its
     toolchain never reaches it -- so it is exercised directly, with the
     environment a runner sets and with the environments that only look
-    like one.
+    like one. `test_published.py`'s four bundle tests take the same rule
+    with a loss of their own, so what is held here is held for them too.
     """
-    for name in _AUTOMATED:
+    for name in toolchain.AUTOMATED:
         monkeypatch.delenv(name, raising=False)
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
@@ -568,7 +537,7 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
         _toolchain_absent("app/node_modules is missing", "Run `npm ci` in app/.")
     assert "app/node_modules is missing" in str(raised.value)
     assert "Run `npm ci` in app/." in str(raised.value)
-    assert ("second instance was never built" in str(raised.value)) is automated
+    assert (_NEVER_BUILT in str(raised.value)) is automated
 
 
 # ------------------------------------------------------------------ #

@@ -167,15 +167,18 @@ jobs:
       # code rests on, so it has to run on every change rather than
       # only where somebody remembers to look; the build itself takes
       # about ten seconds once `node_modules` is there, and it makes no
-      # network call of any kind.
+      # network call of any kind. `tests/test_published.py` reads the same
+      # install for a smaller reason: it loads all four of the
+      # application's build configurations through Vite's own loader,
+      # which it cannot do without the package.
       #
       # These two steps are load-bearing rather than
-      # convenient. `tests/test_second_instance.py::_toolchain_absent`
-      # skips a missing toolchain on a developer's machine and *fails* it
-      # here, because `CI` is set -- so deleting, renaming or reordering
-      # either install below turns this job red by name instead of turning
-      # the whole check into a row of skips inside a green suite (D-25 --
-      # exactly that row of skips has sat inside a green suite here once).
+      # convenient. `tests/toolchain.py::absent` skips a missing toolchain
+      # on a developer's machine and *fails* it here, because `CI` is set
+      # -- so deleting, renaming or reordering either install below turns
+      # this job red by name instead of turning those checks into a row of
+      # skips inside a green suite (D-25 -- exactly that row of skips has
+      # sat inside a green suite here once).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
@@ -186,7 +189,7 @@ jobs:
       - name: Install site (for tests/test_site.py's own build)
         working-directory: site
         run: npm ci
-      - name: Install app (for tests/test_second_instance.py's own build)
+      - name: Install app (for tests/test_second_instance.py and tests/test_published.py)
         working-directory: app
         run: npm ci
       - name: Lint

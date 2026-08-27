@@ -27,7 +27,11 @@ trust without checking:
 4. **All four bundles the application builds resolve the declared base**
    -- proven by loading the real `vite.config.ts` through Vite's own
    `loadConfigFromFile`, which is what a build does, and reading the
-   `base` and the `define` each configuration actually produces.
+   `base` and the `define` each configuration actually produces. That is
+   the one thing here needing a toolchain, so the four tests that ask for
+   it skip on a machine with no `app/node_modules` and fail on a runner,
+   where `quality.yml` installs it before `pytest` runs
+   (`_bundle_configurations`, `tools/tests/toolchain.py`).
 
 Then the sweep: no file outside the declaration writes the address again.
 
@@ -98,6 +102,7 @@ from urllib.parse import urlsplit
 
 import instance_identity
 import pytest
+import toolchain
 import yaml
 
 from convener_ops import (
@@ -251,11 +256,45 @@ def _node_json(script: Path, cwd: Path, timeout: int = 120) -> dict[str, Any]:
             timeout=timeout,
         )
     except FileNotFoundError:
-        pytest.skip("node is not on PATH -- cannot run the build's own config")
+        toolchain.absent(
+            "node is not on PATH, so no build's own configuration can be run",
+            "Install Node 22.",
+            unrun=f"{script.name} never ran",
+        )
     assert result.returncode == 0, result.stdout + result.stderr
     loaded = json.loads(result.stdout)
     assert isinstance(loaded, dict)
     return loaded
+
+
+#: What `app/scripts/print-published.mjs` imports, and the one thing in
+#: this module that a fresh tree does not have. `site/`'s own reader
+#: `require`s nothing outside the standard library, which is why only the
+#: four tests below take this route.
+_VITE = ROOT / "app" / "node_modules" / "vite"
+
+
+def _bundle_configurations() -> dict[str, Any]:
+    """What the four configurations `npm run build` invokes actually
+    resolve, loaded the way a build loads them.
+
+    Behind a toolchain check, on the same terms
+    `test_second_instance.py`'s build is: `print-published.mjs` loads the
+    real `vite.config.ts` through Vite's own `loadConfigFromFile`, so
+    without `app/node_modules` there is no answer to compare and the four
+    tests below reported an absent install as four failures. That is D-25
+    read backwards -- loud where nothing is broken -- and it is the first
+    thing `docs/reference/publishing-the-product.md` used to walk a fresh
+    derivation into. On a runner the same absence still fails, by name,
+    because `quality.yml` installs `app/`'s packages before `pytest` runs.
+    """
+    if not _VITE.is_dir():
+        toolchain.absent(
+            "app/node_modules is missing, so vite.config.ts cannot be loaded",
+            "Run `npm ci` in app/ before this suite.",
+            unrun="the four bundle configurations were never read",
+        )
+    return _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
 
 
 def test_the_showcase_build_resolves_the_declared_prefix() -> None:
@@ -285,7 +324,7 @@ def test_every_bundle_the_application_builds_resolves_the_declared_base() -> Non
     catch: an island published under a different base 404s its own
     fetches -- event keys, the certificate register, the signing keys --
     while every other check stays green."""
-    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    answer = _bundle_configurations()
     address = published.load()
     assert answer["reader"]["appBase"] == address.app_base
     assert set(answer["bases"]) == {
@@ -714,7 +753,7 @@ def test_every_bundle_the_application_builds_carries_the_declared_identity() -> 
     would do it in exactly one of the four, which is the shape that passes
     a test suite and ships broken.
     """
-    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    answer = _bundle_configurations()
     identity = published.load_identity()
     assert set(answer["identityDefines"]) == {
         "production",
@@ -1232,7 +1271,7 @@ def test_every_bundle_the_application_builds_carries_the_declared_prefix() -> No
     bundle that throws the moment somebody locks a date -- in exactly one
     of the four, which is the shape that passes a test suite and ships
     broken."""
-    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    answer = _bundle_configurations()
     editions = published.load_edition_prefix()
     assert answer["editionPrefix"] == editions.value
     assert set(answer["editionPrefixDefines"]) == {
@@ -1426,7 +1465,7 @@ def test_every_bundle_the_application_builds_carries_the_unconfigured_verdict() 
     therefore throws on an absent define and the value travels as JSON --
     `"[]"` is a value, an absent define is not.
     """
-    answer = _node_json(ROOT / "app" / "scripts" / "print-published.mjs", ROOT / "app")
+    answer = _bundle_configurations()
     assert answer["unconfigured"] == list(published.unconfigured())
     assert set(answer["unconfiguredDefines"]) == {
         "production",
