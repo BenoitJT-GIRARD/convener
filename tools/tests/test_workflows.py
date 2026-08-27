@@ -5721,3 +5721,88 @@ def test_the_installed_node_version_clears_what_the_lock_files_declare() -> None
         f"every workflow installs Node {declared}, below the {floor} this "
         f"repository's own lock files require: {'; '.join(sorted(requiring))}"
     )
+
+
+# ------------------------------------------------------------------ #
+# The security scanner kept beside ruff, and its three halves.
+#
+# Ruff's `S` rules are a port of bandit, so `bandit` looks like a tool
+# this project could drop and a step `quality.yml` could stop paying for.
+# It was measured instead of assumed, and kept: `tools/pyproject.toml`'s
+# own `[tool.ruff.lint]` comment carries the comparison finding by
+# finding. What that comment cannot do is stop the three halves of the
+# decision from being removed one at a time -- a dependency nothing runs,
+# a step whose tool is not installed, or eighteen `# nosec` comments no
+# tool reads any more, each of which is silent on its own.
+# ------------------------------------------------------------------ #
+
+#: The scanner itself, as `pyproject.toml` names it, as `quality.yml`
+#: invokes it, and as the suppression syntax below belongs to.
+_SECURITY_SCANNER: Final = "bandit"
+
+#: Bandit's own suppression comment. Ruff does not read it -- it reads a
+#: `noqa` directive instead -- so every one of these is text nothing
+#: checks at all the moment this scanner stops running.
+_SUPPRESSION: Final = "# nosec"
+
+
+def _dev_dependencies() -> list[str]:
+    """`tools/pyproject.toml`'s dev group, as declared."""
+    settings = tomllib.loads(
+        (ROOT / "tools" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    declared = settings["dependency-groups"]["dev"]
+    assert isinstance(declared, list) and declared, (
+        "tools/pyproject.toml declares no dev dependency group at all"
+    )
+    return [str(entry) for entry in declared]
+
+
+def _modules_carrying_a_suppression() -> list[str]:
+    """Every module under `convener_ops` that silences a finding."""
+    package = ROOT / "tools" / "convener_ops"
+    return sorted(
+        path.name
+        for path in package.glob("*.py")
+        if _SUPPRESSION in path.read_text(encoding="utf-8")
+    )
+
+
+def test_the_security_scanner_is_declared_run_and_reads_its_own_suppressions() -> None:
+    """One decision, three files, and none of them enough on its own.
+
+    The dependency without the step is a tool nobody runs. The step
+    without the dependency is a red job. And either without the
+    suppressions is the reverse: `# nosec` is bandit's syntax, so the
+    eighteen of them in `convener_ops` are the part that would quietly
+    become decoration -- ruff reads a `noqa` directive instead, and would
+    go on reporting
+    nothing about lines that are annotated for a tool that no longer runs.
+
+    This does not re-argue the comparison; `tools/pyproject.toml` holds
+    that. It refuses the half-removal the comparison cannot see.
+    """
+    declared = [
+        entry for entry in _dev_dependencies() if entry.startswith(_SECURITY_SCANNER)
+    ]
+    assert declared, (
+        f"tools/pyproject.toml no longer declares {_SECURITY_SCANNER} -- if it "
+        "was swapped for ruff's own `S` rules, that comparison is in that "
+        "file's own [tool.ruff.lint] comment and says why it is not a swap"
+    )
+    run_by = [
+        f"{job}/{step}"
+        for job, step, script in _all_run_scripts(ROOT / QUALITY_WORKFLOW)
+        if f"{_SECURITY_SCANNER} " in script
+    ]
+    assert run_by, (
+        f"quality.yml runs no {_SECURITY_SCANNER} step, while "
+        f"tools/pyproject.toml still installs it: {', '.join(declared)}"
+    )
+    suppressing = _modules_carrying_a_suppression()
+    assert suppressing, (
+        f"no module under convener_ops carries a {_SUPPRESSION!r} any more, "
+        f"so {_SECURITY_SCANNER} is being installed and run over a package "
+        "with nothing left to say about it -- which is the point at which "
+        "the comparison in tools/pyproject.toml is worth running again"
+    )

@@ -96,6 +96,14 @@ dev = [
   "pytest-cov>=6.0",
   "ruff>=0.9",
   "mypy>=1.14",
+  # Kept beside ruff rather than folded into it, on a measurement rather
+  # than on the assumption that a port covers its original: ruff's own `S`
+  # rules see neither `B404` nor a `subprocess.run` whose argv is entirely
+  # literal. The comparison, finding by finding, is in `[tool.ruff.lint]`'s
+  # comment below, and `tools/tests/test_workflows.py::test_the_security_
+  # scanner_is_declared_run_and_reads_its_own_suppressions` is what stops
+  # this line and `quality.yml`'s own step from being removed one without
+  # the other.
   "bandit>=1.8",
   "pip-audit>=2.7",
   "types-pyyaml>=6.0.12",
@@ -111,6 +119,48 @@ line-length = 88
 target-version = "py312"
 
 [tool.ruff.lint]
+# `S` (flake8-bandit) is absent, and that is a measured decision rather
+# than an omission. Ruff's `S` rules are a port of bandit, so enabling
+# them would remove a tool, a dependency and a `quality.yml` step -- which
+# is worth doing only if the port sees what the original sees. It does
+# not. Both were run over `convener_ops` (bandit 1.9.4, ruff 0.16.3):
+#
+#   bandit -q -r convener_ops        0 findings
+#   bandit --ignore-nosec           27  B404x3 B603x12 B607x9 B310x2 B506x1
+#   ruff --select S                 30  S603x10 S607x9 S310x4 S506x1 S105x6
+#
+# The zero is what eighteen `# nosec` comments in `convener_ops` account
+# for; the second line is the set the two tools have to be compared on.
+#
+# Five of those twenty-seven have no equivalent under `select = ["S"]`,
+# and that is what settles it. `B404` (`import subprocess`, in cli.py,
+# derivation.py and derivation_guard.py) is `S404` in ruff, and `S404` is
+# a preview rule -- selecting it prints "has no effect because preview is
+# not enabled", and nothing in this project runs ruff in preview. `B603`
+# fires on every `subprocess.run`; `S603` deliberately does not fire when
+# every element of the argv is a string literal, which is exactly
+# `derivation_guard.py`'s two `git cat-file --batch` calls. Ruff is the
+# better-aimed rule on that pair and bandit is the only one that sees the
+# import at all, so neither tool contains the other.
+#
+# Ruff does see three things bandit misses, and none of them pays for the
+# swap. `S310` also flags `urllib.request.Request` (bandit's `B310`
+# blacklist names `urlopen` and `urlretrieve` only), which is two more
+# findings on `platform_fcc.py`'s existing pair. `S105` flags six
+# `Final`-annotated constants -- `_TOKEN`, `_PASSWORD_ENV`, `TOKEN`,
+# `SECRET`, `TOKEN_ENV`, `SECRET_NAME` -- that hold a regex fragment, an
+# environment variable's *name* or a category label, never a password;
+# bandit's `B105` reads `Assign` and not `AnnAssign`, so it never sees
+# them at all.
+#
+# The swap would also cost more than the step it removes. `# nosec` is
+# bandit's syntax and ruff reads `# noqa`, so all eighteen suppressions
+# would have to be rewritten and six more added for the false positives
+# above. And `select` applies to everything CI lints (`ruff check .
+# ../scripts`), not only to the package bandit is pointed at: `S` finds
+# 6,005 there, 5,888 of them `S101` -- `assert`, in this project's own
+# tests -- so it would need a `per-file-ignores` block bandit never
+# needed.
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
