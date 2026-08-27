@@ -533,8 +533,18 @@ def test_a_missing_toolchain_skips_on_a_laptop_and_fails_on_a_runner(
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
     expected = pytest.fail.Exception if automated else pytest.skip.Exception
-    with pytest.raises(expected) as raised:
+    # Both outcomes are caught and the right one is then asserted, rather
+    # than `pytest.raises(expected)` alone. A skip is an exception pytest
+    # acts on: raised where a failure was expected and not caught here, it
+    # would end this test as a *skip* -- so the one control over the loud
+    # half of the rule would go quiet in exactly the case that broke it,
+    # which is the failure the rule itself exists to refuse.
+    with pytest.raises((pytest.fail.Exception, pytest.skip.Exception)) as raised:
         _toolchain_absent("app/node_modules is missing", "Run `npm ci` in app/.")
+    assert isinstance(raised.value, expected), (
+        f"with {environment or 'nothing'} set this must "
+        f"{'fail' if automated else 'skip'}, and it did the other"
+    )
     assert "app/node_modules is missing" in str(raised.value)
     assert "Run `npm ci` in app/." in str(raised.value)
     assert (_NEVER_BUILT in str(raised.value)) is automated
