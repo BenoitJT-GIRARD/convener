@@ -625,23 +625,20 @@ steps:
       route carries the post-event survey, on the same deployment, with no
       second variable and no second secret.
     check: >-
-      Run the configuration report — this row is not in it, so the check is
-      the browser one. With the variable set and the application rebuilt,
-      submit the registration form for an event that has a published key: the
-      worker answers 204. Seeing no workflow run at all can be correct: a
-      registration further from its event than the queue threshold is written
-      to a queue branch and confirmed on the next daily drain.
+      Run the configuration report and read the *Registration relay* row: it
+      moves from `absent` to `production`. Then the browser check, which is
+      the one that exercises the worker itself: with the variable set and the
+      application rebuilt, submit the registration form for an event that has
+      a published key, and the worker answers 204. Seeing no workflow run at
+      all can be correct: a registration further from its event than the queue
+      threshold is written to a queue branch and confirmed on the next daily
+      drain.
+    command: cd tools && uv run convener-check-config
     sets:
       - VITE_SIGNUP_RELAY_URL
       - CONVENER_DISPATCH_TOKEN
-    degraded: >-
-      The registration page still fetches the event's public key and still
-      encrypts in the browser — none of that depends on this worker — but with
-      the variable unset it says so and sends nothing. It never falls back to
-      sending anything unencrypted. This is the one integration in this
-      sequence that `convener-check-config` cannot report on, because
-      `config/integrations.yml` carries no row for it, so its absence shows up
-      only where a participant meets it.
+    integrations:
+      - signup_relay
 
   - id: tally_account
     stage: intake

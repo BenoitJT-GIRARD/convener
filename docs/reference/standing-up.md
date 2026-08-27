@@ -576,20 +576,48 @@ key, and the worker holds no private half. Its second route carries the
 post-event survey, on the same deployment, with no second variable and no
 second secret.
 
-**Proves it is done.** Run the configuration report — this row is not in it,
-so the check is the browser one. With the variable set and the application
-rebuilt, submit the registration form for an event that has a published key:
-the worker answers 204. Seeing no workflow run at all can be correct: a
-registration further from its event than the queue threshold is written to a
-queue branch and confirmed on the next daily drain.
+**Proves it is done.** Run the configuration report and read the *Registration
+relay* row: it moves from `absent` to `production`. Then the browser check,
+which is the one that exercises the worker itself: with the variable set and
+the application rebuilt, submit the registration form for an event that has a
+published key, and the worker answers 204. Seeing no workflow run at all can
+be correct: a registration further from its event than the queue threshold is
+written to a queue branch and confirmed on the next daily drain.
 
-**Without it.** The registration page still fetches the event's public key and
-still encrypts in the browser — none of that depends on this worker — but with
-the variable unset it says so and sends nothing. It never falls back to
-sending anything unencrypted. This is the one integration in this sequence
-that `convener-check-config` cannot report on, because
-`config/integrations.yml` carries no row for it, so its absence shows up only
-where a participant meets it.
+```bash
+cd tools && uv run convener-check-config
+```
+
+**Without it.** *The* **Registration relay** *row of*
+`config/integrations.yml`*, which* `convener-check-config` *prints as this
+row's* `meanwhile:` *line. It is maintained there, and quoted here.*
+
+> One variable with two consumers in app/src, and one row rather than two
+> because -- unlike CONVENER_MATCHING_SALT below -- both consumers have the
+> same shape of absence. app/src/islands/signup/SignupForm.tsx reads it for a
+> registration and app/src/islands/survey/SurveyForm.tsx for a post-event
+> response, the second posting to the same worker's own /survey route instead
+> of a second deployment, so there is no second variable to declare. Neither
+> island degrades before a participant meets it: the event page still fetches
+> that event's published public key, still renders real fields, and the
+> browser still encrypts what was typed under that key. The absence is met at
+> submit -- after the encryption, before any request -- so the form reports
+> "Registration is not open for this event yet" (the survey: "Submitting
+> answers is not available yet"), the typed fields are left exactly as typed
+> for a later attempt, and nothing at all leaves the browser. It never falls
+> back to sending anything in the clear, and there is nothing queued behind
+> it: a registration attempted while this is unset is a registration that was
+> never made, and the participant is told so rather than left to assume
+> otherwise. Ordinary D-13 in shape, and the widest of these rows in reach --
+> every registration this project takes passes through this one address. The
+> worker's own dispatch credential (CONVENER_DISPATCH_TOKEN) is deliberately
+> not a second secret here: it is a Wrangler secret held by the deployed
+> worker, never a name any code in this repository reads, and declaring it
+> would report it permanently absent everywhere, which is the noise the three
+> CI-only secrets are excluded for above. site/src/_data/csp.js reads this
+> same variable at build time to admit the relay's origin into the showcase's
+> connect-src and omits it when unset, so the policy and the islands agree by
+> construction rather than by a second decision.
 
 **Credentials.** `VITE_SIGNUP_RELAY_URL`, `CONVENER_DISPATCH_TOKEN`
 
