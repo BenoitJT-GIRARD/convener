@@ -110,7 +110,7 @@ jobs:
         run: cp public-data/events-public.json site/src/_data/events.json
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: site/package-lock.json
       - name: Install site

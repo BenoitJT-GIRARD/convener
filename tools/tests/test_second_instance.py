@@ -266,7 +266,7 @@ def _toolchain_absent(missing: str, remedy: str) -> NoReturn:
     install one for them because installing it is the one thing here that
     would touch the network. What is wrong is one sentence covering that
     machine *and* the one environment where the packages are installed on
-    purpose. `quality.yml`'s own `python` job sets up node 20 and runs
+    purpose. `quality.yml`'s own `python` job sets up node 22 and runs
     `npm ci` in both `app/` and `site/` before it runs `pytest`, so on a
     runner their absence means that install stopped happening -- and a
     skip there would let the property the whole separation rests on not
@@ -505,7 +505,7 @@ def second_instance(second_instance_tree: Path) -> Iterator[Built]:
     if shutil.which("node") is None:
         _toolchain_absent(
             "node is not on PATH, so no second instance can be built",
-            "Install Node 20.",
+            "Install Node 22.",
         )
     for package in ("app", "site"):
         if not (ROOT / package / "node_modules").is_dir():

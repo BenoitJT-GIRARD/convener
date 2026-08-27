@@ -36,13 +36,13 @@ name: Quality
 # checkout, one Node installation -- so the saving costs no check.
 #
 #   `python`          unchanged; the heaviest, and the only one needing `uv`.
-#   `web`             was `typescript` + `site` + `spelling`: one Node 20,
+#   `web`             was `typescript` + `site` + `spelling`: one Node,
 #                     and `app/`'s own `npm ci` was previously run twice
 #                     (once by `typescript`, again by `site` for the
 #                     performance budget's island bundles). Now once.
 #   `relays`          was `auth-proxy` + `form-relay` + `signup-relay`:
-#                     one runner. Two `setup-node` steps, not one --
-#                     `signup-relay` is on Node 22 and stays there.
+#                     one runner, one `setup-node`. It carried two while
+#                     the three relays disagreed about their runtime.
 #   `workflow-schema` unchanged, and deliberately *not* merged: two tests
 #                     in tools/tests/test_workflows.py pin a job *named*
 #                     `workflow-schema` whose only `uses:` is
@@ -178,7 +178,7 @@ jobs:
       # exactly that row of skips has sat inside a green suite here once).
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             site/package-lock.json
@@ -307,7 +307,7 @@ jobs:
         run: uv run python ../scripts/generate_brand_css.py --check
 
   # The former `typescript`, `site` and `spelling` jobs, merged.
-  # Three jobs, one Node 20, one checkout -- and `app/`'s own `npm ci` run
+  # Three jobs, one Node, one checkout -- and `app/`'s own `npm ci` run
   # twice between them. See this file's header for the reasoning, and for
   # why the ceiling below is their sum rather than anything smaller.
   #
@@ -330,7 +330,7 @@ jobs:
       - id: node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           # Both lock files, the same multi-path cache `a11y.yml` already
           # uses: this one job installs `app/` (for its own checks, and for
@@ -474,13 +474,18 @@ jobs:
         run: npx --yes cspell@8 lint --no-progress
 
   # The former `auth-proxy`, `form-relay` and
-  # `signup-relay` jobs. One runner, one checkout -- but *two*
-  # `setup-node` steps, because `signup-relay` runs on Node 22 and the
-  # other two on Node 20. Two `setup-node` steps in one job is still one
-  # billed job; putting all three relays on a single Node version to make
-  # this file look tidier would change what is tested, which is not a
-  # trade a tidy-up is allowed to make. The Node 22 step comes last
-  # because `setup-node` changes the version for every step after it.
+  # `signup-relay` jobs. One runner, one checkout, one `setup-node`.
+  #
+  # This job carried *two* `setup-node` steps while `signup-relay` ran on
+  # Node 22 and the other two on Node 20, on the reasoning that each
+  # relay must be tested on the runtime it is deployed on. That reasoning
+  # is kept and the split is not: all three deploy through the same
+  # `wrangler` 4, whose own `engines.node` reads `>=22.0.0`, so the two on
+  # 20 were the ones testing something other than what they ship. One
+  # version is now the repository-wide rule
+  # (tools/tests/test_workflows.py::test_every_workflow_installs_the_same_
+  # node_version), which is what makes a single step here correct rather
+  # than merely tidier.
   relays:
     runs-on: ubuntu-latest
     # 10 + 10 + 10, the three jobs this replaces. See the header: the
@@ -491,16 +496,17 @@ jobs:
     steps:
       - id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - id: node-20
+      - id: node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             services/auth-proxy/package-lock.json
             services/form-relay/package-lock.json
+            services/signup-relay/package-lock.json
 
-      # ---- services/auth-proxy (Node 20) -----------------------------
+      # ---- services/auth-proxy ---------------------------------------
       - name: Install auth-proxy
         id: install-auth-proxy
         working-directory: services/auth-proxy
@@ -528,13 +534,13 @@ jobs:
         working-directory: services/auth-proxy
         run: npm test
 
-      # ---- services/form-relay (Node 20) -----------------------------
-      # Guarded on the Node 20 step, not on the relay above it: three
+      # ---- services/form-relay ---------------------------------------
+      # Guarded on the `setup-node` step, not on the relay above it: three
       # separate jobs used to mean a red auth-proxy said nothing at all
       # about the form relay, and that stays true here.
       - name: Install form-relay
         id: install-form-relay
-        if: always() && steps.node-20.outcome == 'success'
+        if: always() && steps.node.outcome == 'success'
         working-directory: services/form-relay
         run: npm ci
       # Same shape as services/auth-proxy's
@@ -553,23 +559,15 @@ jobs:
         working-directory: services/form-relay
         run: npm test
 
-      # ---- services/signup-relay (Node 22) ---------------------------
-      # Node 22, deliberately: this relay is developed and deployed on 22,
-      # and a merge that quietly moved it to 20 would be testing something
-      # other than what is deployed. Placed last because this step changes
-      # the version every step after it sees. Guarded on the checkout
-      # rather than on either relay above, so a red form relay does not
-      # skip this lane.
-      - id: node-22
-        if: always() && steps.checkout.outcome == 'success'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: services/signup-relay/package-lock.json
+      # ---- services/signup-relay -------------------------------------
+      # Guarded on the same `setup-node` step as the two lanes above,
+      # never on either of them, so a red form relay does not skip this
+      # one. This lane once opened with a second `setup-node` of its own;
+      # see this job's own header for what that step was for and why the
+      # relays no longer disagree about their runtime.
       - name: Install signup-relay
         id: install-signup-relay
-        if: always() && steps.node-22.outcome == 'success'
+        if: always() && steps.node.outcome == 'success'
         working-directory: services/signup-relay
         run: npm ci
       # Same shape as services/auth-proxy's

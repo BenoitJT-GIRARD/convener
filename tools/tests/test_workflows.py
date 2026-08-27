@@ -33,7 +33,7 @@ import subprocess  # nosec B404
 import sys
 import textwrap
 import tomllib
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from functools import cache
 from pathlib import Path
 from types import ModuleType
@@ -5476,3 +5476,248 @@ def test_the_branch_reader_refuses_the_filter_shapes_it_cannot_evaluate(
     """
     with pytest.raises(AssertionError, match=refusal):
         _push_trigger_branches(push)
+
+
+# ------------------------------------------------------------------ #
+# One Node version, and it clears what the toolchain declares.
+#
+# Seven workflows installed Node 20, four installed 22, and `quality.yml`
+# installed both -- a split nothing here could see, because every one of
+# those pins was correct on its own. Node 20 left maintenance in April
+# 2026, so the larger half of this pipeline ran on a runtime that receives
+# no security fix, while the packages it installs had already moved past
+# it: `wrangler` 4 declares `engines.node: >=22.0.0` and the three relays
+# deploy through it; `puppeteer-core` 25 declares `>=22.12.0` and `site/`
+# installs it for its own accessibility and performance checks. Both were
+# being installed on 20.
+#
+# Two properties, deliberately separate. The first is that the workflows
+# agree with each other, swept over the directory rather than over a list
+# of file names, so a workflow added later is held the same way without
+# being added anywhere. The second is that what they agree on clears the
+# floor the six npm trees themselves declare -- without it, the first
+# property is satisfied just as well by every workflow drifting back onto
+# an unsupported runtime together.
+# ------------------------------------------------------------------ #
+
+#: How `actions/setup-node` is named in a `uses:` line. What follows the
+#: `@` is a full commit SHA, pinned by the sweep near the top of this
+#: module, so the prefix is what identifies the action here.
+_SETUP_NODE: Final = "actions/setup-node@"
+
+
+def _setup_node_steps(workflow: Path) -> list[tuple[str, str, str | None]]:
+    """`(job id, step name, node-version)` for every `actions/setup-node`
+    step in `workflow`.
+
+    The version is `None` for a step that installs Node without naming
+    one, which is not the same thing as a step this reader missed: such a
+    step takes whatever the runner image happens to ship, which is the
+    drift this section exists to refuse, so it is carried back as a
+    finding rather than dropped. A step with no `name:` is reported by its
+    `id:`, and one with neither by its position, because the message has
+    to name something a reader can find in the file.
+    """
+    loaded = safe_load(workflow.read_text(encoding="utf-8"))
+    jobs = loaded.get("jobs") if isinstance(loaded, dict) else None
+    found: list[tuple[str, str, str | None]] = []
+    if not isinstance(jobs, dict):
+        return found
+    for job_id, job in jobs.items():
+        steps = job.get("steps") if isinstance(job, dict) else None
+        if not isinstance(steps, list):
+            continue
+        for position, step in enumerate(steps, start=1):
+            if not isinstance(step, dict):
+                continue
+            uses = step.get("uses")
+            if not (isinstance(uses, str) and uses.startswith(_SETUP_NODE)):
+                continue
+            options = step.get("with")
+            version = options.get("node-version") if isinstance(options, dict) else None
+            named = step.get("name") or step.get("id") or f"step {position}"
+            found.append(
+                (str(job_id), str(named), None if version is None else str(version))
+            )
+    return found
+
+
+def _node_installations() -> list[tuple[str, str, str, str | None]]:
+    """Every Node installation this repository performs in CI, as
+    `(workflow, job, step, version)`."""
+    return [
+        (workflow.name, job, step, version)
+        for workflow in _workflow_files()
+        for job, step, version in _setup_node_steps(workflow)
+    ]
+
+
+def test_the_setup_node_reader_finds_the_installations_this_repository_has() -> None:
+    """Reader control before the two properties that rest on it: a reader
+    matching nothing would make both of them pass by finding no
+    disagreement and no shortfall, which is the one way a sweep fails
+    silently."""
+    found = _node_installations()
+    assert found, (
+        f"no step in any workflow uses {_SETUP_NODE} -- the reader itself is "
+        "wrong, and both checks below would pass over an empty sweep"
+    )
+    assert len({workflow for workflow, *_ in found}) > 1, (
+        "every Node installation found sits in one workflow, which has not "
+        "been true here since the relays grew workflows of their own"
+    )
+
+
+def test_every_workflow_installs_the_same_node_version() -> None:
+    """One version across `.github/workflows/`, whichever it is.
+
+    Nothing here names 22. The version is not this test's to state: the
+    check below it is what holds the agreed version above the floor the
+    packages declare, and between them a deliberate move to a newer Node
+    needs no edit here at all, while one workflow left behind on the old
+    one fails by name.
+    """
+    found = _node_installations()
+    assert found, "the reader found no Node installation at all"
+    for workflow, job, step, version in found:
+        assert version is not None, (
+            f"{workflow}::{job}/{step} installs Node with no node-version: "
+            "-- it would take whatever the runner image happens to ship, "
+            "which is not a version this repository has chosen"
+        )
+    by_version: dict[str, list[str]] = {}
+    for workflow, job, step, version in found:
+        by_version.setdefault(str(version), []).append(f"{workflow}::{job}/{step}")
+    assert len(by_version) == 1, (
+        "this repository installs more than one Node version: "
+        + "; ".join(
+            f"{version} in {', '.join(where)}"
+            for version, where in sorted(by_version.items())
+        )
+    )
+
+
+#: The first integer in a version expression -- the major of the lowest
+#: release that expression admits, for every shape `engines.node` takes in
+#: these lock files (`>=22.12.0`, `^20.19.0`, `>= 0.8`, `20`, `6.*`,
+#: `>=v12.22.7`).
+_FIRST_MAJOR_RE: Final = re.compile(r"(\d+)")
+
+
+def _branch_floor_major(branch: str) -> int | None:
+    """The lowest Node major one branch of an `engines.node` range admits,
+    or `None` for a branch naming no version at all (`*`)."""
+    match = _FIRST_MAJOR_RE.search(branch)
+    return int(match.group(1)) if match else None
+
+
+def _range_floor_major(spec: str) -> int | None:
+    """The lowest Node major a whole `engines.node` range admits.
+
+    `||` separates alternatives, so a range's own floor is the *lowest* of
+    its branches, never the highest: `^20.19.0 || >=22.12.0` is satisfied
+    by 20.19, so it requires nothing of 22. Only a range with no
+    alternative -- `>=22.12.0` -- states a floor the toolchain cannot get
+    under, and those are the ones the check below rests on.
+
+    A floor, and deliberately not a full range check. It cannot see that
+    `^20.19.0 || ^22.13.0 || >=24` excludes 23 outright, so a repository
+    that moved to 23 would pass here and fail on the runner. Reading a
+    lock file's whole semver grammar to catch that would be a semver
+    implementation living in a test; the floor catches the drift this
+    section exists for -- staying on a runtime the packages have left --
+    and the gap is written down rather than left to be discovered.
+    """
+    floors = [
+        floor
+        for branch in spec.split("||")
+        if (floor := _branch_floor_major(branch)) is not None
+    ]
+    return min(floors) if floors else None
+
+
+def test_the_engines_reader_takes_the_lowest_branch_of_an_alternative() -> None:
+    """Reader control. Taking the highest branch instead would read
+    `^20.19.0 || >=22.12.0` -- the commonest shape in these lock files, and
+    the one Vite and Vitest both use -- as demanding 22, and the check
+    below would then be quoting a floor no package actually sets."""
+    assert _range_floor_major(">=22.12.0") == 22
+    assert _range_floor_major("^20.19.0 || >=22.12.0") == 20
+    assert _range_floor_major("^20.19.0 || ^22.13.0 || >=24") == 20
+    assert _range_floor_major(">=20.19.0 <22.0.0 || >=22.12.0") == 20
+    assert _range_floor_major(">=v12.22.7") == 12
+    assert _range_floor_major("*") is None
+
+
+#: What the runner these workflows declare actually is. A lock file entry
+#: gated to another platform (`@img/sharp-win32-ia32`, `os: [win32]`,
+#: `cpu: [ia32]`) is never installed there, so its own `engines.node` says
+#: nothing about what CI needs -- and left in, a Windows-only package
+#: could raise this floor against a runtime it will never run on.
+_RUNNER_OS: Final = "linux"
+_RUNNER_CPU: Final = "x64"
+
+
+def _installed_on_the_runner(entry: Mapping[str, Any]) -> bool:
+    for key, runner in (("os", _RUNNER_OS), ("cpu", _RUNNER_CPU)):
+        declared = entry.get(key)
+        if isinstance(declared, list) and runner not in declared:
+            return False
+    return True
+
+
+def _declared_node_floor() -> tuple[int, list[str]]:
+    """The highest Node major this repository's npm trees require between
+    them, and every package that requires it.
+
+    Read from the committed lock files, which are what `npm ci` installs
+    from -- never from `node_modules`, which a laptop may not have and a
+    fresh clone certainly does not.
+    """
+    floor = 0
+    requiring: list[str] = []
+    lockfiles = _git_ls_files("*package-lock.json")
+    assert lockfiles, "this repository tracks no package-lock.json at all"
+    for relative in lockfiles:
+        lock = json.loads((ROOT / relative).read_text(encoding="utf-8"))
+        packages = lock.get("packages")
+        for name, entry in (packages or {}).items():
+            if not isinstance(entry, dict) or not _installed_on_the_runner(entry):
+                continue
+            spec = (entry.get("engines") or {}).get("node")
+            if not isinstance(spec, str):
+                continue
+            major = _range_floor_major(spec)
+            if major is None or major < floor:
+                continue
+            where = f"{relative} {name or '(the tree itself)'} ({spec})"
+            if major > floor:
+                floor, requiring = major, [where]
+            else:
+                requiring.append(where)
+    return floor, requiring
+
+
+def test_the_installed_node_version_clears_what_the_lock_files_declare() -> None:
+    """The half the sweep above cannot state.
+
+    Every workflow agreeing on Node 20 satisfies that one perfectly while
+    `wrangler` and `puppeteer-core` both declare they need 22 -- which is
+    the state this repository was actually in. The floor comes out of the
+    lock files `npm ci` installs from, so a dependency bump that raises it
+    fails here rather than on a runner.
+    """
+    versions = {version for *_, version in _node_installations()}
+    assert len(versions) == 1, "the workflows disagree; the sweep above says which"
+    declared = versions.pop()
+    assert declared is not None
+    installed = _branch_floor_major(declared)
+    assert installed is not None, (
+        f"node-version: {declared!r} names no version at all, so no floor "
+        "can be checked against it"
+    )
+    floor, requiring = _declared_node_floor()
+    assert installed >= floor, (
+        f"every workflow installs Node {declared}, below the {floor} this "
+        f"repository's own lock files require: {'; '.join(sorted(requiring))}"
+    )

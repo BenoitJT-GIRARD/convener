@@ -231,10 +231,14 @@ def test_job_permissions_are_read_only() -> None:
 
 
 def test_node_version_meets_puppeteers_own_floor() -> None:
-    """puppeteer 25.8.0 declares `engines.node: >=22.12.0`; every other
-    workflow in this repository still targets Node 20, which is why this
-    dependency was isolated to its own package rather than joining
-    `site/package.json`, which those other jobs share."""
+    """puppeteer 25.8.0 declares `engines.node: >=22.12.0`. This workflow
+    was the first here to clear that floor while every other one still
+    installed Node 20; they all install 22 now, and
+    `test_workflows.py::test_every_workflow_installs_the_same_node_version`
+    is what keeps this one from drifting away from them again. Kept beside
+    that sweep rather than folded into it: the sweep says the workflows
+    agree with each other, and this says what they agree on has to clear
+    the floor this package's own dependency declares."""
     assert "node-version: '22'" in _WORKFLOW
 
 
