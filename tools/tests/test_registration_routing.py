@@ -407,9 +407,16 @@ def test_deploy_commits_the_routing_file_it_generates() -> None:
 
 
 def test_the_relay_reads_the_path_and_the_version_this_module_writes() -> None:
-    assert f"contents/{registration_routing.ROUTING_PATH.as_posix()}" in _RELAY.replace(
-        "${CONTENTS_URL}", "contents/"
+    """The path is matched as the relay's own constant now, not as a
+    concatenation. `CONTENTS_URL` was a module constant there, built off a
+    repository written into that file; the repository arrives as a
+    deploy-time binding, so the address is built at each call site and only
+    the path itself is left to hold against this module's."""
+    assert (
+        f"const ROUTING_PATH = '{registration_routing.ROUTING_PATH.as_posix()}';"
+        in _RELAY
     )
+    assert "contentsUrl(repository, ROUTING_PATH)" in _RELAY
     assert (
         f"const ROUTING_FILE_VERSION = {registration_routing.ROUTING_FILE_VERSION};"
         in _RELAY

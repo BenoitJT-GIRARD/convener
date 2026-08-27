@@ -156,13 +156,17 @@ Three files is the list for a first *build*, and it is the list for a first
 deploy too. Two of the three edge workers still need one value a duplicate
 fills in by hand, in a file the product otherwise owns: the identifier of
 the storage namespace each binds to, which does not exist until
-`wrangler kv namespace create` has printed it. The origin those workers
-answer cross-origin requests for was the other one, until it stopped being
-written down anywhere but `config/instance.json`: the deploy workflow
-derives it from that declaration and passes it to `wrangler deploy`, so
-there is nothing to correct and nothing that can disagree.
-`docs/reference/standing-up.md` gives the namespace step as a step of its
-own.
+`wrangler kv namespace create` has printed it. Two other values used to be
+on that list and are not: the origin those workers answer cross-origin
+requests for, and the repository the two of them dispatch into. Neither is
+written down anywhere but `config/instance.json` now — the deploy workflow
+derives each and passes it to `wrangler deploy`, so there is nothing to
+correct and nothing that can disagree. The second of the two was the more
+expensive to leave: it sat in the workers' own source rather than in their
+configuration, so nothing ever told a duplicate to change it, and a relay
+left uncorrected would have gone on writing into this instance's
+repository. `docs/reference/standing-up.md` gives the namespace step as a
+step of its own.
 
 `docs/reference/operations.md` covers the rest of standing an instance up —
 the accounts, the secrets, and what degrades without each — and

@@ -98,13 +98,28 @@ read by both `test/index.test.js` here and `tools/tests/test_proposal.py`.
 
 ## Deploying
 
+Run *Deploy form relay* from the Actions tab. Once, before the first run,
+the KV namespace has to exist:
+
 ```bash
 npm install
 npx wrangler kv namespace create FORM_RELAY_KV   # once, then paste the
                                                    # printed id into
                                                    # wrangler.toml
-npx wrangler deploy
 ```
+
+The workflow's own deploy command reads the repository
+`config/instance.json` declares this cockpit lives in and hands it to
+Wrangler:
+
+```bash
+npx wrangler deploy --var "REPOSITORY:$repository"
+```
+
+A deploy from a laptop runs that same command with the same derivation.
+A bare `wrangler deploy` leaves a worker holding no repository at all,
+which refuses every submission with `502` — see "Fail closed, not
+open" below.
 
 `FORM_RATE_LIMITER` needs no equivalent creation step — see its comment in
 `wrangler.toml`.
@@ -122,8 +137,8 @@ npx wrangler secret put CONVENER_DISPATCH_TOKEN
   `tools/convener_ops/proposal.py::verify_signature` reads on the other side of
   the dispatch. Same name on both sides on purpose: it is the same secret.
 - `CONVENER_DISPATCH_TOKEN` — a GitHub token with permission to send a
-  `repository_dispatch` to `example-instance/example-cockpit` (`Contents: read
-  & write` is sufficient). This is not the same credential as the
+  `repository_dispatch` to the repository `config/instance.json` declares
+  (`Contents: read & write` is sufficient). This is not the same credential as the
   authentication relay's: that relay holds no token of its own — it only
   proxies GitHub's device-flow endpoints — and the user access token the
   device flow itself issues carries the broader classic `repo` scope, not
@@ -139,6 +154,8 @@ npx wrangler secret put CONVENER_DISPATCH_TOKEN
   and its own comment in `wrangler.toml` for why, unlike the KV namespace,
   it needs no per-account value and ships already configured.
 
+## Fail closed, not open
+
 Unlike `tools/convener_ops/proposal.py::verify_signature`, whose own copy of
 `TALLY_WEBHOOK_SECRET` accepts everything when unset (D-13: an absent
 integration is a normal state, not an error), a missing
@@ -146,3 +163,14 @@ integration is a normal state, not an error), a missing
 them: this worker is the internet-facing boundary, so an unconfigured
 secret must fail closed here even though the Actions side, reached only
 after this worker already let the request through, fails open.
+
+`REPOSITORY` — the repository this worker dispatches into, passed at
+deploy time rather than written into `src/index.js` (`wrangler.toml`'s own
+header argues why) — is refused the same way, and it is the member of that
+set whose absence would be quietest. A missing secret or binding is
+missing; an unset repository is present and wrong. The dispatch would
+carry the word `undefined` where the repository belongs, GitHub would
+answer `404`, and Tally's webhook log would show the same `502` an expired
+`CONVENER_DISPATCH_TOKEN` produces — so an operator would go and rotate a
+token that was never wrong. It is refused by name, before the call is
+spent.

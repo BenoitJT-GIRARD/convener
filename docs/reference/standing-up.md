@@ -477,19 +477,24 @@ Two of the three workers keep a counter in a KV namespace, and a namespace
 does not exist until somebody creates it: Cloudflare allocates the id, per
 account, so it cannot be shipped filled in. Create the two namespaces the form
 relay and the signup relay bind to, pasting each printed id over the
-placeholder in that worker's own `wrangler.toml`. Nothing else in those files
-is yours to correct: the origin each relay answers cross-origin requests for
-was the second such value until it stopped being written down anywhere but
-`config/instance.json`, and the deploy workflow now derives it from there and
+placeholder in that worker's own `wrangler.toml`. Nothing else in those
+workers is yours to correct. Two values were, and neither is written down
+anywhere but `config/instance.json` now: the origin each relay answers
+cross-origin requests for, and the repository the form relay and the signup
+relay dispatch into. Each deploy workflow derives what its worker needs and
 hands it to `wrangler deploy`.
 
-**Proves it is done.** No `wrangler.toml` still holds a placeholder id, and
-none of them names an `ALLOWED_ORIGIN` either — an origin written back into
-one is refused by `tools/tests/test_published.py`, on the Python suite, with
-no worker's suite run.
+**Proves it is done.** No `wrangler.toml` still holds a placeholder id, and no
+worker names either value — an origin written back into a configuration or a
+repository written back into a worker's source is refused by
+`tools/tests/test_published.py`, on the Python suite, with no worker's suite
+run. Both greps below are anchored on what an assignment looks like rather
+than on the name: every one of these files explains in a comment why the value
+is not there, so a search for the bare word matches the explanation and can
+never come back empty.
 
 ```bash
-grep -RE "REPLACE_WITH_|ALLOWED_ORIGIN" services/*/wrangler.toml
+grep -RE "REPLACE_WITH_|^ALLOWED_ORIGIN" services/*/wrangler.toml ; grep -RE "github.com/repos/[A-Za-z0-9]" services/*/src/index.js
 ```
 
 **Without it.** A failure that is not loud. A KV id left at its placeholder

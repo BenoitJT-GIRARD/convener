@@ -42,7 +42,7 @@ fully usable; onboarding is simply slower.
 
 **To create:**
 1. Register a GitHub App in the organisation. Permissions: *Contents: read &
-   write* and nothing else, on `example-cockpit` only. Enable device flow. The
+   write* and nothing else, on this repository only. Enable device flow. The
    app never touches issues -- the board notifications are posted by the
    workflow's own token, not by this app -- so granting it *Issues* would be
    a permission nobody uses on a repository holding personal data.
@@ -132,7 +132,10 @@ still holds.
 - Wrangler secret `CONVENER_DISPATCH_TOKEN` on the worker — set with
   `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from
   `services/form-relay/`. A GitHub token scoped to *Contents: read & write*
-  on `example-cockpit` only, sufficient to send it a `repository_dispatch`.
+  on this repository only, sufficient to send it a `repository_dispatch`.
+  Which repository that is, the worker is told at deploy time: *Deploy form
+  relay* reads `config/instance.json` and passes the answer to Wrangler, so
+  the worker's own source names none.
 - Repository secret `CLOUDFLARE_API_TOKEN` — the same one already set for
   *Deploy auth relay* above; *Deploy form relay* reads it too, since both
   workers deploy to the same Cloudflare account.
@@ -216,10 +219,12 @@ why one alone was not enough.
    `npx wrangler kv namespace create SIGNUP_RELAY_KV` once and paste the
    printed id into that folder's `wrangler.toml`, then run *Deploy signup
    relay* from the Actions tab — see its README — against the same
-   Cloudflare account used for the other two workers. The origin the relay
-   answers cross-origin requests for is derived from `config/instance.json`
-   by that workflow and passed to Wrangler, so there is no second value to
-   fill in. `SIGNUP_RATE_LIMITER`, the burst limiter, needs no equivalent
+   Cloudflare account used for the other two workers. Two further values
+   the worker needs — the origin it answers cross-origin requests for, and
+   the repository it reads keys from, queues submissions on and dispatches
+   into — are derived from `config/instance.json` by that workflow and
+   passed to Wrangler, so neither is yours to fill in.
+   `SIGNUP_RATE_LIMITER`, the burst limiter, needs no equivalent
    creation step and ships already configured in `wrangler.toml`.
 2. Set repository **variable** `VITE_SIGNUP_RELAY_URL` (Settings → Secrets
    and variables → Actions → Variables) to the deployed worker's URL. Public
@@ -233,7 +238,7 @@ why one alone was not enough.
 - Wrangler secret `CONVENER_DISPATCH_TOKEN` on the worker — set with
   `npx wrangler secret put CONVENER_DISPATCH_TOKEN` from
   `services/signup-relay/`. A GitHub token scoped to *Contents: read &
-  write* on `example-cockpit` only — the same scope the form relay's own
+  write* on this repository only — the same scope the form relay's own
   `CONVENER_DISPATCH_TOKEN` uses, since this worker both reads
   `keys/events/<id>.pub` to confirm an event is known and sends the
   `repository_dispatch` itself. Create a **separate** token from the form

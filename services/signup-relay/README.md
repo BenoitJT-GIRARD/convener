@@ -188,7 +188,11 @@ first thing a request from the open internet reaches. So a missing
 refuses every request with `502` rather than falling back to "no
 ceiling," "no burst limit" or "no known-event check" — none of GitHub,
 the counter or either limiter is ever touched on a misconfigured deploy.
-`test/index.test.js` pins this for all four. `ALLOWED_ORIGIN` fails closed too, but visibly
+`REPOSITORY` is refused with them, and it is the one whose absence would
+otherwise be silent: GitHub answers a Contents read under a repository
+that is not there with a clean `404`, which this worker reads as "no such
+event", so it would refuse every real registration for every real event as
+an unknown one. `test/index.test.js` pins this for all five. `ALLOWED_ORIGIN` fails closed too, but visibly
 differently — see "Cross-origin requests" above — because an unset var
 naturally cannot equal any real `Origin` a browser sends, with no extra
 code needed to enforce it.
@@ -434,17 +438,18 @@ npx wrangler kv namespace create SIGNUP_RELAY_KV   # once, then paste the
                                                      # wrangler.toml
 ```
 
-The workflow's own deploy command reads the one address
-`config/instance.json` declares this project is published at and passes its
-origin to Wrangler:
+The workflow's own deploy command reads two values out of
+`config/instance.json` — the one address this project is published at, and
+the repository this cockpit lives in — and passes both to Wrangler:
 
 ```bash
-npx wrangler deploy --var "ALLOWED_ORIGIN:$origin"
+npx wrangler deploy --var "ALLOWED_ORIGIN:$origin" --var "REPOSITORY:$repository"
 ```
 
 Deploying from a laptop means running that same command with the same
-derivation; a bare `wrangler deploy` leaves a worker that refuses every
-request rather than one that answers for the wrong site.
+derivations; a bare `wrangler deploy` leaves a worker that refuses every
+request rather than one that answers for the wrong site or reads and
+writes in somebody else's repository.
 
 `SIGNUP_RATE_LIMITER` needs no equivalent creation step — see its comment
 in `wrangler.toml`.
@@ -453,7 +458,8 @@ in `wrangler.toml`.
 
 - Wrangler secret `CONVENER_DISPATCH_TOKEN` — set with
   `npx wrangler secret put CONVENER_DISPATCH_TOKEN`. A GitHub token scoped to
-  *Contents: read & write* on `example-instance/example-cockpit`, the same
+  *Contents: read & write* on the repository `config/instance.json`
+  declares, the same
   scope `services/form-relay/README.md` documents for its own token: this
   worker uses it both to check whether an event's public key exists
   (a Contents-API read) and to send the `repository_dispatch` itself.

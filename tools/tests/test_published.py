@@ -63,8 +63,11 @@ series -- closed a gap this module used to name:
    wrong alone.
 8. **The identity sweep**: no file writes the organisation's name, its
    contact address or its forum a second time, with every exemption
-   either checked against the declaration (the relays, `CODEOWNERS`) or
-   named with the phase that owns it.
+   either checked against the declaration (the generated templates,
+   `CODEOWNERS`) or named with the phase that owns it. Beside it, the
+   same pair of clauses the address already has for the relays: no
+   Worker source names a repository, and each deploy workflow that needs
+   one derives it.
 
 What clause 8 does **not** sweep, stated rather than left to be found:
 the series' *title* and the organisation's *short name*. Both are in the
@@ -86,6 +89,7 @@ a way it can never be in a source tree the product's own names live in.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import tomllib
 from pathlib import Path
@@ -452,10 +456,10 @@ def test_no_relay_configuration_names_an_origin_at_all() -> None:
         )
 
 
-def _relay_deploy_scripts() -> dict[Path, str]:
-    """The `run:` block of the Deploy step of each relay deploy workflow."""
+def _deploy_scripts(names: tuple[Path, ...]) -> dict[Path, str]:
+    """The `run:` block of the Deploy step of each named workflow."""
     found: dict[Path, str] = {}
-    for name in _RELAY_DEPLOY_WORKFLOWS:
+    for name in names:
         workflow = yaml.safe_load((ROOT / name).read_text(encoding="utf-8"))
         for job in workflow["jobs"].values():
             for step in job["steps"]:
@@ -478,8 +482,12 @@ def test_both_relay_deploys_hand_the_worker_the_declared_origin() -> None:
     into.
     """
     origin = published.load().origin
-    for name, script in _relay_deploy_scripts().items():
-        assert "convener_ops.published import load" in script, (
+    for name, script in _deploy_scripts(_RELAY_DEPLOY_WORKFLOWS).items():
+        # `print(load().origin)` rather than the import line alone: the
+        # signup relay's own deploy step imports `load_identity` beside
+        # it for the repository, and an import needle would have matched
+        # that and passed with the origin's derivation gone.
+        assert "print(load().origin)" in script, (
             f"{name.as_posix()}'s deploy step does not read the declared "
             "origin -- naming it in the worker's own configuration is how "
             "the published address and the origin it answers for start "
@@ -813,19 +821,19 @@ def test_both_publishing_workflows_read_the_push_target_rather_than_naming_it() 
 #: are read by something that cannot reach the declaration, and that are
 #: therefore *checked* against it below rather than merely exempted.
 #:
-#: - the two Worker sources naming the repository they dispatch into: a
-#:   Worker runs on Cloudflare and never sees this repository. That is the
-#:   argument `ALLOWED_ORIGIN` was kept on until the origin stopped being
-#:   written down at all (`services/auth-proxy/wrangler.toml`), and it is
-#:   the same argument, so the same answer is open to these two: a
-#:   deploy-time `--var`. Until one is written they are checked here.
-#: - `.github/CODEOWNERS`: GitHub reads it verbatim, with no expansion of
-#:   any kind, before any of this project's own code runs.
-_LITERAL_IDENTITY_FILES = (
-    Path("services/signup-relay/src/index.js"),
-    Path("services/form-relay/src/index.js"),
-    Path(".github/CODEOWNERS"),
-)
+#: One is left. `.github/CODEOWNERS` is read by GitHub verbatim, with no
+#: expansion of any kind, before any of this project's own code runs, so
+#: the literal has nowhere else to be.
+#:
+#: The two Worker sources that were here named the repository they
+#: dispatch into, on the argument that a Worker runs on Cloudflare and
+#: never sees this repository. That argument has the answer
+#: `ALLOWED_ORIGIN` already took -- a deploy-time `--var` -- and it has
+#: been taken: neither source names a repository now, and
+#: `test_no_relay_source_names_a_repository_at_all` below refuses one
+#: coming back. Nothing under `services/` is exempt from this sweep any
+#: more either, which is what `_IDENTITY_UNSWEPT_TREES` no longer says.
+_LITERAL_IDENTITY_FILES = (Path(".github/CODEOWNERS"),)
 
 #: Files that hold this instance's identity because something *generated*
 #: them from the declaration. Not a second copy in the sense this module
@@ -855,7 +863,19 @@ _IDENTITY_DEFERRED = {entry.path: entry.owner for entry in instance_identity.DEF
 #: instance, and the check that actually matters for behaviour is the
 #: build of a second instance and the sweep of its output -- not the absence
 #: of a string from a test double.
-_IDENTITY_UNSWEPT_TREES = ("tools/tests/", "app/tests/", "services/")
+#:
+#: The whole of `services/` was one entry here, which was a tree exemption
+#: doing a test tree's job: it covered each relay's suite and, silently,
+#: each relay's source and README beside it. Only the three suites are
+#: named now, so a Worker source or a worker's own documentation naming
+#: this organisation fails here.
+_IDENTITY_UNSWEPT_TREES = (
+    "tools/tests/",
+    "app/tests/",
+    "services/auth-proxy/test/",
+    "services/form-relay/test/",
+    "services/signup-relay/test/",
+)
 
 
 @pytest.mark.skipif(
@@ -959,28 +979,14 @@ def test_the_generated_templates_carry_the_identity_the_declaration_names() -> N
 
 
 def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> None:
-    """The exemption above, checked rather than merely granted -- the same
-    discipline `test_the_relays_deploy_the_address_this_project_is_
-    published_at` already holds for `ALLOWED_ORIGIN`.
+    """The exemption above, checked rather than merely granted.
 
-    Each of these files is read by something that cannot reach
-    `config/instance.json`: a Worker deploys from its own package, and
-    GitHub reads `CODEOWNERS` verbatim before any code of this project's
-    runs. So the copy has to exist. What must not happen is that it
-    drifts, and a copy nothing compares is a copy that will.
+    `.github/CODEOWNERS` is read by GitHub verbatim, before any code of
+    this project's runs, so the copy has to exist. What must not happen is
+    that it drifts, and a copy nothing compares is a copy that will.
     """
     identity = published.load_identity()
-    owner, _, repository = identity.repository.partition("/")
-
-    for path in (
-        Path("services/signup-relay/src/index.js"),
-        Path("services/form-relay/src/index.js"),
-    ):
-        text = (ROOT / path).read_text(encoding="utf-8")
-        assert identity.repository in text, (
-            f"{path.as_posix()} no longer names the repository this cockpit "
-            f"writes to ({identity.repository})"
-        )
+    owner, _, _ = identity.repository.partition("/")
 
     codeowners = (ROOT / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
     assert f"@{owner}/editorial-board" in codeowners, (
@@ -988,7 +994,101 @@ def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> 
         f"config/instance.json declares ({owner}) -- every review request it "
         "makes would go to nobody"
     )
-    assert repository, "the declared repository has no name half"
+
+
+#: Every Worker source in this repository. Two of them used to be where the
+#: repository this cockpit lives in was allowed to be written a second
+#: time: a Cloudflare Worker deploys from its own package and can read
+#: nothing else, so `owner/name` was a constant in each and every GitHub
+#: address in the file was built off it. The copy is gone rather than
+#: merely checked -- the deploy workflows derive it and pass it to
+#: `wrangler deploy --var` -- so what is asserted below is that they name
+#: no repository at all. All three are read, not only the two: a value
+#: that is wrong to hold in one of these files is wrong to hold in any of
+#: them.
+_RELAY_SOURCES = (
+    Path("services/auth-proxy/src/index.js"),
+    Path("services/form-relay/src/index.js"),
+    Path("services/signup-relay/src/index.js"),
+)
+
+#: The two workflows that deploy a worker talking to this repository's own
+#: GitHub API, and therefore the two that have to hand it one.
+#: `deploy-auth-proxy.yml` is not here: that worker forwards two
+#: `github.com` OAuth paths and touches no repository at all.
+_REPOSITORY_DEPLOY_WORKFLOWS = (
+    Path(".github/workflows/deploy-form-relay.yml"),
+    Path(".github/workflows/deploy-signup-relay.yml"),
+)
+
+#: A GitHub REST address whose repository is written out rather than
+#: interpolated. `${` is the only thing allowed to follow `/repos/`, which
+#: is what makes this a check on *any* repository literal rather than only
+#: on this instance's: a duplicate that pasted its own in fails here too,
+#: and so does a derived product carrying the example's.
+_REPOSITORY_LITERAL = re.compile(r"api\.github\.com/repos/(?!\$\{)")
+
+
+def test_no_relay_source_names_a_repository_at_all() -> None:
+    """The binding that replaced the constant, and the one that has to
+    bite.
+
+    Two of the three workers talk to this repository's own GitHub API: the
+    form relay to send one `repository_dispatch`, the signup relay to read
+    a published event key, check the survey switch, write a queue entry and
+    dispatch. Which repository that is, is `config/instance.json`'s
+    `identity.repository`, and it is passed to `wrangler deploy --var` as
+    `REPOSITORY`, so no source here writes one.
+
+    Checked twice, on purpose. The declared repository must not appear at
+    all -- that is this instance's own copy coming back. And no GitHub REST
+    address may write its repository out instead of interpolating one --
+    that is the example's copy, or a duplicate's, neither of which the
+    first assertion could ever see.
+    """
+    declared = published.load_identity().repository
+    for path in _RELAY_SOURCES:
+        text = (ROOT / path).read_text(encoding="utf-8")
+        assert declared not in text, (
+            f"{path.as_posix()} names the repository this cockpit lives in "
+            f"({declared}) again. That value is config/instance.json's "
+            "identity.repository and has one home; the deploy workflow "
+            "derives it and passes it to `wrangler deploy --var`, so "
+            "nothing has to be written here"
+        )
+        found = _REPOSITORY_LITERAL.search(text)
+        assert found is None, (
+            f"{path.as_posix()} builds a GitHub address on a repository "
+            "written out rather than on the REPOSITORY binding "
+            f"({text[found.start() : found.start() + 60]!r}) -- a worker "
+            "naming any repository is a worker a duplicate has to edit "
+            "before its first deploy"
+        )
+
+
+def test_both_dispatching_deploys_hand_the_worker_the_declared_repository() -> None:
+    """The other half: a source naming no repository deploys a worker that
+    refuses every request unless the deploy supplies one.
+
+    Asserted on the `run:` block each workflow actually executes -- it must
+    reach the derivation, it must pass what it read to `--var`, and it must
+    not spell the answer out. The same three clauses
+    `test_both_relay_deploys_hand_the_worker_the_declared_origin` holds for
+    the origin beside it.
+    """
+    repository = published.load_identity().repository
+    for name, script in _deploy_scripts(_REPOSITORY_DEPLOY_WORKFLOWS).items():
+        assert "print(load_identity().repository)" in script, (
+            f"{name.as_posix()}'s deploy step does not read the declared "
+            "repository -- naming it in the worker's own source is how a "
+            "duplicate ends up with a relay dispatching at somebody else's"
+        )
+        assert "REPOSITORY:$repository" in script, (
+            f"{name.as_posix()} never hands what it read to wrangler"
+        )
+        assert repository not in script, (
+            f"{name.as_posix()} writes the repository out as well as deriving it"
+        )
 
 
 # ------------------------------------------------------------------ #
