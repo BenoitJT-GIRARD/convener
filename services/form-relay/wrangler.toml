@@ -2,6 +2,31 @@ name = "convener-form-relay"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
+# There is no `[vars]` table here, and the absence is the decision.
+#
+# This worker sends one `repository_dispatch`, and the repository it sends
+# it to is the one `config/instance.json` declares under
+# `identity.repository`. That value used to sit in `src/index.js` as a
+# literal, because a Worker deploys from this package and can read nothing
+# else. It was a copy in product source: the published product carried the
+# example instance's repository name, and a duplicate that corrected only
+# the declaration had a relay dispatching at somebody else's repository
+# with nothing to say so.
+#
+# `.github/workflows/deploy-form-relay.yml` derives it and hands it to
+# `wrangler deploy --var REPOSITORY:<owner/name>`, which reaches
+# `src/index.js` as `env.REPOSITORY` exactly as an entry here would.
+# `services/auth-proxy/wrangler.toml`'s header carries the reasoning in
+# full for the origin this followed, including the
+# generator-with-a---check it was chosen over.
+#
+# `src/index.js` refuses every request with 502 when `REPOSITORY` is
+# unset -- before it spends the dispatch -- so a deploy that dropped the
+# flag fails closed instead of answering 502 for a reason an operator
+# would read as an expired token (D-25). `tools/tests/test_published.py`
+# holds both halves: no `services/*/src/index.js` names a repository, and
+# each deploy workflow that needs one derives it.
+
 # TALLY_WEBHOOK_SECRET and CONVENER_DISPATCH_TOKEN are Wrangler secrets, set with
 # `npx wrangler secret put <NAME>` -- never here. See README.md.
 

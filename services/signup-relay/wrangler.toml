@@ -2,7 +2,27 @@ name = "convener-signup-relay"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
-# There is no `[vars]` table here, and the absence is the decision.
+# There is no `[vars]` table here, and the absence is the decision. Two
+# values a Worker can read nowhere else were written down in this package,
+# and neither is written down here any more.
+#
+# The repository this worker reads keys from, writes queue entries to and
+# dispatches into is the one `config/instance.json` declares under
+# `identity.repository`. It used to be `REPO` in `src/index.js`, a literal
+# every GitHub address in that file was built off, because a Worker
+# deploys from this package and can read nothing else. It was a copy in
+# product source: the published product carried the example instance's
+# repository name, and a duplicate that corrected only the declaration had
+# a relay reading and dispatching at somebody else's repository, with
+# nothing to say so.
+# `.github/workflows/deploy-signup-relay.yml` derives it and hands it to
+# `wrangler deploy --var REPOSITORY:<owner/name>`, which reaches
+# `src/index.js` as `env.REPOSITORY` exactly as an entry here would.
+# `src/index.js` refuses every request with 502 when it is unset, before
+# any call is spent: an unset repository is the one binding that fails
+# *quietly* -- GitHub answers a read under it with a clean 404, which this
+# worker would otherwise report as "no such event" for every real event
+# (D-25).
 #
 # The application's origin -- the only one this worker answers CORS
 # preflights for -- used to be written out here as `ALLOWED_ORIGIN`.
@@ -34,9 +54,9 @@ compatibility_date = "2026-01-01"
 # credential (CONVENER_DISPATCH_TOKEN, below) this worker already spends one
 # read of for `keys/events/<id>.pub` -- one more read on an already
 # ceiling-capped route, in exchange for an answer that agrees with the
-# handler's by construction rather than by build timing. There is no var
-# to bind here any more: the repository (`REPO`, a source constant) and
-# the token cover both reads.
+# handler's by construction rather than by build timing. Nothing is
+# declared here for it either: the repository (`REPOSITORY`, the
+# deploy-time binding above) and the token cover both reads.
 
 # CONVENER_DISPATCH_TOKEN is a Wrangler secret, set with
 # `npx wrangler secret put CONVENER_DISPATCH_TOKEN` -- never here. See README.md.

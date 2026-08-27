@@ -27,6 +27,24 @@ if (!VALID_CASE || !INVALID_CASE) {
   throw new Error('fixture must hold at least one valid case and one invalid case');
 }
 
+// The repository this worker dispatches into is not this package's to
+// know. It is what `config/instance.json` declares as
+// `identity.repository`, and it reaches `handle` as `env.REPOSITORY` --
+// passed to `wrangler deploy --var` by
+// `.github/workflows/deploy-form-relay.yml`, which reads the declaration
+// through the reader that owns it. `src/index.js` names no repository at
+// all; `wrangler.toml`'s own header argues why, and
+// `tools/tests/test_published.py` is where the two are held together, on
+// the side that has the declaration in reach.
+//
+// So this suite states a repository of its own instead of reading one,
+// and that is the point: every test below is about what the worker does
+// with whatever repository it was deployed for, and none of them is about
+// which repository this instance happens to use. Manifestly synthetic,
+// and no owner anybody is asked to register.
+const REPOSITORY = 'a-fixture-owner/a-fixture-repository';
+const DISPATCH_URL = `https://api.github.com/repos/${REPOSITORY}/dispatches`;
+
 function post(body, tallySignature, headers = {}) {
   const allHeaders = { ...headers };
   if (tallySignature !== undefined) allHeaders['Tally-Signature'] = tallySignature;
@@ -63,6 +81,7 @@ function env(secret, token = 'ghp_test-token', overrides = {}) {
     CONVENER_DISPATCH_TOKEN: token,
     FORM_RELAY_KV: makeKv(),
     FORM_RATE_LIMITER: makeRateLimiter(),
+    REPOSITORY,
     ...overrides,
   };
 }
@@ -80,7 +99,7 @@ describe('form relay', () => {
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     const [url, init] = globalThis.fetch.mock.calls[0];
-    expect(url).toBe('https://api.github.com/repos/example-instance/example-cockpit/dispatches');
+    expect(url).toBe(DISPATCH_URL);
     expect(init.method).toBe('POST');
     // This exact value matters: GitHub 403s a request with a wrong or
     // absent User-Agent.
@@ -368,6 +387,40 @@ describe('form relay -- the cumulative ceiling', () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+});
+
+describe('form relay -- the repository it dispatches into', () => {
+  // A second, different repository. The assertion is that the worker
+  // dispatched into *this* one, so a call that went to the repository
+  // stated at the top of this file would be a failure and not a
+  // coincidence.
+  const ELSEWHERE = 'another-fixture-owner/another-fixture-repository';
+
+  it('dispatches into whatever repository the deploy gave it, and no other', async () => {
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { REPOSITORY: ELSEWHERE }),
+    );
+    expect(res.status).toBe(204);
+    const [url] = globalThis.fetch.mock.calls[0];
+    expect(url).toBe(`https://api.github.com/repos/${ELSEWHERE}/dispatches`);
+  });
+
+  it('refuses a validly signed submission when REPOSITORY is unset, and never calls GitHub', async () => {
+    // In the fail-closed set for a reason the secrets and bindings around
+    // it are not: unset, this one is *present and wrong*. The dispatch
+    // would carry the word `undefined` where the repository belongs,
+    // GitHub would answer 404, and the caller would get this worker's own
+    // 502 -- the same answer an expired CONVENER_DISPATCH_TOKEN gives, so
+    // an operator reading Tally's webhook log would rotate a token that
+    // was never wrong.
+    const res = await handle(
+      post(VALID_CASE.body, VALID_CASE.signature),
+      env(VALID_CASE.secret, 'ghp_test-token', { REPOSITORY: undefined }),
+    );
+    expect(res.status).toBe(502);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
 

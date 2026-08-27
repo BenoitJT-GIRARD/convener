@@ -43,8 +43,8 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: services/signup-relay/package-lock.json
-      # For the one derivation the Deploy step below makes. The relay's own
-      # tests need no Python at all.
+      # For the two derivations the Deploy step below makes. The relay's
+      # own tests need no Python at all.
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: '0.5.x'
@@ -72,12 +72,16 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -e
-          # The one origin this worker answers a CORS preflight for.
-          # `services/signup-relay/wrangler.toml` names no origin at all --
-          # see `services/auth-proxy/wrangler.toml`'s header for why the
-          # copy that used to be there is gone -- so it is derived here,
-          # from `config/instance.json`, through the Python reader that
-          # owns the derivation (`published.Published.origin`). The same
+          # The one origin this worker answers a CORS preflight for, and
+          # the one repository it reads keys from, queues submissions on
+          # and dispatches into. `services/signup-relay/wrangler.toml`
+          # names neither, and `src/index.js` names no repository either --
+          # see that configuration's own header, and
+          # `services/auth-proxy/wrangler.toml`'s for the origin's
+          # reasoning in full -- so both are derived here, from
+          # `config/instance.json`, through the Python readers that own the
+          # derivations (`published.Published.origin` and
+          # `published.Identity.repository`). The same
           # `uv run --project tools python -c` shape `deploy.yml` already
           # uses for the repository it pushes a built site into, rather
           # than a second parser written in shell.
@@ -87,9 +91,15 @@ jobs:
             echo "::error::config/instance.json yielded no origin - refusing to deploy a relay that would answer a CORS preflight for nobody"
             exit 1
           fi
-          # --var reaches src/index.js as env.ALLOWED_ORIGIN exactly as a
+          repository="$(uv run --project tools python -c \
+            'from convener_ops.published import load_identity; print(load_identity().repository)')"
+          if [ -z "$repository" ]; then
+            echo "::error::config/instance.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"
+            exit 1
+          fi
+          # Each --var reaches src/index.js as an env entry exactly as a
           # [vars] entry would, and wrangler clears every var it is not
-          # given, so this deploy leaves the worker holding this one and
+          # given, so this deploy leaves the worker holding these two and
           # nothing a previous deploy set.
           cd services/signup-relay
-          npx wrangler deploy --var "ALLOWED_ORIGIN:$origin"
+          npx wrangler deploy --var "ALLOWED_ORIGIN:$origin" --var "REPOSITORY:$repository"

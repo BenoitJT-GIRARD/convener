@@ -93,10 +93,41 @@
 
 const ROUTE = '/';
 const SURVEY_ROUTE = '/survey';
-const REPO = 'example-instance/example-cockpit';
-const DISPATCH_URL = `https://api.github.com/repos/${REPO}/dispatches`;
-const CONTENTS_URL = `https://api.github.com/repos/${REPO}/contents/`;
 const USER_AGENT = 'convener-signup-relay';
+
+/**
+ * The GitHub REST root of the repository this deploy was given, and the
+ * four addresses taken off it. Built from a binding, never written out
+ * here.
+ *
+ * `owner/name` is what `config/instance.json` declares, and it reaches
+ * `handle` as `env.REPOSITORY`:
+ * `.github/workflows/deploy-signup-relay.yml` reads the declaration
+ * through the reader that owns it and passes the answer to `wrangler
+ * deploy --var`. `wrangler.toml`'s own header carries the reasoning, and
+ * `services/auth-proxy/wrangler.toml`'s carries it in full for the
+ * origin this followed.
+ *
+ * Nothing here checks the shape. `published.identity_from_data` refuses
+ * anything that is not `owner/name`, at the one place that can see the
+ * declaration; this worker's share is the question it already asks of
+ * every other binding -- is it there at all.
+ */
+function repositoryApi(repository) {
+  return `https://api.github.com/repos/${repository}`;
+}
+
+function dispatchUrl(repository) {
+  return `${repositoryApi(repository)}/dispatches`;
+}
+
+/** One path under the repository's Contents API. `path` is already
+ *  escaped by its caller -- `encodeURIComponent` for a single segment,
+ *  `encodeURI` for a queue entry's several -- because what needs
+ *  escaping differs between them. */
+function contentsUrl(repository, path) {
+  return `${repositoryApi(repository)}/contents/${path}`;
+}
 
 // Where a survey response goes instead of straight to a
 // `repository_dispatch`. Mirrors `tools/convener_ops/submission_queue.py`'s own
@@ -122,18 +153,27 @@ const SURVEY_KIND = 'survey';
 const REGISTRATION_KIND = 'registration';
 
 // The branch the queue branch is created from, the one time it does not
-// exist yet. Hardcoded like REPO above, and for the same reason: this
-// worker has no repository metadata call to derive it from and adding one
-// would cost an API call on every submission to save one on the first.
+// exist yet. Written out here, unlike the repository above: this worker
+// has no repository-metadata call to derive it from, and adding one would
+// cost an API call on every submission to save one on the first. Nor is a
+// deploy-time binding the answer: a default branch is the product's own
+// convention, the same for every instance, not something a duplicate
+// declares.
 const DEFAULT_BRANCH = 'main';
-const REF_URL = `https://api.github.com/repos/${REPO}/git/ref/heads/${DEFAULT_BRANCH}`;
-const REFS_URL = `https://api.github.com/repos/${REPO}/git/refs`;
+
+function refUrl(repository) {
+  return `${repositoryApi(repository)}/git/ref/heads/${DEFAULT_BRANCH}`;
+}
+
+function refsUrl(repository) {
+  return `${repositoryApi(repository)}/git/refs`;
+}
 
 // Mirrors `registration_routing.ROUTING_PATH` and
 // `ROUTING_FILE_VERSION`; a version this worker does not know is read as
 // "no answer", which routes to the immediate lane rather than guessing at a
 // shape somebody changed.
-const ROUTING_URL = `${CONTENTS_URL}public-data/registration-routing.json`;
+const ROUTING_PATH = 'public-data/registration-routing.json';
 const ROUTING_FILE_VERSION = 1;
 
 //: Mirrors tools/convener_ops/eventkeys.py -- see that module's docstring for why
@@ -300,8 +340,8 @@ function validatedEventId(parsed) {
  * this worker's own failure (502) rather than confusing it with "no such
  * event" (404).
  */
-async function eventKeyExists(eventId, token) {
-  const url = `https://api.github.com/repos/${REPO}/contents/keys/events/${encodeURIComponent(eventId)}.pub`;
+async function eventKeyExists(eventId, token, repository) {
+  const url = contentsUrl(repository, `keys/events/${encodeURIComponent(eventId)}.pub`);
   const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -383,8 +423,8 @@ function base64DecodeContentsApi(value) {
  * check is a courtesy that saves a wasted queue entry, never the
  * authority.
  */
-async function surveyEnabled(eventId, token) {
-  const url = `https://api.github.com/repos/${REPO}/contents/public-data/survey-status.json`;
+async function surveyEnabled(eventId, token, repository) {
+  const url = contentsUrl(repository, 'public-data/survey-status.json');
   const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -501,8 +541,8 @@ function queueEntryPath(kind) {
 }
 
 /** One Contents-API write of `body` to `path` on the queue branch. */
-function putQueueEntry(path, body, token, kind) {
-  return fetch(`${CONTENTS_URL}${encodeURI(path)}`, {
+function putQueueEntry(path, body, token, repository, kind) {
+  return fetch(contentsUrl(repository, encodeURI(path)), {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -536,14 +576,14 @@ function putQueueEntry(path, body, token, kind) {
  * That is the ceiling this design was built against, not a starting point:
  * a queue that had needed more would have been the wrong shape.
  */
-async function createQueueBranch(token) {
+async function createQueueBranch(token, repository) {
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/vnd.github+json',
     'Content-Type': 'application/json',
     'User-Agent': USER_AGENT,
   };
-  const ref = await fetch(REF_URL, {
+  const ref = await fetch(refUrl(repository), {
     headers,
     signal: AbortSignal.timeout(GITHUB_FETCH_TIMEOUT_MS),
   });
@@ -556,7 +596,7 @@ async function createQueueBranch(token) {
     return false;
   }
   if (typeof sha !== 'string' || sha.length === 0) return false;
-  const created = await fetch(REFS_URL, {
+  const created = await fetch(refsUrl(repository), {
     method: 'POST',
     headers,
     body: JSON.stringify({ ref: `refs/heads/${QUEUE_BRANCH}`, sha }),
@@ -580,12 +620,12 @@ async function createQueueBranch(token) {
  * immediately that it did not work, and re-submitting, is a better outcome
  * than this worker holding their request open.
  */
-async function queueSubmission(body, token, kind) {
+async function queueSubmission(body, token, repository, kind) {
   const path = queueEntryPath(kind);
-  const first = await putQueueEntry(path, body, token, kind);
+  const first = await putQueueEntry(path, body, token, repository, kind);
   if (first.status !== 404 && first.status !== 422) return first;
-  if (!(await createQueueBranch(token))) return first;
-  return putQueueEntry(path, body, token, kind);
+  if (!(await createQueueBranch(token, repository))) return first;
+  return putQueueEntry(path, body, token, repository, kind);
 }
 
 /**
@@ -606,10 +646,10 @@ async function queueSubmission(body, token, kind) {
  * Never throws, for the same reason: there is no failure here worth
  * refusing a registration over.
  */
-async function registrationCutoff(eventId, token) {
+async function registrationCutoff(eventId, token, repository) {
   let res;
   try {
-    res = await fetch(ROUTING_URL, {
+    res = await fetch(contentsUrl(repository, ROUTING_PATH), {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
@@ -756,6 +796,17 @@ export async function handle(request, env) {
   // so for each. Checked before anything below touches GitHub or either
   // counter, so none of them is ever reached on a misconfigured deploy.
   const token = env.CONVENER_DISPATCH_TOKEN;
+  // REPOSITORY joins the fail-closed set, and it is the member whose
+  // absence would be quietest of the five. Every other one is missing
+  // something; an unset repository is *present and wrong*, and it fails
+  // in the one direction a caller cannot tell from a correct answer: a
+  // Contents-API read with the word `undefined` where the repository
+  // belongs is a clean 404, which `eventKeyExists` reads as "no such
+  // event". Every real registration for every real event would then be
+  // refused with this worker's own 404 -- the answer a stranger guessing
+  // at event ids gets -- and nothing anywhere would say the relay is
+  // pointed at nothing. Refused by name, before a call is spent.
+  const repository = env.REPOSITORY;
   const kv = env.SIGNUP_RELAY_KV;
   const rateLimiter = env.SIGNUP_RATE_LIMITER;
   // GLOBAL_RATE_LIMITER joins the fail-closed set -- a deploy missing
@@ -763,7 +814,7 @@ export async function handle(request, env) {
   // per-event limiter, rather than silently running with only half the
   // abuse protection this worker now claims.
   const globalRateLimiter = env.GLOBAL_RATE_LIMITER;
-  if (!token || !kv || !rateLimiter || !globalRateLimiter) {
+  if (!token || !repository || !kv || !rateLimiter || !globalRateLimiter) {
     return respond(502, env, 'Bad Gateway');
   }
 
@@ -830,7 +881,7 @@ export async function handle(request, env) {
 
   let known;
   try {
-    known = await eventKeyExists(eventId, token);
+    known = await eventKeyExists(eventId, token, repository);
   } catch {
     return respond(502, env, 'Bad Gateway');
   }
@@ -848,7 +899,7 @@ export async function handle(request, env) {
   if (isSurvey) {
     let enabled;
     try {
-      enabled = await surveyEnabled(eventId, token);
+      enabled = await surveyEnabled(eventId, token, repository);
     } catch {
       return respond(502, env, 'Bad Gateway');
     }
@@ -878,14 +929,15 @@ export async function handle(request, env) {
   let queued = isSurvey;
   if (!isSurvey) {
     queued =
-      registrationLane(await registrationCutoff(eventId, token), Date.now()) === 'queue';
+      registrationLane(await registrationCutoff(eventId, token, repository), Date.now()) ===
+      'queue';
   }
 
   let upstream;
   try {
     upstream = queued
-      ? await queueSubmission(body, token, isSurvey ? SURVEY_KIND : REGISTRATION_KIND)
-      : await fetch(DISPATCH_URL, {
+      ? await queueSubmission(body, token, repository, isSurvey ? SURVEY_KIND : REGISTRATION_KIND)
+      : await fetch(dispatchUrl(repository), {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,

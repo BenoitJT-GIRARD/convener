@@ -46,9 +46,26 @@ const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 // reserves, so it is a fixture by construction.
 const ALLOWED_ORIGIN = 'https://pages.example.test';
 
-const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cockpit/dispatches';
-const CONTENTS_URL = (id) =>
-  `https://api.github.com/repos/example-instance/example-cockpit/contents/keys/events/${id}.pub`;
+// The repository this worker reads keys from, queues submissions on and
+// dispatches into is not this package's to know either. It is what
+// `config/instance.json` declares as `identity.repository`, and it reaches
+// `handle` as `env.REPOSITORY` -- passed to `wrangler deploy --var` by
+// `.github/workflows/deploy-signup-relay.yml`, which reads the declaration
+// through the reader that owns it. `src/index.js` names no repository at
+// all; `wrangler.toml`'s own header argues why, and
+// `tools/tests/test_published.py` is where the two are held together, on
+// the side that has the declaration in reach.
+//
+// So this suite states a repository of its own, for the same reason it
+// states an origin of its own: every test below is about what the worker
+// does with whatever repository it was deployed for, and none of them is
+// about which repository this instance happens to use. Manifestly
+// synthetic, and no owner anybody is asked to register.
+const REPOSITORY = 'a-fixture-owner/a-fixture-repository';
+const REPOSITORY_API = `https://api.github.com/repos/${REPOSITORY}`;
+
+const DISPATCH_URL = `${REPOSITORY_API}/dispatches`;
+const CONTENTS_URL = (id) => `${REPOSITORY_API}/contents/keys/events/${id}.pub`;
 
 // A survey response is written to the queue branch
 // through the Contents API instead of being dispatched. These mirror
@@ -56,16 +73,14 @@ const CONTENTS_URL = (id) =>
 // `tools/convener_ops/submission_queue.py`'s -- a branch name that disagreed
 // across the three would be a queue nothing ever drains.
 const QUEUE_BRANCH = 'submission-queue';
-const QUEUE_ROOT =
-  'https://api.github.com/repos/example-instance/example-cockpit/contents/queue/';
+const QUEUE_ROOT = `${REPOSITORY_API}/contents/queue/`;
 const QUEUE_PREFIX = `${QUEUE_ROOT}survey/`;
 // The second kind the same queue carries. A branch of
 // its own under the same directory, mirroring
 // `submission_queue.REGISTRATION_KIND`.
 const REGISTRATION_QUEUE_PREFIX = `${QUEUE_ROOT}registration/`;
-const REF_URL =
-  'https://api.github.com/repos/example-instance/example-cockpit/git/ref/heads/main';
-const REFS_URL = 'https://api.github.com/repos/example-instance/example-cockpit/git/refs';
+const REF_URL = `${REPOSITORY_API}/git/ref/heads/main`;
+const REFS_URL = `${REPOSITORY_API}/git/refs`;
 
 /** The path component of a queue write, i.e. what `queueEntryPath` built.
  *  `submission_queue.ENTRY_ID_RE` is the Python half of this shape; the
@@ -77,14 +92,12 @@ const QUEUE_ENTRY_RE = /^[0-9a-z]{1,16}-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{
 // this repository -- not a second, deployed URL any more (that was
 // SURVEY_STATUS_URL, removed along with wrangler.toml's own
 // var of the same name; see that file's comment for why).
-const SURVEY_STATUS_CONTENTS_URL =
-  'https://api.github.com/repos/example-instance/example-cockpit/contents/public-data/survey-status.json';
+const SURVEY_STATUS_CONTENTS_URL = `${REPOSITORY_API}/contents/public-data/survey-status.json`;
 
 // The registration lane cutoffs, read the same way from
 // the same API. `tools/convener_ops/registration_routing.py` is what writes it
 // and `deploy.yml` what commits it; this file only ever stands in for it.
-const ROUTING_CONTENTS_URL =
-  'https://api.github.com/repos/example-instance/example-cockpit/contents/public-data/registration-routing.json';
+const ROUTING_CONTENTS_URL = `${REPOSITORY_API}/contents/public-data/registration-routing.json`;
 
 /** An ISO-8601 UTC instant `offsetMs` from now, spelled exactly the way
  *  `registration_routing.to_routing_data` spells one. */
@@ -151,6 +164,7 @@ function env(overrides = {}) {
     // keeps passing unmodified.
     GLOBAL_RATE_LIMITER: makeRateLimiter(),
     ALLOWED_ORIGIN,
+    REPOSITORY,
     ...overrides,
   };
 }
@@ -250,7 +264,7 @@ function stubFetch({
         status: surveyStatusHttpStatus,
       });
     }
-    if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
+    if (u.startsWith(`${REPOSITORY_API}/contents/`)) {
       return new Response(null, { status: known ? 200 : 404 });
     }
     if (u === DISPATCH_URL) {
@@ -530,7 +544,7 @@ describe('signup relay -- the event must be known', () => {
   it('reports 502, not 404, when the existence check itself cannot be completed', async () => {
     globalThis.fetch = vi.fn(async (url) => {
       const u = String(url);
-      if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
+      if (u.startsWith(`${REPOSITORY_API}/contents/`)) {
         return new Response(null, { status: 403 }); // rate-limited, not "no such event"
       }
       throw new Error(`unexpected fetch in test: ${u}`);
@@ -548,10 +562,19 @@ describe('signup relay -- the event must be known', () => {
   });
 });
 
-describe('signup relay -- fail closed on a missing secret or store', () => {
+describe('signup relay -- fail closed on a missing secret, store or repository', () => {
   it.each([
     ['CONVENER_DISPATCH_TOKEN is unset', { CONVENER_DISPATCH_TOKEN: undefined }],
     ['CONVENER_DISPATCH_TOKEN is an empty string', { CONVENER_DISPATCH_TOKEN: '' }],
+    // The deploy-time repository is in this set for a reason the four
+    // around it are not: unset, it is the only one whose failure is
+    // *quiet*. GitHub answers a Contents read under a repository that is
+    // not there with a clean 404, which `eventKeyExists` reads as "no such
+    // event" -- so a relay deployed without it would refuse every real
+    // registration as an unknown event, with nothing anywhere saying the
+    // relay is pointed at nothing.
+    ['REPOSITORY is unset', { REPOSITORY: undefined }],
+    ['REPOSITORY is an empty string', { REPOSITORY: '' }],
     ['SIGNUP_RELAY_KV is not bound', { SIGNUP_RELAY_KV: undefined }],
     ['SIGNUP_RATE_LIMITER is not bound', { SIGNUP_RATE_LIMITER: undefined }],
     ['GLOBAL_RATE_LIMITER is not bound', { GLOBAL_RATE_LIMITER: undefined }],
@@ -559,6 +582,48 @@ describe('signup relay -- fail closed on a missing secret or store', () => {
     const res = await handle(post(VALID_BODY), env(override));
     expect(res.status).toBe(502);
     expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('signup relay -- the repository it was deployed for', () => {
+  // A second, different repository. Every assertion below is that the
+  // worker reached for *this* one, so a call that went to the repository
+  // the rest of this suite states would be a failure and not a
+  // coincidence.
+  const ELSEWHERE = 'another-fixture-owner/another-fixture-repository';
+
+  /** Answers each GitHub call well enough to reach the next one, and
+   *  records where it went. `stubFetch` cannot serve here: it routes on
+   *  the fixture repository's own addresses, so it could only ever see
+   *  this worker reaching for that one. */
+  function recordingFetch() {
+    return vi.fn(async (url) => {
+      const u = String(url);
+      if (u.endsWith('.pub')) return new Response(null, { status: 200 });
+      if (u.endsWith('/registration-routing.json')) return new Response(null, { status: 404 });
+      if (u.endsWith('/survey-status.json')) {
+        return new Response(
+          JSON.stringify({ content: contentsApiBase64(JSON.stringify([EVENT_ID])) }),
+          { status: 200 },
+        );
+      }
+      return new Response(null, { status: 204 });
+    });
+  }
+
+  it.each([
+    ['a registration', () => post(VALID_BODY)],
+    ['a survey response', () => postSurvey(SURVEY_BODY)],
+  ])('sends every GitHub call for %s to that repository and to no other', async (_label, make) => {
+    globalThis.fetch = recordingFetch();
+    const res = await handle(make(), env({ REPOSITORY: ELSEWHERE }));
+    expect(res.status).toBe(204);
+    const called = globalThis.fetch.mock.calls.map(([url]) => String(url));
+    expect(called.length).toBeGreaterThan(0);
+    expect(called.every((u) => u.startsWith(`https://api.github.com/repos/${ELSEWHERE}/`))).toBe(
+      true,
+    );
+    expect(called.some((u) => u.includes(REPOSITORY))).toBe(false);
   });
 });
 
@@ -680,7 +745,7 @@ describe('signup relay -- dispatch failure', () => {
   it('reports 502 when the dispatch cannot even be attempted (a real network failure)', async () => {
     globalThis.fetch = vi.fn(async (url) => {
       const u = String(url);
-      if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
+      if (u.startsWith(`${REPOSITORY_API}/contents/`)) {
         return new Response(null, { status: 200 });
       }
       throw new TypeError('fetch failed');
@@ -913,7 +978,7 @@ describe('signup relay -- the /survey route', () => {
         if (u === SURVEY_STATUS_CONTENTS_URL) {
           throw new TypeError('fetch failed');
         }
-        if (u.startsWith('https://api.github.com/repos/example-instance/example-cockpit/contents/')) {
+        if (u.startsWith(`${REPOSITORY_API}/contents/`)) {
           return new Response(null, { status: 200 });
         }
         throw new Error(`unexpected fetch in test: ${u}`);
@@ -952,6 +1017,7 @@ describe('signup relay -- the /survey route', () => {
   describe('the survey path fails closed exactly like the registration path', () => {
     it.each([
       ['CONVENER_DISPATCH_TOKEN is unset', { CONVENER_DISPATCH_TOKEN: undefined }],
+      ['REPOSITORY is unset', { REPOSITORY: undefined }],
       ['SIGNUP_RELAY_KV is not bound', { SIGNUP_RELAY_KV: undefined }],
       ['SIGNUP_RATE_LIMITER is not bound', { SIGNUP_RATE_LIMITER: undefined }],
     ])('refuses every well-shaped /survey request when %s, and never calls GitHub', async (_label, override) => {

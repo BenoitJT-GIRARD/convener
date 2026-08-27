@@ -43,6 +43,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: services/form-relay/package-lock.json
+      # For the one derivation the Deploy step below makes. The relay's own
+      # tests need no Python at all.
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.5.x'
       - name: Check whether the integration is configured
         id: gate
         env:
@@ -63,7 +68,28 @@ jobs:
         run: npm ci
       - name: Deploy
         if: steps.gate.outputs.configured == 'true'
-        working-directory: services/form-relay
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler deploy
+        run: |
+          set -e
+          # The one repository this worker dispatches into.
+          # `services/form-relay/src/index.js` names no repository at all --
+          # see `services/form-relay/wrangler.toml`'s header for why the
+          # literal that used to be there is gone -- so it is derived here,
+          # from `config/instance.json`, through the Python reader that
+          # owns the derivation (`published.Identity.repository`). The same
+          # `uv run --project tools python -c` shape `deploy.yml` already
+          # uses for the repository it pushes a built site into, rather
+          # than a second parser written in shell.
+          repository="$(uv run --project tools python -c \
+            'from convener_ops.published import load_identity; print(load_identity().repository)')"
+          if [ -z "$repository" ]; then
+            echo "::error::config/instance.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"
+            exit 1
+          fi
+          # --var reaches src/index.js as env.REPOSITORY exactly as a
+          # [vars] entry would, and wrangler clears every var it is not
+          # given, so this deploy leaves the worker holding this one and
+          # nothing a previous deploy set.
+          cd services/form-relay
+          npx wrangler deploy --var "REPOSITORY:$repository"

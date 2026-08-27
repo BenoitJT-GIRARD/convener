@@ -38,8 +38,27 @@
  */
 
 const ROUTE = '/';
-const DISPATCH_URL = 'https://api.github.com/repos/example-instance/example-cockpit/dispatches';
 const USER_AGENT = 'convener-form-relay';
+
+/**
+ * Where the `repository_dispatch` goes -- built from the repository this
+ * deploy was given, never written out here.
+ *
+ * `owner/name` is what `config/instance.json` declares, and it reaches
+ * `handle` as `env.REPOSITORY`: `.github/workflows/deploy-form-relay.yml`
+ * reads the declaration through the reader that owns it and passes the
+ * answer to `wrangler deploy --var`. `wrangler.toml`'s own header carries
+ * the reasoning, and `services/auth-proxy/wrangler.toml`'s carries it in
+ * full for the origin this followed.
+ *
+ * Nothing here checks the shape. `published.identity_from_data` refuses
+ * anything that is not `owner/name`, at the one place that can see the
+ * declaration; this worker's share is the question it already asks of
+ * every other binding -- is it there at all.
+ */
+function dispatchUrl(repository) {
+  return `https://api.github.com/repos/${repository}/dispatches`;
+}
 
 // A pre-parse guard on the whole request body, checked before it is even
 // read: Tally's own payload wraps up to eleven fields (proposal.py::
@@ -162,7 +181,8 @@ export async function handle(request, env) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // Failing closed, extended to the second secret and the two
+  // Failing closed, extended to the second secret, the repository this
+  // deploy was given and the two
   // abuse-protection bindings: a missing CONVENER_DISPATCH_TOKEN must not round-trip a
   // literal "undefined" Authorization header to GitHub, and a missing KV
   // or rate-limiter binding must refuse rather than silently skip the
@@ -170,11 +190,23 @@ export async function handle(request, env) {
   // services/signup-relay's own index.js applies to
   // SIGNUP_RELAY_KV/SIGNUP_RATE_LIMITER. Checked only once a valid
   // signature is already confirmed, so an unsigned flood never reaches --
-  // or spends -- either binding.
+  // or spends -- any of them.
   const token = env.CONVENER_DISPATCH_TOKEN;
+  // REPOSITORY joins the fail-closed set rather than being defaulted or
+  // left to fail downstream, and it is the member with the quietest
+  // failure of the four. An unset secret or binding is at least absent;
+  // an unset repository is *present and wrong*, building a dispatch
+  // address with the word `undefined` where the repository belongs, which
+  // GitHub answers 404 -- reaching the caller as this worker's own 502, the
+  // same answer an expired CONVENER_DISPATCH_TOKEN gives, which is
+  // precisely the confusion the file-level comment above says the 502
+  // exists to prevent. An operator reading Tally's webhook log would go
+  // and rotate a token that was never wrong. Refused by name, before the
+  // call is spent.
+  const repository = env.REPOSITORY;
   const kv = env.FORM_RELAY_KV;
   const rateLimiter = env.FORM_RATE_LIMITER;
-  if (!token || !kv || !rateLimiter) {
+  if (!token || !repository || !kv || !rateLimiter) {
     return new Response('Bad Gateway', { status: 502 });
   }
 
@@ -215,7 +247,7 @@ export async function handle(request, env) {
 
   let upstream;
   try {
-    upstream = await fetch(DISPATCH_URL, {
+    upstream = await fetch(dispatchUrl(repository), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
