@@ -128,7 +128,7 @@ NEVER_PUBLISHED = frozenset(
 #: event data to the showcase: nothing here maps any column to it, so no
 #: edition's `time` ever reaches `events-public.json` even though it is
 #: classified `PUBLISHABLE_ALWAYS` -- confirmed by regenerating that file
-#: from `data/speakers.yml` and inspecting the output. The site's own
+#: from `instance/data/speakers.yml` and inspecting the output. The site's own
 #: templates (`site/.eleventy.js::parisStandingStart`) read no field for
 #: it either, and say so at the point that would otherwise be silent about
 #: overriding it. Wiring `time` through both sides is a real feature this
@@ -332,7 +332,7 @@ def to_public(speakers: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def to_survey_status(speakers: Sequence[object]) -> list[str]:
     """The event ids currently open for the post-event survey,
     sorted -- what `convener-survey-status-public-data`
-    publishes to `public-data/survey-status.json` and, from there,
+    publishes to `instance/public-data/survey-status.json` and, from there,
     `app/scripts/copy-survey-status.mjs` bakes into the app's own built
     output for `SurveyForm.tsx` to fetch same-origin, the same way
     `copy-certificates.mjs` publishes `certificates.json` for the
@@ -360,7 +360,7 @@ def to_survey_status(speakers: Sequence[object]) -> list[str]:
 
     `Sequence[object]`, not `list[dict[str, Any]]`: the one production
     caller (`cli.survey_status_public_data`) hands over whatever
-    `data/speakers.yml` parsed to, and a hand-edited list whose entries are
+    `instance/data/speakers.yml` parsed to, and a hand-edited list whose entries are
     not mappings is exactly what the `isinstance` guard below is for. A
     signature promising mappings would make that live guard look like dead
     defensive code and its test look like a type error.

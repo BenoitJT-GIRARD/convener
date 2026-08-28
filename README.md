@@ -6,7 +6,7 @@ Running this needs **two repositories on GitHub**: one **private**, holding
 the cockpit and the participant data it works on, and one **public**, whose
 only job is to be the thing that gets published.
 
-The split is forced, not preferred. `data/speakers.yml` and the per-event
+The split is forced, not preferred. `instance/data/speakers.yml` and the per-event
 registration files hold personal data, so whatever repository holds them
 has to be private — and GitHub Pages will not serve a private repository
 without a paid plan, which this project's no-cost constraint rules out. The
@@ -116,9 +116,9 @@ Three files, before the first build:
 
 | File | What is in it |
 |---|---|
-| `config/instance.json` | Who is publishing, and where. Eleven values: the organisation and its short form, the series, its strapline and its tagline, the forum, the contact address, the proposal form, the cockpit's own repository, the published address, and the edition prefix. While any of them is still the example's, the showcase prints a band above its masthead and the cockpit prints one above its sign-in screen, naming the keys left to fill in. |
-| `data/config.yml` | The Editorial Board's GitHub logins, the season, and the thresholds a vote is measured against. |
-| `data/speakers.yml` | Your own records. A duplicate starts it empty. |
+| `instance/config.json` | Who is publishing, and where. Eleven values: the organisation and its short form, the series, its strapline and its tagline, the forum, the contact address, the proposal form, the cockpit's own repository, the published address, and the edition prefix. While any of them is still the example's, the showcase prints a band above its masthead and the cockpit prints one above its sign-in screen, naming the keys left to fill in. |
+| `instance/data/config.yml` | The Editorial Board's GitHub logins, the season, and the thresholds a vote is measured against. |
+| `instance/data/speakers.yml` | Your own records. A duplicate starts it empty. |
 
 That is the whole list, and it is short because the separation is declared
 and checked rather than intended: [`config/boundary.yml`](config/boundary.yml)
@@ -132,21 +132,22 @@ and refusing any trace of the first instance in the output.
 Everything else the declaration hands over needs no edit before a first
 run, and why is worth knowing:
 
-- **`data/brand.json` is not on the list.** The product ships a palette
+- **`instance/data/brand.json` is not on the list.** The product ships a palette
   *and* a motif of its own, and one reader takes them whenever an instance
   has written nothing — so a duplicate builds a finished-looking site
   without providing a single design file. Whole file or whole file, never a
   merge of the two, and a palette measuring below AA does not build, yours
   or ours. [D-16](docs/decisions/d-16-brand-source-of-truth.md) is the
   argument.
-- **`config/actions-budget.yml`, `config/queue-drain.yml` and
-  `config/registration-lanes.yml`** carry numbers rather than identity: an
+- **`instance/actions-budget.yml`, `instance/queue-drain.yml` and
+  `instance/registration-lanes.yml`** carry numbers rather than identity: an
   Actions allowance, a queue alarm, the distance to an event at which a
   registration stops queueing. The shipped values work. They are worth
   re-cutting once a series has a rhythm, and each file says against what.
-- **`keys/`, `public-data/`, and the ledgers under `data/`** are written,
-  never authored. Generating an event key or a signing key is an operator's
-  act; everything under `public-data/` is derived from `data/` by this
+- **`instance/keys/`, `instance/public-data/`, and the ledgers under
+  `instance/data/`** are written, never authored. Generating an event key
+  or a signing key is an operator's act; everything under
+  `instance/public-data/` is derived from `instance/data/` by this
   project's own commands and committed by a workflow.
 - **`docs/governance/register.md`** is a total re-rendering of a
   repository's own commit history, rewritten by a scheduled job on every
@@ -159,7 +160,7 @@ the storage namespace each binds to, which does not exist until
 `wrangler kv namespace create` has printed it. Two other values used to be
 on that list and are not: the origin those workers answer cross-origin
 requests for, and the repository the two of them dispatch into. Neither is
-written down anywhere but `config/instance.json` now — the deploy workflow
+written down anywhere but `instance/config.json` now — the deploy workflow
 derives each and passes it to `wrangler deploy`, so there is nothing to
 correct and nothing that can disagree. The second of the two was the more
 expensive to leave: it sat in the workers' own source rather than in their
@@ -172,7 +173,7 @@ step of its own.
 duplicate meets it before its first pull request.**
 [`.github/CODEOWNERS`](.github/CODEOWNERS) names the team every review
 request goes to, `@<organisation>/editorial-board`, and the organisation
-half is the owner of `config/instance.json`'s `identity.repository`.
+half is the owner of `instance/config.json`'s `identity.repository`.
 GitHub parses that file itself, before any code of this project's can
 run, so it cannot read the declaration the way the origin and the
 repository now do; generating it with a `--check` in continuous
@@ -198,7 +199,7 @@ a person who has neither repository to an instance that runs.
 |---|---|
 | `app/` | The cockpit (Vite + TypeScript + React), gated by GitHub sign-in — plus the public *islands* (registration, certificate verification) built alongside it and mounted on the showcase's static pages. Built here and published to the separate `example-showcase` repository — see *Publishing the showcase and the application* in `docs/reference/operations.md`. |
 | `site/` | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, the data notice. Generated into `example-showcase` the same way `app/` is — nothing there is hand-edited. |
-| `data/` | `speakers.yml` (unified entity), `config.yml` (board, threshold, season), and, per event, an encrypted registration and survey-response file. |
+| `instance/` | Everything this series owns rather than the code, and the only place any of it sits: `data/speakers.yml` (unified entity), `data/config.yml` (board, threshold, season), a per-event encrypted registration and survey-response file, the published public keys, the derived public data, and the four declarations above. |
 | `docs/` | Handbook content as Markdown — rendered *inside* the cockpit at the point of action and in the Handbook tab — plus reference material such as [`architecture.md`](docs/architecture.md). Not a separate site. |
 | `tools/` | The `convener-ops` package: data validation, integration status, the sweep, the public-data filter, certificate issuance and revocation, the retention sweep. |
 | `services/auth-proxy/` | The Cloudflare Worker that relays the GitHub device-flow sign-in. |
@@ -211,7 +212,7 @@ a person who has neither repository to an instance that runs.
 ```bash
 cd app
 npm install
-npm run dev           # served under the base config/instance.json declares
+npm run dev           # served under the base instance/config.json declares
 ```
 
 You'll be prompted for a GitHub fine-grained PAT scoped to this repository
@@ -231,7 +232,7 @@ The public showcase is a separate, static project — no sign-in, no secret:
 ```bash
 cd site
 npm install
-npm start             # served under the prefix config/instance.json declares
+npm start             # served under the prefix instance/config.json declares
 ```
 
 Validate data:
@@ -262,7 +263,7 @@ authority.
 
 ## Architecture
 
-- **One entity per speaker.** `data/speakers.yml` carries the whole lifecycle: lead → approved → invited → confirmed → scheduled → delivered → archived (plus `parked`, `decline-board`, `decline-speaker`).
+- **One entity per speaker.** `instance/data/speakers.yml` carries the whole lifecycle: lead → approved → invited → confirmed → scheduled → delivered → archived (plus `parked`, `decline-board`, `decline-speaker`).
 - **State machine.** Status changes are a consequence of explicit gestures (vote, send invitation, log reply, lock date). The free-form status field is gone (except a board-only admin override).
 - **Two personas.** Active organizer and board member, served at parity. The inbox adapts to the role.
 - **Handbook content rendered inline.** Each runbook step links to the relevant Markdown chunk (template email, instructions) which renders next to the action. No back-and-forth with a separate doc site.

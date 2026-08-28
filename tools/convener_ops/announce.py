@@ -3,7 +3,7 @@ network post, a mailing-list message, and the announcement that a recording
 has gone up -- drafts an operator reads, adjusts and posts by hand.
 
 Every function below takes exactly one row of `public_data.to_public`'s own
-output, never a raw `data/speakers.yml` entry. That is the whole safety
+output, never a raw `instance/data/speakers.yml` entry. That is the whole safety
 argument: `to_public` has already applied the publication gate --
 `PUBLISHABLE_ON_CONSENT` fields blanked unless the speaker's consent and the
 board's approval both cleared, the recording additionally blanked outside
@@ -230,7 +230,7 @@ def _instance_namespace(root: Path) -> dict[str, str]:
     `published.py::
     Identity.namespace` composes this map, and `render.ts` resolves the
     identical names on the other side of the language boundary, so a
-    duplicate that edits `config/instance.json` once changes both.
+    duplicate that edits `instance/config.json` once changes both.
 
     Read from `root`, like `_template` above and for the same reason: a
     function handed its own inputs is the one every test in this module
@@ -241,7 +241,7 @@ def _instance_namespace(root: Path) -> dict[str, str]:
 
 def _event_id(row: Mapping[str, Any]) -> str:
     """`row["id"]` is `to_public`'s own rendering of `edition_code`, cased
-    exactly as typed in `data/speakers.yml` -- `platform.find_speaker`
+    exactly as typed in `instance/data/speakers.yml` -- `platform.find_speaker`
     lower-cases it, and this is the one place these functions apply that
     rule, rather than trusting every caller to have done it already."""
     return str(row.get("id", "")).lower()

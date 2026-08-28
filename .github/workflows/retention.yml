@@ -37,8 +37,8 @@ concurrency:
 jobs:
   retention:
     runs-on: ubuntu-latest
-    # Checkout, `uv sync`, a glob over keys/events/*.pub against
-    # data/speakers.yml and the destruction registry -- no decrypt, no
+    # Checkout, `uv sync`, a glob over instance/keys/events/*.pub against
+    # instance/data/speakers.yml and the destruction registry -- no decrypt, no
     # network call from Python at all (see cli.py::retention_sweep's own
     # docstring: it computes only, and never touches the GitHub API
     # itself).
@@ -46,12 +46,12 @@ jobs:
     permissions:
       contents: write
       # This job's own commit below (deleting
-      # a destroyed event's `keys/events/<id>.pub` among it) pushes with
+      # a destroyed event's `instance/keys/events/<id>.pub` among it) pushes with
       # `GITHUB_TOKEN`, the recursion guard `publish-vitrine.yml`'s own
       # header comment names -- GitHub does not start a new workflow run
       # from a push made with that token. Without a direct dispatch,
       # nothing ever rebuilds the app bundle `copy-event-keys.mjs`
-      # populates from `keys/events/`, so the deployed bundle keeps
+      # populates from `instance/keys/events/`, so the deployed bundle keeps
       # serving a destroyed event's public key until an unrelated push to
       # `main` happens to rebuild it -- the exact suppression trap the
       # three certificate workflows and sweep-and-notify.yml already
@@ -183,8 +183,8 @@ jobs:
         # idempotent by construction -- see its own docstring.
         #
         # `record_destructions` itself also removes each
-        # recorded event's `keys/events/<id>.pub`, in that order --
-        # `git add`ing `keys/events` here as well as the registry file is
+        # recorded event's `instance/keys/events/<id>.pub`, in that order --
+        # `git add`ing `instance/keys/events` here as well as the registry file is
         # what puts that removal in the same commit as the registry entry
         # -- a destroyed event must stop accepting
         # new registrations too, and the published `.pub` is the signup
@@ -196,8 +196,8 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-record-destructions)
-            git add data/event-key-destructions.yml
-            git add keys/events
+            git add instance/data/event-key-destructions.yml
+            git add instance/keys/events
             if git diff --staged --quiet; then
               echo "::warning::convener-retention-sweep found events due for destruction, but the registry already recorded them -- see this run's own log above"
               exit 0
@@ -205,8 +205,8 @@ jobs:
             git commit -m "data: record the destruction of an event registration key"
             if git push; then
               # publish-vitrine.yml watches
-              # data/speakers.yml and data/events/*/certificates.yml, not
-              # keys/ or the destruction registry, so this dispatch finds
+              # instance/data/speakers.yml and instance/data/events/*/certificates.yml, not
+              # instance/keys/ or the destruction registry, so this dispatch finds
               # nothing changed and exits as a no-op -- dispatched anyway,
               # the same way the three certificate workflows dispatch it
               # unconditionally, so this workflow's own trigger shape
@@ -215,7 +215,7 @@ jobs:
                 echo "::warning::failed to trigger publish-vitrine.yml -- rerun it manually from the Actions tab"
               # The dispatch that actually matters: deploy.yml's own build
               # runs copy-event-keys.mjs, which is the only thing that
-              # ever removes a destroyed event's keys/events/<id>.pub from
+              # ever removes a destroyed event's instance/keys/events/<id>.pub from
               # the deployed app bundle. Without this, the signup page for
               # a destroyed event keeps accepting registrations that
               # encrypt under a key nothing can ever decrypt again, until
@@ -228,7 +228,7 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
           done
-          echo "::error::push failed after 3 attempts -- the event key(s) were already destroyed, but the record was not saved; rerun this workflow to record it, or write data/event-key-destructions.yml by hand"
+          echo "::error::push failed after 3 attempts -- the event key(s) were already destroyed, but the record was not saved; rerun this workflow to record it, or write instance/data/event-key-destructions.yml by hand"
           exit 1
       - name: Record that the retention workflow ran today
         # D-25 makes every control
@@ -239,7 +239,7 @@ jobs:
         # work, and neither ever turns a badge red because no run happens
         # at all. This step writes the fact that a run *did* happen where
         # it survives without any workflow ever running again to read it:
-        # a committed file, `data/retention-last-run.yml`, checked by
+        # a committed file, `instance/data/retention-last-run.yml`, checked by
         # `retention-watchdog.yml` on its own, independent schedule, and
         # legible to a person who opens this repository with no CI
         # required either way.
@@ -275,9 +275,9 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
             (cd tools && uv run convener-record-retention-run)
-            git add data/retention-last-run.yml
+            git add instance/data/retention-last-run.yml
             if git diff --staged --quiet; then
-              echo "data/retention-last-run.yml already names today -- nothing to commit"
+              echo "instance/data/retention-last-run.yml already names today -- nothing to commit"
               exit 0
             fi
             git commit -m "data: record that the retention sweep ran today"

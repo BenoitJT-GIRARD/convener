@@ -7,7 +7,7 @@ export type ItemForm = 'content' | 'field' | 'checkbox' | 'button-group';
 export const VIEW_COUNT_KEY = 'delivered/youtube-views-30d';
 
 /** The window used only for the wording of a screen drawn before any config
- *  has loaded. `data/config.yml` is the number that governs. */
+ *  has loaded. `instance/data/config.yml` is the number that governs. */
 const DEFAULT_VIEW_WINDOW_DAYS = 30;
 
 /**
@@ -16,7 +16,7 @@ const DEFAULT_VIEW_WINDOW_DAYS = 30;
  * The window is a convention and nothing more -- views arrive for years, so a
  * count means something only next to another count read off the same number
  * of days after its talk -- which is why it is `view_count_window_days` in
- * `data/config.yml` and not a constant here. It is also why the label is
+ * `instance/data/config.yml` and not a constant here. It is also why the label is
  * built rather than typed: a handbook saying thirty days and a form asking
  * for something else would leave a volunteer to guess which the Board meant,
  * and the guess would be stored as a number nobody could compare afterwards.
@@ -158,7 +158,7 @@ export const PHASES: PhaseDef[] = [
     label: 'Scheduled — runbook',
     // Two weeks out, once the speaker is known to be on the forum, the event
     // is announced everywhere it is announced. Which places those are is read
-    // from `data/config.yml`; only their position in the journey is here.
+    // from `instance/data/config.yml`; only their position in the journey is here.
     channelsAfter: 'scheduled/T-14/speaker_registered',
     items: [
       { key: 'scheduled/T-30/visuals', form: 'checkbox', label: 'Visuals + flyer made', window: 30 },
@@ -280,7 +280,7 @@ export const PHASES: PhaseDef[] = [
         // T-3 because the existing T-3 line was reused rather than a T-7 one
         // added, so the app and the page disagreed about when the thing
         // happens. No record carries the old key: `runbook_progress` is empty
-        // in `data/speakers.yml`, so renaming it is not a migration.
+        // in `instance/data/speakers.yml`, so renaming it is not a migration.
         key: 'scheduled/T-7/plan-day',
         form: 'checkbox',
         label: 'Plan for the day agreed between hosts',
@@ -515,7 +515,7 @@ export function phaseOf(status: SpeakerStatus): PhaseDef | undefined {
  * The lines of one phase, including the ones that are configuration.
  *
  * `PHASES` is a constant; the places an event is announced are not. They live
- * in `data/config.yml` and are read through `state/channels.ts`, so a phase's
+ * in `instance/data/config.yml` and are read through `state/channels.ts`, so a phase's
  * journey is a function of the loaded config rather than a table. Everything
  * that walks a phase's lines walks them from here -- the checklist screen, the
  * inbox, and the guard in `state/assignment.ts` that decides which keys can

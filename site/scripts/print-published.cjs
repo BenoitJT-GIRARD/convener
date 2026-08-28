@@ -11,7 +11,7 @@
  * explains, run the same way, by `subprocess.run(["node", ...])`.
  *
  * Two answers, not one, and the second is the point. `publishedAddress()`
- * is what `scripts/published.cjs` reads out of `config/instance.json`;
+ * is what `scripts/published.cjs` reads out of `instance/config.json`;
  * `pathPrefix` is what `.eleventy.js` -- the real, committed one,
  * `require`d here and *called* with a stub, never read as text -- actually
  * hands Eleventy at the end of its factory. A reader that agreed with the

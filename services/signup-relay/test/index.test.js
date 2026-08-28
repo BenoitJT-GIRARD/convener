@@ -30,7 +30,7 @@ const SURVEY_ENVELOPE = JSON.parse(SURVEY_CASES[0].envelope);
 const SURVEY_BODY = JSON.stringify({ event_id: EVENT_ID, ...SURVEY_ENVELOPE });
 
 // The origin this worker answers CORS preflights for is not this
-// package's to know. It is the one address `config/instance.json`
+// package's to know. It is the one address `instance/config.json`
 // declares this project is published at, and it reaches `handle` as
 // `env.ALLOWED_ORIGIN` -- passed to `wrangler deploy --var` by
 // `.github/workflows/deploy-signup-relay.yml`, which reads the
@@ -48,7 +48,7 @@ const ALLOWED_ORIGIN = 'https://pages.example.test';
 
 // The repository this worker reads keys from, queues submissions on and
 // dispatches into is not this package's to know either. It is what
-// `config/instance.json` declares as `identity.repository`, and it reaches
+// `instance/config.json` declares as `identity.repository`, and it reaches
 // `handle` as `env.REPOSITORY` -- passed to `wrangler deploy --var` by
 // `.github/workflows/deploy-signup-relay.yml`, which reads the declaration
 // through the reader that owns it. `src/index.js` names no repository at
@@ -65,7 +65,7 @@ const REPOSITORY = 'a-fixture-owner/a-fixture-repository';
 const REPOSITORY_API = `https://api.github.com/repos/${REPOSITORY}`;
 
 const DISPATCH_URL = `${REPOSITORY_API}/dispatches`;
-const CONTENTS_URL = (id) => `${REPOSITORY_API}/contents/keys/events/${id}.pub`;
+const CONTENTS_URL = (id) => `${REPOSITORY_API}/contents/instance/keys/events/${id}.pub`;
 
 // A survey response is written to the queue branch
 // through the Contents API instead of being dispatched. These mirror
@@ -92,12 +92,12 @@ const QUEUE_ENTRY_RE = /^[0-9a-z]{1,16}-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{
 // this repository -- not a second, deployed URL any more (that was
 // SURVEY_STATUS_URL, removed along with wrangler.toml's own
 // var of the same name; see that file's comment for why).
-const SURVEY_STATUS_CONTENTS_URL = `${REPOSITORY_API}/contents/public-data/survey-status.json`;
+const SURVEY_STATUS_CONTENTS_URL = `${REPOSITORY_API}/contents/instance/public-data/survey-status.json`;
 
 // The registration lane cutoffs, read the same way from
 // the same API. `tools/convener_ops/registration_routing.py` is what writes it
 // and `deploy.yml` what commits it; this file only ever stands in for it.
-const ROUTING_CONTENTS_URL = `${REPOSITORY_API}/contents/public-data/registration-routing.json`;
+const ROUTING_CONTENTS_URL = `${REPOSITORY_API}/contents/instance/public-data/registration-routing.json`;
 
 /** An ISO-8601 UTC instant `offsetMs` from now, spelled exactly the way
  *  `registration_routing.to_routing_data` spells one. */

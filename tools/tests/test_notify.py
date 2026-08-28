@@ -765,7 +765,7 @@ def test_the_lead_goes_overdue_on_the_morning_the_sweep_parks_it(window: int) ->
     `sweep.expire_votes` parks a lead whose window ran out; `notify.overdue`
     (and `app/src/state/sla.ts`, its twin) say the board decision is late.
     Those used to read two different config keys, both set to 14 in
-    `data/config.yml` with nothing saying they had to agree: setting
+    `instance/data/config.yml` with nothing saying they had to agree: setting
     `sla_days.lead_decision` to 20 made the app call the board on time on the
     very morning the job parked the lead, and neither CI nor a reader had any
     way to notice.
@@ -1267,9 +1267,11 @@ def test_the_notification_module_holds_no_transport() -> None:
 
 
 def _repo(tmp_path: Path, speakers: str, cfg: str) -> Path:
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "speakers.yml").write_text(speakers, encoding="utf-8")
-    (tmp_path / "data" / "config.yml").write_text(cfg, encoding="utf-8")
+    (tmp_path / "instance" / "data").mkdir(parents=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
+        speakers, encoding="utf-8"
+    )
+    (tmp_path / "instance" / "data" / "config.yml").write_text(cfg, encoding="utf-8")
     return tmp_path
 
 
@@ -1444,7 +1446,7 @@ def test_git_show_reports_an_error_rather_than_raising_on_a_repository_with_no_h
         check=True,
     )
 
-    text, error = cli._git_show(tmp_path, "HEAD:data/speakers.yml")
+    text, error = cli._git_show(tmp_path, "HEAD:instance/data/speakers.yml")
 
     assert text == ""
     assert error != ""
@@ -1497,7 +1499,7 @@ def test_immediate_writes_a_body_for_a_lead_from_the_form(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = _repo(tmp_path, "", CONFIG_YML)
-    (root / "data" / "speakers.yml").write_text(
+    (root / "instance" / "data" / "speakers.yml").write_text(
         "- id: spk-009\n  status: lead\n  source: form\n", encoding="utf-8"
     )
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: root)
@@ -1553,7 +1555,7 @@ def test_git_show_reads_the_previous_revision_of_the_speaker_file(
     tmp_path: Path,
 ) -> None:
     """This used to run `cli._git_show` against
-    this very checkout's own `HEAD~1:data/speakers.yml` -- real repository
+    this very checkout's own `HEAD~1:instance/data/speakers.yml` -- real repository
     history, not a fixture. That passes inside the checkout and raises
     `fatal: not a git repository` in any copy without a `.git` (an
     isolated mutation-testing copy, most concretely), a false positive the
@@ -1569,14 +1571,14 @@ def test_git_show_reads_the_previous_revision_of_the_speaker_file(
         cwd=tmp_path,
         check=True,
     )
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True)
     (data_dir / "speakers.yml").write_text(
         "- id: spk-001\n  name: Ada Lovelace\n", encoding="utf-8"
     )
     _git = ["git", "-c", "user.name=test", "-c", "user.email=test@example.org"]
     subprocess.run(  # nosec B603 B607
-        [*_git, "add", "data/speakers.yml"], cwd=tmp_path, check=True
+        [*_git, "add", "instance/data/speakers.yml"], cwd=tmp_path, check=True
     )
     subprocess.run(  # nosec B603 B607
         [*_git, "commit", "--quiet", "-m", "first revision"], cwd=tmp_path, check=True
@@ -1586,7 +1588,7 @@ def test_git_show_reads_the_previous_revision_of_the_speaker_file(
         encoding="utf-8",
     )
     subprocess.run(  # nosec B603 B607
-        [*_git, "add", "data/speakers.yml"], cwd=tmp_path, check=True
+        [*_git, "add", "instance/data/speakers.yml"], cwd=tmp_path, check=True
     )
     subprocess.run(  # nosec B603 B607
         [*_git, "commit", "--quiet", "-m", "second revision"], cwd=tmp_path, check=True
@@ -1607,7 +1609,7 @@ def test_the_comparison_starts_where_the_branch_actually_moved_from() -> None:
     `github.event.before`; the workflow passes it through as `BEFORE`.
     """
     sha = "0123456789abcdef0123456789abcdef01234567"
-    assert cli.previous_revision({"BEFORE": sha}) == f"{sha}:data/speakers.yml"
+    assert cli.previous_revision({"BEFORE": sha}) == f"{sha}:instance/data/speakers.yml"
 
 
 @pytest.mark.parametrize(
@@ -1690,7 +1692,7 @@ def test_the_workflow_asks_for_no_permission_beyond_issues_and_checkout() -> Non
     This file used to hold only the notification, so one assertion
     over the whole file said it all: `contents: read` to check out,
     `issues: write` to post, nothing else. The sweep now shares the file,
-    and it genuinely needs more -- it commits `data/speakers.yml` and
+    and it genuinely needs more -- it commits `instance/data/speakers.yml` and
     dispatches `publish-vitrine.yml`. So the property is asserted per job
     instead of per file, which is stricter rather than looser: the push
     path (`immediate`) must still carry *exactly* what it always did, and
@@ -1718,7 +1720,7 @@ def test_the_workflow_asks_for_no_permission_beyond_issues_and_checkout() -> Non
         "issues": "write",
     }, (
         "the daily job carries the union of the sweep's own scopes "
-        "(commit data/speakers.yml, dispatch publish-vitrine.yml) and the "
+        "(commit instance/data/speakers.yml, dispatch publish-vitrine.yml) and the "
         "digest's own (post a comment) -- and nothing beyond that union"
     )
 
@@ -1749,7 +1751,7 @@ def _daily_steps() -> list[dict[str, Any]]:
 
 def test_the_merged_workflow_keeps_every_trigger_the_two_files_had() -> None:
     """Three triggers went into the merge and each one is somebody's only
-    way in: the push on `data/speakers.yml` is what makes an immediate
+    way in: the push on `instance/data/speakers.yml` is what makes an immediate
     event immediate (without it a lead from the public form waits for the
     next morning), the daily cron is the only scheduled run either half
     ever had, and `workflow_dispatch` is the operator's own hand. A merge
@@ -1757,8 +1759,8 @@ def test_the_merged_workflow_keeps_every_trigger_the_two_files_had() -> None:
     triggers = workflow_triggers(_merged_workflow())
     assert set(triggers) == {"push", "schedule", "workflow_dispatch"}
     assert triggers["push"]["branches"] == ["main"]
-    assert triggers["push"]["paths"] == ["data/speakers.yml"], (
-        "the push trigger no longer watches data/speakers.yml -- the "
+    assert triggers["push"]["paths"] == ["instance/data/speakers.yml"], (
+        "the push trigger no longer watches instance/data/speakers.yml -- the "
         "immediate events are a diff of that file, so nothing would ever "
         "fire them"
     )

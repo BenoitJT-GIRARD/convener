@@ -48,7 +48,7 @@ const MESSAGE_PATH = resolve(__dirname, '../../docs', CONTENT_REGISTRY[MESSAGE_K
  *  the template did not. */
 const declaredIdentity = () =>
   JSON.parse(
-    readFileSync(resolve(__dirname, '../../config/instance.json'), 'utf-8'),
+    readFileSync(resolve(__dirname, '../../instance/config.json'), 'utf-8'),
   ).identity as Record<string, string>;
 
 /** The template as it actually sits in the repository. */

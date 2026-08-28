@@ -7,7 +7,7 @@
  * comment for why a second writer into that same subtree would be
  * silently clobbered the next time either job ran).
  *
- * `public-data/certificates-public.json` itself is CI-generated, gitignored
+ * `instance/public-data/certificates-public.json` itself is CI-generated, gitignored
  * output (`uv run convener-certificates-public-data`, see
  * `.github/workflows/deploy.yml`'s "Build public data" step) -- not
  * committed source, so it will not exist for a plain local `npm run dev`

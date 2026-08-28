@@ -1,7 +1,7 @@
 /**
  * Which speaker field is data about an identifiable person, against
  * `docs/governance/candidate-data-protection.md`'s own account of what
- * `data/speakers.yml` holds.
+ * `instance/data/speakers.yml` holds.
  *
  * The first test is the one that matters, and it is not about the fields
  * that exist today: it is about the next one. `SPEAKER_FIELDS` is derived

@@ -5,7 +5,7 @@ on:
     types: [proposal-submitted]
 
 # This workflow had no concurrency block at
-# all, so two proposals landing at once could each read data/speakers.yml,
+# all, so two proposals landing at once could each read instance/data/speakers.yml,
 # append their own lead, and race the "Commit" step's own `git pull
 # --rebase`. That rebase was a real, if low-frequency, defect, known and
 # left unfixed for a while.
@@ -64,7 +64,7 @@ jobs:
         # The retry, on a rejected push, is a fetch-and-reset-hard followed
         # by *re-running the handler* (`uv run convener-handle-proposal`), not
         # `git pull --rebase` -- see registration.yml's own comment for why
-        # replaying a diff over data/speakers.yml's own array conflicts
+        # replaying a diff over instance/data/speakers.yml's own array conflicts
         # instead of applying. Re-running is safe specifically because
         # `convener_ops.proposal.skip_reason` refuses a submission whose email
         # already matches an existing `lead`: re-running against the tip
@@ -77,7 +77,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-handle-proposal)
-            git add data/speakers.yml
+            git add instance/data/speakers.yml
             if git diff --staged --quiet; then
               echo "no new lead"
               exit 0

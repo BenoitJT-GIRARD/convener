@@ -164,10 +164,10 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
         "tools/convener_ops/formats.py",
         "tools/convener_ops/governance.py",
         "tools/convener_ops/cli.py",
-        "instances/example/config/instance.json",
+        "instances/example/instance/config.json",
         "tools/convener_ops/published.py",
         "tools/convener_ops/registration.py",
-        "instances/example/data/brand.json",
+        "instances/example/instance/data/brand.json",
         "tools/convener_ops/brand.py",
         "fonts/**",
         "tools/uv.lock",
@@ -180,12 +180,12 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
 
 def test_the_path_filter_never_reacts_to_real_speaker_data() -> None:
     """This job renders one fixed, fictional fixture (Ada Lovelace, no
-    photograph) -- never `data/speakers.yml` or any real edition -- so a
+    photograph) -- never `instance/data/speakers.yml` or any real edition -- so a
     change to real speaker data has nothing for it to check, and must not
     trigger a run that would only ever be a no-op.
 
     Checked against the *parsed* path list, not a whole-file substring --
-    this file's own comment names `data/speakers.yml` deliberately, to say
+    this file's own comment names `instance/data/speakers.yml` deliberately, to say
     why it is absent, and a bare `in` check would trip over its own
     explanation."""
     assert not any("speakers.yml" in path for path in _TRIGGERS["push"]["paths"])
@@ -206,17 +206,17 @@ def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
     yml` carries the real pair and must -- that job renders real editions,
     as this instance (`test_visuals_production_workflow.py`)."""
     paths = _TRIGGERS["push"]["paths"]
-    assert "config/instance.json" not in paths
-    assert "data/brand.json" not in paths
-    assert "instances/example/config/instance.json" in paths
-    assert "instances/example/data/brand.json" in paths
+    assert "instance/config.json" not in paths
+    assert "instance/data/brand.json" not in paths
+    assert "instances/example/instance/config.json" in paths
+    assert "instances/example/instance/data/brand.json" in paths
 
 
 def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:
     """`tools/convener_ops/public_data.py` (the
-    module `data/speakers.yml` is read *through*, the consent gate
+    module `instance/data/speakers.yml` is read *through*, the consent gate
     included) is deliberately absent here for the identical reason the
-    test above gives for `data/speakers.yml` itself --
+    test above gives for `instance/data/speakers.yml` itself --
     `render_visual_fixtures` renders `FIXTURE_ANNOUNCEMENT`, a fixed,
     hand-built identity that never goes through `public_data.to_public` at
     all, so a change to the gate's own logic has nothing for this fixture

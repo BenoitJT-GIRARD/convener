@@ -8,10 +8,10 @@ on:
     #
     # This build's inputs cover very nearly the whole repository:
     # `app/package.json`'s own `prebuild` copies `fonts/`, `docs/` (the
-    # handbook, through `app/src/content/registry.ts`), `keys/events/`,
-    # `keys/signing/`, `public-data/certificates-public.json` and
-    # `public-data/survey-status.json` into the bundle, and the job's own
-    # first steps run two `tools/` commands over `data/`. A `paths:` list
+    # handbook, through `app/src/content/registry.ts`), `instance/keys/events/`,
+    # `instance/keys/signing/`, `instance/public-data/certificates-public.json` and
+    # `instance/public-data/survey-status.json` into the bundle, and the job's own
+    # first steps run two `tools/` commands over `instance/data/`. A `paths:` list
     # for that is a list of nearly everything, and a path left out of it
     # publishes a stale bundle in silence -- D-25, the exact failure
     # `a11y.yml`'s own header comment spends twenty lines refusing.
@@ -29,7 +29,7 @@ on:
     # that allowlist's answer, never this list's.
     #
     # `config/**` was on this list until the one
-    # address this project is published at moved into `config/instance.json`,
+    # address this project is published at moved into `instance/config.json`,
     # which `app/vite.config.ts` now reads for every bundle's `base`.
     # `test_workflows.py::test_no_path_the_deploy_ignores_can_reach_the_
     # deployed_bundle` is what noticed, and it is exactly right to: with
@@ -95,7 +95,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       # write, not read: this job commits
-      # public-data/survey-status.json back to this repository itself --
+      # instance/public-data/survey-status.json back to this repository itself --
       # see the "Commit survey status" step below for why.
       contents: write
     steps:
@@ -109,7 +109,7 @@ jobs:
       # into the showcase for free, with no second, separate write into
       # that repo's `app/` subtree to race against this workflow's own
       # wholesale refresh of it. Needs no secret: `convener-certificates-public-data`
-      # only ever reads committed `data/events/*/certificates.yml` files.
+      # only ever reads committed `instance/data/events/*/certificates.yml` files.
       # An event with no certificates yet is a normal state (`cli.py`'s own
       # `certificates_public_data`), so this step never fails for want of
       # one -- `scripts/copy-certificates.mjs`, below, is equally tolerant
@@ -139,7 +139,7 @@ jobs:
       # public_data's own docstring for why this is a second file and a
       # second step rather than folded into "Build public data" above.
       # scripts/copy-survey-status.mjs (part of the app's own `npm run
-      # build`, below) is what actually bakes public-data/survey-status.json
+      # build`, below) is what actually bakes instance/public-data/survey-status.json
       # into dist/, the same two-step shape copy-certificates.mjs already
       # uses for certificates.json.
       - name: Build survey status
@@ -149,12 +149,12 @@ jobs:
       # services/signup-relay reads this exact file, at this exact path,
       # through the GitHub Contents API against this repository (the same
       # credential and the same call shape it already uses for
-      # keys/events/<id>.pub), because checking a deployed public URL
+      # instance/keys/events/<id>.pub), because checking a deployed public URL
       # made the relay's answer depend on a deployment that was never
       # wired up, and made "the switch is on" true at a build-to-live lag
       # the relay has no business inheriting. `.gitignore` carries a
       # deliberate exception for this one file (see its own comment) --
-      # every other file `public-data/` collects stays generated-only.
+      # every other file `instance/public-data/` collects stays generated-only.
       #
       # This step must stay before "Build" and "Push to the published repository"
       # below -- load-bearing, not incidental: the retry loop's own
@@ -167,7 +167,7 @@ jobs:
       # hard followed by *re-running the projection command*, not `git
       # rebase` -- the same rule `registration.yml`'s own retry loop
       # follows, and for the identical reason (see that workflow's own
-      # comment at length). `public-data/survey-status.json` is a
+      # comment at length). `instance/public-data/survey-status.json` is a
       # generated JSON array, the same shape `registrations.enc` is:
       # `git rebase` replays a diff over that array's own closing lines,
       # which is a defect this repository has already had once -- two runs each rewriting
@@ -175,7 +175,7 @@ jobs:
       # `set -e` kills the step before the `::error::` line below is ever
       # reached, leaving the tree mid-rebase with no annotation at all.
       # Re-running `uv run convener-survey-status-public-data` instead is safe
-      # specifically because it is a pure function of `data/speakers.yml`
+      # specifically because it is a pure function of `instance/data/speakers.yml`
       # (deterministic, sorted, deduplicated): discarding the local
       # commit and re-deriving against whatever landed on `main` in the
       # meantime reproduces the identical file, never a conflict to
@@ -191,7 +191,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-survey-status-public-data)
-            git add public-data/survey-status.json
+            git add instance/public-data/survey-status.json
             if git diff --staged --quiet; then
               echo "no change to commit"
               exit 0
@@ -211,10 +211,10 @@ jobs:
       # an arriving registration waits for the daily drain or is dispatched
       # at once, and the only thing that decides is the distance to the
       # event -- so it needs one instant per event, and it cannot get that
-      # from `data/speakers.yml` (YAML, in a worker with no parser for it)
+      # from `instance/data/speakers.yml` (YAML, in a worker with no parser for it)
       # or re-derive Europe/Paris start times of its own. It reads this
       # file instead, with the credential and the call shape it already
-      # uses for `keys/events/<id>.pub` and `public-data/survey-status.json`
+      # uses for `instance/keys/events/<id>.pub` and `instance/public-data/survey-status.json`
       # just above.
       #
       # A step here rather than a workflow, a job or a schedule of its own,
@@ -224,8 +224,8 @@ jobs:
       # Same retry shape and same reasoning as "Commit survey status": a
       # fetch-and-reset-hard followed by *re-running the projection*, never
       # `git rebase` over generated JSON. `registration_routing.
-      # to_routing_data` is a pure, sorted function of `data/speakers.yml`
-      # and `config/registration-lanes.yml`, so re-deriving against whatever
+      # to_routing_data` is a pure, sorted function of `instance/data/speakers.yml`
+      # and `instance/registration-lanes.yml`, so re-deriving against whatever
       # landed on the branch in the meantime reproduces the identical file.
       #
       # Note what this file's *staleness* can and cannot cost, because it
@@ -245,7 +245,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-registration-routing-public-data)
-            git add public-data/registration-routing.json
+            git add instance/public-data/registration-routing.json
             if git diff --staged --quiet; then
               echo "no change to commit"
               exit 0
@@ -263,10 +263,10 @@ jobs:
       # The internal agenda feed -- everything the
       # public `/agenda.ics` carries (site/, built entirely on the
       # JavaScript side) plus the preparation deadlines `notify.due_date`
-      # is already tracking, generated from `data/speakers.yml` directly
+      # is already tracking, generated from `instance/data/speakers.yml` directly
       # rather than the redacted public projection. Same shape as "Commit
       # survey status" just above, and for the identical reason: this
-      # commits `public-data/agenda-internal.ics` back to *this*
+      # commits `instance/public-data/agenda-internal.ics` back to *this*
       # repository over the checkout's own `GITHUB_TOKEN` (`contents:
       # write`, already granted above), never into the published
       # repository's clone the "Push to the published repository" step further down builds --
@@ -285,7 +285,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-agenda-internal)
-            git add public-data/agenda-internal.ics
+            git add instance/public-data/agenda-internal.ics
             if git diff --staged --quiet; then
               echo "no change to commit"
               exit 0
@@ -330,7 +330,7 @@ jobs:
           git config --global user.name "convener-publisher"
           git config --global user.email "convener-publisher@users.noreply.github.com"
           # Where the built output is pushed. Derived from
-          # `config/instance.json`'s own `published_url`, never named here:
+          # `instance/config.json`'s own `published_url`, never named here:
           # GitHub Pages serves a project repository at
           # `https://<owner>.github.io/<repository>/` and nowhere else, so
           # the address a visitor sees and the repository this push writes

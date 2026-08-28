@@ -288,7 +288,7 @@ def test_an_empty_history_does_not_claim_that_nothing_was_decided() -> None:
     assert "dates the arrival of the tooling, not the activity of the board" in said
     # and the reader is told where the earlier decisions actually are
     assert "are recorded elsewhere and are not lost" in said
-    assert "data/speakers.yml" in said
+    assert "instance/data/speakers.yml" in said
     assert "decisions.md" in said
     # no empty table, which would read as a table of no decisions
     assert "| Date |" not in rendered

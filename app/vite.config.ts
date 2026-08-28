@@ -15,7 +15,7 @@ import {
 
 /**
  * The address this project is published at, read once
- * from `config/instance.json` -- the instance's own declaration -- rather
+ * from `instance/config.json` -- the instance's own declaration -- rather
  * than typed into this file four times as `base: '/<repository>/app/'`.
  *
  * A build configuration cannot always read what one would like at the
@@ -134,7 +134,7 @@ const INSTANCE_PATHS = instancePaths();
 
 /**
  * Which of this instance's declared values are still
- * the ones the product ships in `instances/example/config/instance.json`,
+ * the ones the product ships in `instances/example/instance/config.json`,
  * carried into the bundle the same way as everything above it.
  *
  * Empty for an instance somebody has configured, and the names of the
@@ -171,7 +171,7 @@ const UNCONFIGURED = unconfigured();
  *
  * Its own constant rather than a seventh key of `INSTANCE_DEFINE`, and the
  * separation is the whole point. Everything in that object is the
- * instance's -- a duplicate edits `config/instance.json` before its first
+ * instance's -- a duplicate edits `instance/config.json` before its first
  * build and every one of those values changes. Nothing here changes, in any
  * duplicate, ever: it names the software, its author, its licence and the
  * absence of a warranty. Section 5 of that licence is what obliges a
@@ -299,10 +299,10 @@ function cspHtmlPlugin(): Plugin {
  * both now share the one value that actually describes it, rather than two
  * that happened to agree only by not yet having been tested against a real
  * deployment. It is now literally one value:
- * `PUBLISHED.appBase`, derived from `config/instance.json`.
+ * `PUBLISHED.appBase`, derived from `instance/config.json`.
  * `SignupForm.tsx`'s own key fetch reads it back through
  * `import.meta.env.BASE_URL`, landing on
- * `<app base>keys/events/<id>.pub` -- exactly where `copy-event-keys.mjs`
+ * `<app base>instance/keys/events/<id>.pub` -- exactly where `copy-event-keys.mjs`
  * already publishes it inside the app's own `dist/`.
  *
  * No CSS import from this entry (`main.tsx` imports no stylesheet): the
@@ -349,7 +349,7 @@ function islandSignupConfig() {
  * toolchain with no manifest to read hashed names from, and this bundle
  * runs on a page the *site* serves. `register.ts` and `publicKeys.ts`
  * read this same `base` back through `import.meta.env.BASE_URL`, landing
- * on `<app base>certificates.json` and `<app base>keys/signing/index.json`
+ * on `<app base>certificates.json` and `<app base>instance/keys/signing/index.json`
  * -- exactly where the main app build's own `scripts/copy-certificates.mjs`
  * and `copy-signing-keys.mjs` publish them inside `dist/`.
  *
@@ -393,7 +393,7 @@ function islandVerifyConfig() {
  * foreign toolchain with no manifest to read hashed names from, and this
  * bundle runs on a page the *site* serves. `SurveyForm.tsx` reads this
  * same `base` back through `import.meta.env.BASE_URL`, landing on
- * `<app base>keys/events/<id>.pub` and `<app base>survey-status.json` --
+ * `<app base>instance/keys/events/<id>.pub` and `<app base>survey-status.json` --
  * exactly where the main app build's own `copy-event-keys.mjs` and
  * `copy-survey-status.mjs` publish them inside `dist/`.
  *

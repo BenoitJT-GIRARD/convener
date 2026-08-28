@@ -34,7 +34,7 @@ import { config as double } from './data-doubles';
 const PAGE = resolve(__dirname, '../../docs/workflow/2-preparation.md');
 
 /** The one line of the countdown that stands for a list this file cannot
- *  know: the channels are `data/config.yml`'s, so the page names the file
+ *  know: the channels are `instance/data/config.yml`'s, so the page names the file
  *  instead of restating seven lines that a Board edit would falsify. */
 const CHANNELS_LINE = 'One line per promotion channel';
 
@@ -106,13 +106,13 @@ describe('the preparation countdown and the journey the app runs', () => {
 
   it('stands the promotion channels in for a list only the config holds', () => {
     // The channels enter the journey after one named step and are as many as
-    // `data/config.yml` says. The page names the file rather than the seven,
+    // `instance/data/config.yml` says. The page names the file rather than the seven,
     // and says so once, in the window that step falls in.
     const after = ITEMS.find(i => i.key === SCHEDULED.channelsAfter)!;
     const section = countdown().find(s => s.window === after.window)!;
     const named = section.lines.filter(l => l.startsWith(CHANNELS_LINE));
     expect(named).toHaveLength(1);
-    expect(named[0]).toContain('`channels` in `data/config.yml`');
+    expect(named[0]).toContain('`channels` in `instance/data/config.yml`');
     expect(section.lines.indexOf(named[0])).toBe(section.lines.length - 1);
     expect(countdown().flatMap(s => s.lines).filter(l => l.startsWith(CHANNELS_LINE))).toHaveLength(
       1,

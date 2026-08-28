@@ -109,7 +109,7 @@ npx wrangler kv namespace create FORM_RELAY_KV   # once, then paste the
 ```
 
 The workflow's own deploy command reads the repository
-`config/instance.json` declares this cockpit lives in and hands it to
+`instance/config.json` declares this cockpit lives in and hands it to
 Wrangler:
 
 ```bash
@@ -137,7 +137,7 @@ npx wrangler secret put CONVENER_DISPATCH_TOKEN
   `tools/convener_ops/proposal.py::verify_signature` reads on the other side of
   the dispatch. Same name on both sides on purpose: it is the same secret.
 - `CONVENER_DISPATCH_TOKEN` — a GitHub token with permission to send a
-  `repository_dispatch` to the repository `config/instance.json` declares
+  `repository_dispatch` to the repository `instance/config.json` declares
   (`Contents: read & write` is sufficient). This is not the same credential as the
   authentication relay's: that relay holds no token of its own — it only
   proxies GitHub's device-flow endpoints — and the user access token the

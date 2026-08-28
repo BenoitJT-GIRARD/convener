@@ -2,7 +2,7 @@
 describes.
 
 A security review found that `docs/governance/traitement-donnees.md`
-described `data/speakers.yml` in one sentence -- "speakers' own names and
+described `instance/data/speakers.yml` in one sentence -- "speakers' own names and
 institutional email addresses" -- and pointed at
 `docs/governance/selection-criteria.md` for the rest, which is the Board's
 editorial judgement and never described a data-handling process at all. This

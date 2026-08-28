@@ -33,7 +33,7 @@ module.exports = [
   // reports to the console, so it needs the Node globals the bare
   // CommonJS block does not declare. Two more sit under
   // the same override -- `published.cjs`, this package's own reader of
-  // `config/instance.json`, and `print-published.cjs`, which prints what
+  // `instance/config.json`, and `print-published.cjs`, which prints what
   // that reader and the real `.eleventy.js` resolve for the Python suite
   // to compare -- and `URL` with them, the parser `published.cjs` uses to
   // take the declared address apart rather than doing it with a regular

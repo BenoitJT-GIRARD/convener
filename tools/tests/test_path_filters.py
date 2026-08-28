@@ -1,6 +1,6 @@
 """`a11y.yml` and `preview.yml` ran on
 every push and every pull request once, including one touching
-only `docs/`, `data/`, or an unrelated relay -- neither check can possibly
+only `docs/`, `instance/data/`, or an unrelated relay -- neither check can possibly
 have anything to say about most of those. Both are path-filtered now, the
 same deliberate discipline `visuals.yml` already established and
 `test_visuals_workflow.py` already pins (see this module's own docstring
@@ -94,8 +94,8 @@ def test_a11y_workflow_does_not_watch_real_per_edition_data() -> None:
     absent"."""
     data = yaml.safe_load(_A11Y_TEXT)
     paths = data[True]["push"]["paths"]
-    assert "data/speakers.yml" not in paths
-    assert not any(p.startswith("data/") for p in paths)
+    assert "instance/data/speakers.yml" not in paths
+    assert not any(p.startswith("instance/data/") for p in paths)
 
 
 # ==================================================================== #

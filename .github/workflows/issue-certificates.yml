@@ -119,7 +119,7 @@ jobs:
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           # Absent is ordinary D-13 too: platform_from_env falls back to
           # ManualPlatform, reading
-          # data/events/<id>/attendance-import.csv -- which this
+          # instance/data/events/<id>/attendance-import.csv -- which this
           # repository cannot populate in CI at all yet, and that gap is
           # known rather than overlooked.
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
@@ -151,8 +151,8 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-issue-certificates)
-            if [ -f "data/events/$EVENT_ID/certificates.yml" ]; then
-              git add "data/events/$EVENT_ID/certificates.yml"
+            if [ -f "instance/data/events/$EVENT_ID/certificates.yml" ]; then
+              git add "instance/data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
               # An operator pressed this
@@ -173,7 +173,7 @@ jobs:
               # instead. Only reached once a change was genuinely pushed,
               # never on the no-op branch above. deploy.yml is what
               # regenerates app/dist/certificates.json from
-              # data/events/*/certificates.yml and pushes it into
+              # instance/data/events/*/certificates.yml and pushes it into
               # the published repository's own app/ -- see that workflow's own "Build public
               # data" step; it is the one file the verification page
               # actually fetches. A
@@ -184,7 +184,7 @@ jobs:
               #
               # This used to *also* dispatch
               # publish-vitrine.yml. Deliberately not, any more: nothing
-              # this job writes touches data/speakers.yml, the only input
+              # this job writes touches instance/data/speakers.yml, the only input
               # publish-vitrine.yml's own "Build public data" step turns
               # into anything it pushes (events.json) -- a certificate
               # change was always a no-op run there ("no changes", exit

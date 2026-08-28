@@ -63,8 +63,8 @@ messages means whichever is composed last silently replaces the other.
 **The drain having stopped altogether cannot be detected from inside it.**
 A control hosted in the job it watches reports nothing when that job is the
 thing that went quiet -- the identical argument `retention-watchdog.yml`
-records for `retention.yml` and for `data/actions-usage.yml`.
-So the second half is a record, `data/queue-watch.yml`, written by the daily
+records for `retention.yml` and for `instance/data/actions-usage.yml`.
+So the second half is a record, `instance/data/queue-watch.yml`, written by the daily
 job every day whatever it found, and read on `retention-watchdog.yml`'s own
 independent schedule some hours later. Going stale is the finding.
 
@@ -76,12 +76,12 @@ GitHub Actions workflow. If the whole repository goes dark -- sixty days
 inactive, or the month's minutes exhausted before its slot -- the watchdog
 is disabled or starved at the same moment the drain is, and nothing running
 inside GitHub Actions can report that at zero cost. What survives is
-`data/queue-watch.yml` itself: a person who opens this repository, with no
+`instance/data/queue-watch.yml` itself: a person who opens this repository, with no
 run log and no CI at all, can read the date it names and the entries it
 lists and draw the same conclusion by hand.
 
 One overlap is worth naming rather than being quietly relied on.
-`data/actions-usage.yml` is written by the *same* daily job, and its
+`instance/data/actions-usage.yml` is written by the *same* daily job, and its
 own liveness check already goes red when it stops moving -- so "the daily
 job died" is, today, detected twice. That is an accident of the two records
 sharing a job, not a contract: this record is written by the queue steps
@@ -114,17 +114,17 @@ from .registration_routing import MISSED_DRAINS_COVERED
 #: and `submission_queue.LEDGER_PATH` already hold themselves to.
 WATCH_PATH: Final = DATA_DIR / "queue-watch.yml"
 
-#: `data/queue-watch.yml`'s own format version.
+#: `instance/data/queue-watch.yml`'s own format version.
 WATCH_FILE_VERSION: Final = 1
 
 #: The maintainer-editable thresholds, relative to a repository root.
 #: Beside `actions-budget.yml` and `registration-lanes.yml`, never in
-#: `data/config.yml` -- see either of those files' own headers for why the
+#: `instance/data/config.yml` -- see either of those files' own headers for why the
 #: app's validator, which refuses by name any key it does not know, makes
 #: the latter impossible.
-CONFIG_PATH: Final = Path("config") / "queue-drain.yml"
+CONFIG_PATH: Final = Path("instance") / "queue-drain.yml"
 
-#: `config/queue-drain.yml`'s own format version.
+#: `instance/queue-drain.yml`'s own format version.
 CONFIG_FILE_VERSION: Final = 1
 
 #: How the record spells an instant. Seconds precision, always UTC, always
@@ -158,7 +158,7 @@ RESTARTED_ALARM: Final = "restarted"
 
 @dataclass(frozen=True)
 class Thresholds:
-    """`config/queue-drain.yml`, parsed. Two numbers, one per half of this
+    """`instance/queue-drain.yml`, parsed. Two numbers, one per half of this
     module: how long an entry may be known to be waiting before the board
     is told, and how long the record itself may go without moving before
     the watchdog calls the drain dead."""
@@ -187,7 +187,7 @@ class Waiting:
 
 @dataclass(frozen=True)
 class Record:
-    """`data/queue-watch.yml`, parsed: when the queue was last looked at,
+    """`instance/data/queue-watch.yml`, parsed: when the queue was last looked at,
     and what was still in it at that moment."""
 
     observed_at: datetime
@@ -221,18 +221,18 @@ def flatten_reason(reason: str) -> str:
 
 
 def watch_path(root: Path) -> Path:
-    """`data/queue-watch.yml`, relative to `root`. Pure path computation:
+    """`instance/data/queue-watch.yml`, relative to `root`. Pure path computation:
     reads nothing, touches nothing."""
     return root / WATCH_PATH
 
 
 def config_path(root: Path) -> Path:
-    """`config/queue-drain.yml`, relative to `root`."""
+    """`instance/queue-drain.yml`, relative to `root`."""
     return root / CONFIG_PATH
 
 
 def thresholds_from_data(data: Any) -> Thresholds:
-    """Parse an already YAML-loaded `config/queue-drain.yml`.
+    """Parse an already YAML-loaded `instance/queue-drain.yml`.
 
     Raises `ValueError` on anything that is not this exact shape -- the
     same closed-shape discipline `registration_routing.threshold_from_data`
@@ -319,7 +319,7 @@ def _instant_from(raw: Any, what: str) -> datetime:
 
 
 def record_from_data(data: Any) -> Record:
-    """Parse an already YAML-loaded `data/queue-watch.yml`.
+    """Parse an already YAML-loaded `instance/data/queue-watch.yml`.
 
     Raises `ValueError` on anything that is not this exact format. A
     *missing* file is not this function's business -- it means no drain has

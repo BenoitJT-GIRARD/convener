@@ -1,6 +1,6 @@
 # Data protection record — speaker and event-lead candidates
 
-This record covers `data/speakers.yml`: everyone the series has ever
+This record covers `instance/data/speakers.yml`: everyone the series has ever
 considered as a speaker, from an unsolicited or referred lead through to a
 delivered talk. It is a separate processing activity from
 [Data protection record — registration and certification](traitement-donnees.md),
@@ -24,7 +24,7 @@ field, not against what would be convenient to claim.
 
 ## What we hold
 
-Of the fields `data/speakers.yml` carries for a candidate, these describe an
+Of the fields `instance/data/speakers.yml` carries for a candidate, these describe an
 identifiable person — the candidate themselves, or someone else named on
 their behalf — rather than the workshop they might one day deliver:
 
@@ -118,8 +118,8 @@ basis after the fact.
 
 ## Recipients
 
-Unlike the registration pipeline, nothing here is encrypted. `data/speakers.yml`
-is a plain, committed file: anyone with read access to this private
+Unlike the registration pipeline, nothing here is encrypted.
+`instance/data/speakers.yml` is a plain, committed file: anyone with read access to this private
 repository can open it directly and read every field above in full, not only
 the Board members the app's own screens present it to
 (`app/src/screens/SpeakerPage.tsx`, `app/src/components/AdminOverride.tsx`).
@@ -142,7 +142,7 @@ revisits it.
 ## Rights
 
 There is no erasure path. No command removes a candidate's record, in whole
-or in part, from `data/speakers.yml` — nothing plays the part
+or in part, from `instance/data/speakers.yml` — nothing plays the part
 `convener-erase-registration` plays for the registration pipeline. The only
 mechanism that changes what is held is a Board member editing the record by
 hand through the app (`AdminOverride`), which happens for operational

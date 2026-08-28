@@ -65,7 +65,7 @@ describe('readPublicKeys', () => {
     if (dir) await rm(dir, { recursive: true, force: true });
   });
 
-  it('returns [] for a directory that does not exist -- the real, current state of keys/signing/', async () => {
+  it('returns [] for a directory that does not exist -- the real, current state of instance/keys/signing/', async () => {
     expect(await readPublicKeys(join(tmpdir(), 'convener-verify-test-does-not-exist'))).toEqual([]);
   });
 

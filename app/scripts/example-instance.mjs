@@ -15,7 +15,7 @@
  * for that file until this script replaced it.
  *
  * Read as bytes, never parsed here. `src/data/demo.ts` parses them with
- * `src/data/yaml.ts`, the very reader every real `data/speakers.yml` goes
+ * `src/data/yaml.ts`, the very reader every real `instance/data/speakers.yml` goes
  * through, so the demonstration is the example instance read exactly the
  * way a repository's own data is read -- and an example that stopped
  * matching the model would stop the demonstration loudly instead of
@@ -40,12 +40,12 @@
 
 import { readFileSync } from 'node:fs';
 
-/** `instances/example/data/`, from this file's own location -- the app's
+/** `instances/example/instance/data/`, from this file's own location -- the app's
  *  build runs with `app/` as its working directory, so a path relative to
  *  the process is not the same thing. */
-const DATA = new URL('../../instances/example/data/', import.meta.url);
+const DATA = new URL('../../instances/example/instance/data/', import.meta.url);
 
-const NAMED = 'instances/example/data';
+const NAMED = 'instances/example/instance/data';
 
 function read(name) {
   const text = readFileSync(new URL(name, DATA), 'utf8');

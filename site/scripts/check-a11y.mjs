@@ -24,7 +24,7 @@
  * D-26: served at the address it will actually be served at
  * -------------------------------------------------------------
  * GitHub Pages serves this project's build one path segment below a bare
- * domain root (no CNAME, no custom domain) -- `config/instance.json` is
+ * domain root (no CNAME, no custom domain) -- `instance/config.json` is
  * the one place that address is written down, and every template's
  * `| url` filter call resolves against the prefix `.eleventy.js` derives
  * from it. D-26 ("Verify the shape that will actually be deployed, never
@@ -44,8 +44,8 @@
  * operators' cockpit, not a public page) plus its three island bundles
  * (`app/dist/islands/signup`, `app/dist/islands/verify`,
  * `app/dist/islands/survey`) and the static files
- * they fetch at runtime (`keys/events/*.pub`, `certificates.json`,
- * `keys/signing/index.json`, `survey-status.json`) -- into one tree, at
+ * they fetch at runtime (`instance/keys/events/*.pub`, `certificates.json`,
+ * `instance/keys/signing/index.json`, `survey-status.json`) -- into one tree, at
  * the one subtree (`app/`) every real deployment already uses.
  * `assertIslandsAreNotEmpty` is the explicit guard: after the page has
  * finished running its own JavaScript, the three mount points
@@ -149,7 +149,7 @@ function parseArgs(argv) {
  *  iterating on a template-only fix) still serves real pages under the
  *  real prefix; it simply cannot reach the islands' `ready` state, since
  *  their bundles would not be there to fetch. When `appDir` is given, its
- *  own `keys/events/*.pub` (copied there by the app's build itself,
+ *  own `instance/keys/events/*.pub` (copied there by the app's build itself,
  *  `copy-event-keys.mjs`) travels with it -- `a11y.yml` generates its
  *  throw-away event keys *before* building the app for exactly this
  *  reason, so they are already inside `appDir` by the time this runs. */
@@ -344,7 +344,7 @@ async function runAxe(page, axeSource) {
  *    `::before` pseudo-element (`site/src/style.css`), not a `background`
  *    on the text's own ancestor, so axe cannot resolve it statically. The
  *    real pairings it is asking about are `.section__num` (purple on
- *    cream, `data/brand.json`'s `purple_on_cream`, 11.26), `.section__label`
+ *    cream, `instance/data/brand.json`'s `purple_on_cream`, 11.26), `.section__label`
  *    (ink on cream, `ink_on_cream`, 10.12) and `.section__count` (ink-faint
  *    on cream, `ink_faint_on_cream`, 4.99) -- all three already measured,
  *    all AA or better, on every page they appear on (bare class where
@@ -363,7 +363,7 @@ async function runAxe(page, axeSource) {
  *    *designed* background clears AA with room to spare either way:
  *    purple on cream (`purple_on_cream`, 11.26) for the masthead;
  *    turquoise on purple (`turquoise_on_purple`, 7.93 -- added to
- *    `data/brand.json` on review, since the pairing had
+ *    `instance/data/brand.json` on review, since the pairing had
  *    existed unmeasured by name) for `.coda__text em`.
  *  - `elmPartiallyObscuring` -- `.coda__text` itself (the element `em`
  *    sits inside, not the `em` alone), where `.coda__loops` sits in a

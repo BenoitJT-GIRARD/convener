@@ -55,7 +55,7 @@ export function editionCodePrefix(): string {
 
 /**
  * The next edition code to offer, under the prefix the instance on screen
- * declares (`config/instance.json::edition_prefix`).
+ * declares (`instance/config.json::edition_prefix`).
  *
  * The two letters used to be written here, so every duplicate of this
  * repository numbered its own editions after this series' initials --

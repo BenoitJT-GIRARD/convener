@@ -14,7 +14,7 @@ Two claims are held here that no other module can hold:
   stamp (`convener_ops.cli.SPEAKERS_HEADER` and `app/src/data/yaml.ts`), so a
   file migrated today and swept tomorrow does not produce a second diff;
 - the migrated shape is the shape **both** validators require, checked
-  against the real `data/config.yml` rather than against a fixture built
+  against the real `instance/data/config.yml` rather than against a fixture built
   here, because the file this repository actually carries is the one the
   migration was written for.
 
@@ -172,7 +172,7 @@ def test_the_speakers_header_is_restamped_and_nothing_else_moves() -> None:
 
 
 def test_a_bespoke_first_line_keeps_its_own_wording() -> None:
-    """`instances/example/data/speakers.yml` opens with a sentence of its
+    """`instances/example/instance/data/speakers.yml` opens with a sentence of its
     own rather than the standard header, and that sentence is prose."""
     text = f"# The example instance's own speakers ({_V5_STAMP} --\n- id: x\n"
     assert migrate_speakers_text(text) == text.replace(_V5_STAMP, _V6_STAMP)
@@ -348,13 +348,13 @@ def test_the_two_trees_it_names_are_the_two_this_repository_ships() -> None:
     """A directory named here that does not exist would be a migration
     that quietly skipped a file; one that exists and is not named would be
     a tree left at v5."""
-    assert DATA_DIRS == ("data", "instances/example/data")
+    assert DATA_DIRS == ("instance/data", "instances/example/instance/data")
     for directory in DATA_DIRS:
         assert (ROOT / directory / "config.yml").is_file(), directory
         assert (ROOT / directory / "speakers.yml").is_file(), directory
     declared = {
         path.parent.as_posix()
-        for path in ROOT.glob("instances/*/data/config.yml")
+        for path in ROOT.glob("instances/*/instance/data/config.yml")
         if path.is_file()
     }
     assert {(ROOT / directory).as_posix() for directory in DATA_DIRS[1:]} == declared, (
@@ -370,9 +370,11 @@ def test_the_example_instance_declares_a_number_of_its_own() -> None:
     """Guards the fixture the test above stands on: if the example's own
     counter ever became this instance's, migrating it would prove nothing
     about a second instance."""
-    here = yaml.safe_load((ROOT / "data" / "config.yml").read_text(encoding="utf-8"))
+    here = yaml.safe_load(
+        (ROOT / "instance" / "data" / "config.yml").read_text(encoding="utf-8")
+    )
     there = yaml.safe_load(
-        (ROOT / "instances" / "example" / "data" / "config.yml").read_text(
+        (ROOT / "instances" / "example" / "instance" / "data" / "config.yml").read_text(
             encoding="utf-8"
         )
     )
@@ -381,10 +383,10 @@ def test_the_example_instance_declares_a_number_of_its_own() -> None:
 
 def test_the_key_is_not_in_the_declaration_either() -> None:
     """The counter is the instance's *data*, not its declaration: a rename
-    in `data/config.yml` must not have needed a companion edit in
-    `config/instance.json`, which is the file a duplicate hand-edits."""
+    in `instance/data/config.yml` must not have needed a companion edit in
+    `instance/config.json`, which is the file a duplicate hand-edits."""
     declaration: dict[str, Any] = json.loads(
-        (ROOT / "config" / "instance.json").read_text(encoding="utf-8")
+        (ROOT / "instance" / "config.json").read_text(encoding="utf-8")
     )
     assert OLD_KEY not in declaration
     assert NEW_KEY not in declaration

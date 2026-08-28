@@ -51,7 +51,7 @@ longer than the identifier printed above it.]
 - **Who receives one.** Every attendee `tools/convener_ops/attendance.py`'s
   `eligible_attendees` names for this event -- present, matched to our own
   registration (never the platform's own, self-typed name), for at least
-  the configurable share of the session `data/config.yml`'s
+  the configurable share of the session `instance/data/config.yml`'s
   `eligibility_share` sets. Eligible is a calculation; issuing
   one is `tools/convener_ops/cli.py::issue_certificates`' own decision, made
   once per attendee, not automatic from eligibility alone.
@@ -68,7 +68,7 @@ longer than the identifier printed above it.]
 - **The identifier is random, not derived from the address.** A
   deterministic identifier would double as a way to test a guessed address
   against the public register; this one carries no information about who
-  holds it. It is the only column `public-data/certificates-public.json`
+  holds it. It is the only column `instance/public-data/certificates-public.json`
   ever publishes, alongside the certificate's current state (issued or
   revoked) -- never a name, an address, or the salted fingerprint our own
   internal register keeps instead.
@@ -79,7 +79,7 @@ longer than the identifier printed above it.]
   is whether this identifier is currently revoked, by reading the public
   projection above.
 - **A revoked certificate still verifies cryptographically.** Revocation
-  is recorded in our internal register (`data/events/<id>/certificates.yml`)
+  is recorded in our internal register (`instance/data/events/<id>/certificates.yml`)
   alone, never by touching the signature -- see
   `tools/convener_ops/certificate.py`'s own module docstring, "revocation
   touches the register, never the signature".
@@ -91,5 +91,5 @@ longer than the identifier printed above it.]
   is reversible, given the salt", for what that qualification means and
   why the salt itself is never rotated), and its state. That register
   outlives the registration it was derived from:
-  `data/events/<id>/registrations.enc` is destroyed 90 days after the
+  `instance/data/events/<id>/registrations.enc` is destroyed 90 days after the
   event; `certificates.yml`, in the same directory, is not.

@@ -12,9 +12,9 @@ Two questions, deliberately kept apart
 --------------------------------------
 **What did it cost.** `summarise` reduces a window of runs to billed
 minutes, split by the event that started each one. That is written to
-`data/actions-usage.yml`, a committed file: legible by opening this
+`instance/data/actions-usage.yml`, a committed file: legible by opening this
 repository, with no CI running and no log to scroll -- the same shape
-`data/retention-last-run.yml` already has, and for the same reason (see
+`instance/data/retention-last-run.yml` already has, and for the same reason (see
 `retention_liveness.py`'s own module docstring).
 
 **Is the budget about to run out.** `alarms` answers that, and the answer
@@ -76,7 +76,7 @@ from typing import Any, Final
 from .paths import DATA_DIR
 
 #: Where a maintainer edits the thresholds. Deliberately **not**
-#: `data/config.yml`: that file is the app's own governance config, read
+#: `instance/data/config.yml`: that file is the app's own governance config, read
 #: and rewritten by the browser through a closed shape
 #: (`app/src/data/validate.ts::readConfig` refuses any key it does not
 #: know, and `tools/tests/test_yaml_boundary.py` pins the two writers
@@ -84,12 +84,12 @@ from .paths import DATA_DIR
 #: there without a cross-language change to four files. `config/` is where
 #: this repository already keeps declarations that tooling reads and the
 #: app never does -- `config/integrations.yml` is the precedent.
-BUDGET_PATH: Final = Path("config") / "actions-budget.yml"
+BUDGET_PATH: Final = Path("instance") / "actions-budget.yml"
 
 #: Where the measurement is written: a committed file, not a log line.
 USAGE_PATH: Final = DATA_DIR / "actions-usage.yml"
 
-#: `data/actions-usage.yml`'s own format version -- the same file-level
+#: `instance/data/actions-usage.yml`'s own format version -- the same file-level
 #: guard `retention_liveness.LAST_RUN_FILE_VERSION` carries.
 USAGE_FILE_VERSION: Final = 1
 
@@ -104,7 +104,7 @@ BILLED_MINUTE_MS: Final = 60_000
 #: directly comparable.
 DAYS_PER_MONTH: Final = 30.4
 
-#: How many daily observations `data/actions-usage.yml` keeps. Sixty is two
+#: How many daily observations `instance/data/actions-usage.yml` keeps. Sixty is two
 #: months: long enough to read a trend off the file itself rather than off
 #: `git log`, short enough that the file stays a page a person will read.
 HISTORY_LENGTH: Final = 60
@@ -123,7 +123,7 @@ SCHEDULED_EVENT: Final = "schedule"
 #: response is written to the submission queue and handled by a step of a
 #: job that already runs, so it produces no run of its own and appears in
 #: no measurement here. What that means for a reading of
-#: `data/actions-usage.yml` spanning the change is that the count drops
+#: `instance/data/actions-usage.yml` spanning the change is that the count drops
 #: without the traffic dropping.
 SUBMISSION_EVENT: Final = "repository_dispatch"
 
@@ -139,7 +139,7 @@ _CREATED_AT_RE: Final = re.compile(r"^(\d{4}-\d{2}-\d{2})T")
 
 #: Alarm kinds. Strings rather than an enum so a test can pin *which* alarm
 #: fired without matching its prose, and so the same names can appear in
-#: `data/actions-usage.yml` unchanged.
+#: `instance/data/actions-usage.yml` unchanged.
 RATE_ALARM: Final = "rate"
 SUBMISSIONS_ALARM: Final = "submissions"
 UNREADABLE_ALARM: Final = "unreadable"
@@ -157,13 +157,13 @@ LOWER_BOUND_NOTE: Final = (
 
 
 def budget_path(root: Path) -> Path:
-    """`config/actions-budget.yml`, relative to `root`. Pure path
+    """`instance/actions-budget.yml`, relative to `root`. Pure path
     computation: reads nothing."""
     return root / BUDGET_PATH
 
 
 def usage_path(root: Path) -> Path:
-    """`data/actions-usage.yml`, relative to `root`. Pure path
+    """`instance/data/actions-usage.yml`, relative to `root`. Pure path
     computation: reads nothing."""
     return root / USAGE_PATH
 
@@ -176,7 +176,7 @@ def usage_path(root: Path) -> Path:
 @dataclass(frozen=True)
 class Budget:
     """The numbers a maintainer may want to change, as declared in
-    `config/actions-budget.yml`.
+    `instance/actions-budget.yml`.
 
     None of them has a default here, and that is the point: a threshold
     with a fallback in Python is a constant with extra steps, and the
@@ -196,14 +196,14 @@ def _whole(data: Mapping[str, Any], key: str, *, minimum: int) -> int:
     value = data.get(key)
     if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
         raise ValueError(
-            f"config/actions-budget.yml: {key} must be a whole number "
+            f"instance/actions-budget.yml: {key} must be a whole number "
             f"of at least {minimum}, got {value!r}"
         )
     return value
 
 
 def budget_from_data(data: Any) -> Budget:
-    """Parse an already YAML-loaded `config/actions-budget.yml`.
+    """Parse an already YAML-loaded `instance/actions-budget.yml`.
 
     Raises `ValueError` on anything that is not this exact shape -- the
     same closed-shape discipline `retention_liveness.last_run_from_data`
@@ -213,16 +213,19 @@ def budget_from_data(data: Any) -> Budget:
     cannot read is the one thing it must never silently substitute for.
     """
     if not isinstance(data, dict) or data.get("v") != USAGE_FILE_VERSION:
-        raise ValueError("config/actions-budget.yml is not a supported format version")
+        raise ValueError(
+            "instance/actions-budget.yml is not a supported format version"
+        )
     share = data.get("warn_at_share")
     if not isinstance(share, int | float) or isinstance(share, bool):
         raise ValueError(
-            f"config/actions-budget.yml: warn_at_share must be a number "
+            f"instance/actions-budget.yml: warn_at_share must be a number "
             f"in ]0, 1], got {share!r}"
         )
     if not 0 < float(share) <= 1:
         raise ValueError(
-            f"config/actions-budget.yml: warn_at_share must be in ]0, 1], got {share!r}"
+            "instance/actions-budget.yml: warn_at_share must be in ]0, 1], "
+            f"got {share!r}"
         )
     return Budget(
         monthly_minutes=_whole(data, "monthly_minutes", minimum=1),
@@ -626,7 +629,7 @@ def message(usage: Usage, fired: Sequence[Alarm]) -> str | None:
         "",
         LOWER_BOUND_NOTE,
         "",
-        "The full breakdown is committed to data/actions-usage.yml in this "
+        "The full breakdown is committed to instance/data/actions-usage.yml in this "
         "repository -- no run log to open.",
     ]
     return "\n".join(lines)
@@ -669,7 +672,7 @@ def _observation(usage: Usage) -> dict[str, Any]:
 
 
 def history_from_data(data: Any) -> list[dict[str, Any]]:
-    """The trend rows already in `data/actions-usage.yml`, or none.
+    """The trend rows already in `instance/data/actions-usage.yml`, or none.
 
     Tolerant on purpose, unlike `budget_from_data`: a record that cannot be
     read costs the trend, never the alarm -- today's window is measured
@@ -687,7 +690,7 @@ def history_from_data(data: Any) -> list[dict[str, Any]]:
 
 
 def observed_on_from_data(data: Any) -> date:
-    """The day `data/actions-usage.yml` was last written.
+    """The day `instance/data/actions-usage.yml` was last written.
 
     Raises `ValueError` on anything that is not this exact format -- the
     liveness check built on this must not read a malformed record as a

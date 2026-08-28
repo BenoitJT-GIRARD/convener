@@ -184,7 +184,7 @@ async function verifiesWith(
  * `publicPems == []` is not a special case in the code below -- the trial
  * loop simply never runs, falling straight to `NO_MATCHING_KEY` -- and it
  * is a real, expected input: a page built before any signing key has ever
- * been published (`keys/signing/` starts empty, see that directory's own
+ * been published (`instance/keys/signing/` starts empty, see that directory's own
  * README) must show the same honest "cannot confirm" outcome as any other
  * unmatched token, never an exception and never acceptance for want of
  * anything to check against.
@@ -212,7 +212,7 @@ export async function verify(token: string, publicPems: readonly string[]): Prom
     return { valid: false, reason: MALFORMED };
   }
 
-  // Keys are tried in order (newest first, see keys/signing/README.md),
+  // Keys are tried in order (newest first, see instance/keys/signing/README.md),
   // stopping at the first match -- a sequential loop, not `Promise.all`,
   // which would try every key even after one already matched, for no
   // benefit: there are at most a handful of published signing keys ever.

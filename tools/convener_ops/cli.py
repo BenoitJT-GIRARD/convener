@@ -459,7 +459,7 @@ def public_data() -> int:
 
     rows = to_public(speakers or [])
     out_dir = root / PUBLIC_DATA_DIR
-    out_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "events-public.json").write_text(
         json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -469,7 +469,7 @@ def public_data() -> int:
 
 def survey_status_public_data() -> int:
     """`convener-survey-status-public-data`: rebuild
-    `public-data/survey-status.json` from `data/speakers.yml`'s own
+    `instance/public-data/survey-status.json` from `instance/data/speakers.yml`'s own
     `survey_enabled` field -- `public_data`'s own
     precedent (above), for a different consumer and a different field: an
     operational fact, not the programme feed `to_public` projects through
@@ -493,7 +493,7 @@ def survey_status_public_data() -> int:
 
     ids = to_survey_status(speakers or [])
     out_dir = root / PUBLIC_DATA_DIR
-    out_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "survey-status.json").write_text(
         json.dumps(ids, indent=2) + "\n", encoding="utf-8"
     )
@@ -503,8 +503,8 @@ def survey_status_public_data() -> int:
 
 def registration_routing_public_data() -> int:
     """`convener-registration-routing-public-data`: rebuild
-    `public-data/registration-routing.json` from `data/speakers.yml` and
-    `config/registration-lanes.yml` --
+    `instance/public-data/registration-routing.json` from
+    `instance/data/speakers.yml` and `instance/registration-lanes.yml` --
     `survey_status_public_data`'s own precedent above, for a third consumer
     and a third question.
 
@@ -512,8 +512,9 @@ def registration_routing_public_data() -> int:
     that event stops being far enough away for a registration to wait for
     the daily drain. `services/signup-relay` reads it through the Contents
     API, with the credential and the call shape it already uses for
-    `keys/events/<id>.pub` and `public-data/survey-status.json`, and its
-    whole share of the rule becomes one comparison against the clock. Every
+    `instance/keys/events/<id>.pub` and
+    `instance/public-data/survey-status.json`, and its whole share of the
+    rule becomes one comparison against the clock. Every
     piece of arithmetic that has a project decision in it -- Europe/Paris,
     the standing start, the configured threshold -- happens here, in the
     language it already lives in.
@@ -524,7 +525,7 @@ def registration_routing_public_data() -> int:
     checks membership in a list of ids must not have to know about a
     mapping of instants to do it.
 
-    Returns 1, printing why, on a `config/registration-lanes.yml` this code
+    Returns 1, printing why, on a `instance/registration-lanes.yml` this code
     cannot read as the shape it knows. Never a default: a threshold guessed
     at is a threshold that could route a last-minute registrant into a queue
     they cannot afford to wait in, and a red build is the cheap version of
@@ -545,7 +546,7 @@ def registration_routing_public_data() -> int:
 
     data = registration_routing.to_routing_data(speakers or [], threshold)
     out_path = root / registration_routing.ROUTING_PATH
-    out_path.parent.mkdir(exist_ok=True)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     print(
         f"wrote {len(data['queue_until'])} event(s) whose registrations may "
@@ -555,8 +556,9 @@ def registration_routing_public_data() -> int:
 
 
 def agenda_internal() -> int:
-    """`convener-agenda-internal`: rebuild `public-data/agenda-internal.ics` from
-    `data/speakers.yml` and `data/config.yml` --
+    """`convener-agenda-internal`: rebuild
+    `instance/public-data/agenda-internal.ics` from
+    `instance/data/speakers.yml` and `instance/data/config.yml` --
     `public_data`'s own precedent (above), for a feed that must never reach
     either published bundle: unlike `events-public.json`, nothing in this
     build's own copy scripts ever names this file, and `.gitattributes`
@@ -575,7 +577,7 @@ def agenda_internal() -> int:
 
     calendar = agenda.build_internal_calendar(speakers or [], cfg or {})
     out_dir = root / PUBLIC_DATA_DIR
-    out_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     # Binary, not text mode: this string already carries real CRLF line
     # endings RFC 5545 requires, and a text-mode write on this project's own
     # Windows checkouts would translate each embedded "\n" to the platform
@@ -799,7 +801,7 @@ def resolve_registration_secret() -> int:
     silent" idiom `_notify` uses for its own absent channel.
 
     Neither line carries anything a stranger could not already read from
-    the repository: `event_id` is public (`keys/events/<id>.pub` names it
+    the repository: `event_id` is public (`instance/keys/events/<id>.pub` names it
     openly) and `secret_name` is a *name*, not a value.
     """
     payload = os.environ.get("REGISTRATION_PAYLOAD", "")
@@ -817,7 +819,7 @@ def resolve_registration_secret() -> int:
 def handle_registration() -> int:
     """`convener-handle-registration`: the second of the three steps
     `.github/workflows/registration.yml` runs -- decrypt one registration
-    and store it re-encrypted in `data/events/<id>/registrations.enc`.
+    and store it re-encrypted in `instance/data/events/<id>/registrations.enc`.
 
     The confirmation itself is sent by a *separate* step
     (`convener-send-confirmation`, gated `if: success()` so it runs at most once
@@ -834,7 +836,7 @@ def handle_registration() -> int:
     `resolve_registration_secret`'s own output). Never prints either of
     them, or anything decrypted from them: every message below names only
     the event id -- already public, the same identifier every workflow run
-    and every `keys/events/<id>.pub` filename already carry in the clear
+    and every `instance/keys/events/<id>.pub` filename already carry in the clear
     -- and a count.
 
     An absent `EVENT_PRIVATE_KEY` is not D-13's normal state here, the same
@@ -1072,7 +1074,7 @@ def encrypt_identifier() -> int:
 
     Runs entirely outside continuous integration, on an operator's own
     machine, against the event's already-published public key
-    (`keys/events/<id>.pub`) -- needs no secret at all: encrypting under
+    (`instance/keys/events/<id>.pub`) -- needs no secret at all: encrypting under
     a public key is exactly the operation a stranger with no account
     could already perform (the same reasoning
     `encrypt_attendance_export`'s own docstring gives for its identical
@@ -1128,7 +1130,7 @@ def _survey_enabled(root: Path, event_id: str) -> bool:
     """Whether `event_id`'s speaker record has the survey switch on --
     the switch is a field on the speaker record, a
     per-event fact beside the event's other per-event facts, not a
-    `data/config.yml` setting. `False` for every failure to determine it
+    `instance/data/config.yml` setting. `False` for every failure to determine it
     cleanly: a speaker file that will not load, no record for this event
     id, or `False` on the record itself all mean the same thing here --
     this event's survey is not open -- because a job that decrypts and
@@ -1338,7 +1340,7 @@ def plan_queue_drain() -> int:
     eight.
 
     Prints only counts and event ids. An event id is already public (it
-    names a `keys/events/<id>.pub` this repository publishes); nothing a
+    names a `instance/keys/events/<id>.pub` this repository publishes); nothing a
     submitter wrote can reach this command at all, because nothing here
     decrypts.
     """
@@ -1379,7 +1381,7 @@ def drain_queue() -> int:
 
     Reads the same snapshot `plan_queue_drain` read, pairs each slot's event
     id with the key the workflow selected for it, and writes the result --
-    every event's `survey-responses.enc` **and** `data/queue-ledger.yml` --
+    every event's `survey-responses.enc` **and** `instance/data/queue-ledger.yml` --
     so the caller can commit the lot as one commit. The two must land
     together or not at all: the ledger is what makes a replayed drain a
     no-op, and a ledger committed without its data (or data without its
@@ -1631,7 +1633,7 @@ def confirm_queued_registrations() -> int:
 
 
 def _queue_thresholds(root: Path) -> queue_watch.Thresholds:
-    """`config/queue-drain.yml`, parsed or refused.
+    """`instance/queue-drain.yml`, parsed or refused.
 
     Raises `ValueError` carrying a message already shaped for an
     `::error::` annotation. Both commands below fail on it rather than
@@ -1721,13 +1723,13 @@ def record_queue_watch() -> int:
 
     Two outcomes, and they are deliberately different things:
 
-    * `data/queue-watch.yml` is rewritten every single run, whatever it
+    * `instance/data/queue-watch.yml` is rewritten every single run, whatever it
       found. Its *freshness* is the evidence the drain still runs at all,
       which `convener-check-queue-liveness` reads from
       `retention-watchdog.yml`'s own independent schedule -- a control
       hosted inside the job it watches cannot report that job going quiet.
     * `queue_alert` on `$GITHUB_OUTPUT`, and a body file to post, when an
-      entry has waited past `config/queue-drain.yml`'s threshold. That half
+      entry has waited past `instance/queue-drain.yml`'s threshold. That half
       *can* live here, because an entry can only be known to be stuck by
       something that read the queue, and this is the only place that has
       both the queue and the board's channel (D-07).
@@ -1807,8 +1809,8 @@ def check_queue_liveness() -> int:
     most serious of the four ways a submission can sit in the queue for
     ever. So `retention-watchdog.yml`, a second, independent schedule that
     already exists and already asks this exact question about
-    `retention.yml` and `data/actions-usage.yml`, asks it about
-    `data/queue-watch.yml` too, in the same job, at no extra billed job.
+    `retention.yml` and `instance/data/actions-usage.yml`, asks it about
+    `instance/data/queue-watch.yml` too, in the same job, at no extra billed job.
 
     Reads the record's freshness and nothing else. It deliberately does
     *not* re-report the entries that are past the threshold: an entry can
@@ -1893,7 +1895,7 @@ def _published_routing(root: Path) -> tuple[dict[str, str], str | None]:
     distinction is the whole of `routing_watch.UNPUBLISHED`.
 
     A **missing** file is a finding rather than the ordinary pre-first-run
-    state its neighbours treat it as. `data/queue-watch.yml` absent means
+    state its neighbours treat it as. `instance/data/queue-watch.yml` absent means
     no drain has run yet; this file absent means the relay's every read
     404s, which is exactly the silent fallback to the immediate lane this
     command exists to report -- and it stays true on the morning an
@@ -1922,13 +1924,13 @@ def check_registration_routing() -> int:
 
     The last of the queue's controls, and the one that guards the *saving*
     rather than a submission. Every failure the relay meets while reading
-    `public-data/registration-routing.json` resolves to the immediate lane,
+    `instance/public-data/registration-routing.json` resolves to the immediate lane,
     deliberately and correctly -- and therefore invisibly. If that file goes
     missing or falls behind the data, every registration bills a run again,
     the queue is simply empty, and an empty queue looks like a quiet day.
 
-    This recomputes the projection from `data/speakers.yml` and
-    `config/registration-lanes.yml` with the same function `deploy.yml`
+    This recomputes the projection from `instance/data/speakers.yml` and
+    `instance/registration-lanes.yml` with the same function `deploy.yml`
     runs, and compares it with the committed file over the events a
     registration arriving now could still be queued for. See
     `tools/convener_ops/routing_watch.py` for why that comparison rather than
@@ -1940,7 +1942,7 @@ def check_registration_routing() -> int:
     what turns the job red, so an unconfigured channel can never turn a
     real finding into silence. Returns 1 only for the inputs *this*
     repository owns and cannot read -- a missing or malformed
-    `data/speakers.yml` or `config/registration-lanes.yml` -- which is a
+    `instance/data/speakers.yml` or `instance/registration-lanes.yml` -- which is a
     broken repository rather than a stale deployment.
     """
     root = repo_root()
@@ -2033,7 +2035,7 @@ def retention_sweep() -> int:
     Actions tab, to a retention job that genuinely had nothing to do --
     and the two must never be confused for a promise with legal weight.
     So this is checked, and fails, before anything else -- including
-    before reading `data/speakers.yml`, so a malformed data file is never
+    before reading `instance/data/speakers.yml`, so a malformed data file is never
     what an operator sees first when the real problem is a missing
     credential. This function does not itself call the GitHub API with
     the token -- `retention.yml`'s own `gh secret delete` step does -- but
@@ -2140,7 +2142,7 @@ def record_retention_run() -> int:
     """`convener-record-retention-run`: record that today's `retention.yml` run
     happened at all.
 
-    Writes `data/retention-last-run.yml` with today's Paris date
+    Writes `instance/data/retention-last-run.yml` with today's Paris date
     (`governance.paris_today`), unconditionally. `retention.yml`'s own
     "Record that the retention workflow ran today" step calls this last,
     with `if: always()`, deliberately independent of whether the sweep
@@ -2175,7 +2177,7 @@ def check_retention_liveness() -> int:
     """`convener-check-retention-liveness`: `retention-watchdog.yml`'s own
     command.
 
-    Reads `data/retention-last-run.yml` (written by `record_retention_run`
+    Reads `instance/data/retention-last-run.yml` (written by `record_retention_run`
     above) and fails, loudly, once it has gone more than
     `retention_liveness.MAX_SILENT_DAYS` days without moving. A missing
     file is not the ordinary D-13 "an integration that may not exist yet"
@@ -2197,7 +2199,7 @@ def check_retention_liveness() -> int:
     path = retention_liveness.last_run_path(root)
     if not path.exists():
         print(
-            "::error::data/retention-last-run.yml does not exist -- "
+            "::error::instance/data/retention-last-run.yml does not exist -- "
             "retention.yml has never recorded a run in this repository "
             "(or the file was removed) -- see this command's own "
             "docstring and retention-watchdog.yml's own header comment",
@@ -2208,7 +2210,7 @@ def check_retention_liveness() -> int:
         data = yaml_safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as exc:
         print(
-            f"::error::data/retention-last-run.yml: invalid YAML - {exc}",
+            f"::error::instance/data/retention-last-run.yml: invalid YAML - {exc}",
             file=sys.stderr,
         )
         return 1
@@ -2242,7 +2244,7 @@ def check_retention_liveness() -> int:
 
 
 def _actions_budget(root: Path) -> actions_usage.Budget:
-    """`config/actions-budget.yml`, parsed or refused.
+    """`instance/actions-budget.yml`, parsed or refused.
 
     Raises `ValueError` carrying a message already shaped for an
     `::error::` annotation. All three commands below fail on it rather
@@ -2297,7 +2299,7 @@ def record_actions_usage() -> int:
 
     Reads what the collector step left behind -- one JSON object per line,
     each pairing a run with its `/timing` answer -- and writes
-    `data/actions-usage.yml`: a committed file, so the measurement is
+    `instance/data/actions-usage.yml`: a committed file, so the measurement is
     legible by opening this repository rather than by scrolling a job log
     nobody opens. One line goes to the log, not thirty.
 
@@ -2360,7 +2362,7 @@ def record_actions_usage() -> int:
             )
         except yaml.YAMLError:
             print(
-                "::warning::data/actions-usage.yml is not readable YAML -- "
+                "::warning::instance/data/actions-usage.yml is not readable YAML -- "
                 "today's measurement replaces it and the trend restarts here"
             )
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -2385,7 +2387,7 @@ def record_actions_usage() -> int:
     else:
         print(
             "no notification channel is configured -- this alarm reaches "
-            "nowhere but this run's own red status and data/actions-usage.yml"
+            "nowhere but this run's own red status and instance/data/actions-usage.yml"
         )
     _write_github_output("budget_alert=true\n")
     return 0
@@ -2399,7 +2401,7 @@ def check_actions_usage_liveness() -> int:
     own silence, and an exhausted budget is precisely what stops that job.
     So `retention-watchdog.yml` -- a second, independent schedule that
     already exists and already asks this exact question about
-    `retention.yml` -- asks it about `data/actions-usage.yml` too, in the
+    `retention.yml` -- asks it about `instance/data/actions-usage.yml` too, in the
     same job, at no extra billed job. See that workflow's own header
     comment for what a watchdog living inside the scheduler it watches can
     and cannot catch; the answer is the same here, and the residue is the
@@ -2456,7 +2458,7 @@ def check_actions_usage_liveness() -> int:
 
 
 def record_destructions() -> int:
-    """`convener-record-destructions`: write `data/event-key-destructions.yml`
+    """`convener-record-destructions`: write `instance/data/event-key-destructions.yml`
     with every id in `DESTROYED_IDS` (comma-joined, `retention_sweep`'s
     own `$GITHUB_OUTPUT`, or a hand-run operator recovering from a wedged
     sweep -- see `docs/reference/operations.md`, 'Retention and early
@@ -2486,7 +2488,7 @@ def record_destructions() -> int:
     is caught here and turned into an ordinary exit 1.
 
     **Only after every id above is durably written does this delete the
-    published `.pub`.** `keys/events/<id>.pub` is the
+    published `.pub`.** `instance/keys/events/<id>.pub` is the
     signup relay's only "this event is open" gate
     (`services/signup-relay/src/index.js`); leaving it published after
     destruction lets a destroyed event keep accepting registrations that
@@ -2503,7 +2505,7 @@ def record_destructions() -> int:
     re-running this against a `.pub` an earlier, partial attempt already
     removed.
 
-    A missing or malformed `DESTROYED_ON`, or a `data/event-key-
+    A missing or malformed `DESTROYED_ON`, or a `instance/data/event-key-
     destructions.yml` that failed to parse, is reported and the run exits
     1 -- both mean this step cannot answer the one question it exists to
     answer (what day did this destruction happen), so it must not guess.
@@ -2613,13 +2615,13 @@ def erase_registration() -> int:
     docstring carries the full reasoning).
 
     **Checked before anything else touches disk: has this event's key
-    already been destroyed?** `data/event-key-destructions.yml` is read
+    already been destroyed?** `instance/data/event-key-destructions.yml` is read
     first, and if it already names `event_id`, this prints the destruction
     date on record and returns 0 -- demonstrable, not merely asserted:
     proved from the committed registry, and
     the request is already satisfied (there is nothing left that could be
     erased). An event id that is not known to this repository at all (no
-    `keys/events/<id>.pub`, and no destruction on record either) is
+    `instance/keys/events/<id>.pub`, and no destruction on record either) is
     refused instead -- that is not "already erased", it names nothing this
     repository ever registered.
 
@@ -2820,15 +2822,15 @@ UNMATCHED_ATTENDANCE: Final = "unmatched-attendance.md"
 
 def encrypt_attendance_export() -> int:
     """`convener-encrypt-attendance-export`: turn a host's raw, never-committed
-    `data/events/<id>/attendance-import.csv` into a committable,
-    encrypted `data/events/<id>/attendance-import.csv.enc` -- see
+    `instance/data/events/<id>/attendance-import.csv` into a committable,
+    encrypted `instance/data/events/<id>/attendance-import.csv.enc` -- see
     `platform.py`'s module docstring, "one independent envelope per row",
     for the file's own per-row shape.
 
     Runs entirely outside continuous integration, on a host's own
     machine, against the plaintext export they just downloaded off the
     meeting platform -- the manual implementation's whole point. Needs no
-    secret at all: `keys/events/<id>.pub` is already published, public
+    secret at all: `instance/keys/events/<id>.pub` is already published, public
     data (`eventkeys.py`'s own module docstring, "the public half is a
     file, not a secret"), and encrypting under a public key is exactly
     the operation a stranger with no account could already perform.
@@ -2838,9 +2840,9 @@ def encrypt_attendance_export() -> int:
 
     Reads `EVENT_ID` -- the same operator-typed, manual-trigger shape
     `resend_confirmation` and `match_attendance` already read -- and the
-    plaintext CSV at `data/events/<id>/attendance-import.csv`. Refuses
+    plaintext CSV at `instance/data/events/<id>/attendance-import.csv`. Refuses
     (exit 1) when the event id is not shaped like one, when no public key
-    has been published for it yet (`keys/events/<id>.pub` absent -- an
+    has been published for it yet (`instance/keys/events/<id>.pub` absent -- an
     operator has to create the event's key pair, per
     `docs/reference/operations.md`'s "Event registration keys" section,
     before anyone can register for it at all, so this is never the first
@@ -2975,7 +2977,7 @@ def _warn_if_title_truncated(event: CertificateEvent) -> None:
         print(
             f"::warning::the title for event {event.event_id} was too "
             "long and has been truncated on the certificate -- see "
-            "data/speakers.yml's own title field for that event",
+            "instance/data/speakers.yml's own title field for that event",
             file=sys.stderr,
         )
 
@@ -3300,7 +3302,7 @@ def invite_survey() -> int:
        switch `handle_survey_response`, the signup relay and `SurveyForm.tsx`
        already enforce;
     3. **this event has not already been invited**
-       (`data/survey-invitations.yml`), unless `RESEND_ALL=true` -- the
+       (`instance/data/survey-invitations.yml`), unless `RESEND_ALL=true` -- the
        whole bound a resend has, checked before anything is decrypted so a routine
        re-dispatch after nothing changed touches no registration at all;
     4. the event's private key is configured;
@@ -3459,7 +3461,7 @@ def record_survey_invitation() -> int:
     sending and recording are two separate steps.
 
     Reads `EVENT_ID` and idempotently adds it to
-    `data/survey-invitations.yml` with today's Paris date -- `setdefault`,
+    `instance/data/survey-invitations.yml` with today's Paris date -- `setdefault`,
     never overwritten, so calling this again for an event already on
     record (a git-push retry that re-runs this command after a rejected
     push resets the working tree, or an operator re-dispatching the whole
@@ -3541,7 +3543,7 @@ def issue_certificates() -> int:
     Every other failure mirrors `match_attendance`'s own handling: a bad
     event id, a missing private key, a missing or malformed
     `registrations.enc`, or a platform that cannot answer are all reported
-    on one line and exit 1. A missing or malformed `data/config.yml`
+    on one line and exit 1. A missing or malformed `instance/data/config.yml`
     exits 1 too -- eligibility cannot be computed at all without
     `seminar_duration_minutes`, unlike `match_attendance`, which never
     needed the config file in the first place. `CONVENER_SIGNING_KEY` present
@@ -3555,14 +3557,14 @@ def issue_certificates() -> int:
     1) rather than signing a certificate that names no event and no date
     -- a certificate's content is not optional, and the register row a
     silently-empty certificate would leave behind is permanent.
-    When `data/speakers.yml` itself failed to parse, the
+    When `instance/data/speakers.yml` itself failed to parse, the
     message names that parse failure -- surfaced from `_load`, never
     discarded -- instead of sending an operator to look for a speaker
     record that was never actually missing.
 
     Prints only counts, never a name or an address -- the same discipline
     `match_attendance` already holds itself to for the same reason.
-    `data/events/<id>/certificates.yml` is rewritten, as a whole file
+    `instance/data/events/<id>/certificates.yml` is rewritten, as a whole file
     (never appended to a partial one), only when at least one certificate
     was freshly minted; reissuing every attendee already on record writes
     nothing and still exits 0.
@@ -3777,13 +3779,13 @@ def issue_certificates() -> int:
 
 def certificates_public_data() -> int:
     """`convener-certificates-public-data`: rebuild
-    `public-data/certificates-public.json` from every event's own
-    `data/events/<id>/certificates.yml`, following `public_data`'s own
+    `instance/public-data/certificates-public.json` from every event's own
+    `instance/data/events/<id>/certificates.yml`, following `public_data`'s own
     precedent for `events-public.json` (`certificate.public_register` is
     the pure projection this calls, the same split `public_data.to_public`
     draws for the speaker list).
 
-    Reads every `certificates.yml` under `data/events/*/` that exists --
+    Reads every `certificates.yml` under `instance/data/events/*/` that exists --
     an event with none yet contributes nothing, not an error, the ordinary
     state for an event with no certificates issued -- and aggregates them
     into one flat list before projecting: identifiers are drawn from
@@ -3818,7 +3820,7 @@ def certificates_public_data() -> int:
 
     rows = public_register(entries)
     out_dir = root / PUBLIC_DATA_DIR
-    out_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "certificates-public.json").write_text(
         json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -4259,7 +4261,7 @@ def deliver_certificates() -> int:
     Every other refusal mirrors `issue_certificates`'s own handling line
     for line: a bad event id, a missing private key, a missing or
     malformed `registrations.enc`, a missing or malformed
-    `data/config.yml`, a platform that cannot answer, or a speaker record
+    `instance/data/config.yml`, a platform that cannot answer, or a speaker record
     with no title and no date all refuse the whole run (exit 1) before
     anything is delivered. **A missing certificate register also refuses
     :** with no `certificates.yml` on disk for this
@@ -4566,7 +4568,7 @@ def deliver_certificate() -> int:
     clean exit -- for `CONVENER_MATCHING_SALT` the same stronger reason
     `certificate.py`'s module docstring gives), a missing or malformed
     `CERTIFICATE_ID`, missing or malformed `registrations.enc`, an unknown
-    or revoked certificate id, a missing or malformed `data/config.yml`, a
+    or revoked certificate id, a missing or malformed `instance/data/config.yml`, a
     platform that cannot answer, an id that matches no currently eligible
     attendee, or a speaker record with no title and no date -- all refuse
     (exit 1) before anything is rendered or sent.
@@ -5187,7 +5189,7 @@ NOTIFY_BODY: Final = "notify-body.md"
 
 #: The parent of HEAD, as a fixed `git show` argument. The fallback, used when
 #: the run does not know where the branch actually moved from.
-PREVIOUS_SPEAKERS: Final = "HEAD~1:data/speakers.yml"
+PREVIOUS_SPEAKERS: Final = "HEAD~1:instance/data/speakers.yml"
 
 #: An object name, and nothing else, may be interpolated into `git show`.
 #: Anchored and hexadecimal, so no value of `BEFORE` can become an option or a
@@ -5214,12 +5216,12 @@ def previous_revision(env: Mapping[str, str]) -> str:
     """
     before = env.get("BEFORE", "").strip()
     if _OBJECT_NAME.fullmatch(before) and before.strip("0"):
-        return f"{before}:data/speakers.yml"
+        return f"{before}:instance/data/speakers.yml"
     return PREVIOUS_SPEAKERS
 
 
 def _git_show(root: Path, revision: str) -> tuple[str, str]:
-    """`data/speakers.yml` as of `revision`, or an explanation.
+    """`instance/data/speakers.yml` as of `revision`, or an explanation.
 
     A shallow clone, an initial commit, or a repository with no such revision
     all land in the error half, and the caller turns that into "nothing to
@@ -5414,7 +5416,7 @@ def register() -> int:
     what the history derives. Rewriting is what makes a hand edit impossible to
     *keep*; on its own it leaves the edit standing in the repository between a
     push and the next run, which is the window this mode closes. The comparison
-    is meaningful because the rendering reads no clock, no `data/*.yml` and no
+    is meaningful because the rendering reads no clock, no `instance/data/*.yml` and no
     environment: two runs over the same commits produce the same bytes, so a
     difference can only be a change made outside the history.
     """
@@ -5482,7 +5484,7 @@ def render_visual_fixtures() -> int:
     identity the committed reference images are measured against
     (see that constant's own docstring for why it is Ada Lovelace and no
     photograph, never a real, living speaker's name or face). Nothing about
-    this command reads `data/speakers.yml`, the clock, or the network: the
+    this command reads `instance/data/speakers.yml`, the clock, or the network: the
     same input always produces the same three pages, which is the entire
     point of a pinned regression fixture.
 
@@ -5591,7 +5593,7 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
         except ValueError as exc:
             raise ValueError(
                 f"{row.get('id')!r}: scheduled but its date {raw_date!r} is "
-                "not a valid YYYY-MM-DD -- data/speakers.yml disagrees "
+                "not a valid YYYY-MM-DD -- instance/data/speakers.yml disagrees "
                 "with its own validator"
             ) from exc
         if row.get("photo_url"):
@@ -5618,18 +5620,18 @@ def _scheduled_announcements(rows: list[dict[str, Any]]) -> list[visual.Announce
 def render_visuals() -> int:
     """`convener-render-visuals OUTPUT_DIR`: the disk-writing seam for
     *production* visuals -- real, scheduled editions read from
-    `data/speakers.yml`, through the same public gate every other public
+    `instance/data/speakers.yml`, through the same public gate every other public
     artefact in this project already goes through (`public_data.
     to_public`), never a second, looser read of the raw record.
 
     The opposite number of `render_visual_fixtures` above: that command
     always renders the one fixed, fictional identity a regression check
-    needs and never touches `data/speakers.yml` at all; this one renders
+    needs and never touches `instance/data/speakers.yml` at all; this one renders
     *only* real, scheduled editions and touches nothing else. Zero
     scheduled editions is a normal, expected state (D-13) -- printed
     plainly, exit 0, an empty `manifest.json` -- not a failure; a
     malformed date on a record that claims to be scheduled is not, and
-    fails loudly instead (D-25): `data/speakers.yml` disagreeing with its
+    fails loudly instead (D-25): `instance/data/speakers.yml` disagreeing with its
     own validator is a data defect this command must never render around
     quietly.
 
@@ -5646,7 +5648,7 @@ def render_visuals() -> int:
 
     This is also the "manual command" the trigger requires, independently
     of any workflow: `uv run --project tools convener-render-visuals
-    OUTPUT_DIR` renders the current, real state of `data/speakers.yml` on
+    OUTPUT_DIR` renders the current, real state of `instance/data/speakers.yml` on
     demand, from a plain checkout, no CI needed.
 
     Only touches the target directory once a valid state has actually been
@@ -5704,7 +5706,7 @@ def render_visuals() -> int:
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
         )
         print(
-            "no scheduled edition in data/speakers.yml -- nothing to "
+            "no scheduled edition in instance/data/speakers.yml -- nothing to "
             "render (normal until a date is locked)"
         )
         return 0
@@ -5749,7 +5751,7 @@ def render_announcements() -> int:
     is the second, independent route to the identical four texts that
     needs no browser and no authenticated session -- `uv run --project
     tools convener-render-announcements OUTPUT_DIR` renders the current, real
-    state of `data/speakers.yml` on demand, from a plain checkout, exactly
+    state of `instance/data/speakers.yml` on demand, from a plain checkout, exactly
     the same "manual command, independent of any workflow" property
     `render_visuals`'s own docstring states for the visuals.
 
@@ -5840,7 +5842,7 @@ def render_announcements() -> int:
     if not manifest:
         print(
             "no scheduled or announceable archived edition in "
-            "data/speakers.yml -- nothing to render (normal until a date "
+            "instance/data/speakers.yml -- nothing to render (normal until a date "
             "is locked or a recording is published)"
         )
         return 0

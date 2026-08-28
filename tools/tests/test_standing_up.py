@@ -632,8 +632,8 @@ def test_an_unsupported_version_is_refused() -> None:
 @pytest.fixture
 def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A repository holding the two declarations, with the page not written."""
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "config.yml").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "instance" / "data").mkdir(parents=True)
+    (tmp_path / "instance" / "data" / "config.yml").write_text("{}\n", encoding="utf-8")
     (tmp_path / INTEGRATIONS_PATH).parent.mkdir(parents=True)
     (tmp_path / INTEGRATIONS_PATH).write_text(
         (ROOT / INTEGRATIONS_PATH).read_text(encoding="utf-8"), encoding="utf-8"

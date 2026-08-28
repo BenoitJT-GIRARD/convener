@@ -618,7 +618,7 @@ def test_the_contact_email_matches_the_signup_pages_own_notice() -> None:
 
     Both sides used to hold the literal and this test bound
     them to each other -- which could say the two copies still agreed,
-    never that there was one. Both now read `config/instance.json`, so
+    never that there was one. Both now read `instance/config.json`, so
     what is asserted here is that neither has gone back to writing it out:
     the registration form reads the identity, and no e-mail address
     appears in its source at all.
@@ -812,7 +812,7 @@ def _signup_link_cases() -> dict[str, Any]:
 def test_signup_base_matches_the_shared_fixture() -> None:
     """The fixture states the *path* the product
     publishes an event page under; the root both sides prepend is
-    `config/instance.json`'s, read here through `published.load()` and on
+    `instance/config.json`'s, read here through `published.load()` and on
     the TypeScript side through `import.meta.env.VITE_PUBLISHED_URL`. The
     fixture used to hold the whole address, which made it a copy of that
     root rather than a binding between two implementations."""

@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { handle } from '../src/index.js';
 
 // The origin this worker answers CORS preflights for is not this
-// package's to know. It is the one address `config/instance.json`
+// package's to know. It is the one address `instance/config.json`
 // declares this project is published at, and it reaches `handle` as
 // `env.ALLOWED_ORIGIN` -- passed to `wrangler deploy --var` by
 // `.github/workflows/deploy-auth-proxy.yml`, which reads the declaration

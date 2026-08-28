@@ -75,7 +75,7 @@ def _configured_path_prefix() -> str:
 
     This used to scrape `PATH_PREFIX` out of
     `site/.eleventy.js` with a regular expression, because that file was
-    where the value lived. It now lives in `config/instance.json`, which
+    where the value lived. It now lives in `instance/config.json`, which
     `.eleventy.js` reads for itself, so this reads the declaration
     directly rather than the source of another reader of it. That the two
     actually agree -- that the *build* resolves the same prefix this
@@ -891,7 +891,7 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 
     This used to bind `event.njk`'s own literal to `confirmation.py`'s.
     The literal is gone: the template names `site.contact`,
-    which `.eleventy.js` derives from `config/instance.json`. So both
+    which `.eleventy.js` derives from `instance/config.json`. So both
     halves are asserted -- the template names it rather than spelling it,
     and the *built* page carries the address `confirmation.py` sends from.
     """
@@ -936,7 +936,7 @@ def test_the_event_pages_contact_address_matches_confirmations_own_constant() ->
 #: What `site/.eleventy.js` hands every template as `site`. Composed
 #: here from the one declaration rather than read out of a file, because
 #: there is no file to read: the four keys that used
-#: to be `site/src/_data/site.json` are `config/instance.json`'s own
+#: to be `site/src/_data/site.json` are `instance/config.json`'s own
 #: `identity`, and the data file derives them.
 #: `test_published.py::test_the_showcase_feeds_its_templates_the_declared_
 #: identity` holds this composition against what the real, committed data
@@ -1340,7 +1340,7 @@ def test_the_propose_page_offers_a_form_or_says_it_is_not_open(
 ) -> None:
     """One page, two states, and never the third one it used to have.
 
-    `config/instance.json` declared `proposal_form:
+    `instance/config.json` declared `proposal_form:
     https://forms.example.test/propose` -- a placeholder inherited from the old
     `site/src/_data/site.json` -- and this page published it as its one
     call to action, a live button on a public page resolving to nothing.
@@ -1470,7 +1470,7 @@ def test_the_governance_record_link_agrees_on_every_page_that_makes_it() -> None
 
     The templates no longer write the address at all --
     they pipe a root-relative path through `absoluteUrl`, which builds it
-    from `config/instance.json`. So what is checked here is that both
+    from `instance/config.json`. So what is checked here is that both
     templates make the *same* call (they cannot state two different
     answers to the same question), and the address itself is checked
     where it is actually produced: on the built pages, by
@@ -1506,7 +1506,7 @@ def test_the_governance_record_link_resolves_to_the_published_handbook(
     actually receives.
 
     D-26 -- checked at the deployed shape, never at the template. The
-    address is composed at build time from `config/instance.json` and the
+    address is composed at build time from `instance/config.json` and the
     application's own published base, so the only way to know it came out
     right is to read it off a built page. Both pages that carry this link
     are checked, and the expected value is built from the declaration
@@ -1664,12 +1664,12 @@ def test_the_path_prefix_agrees_with_the_addresses_python_already_pins() -> None
     root = published.load().url
     assert SIGNUP_BASE.startswith(root), (
         f"registration.SIGNUP_BASE ({SIGNUP_BASE!r}) no longer starts with "
-        f"{root!r} -- it has stopped deriving from config/instance.json"
+        f"{root!r} -- it has stopped deriving from instance/config.json"
     )
     assert VERIFICATION_BASE.startswith(root), (
         f"certificate.VERIFICATION_BASE ({VERIFICATION_BASE!r}) no longer "
         f"starts with {root!r} -- it has stopped deriving from "
-        "config/instance.json"
+        "instance/config.json"
     )
     assert _published_app_base() == f"{_configured_path_prefix()}app/", (
         "the application's published base no longer sits under the "
@@ -2621,14 +2621,14 @@ def built_site_with_share_banner(tmp_path_factory: pytest.TempPathFactory) -> Pa
         ignore=shutil.ignore_patterns("node_modules", "_site"),
     )
     # `.eleventy.js` reads this project's published
-    # address from `config/instance.json`, one level above `site/` -- the
+    # address from `instance/config.json`, one level above `site/` -- the
     # same way it already passthrough-copies `../fonts`. A copy of `site/`
     # alone is no longer a buildable tree, and the build says so loudly
     # rather than guessing an address, which is the whole point of that
     # module refusing a default.
-    (scratch_root / "config").mkdir()
+    (scratch_root / "instance").mkdir()
     shutil.copy2(
-        ROOT / "config" / "instance.json", scratch_root / "config" / "instance.json"
+        ROOT / "instance" / "config.json", scratch_root / "instance" / "config.json"
     )
     # And `.eleventy.js` also reads the declaration
     # the *product* ships, to decide whether this instance is still

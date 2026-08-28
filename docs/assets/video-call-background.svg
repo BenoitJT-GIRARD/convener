@@ -7,7 +7,7 @@
   the session runs on.</desc>
 
   <!-- Generated, not drawn: scripts/generate_brand_css.py writes this file
-  from data/brand.json (the colours and the motif) and config/instance.json
+  from instance/data/brand.json (the colours and the motif) and instance/config.json
   (the names). Change one of those, run that command, and commit what it
   writes; an edit made here is overwritten, and the check fails until it
   is. Once you have downloaded a copy it is yours, of course: edit that as

@@ -187,7 +187,7 @@ def test_no_write_call_in_convener_ops_ever_writes_a_private_key() -> None:
 
 
 # -------------------------------------------------------------------- #
-# The destruction registry: data/event-key-destructions.yml
+# The destruction registry: instance/data/event-key-destructions.yml
 # -------------------------------------------------------------------- #
 
 
@@ -196,7 +196,7 @@ def test_destructions_path_is_under_data(
 ) -> None:
     assert (
         eventkeys.destructions_path(tmp_path)
-        == tmp_path / "data" / "event-key-destructions.yml"
+        == tmp_path / "instance" / "data" / "event-key-destructions.yml"
     )
 
 
@@ -469,7 +469,7 @@ def test_find_by_matching_code_refuses_a_collision_instead_of_returning_the_firs
 
 def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, str]:
     private_pem, public_pem = generate()
-    keys_dir = tmp_path / "keys" / "events"
+    keys_dir = tmp_path / "instance" / "keys" / "events"
     keys_dir.mkdir(parents=True, exist_ok=True)
     (keys_dir / f"{event_id}.pub").write_text(public_pem, encoding="ascii")
     return private_pem, public_pem
@@ -486,8 +486,8 @@ def _email_envelope(public_pem: str, email: str) -> str:
 def _write_speaker(
     tmp_path: Path, event_id: str = "mrg-042", event_date: str = ""
 ) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text(
         yaml.safe_dump([speaker(edition_code=event_id.upper(), date=event_date)]),
         encoding="utf-8",
@@ -500,7 +500,7 @@ def _write_registrations(
     file = load_registration_file(None)
     for registration in registrations:
         file, _replaced = upsert(file, registration, private_pem=private_pem)
-    path = tmp_path / "data" / "events" / event_id / "registrations.enc"
+    path = tmp_path / "instance" / "data" / "events" / event_id / "registrations.enc"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump_registration_file(file), encoding="utf-8")
 
@@ -718,8 +718,10 @@ def test_retention_sweep_skips_an_event_with_no_speaker_record(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _publish_event_key(tmp_path, "mrg-042")
-    (tmp_path / "data").mkdir(exist_ok=True)
-    (tmp_path / "data" / "speakers.yml").write_text("[]\n", encoding="utf-8")
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
+        "[]\n", encoding="utf-8"
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     _github_output(tmp_path, monkeypatch)
@@ -765,7 +767,9 @@ def test_retention_sweep_fails_on_a_malformed_registry(
     registry_path = eventkeys.destructions_path(tmp_path)
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text("v: 2\ndestructions: []\n", encoding="utf-8")
-    (tmp_path / "data" / "speakers.yml").write_text("[]\n", encoding="utf-8")
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
+        "[]\n", encoding="utf-8"
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
 
@@ -779,7 +783,9 @@ def test_retention_sweep_fails_on_a_registry_that_is_not_valid_yaml(
     registry_path = eventkeys.destructions_path(tmp_path)
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text("v: [unclosed\n", encoding="utf-8")
-    (tmp_path / "data" / "speakers.yml").write_text("[]\n", encoding="utf-8")
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
+        "[]\n", encoding="utf-8"
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
 
@@ -790,8 +796,8 @@ def test_retention_sweep_fails_on_a_registry_that_is_not_valid_yaml(
 def test_retention_sweep_fails_on_a_malformed_speakers_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "data" / "speakers.yml").write_text(
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         "key: [unclosed\n", encoding="utf-8"
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -805,10 +811,12 @@ def test_retention_sweep_with_no_keys_directory_reports_nothing_due(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """No event has ever published a key at all -- the ordinary state for
-    a repository before its first event, and `keys/events/` itself does
+    a repository before its first event, and `instance/keys/events/` itself does
     not exist yet."""
-    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "data" / "speakers.yml").write_text("[]\n", encoding="utf-8")
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
+        "[]\n", encoding="utf-8"
+    )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("CONVENER_RETENTION_TOKEN", "a-fine-grained-pat")
     _github_output(tmp_path, monkeypatch)
@@ -879,7 +887,7 @@ def test_record_destructions_refuses_an_id_whose_key_was_never_published(
 def test_record_destructions_deletes_the_published_pub_only_after_recording(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`keys/events/<id>.pub` is the signup relay's
+    """`instance/keys/events/<id>.pub` is the signup relay's
     only "this event is open" gate, so it must go in the same operation
     that records the destruction -- and strictly after, per the ruling's
     own ordering, so `destroy`'s `key_was_published` guard still sees the
@@ -890,7 +898,7 @@ def test_record_destructions_deletes_the_published_pub_only_after_recording(
     never-before-recorded id, `destroy` would raise, and this would assert
     `record_destructions() == 0` against a `1`."""
     _, public_pem = _publish_event_key(tmp_path, "mrg-042")
-    pub_path = tmp_path / "keys" / "events" / "mrg-042.pub"
+    pub_path = tmp_path / "instance" / "keys" / "events" / "mrg-042.pub"
     assert pub_path.read_text(encoding="ascii") == public_pem
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("DESTROYED_IDS", "mrg-042")
@@ -1012,7 +1020,9 @@ def test_destruction_leaves_the_ciphertext_file_in_place(
     private_pem, _ = _publish_event_key(tmp_path, "mrg-042")
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     ciphertext_before = enc_path.read_text(encoding="utf-8")
     _write_speaker(tmp_path, "mrg-042", event_date="2026-01-01")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1177,7 +1187,9 @@ def test_erase_registration_removes_only_the_named_entry_by_address(
     assert erase_registration() == 0
     assert "erased" in capsys.readouterr().out
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 1
     assert to_registration(json.dumps(remaining.entries[0]), private_pem) == grace
@@ -1201,7 +1213,12 @@ def test_erase_registration_also_removes_the_persons_attendance_rows(
     ada_second = AttendanceRow("ada lovelace", "ada@example.org", "c", "d", 90)
     grace_row = AttendanceRow("Grace Hopper", "grace@example.org", "x", "y", 30)
     attendance_path = (
-        tmp_path / "data" / "events" / "mrg-042" / "attendance-import.csv.enc"
+        tmp_path
+        / "instance"
+        / "data"
+        / "events"
+        / "mrg-042"
+        / "attendance-import.csv.enc"
     )
     attendance_path.write_text(
         encrypt_attendance_rows(public_pem, [ada_first, ada_second, grace_row]),
@@ -1259,11 +1276,16 @@ def test_erase_registration_refuses_on_a_malformed_attendance_export(
     ada = Registration("Ada", "Lovelace", "ada@example.org", "", False)
     _write_registrations(tmp_path, "mrg-042", private_pem, ada)
     attendance_path = (
-        tmp_path / "data" / "events" / "mrg-042" / "attendance-import.csv.enc"
+        tmp_path
+        / "instance"
+        / "data"
+        / "events"
+        / "mrg-042"
+        / "attendance-import.csv.enc"
     )
     attendance_path.write_text("not json at all", encoding="utf-8")
     original_registrations = (
-        tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
     ).read_text(encoding="utf-8")
 
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1274,9 +1296,9 @@ def test_erase_registration_refuses_on_a_malformed_attendance_export(
 
     assert erase_registration() == 1
     assert "attendance-import.csv.enc" in capsys.readouterr().err
-    assert (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").read_text(
-        encoding="utf-8"
-    ) == original_registrations
+    assert (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    ).read_text(encoding="utf-8") == original_registrations
 
 
 def test_erase_registration_prefers_the_matching_code_over_the_address(
@@ -1302,7 +1324,9 @@ def test_erase_registration_prefers_the_matching_code_over_the_address(
 
     assert erase_registration() == 0
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 1
     assert to_registration(json.dumps(remaining.entries[0]), private_pem) == grace
@@ -1341,7 +1365,9 @@ def test_erase_registration_refuses_an_ambiguous_matching_code(
     # invariant every other refusal path in convener_ops already holds.
     assert "ABCD-2345" not in err
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 2
 
@@ -1376,7 +1402,9 @@ def test_erase_registration_refuses_a_collision_the_address_does_not_narrow(
     assert "share one matching code" in err
     assert "ABCD-2345" not in err
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 2
 
@@ -1410,7 +1438,9 @@ def test_erase_registration_resolves_an_ambiguous_matching_code_using_the_addres
 
     assert erase_registration() == 0
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 1
     assert to_registration(json.dumps(remaining.entries[0]), private_pem) == ada
@@ -1431,7 +1461,9 @@ def test_erase_registration_falls_back_to_the_address_without_a_salt(
 
     assert erase_registration() == 0
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert remaining.entries == ()
 
@@ -1440,7 +1472,9 @@ def test_erase_registration_rejects_a_malformed_committed_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, public_pem = _publish_event_key(tmp_path, "mrg-042")
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     enc_path.parent.mkdir(parents=True, exist_ok=True)
     enc_path.write_text('{"v": 2, "registrations": []}', encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1472,7 +1506,9 @@ def test_erase_registration_refuses_an_undecryptable_envelope(
     assert erase_registration() == 1
     assert "could not be decrypted" in capsys.readouterr().err
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     remaining = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(remaining.entries) == 1
 

@@ -20,7 +20,7 @@ export class BallotRejected extends Error {
  * Record `voter`'s ballot, replacing any earlier ballot from the same
  * voter rather than adding a second one -- a board member changing their
  * mind must produce one ballot, not two. A replaced ballot keeps its
- * original position in the list: `data/speakers.yml` is read by hand and
+ * original position in the list: `instance/data/speakers.yml` is read by hand and
  * reviewed as a diff, and reordering the list on a simple vote change would
  * bury the actual change in noise; ballot order also carries information
  * (roughly who voted when) that moving an entry to the end would destroy.

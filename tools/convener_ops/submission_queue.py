@@ -57,7 +57,7 @@ relay's request body byte for byte -- the hybrid envelope
 queue carries ciphertext and an event id, and nothing else. That matters for
 retention: D-22 destroys the *key*, not the records, so a residual entry in
 this branch's history becomes unreadable at exactly the moment
-`data/events/<id>/survey-responses.enc` and `registrations.enc` do, by the
+`instance/data/events/<id>/survey-responses.enc` and `registrations.enc` do, by the
 same one operation. A queue whose entries were plaintext would have no such
 property, which is why `KINDS` is a closed set and not an open door -- and
 why the proposal, whose relay receives Tally's body in the clear, is still
@@ -82,7 +82,7 @@ from one submission, which `survey.add_response` cannot detect on its own
 (it is append-only and holds no identity to deduplicate on, deliberately;
 see its own module docstring).
 
-`data/queue-ledger.yml` closes that. It is written in the *same commit* as
+`instance/data/queue-ledger.yml` closes that. It is written in the *same commit* as
 the data, so "this entry has been handled" and "here is what handling it
 produced" become one atomic fact, and a replayed drain reads the ledger and
 does nothing. It does not grow without bound: an id is forgotten by the
@@ -222,7 +222,7 @@ ENTRY_ID_RE: Final = re.compile(
 #: already holds itself to.
 LEDGER_PATH: Final = DATA_DIR / "queue-ledger.yml"
 
-#: `data/queue-ledger.yml`'s own format version.
+#: `instance/data/queue-ledger.yml`'s own format version.
 LEDGER_FILE_VERSION: Final = 1
 
 #: How many distinct events one drain can decrypt for -- see the module
@@ -240,7 +240,7 @@ def entry_path(kind: str, entry_id: str) -> str:
 
 
 def responses_path(event_id: str) -> str:
-    """`data/events/<id>/survey-responses.enc`, as a repository-relative
+    """`instance/data/events/<id>/survey-responses.enc`, as a repository-relative
     POSIX path -- the file `survey.py` owns the format of and the drain
     rewrites. A string, not a `Path`, because it is a key in
     `DrainOutcome.files` and has to compare equal across platforms."""
@@ -248,7 +248,7 @@ def responses_path(event_id: str) -> str:
 
 
 def registrations_path(event_id: str) -> str:
-    """`data/events/<id>/registrations.enc`, the twin of `responses_path`
+    """`instance/data/events/<id>/registrations.enc`, the twin of `responses_path`
     above for the other kind this queue carries -- the same file
     `.github/workflows/registration.yml` writes for a registration that
     took the immediate lane, written here by the same
@@ -362,7 +362,7 @@ def ledger_to_data(handled: Iterable[str]) -> dict[str, Any]:
 
 
 def ledger_from_data(data: Any) -> frozenset[str]:
-    """Parse an already YAML-loaded `data/queue-ledger.yml`.
+    """Parse an already YAML-loaded `instance/data/queue-ledger.yml`.
 
     Raises `ValueError` on anything that is not this exact format -- the
     same closed-shape discipline `retention_liveness.last_run_from_data`
@@ -439,7 +439,7 @@ def plan_drain(
     drain started.
 
     `survey_open` answers, for one event id, whether that event's survey
-    switch is on -- `cli.py::_survey_enabled` reading `data/speakers.yml`.
+    switch is on -- `cli.py::_survey_enabled` reading `instance/data/speakers.yml`.
     Asked here rather than inside the drain so that an entry for a closed
     survey never costs one of the `max_events` slots, which are the scarce
     thing. Asked of survey entries only: there is no equivalent switch on
@@ -494,7 +494,7 @@ def plan_drain(
         if read.kind == SURVEY_KIND and not survey_open(read.event_id):
             # The same refusal `cli.handle_survey_response` already makes
             # one response at a time, and for the same reason: the relay's
-            # own check proves only that `keys/events/<id>.pub` exists, so
+            # own check proves only that `instance/keys/events/<id>.pub` exists, so
             # anyone who knows a live event id could otherwise get an
             # answer stored for an event whose organiser never opened a
             # survey. Refused rather than deferred -- it will not become

@@ -72,7 +72,7 @@ jobs:
           # The one origin this worker answers a CORS preflight for.
           # `services/auth-proxy/wrangler.toml` names no origin at all --
           # see its own header for why the copy that used to be there is
-          # gone -- so it is derived here, from `config/instance.json`,
+          # gone -- so it is derived here, from `instance/config.json`,
           # through the Python reader that owns the derivation
           # (`published.Published.origin`). The same
           # `uv run --project tools python -c` shape `deploy.yml` already
@@ -81,7 +81,7 @@ jobs:
           origin="$(uv run --project tools python -c \
             'from convener_ops.published import load; print(load().origin)')"
           if [ -z "$origin" ]; then
-            echo "::error::config/instance.json yielded no origin - refusing to deploy a relay that would answer a CORS preflight for nobody"
+            echo "::error::instance/config.json yielded no origin - refusing to deploy a relay that would answer a CORS preflight for nobody"
             exit 1
           fi
           # --var reaches src/index.js as env.ALLOWED_ORIGIN exactly as a

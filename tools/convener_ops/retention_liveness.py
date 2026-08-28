@@ -9,7 +9,7 @@ repository, and an exhausted Actions minute budget simply stops work either
 way. Neither ever turns a badge red, because no run happens at all.
 
 This module holds the pure half of the fix: a tiny, versioned record --
-`data/retention-last-run.yml`, one field, `last_run` -- and the arithmetic
+`instance/data/retention-last-run.yml`, one field, `last_run` -- and the arithmetic
 that decides whether it is stale. `cli.py` is the only module that touches
 disk (its own module docstring); the two console scripts built on this one
 (`convener-record-retention-run` and `convener-check-retention-liveness`) live there.
@@ -40,7 +40,7 @@ from .paths import DATA_DIR
 #: already holds itself to.
 LAST_RUN_PATH: Final = DATA_DIR / "retention-last-run.yml"
 
-#: `data/retention-last-run.yml`'s own format version -- the file-level
+#: `instance/data/retention-last-run.yml`'s own format version -- the file-level
 #: analogue of `eventkeys.DESTRUCTIONS_FILE_VERSION`.
 LAST_RUN_FILE_VERSION: Final = 1
 
@@ -57,7 +57,7 @@ MAX_SILENT_DAYS: Final = 2
 
 
 def last_run_path(root: Path) -> Path:
-    """`data/retention-last-run.yml`, relative to `root`. Pure path
+    """`instance/data/retention-last-run.yml`, relative to `root`. Pure path
     computation: reads nothing, touches nothing."""
     return root / LAST_RUN_PATH
 
@@ -69,7 +69,7 @@ def record_to_data(today: date) -> dict[str, Any]:
 
 
 def last_run_from_data(data: Any) -> date:
-    """Parse an already YAML-loaded `data/retention-last-run.yml`.
+    """Parse an already YAML-loaded `instance/data/retention-last-run.yml`.
 
     Raises `ValueError` on anything that is not this exact, single-field
     format -- the same closed-shape discipline

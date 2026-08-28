@@ -124,7 +124,7 @@ def test_retention_workflow_last_run_step_calls_the_record_command() -> None:
 
 def test_retention_workflow_last_run_step_stages_the_liveness_file() -> None:
     script = _last_run_step()["run"]
-    assert "git add data/retention-last-run.yml" in script
+    assert "git add instance/data/retention-last-run.yml" in script
 
 
 def test_retention_workflow_last_run_step_re_derives_rather_than_rebases() -> None:

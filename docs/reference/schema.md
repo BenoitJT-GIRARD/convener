@@ -6,17 +6,17 @@ and commit what it writes, and CI refuses a page the types do not derive.
 Every field, type, enumerated value and note below comes from the model; the
 prose between the tables lives in `scripts/generate_schema_doc.py`.*
 
-The repository stores all operational data in two YAML files under `data/`:
+The repository stores all operational data in two YAML files under `instance/data/`:
 
-- `data/speakers.yml` — the unified speaker + event entity, one entry per
+- `instance/data/speakers.yml` — the unified speaker + event entity, one entry per
   invitation lifecycle
-- `data/config.yml` — repository-wide configuration: the board, the thresholds,
+- `instance/data/config.yml` — repository-wide configuration: the board, the thresholds,
   the season counters
 
 Both files are validated in CI by `convener-validate` (see
 `docs/reference/operations.md`) on every commit.
 
-## `data/speakers.yml`
+## `instance/data/speakers.yml`
 
 Top-level: a list of speaker entries. Each entry covers the full lifecycle from
 lead to archived. Speaker and event are the same record — the speaker fields
@@ -67,7 +67,7 @@ given" — and is well formed.
 | `zoom_link` | string | The meeting link the session runs on. |
 | `youtube_url` | string | Where the recording sits. Recorded here; published only through the publication gate. |
 | `forum_thread` | string | Link to the forum announcement thread. |
-| `survey_enabled` | bool | Whether the post-event survey is open for this event. A per-event fact, not a `data/config.yml` setting: the survey is switched on per event, and every other per-event fact -- the room link, the recording, the forum thread -- already lives on the speaker record rather than in the shared config. The three questions themselves are fixed for every event (`tools/convener_ops/survey.py`'s module docstring); this is the only thing that varies. |
+| `survey_enabled` | bool | Whether the post-event survey is open for this event. A per-event fact, not a `instance/data/config.yml` setting: the survey is switched on per event, and every other per-event fact -- the room link, the recording, the forum thread -- already lives on the speaker record rather than in the shared config. The three questions themselves are fixed for every event (`tools/convener_ops/survey.py`'s module docstring); this is the only thing that varies. |
 | `runbook_progress` | map&lt;string, bool&gt; | Which lines of the journey are ticked, keyed `phase/item`. |
 | `checklist` | map&lt;string, ChecklistAssignee&gt; | Who owes each line of the journey, keyed by runbook item. An item with no entry here is nobody's in particular, which means the hosts' -- the behaviour the app has always had, and still the default. Never read from, and never written to, `assigned_to`. |
 | `metrics.registrations` | number \| null | How many people registered. |
@@ -152,14 +152,14 @@ A line with no entry is nobody's in particular and stays the hosts'. Naming an
 owner has never been asked of anybody and is not asked for here either: the app
 raises no warning and no reminder over an empty checklist.
 
-## `data/config.yml`
+## `instance/data/config.yml`
 
 One mapping, with the keys below.
 
 | Field | Type | Notes |
 |---|---|---|
 | `season` | number | Current season number. |
-| `next_edition_number` | number | The next edition number to assign, under the prefix `config/instance.json` declares. |
+| `next_edition_number` | number | The next edition number to assign, under the prefix `instance/config.json` declares. |
 | `overlap_window_days` | number | Forbidden window around each scheduled date, in days. |
 | `seminar_duration_minutes` | number | How long a seminar runs, in minutes. |
 | `eligibility_share` | number | A share of `seminar_duration_minutes` a matched attendee's summed duration must reach to earn a certificate, in `]0, 1]`: above zero, at most one. Configuration, not a constant: the real number has to align with accreditation requirements this project does not yet know, and alignment happens by editing this file, not by editing code. |
@@ -224,12 +224,12 @@ is what records store, so renaming one re-keys what is already written and is a
 migration rather than an edit; the `label` is only ever shown, and can be
 reworded at any time. Removing a channel has the same property from the other
 side: the owners already written under `promotion/<key>` stay in
-`data/speakers.yml`, on a line no screen shows any more. They are harmless, and
+`instance/data/speakers.yml`, on a line no screen shows any more. They are harmless, and
 nothing in the app offers to clear them: the record page lists the lines the
 journey currently has, so a key it no longer has has no control beside it.
 Clearing one means putting the channel back in `channels`, taking the name off
 the line on the record page, and removing the channel again — or editing
-`data/speakers.yml` on GitHub. Neither is urgent: an entry under a key no phase
+`instance/data/speakers.yml` on GitHub. Neither is urgent: an entry under a key no phase
 holds is read by nothing. An empty list is a legal answer and means nothing is
 promoted through this app; a `channels` that is missing, that is not a list,
 that repeats a key, or that holds a channel with no label stops the file being
@@ -255,7 +255,7 @@ check and not a test; see `docs/governance/editorial-board.md`.
 
 ## History
 
-`data/speakers.yml` was originally split across two files, joined on an event
+`instance/data/speakers.yml` was originally split across two files, joined on an event
 id. `scripts/` holds the one-shot scripts that merged them into today's unified
 schema; they already ran and are kept only as a record, not as something to run
 again.

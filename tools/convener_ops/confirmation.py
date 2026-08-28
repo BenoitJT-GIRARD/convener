@@ -287,7 +287,7 @@ _NO_CODE_FALLBACK: Final = (
 #: Both sides used to hold the literal, bound to each
 #: other by `test_confirmation.py` -- a binding that could say the two
 #: copies still agreed, never that there was one. Both now read
-#: `config/instance.json`, this side through `published.load_identity()`
+#: `instance/config.json`, this side through `published.load_identity()`
 #: and the browser's through `vite.config.ts`'s own define. It is the
 #: address of whoever runs this series, and a duplicate's participants
 #: must not be sent to this one.
@@ -295,7 +295,7 @@ CONTACT_EMAIL: Final = published.load_identity().contact
 
 #: How every message this project sends signs itself off. The
 #: organisation's name is the instance's, declared once in
-#: `config/instance.json`: a duplicate that left the literal here would
+#: `instance/config.json`: a duplicate that left the literal here would
 #: sign its own e-mails with the previous instance's name. Composed at
 #: import, the same shape `registration.SIGNUP_BASE` already uses for the
 #: address half of the same declaration.

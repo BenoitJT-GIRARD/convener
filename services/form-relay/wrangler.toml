@@ -5,7 +5,7 @@ compatibility_date = "2026-01-01"
 # There is no `[vars]` table here, and the absence is the decision.
 #
 # This worker sends one `repository_dispatch`, and the repository it sends
-# it to is the one `config/instance.json` declares under
+# it to is the one `instance/config.json` declares under
 # `identity.repository`. That value used to sit in `src/index.js` as a
 # literal, because a Worker deploys from this package and can read nothing
 # else. It was a copy in product source: the published product carried the

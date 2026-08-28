@@ -5,7 +5,7 @@ own docstring). Five groups matter most, because each is a defect that
 would otherwise be
 invisible in a single screenshot: a long title staying inside its band, a
 missing portrait composing rather than breaking, every colour coming from
-`data/brand.json` rather than a hand-typed literal, the date line
+`instance/data/brand.json` rather than a hand-typed literal, the date line
 reflecting the edition's real Europe/Paris offset -- pinned for a winter
 *and* a summer edition, because a test that only ever checked a winter date
 would pass against the reference poster's own hard-typed "(CET)" defect --
@@ -306,7 +306,7 @@ def test_withheld_consent_reaches_the_composition_as_no_portrait_end_to_end() ->
 
 
 # ---------------------------------------------------------------------------
-# Every colour comes from data/brand.json's generated block, never a
+# Every colour comes from instance/data/brand.json's generated block, never a
 # hand-typed literal.
 # ---------------------------------------------------------------------------
 
@@ -336,7 +336,11 @@ _ROOT_VAR_SOURCES = {
 
 
 def _brand() -> dict[str, Any]:
-    return dict(json.loads((ROOT / "data" / "brand.json").read_text(encoding="utf-8")))
+    return dict(
+        json.loads(
+            (ROOT / "instance" / "data" / "brand.json").read_text(encoding="utf-8")
+        )
+    )
 
 
 def _root_block_text(doc: str) -> str:
@@ -353,14 +357,14 @@ def test_colours_in_the_root_block_match_brand_json_exactly() -> None:
         expected = brand[section][key]
         assert re.search(rf"{re.escape(var)}:\s*{re.escape(expected)};", root_block), (
             f"{var} in the rendered :root block is not {expected!r} "
-            f"(data/brand.json::{section}.{key})"
+            f"(instance/data/brand.json::{section}.{key})"
         )
 
 
 def test_no_brand_colour_hand_typed_outside_root_or_ribbon_stroke() -> None:
     """The same guard `test_brand.py` already runs on the ribbon templates
     and the two generated stylesheets, applied to this third consumer of
-    `data/brand.json`. The ribbon's own `stroke="#..."` is the one
+    `instance/data/brand.json`. The ribbon's own `stroke="#..."` is the one
     accepted exception -- an SVG attribute filled
     in from `ribbon_stroke_colour(root)` at render time, never hand-typed
     in this module's source."""
@@ -931,7 +935,7 @@ def test_the_register_row_never_shrinks_in_the_wide_grid() -> None:
 # flush at the left edge, stopping short of the right (the "heading" grid
 # area is only `.wide-heading`'s own column, beside the frame's own
 # column), reading as a rendering accident rather than the "cream bands run
-# the full width" rule `data/brand.json`'s own `layout._bands` states
+# the full width" rule `instance/data/brand.json`'s own `layout._bands` states
 # outright. The square and the print poster never had this defect
 # (`.band--talk-title` is a plain flex child of `.poster`'s own flex
 # column there, stretched to the canvas's own full width by the same

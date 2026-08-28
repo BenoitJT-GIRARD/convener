@@ -1,14 +1,14 @@
 /* Publishes every `../../keys/signing/*.pub` this repository has ever
  * committed into `public/keys/signing/`, for `src/verify/publicKeys.ts` to
  * fetch at runtime -- the same idiom `copy-event-keys.mjs` already applies
- * to `keys/events/`, adapted for a page with no single event id to key a
- * fetch off of (see `keys/signing/README.md`'s "How a verifier should use
+ * to `instance/keys/events/`, adapted for a page with no single event id to key a
+ * fetch off of (see `instance/keys/signing/README.md`'s "How a verifier should use
  * this directory").
  *
  * Two things are written, not one:
  * - Every `.pub` file, copied verbatim -- transparency: a key can be
  *   inspected directly at its own published URL, the same as any
- *   `keys/events/<id>.pub` today.
+ *   `instance/keys/events/<id>.pub` today.
  * - `index.json`, one array of every key's PEM text, newest first (see
  *   `signing-keys-files.mjs::sortDescending`) -- what the app actually
  *   fetches, in one request, rather than one request per key with no
@@ -21,7 +21,7 @@
  * temporary directory without triggering this file's own side effect.
  *
  * Runs before `vite dev` and `vite build`, alongside the other copy
- * scripts. `keys/signing/` legitimately holds no key at all until an
+ * scripts. `instance/keys/signing/` legitimately holds no key at all until an
  * operator generates the first one -- an absent or empty source directory
  * produces an empty `index.json` (`[]`), not a build failure, the same
  * "empty is normal" discipline every copy script in this directory

@@ -38,7 +38,7 @@ name: Preview
 # D-26: served at the address it will actually be served at
 # -------------------------------------------------------------
 # GitHub Pages serves this project one path segment below a bare domain
-# root (no CNAME, no custom domain) -- `config/instance.json` is the one
+# root (no CNAME, no custom domain) -- `instance/config.json` is the one
 # place that address is written down, and every template's `| url` filter
 # call, plus all four `base` values in `app/vite.config.ts`, resolve
 # against what each build derives from it. D-26 exists because seven
@@ -80,7 +80,7 @@ name: Preview
 # against the real data applies here too, against the assembled preview
 # rather than a checkout of a second repository.
 # This workflow was unfiltered once, so every
-# pull request -- including one touching only `docs/`, `data/`, or an
+# pull request -- including one touching only `docs/`, `instance/data/`, or an
 # unrelated relay -- paid a full site+app build and packaged an artefact
 # nobody asked to review. Path-filtered now, deliberately the identical
 # list a11y.yml carries (both build the same fixture-based
@@ -98,7 +98,7 @@ on:
       # Both builds resolve their published
       # address from here, and D-26 is about checking at the address
       # a build is actually served under.
-      - 'config/instance.json'
+      - 'instance/config.json'
       - 'app/**'
       - 'tools/convener_ops/**'
       - 'tools/pyproject.toml'
@@ -218,7 +218,7 @@ jobs:
       # `site/scripts/check-a11y.mjs`'s own `assembleTree`/`publishRoot`
       # already builds to check this build, written to disk here instead
       # of an ephemeral scratch directory. The prefix is read from
-      # `config/instance.json` through the very module the site's own build
+      # `instance/config.json` through the very module the site's own build
       # reads it through (`site/scripts/published.cjs`), never retyped, so
       # this step assembles at the address the build was configured for or
       # fails loudly -- `node -p` exits non-zero if that module refuses,
@@ -228,7 +228,7 @@ jobs:
           set -e
           prefix=$(node -p "require('./site/scripts/published.cjs').publishedAddress().pathPrefix")
           if [ -z "$prefix" ]; then
-            echo "::error::could not read the published path prefix out of config/instance.json -- refusing to assemble a preview at a guessed address"
+            echo "::error::could not read the published path prefix out of instance/config.json -- refusing to assemble a preview at a guessed address"
             exit 1
           fi
           segment="${prefix#/}"

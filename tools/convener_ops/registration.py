@@ -11,7 +11,7 @@ that belongs to `cli.py`, the same split `eventkeys.py` keeps.
 
 The file shape, and why it is not one envelope for the whole event
 --------------------------------------------------------------------
-`data/events/<id>/registrations.enc` is one JSON object::
+`instance/data/events/<id>/registrations.enc` is one JSON object::
 
     {"v": 1, "registrations": [ {<envelope>}, {<envelope>}, ... ]}
 
@@ -168,7 +168,7 @@ FILE_VERSION: Final = 1
 #:
 #: The host and prefix used to be typed in here, and
 #: bound by test to the same address written out in eleven other files.
-#: They now come from `config/instance.json` through `published.load()` --
+#: They now come from `instance/config.json` through `published.load()` --
 #: one declaration, read from each side of the language boundary (D-14).
 #: `events/` stays here: that segment is the *product's* own route shape,
 #: inherited by every duplicate, not something an instance configures.
@@ -429,7 +429,7 @@ def upsert(
     There is no `public_pem` parameter: the re-encryption key is
     `eventkeys.derive_public_pem(private_pem)`, the public half that
     mathematically matches the private key this call already needs --
-    never whatever happens to be committed at `keys/events/<id>.pub`,
+    never whatever happens to be committed at `instance/keys/events/<id>.pub`,
     which could in principle be stale, mid-rotation, or simply the wrong
     file. See `derive_public_pem`'s own docstring.
 

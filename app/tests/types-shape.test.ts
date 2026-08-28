@@ -70,7 +70,7 @@ describe('the fields the templates ask for', () => {
     } catch (e) {
       message = (e as Error).message;
     }
-    expect(message).toContain('data/speakers.yml');
+    expect(message).toContain('instance/data/speakers.yml');
     expect(message).toContain('speaker 2 (spk-001)');
     expect(message).toContain('is missing "bio"');
   });

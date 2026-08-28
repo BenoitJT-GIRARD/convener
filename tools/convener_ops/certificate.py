@@ -44,9 +44,9 @@ conflating them would quietly undo the whole design:
   see "why the identifier must not be deterministic" below.
 - **`fingerprint`** -- an HMAC of the participant's address, salted with
   `CONVENER_MATCHING_SALT`. Private: it lives only in the internal register
-  (`data/events/<id>/certificates.yml`), is never signed into a payload,
+  (`instance/data/events/<id>/certificates.yml`), is never signed into a payload,
   never printed, and `public_register` strips it before anything leaves
-  this module for `public-data/certificates-public.json`.
+  this module for `instance/public-data/certificates-public.json`.
 
 Why the identifier must not be deterministic
 -----------------------------------------------
@@ -136,9 +136,9 @@ documents apart.
 
 The register survives the data it was derived from
 ----------------------------------------------------
-`data/events/<id>/registrations.enc` is destroyed -- the event's private
+`instance/data/events/<id>/registrations.enc` is destroyed -- the event's private
 key deleted, its ciphertext left permanently unreadable -- 90 days after
-the event. `data/events/<id>/certificates.yml` is a
+the event. `instance/data/events/<id>/certificates.yml` is a
 **different file in the same directory, on a different, indefinite
 lifetime**, and the retention sweep must not treat the two alike. The whole reason
 this register holds no name and no address is so that its own survival
@@ -263,7 +263,7 @@ The public projection: identifiers and states, nothing else
 register the same way `public_data.to_public` builds `events-public.json`
 from the speaker list -- an allowlist of exactly two columns, not a
 denylist of the one column (`fingerprint`) that must never leave. `cli.py`
-writes the result to `public-data/certificates-public.json`, following
+writes the result to `instance/public-data/certificates-public.json`, following
 `events-public.json`'s own precedent (`publish-vitrine.yml` copies that
 file to the public showcase; a future workflow does the same for this
 one). The verification page fetches this file for exactly one
@@ -405,7 +405,7 @@ __all__ = [
 ]
 
 #: The organisation's own name, printed on the document as the organising
-#: body. Not a `data/config.yml` key: it does not vary between
+#: body. Not a `instance/data/config.yml` key: it does not vary between
 #: events, so a config key here would buy a TypeScript ripple
 #: -- `types.ts`, `validate.ts`, `CONFIG_KEYS`, `readConfig`, every
 #: hand-built `Config` literal in the app's tests, a regenerated
@@ -414,7 +414,7 @@ __all__ = [
 #: It does not vary between *events*, and it does vary
 #: between *instances* -- it is the name a stranger reads at the top of a
 #: certificate that is meant to stand for years. It comes from
-#: `config/instance.json` now, the one place this repository says whose
+#: `instance/config.json` now, the one place this repository says whose
 #: series this is.
 ORGANISER: Final = published.load_identity().organisation
 
@@ -434,7 +434,7 @@ ORGANISER: Final = published.load_identity().organisation
 #: `test_verification_url_carries_the_token_after_the_fragment_not_before_it`.
 #:
 #: The host and prefix come from
-#: `config/instance.json` through `published.load()`, the one declaration
+#: `instance/config.json` through `published.load()`, the one declaration
 #: every published address in this repository is built from. The value for
 #: this instance is byte-identical to the literal it replaces -- a
 #: certificate already delivered carries this address printed on it, and
@@ -530,7 +530,7 @@ _SECONDS_PER_HOUR: Final = 3600
 #: the two signed names are) makes `segno.make` raise `DataOverflowError`,
 #: which the bulk delivery command's own broad `except Exception` folded
 #: silently into "not sent", forever, since every retry hit the identical
-#: wall -- `event.title` comes from `data/speakers.yml`, bounded nowhere
+#: wall -- `event.title` comes from `instance/data/speakers.yml`, bounded nowhere
 #: before this. Truncated, not refused: unlike
 #: `registration._MAX_FIELD_LENGTH` (a reputation bound on a *stranger's*
 #: public-key-encrypted submission, refused rather than shortened because
@@ -599,7 +599,7 @@ class CertificateEntry:
     """One register row -- see the module docstring's opening section for
     what this deliberately does not carry. `event_id` is included even
     though `certificates.yml` already lives at
-    `data/events/<event_id>/certificates.yml`: it is what lets
+    `instance/data/events/<event_id>/certificates.yml`: it is what lets
     `public_register`'s aggregation over *every* event's file still be
     traced back to the right one internally, and what lets `issue`, `reissue`
     and `revoke` all refuse to match against the wrong
@@ -1161,7 +1161,7 @@ def register_to_data(entries: Sequence[CertificateEntry]) -> dict[str, Any]:
     }
 
 
-#: `data/events/<event_id>/`, relative to a repository root -- the
+#: `instance/data/events/<event_id>/`, relative to a repository root -- the
 #: directory `certificates_path` below builds on, and the one
 #: `cli.py::certificates_public_data` globs. Exported
 #: rather than buried inside `certificates_path` alone, so the one
@@ -1172,7 +1172,7 @@ EVENTS_DIR: Final = DATA_DIR / "events"
 
 
 def certificates_path(root: Path, event_id: str) -> Path:
-    """`data/events/<event_id>/certificates.yml`, relative to `root` --
+    """`instance/data/events/<event_id>/certificates.yml`, relative to `root` --
     the one function that names where this event's certificate register
     lives on disk. Pure path computation, like
     `signing.public_key_path`: reads nothing, touches nothing; `cli.py` is

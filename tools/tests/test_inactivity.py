@@ -316,7 +316,7 @@ def test_the_prompts_stay_ascii_so_a_terminal_can_print_them() -> None:
 
 def _repo(tmp_path: Path, cfg: dict[str, Any], speakers: list[dict[str, Any]]) -> Path:
     """A repository root holding the two data files, for `cli.sweep`."""
-    data = tmp_path / "data"
+    data = tmp_path / "instance" / "data"
     data.mkdir(parents=True)
     (data / "speakers.yml").write_text(yaml.safe_dump(speakers), encoding="utf-8")
     (data / "config.yml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
@@ -371,10 +371,10 @@ def test_the_scheduled_job_never_writes_an_inactivity_change(
         assert cli.sweep() == 0
         prompted = "no ballot since" in capsys.readouterr().out
         assert prompted is (cfg is speaking)
-        written.append((root / "data" / "speakers.yml").read_bytes())
+        written.append((root / "instance" / "data" / "speakers.yml").read_bytes())
         # The config file is not a thing this command writes at all.
         assert yaml.safe_load(
-            (root / "data" / "config.yml").read_text(encoding="utf-8")
+            (root / "instance" / "data" / "config.yml").read_text(encoding="utf-8")
         ) == yaml.safe_load(yaml.safe_dump(cfg))
 
     # Non-trivially so: both runs really did write a swept file.
@@ -383,7 +383,9 @@ def test_the_scheduled_job_never_writes_an_inactivity_change(
     # And the board on disk is untouched: every member still reads `active`.
     for index in (0, 1):
         on_disk = yaml.safe_load(
-            (tmp_path / str(index) / "data" / "config.yml").read_text(encoding="utf-8")
+            (tmp_path / str(index) / "instance" / "data" / "config.yml").read_text(
+                encoding="utf-8"
+            )
         )
         assert {m["status"] for m in on_disk["board"]} == {"active"}
 

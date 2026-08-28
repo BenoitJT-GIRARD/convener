@@ -40,7 +40,7 @@ else.
 Pure, so `--check` means something
 ----------------------------------
 The rendering reads the declaration and `config/integrations.yml` and nothing
-else: no clock, no environment, no `data/`. Two runs over the same two files
+else: no clock, no environment, no `instance/data/`. Two runs over the same two files
 produce byte-identical output, so a difference can only be an edit made
 outside them -- which is exactly what `--check` refuses, without repairing it.
 A check that silently rewrote the file it was checking would report success on

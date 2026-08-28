@@ -1,7 +1,7 @@
 """Opening the vote window on the backlog (scripts/open_vote_window.py).
 
 The transformation is pure and tested here before it is ever pointed at
-`data/`, because the file it rewrites holds real people's names and e-mail
+`instance/data/`, because the file it rewrites holds real people's names and e-mail
 addresses. Three properties matter more than the rest:
 
 * only a record still awaiting the Board is stamped -- a concluded vote must
@@ -123,8 +123,8 @@ def test_stamping_twice_changes_nothing() -> None:
 
 
 def _repo(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
-    data = tmp_path / "data"
-    data.mkdir()
+    data = tmp_path / "instance" / "data"
+    data.mkdir(parents=True)
     (data / "config.yml").write_text("season: 2026\n", encoding="utf-8")
     path = data / "speakers.yml"
     path.write_text(

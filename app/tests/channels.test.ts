@@ -1,7 +1,7 @@
 /**
  * The promotion channels, and the one thing worth pinning about them.
  *
- * Not that there are seven. The seven in `data/config.yml` are configuration
+ * Not that there are seven. The seven in `instance/data/config.yml` are configuration
  * precisely because nobody here can confirm they are still the right seven --
  * that would mean asking the collaborators, which this project never does --
  * so a test counting them would freeze exactly what the data file exists to
@@ -9,7 +9,7 @@
  *
  * What is pinned instead is that the list *comes from the file*: a config
  * naming one channel yields that one channel, whatever it is called; the real
- * `data/config.yml` yields whatever that file happens to say, compared
+ * `instance/data/config.yml` yields whatever that file happens to say, compared
  * against the file itself rather than against a list retyped here; and the
  * module's own source carries none of the keys or labels, so a hard-coded
  * list cannot be reintroduced without a red test even if every other
@@ -27,9 +27,9 @@ import { DataShapeError } from '../src/data/validate';
 import { config, configYaml, speaker } from './data-doubles';
 import type { Channel, Config } from '../src/data/types';
 
-/** `data/config.yml` as it stands in the repository, not a copy of it. */
+/** `instance/data/config.yml` as it stands in the repository, not a copy of it. */
 function repoConfigText(): string {
-  return readFileSync(resolve(__dirname, '../../data/config.yml'), 'utf8');
+  return readFileSync(resolve(__dirname, '../../instance/data/config.yml'), 'utf8');
 }
 
 /** The channels that file lists, read straight from the YAML, so the
@@ -72,7 +72,7 @@ describe('the list comes from the file', () => {
     ]);
   });
 
-  it('gives back what data/config.yml says, compared against that file itself', () => {
+  it('gives back what instance/data/config.yml says, compared against that file itself', () => {
     expect(channelsOf(parseConfig(repoConfigText()))).toEqual(channelsOnFile());
   });
 
@@ -103,7 +103,7 @@ describe('a list that cannot be read is refused, never silently emptied', () => 
     const message = refusal(() =>
       channelsOf({ ...config(), channels: undefined } as unknown as Config),
     );
-    expect(message).toContain('data/config.yml');
+    expect(message).toContain('instance/data/config.yml');
     expect(message).toContain('"channels"');
   });
 
@@ -130,7 +130,7 @@ describe('the file is read field by field, with the position named', () => {
   it('refuses a channels that reads as something other than a list', () => {
     const text = configYaml().replace(/channels:[\s\S]*$/, 'channels: 7\n');
     const message = refusal(() => parseConfig(text));
-    expect(message).toContain('data/config.yml');
+    expect(message).toContain('instance/data/config.yml');
     expect(message).toContain('"channels"');
     expect(message).toContain('list');
   });

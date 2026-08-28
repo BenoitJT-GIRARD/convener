@@ -11,7 +11,7 @@
  *
  * Two claims live here, and they are different claims:
  *
- * 1. **The two readers of `config/instance.json::edition_prefix` agree
+ * 1. **The two readers of `instance/config.json::edition_prefix` agree
  *    about what a prefix is.** `tools/tests/fixtures/edition-prefix.json`
  *    holds the cases and both sides answer them --
  *    `tools/tests/test_published.py` against `published.EDITION_PREFIX_RE`

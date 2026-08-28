@@ -1,8 +1,8 @@
-"""One-shot migration of `data/speakers.yml` from schema v4 to schema v5.
+"""One-shot migration of `instance/data/speakers.yml` from schema v4 to schema v5.
 
 Schema v5 adds one field: `survey_enabled`, the post-event survey's
 per-event switch. It is a fact about a speaker
-record, not a `data/config.yml` setting, for the reasoning
+record, not a `instance/data/config.yml` setting, for the reasoning
 `app/src/data/types.ts::Speaker.survey_enabled`'s own doc comment gives --
 so every existing record, real data older than the field itself, has to
 gain it before `app/src/data/validate.ts` and `tools/convener_ops/validate.py`
@@ -109,7 +109,7 @@ def diff(before: str, after: str, name: str) -> str:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Migrate data/speakers.yml to schema v5."
+        description="Migrate instance/data/speakers.yml to schema v5."
     )
     parser.add_argument(
         "--dry-run",
@@ -118,7 +118,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    speakers_path = repo_root() / "data" / "speakers.yml"
+    speakers_path = repo_root() / "instance" / "data" / "speakers.yml"
     before = speakers_path.read_text(encoding="utf-8")
     after = dump_speakers(migrate_speakers(safe_load(before) or []))
 
@@ -126,7 +126,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"{speakers_path.name}: already migrated, nothing to do")
         return 0
     if args.dry_run:
-        print(_ascii(diff(before, after, "data/speakers.yml")), end="")
+        print(_ascii(diff(before, after, "instance/data/speakers.yml")), end="")
         print("dry run: nothing written")
         return 0
     speakers_path.write_text(after, encoding="utf-8", newline="")

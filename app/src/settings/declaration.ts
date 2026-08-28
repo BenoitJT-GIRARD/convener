@@ -4,8 +4,9 @@
  *
  * The settings screen has to say what it is settling, and
  * the honest answer to "what is the instance's?" is already written down
- * once: `config/boundary.yml` names the paths outside `config/`, and each
- * file *inside* `config/` states its own answer in its own `owner:` key.
+ * once: `config/boundary.yml` names the directories the instance owns
+ * whole, and each configuration file `CONFIG_DIRS` holds directly states
+ * its own answer in its own `owner:` key.
  * `tools/convener_ops/boundary.py` is the reader on the other side of the
  * language boundary; this is the browser's, and it reads the same bytes
  * rather than a list somebody typed into a screen. A hand-typed list would
@@ -27,11 +28,31 @@
  */
 import yaml from 'js-yaml';
 
-/** Where the declaration lives, and where each `config/` file answers for
- *  itself. Named here rather than repeated at every call site. */
+/** Where the declaration lives, and the two directories whose
+ *  configuration files answer for themselves. Named here rather than
+ *  repeated at every call site. Mirrors `boundary.CONFIG_DIRS`: `config/`
+ *  is the product's own directory and `instance/` is this instance's, and
+ *  only the files they hold *directly* state an owner -- `instance/`'s
+ *  subdirectories are handed over whole, by the declaration. */
 export const BOUNDARY_PATH = 'config/boundary.yml';
 export const INTEGRATIONS_PATH = 'config/integrations.yml';
-export const CONFIG_DIR = 'config';
+export const CONFIG_DIRS = ['config', 'instance'];
+
+/** What a configuration file may be written in -- `boundary.CONFIG_READERS`
+ *  seen as a list of suffixes. */
+export const CONFIG_SUFFIXES = ['.yml', '.json'];
+
+/** Whether `path` is a configuration file that answers for itself: one of
+ *  `CONFIG_DIRS` holds it directly, in one of `CONFIG_SUFFIXES`. Mirrors
+ *  `boundary.states_its_own_owner`. */
+export function statesItsOwnOwner(path: string): boolean {
+  const cut = path.lastIndexOf('/');
+  const parent = cut === -1 ? '' : path.slice(0, cut);
+  const name = path.slice(cut + 1);
+  return (
+    CONFIG_DIRS.includes(parent) && CONFIG_SUFFIXES.some(suffix => name.endsWith(suffix))
+  );
+}
 
 /** The declaration's own format version, and the integrations file's.
  *  Mirrors `boundary.DECLARATION_VERSION`. A file carrying a version this
@@ -111,9 +132,9 @@ export function handedFromData(data: unknown): Handed[] {
       );
     }
     const path = nonEmptyString(entry.path, 'an instance path', BOUNDARY_PATH);
-    if (path.split('/')[0] === CONFIG_DIR) {
+    if (statesItsOwnOwner(path)) {
       throw new DeclarationRefused(
-        `${BOUNDARY_PATH}: ${path} is under ${CONFIG_DIR}/, whose files state ` +
+        `${BOUNDARY_PATH}: ${path} is a configuration file, whose files state ` +
           'their own owner in their own `owner:` key. Naming it here too would ' +
           'make one fact two places.',
       );
@@ -131,24 +152,25 @@ export function handedFromData(data: unknown): Handed[] {
 }
 
 /**
- * What one file in `config/` says it is, from its own header.
+ * What one configuration file says it is, from its own header.
  *
  * Every file must answer, in whichever format it is written -- a JSON file
  * states the same `owner` key a YAML one does, in a `_comment` because JSON
  * has nowhere else to put the argument. A file with no `owner` is refused
  * by name rather than defaulted to either side, exactly as
- * `boundary.config_owners` refuses it: this directory filled up by
- * accumulation once, and a default here would be that same silence with a
- * friendlier face.
+ * `boundary.config_owners` refuses it: `config/` filled up by accumulation
+ * once, and a default here would be that same silence with a friendlier
+ * face.
  */
 export function configOwner(name: string, text: string): string {
   const loaded: unknown = name.endsWith('.json') ? JSON.parse(text) : yaml.load(text);
   const declared = asRecord(loaded)?.owner;
   if (typeof declared !== 'string' || !OWNERS.includes(declared)) {
     throw new DeclarationRefused(
-      `${name} declares no owner. Every file in ${CONFIG_DIR}/ has to say ` +
-        `whether it is the instance's or the product's: add \`owner:\` with one ` +
-        `of ${OWNERS.join(', ')}, and the argument for it, to its header.`,
+      `${name} declares no owner. Every configuration file in ` +
+        `${CONFIG_DIRS.join('/, ')}/ has to say whether it is the instance's ` +
+        `or the product's: add \`owner:\` with one of ${OWNERS.join(', ')}, and ` +
+        'the argument for it, to its header.',
     );
   }
   return declared;

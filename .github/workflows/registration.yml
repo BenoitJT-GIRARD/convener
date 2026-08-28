@@ -123,7 +123,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-handle-registration)
-            git add "data/events/$EVENT_ID/registrations.enc"
+            git add "instance/data/events/$EVENT_ID/registrations.enc"
             if git diff --staged --quiet; then
               echo "no change to commit"
               exit 0

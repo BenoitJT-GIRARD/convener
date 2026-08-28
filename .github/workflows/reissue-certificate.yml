@@ -116,8 +116,8 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-reissue-certificate)
-            if [ -f "data/events/$EVENT_ID/certificates.yml" ]; then
-              git add "data/events/$EVENT_ID/certificates.yml"
+            if [ -f "instance/data/events/$EVENT_ID/certificates.yml" ]; then
+              git add "instance/data/events/$EVENT_ID/certificates.yml"
             fi
             if git diff --staged --quiet; then
               # See issue-certificates.yml's

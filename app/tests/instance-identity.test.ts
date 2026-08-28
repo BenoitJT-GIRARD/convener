@@ -8,7 +8,7 @@
  * out in full, in prose the product ships: the e-mail a
  * speaker is invited with, the certificate a participant is sent, the
  * masthead of the cockpit, the handbook a volunteer reads. They read
- * `{{ instance.* }}` now, resolved from `config/instance.json` -- one
+ * `{{ instance.* }}` now, resolved from `instance/config.json` -- one
  * declaration, read by Python for the jobs that send, by the two builds for
  * what they emit, and injected into this bundle by `vite.config.ts`'s own
  * `define` because this code runs in a browser that can read no file.
@@ -51,7 +51,7 @@ const REGISTRY_SOURCE = readFileSync(
  *  here, or this suite would pass on the day somebody changed the
  *  declaration and forgot a template. */
 const DECLARED = JSON.parse(
-  readFileSync(resolve(ROOT, 'config/instance.json'), 'utf-8'),
+  readFileSync(resolve(ROOT, 'instance/config.json'), 'utf-8'),
 ).identity as Record<string, string>;
 
 /** A second instance. Manifestly synthetic -- no real organisation, no real

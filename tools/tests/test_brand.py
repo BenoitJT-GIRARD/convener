@@ -1,6 +1,6 @@
 """The design tokens, and the guards that keep them derived from one file.
 
-`data/brand.json` measured the designer's own colours. Before this module
+`instance/data/brand.json` measured the designer's own colours. Before this module
 existed, two implementations each carried their own hand-typed copy of them --
 `site/src/style.css` and `app/src/design/tokens.css` -- and the application
 had drifted to a reconstruction's palette without anyone deciding that on
@@ -17,12 +17,12 @@ now, not by a generation test for a file that no longer exists.
 
 **The loop is proved, not assumed**, the same way `test_schema_doc.py` proves
 it for the handbook appendix: the tests below read the committed files off
-disk and compare them with what today's `data/brand.json` derives. That
-catches a token hand-edited without regenerating, and a `data/brand.json`
+disk and compare them with what today's `instance/data/brand.json` derives. That
+catches a token hand-edited without regenerating, and a `instance/data/brand.json`
 value changed without regenerating -- the two ways the committed copies
 and their source can drift apart.
 
-**Contrast is recomputed, not re-read.** `data/brand.json` carries measured
+**Contrast is recomputed, not re-read.** `instance/data/brand.json` carries measured
 ratios; `test_every_measured_contrast_ratio_is_recomputed_from_its_colours`
 walks every one, recomputes it from the colours that produce it with the WCAG
 2.1 arithmetic in `generate_brand_css.py`, and fails the moment they disagree.
@@ -34,7 +34,7 @@ unmeasured for months while being false.
 ribbon SVGs in `site/src/index.njk` and `app/src/auth/Login.tsx` carried
 `stroke="#3D2D7C"` / `stroke="#3FB1C2"` -- the reconstruction's values, typed
 directly into markup no generator ever touches. Two further guards cover
-that: one asks whether any of `data/brand.json`'s own colours are hand-typed
+that: one asks whether any of `instance/data/brand.json`'s own colours are hand-typed
 in either template (they must come from a generated CSS custom property or
 a Tailwind class instead), and one asks whether the reconstruction's three
 known-wrong values have reappeared anywhere across the guarded files.
@@ -78,7 +78,7 @@ from convener_ops.paths import repo_root
 ROOT = repo_root()
 
 #: The templates that draw the ribbon motif directly, outside any generated
-#: stylesheet. None may hand-type a colour `data/brand.json` carries; each
+#: stylesheet. None may hand-type a colour `instance/data/brand.json` carries; each
 #: must take it from a generated token instead. `layout.njk` joined this list
 #: when the shared masthead grew its own loop, so every page built on it --
 #: not only the home page -- carries the motif (D-18).
@@ -177,7 +177,7 @@ def test_the_generated_files_say_so() -> None:
 
 
 def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
-    """`data/brand.json`'s `contrast` section names a foreground and a
+    """`instance/data/brand.json`'s `contrast` section names a foreground and a
     ground in its own key (`purple_on_turquoise`); this looks both up and
     recomputes the ratio from the colours themselves, rather than trusting
     the number already written beside them.
@@ -193,11 +193,11 @@ def test_every_measured_contrast_ratio_is_recomputed_from_its_colours() -> None:
         assert bg in colours, f"{name}: no colour named {bg!r}"
         computed = round(contrast_ratio(colours[fg], colours[bg]), 2)
         assert computed == stored, (
-            f"{name}: data/brand.json claims {stored}, "
+            f"{name}: instance/data/brand.json claims {stored}, "
             f"{colours[fg]} on {colours[bg]} computes to {computed}"
         )
         checked += 1
-    # Every entry data/brand.json currently carries -- a change to that
+    # Every entry instance/data/brand.json currently carries -- a change to that
     # section without a matching change here would otherwise pass silently.
     # Nine at first, plus two the verify page's own
     # panel needed (turquoise_text_on_cream, ink_muted_on_cream), plus one
@@ -213,7 +213,7 @@ def test_purple_on_turquoise_is_the_measurement_d16_turned_on() -> None:
 
     The two colours are read from the charter in force rather than typed.
     They used to be typed, and the two hexadecimal values
-    in them were `data/brand.json`'s own -- one instance's declared
+    in them were `instance/data/brand.json`'s own -- one instance's declared
     palette, written into a test of the *product's* arithmetic, where the
     derivation quite correctly replaced them with another instance's and
     left the expected figure behind. Nothing was hurt by that here; what
@@ -273,7 +273,7 @@ def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> No
     the white/paper ground they were designed against, onto one where their
     old colour fails AA: turquoise-d on turquoise measures 3.81, ink-faint
     on turquoise measures 3.51, and white on a turquoise fill measures 1.61
-    -- all below the 4.5 floor for normal text (`data/brand.json`'s
+    -- all below the 4.5 floor for normal text (`instance/data/brand.json`'s
     `_forbidden` note). Each of these selectors was moved to a colour that
     clears AA on whichever ground it can now appear on; this pins that each
     one stays off the value that would fail there again.
@@ -309,7 +309,7 @@ def test_no_selector_reverts_to_a_colour_that_fails_aa_on_the_new_ground() -> No
 
 
 def test_no_brand_colour_is_hand_typed_in_the_ribbon_templates() -> None:
-    """No colour that appears in `data/brand.json` is hand-typed anywhere
+    """No colour that appears in `instance/data/brand.json` is hand-typed anywhere
     else -- including inside a template. Both ribbons draw with a stroke
     the surrounding CSS/Tailwind sets, never an attribute of their own.
     """
@@ -319,7 +319,7 @@ def test_no_brand_colour_is_hand_typed_in_the_ribbon_templates() -> None:
     for rel in _RIBBON_TEMPLATES:
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert not pattern.search(text), (
-            f"{rel.as_posix()} hand-types a data/brand.json colour"
+            f"{rel.as_posix()} hand-types a instance/data/brand.json colour"
         )
 
 
@@ -393,7 +393,7 @@ _SYNTHETIC_MOTIF: dict[str, Any] = {
 
 @pytest.fixture
 def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A repository holding this instance's own `data/brand.json`, the
+    """A repository holding this instance's own `instance/data/brand.json`, the
     product's default charter beside it, and marked-but-empty stylesheets
     for both spliced targets.
     """
@@ -405,7 +405,7 @@ def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def default_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A duplicate that has chosen nothing: no `data/brand.json` at all.
+    """A duplicate that has chosen nothing: no `instance/data/brand.json` at all.
 
     The state the product has to survive, and since 2026-08-26 the state
     it has to *build* in: the product's own palette and the product's own
@@ -466,7 +466,7 @@ def test_check_leaves_a_stale_file_exactly_as_it_found_it(
 def test_a_hand_edited_generated_token_makes_check_fail(
     fake_repo: Path,
 ) -> None:
-    """Mutation 1: a generated value edited by hand, `data/brand.json`
+    """Mutation 1: a generated value edited by hand, `instance/data/brand.json`
     untouched. Exactly what a contributor does when they "fix" a colour
     directly in the stylesheet instead of in the brand file.
     """
@@ -482,7 +482,7 @@ def test_a_hand_edited_generated_token_makes_check_fail(
 def test_brand_json_changed_without_regenerating_makes_check_fail(
     fake_repo: Path,
 ) -> None:
-    """Mutation 2: `data/brand.json` edited, nothing regenerated. Exactly
+    """Mutation 2: `instance/data/brand.json` edited, nothing regenerated. Exactly
     what a contributor does when they change the brand file and forget the
     command the header of every generated file names.
     """
@@ -694,7 +694,7 @@ def test_an_instance_that_wrote_colours_but_no_motif_gets_the_products(
     fake_repo: Path,
 ) -> None:
     """The same answer one step further in, and the step that matters
-    most in practice: somebody edits `data/brand.json` to set their own
+    most in practice: somebody edits `instance/data/brand.json` to set their own
     colours and never thinks about `motif` at all. Refusing there would
     be the same absurdity at a smaller scale.
 

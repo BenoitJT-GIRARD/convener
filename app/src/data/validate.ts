@@ -1,5 +1,5 @@
 /**
- * What the browser is allowed to believe about `data/*.yml`.
+ * What the browser is allowed to believe about `instance/data/*.yml`.
  *
  * `yaml.load` returns `unknown`, and until this module existed the two
  * readers cast that straight to `Speaker[]` and `Config`. The cast is not a
@@ -85,7 +85,7 @@ function shown(value: unknown): string {
 }
 
 interface Cursor {
-  /** The file being read, as a volunteer would name it: `data/config.yml`. */
+  /** The file being read, as a volunteer would name it: `instance/data/config.yml`. */
   file: string;
   /** Where in the file, in the file's own words: `speaker 3 (spk-003)`. */
   where: string;
@@ -467,7 +467,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
 }
 
 /**
- * Narrow whatever `yaml.load` returned for `data/speakers.yml`.
+ * Narrow whatever `yaml.load` returned for `instance/data/speakers.yml`.
  *
  * An empty file is an empty list, not an error: that is where the repository
  * starts, and it is the one absence that means exactly what it looks like.
@@ -528,7 +528,7 @@ function readNomination(at: Cursor, entry: unknown): Nomination {
 /** A channel key as it may be written in the file.
  *
  *  Narrow on purpose: the key becomes a checklist key inside
- *  `data/speakers.yml`, so it is read back by both languages and shows up in
+ *  `instance/data/speakers.yml`, so it is read back by both languages and shows up in
  *  hand-reviewed diffs. Spaces, capitals and punctuation would all survive a
  *  YAML round-trip and all read as a different key to somebody skimming one.
  *  The label carries whatever the volunteers want to see; this does not. */
@@ -613,7 +613,7 @@ const CONFIG_KEYS = [
 ] as const;
 
 /**
- * Narrow whatever `yaml.load` returned for `data/config.yml`.
+ * Narrow whatever `yaml.load` returned for `instance/data/config.yml`.
  *
  * Unlike the speaker list there is no empty case: a config with no settings
  * is not a repository that has not started, it is one whose every window,

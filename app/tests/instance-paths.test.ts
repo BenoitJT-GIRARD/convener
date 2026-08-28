@@ -23,20 +23,24 @@
  * for the same reason: this is where a parser for those files is.
  *
  * **What counts as writing a path out.** A string whose value is, or
- * begins with, a declared instance path -- `'data/config.yml'`,
- * `'public-data/registration-routing.json'` -- a string that is a
+ * begins with, a declared instance path -- `'instance/data/config.yml'`,
+ * `'instance/public-data/registration-routing.json'` -- a string that is a
  * declared directory carrying the slash the declaration writes it with
- * (`'data/'`), and a `join` or `resolve` call that spells one segment by
- * segment: `resolve(root, 'keys', 'events')`. Segments are joined the
+ * (`'instance/data/'`), and a `join` or `resolve` call that spells one segment by
+ * segment: `resolve(root, 'instance', 'keys', 'events')`. Segments are joined the
  * way `resolve` joins them, with
  * leading `.` and `..` dropped, so a path built from a directory above
  * the one the call starts in is caught in the position it occupies.
  *
- * **A bare word is a path only where the code uses it as one.** `'keys'`
- * on its own is refused inside a `join` or `resolve` chain and admitted
- * everywhere else. `'data'` and `'keys'` are ordinary words, and a
- * declaration with four entries would need an exemption for each place
- * one of them means something else.
+ * **A bare word is a path only where the code uses it as one.** A word
+ * with no separator in it is refused inside a `join` or `resolve` chain
+ * and admitted everywhere else. `'data'` and `'keys'` are ordinary words,
+ * and a declaration handing over a bare one would need an exemption for
+ * each place it means something else. None of the four entries is a bare
+ * word today -- every one of them is under `instance/` or under `docs/` --
+ * so the clause guards a shape the declaration does not currently have,
+ * and it is kept because the declaration is free to hand over a single
+ * top-level name again.
  *
  * **A comment or a JSDoc block may name a path, and this sweep leaves it
  * alone.** They are not nodes of the syntax tree, so walking that tree
@@ -273,17 +277,17 @@ describe('an instance path is named once', () => {
 });
 
 const REFUSED = [
-  "const PATH = 'data/config.yml';",
-  "getFile('data/speakers.yml', token);",
-  "const SRC = resolve(__dirname, '..', '..', 'keys', 'events');",
-  "const OUT = join(root, 'public-data', 'certificates-public.json');",
+  "const PATH = 'instance/data/config.yml';",
+  "getFile('instance/data/speakers.yml', token);",
+  "const SRC = resolve(__dirname, '..', '..', 'instance', 'keys', 'events');",
+  "const OUT = join(root, 'instance', 'public-data', 'certificates-public.json');",
   "const REGISTER = 'docs/governance/register.md';",
-  "const EVENTS = resolve(root, 'data');",
-  "throw new Error('data/queue-ledger.yml holds no usable handled list');",
-  'const url = `data/events/${eventId}/registrations.enc`;',
-  'const label = <code>data/speakers.yml</code>;',
-  "if (path === 'data/') return why;",
-  "if (path === 'public-data/') return why;",
+  "const EVENTS = resolve(root, 'instance', 'data');",
+  "throw new Error('instance/data/queue-ledger.yml holds no usable handled list');",
+  'const url = `instance/data/events/${eventId}/registrations.enc`;',
+  'const label = <code>instance/data/speakers.yml</code>;',
+  "if (path === 'instance/data/') return why;",
+  "if (path === 'instance/public-data/') return why;",
 ];
 
 const ADMITTED = [
@@ -297,11 +301,11 @@ const ADMITTED = [
   "import { useData } from '../data/DataContext';",
   "const DEMO = `instances/example/${dataDir()}`;",
   "const permalink = '/data/';",
-  "const BUDGET = 'config/actions-budget.yml';",
-  "const DECLARATION = path.join(__dirname, '..', '..', 'config', 'instance.json');",
+  "const BUDGET = 'instance/actions-budget.yml';",
+  "const DECLARATION = path.join(__dirname, '..', '..', 'instance', 'config.json');",
   'throw new Error(`${configFile()} holds no usable channel list`);',
-  '/** data/config.yml is the board configuration. */\nconst settled = 1;',
-  '// data/speakers.yml is read through the Contents API.\nconst records = 2;',
+  '/** instance/data/config.yml is the board configuration. */\nconst settled = 1;',
+  '// instance/data/speakers.yml is read through the Contents API.\nconst records = 2;',
 ];
 
 describe('the rule bites', () => {

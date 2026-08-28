@@ -11,7 +11,7 @@ independently maintained identifier rules would eventually drift apart.
 ## Decision
 
 `event_id` **is** the edition code, lower-cased: an edition `MRG-4` is event
-`mrg-4`, whatever prefix the instance declares (`config/instance.json`'s
+`mrg-4`, whatever prefix the instance declares (`instance/config.json`'s
 own `edition_prefix`). Nothing else stands in as an identifier. A duplicate edition code is
 already rejected as a validation error upstream, so uniqueness does not need
 re-establishing here.

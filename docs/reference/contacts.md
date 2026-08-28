@@ -30,7 +30,7 @@ If you are not on GitHub, ask any volunteer to open it for you. Nothing here req
 
 The series is run by its Editorial Board; between them, its members hold the accounts described above.
 
-**Who sits on it is not kept on this page** — not the Board of today, and not the one that started the series. It is the `board` list in `data/config.yml`, and the Board screen in the workspace shows it. A list of names typed here would be a second answer to that question, and a second answer is one that is eventually wrong — quietly, and in the place a newcomer happens to read first.
+**Who sits on it is not kept on this page** — not the Board of today, and not the one that started the series. It is the `board` list in `instance/data/config.yml`, and the Board screen in the workspace shows it. A list of names typed here would be a second answer to that question, and a second answer is one that is eventually wrong — quietly, and in the place a newcomer happens to read first.
 
 Two rules, one reason. The one above is about whom a message is addressed to; this one is about where a fact is kept. Neither makes an exception for the names that feel permanent, and a founding board is the clearest case there is: it is the list that looks safest to type, and the one nobody ever comes back to check.
 

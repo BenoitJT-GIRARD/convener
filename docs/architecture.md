@@ -2,7 +2,7 @@
 
 This project runs a volunteer-run series of academic webinars. Which
 series, under whose name, is the instance's own answer and lives in
-`config/instance.json`; everything below describes the system, which is
+`instance/config.json`; everything below describes the system, which is
 the same whoever runs it. This system is the series' operational
 workspace: finding a
 speaker, running the editorial board's approval process, preparing and
@@ -44,8 +44,8 @@ either.
 | `site/` | Source of the public showcase (Eleventy): the home page, one page per event, the archives, the speaker-proposal entry, and the data notice. |
 | `tools/` | `convener_ops`, the Python package every automated workflow runs: data validation, the public-data filter, matching attendance, issuing and revoking certificates, the retention sweep. |
 | `services/` | Three small Cloudflare Workers with no server of their own to maintain: `auth-proxy` relays a volunteer's GitHub sign-in; `form-relay` turns a speaker-proposal submission into a commit; `signup-relay` does the same for a registration or a survey response. |
-| `data/` | The store itself: speaker and event records, board configuration, and — per event — an encrypted registration file and an encrypted survey-response file. |
-| `config/` | Declarations the tooling reads and the cockpit never does: the thresholds a maintainer edits, the external integrations the code knows about, and `boundary.yml`, which names the paths below. |
+| `instance/` | Everything this series owns rather than the code: the store itself under `data/` (speaker and event records, board configuration, and — per event — an encrypted registration file and an encrypted survey-response file), the published public keys under `keys/`, what the instance publishes about itself under `public-data/`, and the four declarations a maintainer edits. `config/boundary.yml` is what says so, and `tools/tests/test_instance_directory.py` is what keeps it true. |
+| `config/` | The product's own declarations, which the cockpit never reads: the external integrations the code knows about, and `boundary.yml`, which names the paths the instance owns. |
 | `.github/workflows/` | The whole automation surface. Nothing in this system runs anywhere else. |
 | `docs/` | This handbook: volunteer-facing workflow and governance pages (rendered inline by the cockpit), plus reference material like this file. |
 
@@ -64,7 +64,7 @@ https://<owner>.github.io/<repository>/app/           the cockpit
 https://<owner>.github.io/<repository>/verify/        certificate verification
 ```
 
-One declaration decides all four: `config/instance.json`. Both halves of
+One declaration decides all four: `instance/config.json`. Both halves of
 the address above come out of it, and so does the repository the two
 publishing workflows push into — see *Operations* for how an operator sets
 that up.
@@ -77,14 +77,14 @@ in paths that never overlap. So "what belongs to this series" is not a
 sentiment here, it is a list — `config/boundary.yml` holds it, and
 `tools/convener_ops/boundary.py` reads it. Everything the list does not name
 belongs to the code, and a directory is handed over whole rather than file
-by file: the records and configuration under `data/`, the published
-public keys under `keys/`, whatever continuous integration publishes into
-`public-data/`, the showcase's own title and addresses, and the thresholds
+by file: the records and configuration under `instance/data/`, the published
+public keys under `instance/keys/`, whatever continuous integration publishes into
+`instance/public-data/`, the showcase's own title and addresses, and the thresholds
 in `config/` that each say so in their own header.
 
 Two files sit inside those directories and still belong to the code —
-`data/schema.md`, a pointer to the generated schema page, and
-`keys/signing/README.md`, the verification wire format. Both are named as
+`instance/data/schema.md`, a pointer to the generated schema page, and
+`instance/keys/signing/README.md`, the verification wire format. Both are named as
 exceptions in the same declaration, with the reason beside the path. A
 test refuses a third one nobody accounts for, and refuses source code
 appearing anywhere in the handed-over paths: a bug in a file has to be
@@ -117,7 +117,7 @@ flowchart LR
     subgraph vitrine["example-showcase — public repository, generated only"]
         direction TB
         pages["Static event page + signup island<br/>app bundle, verification page"]
-        pubkey["Event's public key<br/>keys/events/&lt;id&gt;.pub — not a secret"]
+        pubkey["Event's public key<br/>instance/keys/events/&lt;id&gt;.pub — not a secret"]
         pages --> pubkey
     end
 
@@ -222,7 +222,7 @@ cd site && npm install && npm start      # localhost, under <repository>/
 cd tools && uv sync
 ```
 
-Both dev servers serve under the path prefix `config/instance.json`'s own
+Both dev servers serve under the path prefix `instance/config.json`'s own
 `published_url` gives, never at a bare root: D-26 exists because a build
 served at a bare `localhost` root passed every local check while the
 deployed shape was broken.

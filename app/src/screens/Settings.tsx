@@ -3,10 +3,10 @@
  *
  * **A file cannot refuse a value; a form can.** That is
  * the whole argument for this screen, and there is one case that proves it
- * rather than illustrating it: `config/queue-drain.yml`'s
+ * rather than illustrating it: `instance/queue-drain.yml`'s
  * `alarm_after_hours` is bounded on *both* sides by other declarations --
  * its floor is twice the drain's own cron period, its ceiling is
- * `config/registration-lanes.yml`'s `queue_beyond_hours` minus the same --
+ * `instance/registration-lanes.yml`'s `queue_beyond_hours` minus the same --
  * and with this repository's settings those two meet exactly at 48. There
  * is precisely one legal value, and nothing in the file tells anybody
  * editing it. A test says so, later, somewhere else. A field says so as
@@ -46,7 +46,7 @@
  * ignores `config/**`, so committing here starts nothing. The queue alarm
  * is live at the next run of the daily sweep; the lane threshold reaches
  * the registration relay only once *Deploy app* has regenerated
- * `public-data/registration-routing.json`, and until then registrations
+ * `instance/public-data/registration-routing.json`, and until then registrations
  * route on the threshold already published there. See `../settings/form.ts`.
  */
 import { useCallback, useEffect, useState } from 'react';

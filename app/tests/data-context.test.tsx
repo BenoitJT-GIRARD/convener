@@ -153,7 +153,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.config).toBeNull();
-    expect(result.current.error).toContain('data/config.yml');
+    expect(result.current.error).toContain('instance/data/config.yml');
     expect(result.current.error).not.toMatch(/GitHub is not responding/);
   });
 
@@ -178,7 +178,7 @@ describe('DataProvider (real GitHub backend)', () => {
     const { result } = renderHook(() => useData(), { wrapper: Providers });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toContain('vote_threshold');
-    expect(result.current.error).toContain('data/config.yml');
+    expect(result.current.error).toContain('instance/data/config.yml');
     expect(result.current.config).toBeNull();
   });
 

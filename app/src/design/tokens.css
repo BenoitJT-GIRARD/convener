@@ -1,6 +1,6 @@
 /* The cockpit's design tokens.
  *
- * The block below is generated from the charter in force -- data/brand.json
+ * The block below is generated from the charter in force -- instance/data/brand.json
  * if this instance has chosen its colours, brand/convener/brand.json if it
  * has not (tools/convener_ops/brand.py::source) -- by
  * scripts/generate_brand_css.py, whose --check fails on a stylesheet that
@@ -72,12 +72,12 @@
   --accent-soft:   #d8dde7;
   --border:        #d0bbc3;
   --border-strong: #b18f9b;
-  /* No data/brand.json equivalent: no original the designer drew ever
+  /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. */
   --danger:        #9b2226;
   --info:          #4a6c75;
   --select:        rgba(130, 219, 215, 0.25);
-/* END GENERATED TOKENS -- edit data/brand.json, not this block */
+/* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */
 
   --radius-sm:     2px;
   --radius-md:     3px;

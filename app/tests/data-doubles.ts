@@ -11,7 +11,7 @@
  * reading a real one.
  *
  * Override only what the test is about; everything else comes from the
- * values `data/config.yml` actually carries.
+ * values `instance/data/config.yml` actually carries.
  */
 import { serializeConfig, serializeSpeakers } from '../src/data/yaml';
 import type { BoardMember, Config, Speaker } from '../src/data/types';
@@ -45,7 +45,7 @@ export function config(overrides: Partial<Config> = {}): Config {
       summary_after_delivery: 7,
       recording_after_delivery: 14,
     },
-    // Two, where `data/config.yml` lists seven: a double that restated the
+    // Two, where `instance/data/config.yml` lists seven: a double that restated the
     // seven would make every screen test depend on a list that exists to
     // stay editable. A test about the channels states its own.
     //
@@ -61,7 +61,7 @@ export function config(overrides: Partial<Config> = {}): Config {
   };
 }
 
-/** `data/config.yml` as the app itself would write it.
+/** `instance/data/config.yml` as the app itself would write it.
  *
  *  Without the comment header: several of these doubles go through `btoa`,
  *  which is Latin-1 only, and the header carries an em dash. The header is a
@@ -116,7 +116,7 @@ export function speaker(overrides: Partial<Speaker> = {}): Speaker {
   };
 }
 
-/** `data/speakers.yml` as the app itself would write it, header aside (see
+/** `instance/data/speakers.yml` as the app itself would write it, header aside (see
  *  `configYaml`). */
 export function speakersYaml(entries: Partial<Speaker>[]): string {
   return serializeSpeakers(entries.map(entry => speaker(entry)));

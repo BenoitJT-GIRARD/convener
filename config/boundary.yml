@@ -23,20 +23,26 @@
 # Because a merge is a file-level event. A file holding one instance-owned
 # value is an instance file even when its other values would have made
 # perfectly good product defaults: upstream cannot ship half a file. That is
-# the rule that settles `config/`, and each file there states its own answer
-# in its own header rather than being listed again here -- see `owner:` in
-# `config/actions-budget.yml`, `config/instance.json`,
-# `config/integrations.yml`, `config/queue-drain.yml`,
-# `config/registration-lanes.yml`, and in this file itself. One fact, one
-# place: `test_boundary.py` refuses a `config/` path named in the list
-# below, so the two can never disagree.
+# the rule that settled `config/`, which held both owners until the four
+# files that were the instance's moved into `instance/` beside its records.
+#
+# The list below names directories, and a configuration file is not one of
+# them: each states its own answer in its own header, next to the argument
+# for it -- see `owner:` in `instance/config.json`,
+# `instance/actions-budget.yml`, `instance/queue-drain.yml`,
+# `instance/registration-lanes.yml`, `config/integrations.yml`, and in this
+# file itself. `boundary.CONFIG_DIRS` is where those two directories are
+# named and `boundary.states_its_own_owner` is the same set seen from the
+# other end: `test_boundary.py` refuses such a file named in the list below,
+# so the two halves can never disagree. Which side a file is on is now also
+# where it sits, and `test_instance_directory.py` is what holds that.
 #
 # What used to be here and is not any more
 # ----------------------------------------
 # `site/src/_data/site.json` was an entry in the list below: four keys --
 # the series' title, its tagline, its forum, its proposal form -- read by
 # the showcase's build through Eleventy's global-data convention. All four
-# were folded into `config/instance.json`'s own `identity`,
+# were folded into `instance/config.json`'s own `identity`,
 # alongside the organisation's name, and `site/.eleventy.js` composes them
 # from there for every template. The file entry went with the file. That is
 # one-notion-one-home applied
@@ -45,7 +51,7 @@
 # a duplicate two files to edit before its first build. Nothing under
 # `site/` is the instance's now.
 #
-# `config/instance.json` is JSON rather than YAML for a reason that is not
+# `instance/config.json` is JSON rather than YAML for a reason that is not
 # taste: it is the one declaration of this project's
 # published address, and Python, the application's build and the showcase's
 # build all read it. JSON is the only format all three parse without a
@@ -56,9 +62,10 @@
 #
 # `instances/example/` is the product's, and looks exactly like it is not
 # ---------------------------------------------------------------------
-# That directory holds one file for each path named below, at the same
-# relative path -- an invented instance's `instance.json`, `brand.json`,
-# `config.yml`, `speakers.yml`. It is still the product's, by the default
+# That directory holds one file for each path an instance owns, at the same
+# relative path -- so `instances/example/instance/` mirrors `instance/`,
+# down to an invented instance's `config.json`, `brand.json`, `config.yml`,
+# `speakers.yml`. It is still the product's, by the default
 # above: upstream ships it and upstream maintains it, and nothing reads it
 # at run time. `tools/tests/test_second_instance.py` copies this
 # repository, deletes everything the list below hands to the instance,
@@ -79,7 +86,7 @@ owner: product
 v: 1
 
 instance:
-  - path: data/
+  - path: instance/data/
     reason: >-
       The instance's own records and its governance configuration: the board
       and its thresholds (config.yml), the speakers and events (speakers.yml),
@@ -89,22 +96,23 @@ instance:
       event-key-destructions.yml). None of it is a value upstream could ship
       correctly for anybody else.
     kept:
-      - path: data/schema.md
+      - path: instance/data/schema.md
         reason: >-
           A three-line stub pointing a reader at docs/reference/schema.md,
           which scripts/generate_schema_doc.py derives from
           app/src/data/types.ts. It describes the product's model, not this
           instance's records, and no duplicate has any reason to edit it.
-  - path: keys/
+  - path: instance/keys/
     reason: >-
-      The instance's cryptographic material: the published public half of each
-      event key (keys/events/, tools/convener_ops/eventkeys.py) and of each
-      certificate signing key (keys/signing/, tools/convener_ops/signing.py). Both
-      directories are empty of keys in this repository today and stay empty in
-      a fresh duplicate -- generating one is an operator's act, never
+      The instance's cryptographic material: the published public half of
+      each event key (instance/keys/events/,
+      tools/convener_ops/eventkeys.py) and of each certificate signing key
+      (instance/keys/signing/, tools/convener_ops/signing.py). Both
+      directories are empty of keys in this repository today and stay empty
+      in a fresh duplicate -- generating one is an operator's act, never
       upstream's.
     kept:
-      - path: keys/signing/README.md
+      - path: instance/keys/signing/README.md
         reason: >-
           The wire format and the directory's contract, which the verification
           page depends on. It is product documentation that happens to live
@@ -124,10 +132,10 @@ instance:
       and upstream ships it filled in with rows a duplicate has no reason
       to inherit. It is the one entry here that upstream's own runs also
       write, which is what regenerated: above is for.
-  - path: public-data/
+  - path: instance/public-data/
     reason: >-
-      Everything the instance publishes about itself, derived from data/ by
-      the product's own commands and committed by
+      Everything the instance publishes about itself, derived from
+      instance/data/ by the product's own commands and committed by
       .github/workflows/deploy.yml. Upstream ships no content here at all --
       the directory is empty in a fresh clone, and .gitignore's own
       exceptions name the three files a running instance commits into it.

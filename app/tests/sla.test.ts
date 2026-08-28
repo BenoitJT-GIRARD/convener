@@ -15,7 +15,7 @@ import {
 import type { Config, Speaker, SpeakerStatus } from '../src/data/types';
 import { speaker as double } from './data-doubles';
 
-/** The values `data/config.yml` actually carries, so the arithmetic is pinned
+/** The values `instance/data/config.yml` actually carries, so the arithmetic is pinned
  *  against the real turnaround times and not against round numbers. */
 const config: Config = {
   season: 2026, next_edition_number: 5, overlap_window_days: 7,

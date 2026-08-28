@@ -111,7 +111,7 @@ def registration_code_svg(event_id: str, *, dark: str, root: Path | None = None)
     structurally unreachable here, not merely absent by convention).
 
     `dark` is the single colour the code is drawn in, threaded in by the
-    caller (`visual.py`, from `data/brand.json`'s own "black") rather than
+    caller (`visual.py`, from `instance/data/brand.json`'s own "black") rather than
     read from the file here -- the same separation `ribbon.py`'s own
     rendering functions keep from `_load_motif` (a caller fetches a brand
     value once and threads it through a pure function, rather than every
@@ -120,7 +120,7 @@ def registration_code_svg(event_id: str, *, dark: str, root: Path | None = None)
     `.registration-code-slot` box, so there is nothing a second colour
     would add here that the slot's own background does not already give
     it, and one fewer colour is one fewer place for a value not sourced
-    from `data/brand.json` to appear.
+    from `instance/data/brand.json` to appear.
 
     `root` is threaded straight through to `signup_url` and means what
     it means there: which instance's declaration the encoded address is

@@ -107,7 +107,7 @@ export function Layout() {
         <div className="max-w-content mx-auto px-6 py-6 flex items-center justify-between text-xs text-ink-muted flex-wrap gap-2">
           <p>
             {/* Where the records on screen actually come from. In demo mode
-                that is not this repository's own `data/`: it is the example
+                that is not this repository's own `instance/data/`: it is the example
                 instance the product ships, and saying otherwise would send
                 a curious visitor to look for these five people in a file
                 that has never held them. */}
@@ -134,7 +134,7 @@ export function Layout() {
 
             Below the line that names this instance, and separated from it by
             a rule, because the two say different kinds of thing: everything
-            above comes from `config/instance.json` and belongs to whoever
+            above comes from `instance/config.json` and belongs to whoever
             runs this cockpit, and nothing here does. `NOTICE.json` is the one
             declaration, read by `scripts/notice.mjs` and carried into this
             bundle by `vite.config.ts`'s own define -- see `src/notice.ts`. */}

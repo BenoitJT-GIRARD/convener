@@ -711,7 +711,7 @@ def test_zero_seconds_is_never_eligible() -> None:
 
 
 def test_the_default_share_matches_data_config_ymls_own_chosen_literal() -> None:
-    """`DEFAULT_ELIGIBILITY_SHARE` is `data/config.yml`'s own
+    """`DEFAULT_ELIGIBILITY_SHARE` is `instance/data/config.yml`'s own
     `0.6666666666666666`, digit for digit -- the closest
     float64 to two thirds, chosen fractionally *below* the exact value so
     a duration of exactly 3600 seconds against a 90-minute session still

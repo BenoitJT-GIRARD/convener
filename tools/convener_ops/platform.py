@@ -25,7 +25,7 @@ whoever wires them together, not by anything in here.
 Where "the event's configuration" lives (revised on review)
 ------------------------------------------------------------
 The first version of this module opened its own file,
-`data/events/<id>/config.yml`, reasoning that `data/speakers.yml`'s
+`instance/data/events/<id>/config.yml`, reasoning that `instance/data/speakers.yml`'s
 `zoom_link` and `youtube_url` belonged to a schema it had no
 licence to change. Review found the reasoning sound but pointed at the
 wrong file: every `convener_ops` business-logic module except `cli.py` is pure,
@@ -35,11 +35,11 @@ that rule, and it is the right one. The defect was that `ManualPlatform`
 was reading a file at all, not which file it was reading. So:
 
 * **`ManualPlatform` takes the loaded speaker records as a constructor
-  parameter (`speakers`) and never touches `data/speakers.yml` itself.**
+  parameter (`speakers`) and never touches `instance/data/speakers.yml` itself.**
   `get_room` and `get_recording` find the matching record and read its
   existing `zoom_link` and `youtube_url` -- the very fields the first
   version rejected, now reached the way every other pure module in this
-  package reaches `data/speakers.yml`'s content: already loaded, by
+  package reaches `instance/data/speakers.yml`'s content: already loaded, by
   whoever wires this class up (`cli.py`, in the end).
 * **`event_id` is `edition_code`, lower-cased.** Nothing else in the
   codebase defines that mapping, and it cannot be implemented without one:
@@ -49,7 +49,7 @@ was reading a file at all, not which file it was reading. So:
   instance declares followed by digits), and it is what this project's own
   tests already use (`mrg-042` for `MRG-042`). `find_speaker` below is the one
   place this rule is written down.
-* **`instructions` lives in `data/config.yml`, not on the speaker
+* **`instructions` lives in `instance/data/config.yml`, not on the speaker
   record.** The cost of the alternative is real -- a `Speaker` field must
   also join the exhaustive field set, be classified in `consent.ts`,
   mirrored in `public_data.py`, and added to the cross-language fixture
@@ -59,22 +59,22 @@ was reading a file at all, not which file it was reading. So:
   event. Putting them on the speaker record would invite writing different
   instructions per event for a room that is the same room every time. So
   `ManualPlatform` takes a second, optional constructor parameter
-  (`config`, the loaded `data/config.yml`) and reads `instructions` from
+  (`config`, the loaded `instance/data/config.yml`) and reads `instructions` from
   it; `None` (no config supplied) reads as `''`, the same "nothing more to
   say" answer an explicit empty string would give.
 
 For attendance, the file stays where it has always been -- nothing about
 that path was in question:
 
-    data/events/<id>/attendance-import.csv
+    instance/data/events/<id>/attendance-import.csv
 
 The plaintext CSV is never committed -- the encrypted export is
 -----------------------------------------------------------------
 `attendance-import.csv` is a raw export off the chosen platform:
 `display_name` and `email` are personal data. "No personal data in the
 repository, ever" is a hard constraint of this phase, so this path is
-`.gitignore`d (`data/events/*/attendance-import.csv`) even though it sits
-under `data/` like everything else here -- it is dropped locally (or into
+`.gitignore`d (`instance/data/events/*/attendance-import.csv`) even though it sits
+under `instance/data/` like everything else here -- it is dropped locally (or into
 an ephemeral job workspace) for this reader to consume once, never checked
 in.
 
@@ -90,10 +90,10 @@ over, and stood for a long time.
 `registrations.enc` and `survey-responses.enc`: encrypt under the event's
 own *public* key, which needs no secret at all, and commit the ciphertext.**
 `get_attendance` below looks first for
-`data/events/<event id>/attendance-import.csv.enc`, produced locally by a
+`instance/data/events/<event id>/attendance-import.csv.enc`, produced locally by a
 host running `convener-encrypt-attendance-export` against the plaintext export
-and the event's already-published `keys/events/<id>.pub`, then committed
-like any other file under `data/`. A CI job holds the matching private
+and the event's already-published `instance/keys/events/<id>.pub`, then committed
+like any other file under `instance/data/`. A CI job holds the matching private
 half already (`EVENT_PRIVATE_KEY`, the same secret every other command in
 this event's chain reads to decrypt `registrations.enc`), so it can
 decrypt this file the moment it is checked out -- no plaintext ever has to
@@ -720,17 +720,17 @@ class ManualPlatform:
     for why it is the default, where the room and recording come from
     (constructor parameters, not a file this class reads itself), and why
     `attendance-import.csv` -- the one file it does read -- is treated
-    differently by `.gitignore` than everything else under `data/`."""
+    differently by `.gitignore` than everything else under `instance/data/`."""
 
     events_dir: Path = field(default_factory=lambda: repo_root() / DATA_DIR / "events")
-    #: The loaded contents of `data/speakers.yml` -- already validated and
+    #: The loaded contents of `instance/data/speakers.yml` -- already validated and
     #: read by whoever constructs this class, never by this class itself
     #: (see the module docstring's "Where the event's configuration lives"
     #: section). `()` is a legal, if useless, default: any lookup then
     #: raises `EventNotFoundError` for every id, which is the honest
     #: answer to "no speaker data was supplied".
     speakers: Sequence[Mapping[str, Any]] = ()
-    #: The loaded contents of `data/config.yml`, for `instructions`.
+    #: The loaded contents of `instance/data/config.yml`, for `instructions`.
     #: `None` -- the default -- reads as `''`: no config supplied is not a
     #: data-integrity failure the way a missing speaker record is, it is
     #: the same "nothing more to say" an explicit empty string would be.

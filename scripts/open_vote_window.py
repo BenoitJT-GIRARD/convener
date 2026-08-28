@@ -29,7 +29,7 @@ of them would either restart a concluded vote or, for a `lead` that already
 has a `decided_on`, expose a settled decision to expiry.
 
 The file it rewrites holds real people's names and e-mail addresses, so the
-transformation is pure and tested before it is ever pointed at `data/`, and
+transformation is pure and tested before it is ever pointed at `instance/data/`, and
 `--dry-run` prints the diff for a human to read first.
 
 Idempotent: a record that already has an `opened_on` is left exactly as it
@@ -138,7 +138,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    speakers_path = repo_root() / "data" / "speakers.yml"
+    speakers_path = repo_root() / "instance" / "data" / "speakers.yml"
     before = speakers_path.read_text(encoding="utf-8")
 
     speakers = safe_load(before) or []
@@ -150,7 +150,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.dry_run:
-        print(_ascii(diff(before, after, "data/speakers.yml")), end="")
+        print(_ascii(diff(before, after, "instance/data/speakers.yml")), end="")
         print(f"dry run: nothing written ({stamped} leads would be stamped)")
         return 0
 

@@ -4,7 +4,7 @@ The Editorial Board is the small group that **steers the series**: it validates 
 
 ## Who is on it
 
-- A small, named group — not a crowd. The size it aims for, and the size it may not exceed, are declared once as `board_min` and `board_max` in `data/config.yml`; the Board screen shows today's headcount against both. Why the first is a target and the second a rule is in `docs/reference/operations.md` ("The Board's target size").
+- A small, named group — not a crowd. The size it aims for, and the size it may not exceed, are declared once as `board_min` and `board_max` in `instance/data/config.yml`; the Board screen shows today's headcount against both. Why the first is a target and the second a rule is in `docs/reference/operations.md` ("The Board's target size").
 - It is reviewed once a year (see below).
 - Being on the Board is a real commitment: you take part in the speaker votes. The Board is the dependable core of the series.
 
@@ -25,7 +25,7 @@ The exact mechanics of both — who counts, how the bar is computed, what a recu
 Two records name the Board, they answer different questions, and neither is
 derived from the other.
 
-**Who votes** is `data/config.yml`, edited from the cockpit's Board screen.
+**Who votes** is `instance/data/config.yml`, edited from the cockpit's Board screen.
 Every count the app makes reads it and nothing else: who is eligible, what the
 two-thirds bar is today, who has declared an absence, which members a yearly
 inactivity check would propose. It is the governance record, and it carries
@@ -52,15 +52,15 @@ configured, what is missing" command this project still owes itself.
 
 Not here. This page is the product's, and the rules on it are written against
 whoever the Board happens to be; a sentence about who that is right now would
-be a second answer to a question `data/config.yml` already answers, and the
+be a second answer to a question `instance/data/config.yml` already answers, and the
 second answer is the one that goes quietly out of date.
 
 **Who is on the Board, whether every entry is a real GitHub login yet, and how
-today's headcount sits against the target** are all read from `data/config.yml`
+today's headcount sits against the target** are all read from `instance/data/config.yml`
 — on the Board screen in the workspace, and by `cd tools && uv run
 convener-validate`, which prints the headcount against the target as a plain
 `Note:` line beside its verdict. **Whether any speaker has been asked for
-publication consent** is read the same way, from `data/speakers.yml`: nothing
+publication consent** is read the same way, from `instance/data/speakers.yml`: nothing
 may be published for a speaker until they are asked and their answer is
 recorded, and an unanswered field is the gate working rather than the gate
 being broken.

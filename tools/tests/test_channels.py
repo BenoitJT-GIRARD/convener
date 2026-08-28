@@ -4,7 +4,7 @@ The list is configuration and not a constant: whether the seven channels
 are still the right seven cannot be confirmed without asking the
 collaborators, which this project never does. Nothing here counts them and
 nothing here names one -- a channel added, renamed or dropped in
-`data/config.yml` passes this validator unchanged, and the test that would
+`instance/data/config.yml` passes this validator unchanged, and the test that would
 have frozen the list is deliberately absent.
 
 What is checked is what a hand-edited file can get wrong and what the app
@@ -78,7 +78,7 @@ def test_a_channel_entry_must_be_a_mapping() -> None:
     ],
 )
 def test_a_channel_key_that_could_not_be_a_checklist_key_is_rejected(key: Any) -> None:
-    """The key reaches `data/speakers.yml` as a checklist key.
+    """The key reaches `instance/data/speakers.yml` as a checklist key.
 
     It is read back by both languages and skimmed in hand-reviewed diffs, so
     it is held to the same narrow shape here as in the browser. The label,

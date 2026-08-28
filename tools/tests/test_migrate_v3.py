@@ -1,7 +1,7 @@
 """The v2 -> v3 migration (scripts/migrate_v3.py).
 
 The transformations are pure and tested here before they are ever pointed
-at `data/`, because the file they rewrite holds real people's names, e-mail
+at `instance/data/`, because the file they rewrite holds real people's names, e-mail
 addresses and affiliations. Two properties matter more than the rest:
 
 * nothing outside the migrated fields is touched -- pinned field by field
@@ -34,7 +34,7 @@ from convener_ops.validate import validate_config, validate_speakers
 
 
 def v2_speaker(**overrides: Any) -> dict[str, Any]:
-    """A speaker in the shape `data/speakers.yml` actually had before the
+    """A speaker in the shape `instance/data/speakers.yml` actually had before the
     migration -- same keys, same order, values shortened."""
     base: dict[str, Any] = {
         "id": "spk-001",
@@ -281,7 +281,7 @@ def test_the_migrated_data_passes_the_validator() -> None:
     `scripts/migrate_v4.py` closes the six v4 fields but leaves
     `survey_enabled` still missing (`expected_v5_gap` below), and
     `scripts/migrate_v5.py` closes that. The third assertion runs all
-    three one-shots in the order they were actually run against `data/`
+    three one-shots in the order they were actually run against `instance/data/`
     and asserts the validator then finds nothing at all. Naming each gap
     and naming what closes it is what keeps this assertion exhaustive
     instead of merely tolerant -- a v3 output that grew a further defect
@@ -351,8 +351,8 @@ def test_the_migrated_data_passes_the_validator() -> None:
 def test_main_writes_both_files_and_a_second_run_is_a_no_op(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data = tmp_path / "data"
-    data.mkdir()
+    data = tmp_path / "instance" / "data"
+    data.mkdir(parents=True)
     speakers_path = data / "speakers.yml"
     config_path = data / "config.yml"
     speakers_path.write_text(
@@ -381,8 +381,8 @@ def test_main_writes_both_files_and_a_second_run_is_a_no_op(
 def test_a_dry_run_prints_the_diff_and_writes_nothing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data = tmp_path / "data"
-    data.mkdir()
+    data = tmp_path / "instance" / "data"
+    data.mkdir(parents=True)
     speakers_path = data / "speakers.yml"
     config_path = data / "config.yml"
     before = yaml.safe_dump([v2_speaker(name="Cyra Adeyemo-Lund")], sort_keys=False)

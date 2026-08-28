@@ -11,7 +11,7 @@
  * identity.
  *
  * The route has to be the `define`. `DataContext` asks GitHub for
- * `data/speakers.yml` before anything has been fetched, and demo mode
+ * `instance/data/speakers.yml` before anything has been fetched, and demo mode
  * asks for nothing at all, so the declaration is not in hand at the
  * moment the paths are needed. `settings/declaration.ts` parses the same
  * file in the browser for the settings screen, from text the Contents API

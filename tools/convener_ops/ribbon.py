@@ -1,6 +1,6 @@
 """The charter's ribbon: one continuous meandering stroke, not four circles.
 
-`data/brand.json::motif._ribbon` names the defect this module fixes: the
+`instance/data/brand.json::motif._ribbon` names the defect this module fixes: the
 purple stroke that runs through the designer's own poster
 (`docs/assets/example_and_template_initial_assets/announcement-template_initial.png`,
 gitignored -- it carries a real person's photograph) was stood in for by
@@ -19,7 +19,7 @@ that came with it was a starting point to verify, not a given, and two of
 its claims did not survive that check: the left curl does not cross its own
 tail (it is a near circle open on one side, like the right one), and the
 stroke measures 23-33px wide there, not the 0.0075-ratio 9px
-`data/brand.json` used to hold (see `motif._ribbon_width_ratio`).
+`instance/data/brand.json` used to hold (see `motif._ribbon_width_ratio`).
 
 What does hold up: a single purple stroke, uniform width, round caps, no
 fill, that enters and leaves the canvas rather than closing on itself. On the
@@ -100,7 +100,7 @@ def ribbon_width_ratio(root: Path) -> float:
 
     Each charter says where its own figure comes from, and the two do not
     come from the same place: this instance's was measured off the
-    designer's poster (`data/brand.json::motif._ribbon_width_ratio`), and
+    designer's poster (`instance/data/brand.json::motif._ribbon_width_ratio`), and
     the product's is carried over from the proportion its own mark's
     inner arc is drawn at (`brand/convener/brand.json`).
     """
@@ -448,7 +448,7 @@ def ribbon_path(width: float, height: float) -> str:
     """The charter's ribbon for a canvas of the given size, as an SVG path `d`.
 
     One `M`, only `C` after it, no `Z`: a single continuous cubic-Bezier
-    stroke, exactly as `data/brand.json::motif._ribbon` describes it, not
+    stroke, exactly as `instance/data/brand.json::motif._ribbon` describes it, not
     four bare circles standing in for one. Pair with `ribbon_stroke_colour`
     and `ribbon_stroke_width` for the `stroke` and `stroke-width` a consumer
     draws it with; this function only ever returns geometry.

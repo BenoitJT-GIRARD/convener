@@ -16,7 +16,7 @@ describe('getFile', () => {
         json: async () => ({ content: b64, sha: 'abc123' }),
       }),
     );
-    const out = await getFile('data/speakers.yml', 'tok');
+    const out = await getFile('instance/data/speakers.yml', 'tok');
     expect(out).toEqual({ text: 'speakers: []\n', sha: 'abc123' });
   });
 
@@ -30,7 +30,7 @@ describe('getFile', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ content: b64, sha: 's' }) }),
     );
-    const out = await getFile('data/config.yml', 'tok');
+    const out = await getFile('instance/data/config.yml', 'tok');
     expect(out.text).toBe(original);
   });
 });
@@ -47,7 +47,7 @@ describe('putFile', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
     const out = await putFile(
-      'data/speakers.yml',
+      'instance/data/speakers.yml',
       'speakers: []\n',
       'oldsha',
       dataEdit(identifier('spk-001'), { part: 'admin-fields' }),
@@ -70,7 +70,7 @@ describe('putFile', () => {
     vi.stubGlobal('fetch', fetchSpy);
     await expect(
       putFile(
-        'data/speakers.yml',
+        'instance/data/speakers.yml',
         'speakers: []\n',
         'oldsha',
         JSON.parse(JSON.stringify('data: add lead Jane Doe')),
@@ -92,7 +92,7 @@ describe('githubStore', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ content: b64, sha: 'abc123' }) }),
     );
-    const out = await githubStore('tok').read('data/speakers.yml');
+    const out = await githubStore('tok').read('instance/data/speakers.yml');
     expect(out).toEqual({ text: 'speakers: []\n', sha: 'abc123' });
   });
 
@@ -103,7 +103,7 @@ describe('githubStore', () => {
     });
     vi.stubGlobal('fetch', fetchSpy);
     const out = await githubStore('tok').write(
-      'data/speakers.yml',
+      'instance/data/speakers.yml',
       'speakers: []\n',
       'oldsha',
       dataEdit(identifier('spk-001'), { part: 'admin-fields' }),

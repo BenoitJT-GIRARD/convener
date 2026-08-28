@@ -9,9 +9,9 @@
 #    `editorial-board`, exactly: that slug is the one `app/src/auth/role.ts`
 #    asks GitHub about when it decides who signs in as a Board member, so a
 #    team under any other name leaves every member falling back to
-#    data/config.yml alone.
+#    instance/data/config.yml alone.
 # 2. Write it below as `@<organisation>/editorial-board`, where
-#    `<organisation>` is the owner half of `config/instance.json`'s
+#    `<organisation>` is the owner half of `instance/config.json`'s
 #    `identity.repository`.
 #
 # The literal has to exist because GitHub reads this file verbatim, before
@@ -29,6 +29,6 @@
 # Default: handbook, governance, and app changes are reviewed by the Editorial Board.
 *               @example-instance/editorial-board
 
-# data/ is driven by the team app and validated by CI on every commit.
+# instance/data/ is driven by the team app and validated by CI on every commit.
 # No required review here.
 /data/

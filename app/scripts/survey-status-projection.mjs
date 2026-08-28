@@ -1,4 +1,4 @@
-/* Reading and writing `public-data/survey-status.json`, the way
+/* Reading and writing `instance/public-data/survey-status.json`, the way
  * `copy-survey-status.mjs` needs to -- the identical split
  * `certificates-projection.mjs` uses for `copy-certificates.mjs`, kept as
  * its own module for the same reason: a rule

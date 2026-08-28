@@ -78,14 +78,14 @@ def test_the_site_lane_is_isolated_correctly() -> None:
 
 def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
     """D-26: never a second, hand-typed prefix that could drift from
-    `config/instance.json` -- the identical property
+    `instance/config.json` -- the identical property
     `test_a11y_workflow.py::test_the_checker_reads_the_path_prefix_from_
     its_one_source` already pins for the accessibility checker.
     """
     assert "from './published.cjs'" in _CHECKER, (
         "check-performance-budget.mjs no longer reads the published address "
         "through site/scripts/published.cjs -- it must derive the served "
-        "prefix from config/instance.json, never restate it"
+        "prefix from instance/config.json, never restate it"
     )
     assert "publishedAddress().pathPrefix" in _CHECKER
 

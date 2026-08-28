@@ -45,7 +45,7 @@
  * `speaker_country` is already published per row in the public feed, so
  * aggregating it discloses nothing new.
  *
- * Nothing computed here reaches `public-data/`. The public feed is an
+ * Nothing computed here reaches `instance/public-data/`. The public feed is an
  * allowlist in `tools/convener_ops/public_data.py`, `gender` and `career_stage`
  * are not on it, and they must not be: aggregate-only inside the app, a
  * per-speaker attribute becomes individually identifying the moment it is
@@ -202,7 +202,7 @@ export function monthsBefore(day: string, months: number): string {
 function stageOf(s: Speaker): CareerStage {
   // `data/validate.ts` has checked this field against the model before the
   // browser saw it, so an unrecognised value no longer reaches here from
-  // `data/speakers.yml`. This is kept anyway: it is a
+  // `instance/data/speakers.yml`. This is kept anyway: it is a
   // total function on its argument, so a caller building a `Speaker` some
   // other way still gets a bucket rather than a new category, and an
   // unrecognised value reads as `undisclosed` -- a typo must not become a

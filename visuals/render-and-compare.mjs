@@ -95,7 +95,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *  them, differ by exactly 0 pixels at any threshold) and comfortably
  *  below the smallest gap
  *  between any two colours this composition actually paints next to each
- *  other -- `data/brand.json`'s own palette (purple #012765, cream
+ *  other -- `instance/data/brand.json`'s own palette (purple #012765, cream
  *  #F4F0F1, turquoise #FECAC1, white, black) differs by dozens to
  *  hundreds of levels per channel between any pair, so a real colour
  *  swap, a moved element revealing a different background underneath it,

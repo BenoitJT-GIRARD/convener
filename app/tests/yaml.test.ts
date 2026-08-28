@@ -73,7 +73,7 @@ describe('the JS/Python YAML boundary (D-14)', () => {
   // unchanged. Here is the other end of that round-trip: the fixtures are
   // what this app emits, byte for byte, and parsing them gives back the
   // very objects they were written from. A field either side serialises
-  // differently therefore fails here or there -- it cannot reach `data/`.
+  // differently therefore fails here or there -- it cannot reach `instance/data/`.
   //
   // To regenerate after a deliberate schema change: run the suite, read the
   // diff the assertion prints, and update the fixture to match. Never the

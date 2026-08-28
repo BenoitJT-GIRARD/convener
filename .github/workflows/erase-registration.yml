@@ -28,7 +28,7 @@ name: Erase a registration early
 # `encrypted_identifier` is that same address, hybrid-encrypted under
 # this event's own already-published public key -- produced on an
 # operator's own machine with `convener-encrypt-identifier` (needs no secret:
-# `keys/events/<id>.pub` is public data, not a secret) -- so the value
+# `instance/keys/events/<id>.pub` is public data, not a secret) -- so the value
 # GitHub renders and retains is ciphertext, decryptable only by whichever
 # CI job later holds this event's EVENT_PRIVATE_KEY. workflow_dispatch is
 # still restricted to collaborators with repository write access, but
@@ -121,8 +121,8 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-erase-registration)
-            if [ -f "data/events/$EVENT_ID/registrations.enc" ]; then
-              git add "data/events/$EVENT_ID/registrations.enc"
+            if [ -f "instance/data/events/$EVENT_ID/registrations.enc" ]; then
+              git add "instance/data/events/$EVENT_ID/registrations.enc"
             fi
             # convener-erase-registration also rewrites the
             # committed attendance export when the erased person has rows
@@ -131,8 +131,8 @@ jobs:
             # runner while the log reported it committed. Guarded the same
             # way: the file may not exist for an event with no attendance
             # export yet.
-            if [ -f "data/events/$EVENT_ID/attendance-import.csv.enc" ]; then
-              git add "data/events/$EVENT_ID/attendance-import.csv.enc"
+            if [ -f "instance/data/events/$EVENT_ID/attendance-import.csv.enc" ]; then
+              git add "instance/data/events/$EVENT_ID/attendance-import.csv.enc"
             fi
             if git diff --staged --quiet; then
               echo "::warning::convener-erase-registration ran but wrote nothing -- see this run's own log above for why"

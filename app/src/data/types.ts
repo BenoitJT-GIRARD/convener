@@ -109,7 +109,7 @@ export interface ChecklistAssignee {
  * runs to seven. The seven are *configuration*, not a constant: whether
  * they are still the right seven cannot be confirmed without asking the
  * collaborators, which this project never does, so the list lives in
- * `data/config.yml` and a channel is added, renamed or dropped without a
+ * `instance/data/config.yml` and a channel is added, renamed or dropped without a
  * line of TypeScript changing.
  *
  * `key` is what the record stores -- it becomes the checklist key an owner
@@ -141,7 +141,7 @@ export interface SpeakerMetrics {
    *
    *  Keeping it is a decision, not an oversight. `youtube_views_30d` is a
    *  stored key: renaming it means migrating every record in
-   *  `data/speakers.yml`, both readers, both test doubles and the byte-exact
+   *  `instance/data/speakers.yml`, both readers, both test doubles and the byte-exact
    *  YAML boundary fixtures -- the same cost as any other schema change --
    *  and it buys a name that reads slightly better. The number in it is
    *  already contradicted by the two things that act on the value: the label
@@ -401,7 +401,7 @@ export interface Speaker {
   forum_thread: string;
 
   /** Whether the post-event survey is open for this
-   *  event. A per-event fact, not a `data/config.yml` setting: the survey
+   *  event. A per-event fact, not a `instance/data/config.yml` setting: the survey
    *  is switched on per event, and every other per-event
    *  fact -- the room link, the recording, the forum thread -- already
    *  lives on the speaker record rather than in the shared config. The
@@ -462,7 +462,7 @@ export interface Config {
   /** Current season number. */
   season: number;
   /** The next edition number to assign, under the prefix
-   *  `config/instance.json` declares. */
+   *  `instance/config.json` declares. */
   next_edition_number: number;
   /** Forbidden window around each scheduled date, in days. */
   overlap_window_days: number;
@@ -523,7 +523,7 @@ export interface Config {
    *  the chosen platform's account *is* the permanent room, so these
    *  instructions describe a room that never changes. Read by
    *  `tools/convener_ops/platform.py::ManualPlatform.get_room`, which pairs
-   *  this with `data/speakers.yml`'s per-event `zoom_link`.
+   *  this with `instance/data/speakers.yml`'s per-event `zoom_link`.
    *
    *  Kept immediately before `sla_days`, never between it and `channels`:
    *  `data-validate.test.ts` regex-matches from `sla_days:` up to the next

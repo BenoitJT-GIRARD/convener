@@ -50,7 +50,7 @@ describe('readProjection', () => {
     if (dir) await rm(dir, { recursive: true, force: true });
   });
 
-  it('returns [] when public-data/survey-status.json does not exist -- a normal state, no event enabled yet', async () => {
+  it('returns [] when instance/public-data/survey-status.json does not exist -- a normal state, no event enabled yet', async () => {
     expect(
       await readProjection(join(tmpdir(), 'convener-survey-status-test-does-not-exist.json')),
     ).toEqual([]);

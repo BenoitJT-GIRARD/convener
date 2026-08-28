@@ -1,7 +1,7 @@
 /**
  * The grammar of decision commits, browser side.
  *
- * There is no database. Every act this app records lands in `data/*.yml`
+ * There is no database. Every act this app records lands in `instance/data/*.yml`
  * through one commit, and that commit subject is the only place the *who* and
  * the *why now* survive. So the subject is a data format:
  *
@@ -29,6 +29,7 @@
  * not exist.
  */
 
+import { CONFIG_DIRS } from '../settings/declaration';
 import type {
   BallotValue,
   ConsentDecision,
@@ -141,7 +142,7 @@ export type AvailabilityChange = 'away' | 'back';
  *
  * `accepted` and `declined` are `DateAnswer`; `cleared` is the third thing
  * the act can record and the record cannot -- a reply taken back, which
- * `data/speakers.yml` stores as `answer: ''` and which reads as "not answered
+ * `instance/data/speakers.yml` stores as `answer: ''` and which reads as "not answered
  * yet" once it is written. The register needs the three because the act is
  * what happened, not what the field now holds.
  *
@@ -290,7 +291,7 @@ function editPart(edit: Edit): string {
 /**
  * The subject for a `data:` commit that records no decision.
  *
- * Five screens write to `data/speakers.yml` without deciding anything: a
+ * Five screens write to `instance/data/speakers.yml` without deciding anything: a
  * runbook box ticked, a talk detail typed in, a name put against a line of
  * the journey, the post-archive numbers, and the admin form saving the fields
  * it was given. They are bookkeeping -- the file catching up with something
@@ -323,7 +324,7 @@ export function dataEdit(entity: Identifier, edit: Edit): Subject {
  * A different domain, deliberately. `data:` is the register's prefix and
  * `commit_format.py` reads every one of those lines back as an act on a
  * *record* -- a ballot, a nomination, a recording. Changing
- * `config/queue-drain.yml`'s alarm threshold is none of those: it is not
+ * `instance/queue-drain.yml`'s alarm threshold is none of those: it is not
  * about a person, there is nobody it could name, and writing it as a
  * decision would put a line in the governance register that records no
  * decision. `validate_messages` leaves an ordinary commit alone precisely
@@ -346,15 +347,18 @@ export function configEdit(file: SettingsFile, key: SettingKey): Subject {
 declare const settingsFileBrand: unique symbol;
 declare const settingKeyBrand: unique symbol;
 
-/** A file under `config/`, as the declaration names it. */
+/** A configuration file, as the declaration names it. */
 export type SettingsFile = string & { readonly [settingsFileBrand]: true };
 
 /** A top-level key of one of those files. */
 export type SettingKey = string & { readonly [settingKeyBrand]: true };
 
-/** `config/<name>.<yml|json>` -- nothing outside that directory, and no
- *  path traversal, because the string reaches the Contents API as a path. */
-const SETTINGS_FILE_SRC = 'config/[A-Za-z0-9][A-Za-z0-9._-]*\\.(?:yml|json)';
+/** `<config|instance>/<name>.<yml|json>` -- nothing outside the two
+ *  directories `CONFIG_DIRS` names, and no path traversal, because the
+ *  string reaches the Contents API as a path. Built from that list rather
+ *  than typed, so a directory added there does not leave this pattern
+ *  refusing a file the screen has just read. */
+const SETTINGS_FILE_SRC = `(?:${CONFIG_DIRS.join('|')})/[A-Za-z0-9][A-Za-z0-9._-]*\\.(?:yml|json)`;
 
 /** A YAML key as these files spell one: lower case, words joined by
  *  underscores. Narrow on purpose -- it is interpolated into the pattern
@@ -366,8 +370,8 @@ const SETTING_KEY_SRC = '[a-z][a-z0-9_]*';
 export function settingsFile(value: string): SettingsFile {
   if (!new RegExp(`^${SETTINGS_FILE_SRC}$`).test(value)) {
     throw new DecisionRejected(
-      `"${value}" is not a file in config/. This screen settles the declarations ` +
-        'in that directory and nothing else.',
+      `"${value}" is not a configuration file. This screen settles the ` +
+        `declarations in ${CONFIG_DIRS.join('/ and ')}/ and nothing else.`,
     );
   }
   return value as SettingsFile;

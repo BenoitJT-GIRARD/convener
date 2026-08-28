@@ -68,7 +68,7 @@ PUBLICATION_CONSENTS = frozenset({"", "granted", "refused", "pending"})
 #: line on the read side.
 SPEAKER_TEXT_V4 = ("photo_url", "bio", "linkedin", "seed_questions")
 #: The post-event survey's per-event switch --
-#: a field on the speaker record, not `data/config.yml`, for the same
+#: a field on the speaker record, not `instance/data/config.yml`, for the same
 #: "per-event fact beside the event's other per-event facts" reasoning
 #: `app/src/data/types.ts::Speaker.survey_enabled`'s own doc comment gives.
 #: Checked with `in` and `isinstance(..., bool)`, the same "absent is a
@@ -133,10 +133,10 @@ CONFIG_REQUIRED = frozenset(
 #: whether they are still the right seven cannot be confirmed without asking
 #: the collaborators, which this project never does. So nothing here counts
 #: them, and nothing here names one - a channel added, renamed or dropped in
-#: `data/config.yml` passes this validator unchanged, which is the whole
+#: `instance/data/config.yml` passes this validator unchanged, which is the whole
 #: point of the list being data.
 CHANNEL_KEYS = frozenset({"key", "label"})
-#: A channel `key` becomes a checklist key inside `data/speakers.yml`, read
+#: A channel `key` becomes a checklist key inside `instance/data/speakers.yml`, read
 #: back by both languages and skimmed in hand-reviewed diffs. Spaces and
 #: capitals would survive the round-trip and read as a different key to a
 #: person. The `label`, which nothing stores, carries whatever wording the
@@ -446,9 +446,9 @@ def validate_speakers(
     *,
     editions: EditionPrefix,
 ) -> list[str]:
-    """Every error `data/speakers.yml` holds, as plain sentences.
+    """Every error `instance/data/speakers.yml` holds, as plain sentences.
 
-    `editions` is the prefix `config/instance.json` declares and has no
+    `editions` is the prefix `instance/config.json` declares and has no
     default, deliberately. A default would be this instance's own value
     living on in the product's validator under a different name -- the
     defect that gave this parameter its reason to exist -- and it would be
@@ -659,15 +659,15 @@ def validate_speakers(
     # record above has already been reported as a shape error, which is
     # true and is not the point: a whole file numbered under one other
     # prefix is not eight typing mistakes, it is somebody having changed
-    # `config/instance.json` after this instance had already published
+    # `instance/config.json` after this instance had already published
     # editions -- and the reason that is refused is not the shape.
     for prefix, count in sorted(renamed.items()):
         errors.append(
             f"speakers.yml: {count} edition_code(s) are numbered {prefix}- "
-            f"while config/instance.json declares edition_prefix "
+            f"while instance/config.json declares edition_prefix "
             f"{editions.value!r}. An edition code is in a published address "
             f"(/events/{prefix.lower()}-1/), on every certificate issued for "
-            f"that event and in keys/events/{prefix.lower()}-1.pub, so an "
+            f"that event and in instance/keys/events/{prefix.lower()}-1.pub, so an "
             "edition already assigned is never renumbered: put the "
             "declaration back, or leave the editions alone"
         )

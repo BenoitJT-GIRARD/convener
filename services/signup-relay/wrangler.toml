@@ -7,7 +7,7 @@ compatibility_date = "2026-01-01"
 # and neither is written down here any more.
 #
 # The repository this worker reads keys from, writes queue entries to and
-# dispatches into is the one `config/instance.json` declares under
+# dispatches into is the one `instance/config.json` declares under
 # `identity.repository`. It used to be `REPO` in `src/index.js`, a literal
 # every GitHub address in that file was built off, because a Worker
 # deploys from this package and can read nothing else. It was a copy in
@@ -29,7 +29,7 @@ compatibility_date = "2026-01-01"
 # Origin carries no path, so the app being served from a subpath of this
 # host does not change it, and it is not a secret: it ships in every CORS
 # response header already. What it is, is the one address
-# `config/instance.json` declares this project is published at, spelled a
+# `instance/config.json` declares this project is published at, spelled a
 # second time in a file the product owns. A Worker deploys from this file
 # and can read nothing else, so the copy looked unavoidable; what actually
 # followed from it was a published product carrying the example instance's
@@ -50,9 +50,9 @@ compatibility_date = "2026-01-01"
 # carried a build-to-live latency the relay had no reason to inherit on
 # top of the handler's, and was a hardcoded cross-origin literal nothing
 # derived. `surveyEnabled` in src/index.js now reads
-# `public-data/survey-status.json` through the same GitHub Contents API
+# `instance/public-data/survey-status.json` through the same GitHub Contents API
 # credential (CONVENER_DISPATCH_TOKEN, below) this worker already spends one
-# read of for `keys/events/<id>.pub` -- one more read on an already
+# read of for `instance/keys/events/<id>.pub` -- one more read on an already
 # ceiling-capped route, in exchange for an answer that agrees with the
 # handler's by construction rather than by build timing. Nothing is
 # declared here for it either: the repository (`REPOSITORY`, the

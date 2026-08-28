@@ -4,16 +4,16 @@
  * file under the identical event id -- can fetch an event's published
  * public half from the same origin the app itself is served from -- the same
  * reasoning `copy-handbook.mjs` gives for `docs/`, applied to a directory
- * that is public for a different reason: nothing under `keys/events/*.pub`
+ * that is public for a different reason: nothing under `instance/keys/events/*.pub`
  * is a secret (see `tools/convener_ops/eventkeys.py`'s module docstring), only
  * `.pub` files exist here at all -- the private half never touches disk
  * outside a CI job, and `.gitignore` refuses everything under
- * `keys/events/` except `*.pub` by construction.
+ * `instance/keys/events/` except `*.pub` by construction.
  *
  * Runs before `vite dev` and `vite build`, alongside copy-handbook.mjs.
  *
  * No event may have been created yet, and that is a normal state, not an
- * error: an absent `keys/events/` directory produces an empty destination
+ * error: an absent `instance/keys/events/` directory produces an empty destination
  * rather than failing the build. A registration page whose event id has no
  * published key then gets a 404 fetching it -- which is exactly the
  * "public key cannot be fetched" case `SignupForm` refuses to send through,

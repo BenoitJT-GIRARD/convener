@@ -22,7 +22,7 @@ against accessibility.**
 
 ## Decision
 
-A single file, `data/brand.json`, holds the visual identity, and **every
+A single file, `instance/data/brand.json`, holds the visual identity, and **every
 implementation reads it** — the showcase's stylesheet, the visual generator,
 the application's own design tokens. Its values are extracted from the
 organisation's **original** design files — the original presentation for
@@ -44,7 +44,7 @@ is declared as a variant and measured, not simply arrived at by accident.
 ## Amended — the one file is the *instance's*, and the product ships a default
 
 Separating the instance from the code changed which file this decision is
-about, and nothing else about it. `data/brand.json` still holds this series'
+about, and nothing else about it. `instance/data/brand.json` still holds this series'
 own values, unchanged, and every implementation still reads it. What is new is
 that the file is now **optional**: it belongs to the instance, and a duplicate
 that has not chosen colours yet has none. `tools/convener_ops/brand.py` is the one

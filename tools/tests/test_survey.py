@@ -449,7 +449,7 @@ def test_add_response_writes_entries_that_are_exactly_ciphertext() -> None:
 def test_add_response_re_encrypts_under_derived_key_not_a_stale_published_one() -> None:
     """Mirrors `registration.py::upsert`'s own reasoning: there is no
     `public_pem` parameter, so a caller cannot accidentally re-encrypt
-    under a stale or mismatched `keys/events/<id>.pub`."""
+    under a stale or mismatched `instance/keys/events/<id>.pub`."""
     private_pem, public_pem = eventkeys.generate()
     other_private, _ = eventkeys.generate()
     response = SurveyResponse(overall_rating=3, recommend=False, feedback="")

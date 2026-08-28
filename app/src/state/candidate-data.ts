@@ -12,7 +12,7 @@ import type { Speaker } from '../data/types';
  * and is never published either. Neither set is derived from the other.
  *
  * This axis exists for one reader: a security review's finding that
- * `docs/governance/traitement-donnees.md` described `data/speakers.yml` as
+ * `docs/governance/traitement-donnees.md` described `instance/data/speakers.yml` as
  * holding "speakers' own names and institutional email addresses" when the
  * schema carries a good deal more, and its own fix
  * (`docs/governance/candidate-data-protection.md`) states plainly what the

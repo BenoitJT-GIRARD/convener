@@ -37,7 +37,7 @@ function base64ByteLength(b64: string): number {
 }
 
 /** PEM-wraps DER at the conventional 64-column width, so tests exercise the
- *  same multi-line shape `keys/events/<id>.pub` actually has -- a single
+ *  same multi-line shape `instance/keys/events/<id>.pub` actually has -- a single
  *  unwrapped base64 line would not catch a `pemToDer` that only strips the
  *  header and footer of a real, wrapped key. */
 function toPem(der: ArrayBuffer, label: string): string {

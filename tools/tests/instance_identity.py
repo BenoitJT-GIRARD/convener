@@ -3,7 +3,7 @@
 Two facts live here because two modules need exactly the same ones and a
 second copy of either would be the defect this whole phase exists to end:
 
-1. **The needles** -- every writable form of what `config/instance.json`
+1. **The needles** -- every writable form of what `instance/config.json`
    and the charter in force declare. They are **not written here any
    more**: they have a second reader outside the suite
    (`convener_ops.derivation_guard`, which asks the same question of every
@@ -117,7 +117,7 @@ DEFERRED: Final = (
         owner="the example instance",
         reason=(
             "The showcase's committed build fixture: a copy of "
-            "`public-data/events-public.json`, refreshed by "
+            "`instance/public-data/events-public.json`, refreshed by "
             "`publish-vitrine.yml` before every real build. It carries "
             "this instance's identity and not only its programme, which "
             "is why the entry is load-bearing rather than a courtesy: "
@@ -127,7 +127,7 @@ DEFERRED: Final = (
             "this file and that needle. What it reaches is nothing "
             "*built*, which is the separate claim `carried_into` makes: a "
             "second instance's build regenerates it from that instance's "
-            "own `data/speakers.yml` before Eleventy ever reads it. "
+            "own `instance/data/speakers.yml` before Eleventy ever reads it. "
             "Two corrections live in this sentence, both of the same "
             'shape. It once said "no needle here matches '
             'it", which was false the day it was written. It then said '
@@ -152,7 +152,7 @@ DEFERRED: Final = (
             "repository, which is why this entry was reread. "
             "Eight of its entries were parts of people's names, and "
             "not one of them was reachable from anything cspell actually "
-            "lints -- `cspell.json` ignores `data/speakers.yml` outright "
+            "lints -- `cspell.json` ignores `instance/data/speakers.yml` outright "
             "and lints no `.json` at all -- so they came out and the run "
             "stayed green. Dead weight that happened to be somebody's "
             "name is the worst kind to leave in a shipped file. Two "
@@ -248,7 +248,7 @@ def claimed_by_any(relative: str) -> bool:
 #: `convener_ops.derivation` lays `instances/example/` into every path
 #: the boundary hands to the instance, because a product repository with
 #: those paths merely deleted neither starts its own suite nor builds --
-#: `paths.repo_root` finds a repository by `data/config.yml` and the
+#: `paths.repo_root` finds a repository by `instance/data/config.yml` and the
 #: product's default charter has no `motif`. The consequence is exact and
 #: not a compromise: **in the derived repository the instance and the
 #: example are the same instance**, so every needle agrees with itself,

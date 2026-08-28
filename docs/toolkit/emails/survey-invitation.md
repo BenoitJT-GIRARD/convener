@@ -79,7 +79,7 @@ Best regards,
   days, so it is not built. A single in-place retry inside the same run
   (needing no identifier at all) already removes most transient failures.
   By default, once an event has already been invited once
-  (`data/survey-invitations.yml`), a second dispatch of this workflow
+  (`instance/data/survey-invitations.yml`), a second dispatch of this workflow
   sends nothing further; ticking that workflow's own `resend_all` input is
   the recovery for what the in-run retry could not fix, and it re-sends to
   everyone the first run already reached too — a harmless duplicate, since

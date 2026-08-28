@@ -7,14 +7,14 @@
  * personal accounts on it, a research-network mailing list, institute
  * newsletters and internal messaging, a second newsletter, and printed
  * posters in the institutes. Which seven they are by name is the
- * instance's own answer, in `data/config.yml`'s `channels` -- naming them
+ * instance's own answer, in `instance/data/config.yml`'s `channels` -- naming them
  * here would be a copy of that list, in a comment nothing checks.
  *
  * **They are configuration, not a constant.** Whether those are still the
  * right seven cannot be confirmed without asking the collaborators, and
  * nothing in this project may depend on a collaborator's goodwill or
  * availability. So rather than freeze a list nobody here can verify, the list
- * became data: it lives in `data/config.yml`, and a channel is added,
+ * became data: it lives in `instance/data/config.yml`, and a channel is added,
  * renamed or dropped without a line of TypeScript changing. The question
  * stops needing an answer.
  *
@@ -37,7 +37,7 @@
  * would show a volunteer a promotion phase with no lines in it and no
  * indication that the file, not the plan, is what is missing.
  *
- * Pure: no clock, no state, no reading of `data/` beyond the config handed in.
+ * Pure: no clock, no state, no reading of `instance/data/` beyond the config handed in.
  */
 import { DataShapeError } from '../data/validate';
 import { configFile } from '../paths';

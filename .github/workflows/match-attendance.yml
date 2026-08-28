@@ -98,7 +98,7 @@ jobs:
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           # Absent is ordinary D-13 too: platform_from_env falls back to
           # ManualPlatform, reading
-          # data/events/<id>/attendance-import.csv.
+          # instance/data/events/<id>/attendance-import.csv.
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
         run: uv run convener-match-attendance

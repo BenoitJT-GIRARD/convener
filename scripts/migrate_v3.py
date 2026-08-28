@@ -1,4 +1,4 @@
-"""One-shot migration of `data/` from schema v2 to schema v3 (governance).
+"""One-shot migration of `instance/data/` from schema v2 to schema v3 (governance).
 
 What it does:
 
@@ -237,7 +237,7 @@ def diff(before: str, after: str, name: str) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Migrate data/ to schema v3.")
+    parser = argparse.ArgumentParser(description="Migrate instance/data/ to schema v3.")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -246,8 +246,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = repo_root()
-    speakers_path = root / "data" / "speakers.yml"
-    config_path = root / "data" / "config.yml"
+    speakers_path = root / "instance" / "data" / "speakers.yml"
+    config_path = root / "instance" / "data" / "config.yml"
 
     speakers_before = speakers_path.read_text(encoding="utf-8")
     config_before = config_path.read_text(encoding="utf-8")
@@ -268,7 +268,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             continue
         changed = True
         if args.dry_run:
-            print(_ascii(diff(before, after, f"data/{path.name}")), end="")
+            print(_ascii(diff(before, after, f"instance/data/{path.name}")), end="")
         else:
             path.write_text(after, encoding="utf-8", newline="")
             print(f"{path.name}: migrated")

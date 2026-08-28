@@ -11,13 +11,13 @@
  *
  * The sharp case, and the reason this screen exists at all
  * -------------------------------------------------------
- * `config/queue-drain.yml`'s `alarm_after_hours` is bounded on **both**
+ * `instance/queue-drain.yml`'s `alarm_after_hours` is bounded on **both**
  * sides by other declarations. Its floor is twice the drain's period,
  * because `sweep-and-notify.yml`'s own header records that GitHub's
  * scheduled runs "are routinely ten to twenty minutes late and are dropped
  * outright under load" -- an alarm that fires before a healthy drain has
  * had its chance is one people learn to ignore. Its ceiling is
- * `config/registration-lanes.yml`'s `queue_beyond_hours` minus those same
+ * `instance/registration-lanes.yml`'s `queue_beyond_hours` minus those same
  * two periods, because one period is spent before the clock starts (the age
  * is measured from the first drain that *observed* the entry) and one has
  * to be left after the alarm, or the board hears about a registration as
@@ -56,9 +56,9 @@ export const MISSED_DRAINS_COVERED = 2;
 /** The drain whose cadence every floor below is derived from. */
 export const DRAIN_WORKFLOW = '.github/workflows/sweep-and-notify.yml';
 
-export const QUEUE_DRAIN_FILE = 'config/queue-drain.yml';
-export const REGISTRATION_LANES_FILE = 'config/registration-lanes.yml';
-export const ACTIONS_BUDGET_FILE = 'config/actions-budget.yml';
+export const QUEUE_DRAIN_FILE = 'instance/queue-drain.yml';
+export const REGISTRATION_LANES_FILE = 'instance/registration-lanes.yml';
+export const ACTIONS_BUDGET_FILE = 'instance/actions-budget.yml';
 
 const HOURS_PER_DAY = 24;
 
@@ -168,7 +168,7 @@ export function laneFloorHours(periodHours: number): number {
   return periodHours * MISSED_DRAINS_COVERED;
 }
 
-/** The lowest `config/queue-drain.yml::max_silent_days` may be, in whole
+/** The lowest `instance/queue-drain.yml::max_silent_days` may be, in whole
  *  days: the same two drain periods, rounded **up** so a drain running more
  *  often than daily never lowers it below a day. Mirrors
  *  `queue_watch.silence_floor_days`. */
@@ -185,9 +185,9 @@ export interface Coupling {
   periodHours: number;
   /** The cron it was derived from, for a message that can be checked. */
   cron: string;
-  /** `config/registration-lanes.yml`'s current `queue_beyond_hours`. */
+  /** `instance/registration-lanes.yml`'s current `queue_beyond_hours`. */
   queueBeyondHours: number;
-  /** `config/queue-drain.yml`'s current `alarm_after_hours`. */
+  /** `instance/queue-drain.yml`'s current `alarm_after_hours`. */
   alarmAfterHours: number;
 }
 

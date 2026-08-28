@@ -8,7 +8,7 @@ export declare function published(): {
   appBase: string;
 };
 
-/** Who runs this series -- `config/instance.json`'s own `identity`, plus
+/** Who runs this series -- `instance/config.json`'s own `identity`, plus
  *  the one derived name both sides compose (`forum_host`). A record rather
  *  than a named shape: `src/instance.ts` declares the vocabulary for the
  *  browser side, and a second declaration of it here would be the copy the
@@ -27,7 +27,7 @@ export declare function editionPrefix(): string;
 export declare function isEditionPrefix(value: unknown): boolean;
 
 /** Which of this instance's declared values are still the ones the product
- *  ships in `instances/example/config/instance.json` -- empty for an
+ *  ships in `instances/example/instance/config.json` -- empty for an
  *  instance somebody has configured, and the names of the offending keys
  *  for one nobody has. Sorted, so a bundle's own define is stable between
  *  builds. */

@@ -14,7 +14,7 @@
  * `src/data/demo.ts` already shows, the one
  * `tools/tests/test_second_instance.py` lays into this repository's own
  * holes on every run. Its four `config/` files are in
- * `instances/example/config/`; the two product files are this
+ * `instances/example/instance/`; the two product files are this
  * repository's own, because they are the product's and a duplicate does not
  * have its own copy of them.
  *
@@ -59,10 +59,10 @@ const PRODUCT_FILES = ['config/boundary.yml', 'config/integrations.yml'];
  *  describes -- `instances/example/` is where this build finds them, not
  *  what they are. */
 const INSTANCE_FILES = [
-  'config/actions-budget.yml',
-  'config/instance.json',
-  'config/queue-drain.yml',
-  'config/registration-lanes.yml',
+  'instance/actions-budget.yml',
+  'instance/config.json',
+  'instance/queue-drain.yml',
+  'instance/registration-lanes.yml',
 ];
 
 const DRAIN_WORKFLOW = '.github/workflows/sweep-and-notify.yml';

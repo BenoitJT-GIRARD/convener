@@ -5,7 +5,7 @@ compatibility_date = "2026-01-01"
 # There is no `[vars]` table here, and the absence is the decision.
 #
 # This worker answers CORS preflights for exactly one origin: the address
-# `config/instance.json` declares this project is published at. That value
+# `instance/config.json` declares this project is published at. That value
 # used to be written out below, because a Worker deploys from this file
 # and can read nothing else. It was checked -- and still a copy: a product
 # file carrying one instance's address, so the published product shipped

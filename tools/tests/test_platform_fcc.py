@@ -160,7 +160,7 @@ class FakeTransport:
 
 
 def _speaker(**overrides: Any) -> dict[str, Any]:
-    """A minimal loaded `data/speakers.yml` record -- only the fields
+    """A minimal loaded `instance/data/speakers.yml` record -- only the fields
     `PlatformFCC` reads, the same minimalism `test_platform.py::_speaker`
     uses for `ManualPlatform`."""
     base: dict[str, Any] = {

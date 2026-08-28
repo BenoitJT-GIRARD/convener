@@ -72,7 +72,7 @@ in `docs/reference/operations.md`.
 ## When something looks wrong
 
 The workspace reads and writes the files in this repository and nothing else.
-So a number that looks wrong on a screen is a number in `data/speakers.yml`,
+So a number that looks wrong on a screen is a number in `instance/data/speakers.yml`,
 and it can be corrected in either place. If a screen refuses something and does
 not say why, that is a defect worth reporting rather than a rule you have not
 understood: every refusal here is meant to name its reason.

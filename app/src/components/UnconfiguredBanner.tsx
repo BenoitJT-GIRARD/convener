@@ -9,7 +9,7 @@
  *
  * `unconfiguredFields()` (src/instance.ts, from the define
  * `vite.config.ts` fills from `scripts/published.mjs::unconfigured`) is
- * the list of values this bundle's `config/instance.json` still shares
+ * the list of values this bundle's `instance/config.json` still shares
  * with the example declaration the product ships. Empty for a configured
  * instance, so this renders nothing at all on one -- no reserved strip of
  * screen, no markup. The whole rule, and why the `REPLACE` marker is
@@ -42,7 +42,7 @@ export function UnconfiguredBanner() {
           This deployment still declares the identity the software ships as its
           worked example, so nothing here names a real organisation, a real
           address or a real contact. Fill in{' '}
-          <code className="font-mono text-xs">config/instance.json</code> — still
+          <code className="font-mono text-xs">instance/config.json</code> — still
           the example&rsquo;s:{' '}
           <code className="font-mono text-xs break-words">{fields.join(', ')}</code>.
         </p>

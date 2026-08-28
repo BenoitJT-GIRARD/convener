@@ -140,7 +140,7 @@ export function assignLead(speakers: Speaker[], config: Config, on: string): str
 export const NOMINATION_WINDOW_DAYS = 7;
 
 /** Webinars a candidate must have actually co-hosted to be nominated,
- *  counted from `data/speakers.yml` by `coHostedCount` -- never declared in
+ *  counted from `instance/data/speakers.yml` by `coHostedCount` -- never declared in
  *  the config, never inferred from board membership. */
 export const NOMINATION_MIN_CO_HOSTED = 2;
 

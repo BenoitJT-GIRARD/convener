@@ -266,7 +266,7 @@ describe('the AcceptedDate brand', () => {
 
   it('is a plain string once the compiler is out of the way', () => {
     // Nothing is added at run time: the brand is a compile-time device, so
-    // a locked date serialises to `data/speakers.yml` as the string it is.
+    // a locked date serialises to `instance/data/speakers.yml` as the string it is.
     const s = withCandidates([{ date: '2026-10-01', time: '18:00', answer: 'accepted' }]);
     expect(typeof acceptedDates(s)[0]).toBe('string');
     expect(JSON.stringify(acceptedDates(s))).toBe('["2026-10-01"]');
@@ -277,7 +277,7 @@ describe('the AcceptedDate brand', () => {
  * What a slot *is*, stated once for both languages.
  *
  * The day identifies a slot; the hour is part of the offer, not part of its
- * name. The two readers of `data/speakers.yml` disagreed about that --
+ * name. The two readers of `instance/data/speakers.yml` disagreed about that --
  * `tools/convener_ops/validate.py` de-duplicated on (date, time) while this
  * module keys on the date -- so a file holding two hours on one day passed
  * validation and then had one recorded reply written against both, with

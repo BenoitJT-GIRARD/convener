@@ -11,7 +11,7 @@ name: Accessibility
 # every page axe-core (Deque's rule engine, MIT-licensed, no account, no
 # third-party call at run time) can reach in a real, JavaScript-executing
 # browser. D-26: checked at the address and in the topology it will
-# actually be served at (`config/instance.json`'s own published path
+# actually be served at (`instance/config.json`'s own published path
 # prefix, read by the checker itself), never a bare `localhost` root
 # -- see `site/scripts/check-a11y.mjs`'s own module comment for the full
 # reasoning, including why the two islands are covered here at all
@@ -20,7 +20,7 @@ name: Accessibility
 # This workflow was unfiltered once, and paid
 # a full site+app build and a real Chrome-driven axe-core
 # sweep on every push and every pull request, including one touching only
-# `docs/`, `data/`, or an unrelated relay -- none of which this check can
+# `docs/`, `instance/data/`, or an unrelated relay -- none of which this check can
 # possibly have anything to say about. Path-filtered now, the same
 # deliberate, path-by-path discipline `visuals.yml`'s own header comment
 # already applies (D-25: a filter that silently omits a path means a real
@@ -40,7 +40,7 @@ name: Accessibility
 #   `uv run --project tools` resolves and installs.
 # - `.github/workflows/a11y.yml` -- this file.
 #
-# Deliberately absent: `data/speakers.yml` and every other real,
+# Deliberately absent: `instance/data/speakers.yml` and every other real,
 # per-edition data file -- this check builds from `site/src/_data/
 # events.json`, a committed fixture (site/README.md), and never reads real
 # event data at all, the same reasoning `quality.yml`'s own `site` job
@@ -53,7 +53,7 @@ on:
       # Both builds resolve their published
       # address from here, and D-26 is about checking at the address
       # a build is actually served under.
-      - 'config/instance.json'
+      - 'instance/config.json'
       - 'app/**'
       - 'tools/convener_ops/**'
       - 'tools/pyproject.toml'
@@ -72,7 +72,7 @@ on:
       # Both builds resolve their published
       # address from here, and D-26 is about checking at the address
       # a build is actually served under.
-      - 'config/instance.json'
+      - 'instance/config.json'
       - 'app/**'
       - 'tools/convener_ops/**'
       - 'tools/pyproject.toml'

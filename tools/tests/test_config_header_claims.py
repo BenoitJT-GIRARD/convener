@@ -1,7 +1,7 @@
 """Every figure a `config/` header works out, against the declarations it
 works it out from.
 
-`config/queue-drain.yml` and `config/registration-lanes.yml` bound each
+`instance/queue-drain.yml` and `instance/registration-lanes.yml` bound each
 other. The alarm's floor is twice the drain's own cron period; its ceiling
 is the lane threshold next door minus that same margin; and the lane
 threshold's own floor is the margin again. Both headers say so at length,
@@ -22,7 +22,7 @@ page is the product's, shipped filled in, and every duplicate serves it to
 its own volunteers: the page states the window and the test says which
 window. These two files are the *instance's* -- `owner: instance` in their
 own headers -- and the copies a fresh duplicate starts from are
-`instances/example/config/`'s, whose headers are five lines and work
+`instances/example/instance/`'s, whose headers are five lines and work
 nothing out. Requiring the sentences would therefore fail on a duplicate
 that had done nothing wrong. So a header that states a figure is held to
 it, and a header that states none is held to nothing; what stops that
@@ -31,7 +31,7 @@ being a check nobody can fail is
 reader over a header whose every figure is wrong.
 
 **What is deliberately not read.** *Twelve hours* in
-`config/registration-lanes.yml` -- an invented value in a sentence about
+`instance/registration-lanes.yml` -- an invented value in a sentence about
 somebody shortening the threshold, derived from nothing. *Two drain
 periods*, in both files -- a count of drains
 (`registration_routing.MISSED_DRAINS_COVERED`), not a figure the
@@ -351,7 +351,7 @@ def test_a_header_stating_a_stale_figure_is_reported() -> None:
 def test_a_header_that_works_nothing_out_is_held_to_nothing() -> None:
     """The example instance's own headers, which is what a fresh duplicate
     starts from: five lines, no arithmetic, nothing to be stale."""
-    example = ROOT / "instances" / "example" / "config"
+    example = ROOT / "instances" / "example" / "instance"
     prose = {
         QUEUE_DRAIN: header_prose(
             (example / QUEUE_DRAIN.name).read_text(encoding="utf-8")

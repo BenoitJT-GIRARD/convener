@@ -13,8 +13,8 @@
     "site/node_modules/**",
     "site/_site/**",
     "site/src/fonts/**",
-    "public-data/**",
-    "data/speakers.yml",
+    "instance/public-data/**",
+    "instance/data/speakers.yml",
     "tools/**"
   ],
   "files": [

@@ -149,23 +149,23 @@ a duration, full stop; whether a fact becomes a certificate is a later
 module's decision, deliberately.
 
 The threshold itself is `EligibilityThreshold`: `seminar_duration_minutes`
-(`data/config.yml`, already required for every other reason this project
+(`instance/data/config.yml`, already required for every other reason this project
 reads "the session's own length") and `share`, the configurable
 fraction -- configuration, not a constant, because the real number will
 have to line up with accreditation requirements nobody knows yet.
-`eligibility_share` is required in `data/config.yml` (a
+`eligibility_share` is required in `instance/data/config.yml` (a
 threshold that only ever lived as a Python default would have been a
 constant with extra steps, and alignment with an accreditation body's
 requirement has to happen by editing that file, not this one).
 `validate.py::validate_config` refuses a value outside ``]0, 1]`` at
 write time, the same way it already refuses a malformed `sla_days` entry,
-naming the key. `data/config.yml` itself carries `0.6666666666666666`,
+naming the key. `instance/data/config.yml` itself carries `0.6666666666666666`,
 not the mathematically exact two thirds -- a `float` cannot hold that
 exactly, and this project chose to round *down* rather than up: a
 duration of exactly two thirds of the session must read as eligible, and
 rounding up would have refused exactly that person over a rounding
 artefact nobody typing `0.6667` into a file could see or contest. See
-`data/config.yml`'s own comment beside the key, and
+`instance/data/config.yml`'s own comment beside the key, and
 `DEFAULT_ELIGIBILITY_SHARE`'s, for the fuller reasoning and the fallback
 this constant is for once the key stopped being optional.
 
@@ -562,13 +562,13 @@ def match(
     )
 
 
-#: `data/config.yml` carries `eligibility_share: 0.6666666666666666` for
+#: `instance/data/config.yml` carries `eligibility_share: 0.6666666666666666` for
 #: real -- the reasoning for that exact sixteen-digit
 #: literal lives beside the key itself, in the file, and is not repeated
 #: here. This constant matches it digit for digit on purpose: it is
 #: reached only when a caller builds an `EligibilityThreshold` from a
 #: config that skips the now-required key entirely -- a hand-built dict in
-#: a test, or a fixture predating this key -- never by `data/config.yml`
+#: a test, or a fixture predating this key -- never by `instance/data/config.yml`
 #: itself, which `validate.py::CONFIG_REQUIRED` refuses to load without
 #: it. A fallback using the mathematically exact `Fraction(2, 3)` instead
 #: would be quietly *stricter* than production (see the module docstring's
@@ -584,7 +584,7 @@ DEFAULT_ELIGIBILITY_SHARE: Final = 0.6666666666666666
 class EligibilityThreshold:
     """The two facts `eligible` needs about the event that live on neither
     `MatchedAttendee` nor `Registration`: how long the session itself was
-    scheduled to run (`seminar_duration_minutes`, minutes, `data/config.yml`
+    scheduled to run (`seminar_duration_minutes`, minutes, `instance/data/config.yml`
     -- the same setting `sweep.py`'s auto-deliver cutoff already reads, so
     building this never re-derives what "the session's own length" means)
     and what share of it counts (`share`, the configurable fraction
@@ -592,7 +592,7 @@ class EligibilityThreshold:
     here, this module is pure like every `convener_ops` module but `cli.py`).
 
     `share` is a plain `float`, matching what YAML gives back for
-    `data/config.yml`'s own `eligibility_share`. An earlier version of this
+    `instance/data/config.yml`'s own `eligibility_share`. An earlier version of this
     dataclass accepted `Fraction | float` so the *default* could stay
     mathematically exact; that was dropped once the key became
     required -- see `DEFAULT_ELIGIBILITY_SHARE`'s own comment for why an
@@ -618,7 +618,7 @@ class EligibilityThreshold:
 
     @classmethod
     def from_config(cls, cfg: Mapping[str, Any]) -> EligibilityThreshold:
-        """Build the threshold from an already-loaded `data/config.yml`.
+        """Build the threshold from an already-loaded `instance/data/config.yml`.
 
         Both fields are required (`validate.py::CONFIG_REQUIRED`);
         `seminar_duration_minutes` is read directly, and `eligibility_share`
@@ -628,7 +628,7 @@ class EligibilityThreshold:
         it trusts every other already-validated fact it is handed.
         `DEFAULT_ELIGIBILITY_SHARE` is kept as `.get`'s fallback anyway, for
         a caller building a threshold from a hand-built config that
-        predates or skips the key -- `data/config.yml` itself is never
+        predates or skips the key -- `instance/data/config.yml` itself is never
         that caller, once `validate_config` refuses to load a file missing
         it."""
         return cls(

@@ -11,14 +11,14 @@ import type { Speaker, Config } from './types';
  * difference in the file, and every alternating write would rewrite lines
  * neither side meant to touch. `noArrayIndent` is the one that mattered:
  * PyYAML puts a block sequence at its parent key's indentation, js-yaml
- * indented it by two, and `data/speakers.yml` on disk is in PyYAML's shape.
+ * indented it by two, and `instance/data/speakers.yml` on disk is in PyYAML's shape.
  * `tools/tests/fixtures/speakers-from-app.yml` pins the agreement byte for
  * byte, from both sides.
  */
 const DUMP = { lineWidth: 1000, noRefs: true, sortKeys: false, noArrayIndent: true };
 
 /**
- * Read `data/speakers.yml`.
+ * Read `instance/data/speakers.yml`.
  *
  * Every field is checked against the model on the way in (`./validate.ts`);
  * a file that does not match stops the read with a `DataShapeError` naming
@@ -34,7 +34,7 @@ export function serializeSpeakers(items: Speaker[]): string {
 }
 
 /**
- * Read `data/config.yml`.
+ * Read `instance/data/config.yml`.
  *
  * Throws rather than returning `null` for a file it cannot read: the caller
  * used to substitute a constant default, which meant a malformed config

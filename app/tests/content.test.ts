@@ -141,7 +141,7 @@ describe('substitute v2 context', () => {
 // rather than trusting two lower-casing implementations to agree.
 describe('speaker.signup_link matches the shared D-14 fixture', () => {
   // The fixture states paths, not addresses. The root
-  // comes from `config/instance.json`, which `vite.config.ts` substitutes
+  // comes from `instance/config.json`, which `vite.config.ts` substitutes
   // into this bundle (and into this test run, which reads the same
   // configuration) as `import.meta.env.VITE_PUBLISHED_URL` -- Python reads
   // the same declaration through `convener_ops.published`. Asserting the define

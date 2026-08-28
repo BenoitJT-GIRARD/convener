@@ -1,6 +1,6 @@
 /**
  * The one address this project is published at, read from
- * `config/instance.json` -- this build's side of it.
+ * `instance/config.json` -- this build's side of it.
  *
  * `tools/convener_ops/published.py` is Python's reader of the same file and
  * `site/scripts/published.cjs` the showcase's. Three readers of one
@@ -27,12 +27,12 @@
 
 import { readFileSync } from 'node:fs';
 
-/** `config/instance.json`, from this file's own location -- the app's
+/** `instance/config.json`, from this file's own location -- the app's
  *  build runs with `app/` as its working directory, so a path relative
  *  to the process is not the same thing. */
-const DECLARATION = new URL('../../config/instance.json', import.meta.url);
+const DECLARATION = new URL('../../instance/config.json', import.meta.url);
 
-const NAMED = 'config/instance.json';
+const NAMED = 'instance/config.json';
 
 /**
  * The published address and the parts of the build that need it.
@@ -235,10 +235,10 @@ export function editionPrefix() {
  * the sign-in screen a visitor lands on and above the cockpit itself.
  */
 const EXAMPLE_DECLARATION = new URL(
-  '../../instances/example/config/instance.json',
+  '../../instances/example/instance/config.json',
   import.meta.url
 );
-const EXAMPLE_NAMED = 'instances/example/config/instance.json';
+const EXAMPLE_NAMED = 'instances/example/instance/config.json';
 
 /** The eleven values a declaration carries about *who* is publishing,
  *  under the declaration's own names. Raw, deliberately: the question is

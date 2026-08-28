@@ -37,7 +37,7 @@ public account.
 <owner>.github.io/<repository>/verify/         certificate verification
 ```
 
-The two halves come from `config/instance.json`'s `published_url` and are
+The two halves come from `instance/config.json`'s `published_url` and are
 written down nowhere else — including the repository this build pushes
 into, which is derived from that same address
 (`published.Published.publish_repository`) rather than named beside it.

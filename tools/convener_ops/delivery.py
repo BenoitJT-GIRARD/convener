@@ -124,12 +124,12 @@ fix, in the same place in that module's own `_SmtpTransport.send`.
 **That replayability is not unconditional forever, and this module does
 not claim it is.** `certificate.issue` needs the event's own decrypted
 registrations to find the attendee's fingerprint and address at all --
-`data/events/<id>/registrations.enc`, together with the event's own
+`instance/data/events/<id>/registrations.enc`, together with the event's own
 private key. The retention sweep destroys that private key, and with
 it every registration it protects, 90 days after the event.
 After that, `certificate.issue` (and therefore this module) has no address
 left to resolve `CERTIFICATE_ID` against, or to build a fresh delivery
-for, at all -- `data/events/<id>/certificates.yml`, the certificate
+for, at all -- `instance/data/events/<id>/certificates.yml`, the certificate
 register, survives that destruction untouched (`certificate.py`'s own
 module docstring, "the register survives the data it was derived from"),
 so the certificate keeps verifying, forever, exactly as promised

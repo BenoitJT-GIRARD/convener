@@ -61,7 +61,7 @@ def test_speakers_fixture_survives_a_python_rewrite_byte_for_byte() -> None:
 
     A single field either side formats differently -- a quote, an
     indentation, a block scalar -- shows up here as a diff, before it shows
-    up in `data/speakers.yml` as a whole-file rewrite by whichever side
+    up in `instance/data/speakers.yml` as a whole-file rewrite by whichever side
     saved last.
     """
     assert dump_speakers(_speakers()) == _text(SPEAKERS_FIXTURE)

@@ -443,13 +443,15 @@ def test_agenda_internal_ics_is_declared_binary_in_gitattributes() -> None:
     endings to this repository's own blanket `eol=lf` rule -- see
     `agenda_internal`'s own docstring."""
     text = (_ROOT / ".gitattributes").read_text(encoding="utf-8")
-    assert "public-data/agenda-internal.ics" in text
+    assert "instance/public-data/agenda-internal.ics" in text
     line = next(
-        line for line in text.splitlines() if "public-data/agenda-internal.ics" in line
+        line
+        for line in text.splitlines()
+        if "instance/public-data/agenda-internal.ics" in line
     )
     assert "binary" in line
 
 
 def test_gitignore_carries_a_named_exception_for_the_internal_feed() -> None:
     text = (_ROOT / ".gitignore").read_text(encoding="utf-8")
-    assert "!public-data/agenda-internal.ics" in text
+    assert "!instance/public-data/agenda-internal.ics" in text

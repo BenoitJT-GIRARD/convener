@@ -6,7 +6,7 @@
  * `config/boundary.yml` hands to the instance, because a product
  * repository with those paths merely deleted neither starts its own
  * suite nor builds: several modules read an instance path while they
- * load, `paths.repo_root` finds a repository by `data/config.yml`, and
+ * load, `paths.repo_root` finds a repository by `instance/data/config.yml`, and
  * the product's default charter has no `motif`. The consequence is exact
  * and is not a compromise -- **in the derived repository the instance
  * and the example are the same instance**, so every declared value
@@ -41,8 +41,8 @@ function declaration(relative: string): unknown {
 /** True while this repository's declaration is still the example's. */
 export const ONE_INSTANCE: boolean =
   unconfiguredFrom(
-    declaration('config/instance.json'),
-    declaration('instances/example/config/instance.json'),
+    declaration('instance/config.json'),
+    declaration('instances/example/instance/config.json'),
   ).length > 0;
 
 /** Why a skipped test is skipped, in the words a reader needs. */

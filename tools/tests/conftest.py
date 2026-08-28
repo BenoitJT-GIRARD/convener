@@ -163,7 +163,7 @@ def nomination(**overrides: Any) -> dict[str, Any]:
 #: The edition prefix these doubles are numbered under, and the one
 #: `validate_speakers` is handed unless a test is about the prefix itself.
 #:
-#: Written here rather than read from `config/instance.json`, and the
+#: Written here rather than read from `instance/config.json`, and the
 #: difference matters: this suite tests the *validator*, so what it needs
 #: is a prefix, any prefix, held still. Reading the declaration would make
 #: every assertion below move the day the declaration moved, which is the
@@ -263,7 +263,7 @@ def config(**overrides: Any) -> dict[str, Any]:
             "summary_after_delivery": 5,
             "recording_after_delivery": 10,
         },
-        # Two, where `data/config.yml` lists seven: the channels are
+        # Two, where `instance/data/config.yml` lists seven: the channels are
         # configuration, and a double that restated the seven of today would
         # make every unrelated test depend on a list this repository leaves
         # editable. A test about the channels states its own.

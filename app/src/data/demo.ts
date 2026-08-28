@@ -22,7 +22,7 @@
  * a script other than Latin), because the example was chosen to exercise
  * states rather than to be plausible.
  *
- * Parsed by `./yaml.ts`, the reader every real `data/speakers.yml` goes
+ * Parsed by `./yaml.ts`, the reader every real `instance/data/speakers.yml` goes
  * through, so what the demonstration renders is the example instance read
  * exactly the way a repository's own data is read. An example that stopped
  * matching the model stops the demonstration by name rather than rendering

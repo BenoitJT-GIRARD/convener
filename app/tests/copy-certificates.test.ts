@@ -53,7 +53,7 @@ describe('readProjection', () => {
     if (dir) await rm(dir, { recursive: true, force: true });
   });
 
-  it('returns [] when public-data/certificates-public.json does not exist -- a normal state, no certificate issued yet', async () => {
+  it('returns [] when instance/public-data/certificates-public.json does not exist -- a normal state, no certificate issued yet', async () => {
     expect(await readProjection(join(tmpdir(), 'convener-verify-test-does-not-exist.json'))).toEqual([]);
   });
 
@@ -73,7 +73,7 @@ describe('readProjection', () => {
 
   it('round-trips the real, bare-array projection unchanged, end to end into what register.ts accepts', async () => {
     // The strongest form of "pin the two ends together": the exact bytes
-    // this script would read from `public-data/certificates-public.json`
+    // this script would read from `instance/public-data/certificates-public.json`
     // are handed straight to register.ts's own shape validator, using one
     // shared fixture on both sides.
     dir = await mkdtemp(join(tmpdir(), 'convener-verify-cert-'));

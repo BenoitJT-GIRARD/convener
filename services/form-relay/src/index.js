@@ -44,7 +44,7 @@ const USER_AGENT = 'convener-form-relay';
  * Where the `repository_dispatch` goes -- built from the repository this
  * deploy was given, never written out here.
  *
- * `owner/name` is what `config/instance.json` declares, and it reaches
+ * `owner/name` is what `instance/config.json` declares, and it reaches
  * `handle` as `env.REPOSITORY`: `.github/workflows/deploy-form-relay.yml`
  * reads the declaration through the reader that owns it and passes the
  * answer to `wrangler deploy --var`. `wrangler.toml`'s own header carries

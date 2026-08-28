@@ -137,7 +137,7 @@ def test_the_edition_pattern_follows_the_declaration() -> None:
     initials of the series that happens to run this repository, in the
     product's own validator, which is why a duplicate running a reading
     group numbered its sessions `MRG-1`. The pattern is built from whatever
-    `config/instance.json` declares now, so the same record is valid under
+    `instance/config.json` declares now, so the same record is valid under
     one instance and refused under another."""
     reading_group = EditionPrefix(value="MRG")
     assert (
@@ -161,7 +161,7 @@ def test_an_edition_already_assigned_stops_the_prefix_being_changed() -> None:
 
     An edition code is not a label that can be reworded: it is in a
     published address (`/events/mrg-05/`, D-19), on every certificate issued
-    for that event, and in `keys/events/mrg-05.pub` together with the
+    for that event, and in `instance/keys/events/mrg-05.pub` together with the
     repository secret derived from it. Nothing renumbers those.
 
     So there is no separate guard -- there is the derivation, read from
@@ -180,7 +180,7 @@ def test_an_edition_already_assigned_stops_the_prefix_being_changed() -> None:
     assert "2 edition_code(s) are numbered MRG-" in renames[0]
     assert "declares edition_prefix 'RG'" in renames[0]
     assert "/events/mrg-1/" in renames[0]
-    assert "keys/events/mrg-1.pub" in renames[0]
+    assert "instance/keys/events/mrg-1.pub" in renames[0]
 
 
 def test_a_code_that_is_simply_malformed_is_not_reported_as_a_rename() -> None:
@@ -211,7 +211,7 @@ def test_the_view_counting_window_is_configuration_on_this_side_too() -> None:
 
     Both languages have to require it, or the browser writes a file the
     scheduled jobs refuse - or, worse, the other way round, and a config
-    without the key reaches `data/` where the app then reads `undefined`
+    without the key reaches `instance/data/` where the app then reads `undefined`
     into a label. `docs/workflow/4-after.md` states the convention itself.
     """
     cfg = config()
@@ -296,7 +296,7 @@ def test_eligibility_share_is_required_configuration_not_a_constant() -> None:
 
     Both languages have to require it, or the browser writes a file the
     certificate calculation refuses -- or, worse, the other way round, and
-    a config without the key reaches `data/` where the eligibility
+    a config without the key reaches `instance/data/` where the eligibility
     calculation then falls back to a default nobody chose to write down.
     """
     cfg = config()

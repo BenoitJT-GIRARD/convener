@@ -22,7 +22,7 @@ Skip this section entirely if the series' own meeting-platform account handled t
 
 Otherwise, before anyone can issue certificates: download the attendance export from wherever the session actually ran, then encrypt and commit it.
 
-1. Save it locally as `data/events/<event id>/attendance-import.csv` (never commit this file directly — it holds names and addresses in the clear).
+1. Save it locally as `instance/data/events/<event id>/attendance-import.csv` (never commit this file directly — it holds names and addresses in the clear).
 2. From `tools/`, run `EVENT_ID=<event id> uv run convener-encrypt-attendance-export`. This needs no account and no secret; it only reads the event's already-published public key.
 3. Commit and push the `attendance-import.csv.enc` file this writes.
 
@@ -57,7 +57,7 @@ Add the four numbers for this webinar to the event list: registrations, peak liv
 
 **The counting window is a convention.** Views keep arriving for years, so a view count is not a fact about a talk until somebody says when it was read off; without an agreed moment the four numbers are not comparable with each other, and a session from March quietly outranks one from November for no reason but its age. The series reads them **30 days after the talk**. There is nothing behind the 30: it is long enough that most of the views have arrived and short enough that somebody still remembers to look, and any other number chosen once would do the same job. What matters is that it is the same number every time.
 
-Because it is a convention and not a law, it is configuration: `view_count_window_days` in `data/config.yml`. Change it there and both the app and the validator follow: the Archive's field relabels itself, and the number stated above is read out of this page and checked against the file (`tools/tests/test_handbook_claims.py`), so the handbook and the form cannot end up claiming different windows. Change it rarely, and know that counts taken under the old window and the new one are not comparable, which is exactly the problem the convention exists to avoid.
+Because it is a convention and not a law, it is configuration: `view_count_window_days` in `instance/data/config.yml`. Change it there and both the app and the validator follow: the Archive's field relabels itself, and the number stated above is read out of this page and checked against the file (`tools/tests/test_handbook_claims.py`), so the handbook and the form cannot end up claiming different windows. Change it rarely, and know that counts taken under the old window and the new one are not comparable, which is exactly the problem the convention exists to avoid.
 
 ## Checklist
 

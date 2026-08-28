@@ -89,7 +89,7 @@
 
   `site.unconfigured` (site/.eleventy.js, from
   `scripts/published.cjs::unconfigured`) is the list of values this
-  instance's `config/instance.json` still shares with the example
+  instance's `instance/config.json` still shares with the example
   declaration the product ships -- empty for a configured instance, so
   this block renders nothing at all on one. The whole rule, and why the
   `REPLACE` marker is deliberately no part of it, is stated once in
@@ -113,7 +113,7 @@
       This site still publishes the identity that ships with the software as
       its worked example, so nothing on it names a real organisation, a real
       address or a real contact. Whoever deployed it has to fill in
-      <code class="unconfigured__keys">config/instance.json</code> &mdash;
+      <code class="unconfigured__keys">instance/config.json</code> &mdash;
       still the example&rsquo;s:
       <code class="unconfigured__keys">{{ site.unconfigured | join(', ') }}</code>.
     </p>

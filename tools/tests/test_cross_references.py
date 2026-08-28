@@ -26,7 +26,7 @@ Four vocabularies, each read from the repository at run time:
   "around T-6 weeks" is using it. `_countdown_notation_exists` reads those
   keys, so the exemption disappears the day the notation does.
 * **`<prefix>-N`** -- an edition code. Derived from the `edition_prefix`
-  every tracked `instance.json` declares, so `MRG-05` and `MRG-1` resolve
+  every tracked `instance/config.json` declares, so `MRG-05` and `MRG-1` resolve
   because two instances in this repository say those prefixes are theirs.
 * **`G-NN`** -- a governance rule. Derived from the pages under `docs/`
   that state the rules, each of which *titles* the rule with its number:
@@ -152,6 +152,7 @@ from functools import cache
 from pathlib import Path
 
 from convener_ops.paths import repo_root
+from convener_ops.published import INSTANCE_PATH
 
 ROOT = repo_root()
 
@@ -408,13 +409,17 @@ def countdown_notation_exists() -> bool:
 def edition_prefixes() -> frozenset[str]:
     """Every prefix an instance in this repository numbers its editions under.
 
-    Read from each tracked `instance.json` rather than from one: the
-    instance's own declaration is a path `config/boundary.yml` hands to the
-    instance, so a derived repository has only the example's.
+    Read from each tracked copy of `published.INSTANCE_PATH` rather than
+    from one: the instance's own declaration is a path `config/boundary.yml`
+    hands to the instance, so a derived repository has only the example's.
+    The whole path is matched rather than the file name, because
+    `config.json` under `instance/` is a name a directory somewhere else
+    could carry for something entirely different.
     """
     prefixes = set()
+    declaration = INSTANCE_PATH.as_posix()
     for name in _tracked():
-        if Path(name).name != "instance.json":
+        if name != declaration and not name.endswith(f"/{declaration}"):
             continue
         try:
             declared = json.loads((ROOT / name).read_text(encoding="utf-8"))
@@ -620,7 +625,7 @@ def test_the_edition_prefixes_are_read_from_the_declarations() -> None:
     against nothing."""
     prefixes = edition_prefixes()
     assert prefixes, (
-        "no tracked `instance.json` declares an `edition_prefix` -- an "
+        "no tracked `instance/config.json` declares an `edition_prefix` -- an "
         "edition code like `MRG-1` would then read as an unresolvable "
         "citation rather than as this repository's own data"
     )

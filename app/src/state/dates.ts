@@ -89,7 +89,7 @@ function brand(date: string): AcceptedDate {
  *
  * A reader, not a constructor: it cannot invent an acceptance, it can only
  * report one that `answerDate` (or the speaker's reply as recorded in
- * `data/speakers.yml`) already wrote down. Everything that needs an
+ * `instance/data/speakers.yml`) already wrote down. Everything that needs an
  * `AcceptedDate` gets it from here, so "did the speaker agree to this
  * evening?" is answered by the record and never by the caller.
  */
@@ -191,7 +191,7 @@ export function proposeDates(
  * `declined` and the empty string and nothing else, so "probably fine" is not
  * expressible -- see the note on the type. An answer may be changed (a
  * speaker's term dates move) and the new one replaces the old in place, which
- * keeps `data/speakers.yml` readable as a diff.
+ * keeps `instance/data/speakers.yml` readable as a diff.
  */
 export function answerDate(current: Speaker, date: string, answer: DateAnswer): AnsweredDate {
   const known = current.candidate_dates.find(c => c.date === date);

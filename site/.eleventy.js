@@ -20,7 +20,7 @@
 // bound to `tools/convener_ops/registration.py::SIGNUP_BASE`, to
 // `certificate.py::VERIFICATION_BASE` and to `app/vite.config.ts`'s own
 // `base` by tests that could say the copies still agreed but never that
-// there was one. They are now read from `config/instance.json`, the
+// there was one. They are now read from `instance/config.json`, the
 // instance's own declaration, through `scripts/published.cjs` -- the
 // showcase's side of a boundary Python and the application build read
 // from their own (D-14). The names stay: everything below this line uses
@@ -37,7 +37,7 @@ const PUBLISHED = publishedAddress();
 
 const PATH_PREFIX = PUBLISHED.pathPrefix;
 
-// Who runs this series, read from `config/instance.json` through the same
+// Who runs this series, read from `instance/config.json` through the same
 // `scripts/published.cjs` this file already reads the published address
 // from.
 //
@@ -142,12 +142,12 @@ const SITE_ORIGIN = PUBLISHED.origin;
 // The series' one standing start time, Europe/Paris *local*
 // -- what a recurring seminar series means by "the seminar starts at
 // 12:30" is 12:30 in Paris, not a fixed UTC offset that happens to be
-// right for half the year. `data/speakers.yml` carries a `time` field
+// right for half the year. `instance/data/speakers.yml` carries a `time` field
 // per record, and `public_data.py::PUBLISHABLE_ALWAYS` classifies it as
 // publishable -- but `PUBLIC_FIELD_SOURCES`, the mapping that actually
 // decides what a built row carries, has no entry pointing any column at
 // it, so `time` never reaches `events-public.json` (confirmed by
-// regenerating that file from the real `data/speakers.yml` and
+// regenerating that file from the real `instance/data/speakers.yml` and
 // inspecting the output, not merely by reading the two files side by
 // side) and so never reaches this project's own `events.json` either.
 // With nothing to read per edition, this stays one constant rather than
@@ -312,13 +312,13 @@ const SHARE_IMAGE_HEIGHT = 630;
 // value.
 // ------------------------------------------------------------------ //
 
-// The seminar's own fixed length, `data/config.yml::
+// The seminar's own fixed length, `instance/data/config.yml::
 // seminar_duration_minutes` (also read, with the same 90-minute default,
 // by `tools/convener_ops/sweep.py::sweep` and now by this feed's own Python
 // twin, `tools/convener_ops/agenda.py::build_internal_calendar`) -- a plain
 // site-wide constant, on the same footing `STANDING_START_LOCAL` above
 // already stands on, not a computed rule the D-14 fixture would need to
-// bind across languages. This build has no path to `data/config.yml`
+// bind across languages. This build has no path to `instance/data/config.yml`
 // itself: that file also carries board membership and other internal
 // governance fields no public build may see (the same reason `time`
 // never reaches this data either -- see `STANDING_START_LOCAL`'s own
@@ -523,7 +523,7 @@ module.exports = function (cfg) {
   // The front page itself is no longer a passthrough copy: it is
   // `src/publish-readme.njk`, a template with `permalink:
   // "/README.md"`, because it names the organisation and both repositories
-  // and those are the instance's, declared once in `config/instance.json`.
+  // and those are the instance's, declared once in `instance/config.json`.
   // A passthrough copy renders nothing, so a `{{ }}` in it would have been
   // published verbatim -- the exact failure `docs/toolkit/index.md` warns
   // about. A `.njk` under `src/` is fine where a `.md` was not: only `md`

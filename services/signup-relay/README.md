@@ -46,7 +46,7 @@ sibling of `app/src/signup/encrypt.ts`, same wire format), and POSTs it to
 deliberate, not a shortcut: the envelope this worker validates is
 byte-identical in shape whichever route receives it — `validatedEventId`
 draws no distinction between the two — the known-event check is the same
-`keys/events/<id>.pub` lookup, and the GitHub token is the one already
+`instance/keys/events/<id>.pub` lookup, and the GitHub token is the one already
 scoped to this repository. None of the reasoning in "Why this is a third
 worker, not a route on either of the other two" below applies a second time
 between `/` and `/survey`: there is no second trust boundary here, only a
@@ -58,10 +58,10 @@ exist — whether that event's survey switch is actually on. That check
 used to be enforced in exactly one of four layers (the CI handler,
 last), which meant a participant answering a closed survey was thanked and
 had the answer discarded with no one told. `surveyEnabled` (`src/index.js`)
-reads `public-data/survey-status.json` through the same GitHub Contents API
+reads `instance/public-data/survey-status.json` through the same GitHub Contents API
 call shape — the same credential, `CONVENER_DISPATCH_TOKEN`, and the same
 `https://api.github.com/repos/.../contents/<path>` request — `eventKeyExists`
-already spends one read of for `keys/events/<id>.pub`, just a different
+already spends one read of for `instance/keys/events/<id>.pub`, just a different
 path, and refuses (`404`, the same bucket "no such event" already falls
 into) when the event is not in the array it decodes.
 
@@ -70,12 +70,12 @@ instead (a page on the published site, no token, no GitHub API budget).
 That is gone: the URL pointed at a deployment this project
 had never actually wired up, so the relay's own answer depended on a site
 that did not exist; it also carried a build-to-live latency the handler's
-own read of `data/speakers.yml` does not have, on top of which the relay
+own read of `instance/data/speakers.yml` does not have, on top of which the relay
 added a second one. Reading this repository's own committed copy instead
 makes the relay's answer agree with the handler's by construction, not by
 build timing — at the cost of one more Contents-API read on a route
 already spending one and already ceiling-capped per event.
-`public-data/survey-status.json` is committed for exactly this reason (see
+`instance/public-data/survey-status.json` is committed for exactly this reason (see
 the root `.gitignore`'s own comment): a bare, sorted list of event ids, no
 personal data, refreshed by `deploy.yml`'s "Commit survey status" step
 every time it changes.
@@ -84,7 +84,7 @@ This is the relay's own layer, not the only one: `app/src/islands/survey/
 SurveyForm.tsx` still fetches the deployed `survey-status.json` from the
 published site — a static page has no token and cannot read the Contents API
 any other way — and the daily drain checks the authoritative
-`data/speakers.yml` again regardless. Three layers still, for the same
+`instance/data/speakers.yml` again regardless. Three layers still, for the same
 reason as before: a page check is bypassable by posting straight to this
 worker, and a relay check — even one now reading this repository's own
 tip rather than a deployed artefact — is a courtesy that saves a wasted
@@ -116,7 +116,7 @@ otherwise:
   this worker still forwards byte-identical);
 - `event_id` is shaped like one (mirrors
   `tools/convener_ops/commit_format._TOKEN`) and names an event whose public key
-  (`keys/events/<event_id>.pub`) actually exists in the repository (see
+  (`instance/keys/events/<event_id>.pub`) actually exists in the repository (see
   "Known events" below for how, and why);
 - `v` is the wire version this worker was written against;
 - `encrypted_key`, `iv` and `ciphertext` are valid base64 that decode to the
@@ -158,7 +158,7 @@ exempt from a preflight (only a handful of simple header values are).
 `services/auth-proxy/src/index.js` already solved this once for a
 different worker; this one copies that pattern rather than inventing a
 second one: an `ALLOWED_ORIGIN` var (passed to `wrangler deploy --var` by
-`deploy-signup-relay.yml`, which derives it from `config/instance.json`;
+`deploy-signup-relay.yml`, which derives it from `instance/config.json`;
 `services/auth-proxy/wrangler.toml`'s header says why it is written in no
 configuration file), a 204 answer to the
 preflight, and CORS headers on *every* response this worker sends, success
@@ -357,7 +357,7 @@ one event's registration count needs to stay a plausible number.
 ## Known events: a live check, not a baked allow-list
 
 `eventKeyExists` in `src/index.js` asks GitHub's Contents API,
-`GET /repos/.../contents/keys/events/<event_id>.pub`, live, on every
+`GET /repos/.../contents/instance/keys/events/<event_id>.pub`, live, on every
 request, rather than checking a list of known event ids baked into the
 worker at deploy time.
 
@@ -365,7 +365,7 @@ An earlier version of this rationale claimed the live check avoids
 "deploy-time coupling between a new event key being committed and this
 worker being redeployed." That does not hold up: the browser never fetches
 the public key from this worker or from GitHub — it fetches
-`keys/events/<id>.pub` from the **app's own origin**
+`instance/keys/events/<id>.pub` from the **app's own origin**
 (`SignupForm.tsx`, `eventPublicKeyUrl`), which `app/scripts/
 copy-event-keys.mjs` publishes there as an `app/package.json` `prebuild`
 step, and `.github/workflows/deploy.yml` rebuilds and republishes the app
@@ -378,7 +378,7 @@ What the live check genuinely buys instead: no *stale allow-list* failure
 mode, where a skipped or failed `deploy-signup-relay.yml` run would leave
 this worker silently refusing a perfectly real, newly created event
 indefinitely with no visible cause; and no new build tooling — a generated
-list of ids and a `paths:` entry watching `keys/events/**`, mirroring what
+list of ids and a `paths:` entry watching `instance/keys/events/**`, mirroring what
 `copy-event-keys.mjs` already does for the app. Both are real, if modest,
 advantages, worth the one extra GitHub API call and its own timeout per
 registration (`GITHUB_FETCH_TIMEOUT_MS`) — not worth abandoning the design
@@ -439,7 +439,7 @@ npx wrangler kv namespace create SIGNUP_RELAY_KV   # once, then paste the
 ```
 
 The workflow's own deploy command reads two values out of
-`config/instance.json` — the one address this project is published at, and
+`instance/config.json` — the one address this project is published at, and
 the repository this cockpit lives in — and passes both to Wrangler:
 
 ```bash
@@ -458,7 +458,7 @@ in `wrangler.toml`.
 
 - Wrangler secret `CONVENER_DISPATCH_TOKEN` — set with
   `npx wrangler secret put CONVENER_DISPATCH_TOKEN`. A GitHub token scoped to
-  *Contents: read & write* on the repository `config/instance.json`
+  *Contents: read & write* on the repository `instance/config.json`
   declares, the same
   scope `services/form-relay/README.md` documents for its own token: this
   worker uses it both to check whether an event's public key exists

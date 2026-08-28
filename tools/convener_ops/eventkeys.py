@@ -62,7 +62,7 @@ reproduce this exactly, so a change here is a change there too.
 
 The public half is a file, not a secret
 ----------------------------------------
-`public_key_path` returns `keys/events/<id>.pub`, committed PEM. It is not a
+`public_key_path` returns `instance/keys/events/<id>.pub`, committed PEM. It is not a
 secret -- publishing it is what lets a static registration page encrypt
 without asking a server for anything first.
 
@@ -110,7 +110,7 @@ the two facts a caller already has cheaply: whether `public_key_path
 removing `CONVENER_EVENT_KEY_<ID>` from the repository's secrets, and persisting
 the record `destroy` returns, are real side effects, and belong to the
 retention job that calls this module, the same way `cli.py` -- not
-`validate.py` -- is the one that writes `data/speakers.yml`.
+`validate.py` -- is the one that writes `instance/data/speakers.yml`.
 
 The distinction the registry has to preserve is `DESTROYED` versus
 `NEVER_CREATED`: without it, an event with no key two years from now could
@@ -144,11 +144,11 @@ The destruction registry lives in one file, not one per event
 `destroy` and `key_status` above take `registry: Mapping[str, date]`
 already assembled; `registry_from_data` and `registry_to_data` are its
 parse and serialise halves, reading and writing
-`data/event-key-destructions.yml` (`destructions_path`) the same way
+`instance/data/event-key-destructions.yml` (`destructions_path`) the same way
 `certificate.register_from_data`/`register_to_data` read and write
 `certificates.yml` -- pure, no filesystem access, `cli.py` is still the
 only module that opens the path. One file for every event, not a marker
-dropped into each event's own `data/events/<id>/` directory: a scheduled
+dropped into each event's own `instance/data/events/<id>/` directory: a scheduled
 sweep spanning many events writes one small file and one commit, not one
 commit per event, and an operator who wants "which events has this ever
 destroyed" reads one page rather than globbing a tree.
@@ -161,7 +161,7 @@ ever need destroying itself.
 
 The file is not deleted, and here is why
 ------------------------------------------
-Destroying a key does **not** delete `data/events/<id>/registrations.enc`
+Destroying a key does **not** delete `instance/data/events/<id>/registrations.enc`
 from the working tree. Deleting the file would not, on its own, make
 anything more unreadable than destroying the key already has -- git
 history still holds every byte of the ciphertext, deletion or not -- and
@@ -244,7 +244,7 @@ _OAEP: Final = padding.OAEP(
 #: treats one as a validated `str` rather than inventing a wrapper type
 #: nothing else uses. The validation exists because this string becomes a
 #: path component (`public_key_path`): an id that is not a plain token
-#: could otherwise walk out of `keys/events/`. It does *not* by itself
+#: could otherwise walk out of `instance/keys/events/`. It does *not* by itself
 #: guarantee a legal environment variable suffix -- `_TOKEN` admits `.` and
 #: `-`, neither legal in a GitHub Actions secret name, which is why
 #: `secret_name` below exists as a separate step.
@@ -257,7 +257,7 @@ _OAEP: Final = padding.OAEP(
 #: the cap exists only so a pathological input cannot inflate the GitHub
 #: API URL or the dispatch payload it participates in" (that module's own
 #: comment). Without a matching bound here, a >64-character id could pass
-#: every check in this module, get published as `keys/events/<id>.pub`,
+#: every check in this module, get published as `instance/keys/events/<id>.pub`,
 #: and be refused by the relay with a bare 400 on every registration
 #: attempt -- fail-closed, but confusingly, and only at signup time. The
 #: lookahead enforces the length without touching `_TOKEN` itself, which
@@ -373,7 +373,7 @@ def derive_public_pem(private_pem: str) -> str:
     A job re-encrypting a registration (`registration.py::upsert`) only
     ever needs the public half that *mathematically matches* the private
     key it already holds -- and deriving it is what guarantees exactly
-    that. Reading `keys/events/<id>.pub` instead would trust whatever
+    that. Reading `instance/keys/events/<id>.pub` instead would trust whatever
     happens to be committed there: ordinarily the same key, but a stale
     commit, a mid-rotation state, or a swapped file would silently
     re-encrypt under the wrong public half, and the failure would not
@@ -475,7 +475,7 @@ def _decrypt(private_pem: str, ciphertext: str) -> bytes:
 
 
 def public_key_path(event_id: str) -> Path:
-    """Where the published public half for `event_id` lives: `keys/events/
+    """Where the published public half for `event_id` lives: `instance/keys/events/
     <event_id>.pub`, relative to the repository root. Pure path computation
     -- this reads nothing, and callers decide whether to check `.exists()`
     or read it."""
@@ -525,7 +525,7 @@ def destroy(
 
 
 #: The retention window: the event's date, plus 90 days.
-#: A module constant, not a `data/config.yml` value: retention is a legal
+#: A module constant, not a `instance/data/config.yml` value: retention is a legal
 #: commitment, stated once here and once in the confirmation e-mail
 #: (`confirmation.py::_DATA_PROTECTION`), never something an operator
 #: tunes per event.
@@ -547,7 +547,7 @@ def is_due_for_destruction(event_date: date, today: date) -> bool:
 #: file" section for why this is a single file rather than one per event.
 DESTRUCTIONS_PATH: Final = paths.DATA_DIR / "event-key-destructions.yml"
 
-#: `data/event-key-destructions.yml`'s own format version -- the file-level
+#: `instance/data/event-key-destructions.yml`'s own format version -- the file-level
 #: analogue of `WIRE_VERSION` and `registration.FILE_VERSION`.
 DESTRUCTIONS_FILE_VERSION: Final = 1
 
@@ -556,7 +556,7 @@ _DESTRUCTION_FIELDS: Final = frozenset({"event_id", "destroyed_on"})
 
 
 def destructions_path(root: Path) -> Path:
-    """`data/event-key-destructions.yml`, relative to `root` -- the one
+    """`instance/data/event-key-destructions.yml`, relative to `root` -- the one
     function that names where the destruction registry lives on disk, the
     same role `certificate.certificates_path` plays for that register.
     Pure path computation: reads nothing, touches nothing; `cli.py` is
@@ -565,7 +565,7 @@ def destructions_path(root: Path) -> Path:
 
 
 def registry_from_data(data: Any) -> dict[str, date]:
-    """Parse an already YAML-loaded `data/event-key-destructions.yml` into
+    """Parse an already YAML-loaded `instance/data/event-key-destructions.yml` into
     the `Mapping[str, date]` `key_status` and `destroy` expect, or start
     empty when `data` is `None` -- no event has ever been destroyed yet,
     the ordinary state before the first retention sweep that finds
@@ -622,7 +622,7 @@ def registry_to_data(registry: Mapping[str, date]) -> dict[str, Any]:
     """The inverse of `registry_from_data`: a plain, YAML-safe structure
     `cli.py` hands to its own YAML writer. Sorted by event id -- like
     `certificate.register_to_data`'s own field ordering -- so a diff on
-    `data/event-key-destructions.yml` shows only what a sweep actually
+    `instance/data/event-key-destructions.yml` shows only what a sweep actually
     added, never a reordering."""
     return {
         "v": DESTRUCTIONS_FILE_VERSION,

@@ -53,7 +53,7 @@ def _write_encrypted_csv(path: Path, public_pem: str, *rows: str) -> None:
 
 
 def _speaker(**overrides: Any) -> dict[str, Any]:
-    """A minimal loaded `data/speakers.yml` record -- only the two fields
+    """A minimal loaded `instance/data/speakers.yml` record -- only the two fields
     `ManualPlatform` reads. Real records carry far more; this class never
     looks at the rest, the same way `public_data.py` only ever reads the
     fields its own allowlist names."""
@@ -124,7 +124,7 @@ def test_find_speaker_ignores_a_record_with_no_edition_code() -> None:
 
 # ------------------------------------------------------------------ #
 # get_room -- the room comes from the speaker record, instructions from
-# data/config.yml
+# instance/data/config.yml
 # ------------------------------------------------------------------ #
 
 
@@ -148,7 +148,7 @@ def test_get_room_reads_instructions_from_config_not_the_speaker_record(
 ) -> None:
     """D-06 makes the account itself the permanent room, so join
     instructions describe a room that never changes -- a property of the
-    series (`data/config.yml`), not of one event."""
+    series (`instance/data/config.yml`), not of one event."""
     speakers = [_speaker(edition_code="MRG-901")]
     config = {"instructions": "Dial +1 555 0100 if the link fails."}
 
@@ -364,7 +364,7 @@ def test_missing_attendance_file_message_does_not_leak_the_repository_root(
 
     message = str(excinfo.value)
     assert str(tmp_path) not in message
-    assert "data/events/mrg-918/attendance-import.csv" in message
+    assert "instance/data/events/mrg-918/attendance-import.csv" in message
 
 
 def test_missing_column_raises_and_names_it(tmp_path: Path) -> None:
@@ -1052,10 +1052,12 @@ def test_events_dir_defaults_to_the_repository_data_events_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "config.yml").write_text("season: 2026\n", encoding="utf-8")
+    (tmp_path / "instance" / "data").mkdir(parents=True)
+    (tmp_path / "instance" / "data" / "config.yml").write_text(
+        "season: 2026\n", encoding="utf-8"
+    )
 
-    assert ManualPlatform().events_dir == tmp_path / "data" / "events"
+    assert ManualPlatform().events_dir == tmp_path / "instance" / "data" / "events"
 
 
 def test_speakers_and_config_default_to_empty(tmp_path: Path) -> None:

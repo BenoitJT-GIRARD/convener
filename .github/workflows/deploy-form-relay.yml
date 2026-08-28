@@ -76,7 +76,7 @@ jobs:
           # `services/form-relay/src/index.js` names no repository at all --
           # see `services/form-relay/wrangler.toml`'s header for why the
           # literal that used to be there is gone -- so it is derived here,
-          # from `config/instance.json`, through the Python reader that
+          # from `instance/config.json`, through the Python reader that
           # owns the derivation (`published.Identity.repository`). The same
           # `uv run --project tools python -c` shape `deploy.yml` already
           # uses for the repository it pushes a built site into, rather
@@ -84,7 +84,7 @@ jobs:
           repository="$(uv run --project tools python -c \
             'from convener_ops.published import load_identity; print(load_identity().repository)')"
           if [ -z "$repository" ]; then
-            echo "::error::config/instance.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"
+            echo "::error::instance/config.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"
             exit 1
           fi
           # --var reaches src/index.js as env.REPOSITORY exactly as a

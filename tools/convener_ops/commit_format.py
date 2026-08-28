@@ -37,7 +37,7 @@ from dataclasses import dataclass
 from typing import Final
 
 #: The domain prefix a decision commit carries. Decisions are recorded in
-#: `data/`, so they are `data:` commits and nothing else.
+#: `instance/data/`, so they are `data:` commits and nothing else.
 DOMAIN: Final = "data"
 
 #: Every act the register can record, as an imperative phrase ending in the

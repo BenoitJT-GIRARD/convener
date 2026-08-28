@@ -8,11 +8,11 @@ quietly. So "instance" cannot stay an intention -- it has to be a set of
 paths something can enumerate, and this module is what reads it.
 
 **One declaration, two halves, no copy.** `config/boundary.yml` names the
-paths outside `config/` that the instance owns. Inside `config/`, each file
-states its own answer in its own `owner:` key, next to the argument for it,
-and this module reads that -- `declaration_from_data` *refuses* a
-declaration that also names a `config/` path, so the two halves can never
-drift into disagreeing. That refusal is the whole point: this repository's
+directories the instance owns whole. The configuration files `CONFIG_DIRS`
+holds directly state their own answer in their own `owner:` key, next to
+the argument for it, and this module reads that -- `declaration_from_data`
+*refuses* a declaration that also names one of them, so the two halves can
+never drift into disagreeing. That refusal is the whole point: this repository's
 recurring defect is the copy (three palettes, five addresses, two path
 lists), and a boundary built out of a second list would be the same defect
 wearing a new name.
@@ -24,13 +24,14 @@ becomes the instance's by being named, never by being forgotten.
 **Ownership is a property of a file, not of a value**, because a merge is a
 file-level event. A file holding one instance-owned value is an instance
 file even when its other values would have made perfectly good product
-defaults -- upstream cannot ship half a file. That is the rule that settles
-`config/`, where `actions-budget.yml` mixes an organisation's GitHub
-allowance with a bound on the collector's own runtime.
+defaults -- upstream cannot ship half a file. That is the rule that settled
+`config/`, where `actions-budget.yml` mixed an organisation's GitHub
+allowance with a bound on the collector's own runtime and now sits in
+`instance/` for it.
 
 What this module does **not** do is decide anything about the future. No
 offline check can promise that a later upstream commit will not touch
-`data/`. What it can do, and what `tools/tests/test_boundary.py` builds on
+`instance/data/`. What it can do, and what `tools/tests/test_boundary.py` builds on
 top of it, is refuse the states that make such a commit *necessary* -- see
 that module's own docstring for the formulation held and for what it
 leaves uncovered.
@@ -47,24 +48,28 @@ from typing import Any, Final
 import yaml
 
 #: The declaration itself, relative to a repository root. In `config/`
-#: rather than beside it: that directory was already mixing product and
-#: instance by accumulation, and the
-#: answer to a directory nobody sorted is to sort it, not to open a second
-#: one next to it.
+#: rather than beside it: this is the product's own statement about what
+#: an instance owns, and it belongs with the product's own configuration.
 DECLARATION_PATH: Final = Path("config") / "boundary.yml"
 
-#: Where a file states its own owner in its own header.
-CONFIG_DIR: Final = Path("config")
+#: Where a configuration file states its own owner in its own header, and
+#: the only two places one may. `config/` is the product's own directory
+#: and `instance/` is this instance's, so a file's location already says
+#: which side it is on; the header is what refuses, by name, the file that
+#: lands on the wrong one. Only the files these directories hold
+#: *directly* answer for themselves -- `instance/`'s subdirectories are
+#: handed over whole, by the declaration above.
+CONFIG_DIRS: Final = (Path("config"), Path("instance"))
 
-#: What a file in `config/` may be written in, and how to read each. YAML
+#: What a configuration file may be written in, and how to read each. YAML
 #: for anything only this repository's Python reads; JSON for anything
 #: read from more than one side of the language boundary, because it is
 #: the only format `site/` and `services/` can parse without a dependency
 #: neither of them has and the zero-cost constraint forbids adding
-#: (`config/instance.json`). Both are listed here for one reason: a
-#: format nobody enumerated is a file in this directory whose owner
-#: nothing asks for, and "every file answers" would quietly become "every
-#: file we happened to look at".
+#: (`instance/config.json`). Both are listed here for one reason: a
+#: format nobody enumerated is a file in one of those directories whose
+#: owner nothing asks for, and "every file answers" would quietly become
+#: "every file we happened to look at".
 CONFIG_READERS: Final[dict[str, Callable[[str], Any]]] = {
     ".yml": yaml.safe_load,
     ".json": json.loads,
@@ -177,7 +182,8 @@ class Handed:
 
 @dataclass(frozen=True)
 class Boundary:
-    """The whole answer: the declared paths, and `config/`'s own headers."""
+    """The whole answer: the declared paths, and the headers the
+    configuration files state their own owner in."""
 
     handed: tuple[Handed, ...]
     config_owners: Mapping[str, str]
@@ -204,12 +210,13 @@ class Boundary:
         `owner_of` answers about one path, and a caller that has a
         directory rather than a file cannot always spell it as one: `git
         rev-list --objects` names a directory by its tree object, whose
-        path carries no trailing slash, and `data` does not start with
-        `data/`. This asks the question the caller actually has.
+        path carries no trailing slash, and `instance/data` does not start
+        with `instance/data/`. This asks the question the caller actually
+        has.
 
         A directory holding a file the product keeps is **not** the
-        instance's, whatever the entry above it says: `keys/signing/`
-        cannot be dropped without dropping `keys/signing/README.md` with
+        instance's, whatever the entry above it says: `instance/keys/signing/`
+        cannot be dropped without dropping `instance/keys/signing/README.md` with
         it, and that file is the product's by this same declaration. So
         the answer is the `kept:` answer again, applied to the only other
         kind of thing a repository holds.
@@ -261,6 +268,20 @@ def _relative_path(raw: Any, what: str) -> str:
     return path
 
 
+def states_its_own_owner(path: str) -> bool:
+    """Whether `path` is a configuration file that answers for itself.
+
+    One of `CONFIG_DIRS` holds it directly, and it is written in a format
+    `CONFIG_READERS` knows. Those two conditions are the whole of what
+    `config_owners` reads, so this is the same set seen from the other
+    end -- which is what lets the declaration refuse a path whose owner a
+    header already states, rather than a path that merely looks like one.
+    """
+    named = PurePosixPath(path)
+    parents = {directory.as_posix() for directory in CONFIG_DIRS}
+    return named.parent.as_posix() in parents and named.suffix in CONFIG_READERS
+
+
 def _reason(raw: Any, what: str) -> str:
     named = DECLARATION_PATH.as_posix()
     if not isinstance(raw, str) or not raw.strip():
@@ -299,9 +320,9 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
 
     Refuses, rather than repairs, anything that is not this exact shape --
     including the two mistakes that would quietly hollow the boundary out:
-    a `config/` path named here (its answer belongs in its own header, and
-    a second home for it is how the two start disagreeing), and one entry
-    nested inside another (whichever is read first wins, silently).
+    a configuration file named here (its answer belongs in its own header,
+    and a second home for it is how the two start disagreeing), and one
+    entry nested inside another (whichever is read first wins, silently).
     """
     named = DECLARATION_PATH.as_posix()
     if not isinstance(data, dict) or data.get("v") != DECLARATION_VERSION:
@@ -319,11 +340,12 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
         if not isinstance(item, dict):
             raise ValueError(f"{named}: instance: holds {item!r}, not an entry")
         path = _relative_path(item.get("path"), "an instance path")
-        if PurePosixPath(path).parts[0] == CONFIG_DIR.name:
+        if states_its_own_owner(path):
             raise ValueError(
-                f"{named}: {path!r} is under {CONFIG_DIR.as_posix()}/, whose "
-                "files state their own owner in their own `owner:` key. "
-                "Naming it here too would make one fact two places."
+                f"{named}: {path!r} is a configuration file in "
+                f"{PurePosixPath(path).parent.as_posix()}/, whose files "
+                "state their own owner in their own `owner:` key. Naming "
+                "it here too would make one fact two places."
             )
         regenerated = item.get("regenerated", False)
         if not isinstance(regenerated, bool):
@@ -357,21 +379,23 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
 
 
 def config_owners(root: Path) -> dict[str, str]:
-    """What each file in `config/` says it is, read from its own header.
+    """What each configuration file says it is, read from its own header.
 
-    Every file must answer, in whichever of `CONFIG_READERS`' formats it
-    is written -- a JSON file states the same `owner` key a YAML one
-    does, next to the same argument for it, in a `_comment` because JSON
-    has nowhere else to put one. A file with no `owner` is refused by
-    name rather than defaulted to either side: this
-    directory was found mixing product and instance precisely because it filled up by
-    accumulation, with nobody ever deciding, and a default here would be
-    that same silence with a friendlier face.
+    Every file `CONFIG_DIRS` holds directly must answer, in whichever of
+    `CONFIG_READERS`' formats it is written -- a JSON file states the same
+    `owner` key a YAML one does, next to the same argument for it, in a
+    `_comment` because JSON has nowhere else to put one. A file with no
+    `owner` is refused by name rather than defaulted to either side:
+    `config/` was found mixing product and instance precisely because it
+    filled up by accumulation, with nobody ever deciding, and a default
+    here would be that same silence with a friendlier face.
     """
-    directory = root / CONFIG_DIR
     owners: dict[str, str] = {}
     candidates = sorted(
-        path for suffix in CONFIG_READERS for path in directory.glob(f"*{suffix}")
+        path
+        for directory in CONFIG_DIRS
+        for suffix in CONFIG_READERS
+        for path in (root / directory).glob(f"*{suffix}")
     )
     for path in candidates:
         name = path.relative_to(root).as_posix()
@@ -380,10 +404,11 @@ def config_owners(root: Path) -> dict[str, str]:
         declared = loaded.get("owner") if isinstance(loaded, dict) else None
         if declared not in OWNERS:
             raise ValueError(
-                f"{name} declares no owner. Every file in "
-                f"{CONFIG_DIR.as_posix()}/ has to say whether it is the "
-                f"instance's or the product's: add `owner:` with one of "
-                f"{', '.join(OWNERS)}, and the argument for it, to its header."
+                f"{name} declares no owner. Every configuration file in "
+                f"{PurePosixPath(name).parent.as_posix()}/ has to say "
+                "whether it is the instance's or the product's: add "
+                f"`owner:` with one of {', '.join(OWNERS)}, and the "
+                "argument for it, to its header."
             )
         owners[name] = declared
     return owners

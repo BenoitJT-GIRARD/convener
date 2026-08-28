@@ -1,7 +1,7 @@
 # Design tokens
 
 The instance's visual identity, derived from the charter in force --
-`data/brand.json` when this instance has written one, and the product's own
+`instance/data/brand.json` when this instance has written one, and the product's own
 `brand/convener/brand.json` when it has not, so a fresh duplicate is finished
 rather than grey (`tools/convener_ops/brand.py` decides which, once, for every
 reader). Here that is the designer's own turquoise and purple, warm neutrals,
@@ -13,7 +13,7 @@ generic.
 
 `tokens.css`'s custom properties are generated:
 `scripts/generate_brand_css.py` owns the block between the
-`GENERATED TOKENS` markers. Do not hand-edit it -- change `data/brand.json`
+`GENERATED TOKENS` markers. Do not hand-edit it -- change `instance/data/brand.json`
 and run `uv run python ../scripts/generate_brand_css.py` from `tools/`, then
 commit what it writes. That command also recomputes every contrast the charter
 records and refuses a palette measuring below WCAG AA, so a colour changed here

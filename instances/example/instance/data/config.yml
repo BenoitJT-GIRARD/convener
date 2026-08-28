@@ -1,5 +1,5 @@
 # The example instance's own governance configuration -- the same file
-# `data/config.yml` is for the instance that runs this repository, written
+# `instance/data/config.yml` is for the instance that runs this repository, written
 # for one that does not exist.
 #
 # Every login below is prefixed `example-`: these are not accounts anybody
@@ -32,7 +32,7 @@ board:
   status: active
   unavailable_until: ''
 seminar_duration_minutes: 90
-# See `data/config.yml`'s own comment on this value: 0.6666666666666666 is
+# See `instance/data/config.yml`'s own comment on this value: 0.6666666666666666 is
 # the closest float64 below exactly two thirds, and rounding it up refuses
 # somebody present for exactly two thirds of a session.
 eligibility_share: 0.6666666666666666

@@ -9,23 +9,23 @@ import, and every other module in `convener_ops` builds the instance paths
 it touches out of them: `DATA_DIR / "config.yml"`, `KEYS_DIR / "events"`,
 `PUBLIC_DATA_DIR / "registration-routing.json"`. That is what makes the
 whole set movable from one place: change where the declaration puts
-`data/` and these constants follow, and the hundred-odd places that build
-on them follow with it. `tools/tests/test_paths.py` sweeps the package and
+`instance/data/` and these constants follow, and the hundred-odd places
+that build on them follow with it. `tools/tests/test_paths.py` sweeps the package and
 fails on a module that writes one of these paths out in a string of its
 own.
 
 A file inside a declared directory is built from that directory's
 constant. The declaration has no entry to take it from:
 `boundary.declaration_from_data` refuses an entry nested inside another,
-so `data/config.yml` cannot be listed there while `data/` is. Ownership is
-settled once, for the directory; the file names inside it stay with the
-module that reads and writes them.
+so `instance/data/config.yml` cannot be listed there while
+`instance/data/` is. Ownership is settled once, for the directory; the
+file names inside it stay with the module that reads and writes them.
 
 Each constant is looked up by the last component of a declared path.
-Moving `data/` in the declaration moves `DATA_DIR` with it and leaves this
-module untouched; a declaration that hands none of its paths a given last
-component raises at import, naming the constant that lost its path and
-listing what the declaration does hand over.
+Moving `instance/data/` in the declaration moves `DATA_DIR` with it and
+leaves this module untouched; a declaration that hands none of its paths a
+given last component raises at import, naming the constant that lost its
+path and listing what the declaration does hand over.
 """
 
 from __future__ import annotations
@@ -44,9 +44,11 @@ if TYPE_CHECKING:
 
 #: The file whose presence marks a repository root. Written out here
 #: because finding the root is how the declaration below gets read, so
-#: this one path has to be known before any of them can be. It is held
-#: against `DATA_DIR` at the bottom of this module.
-_MARKER = Path("data") / "config.yml"
+#: this one path has to be known before any of them can be. It is the one
+#: instance path this repository cannot derive, and it moves by hand when
+#: the declaration moves; it is held against `DATA_DIR` at the bottom of
+#: this module so that a hand that forgets is a failure at import.
+_MARKER = Path("instance") / "data" / "config.yml"
 
 
 def repo_root(start: Path | None = None) -> Path:

@@ -1,5 +1,5 @@
 """`convener-render-visuals` -- the disk-writing seam for *production*
-visuals: real, scheduled editions from `data/speakers.yml`, run through the
+visuals: real, scheduled editions from `instance/data/speakers.yml`, run through the
 same public gate every other public artefact in this project already goes
 through (`public_data.to_public`), rendered on the same pure
 composition. `render_visual_fixtures` always renders the one
@@ -36,18 +36,18 @@ _REAL_ROOT = repo_root()
 #: actually build a root, and says which file is missing.
 @cache
 def _real_brand() -> str:
-    return (_REAL_ROOT / "data" / "brand.json").read_text(encoding="utf-8")
+    return (_REAL_ROOT / "instance" / "data" / "brand.json").read_text(encoding="utf-8")
 
 
 #: The composition reads the instance's own declaration
 #: too, for the wordmark, the strapline and the forum the "what to expect"
 #: rows name. Copied from the real repository for the same reason
-#: `data/brand.json` above is -- a second, hand-typed identity here would
+#: `instance/data/brand.json` above is -- a second, hand-typed identity here would
 #: be a second answer to "what does this instance call itself", free to
 #: drift from the file every other reader in this project reads.
 @cache
 def _real_instance() -> str:
-    return (_REAL_ROOT / "config" / "instance.json").read_text(encoding="utf-8")
+    return (_REAL_ROOT / "instance" / "config.json").read_text(encoding="utf-8")
 
 
 def _scheduled(**overrides: Any) -> dict[str, Any]:
@@ -64,7 +64,7 @@ def _scheduled(**overrides: Any) -> dict[str, Any]:
 
 def _fake_root(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
     """A repository root a test can point `convener_ops.cli.repo_root` at:
-    real `data/brand.json` and real `config/instance.json` (both small,
+    real `instance/data/brand.json` and real `instance/config.json` (both small,
     stable and non-personal -- copied rather than re-typed, the same
     choice `test_visual.py`'s own `ROOT = repo_root()` makes by reading
     them from the real repository directly),
@@ -74,13 +74,15 @@ def _fake_root(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
     real `yaml.safe_dump` so a hand-typed `date: 2026-05-14` cannot
     accidentally reach the file unquoted.
     """
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "speakers.yml").write_text(
+    (tmp_path / "instance" / "data").mkdir(parents=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         yaml.safe_dump(speakers, sort_keys=False), encoding="utf-8"
     )
-    (tmp_path / "data" / "brand.json").write_text(_real_brand(), encoding="utf-8")
-    (tmp_path / "config").mkdir()
-    (tmp_path / "config" / "instance.json").write_text(
+    (tmp_path / "instance" / "data" / "brand.json").write_text(
+        _real_brand(), encoding="utf-8"
+    )
+    (tmp_path / "instance").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "config.json").write_text(
         _real_instance(), encoding="utf-8"
     )
     fonts = tmp_path / "fonts"
@@ -340,7 +342,7 @@ def test_a_stale_page_from_an_earlier_run_does_not_survive(
     _run(out, monkeypatch)
     assert (out / "mrg-01-square.html").exists()
 
-    (fake_root / "data" / "speakers.yml").write_text(
+    (fake_root / "instance" / "data" / "speakers.yml").write_text(
         yaml.safe_dump(
             [_scheduled(edition_code="MRG-02", date="2026-02-09")], sort_keys=False
         ),
@@ -354,8 +356,10 @@ def test_a_stale_page_from_an_earlier_run_does_not_survive(
 def test_invalid_yaml_fails_loudly_and_leaves_the_target_untouched(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "speakers.yml").write_text("not: [valid", encoding="utf-8")
+    (tmp_path / "instance" / "data").mkdir(parents=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
+        "not: [valid", encoding="utf-8"
+    )
     monkeypatch.setattr("convener_ops.cli.repo_root", lambda: tmp_path)
     out = tmp_path / "out"
     exit_code = _run(out, monkeypatch)

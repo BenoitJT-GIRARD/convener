@@ -25,7 +25,7 @@ convention somebody is asked to respect.
   assertion, so CI refuses the edit at the push that carries it instead of
   leaving it standing in the repository until the next run undoes it.
 * **The rendering is a function of the commits alone.** No clock, no
-  `data/*.yml`, no generation counter, no environment. Two runs over the same
+  `instance/data/*.yml`, no generation counter, no environment. Two runs over the same
   commits produce byte-identical files, which is what lets the job commit
   "only if it changed" and mean it.
 
@@ -78,7 +78,7 @@ Every cell below is a calendar day, an identifier, or a phrase from the closed
 vocabulary in `tools/convener_ops/commit_format.py`. The table has no free-text
 column, so it records what happened to a record and never passes judgement on
 the volunteer who acted. Reasons a volunteer chose to state live with the
-record itself, in `data/speakers.yml`, where they can still be corrected; a
+record itself, in `instance/data/speakers.yml`, where they can still be corrected; a
 line of this register, once written, never changes.
 
 This register begins with the grammar of decision commits, which is younger
@@ -86,7 +86,7 @@ than the board. Decisions taken before it are not listed here and have not been
 reconstituted from memory -- an audit trail that invented its own past would be
 worth nothing. Those earlier decisions are recorded elsewhere and are not lost:
 the ballots the board cast on the speakers migrated with them into
-`data/speakers.yml`, and the reasoning behind the board's standing choices is
+`instance/data/speakers.yml`, and the reasoning behind the board's standing choices is
 in `decisions.md`, next to this file. A short or empty table therefore dates
 the arrival of the tooling, not the activity of the board.
 """

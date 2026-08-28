@@ -276,14 +276,15 @@ def _configured() -> queue_watch.Thresholds:
     )
 
 
-def test_the_threshold_lives_in_config_beside_the_others() -> None:
-    """Never `data/config.yml`: the app's validator refuses by name any key
-    it does not know and would delete it at the next Board edit, which has
-    happened. `config/` is what `deploy.yml` ignores."""
-    assert queue_watch.CONFIG_PATH.parent.as_posix() == "config"
+def test_the_threshold_lives_beside_the_other_declarations() -> None:
+    """Never `instance/data/config.yml`: the app's validator refuses by
+    name any key it does not know and would delete it at the next Board
+    edit, which has happened. It sits at the top of `instance/`, beside
+    the other two thresholds, which is what `deploy.yml` ignores."""
+    assert queue_watch.CONFIG_PATH.parent.as_posix() == "instance"
     assert queue_watch.config_path(_ROOT).is_file()
-    assert (_ROOT / "config" / "actions-budget.yml").is_file()
-    assert (_ROOT / "config" / "registration-lanes.yml").is_file()
+    assert (_ROOT / "instance" / "actions-budget.yml").is_file()
+    assert (_ROOT / "instance" / "registration-lanes.yml").is_file()
 
 
 def test_the_configured_alarm_sits_inside_the_bounds_the_drain_sets() -> None:
@@ -304,7 +305,7 @@ def test_the_configured_alarm_sits_inside_the_bounds_the_drain_sets() -> None:
     )
     floor, ceiling = queue_watch.alarm_bounds(period, lane)
     assert floor <= ceiling, (
-        f"config/registration-lanes.yml's queue_beyond_hours ({lane}) is cut "
+        f"instance/registration-lanes.yml's queue_beyond_hours ({lane}) is cut "
         f"so close to the drain's {period}-hour period that no alarm can "
         "both wait for a healthy drain and still leave anybody time to act "
         f"(floor {floor}, ceiling {ceiling}) -- the lane threshold is what "
@@ -312,7 +313,7 @@ def test_the_configured_alarm_sits_inside_the_bounds_the_drain_sets() -> None:
     )
     configured = _configured().alarm_after_hours
     assert floor <= configured <= ceiling, (
-        f"config/queue-drain.yml's alarm_after_hours ({configured}) is "
+        f"instance/queue-drain.yml's alarm_after_hours ({configured}) is "
         f"outside the {floor}..{ceiling} hours the drain's own cadence and "
         "the registration lane leave for it"
     )
@@ -404,10 +405,12 @@ class _FixedDatetime:
 
 def _repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, now: datetime) -> Path:
     """A repository root holding only what these two commands read."""
-    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "data" / "config.yml").write_text("season: 2026\n", encoding="utf-8")
-    (tmp_path / "config").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "config" / "queue-drain.yml").write_text(
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data" / "config.yml").write_text(
+        "season: 2026\n", encoding="utf-8"
+    )
+    (tmp_path / "instance").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "queue-drain.yml").write_text(
         "v: 1\nalarm_after_hours: 48\nmax_silent_days: 2\n", encoding="utf-8"
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))

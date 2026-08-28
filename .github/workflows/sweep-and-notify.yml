@@ -36,7 +36,7 @@
 # `contents: write` and `actions: write` it has no use for, which is a
 # real loss for no gain.
 #
-# The sweep writes `data/speakers.yml` -- the very path the `push:` trigger
+# The sweep writes `instance/data/speakers.yml` -- the very path the `push:` trigger
 # below watches. That is not a loop: the commit is made with the job's own
 # GITHUB_TOKEN, and GitHub does not start a workflow run from an event a
 # GITHUB_TOKEN produced (its recursion guard). It is the same guard that
@@ -63,13 +63,13 @@
 # --------------------------------
 # The `daily` job also measures what this repository's own Actions runs
 # actually billed over the last week, commits it to
-# `data/actions-usage.yml`, and goes red -- and posts on the same thread --
+# `instance/data/actions-usage.yml`, and goes red -- and posts on the same thread --
 # when the rate says the free monthly allowance will not hold. It lives
 # here, as steps, for one reason: a workflow or a job created to watch the
 # cost would cost a billed job a day, every day, which is self-defeating.
 # The steps themselves are at the bottom of `daily`, with their own
 # reasoning; `tools/convener_ops/actions_usage.py` holds the arithmetic and
-# `config/actions-budget.yml` the thresholds.
+# `instance/actions-budget.yml` the thresholds.
 
 name: Sweep and notify the board
 
@@ -77,7 +77,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'data/speakers.yml'
+      - 'instance/data/speakers.yml'
   schedule:
     # 05:00 UTC, the hour the sweep already had. The digest no longer needs
     # an hour of its own: it is the step after the sweep in the same job.
@@ -104,7 +104,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # The whole history. The immediate events are a difference between
-          # two revisions of data/speakers.yml -- the working tree's and the
+          # two revisions of instance/data/speakers.yml -- the working tree's and the
           # one the branch was at before this push -- and a push carrying
           # several commits moved the branch by more than one, so the parent
           # of HEAD is not that revision. With the revision unreachable the
@@ -176,7 +176,7 @@ jobs:
     timeout-minutes: 40
     permissions:
       # The union of what the two files carried, and nothing past it.
-      # `contents: write` is the sweep committing data/speakers.yml;
+      # `contents: write` is the sweep committing instance/data/speakers.yml;
       # `actions: write` is the same sweep dispatching publish-vitrine.yml
       # afterwards, which the recursion guard makes necessary (see the
       # sweep step below, and visuals-production.yml's own copy of the
@@ -201,7 +201,7 @@ jobs:
           enable-cache: true
       # The commit below pushes with this job's
       # own GITHUB_TOKEN, which cannot fire publish-vitrine.yml's `push`-
-      # triggered `paths:` trigger (`data/speakers.yml` is one of the paths
+      # triggered `paths:` trigger (`instance/data/speakers.yml` is one of the paths
       # it names) -- GitHub's recursion guard. That is not a hypothetical:
       # `events-public.json` had in fact never been republished after a
       # nightly sweep, and went unnoticed until somebody ran the wired job.
@@ -221,7 +221,7 @@ jobs:
         # On a rejected push, re-derive against the
         # refreshed tip rather than `git pull --rebase` -- the same shape
         # registration.yml's own retry loop uses. `convener-sweep` rewrites
-        # data/speakers.yml as a pure function of the current time and the
+        # instance/data/speakers.yml as a pure function of the current time and the
         # file's own current content (sweep_speakers/expire_votes are both
         # idempotent -- an already-swept event stays swept, an already-
         # expired vote window stays expired), so re-running it against
@@ -235,7 +235,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-sweep)
-            git add data/speakers.yml
+            git add instance/data/speakers.yml
             if git diff --staged --quiet; then
               echo "nothing to commit"
               exit 0
@@ -272,7 +272,7 @@ jobs:
       # one commit, once a day.
       #
       # There is a second kind: a registration whose event is
-      # still further away than `config/registration-lanes.yml`'s threshold
+      # still further away than `instance/registration-lanes.yml`'s threshold
       # comes here too. A registration closer than that is still dispatched
       # the instant it arrives and still handled by `registration.yml`,
       # unchanged -- the confirmation e-mail carries the room link and the
@@ -294,7 +294,7 @@ jobs:
       # The order of these steps is the whole of "nothing is lost": the
       # drain commits and pushes its result to `main` *first*, and only then
       # clears what it handled from the queue. An interruption between the
-      # two leaves entries in the queue that `data/queue-ledger.yml` already
+      # two leaves entries in the queue that `instance/data/queue-ledger.yml` already
       # records as handled, so the next drain clears them without applying
       # them twice. The reverse order would lose a submission outright, and
       # no ledger could recover it.
@@ -321,7 +321,7 @@ jobs:
           QUEUE_BRANCH: submission-queue
         # Exported outside the checkout, into the runner's own temporary
         # directory, so a queued entry can never be caught by a `git add`
-        # meant for `data/` and committed to the default branch -- which is
+        # meant for `instance/data/` and committed to the default branch -- which is
         # the one place it must never land (see this block's own comment).
         run: |
           set -e
@@ -416,8 +416,8 @@ jobs:
         # --rebase` over a JSON array, for the reason registration.yml's own
         # comment gives.
         #
-        # `data/queue-ledger.yml` is staged in the *same* commit as
-        # `data/events/`: "this entry has been handled" and "here is what
+        # `instance/data/queue-ledger.yml` is staged in the *same* commit as
+        # `instance/data/events/`: "this entry has been handled" and "here is what
         # handling it produced" have to become one atomic fact, or a replay
         # records a submission twice.
         run: |
@@ -429,17 +429,17 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
             (cd tools && uv run convener-drain-queue)
-            git add -- data/queue-ledger.yml
+            git add -- instance/data/queue-ledger.yml
             # Conditional, because `git add` on a pathspec that matches
             # nothing is a *failure*, and `set -e` would end the step
             # there. A drain that refused everything it found writes no
             # response file at all, and on a repository whose first drain
-            # refuses, data/events does not exist yet -- that run must
+            # refuses, instance/data/events does not exist yet -- that run must
             # still commit its ledger and go on to clear the queue, or
             # those entries block it for ever. Found by driving this
             # script, not by reading it.
-            if [ -d data/events ]; then
-              git add -- data/events
+            if [ -d instance/data/events ]; then
+              git add -- instance/data/events
             fi
             if git diff --staged --quiet; then
               echo "the drain changed nothing -- nothing to commit"
@@ -531,7 +531,7 @@ jobs:
         # must not be disturbed to remove files from an unrelated branch.
         #
         # Failing here is not a lost submission. Every entry stays in the
-        # queue and `data/queue-ledger.yml` already names it as handled, so
+        # queue and `instance/data/queue-ledger.yml` already names it as handled, so
         # tomorrow's drain clears it without applying it a second time.
         run: |
           set -e
@@ -561,7 +561,7 @@ jobs:
             fi
             echo "clearing push rejected (attempt $attempt/3) -- re-fetching the queue and retrying"
           done
-          echo "::error::could not clear the queue after 3 attempts -- nothing is lost, and data/queue-ledger.yml stops tomorrow's drain re-applying any of it"
+          echo "::error::could not clear the queue after 3 attempts -- nothing is lost, and instance/data/queue-ledger.yml stops tomorrow's drain re-applying any of it"
           exit 1
       - name: Fail if a queued submission could not be reached
         # Deferrals only, never refusals -- see
@@ -603,7 +603,7 @@ jobs:
       # and this job is also the only place that already holds the board's
       # thread and team mention. The other half, "the drain stopped running
       # at all", cannot be detected from inside the job that stopped: that
-      # is what data/queue-watch.yml is for, rewritten below every single
+      # is what instance/data/queue-watch.yml is for, rewritten below every single
       # day whatever this run found, and read by retention-watchdog.yml on
       # its own independent schedule some hours later.
       - name: Record what the queue still holds
@@ -654,9 +654,9 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
             (cd tools && uv run convener-record-queue-watch)
-            git add -- data/queue-watch.yml
+            git add -- instance/data/queue-watch.yml
             if git diff --staged --quiet; then
-              echo "data/queue-watch.yml already says this -- nothing to commit"
+              echo "instance/data/queue-watch.yml already says this -- nothing to commit"
               exit 0
             fi
             git commit -m "data: record what the public submission queue still holds"
@@ -695,7 +695,7 @@ jobs:
         # appears here at all.
         if: always() && steps.queue-watch.outputs.queue_alert == 'true'
         run: |
-          echo "::error::a public submission has been waiting past config/queue-drain.yml's alarm_after_hours -- see the annotations above and data/queue-watch.yml"
+          echo "::error::a public submission has been waiting past instance/queue-drain.yml's alarm_after_hours -- see the annotations above and instance/data/queue-watch.yml"
           exit 1
       # ----------------------------------------------------------------
       # The lane rule that quietly stops applying
@@ -705,7 +705,7 @@ jobs:
       # is about the ones that never do.
       #
       # `services/signup-relay` decides a registration's lane by reading
-      # `public-data/registration-routing.json`, and every failure to
+      # `instance/public-data/registration-routing.json`, and every failure to
       # resolve that read -- a 404, an unknown version, an event absent
       # from it, a rate limit -- falls open to the immediate lane. That
       # direction is right and nothing here changes it: the confirmation
@@ -724,7 +724,7 @@ jobs:
       # reason the drain and the budget measurement are: a workflow or a
       # job created for this would itself cost a billed run every day,
       # which is the very cost it exists to protect. It also needs
-      # `data/speakers.yml`, which this job already has checked out, and
+      # `instance/data/speakers.yml`, which this job already has checked out, and
       # the board's thread, which this job already holds.
       #
       # The signal is what the file can still *route*, never how old it
@@ -773,7 +773,7 @@ jobs:
         # in this repository, or a file that is not there.
         if: always() && steps.routing-watch.outputs.routing_alert == 'true'
         run: |
-          echo "::error::public-data/registration-routing.json can no longer route registrations to the queue -- see the annotations above; it is regenerated and committed by Deploy app, which nothing in this job starts"
+          echo "::error::instance/public-data/registration-routing.json can no longer route registrations to the queue -- see the annotations above; it is regenerated and committed by Deploy app, which nothing in this job starts"
           exit 1
       - name: Compose
         id: compose
@@ -928,9 +928,9 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git reset --hard "origin/$TARGET_BRANCH"
             (cd tools && uv run convener-record-actions-usage)
-            git add data/actions-usage.yml
+            git add instance/data/actions-usage.yml
             if git diff --staged --quiet; then
-              echo "data/actions-usage.yml already says this -- nothing to commit"
+              echo "instance/data/actions-usage.yml already says this -- nothing to commit"
               exit 0
             fi
             git commit -m "data: record what this repository's runs cost"
@@ -964,5 +964,5 @@ jobs:
         # reason.
         if: always() && steps.usage.outputs.budget_alert == 'true'
         run: |
-          echo "::error::the Actions budget alarm fired -- see the annotations above and data/actions-usage.yml"
+          echo "::error::the Actions budget alarm fired -- see the annotations above and instance/data/actions-usage.yml"
           exit 1

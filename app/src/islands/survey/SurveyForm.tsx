@@ -76,7 +76,7 @@ function surveyRelayUrl(): string | undefined {
 }
 
 // The address a participant writes to about their own data. Declared
-// once in `config/instance.json` and carried into this
+// once in `instance/config.json` and carried into this
 // bundle by `vite.config.ts`'s own define, because this runs in a
 // participant's browser. A duplicate that left this literal here would
 // send its own participants' data-protection requests to the previous

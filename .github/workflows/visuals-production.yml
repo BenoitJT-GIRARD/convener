@@ -2,7 +2,7 @@ name: Visuals production
 
 # The trigger for the production seam
 # (`convener-render-visuals`, `tools/convener_ops/cli.py`), run against real, *scheduled*
-# editions in `data/speakers.yml` -- locking a date, receiving a
+# editions in `instance/data/speakers.yml` -- locking a date, receiving a
 # portrait's consent, or correcting a title all land here through that one
 # file -- plus a GitHub-side manual command (`workflow_dispatch`)
 # mirroring the one this command already offers on the command line with
@@ -53,7 +53,7 @@ name: Visuals production
 # references/*.png`) -- accepted for the one file an unattended
 # bot actually reads, not for the two a human downloads on demand.
 #
-# Why this exact path list, and why `data/speakers.yml` is in it (unlike
+# Why this exact path list, and why `instance/data/speakers.yml` is in it (unlike
 # visuals.yml's own list, which names it only to say why it is
 # deliberately absent there): this job exists to render *real* editions,
 # so a change to the one file that carries them is precisely the case it
@@ -72,7 +72,7 @@ name: Visuals production
 # and none of the four was a dependency of this workflow before this
 # command had a consumer in it.
 #
-# It also carries `config/instance.json` and
+# It also carries `instance/config.json` and
 # `tools/convener_ops/published.py`, and this pair *is* shared with visuals.yml
 # for once: the composition reads the instance's own declaration now (the
 # wordmark band is `identity.forum_host`, the hero band is
@@ -99,7 +99,7 @@ name: Visuals production
 # that never goes through `to_public` at all -- so adding it there would
 # only trigger a fixture re-render that could never produce a different
 # pixel; see visuals.yml's own comment for the parallel statement about
-# `data/speakers.yml`, which `public_data.py` exists to gate.
+# `instance/data/speakers.yml`, which `public_data.py` exists to gate.
 #
 # A single `paths:` list, not two: unlike visuals.yml, this workflow has no
 # `pull_request` trigger to keep a second copy in step with, so the
@@ -131,15 +131,15 @@ on:
       - 'docs/toolkit/linkedin-post.md'
       - 'docs/toolkit/mailing-list-announce.md'
       - 'docs/toolkit/recording-announce.md'
-      - 'config/instance.json'
+      - 'instance/config.json'
       - 'tools/convener_ops/published.py'
-      - 'data/brand.json'
+      - 'instance/data/brand.json'
       - 'brand/convener/brand.json'
       - 'tools/convener_ops/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'visuals/**'
-      - 'data/speakers.yml'
+      - 'instance/data/speakers.yml'
       - '.github/workflows/visuals-production.yml'
   workflow_dispatch:
 
@@ -236,7 +236,7 @@ jobs:
       - name: Nothing scheduled -- nothing to render this run
         if: steps.pages.outputs.count == '0' && steps.announcements.outputs.count == '0'
         run: |
-          echo "::notice::no scheduled edition in data/speakers.yml -- this run produced nothing to publish, which is the normal state until a date is locked"
+          echo "::notice::no scheduled edition in instance/data/speakers.yml -- this run produced nothing to publish, which is the normal state until a date is locked"
       # Restored *before* `npm ci` so its own postinstall download
       # (`puppeteer`'s pinned Chrome-for-Testing build) can be skipped
       # entirely on a cache hit -- the identical key visuals.yml's own job

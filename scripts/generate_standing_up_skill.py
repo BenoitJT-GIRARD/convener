@@ -38,7 +38,7 @@ to remove, arriving by a different door.
 Pure, so `--check` means something
 ----------------------------------
 The rendering reads `STANDING-UP.yml` and nothing else: no clock, no
-environment, no `config/`, no `data/`. Two runs over the same file produce
+environment, no `config/`, no `instance/data/`. Two runs over the same file produce
 byte-identical output, so a difference can only be an edit made outside it --
 which is what `--check` refuses, without repairing it.
 

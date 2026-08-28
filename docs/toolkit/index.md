@@ -28,7 +28,7 @@ record's own field names, reached through the object that holds them:
   `{{ instance.series }}`,
   `{{ instance.forum_host }}` and `{{ instance.contact }}`. These are the
   only ones that do not come from a record: they come from
-  `config/instance.json`, the one file that says whose series this is, and
+  `instance/config.json`, the one file that says whose series this is, and
   they are therefore the same on every page. They resolve on the Templates
   screen with no speaker in hand, exactly as the `consent.…` group does, so
   what you read there is what a speaker would receive.
@@ -111,7 +111,7 @@ here to fill them in.
 - [Forum post — announce](forum-post-announce.md)
 - [Forum post — discussion summary](forum-post-summary.md)
 - [LinkedIn post](linkedin-post.md)
-- [Mailing list / newsletter message](mailing-list-announce.md) — for every mailing list and newsletter the series announces on; which ones those are is the Board's own list of channels, kept in `data/config.yml` and shown on each speaker's promotion checklist, not written out here
+- [Mailing list / newsletter message](mailing-list-announce.md) — for every mailing list and newsletter the series announces on; which ones those are is the Board's own list of channels, kept in `instance/data/config.yml` and shown on each speaker's promotion checklist, not written out here
 - [Recording announcement](recording-announce.md) — once the recording is actually published, for every channel the seminar was announced on
 - [Intro scripts](intro-scripts.md) — what the hosts say over the opening slides
 - [Run of show](run-of-show.md) — the session slide by slide, and the split between the two hosts

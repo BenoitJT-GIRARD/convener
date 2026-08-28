@@ -35,7 +35,7 @@ working instance and one that has published something it cannot take back.
 
 | Repository | Visibility | What it is |
 |---|---|---|
-| `cockpit` | private | The instance itself: the code, the workflows, the participant records, and every secret. Private because `data/speakers.yml` and the per-event registration files hold personal data, and a repository holding those cannot be public. Created as a new repository of your own, never as a fork — repositories in one fork network share an object store, so a commit pushed to a private-looking fork stays reachable from the public parent for ever, and no setting inside the fork closes that route. |
+| `cockpit` | private | The instance itself: the code, the workflows, the participant records, and every secret. Private because `instance/data/speakers.yml` and the per-event registration files hold personal data, and a repository holding those cannot be public. Created as a new repository of your own, never as a fork — repositories in one fork network share an object store, so a commit pushed to a private-looking fork stays reachable from the public parent for ever, and no setting inside the fork closes that route. |
 | `showcase` | public | The publication target, and nothing else. GitHub Pages will not serve a private repository without a paid plan, which the no-cost constraint rules out, so continuous integration in the cockpit builds `site/` and `app/` and pushes the result into this repository's root. Nobody edits anything here. Every byte is reproducible from the cockpit, so losing it costs a rebuild. |
 
 The split is forced, not preferred, and
@@ -231,7 +231,7 @@ and there is nothing to enable there.
 
 **Proves it is done.** Settings → Pages names `main` and `/ (root)`, and shows
 the address the site will be served at. That address, with its trailing slash,
-is what the next stage writes into `config/instance.json`.
+is what the next stage writes into `instance/config.json`.
 
 **Without it.** Nothing is served, or — worse, and this is the failure this
 project has already met once — the wrong thing is served with no sign of it. A
@@ -250,7 +250,7 @@ one above its sign-in screen, naming the keys still to fill in.
 
 **Who:** an agent, or a person.
 
-Edit `config/instance.json`: the published address and its trailing slash, the
+Edit `instance/config.json`: the published address and its trailing slash, the
 edition prefix your talks are numbered under, and the nine identity values a
 stranger reads — the organisation and its short form, the series, its
 strapline and its tagline, the forum, the contact address, the proposal form,
@@ -288,9 +288,10 @@ the pull request waits for a review that cannot arrive.
 
 **Who:** an agent, or a person.
 
-Edit `data/config.yml`: the Editorial Board's GitHub logins, the season, and
-the thresholds a vote is counted against. Logins, not names — the cockpit asks
-GitHub who is signed in, and a first name is not an answer to that question.
+Edit `instance/data/config.yml`: the Editorial Board's GitHub logins, the
+season, and the thresholds a vote is counted against. Logins, not names — the
+cockpit asks GitHub who is signed in, and a first name is not an answer to
+that question.
 
 **Proves it is done.** `convener-validate` exits 0, and the *Validate data*
 workflow is green on the commit that changed the file.
@@ -310,10 +311,10 @@ recognise them when they sign in.
 
 **Who:** an agent, or a person.
 
-Empty `data/speakers.yml`. A duplicate starts with no speakers and no events;
-the file that ships holds the worked example's invented reading group, which
-exists to prove the product can be built as somebody else and for nothing
-else.
+Empty `instance/data/speakers.yml`. A duplicate starts with no speakers and no
+events; the file that ships holds the worked example's invented reading group,
+which exists to prove the product can be built as somebody else and for
+nothing else.
 
 **Proves it is done.** `convener-validate` exits 0 on the emptied file, and
 the showcase's archive page lists nothing.
@@ -391,7 +392,7 @@ to catch, and only the deployed page can catch it.
 **Without it.** Every later step in this sequence is verified against a site
 nobody has opened. The two failures this stage is here to surface — a Pages
 source pointing at a branch nothing pushes to, and an address written into
-`config/instance.json` that does not match the one Pages serves — both look
+`instance/config.json` that does not match the one Pages serves — both look
 like success from inside the repository, and both are obvious from one browser
 tab.
 
@@ -493,7 +494,7 @@ account, so it cannot be shipped filled in. Create the two namespaces the form
 relay and the signup relay bind to, pasting each printed id over the
 placeholder in that worker's own `wrangler.toml`. Nothing else in those
 workers is yours to correct. Two values were, and neither is written down
-anywhere but `config/instance.json` now: the origin each relay answers
+anywhere but `instance/config.json` now: the origin each relay answers
 cross-origin requests for, and the repository the form relay and the signup
 relay dispatch into. Each deploy workflow derives what its worker needs and
 hands it to `wrangler deploy`.
@@ -733,12 +734,12 @@ at a steady rate rather than as an edge case.
 Open the draft in Tally, confirm the hint text renders under the two
 dropdowns, publish it, point its webhook at the deployed form relay, set the
 signing secret Tally shows in the two places that verify it, and write the
-published form's address into `config/instance.json`.
+published form's address into `instance/config.json`.
 
 **Proves it is done.** Submit the form yourself. A new lead appears in
-`data/speakers.yml` shortly afterwards, committed by *Handle proposal*, and
-the showcase's propose page links the form instead of saying it is not open
-yet.
+`instance/data/speakers.yml` shortly afterwards, committed by *Handle
+proposal*, and the showcase's propose page links the form instead of saying it
+is not open yet.
 
 **Without it.** A form that exists and reaches nobody. A webhook pointed at
 any path but the worker's root answers 404 and the submission is lost with no
@@ -769,7 +770,7 @@ failure.
    secret named `TALLY_WEBHOOK_SECRET` on the form relay, and as a repository
    secret of the same name on the private repository. The worker verifies it
    before forwarding anything, and the workflow verifies it again on arrival.
-6. Copy the published form's address into `config/instance.json` as
+6. Copy the published form's address into `instance/config.json` as
    `identity.proposal_form`, and commit. Until that value is a real address,
    the showcase's propose page reads as not yet open.
 
@@ -849,8 +850,8 @@ exactly once by somebody who then holds the only copy of its private half
 until it is pasted in and never printed again.
 
 **Proves it is done.** Run the configuration report: *Certificate signing key*
-moves from `absent` to `production`, and `keys/signing/` holds one public half
-named for the day it was generated.
+moves from `absent` to `production`, and `instance/keys/signing/` holds one
+public half named for the day it was generated.
 
 ```bash
 cd tools && uv run convener-check-config
@@ -880,9 +881,9 @@ row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 1. Open a Python shell inside `tools/` with `uv run python`, and generate the
    pair with `from convener_ops.signing import generate; private_pem,
    public_pem = generate()`.
-2. Commit the public half first, as `keys/signing/` plus the day it was
-   generated and a `.pub` suffix. The order is load-bearing, because a private
-   secret set before its public half is published lets a job sign a
+2. Commit the public half first, as `instance/keys/signing/` plus the day it
+   was generated and a `.pub` suffix. The order is load-bearing, because a
+   private secret set before its public half is published lets a job sign a
    certificate nothing can yet verify.
 3. Paste the private half directly from that terminal into the private
    repository's Settings → Secrets and variables → Actions → Secrets → New
@@ -1121,21 +1122,22 @@ cd tools && uv run convener-check-config
 row's* `meanwhile:` *line. It is maintained there, and quoted here.*
 
 > The manual adapter (tools/convener_ops/platform.py::ManualPlatform) is used.
-> The room and recording links are typed by hand into data/speakers.yml's
-> existing zoom_link and youtube_url, join instructions into data/config.yml's
-> instructions (one value for the whole series -- the account is the permanent
-> room), and attendance is imported from
-> data/events/<id>/attendance-import.csv, a file that is never committed. No
-> room link is published automatically, and no recording storage is managed on
-> our side. Once set, tools/convener_ops/platform_fcc.py::PlatformFCC is used
-> instead (selected by platform_fcc.py::platform_from_env, D-13): real
-> per-person attendance is read from the provider's own calls endpoint --
-> undocumented by the vendor, but verified empirically -- and the recording is
-> reported and deleted through its own API instead of being tracked by hand.
-> The value is the current access token itself, not a client id and secret; it
-> expires and must be renewed roughly monthly, a step of the event journey
-> rather than a one-time secret -- see docs/reference/operations.md's "Meeting
-> platform" section.
+> The room and recording links are typed by hand into
+> instance/data/speakers.yml's existing zoom_link and youtube_url, join
+> instructions into instance/data/config.yml's instructions (one value for the
+> whole series -- the account is the permanent room), and attendance is
+> imported from instance/data/events/<id>/attendance-import.csv, a file that
+> is never committed. No room link is published automatically, and no
+> recording storage is managed on our side. Once set,
+> tools/convener_ops/platform_fcc.py::PlatformFCC is used instead (selected by
+> platform_fcc.py::platform_from_env, D-13): real per-person attendance is
+> read from the provider's own calls endpoint -- undocumented by the vendor,
+> but verified empirically -- and the recording is reported and deleted
+> through its own API instead of being tracked by hand. The value is the
+> current access token itself, not a client id and secret; it expires and must
+> be renewed roughly monthly, a step of the event journey rather than a
+> one-time secret -- see docs/reference/operations.md's "Meeting platform"
+> section.
 
 **Credentials.** `CONVENER_MEETING_API_TOKEN`
 

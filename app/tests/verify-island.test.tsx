@@ -7,7 +7,7 @@ import cases from '../../tools/tests/fixtures/certificate-verification.json';
  * End-to-end tests of the whole page: real fixture tokens, real RSA
  * verification via `crypto.subtle` (never a stubbed `verify()`), a stubbed
  * `fetch` standing in for the two same-origin static files this page reads
- * (`keys/signing/index.json`, `certificates.json`). This is what a unit
+ * (`instance/keys/signing/index.json`, `certificates.json`). This is what a unit
  * test of `verify.ts` alone cannot prove: that `VerifyPage` actually wires
  * a genuine signature failure to the "not verifiable" panel, and a genuine
  * register-unavailable to "state unknown" -- not merely that the pure

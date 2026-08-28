@@ -74,7 +74,7 @@ describe('friendlyError', () => {
   });
 
   it('passes a ConflictError message through unchanged -- it is already plain language', () => {
-    const e = new ConflictError('data/speakers.yml', 3);
+    const e = new ConflictError('instance/data/speakers.yml', 3);
     expect(friendlyError(e, 'save')).toBe(e.message);
     expect(friendlyError(e, 'save')).toMatch(/someone else is editing/);
   });

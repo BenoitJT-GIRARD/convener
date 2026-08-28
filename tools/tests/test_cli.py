@@ -102,7 +102,7 @@ def test_load_valid_yaml_returns_data_and_no_errors(tmp_path: Path) -> None:
 
 
 #: The real declaration, copied into every scratch root below rather than
-#: re-typed. `convener-validate` reads `config/instance.json` for the prefix its
+#: re-typed. `convener-validate` reads `instance/config.json` for the prefix its
 #: editions are numbered under, and a second hand-typed
 #: declaration here would be a second answer to what this instance is --
 #: the same choice `test_cli_render_visuals.py::_fake_root` already makes.
@@ -115,17 +115,17 @@ def test_load_valid_yaml_returns_data_and_no_errors(tmp_path: Path) -> None:
 #: says which file is missing.
 @cache
 def _real_instance() -> str:
-    return (repo_root() / "config" / "instance.json").read_text(encoding="utf-8")
+    return (repo_root() / "instance" / "config.json").read_text(encoding="utf-8")
 
 
 def _write_data(tmp_path: Path, speakers: object, cfg: object) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True)
     (data_dir / "speakers.yml").write_text(yaml.safe_dump(speakers), encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(cfg), encoding="utf-8")
-    config_dir = tmp_path / "config"
-    config_dir.mkdir(exist_ok=True)
-    (config_dir / "instance.json").write_text(_real_instance(), encoding="utf-8")
+    instance_dir = tmp_path / "instance"
+    instance_dir.mkdir(parents=True, exist_ok=True)
+    (instance_dir / "config.json").write_text(_real_instance(), encoding="utf-8")
 
 
 def test_validate_reports_ok_and_returns_0(
@@ -180,8 +180,8 @@ def test_validate_handles_a_missing_config_file(
     # written, or a broken deploy -- and validate() must still run speakers
     # validation and report the load error, not crash resolving
     # cfg["board"] or calling validate_config(None).
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True)
     (data_dir / "speakers.yml").write_text(
         yaml.safe_dump([speaker()]), encoding="utf-8"
     )
@@ -201,8 +201,8 @@ def test_validate_handles_a_missing_config_file(
 def test_validate_handles_a_missing_speakers_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True)
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
 
@@ -266,7 +266,7 @@ def test_sweep_rewrites_the_file_and_keeps_the_header(
     out = capsys.readouterr().out
     assert "spk-001: scheduled -> delivered" in out
 
-    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    text = (tmp_path / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
     assert text.startswith("# Speakers (unified schema v6")
     assert "status: delivered" in text
 
@@ -275,7 +275,7 @@ def test_sweep_reports_load_errors_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    (tmp_path / "data").mkdir()
+    (tmp_path / "instance" / "data").mkdir(parents=True)
 
     assert sweep() == 1
     assert "file missing" in capsys.readouterr().out
@@ -307,7 +307,9 @@ def test_public_data_writes_the_allowlisted_feed(
     assert "wrote 1 events" in capsys.readouterr().out
 
     written = json.loads(
-        (tmp_path / "public-data" / "events-public.json").read_text(encoding="utf-8")
+        (tmp_path / "instance" / "public-data" / "events-public.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert [row["id"] for row in written] == ["MRG-05"]
 
@@ -316,11 +318,11 @@ def test_public_data_reports_load_errors_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    (tmp_path / "data").mkdir()
+    (tmp_path / "instance" / "data").mkdir(parents=True)
 
     assert public_data() == 1
     assert "file missing" in capsys.readouterr().out
-    assert not (tmp_path / "public-data").exists()
+    assert not (tmp_path / "instance" / "public-data").exists()
 
 
 def test_survey_status_public_data_writes_only_the_enabled_ids(
@@ -342,7 +344,9 @@ def test_survey_status_public_data_writes_only_the_enabled_ids(
     assert "wrote 1 event(s)" in capsys.readouterr().out
 
     written = json.loads(
-        (tmp_path / "public-data" / "survey-status.json").read_text(encoding="utf-8")
+        (tmp_path / "instance" / "public-data" / "survey-status.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert written == ["mrg-06"]
 
@@ -351,11 +355,11 @@ def test_survey_status_public_data_reports_load_errors_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    (tmp_path / "data").mkdir()
+    (tmp_path / "instance" / "data").mkdir(parents=True)
 
     assert survey_status_public_data() == 1
     assert "file missing" in capsys.readouterr().out
-    assert not (tmp_path / "public-data").exists()
+    assert not (tmp_path / "instance" / "public-data").exists()
 
 
 def test_agenda_internal_writes_pure_crlf_bytes_for_a_scheduled_edition(
@@ -378,7 +382,9 @@ def test_agenda_internal_writes_pure_crlf_bytes_for_a_scheduled_edition(
     assert agenda_internal() == 0
     assert "wrote 1 entrie(s)" in capsys.readouterr().out
 
-    written = (tmp_path / "public-data" / "agenda-internal.ics").read_bytes()
+    written = (
+        tmp_path / "instance" / "public-data" / "agenda-internal.ics"
+    ).read_bytes()
     assert b"BEGIN:VEVENT" in written
     assert b"mrg-07" in written
     assert b"\r\n" in written
@@ -392,11 +398,11 @@ def test_agenda_internal_reports_load_errors_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    (tmp_path / "data").mkdir()
+    (tmp_path / "instance" / "data").mkdir(parents=True)
 
     assert agenda_internal() == 1
     assert "file missing" in capsys.readouterr().out
-    assert not (tmp_path / "public-data").exists()
+    assert not (tmp_path / "instance" / "public-data").exists()
 
 
 def test_handle_proposal_with_no_payload_returns_1(
@@ -423,7 +429,7 @@ def test_handle_proposal_writes_a_new_lead(
     out = capsys.readouterr().out
     assert "created spk-002 from form proposal" in out
 
-    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    text = (tmp_path / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
     assert "spk-002" in text
     assert "Grace Hopper" in text
 
@@ -458,7 +464,9 @@ def test_handle_proposal_stamps_the_paris_day_not_the_utc_one(
     assert handle_proposal() == 0
     capsys.readouterr()
 
-    written = yaml.safe_load((tmp_path / "data" / "speakers.yml").read_text("utf-8"))
+    written = yaml.safe_load(
+        (tmp_path / "instance" / "data" / "speakers.yml").read_text("utf-8")
+    )
     assert written[0]["selection"]["opened_on"] == "2026-01-12"
 
 
@@ -504,7 +512,7 @@ def test_handle_proposal_accepts_a_correctly_signed_tally_shaped_body(
     out = capsys.readouterr().out
     assert "created spk-002 from form proposal" in out
 
-    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    text = (tmp_path / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
     assert "spk-002" in text
     assert "Grace Hopper" in text
 
@@ -552,7 +560,7 @@ def test_handle_proposal_reports_load_errors_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    (tmp_path / "data").mkdir()
+    (tmp_path / "instance" / "data").mkdir(parents=True)
     monkeypatch.setenv("PROPOSAL_PAYLOAD", '{"fields": []}')
     monkeypatch.delenv("PROPOSAL_SIGNATURE", raising=False)
     monkeypatch.delenv("TALLY_WEBHOOK_SECRET", raising=False)
@@ -642,7 +650,9 @@ def test_handle_proposal_resolves_a_picker_shaped_gender_field(
 
     assert handle_proposal() == 0
 
-    written = yaml.safe_load((tmp_path / "data" / "speakers.yml").read_text("utf-8"))
+    written = yaml.safe_load(
+        (tmp_path / "instance" / "data" / "speakers.yml").read_text("utf-8")
+    )
     assert written[-1]["gender"] == "NB"
 
 
@@ -669,7 +679,7 @@ def test_handle_proposal_never_writes_a_stringified_list_for_an_unresolvable_opt
 
     assert handle_proposal() == 0
 
-    text = (tmp_path / "data" / "speakers.yml").read_text(encoding="utf-8")
+    text = (tmp_path / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
     assert "['unknown-id']" not in text
     written = yaml.safe_load(text)
     assert written[-1]["gender"] == "undisclosed"
@@ -710,7 +720,7 @@ def _registration_payload(event_id: str, public_pem: str, **overrides: object) -
 
 def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, str]:
     private_pem, public_pem = eventkeys.generate()
-    keys_dir = tmp_path / "keys" / "events"
+    keys_dir = tmp_path / "instance" / "keys" / "events"
     keys_dir.mkdir(parents=True)
     (keys_dir / f"{event_id}.pub").write_text(public_pem, encoding="ascii")
     return private_pem, public_pem
@@ -822,14 +832,14 @@ def test_handle_registration_fails_closed_without_a_configured_key(
 
     err = capsys.readouterr().err
     assert "no private key configured for event mrg-042" in err
-    assert not (tmp_path / "data").exists()
+    assert not (tmp_path / "instance" / "data").exists()
 
 
 def test_handle_registration_does_not_require_a_published_public_key(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The failure mode this replaces: re-encryption used to read
-    `keys/events/<id>.pub` from disk and fail without it. `upsert` now
+    `instance/keys/events/<id>.pub` from disk and fail without it. `upsert` now
     derives the matching public half from `private_pem` itself
     (`eventkeys.derive_public_pem`), so this job succeeds even when no
     `.pub` file exists anywhere in the checkout -- removing both the
@@ -841,7 +851,7 @@ def test_handle_registration_does_not_require_a_published_public_key(
         "REGISTRATION_PAYLOAD", _registration_payload("mrg-042", public_pem)
     )
     monkeypatch.setenv("EVENT_PRIVATE_KEY", private_pem)
-    assert not (tmp_path / "keys").exists()
+    assert not (tmp_path / "instance" / "keys").exists()
 
     assert handle_registration() == 0
     assert (
@@ -909,7 +919,9 @@ def test_handle_registration_writes_the_record_and_prints_no_name_or_address(
     out = _assert_no_leak(capsys)
     assert "recorded a registration for event mrg-042 (1 total)" in out
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     assert enc_path.exists()
     file = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(file.entries) == 1
@@ -947,7 +959,9 @@ def test_handle_registration_a_resend_updates_the_one_record_and_still_leaks_not
     assert "recorded a registration for event mrg-042 (1 total)" in out
     assert "updated a registration for event mrg-042 (1 total)" in out
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     file = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(file.entries) == 1
     recovered = to_registration(json.dumps(file.entries[0]), private_pem)
@@ -959,7 +973,7 @@ def test_handle_registration_rejects_a_malformed_committed_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, public_pem = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -997,8 +1011,8 @@ def test_handle_registration_rejects_a_malformed_committed_file(
 
 
 def _write_event(tmp_path: Path, **overrides: object) -> None:
-    """`data/speakers.yml` and `data/config.yml`, with one record whose
-    `edition_code` matches the `mrg-042` event id every fixture above
+    """`instance/data/speakers.yml` and `instance/data/config.yml`, with one
+    record whose `edition_code` matches the `mrg-042` event id every fixture above
     already submits against."""
     record = speaker(
         edition_code="MRG-042",
@@ -1223,7 +1237,7 @@ def test_handle_registration_confirmation_says_nothing_about_an_update_the_first
 def test_handle_registration_confirmation_degrades_with_no_speaker_record(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """No `data/speakers.yml` at all -- the state every registration test
+    """No `instance/data/speakers.yml` at all -- the state every registration test
     before this one already ran in. The registration must still be
     recorded and a confirmation still composed and sent, only without a
     room link."""
@@ -1280,7 +1294,9 @@ def test_handle_registration_survives_an_unanticipated_confirmation_failure(
     assert "recorded a registration for event mrg-042 (1 total)" in out
     assert "could not be composed or sent" in out
 
-    enc_path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    enc_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    )
     file = load_registration_file(enc_path.read_text(encoding="utf-8"))
     assert len(file.entries) == 1
 
@@ -1612,7 +1628,7 @@ def test_resend_confirmation_rejects_a_malformed_committed_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, public_pem = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -1646,13 +1662,15 @@ def _write_registrations(
     file = load_registration_file(None)
     for registration in registrations:
         file, _replaced = upsert(file, registration, private_pem=private_pem)
-    path = tmp_path / "data" / "events" / event_id / "registrations.enc"
+    path = tmp_path / "instance" / "data" / "events" / event_id / "registrations.enc"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump_registration_file(file), encoding="utf-8")
 
 
 def _write_attendance_csv(tmp_path: Path, event_id: str, *rows: str) -> None:
-    path = tmp_path / "data" / "events" / event_id / "attendance-import.csv"
+    path = (
+        tmp_path / "instance" / "data" / "events" / event_id / "attendance-import.csv"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n", encoding="utf-8")
 
@@ -1661,7 +1679,7 @@ def _write_attendance_csv_encrypted(
     tmp_path: Path, event_id: str, public_pem: str, *rows: str
 ) -> None:
     """The committed shape:
-    `data/events/<id>/attendance-import.csv.enc`, one independent
+    `instance/data/events/<id>/attendance-import.csv.enc`, one independent
     `eventkeys` envelope per row -- built through the real
     `parse_attendance_csv` + `platform.encrypt_attendance_rows`, never a
     hand-rolled stand-in for either, the same discipline
@@ -1669,7 +1687,14 @@ def _write_attendance_csv_encrypted(
     text = "\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n"
     parsed_rows, issues = parse_attendance_csv(text)
     assert issues == []
-    path = tmp_path / "data" / "events" / event_id / "attendance-import.csv.enc"
+    path = (
+        tmp_path
+        / "instance"
+        / "data"
+        / "events"
+        / event_id
+        / "attendance-import.csv.enc"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         encrypt_attendance_rows(public_pem, parsed_rows), encoding="utf-8", newline=""
@@ -1705,7 +1730,7 @@ def test_encrypt_attendance_export_without_a_plaintext_csv_returns_1(
     assert encrypt_attendance_export() == 1
     err = capsys.readouterr().err
     assert "no attendance export to encrypt" in err
-    assert "data/events/mrg-042/attendance-import.csv" in err
+    assert "instance/data/events/mrg-042/attendance-import.csv" in err
     assert str(tmp_path) not in err
 
 
@@ -1718,7 +1743,7 @@ def test_encrypt_attendance_export_writes_a_decryptable_committed_file(
     command wrote and parsing it back into the original rows, not by
     trusting the envelope's shape alone."""
     private_pem, _public_pem = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "attendance-import.csv").write_text(
         _ATTENDANCE_CSV_HEADER + "\n"
@@ -1757,7 +1782,7 @@ def test_encrypt_attendance_export_warns_when_replacing_an_already_committed_fil
     signal. A first run names no replacement; a second run over a
     changed plaintext does."""
     _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     plain_path = events_dir / "attendance-import.csv"
     plain_path.write_text(
@@ -1792,7 +1817,7 @@ def test_encrypt_attendance_export_never_reads_the_private_key(
     package reads one by subscript or through `os.getenv`); it would not
     by itself catch a future read added through either of those."""
     _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "attendance-import.csv").write_text(
         _ATTENDANCE_CSV_HEADER + "\nAda,ada@example.org,x,y,60\n", encoding="utf-8"
@@ -1949,7 +1974,7 @@ def test_match_attendance_rejects_a_malformed_committed_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, _ = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2388,7 +2413,7 @@ def test_match_attendance_skips_an_entry_that_fails_to_decrypt(
     _other_private, other_public = eventkeys.generate()
     stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
     file = RegistrationFile(entries=(*file.entries, stray))
-    path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    path = tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump_registration_file(file), encoding="utf-8")
     _write_attendance_csv(
@@ -2438,8 +2463,8 @@ def _prepare_survey_event(
         _write_registrations(tmp_path, event_id, private_pem, *registrations)
     if attendance_rows:
         _write_attendance_csv(tmp_path, event_id, *attendance_rows)
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text(
         yaml.safe_dump(
             [
@@ -2677,7 +2702,7 @@ def test_invite_survey_skips_an_entry_that_fails_to_decrypt(
             "2026-08-20T19:30:00Z,5400",
         ),
     )
-    path = tmp_path / "data" / "events" / "mrg-042" / "registrations.enc"
+    path = tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
     file = load_registration_file(path.read_text(encoding="utf-8"))
     _other_private, other_public = eventkeys.generate()
     stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
@@ -2807,7 +2832,7 @@ def test_invite_survey_refuses_a_second_time_without_resend_all(
     line to `record=true` survived the full suite until this assertion
     existed, harmless only because the recorder is itself idempotent."""
     _prepare_survey_event(tmp_path)
-    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path = tmp_path / "instance" / "data" / "survey-invitations.yml"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text(
         "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
@@ -2867,7 +2892,7 @@ def test_invite_survey_resend_all_only_recognises_the_literal_true(
             "2026-08-20T19:30:00Z,5400",
         ),
     )
-    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path = tmp_path / "instance" / "data" / "survey-invitations.yml"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text(
         "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
@@ -2903,7 +2928,7 @@ def test_invite_survey_resend_all_invites_the_matched_attendee_again(
             "2026-08-20T19:30:00Z,5400",
         ),
     )
-    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path = tmp_path / "instance" / "data" / "survey-invitations.yml"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text(
         "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
@@ -2964,7 +2989,7 @@ def test_invite_survey_rejects_a_malformed_committed_registry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _prepare_survey_event(tmp_path)
-    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path = tmp_path / "instance" / "data" / "survey-invitations.yml"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text("not valid at all: [", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -2992,7 +3017,7 @@ def test_record_survey_invitation_writes_a_fresh_entry(
 
     assert record_survey_invitation() == 0
 
-    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path = tmp_path / "instance" / "data" / "survey-invitations.yml"
     data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
     assert data == {
         "v": 1,
@@ -3008,7 +3033,7 @@ def test_record_survey_invitation_writes_a_fresh_entry(
 def test_record_survey_invitation_is_idempotent_and_keeps_the_first_date(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path = tmp_path / "instance" / "data" / "survey-invitations.yml"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text(
         "v: 1\ninvitations:\n- event_id: mrg-042\n  invited_on: '2026-08-01'\n",
@@ -3026,7 +3051,7 @@ def test_record_survey_invitation_is_idempotent_and_keeps_the_first_date(
 def test_record_survey_invitation_rejects_a_malformed_committed_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    registry_path = tmp_path / "data" / "survey-invitations.yml"
+    registry_path = tmp_path / "instance" / "data" / "survey-invitations.yml"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text("not valid at all: [", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -3068,7 +3093,7 @@ def _assert_no_personal_data_leaked(text: str) -> None:
 
 
 def _certificates_register_path(tmp_path: Path, event_id: str = "mrg-042") -> Path:
-    return tmp_path / "data" / "events" / event_id / "certificates.yml"
+    return tmp_path / "instance" / "data" / "events" / event_id / "certificates.yml"
 
 
 #: `CERTIFICATE_ID` is shape-checked
@@ -3235,7 +3260,7 @@ def test_issue_certificates_rejects_a_malformed_committed_registrations_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, _ = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -3301,10 +3326,10 @@ def _prepare_event(
     if attendance_rows:
         _write_attendance_csv(tmp_path, event_id, *attendance_rows)
     # Not `_write_data` (used elsewhere in this file): that helper's own
-    # `data_dir.mkdir()` has no `exist_ok`, and `_write_registrations` /
-    # `_write_attendance_csv` above already created `data/events/<id>/`.
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    # `data_dir.mkdir(parents=True)` has no `exist_ok`, and `_write_registrations` /
+    # `_write_attendance_csv` above already created `instance/data/events/<id>/`.
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text(
         yaml.safe_dump(
             [
@@ -3380,7 +3405,7 @@ def test_issue_certificates_warns_when_the_event_title_is_truncated(
     )
     # Overwrite the speaker record `_prepare_event` already wrote, with an
     # over-long title -- everything else about the event stays identical.
-    (tmp_path / "data" / "speakers.yml").write_text(
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         yaml.safe_dump(
             [
                 speaker(
@@ -3622,9 +3647,9 @@ def test_issue_certificates_skips_an_entry_that_fails_to_decrypt(
     _other_private, other_public = eventkeys.generate()
     stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
     file = RegistrationFile(entries=(*file.entries, stray))
-    (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").write_text(
-        dump_registration_file(file), encoding="utf-8"
-    )
+    (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    ).write_text(dump_registration_file(file), encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
@@ -3789,8 +3814,8 @@ def test_issue_certificates_refuses_when_no_speaker_record_supplies_a_title_and_
         "mrg-042",
         "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
     )
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text(yaml.safe_dump([]), encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     signing_private_pem, _ = generate()
@@ -3813,7 +3838,7 @@ def test_issue_certificates_refuses_and_names_the_parse_failure_of_speakers_yml(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A review's own reproduction: a
-    `data/speakers.yml` that fails to *parse* used to be indistinguishable
+    `instance/data/speakers.yml` that fails to *parse* used to be indistinguishable
     from an event genuinely absent from a well-formed file -- both landed
     on `EventNotFoundError` and the same "no speaker record matches"
     message, sending an operator looking for a missing record that was
@@ -3826,8 +3851,8 @@ def test_issue_certificates_refuses_and_names_the_parse_failure_of_speakers_yml(
         "mrg-042",
         "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
     )
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text("- title: [unterminated", encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     signing_private_pem, _ = generate()
@@ -3849,7 +3874,7 @@ def test_issue_certificates_refuses_and_names_the_parse_failure_of_speakers_yml(
 def test_certificates_public_data_aggregates_every_events_register(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    events_dir = tmp_path / "data" / "events"
+    events_dir = tmp_path / "instance" / "data" / "events"
     (events_dir / "mrg-042").mkdir(parents=True)
     (events_dir / "mrg-042" / "certificates.yml").write_text(
         yaml.safe_dump(
@@ -3892,7 +3917,7 @@ def test_certificates_public_data_aggregates_every_events_register(
     assert "wrote 2 certificates" in capsys.readouterr().out
 
     written = json.loads(
-        (tmp_path / "public-data" / "certificates-public.json").read_text(
+        (tmp_path / "instance" / "public-data" / "certificates-public.json").read_text(
             encoding="utf-8"
         )
     )
@@ -3911,7 +3936,7 @@ def test_certificates_public_data_with_no_events_directory_writes_an_empty_list(
 
     assert certificates_public_data() == 0
     written = json.loads(
-        (tmp_path / "public-data" / "certificates-public.json").read_text(
+        (tmp_path / "instance" / "public-data" / "certificates-public.json").read_text(
             encoding="utf-8"
         )
     )
@@ -3921,7 +3946,7 @@ def test_certificates_public_data_with_no_events_directory_writes_an_empty_list(
 def test_certificates_public_data_rejects_a_malformed_register_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "certificates.yml").write_text(
         "not yaml: [unclosed", encoding="utf-8"
@@ -3937,7 +3962,7 @@ def test_certificates_public_data_rejects_a_register_of_the_wrong_version(
 ) -> None:
     """Valid YAML, but not this format -- exercises `register_from_data`'s
     own refusal, distinct from the previous test's YAML-parse failure."""
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "certificates.yml").write_text(
         yaml.safe_dump({"v": 999, "certificates": []}), encoding="utf-8"
@@ -4083,7 +4108,7 @@ def test_reissue_certificate_rejects_a_malformed_committed_registrations_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, _ = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -4355,8 +4380,8 @@ def test_reissue_certificate_refuses_when_no_speaker_record_supplies_a_title_and
         "mrg-042",
         "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
     )
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text(yaml.safe_dump([]), encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     salt = "s3cr3t-salt-value"
@@ -4390,8 +4415,8 @@ def test_reissue_certificate_refuses_and_names_the_parse_failure_of_speakers_yml
         "mrg-042",
         "Ada Lovelace,ada@example.org,2026-08-20T18:00:00Z,2026-08-20T19:30:00Z,5400",
     )
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text("- title: [unterminated", encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     salt = "s3cr3t-salt-value"
@@ -4620,16 +4645,16 @@ def test_reissue_certificate_skips_a_stray_entry_that_fails_to_decrypt(
     capsys.readouterr()
 
     file = load_registration_file(
-        (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").read_text(
-            encoding="utf-8"
-        )
+        (
+            tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+        ).read_text(encoding="utf-8")
     )
     _other_private, other_public = eventkeys.generate()
     stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
     file = RegistrationFile(entries=(*file.entries, stray))
-    (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").write_text(
-        dump_registration_file(file), encoding="utf-8"
-    )
+    (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    ).write_text(dump_registration_file(file), encoding="utf-8")
 
     assert reissue_certificate() == 0
     assert "reissued" in capsys.readouterr().out
@@ -4734,7 +4759,7 @@ def test_revoke_certificate_refuses_a_row_naming_a_different_event(
 ) -> None:
     """Exercised through the real CLI command, not
     only `certificate.revoke` directly (see `test_certificate.py`'s own
-    unit-level pair): `data/events/mrg-042/certificates.yml` can still
+    unit-level pair): `instance/data/events/mrg-042/certificates.yml` can still
     carry a row whose own `event_id` field names a different event --
     `register_from_data` does not itself refuse one -- and this event's
     own revoke command must not be able to touch it."""
@@ -5635,7 +5660,7 @@ def test_deliver_certificates_rejects_a_malformed_committed_registrations_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, _ = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -5699,9 +5724,9 @@ def test_deliver_certificates_skips_an_entry_that_fails_to_decrypt(
     _other_private, other_public = eventkeys.generate()
     stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
     file = RegistrationFile(entries=(*file.entries, stray))
-    (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").write_text(
-        dump_registration_file(file), encoding="utf-8"
-    )
+    (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    ).write_text(dump_registration_file(file), encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
@@ -5731,8 +5756,8 @@ def test_deliver_certificates_refuses_when_no_speaker_record_supplies_a_title_an
     private_pem, _ = _publish_event_key(tmp_path)
     _write_registrations(tmp_path, "mrg-042", private_pem, _ADA)
     _write_attendance_csv(tmp_path, "mrg-042", _ADA_ATTENDANCE_ROW)
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text(yaml.safe_dump([]), encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -5816,8 +5841,8 @@ def test_deliver_certificates_refuses_and_names_the_parse_failure_of_speakers_ym
     private_pem, _ = _publish_event_key(tmp_path)
     _write_registrations(tmp_path, "mrg-042", private_pem, _ADA)
     _write_attendance_csv(tmp_path, "mrg-042", _ADA_ATTENDANCE_ROW)
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "speakers.yml").write_text("- title: [unterminated", encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -6170,7 +6195,7 @@ def test_deliver_certificate_rejects_a_malformed_committed_registrations_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     private_pem, _ = _publish_event_key(tmp_path)
-    events_dir = tmp_path / "data" / "events" / "mrg-042"
+    events_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     events_dir.mkdir(parents=True)
     (events_dir / "registrations.enc").write_text("not json at all", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -6191,7 +6216,7 @@ def test_deliver_certificate_with_a_missing_config_returns_1(
         tmp_path, registrations=(_ADA,), attendance_rows=(_ADA_ATTENDANCE_ROW,)
     )
     _write_certificate_register(tmp_path)
-    (tmp_path / "data" / "config.yml").unlink()
+    (tmp_path / "instance" / "data" / "config.yml").unlink()
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     monkeypatch.setenv("EVENT_ID", "mrg-042")
     monkeypatch.setenv("EVENT_PRIVATE_KEY", event_private_pem)
@@ -6248,7 +6273,7 @@ def test_deliver_certificate_refuses_when_no_speaker_record_supplies_a_title_and
     [entry] = yaml.safe_load(
         _certificates_register_path(tmp_path).read_text(encoding="utf-8")
     )["certificates"]
-    (tmp_path / "data" / "speakers.yml").write_text(
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         yaml.safe_dump([]), encoding="utf-8"
     )
     monkeypatch.setenv("CERTIFICATE_ID", entry["identifier"])
@@ -6341,16 +6366,16 @@ def test_deliver_certificate_skips_a_stray_entry_that_fails_to_decrypt(
     )["certificates"]
 
     file = load_registration_file(
-        (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").read_text(
-            encoding="utf-8"
-        )
+        (
+            tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+        ).read_text(encoding="utf-8")
     )
     _other_private, other_public = eventkeys.generate()
     stray = json.loads(eventkeys.encrypt(other_public, b'{"not": "ours"}'))
     file = RegistrationFile(entries=(*file.entries, stray))
-    (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").write_text(
-        dump_registration_file(file), encoding="utf-8"
-    )
+    (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    ).write_text(dump_registration_file(file), encoding="utf-8")
     monkeypatch.setenv("CERTIFICATE_ID", entry["identifier"])
 
     assert deliver_certificate() == 0
@@ -6384,7 +6409,7 @@ def test_deliver_certificate_refuses_and_names_the_parse_failure_of_speakers_yml
     [entry] = yaml.safe_load(
         _certificates_register_path(tmp_path).read_text(encoding="utf-8")
     )["certificates"]
-    (tmp_path / "data" / "speakers.yml").write_text(
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         "- title: [unterminated", encoding="utf-8"
     )
     monkeypatch.setenv("CERTIFICATE_ID", entry["identifier"])
@@ -6429,7 +6454,9 @@ def test_deliver_certificate_after_the_registration_is_gone_refuses_cleanly(
     # gone. certificates.yml, in the same directory, is deliberately left
     # untouched (certificate.py's own module docstring, "the register
     # survives the data it was derived from").
-    (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").unlink()
+    (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+    ).unlink()
 
     monkeypatch.setenv("CERTIFICATE_ID", certificate_id)
     assert deliver_certificate() == 1
@@ -6671,8 +6698,8 @@ def test_release_recording_with_an_unknown_event_id_returns_1(
 def test_release_recording_reports_a_malformed_speakers_file_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True)
     (data_dir / "speakers.yml").write_text("key: [unclosed\n", encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -7317,8 +7344,8 @@ def test_discard_recording_with_an_unknown_event_id_returns_1(
 def test_discard_recording_reports_a_malformed_speakers_file_and_returns_1(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True)
     (data_dir / "speakers.yml").write_text("key: [unclosed\n", encoding="utf-8")
     (data_dir / "config.yml").write_text(yaml.safe_dump(config()), encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))

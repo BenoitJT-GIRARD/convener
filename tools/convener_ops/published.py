@@ -6,7 +6,7 @@ identity followed: the name of the organisation running the
 series, what the series is called, the forum it discusses on, and the
 address a participant writes to about their own data. The third
 is the prefix its editions are numbered under. All three
-are in `config/instance.json`, all three are read here, and none of them
+are in `instance/config.json`, all three are read here, and none of them
 is written down anywhere else.
 
 Every public address this repository emits is a suffix of a single value:
@@ -20,7 +20,7 @@ across twelve files, bound to each other by tests that could only ever
 say "these copies still agree" -- never "there is one".
 
 **One declaration, one derivation, per side of the language boundary.**
-`config/instance.json` holds the address; this module is Python's reader
+`instance/config.json` holds the address; this module is Python's reader
 of it, `app/scripts/published.mjs` is the application build's, and
 `site/scripts/published.cjs` is the showcase's. That is D-14 applied
 literally: a shared declaration read by each language, never three copies
@@ -89,7 +89,7 @@ __all__ = [
 #: The instance's own declaration, relative to a repository root. In
 #: `config/` rather than beside it, and stating its own `owner:` the way
 #: every other file in that directory does -- see `boundary.py`.
-INSTANCE_PATH: Final = Path("config") / "instance.json"
+INSTANCE_PATH: Final = Path("instance") / "config.json"
 
 #: The declaration the *product* ships, as its own worked example --
 #: `instances/example/`'s copy of the file above, at the same relative
@@ -103,7 +103,7 @@ INSTANCE_PATH: Final = Path("config") / "instance.json"
 EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
 
 #: The example instance's own root -- the tree the declaration above and
-#: `instances/example/data/brand.json` both sit under, at the same
+#: `instances/example/instance/data/brand.json` both sit under, at the same
 #: relative paths a real instance uses. Derived from the path above
 #: rather than spelled a second time: one of them moving has to move
 #: the other.
@@ -116,7 +116,7 @@ EXAMPLE_INSTANCE_PATH: Final = Path("instances") / "example" / INSTANCE_PATH
 #: real instance's charter, in a product-side directory.
 EXAMPLE_INSTANCE_ROOT: Final = EXAMPLE_INSTANCE_PATH.parent.parent
 
-#: `config/instance.json`'s own format version.
+#: `instance/config.json`'s own format version.
 DECLARATION_VERSION: Final = 1
 
 #: The key the first half of this module is about.
@@ -170,7 +170,7 @@ EDITION_PREFIX_MAX_LENGTH: Final = 8
 #:   an event id *is* that code lower-cased (D-19), so the pair only
 #:   round-trips while the declaration fixes the case. Allowing `Vw`
 #:   would make `Vw-1` and `MRG-1` two codes with one URL, one
-#:   `keys/events/mrg-1.pub` and one `CONVENER_EVENT_KEY_MRG_1`; allowing a
+#:   `instance/keys/events/mrg-1.pub` and one `CONVENER_EVENT_KEY_MRG_1`; allowing a
 #:   non-ASCII capital would make `str.lower()` a place where a URL path
 #:   segment quietly acquires a percent-encoding.
 #: * **No `-`, `.` or `_` inside it.** The product puts exactly one `-`
@@ -344,7 +344,7 @@ class Published:
 
 
 def from_data(data: Any) -> Published:
-    """Parse an already JSON-loaded `config/instance.json`.
+    """Parse an already JSON-loaded `instance/config.json`.
 
     Refuses, rather than repairs. Each clause below is a shape that would
     otherwise produce an address which looks plausible and is wrong: a
@@ -419,7 +419,7 @@ class Identity:
     there wraps to three lines at 4vw and pushes the composition into the
     ribbon, which is the failure D-08 already names; setting a strapline
     in the feed's `<description>` says nothing a reader can act on. The
-    example instance's two -- `instances/example/config/instance.json` --
+    example instance's two -- `instances/example/instance/config.json` --
     are a two-word display line and a full sentence, and neither
     substitutes for the other. The strapline used to be typed
     into `visual.py` with no key at all, which is why a second
@@ -470,7 +470,7 @@ class Identity:
 
 
 def identity_from_data(data: Any) -> Identity:
-    """Parse an already JSON-loaded `config/instance.json`.
+    """Parse an already JSON-loaded `instance/config.json`.
 
     Refuses, rather than repairs, for the same reason `from_data` above
     does: what this half of the declaration carries goes out under an
@@ -551,7 +551,7 @@ class EditionPrefix:
       event id into the token a holder is given and into the verification
       link printed beside it, and a certificate is meant to stand for
       years;
-    * it is **in a key filename** -- `keys/events/<event id>.pub`, and in
+    * it is **in a key filename** -- `instance/keys/events/<event id>.pub`, and in
       the `CONVENER_EVENT_KEY_<ID>` repository secret `eventkeys.secret_name`
       derives from the same id.
 
@@ -602,7 +602,7 @@ class EditionPrefix:
 
 
 def edition_prefix_from_data(data: Any) -> EditionPrefix:
-    """Parse an already JSON-loaded `config/instance.json`.
+    """Parse an already JSON-loaded `instance/config.json`.
 
     Refuses, rather than repairs, and refuses **at declaration** rather
     than where the value lands. Every shape below is one that reads
@@ -716,7 +716,7 @@ def unconfigured(root: Path | None = None) -> tuple[str, ...]:
 
     **What "not configured" means here, mechanically.** A duplicate is
     unconfigured exactly while its declaration still carries a value the
-    product ships in `instances/example/config/instance.json` -- the
+    product ships in `instances/example/instance/config.json` -- the
     invented instance this repository already builds itself as on every
     run of `tools/tests/test_second_instance.py`. Every value in that file
     is unmistakably synthetic and reserved: `.test` is RFC 2606's, no
@@ -744,7 +744,7 @@ def unconfigured(root: Path | None = None) -> tuple[str, ...]:
     open yet is a banner somebody deletes within the week, and it would
     take the real warning with it. So the marker decides nothing here.
 
-    **The charter is not in this set either.** `data/brand.json` is the
+    **The charter is not in this set either.** `instance/data/brand.json` is the
     instance's too, and a duplicate that keeps the example's palette has
     kept a palette -- it has not published somebody else's name, address
     or contact, which is the whole of what this warns about.
@@ -772,7 +772,7 @@ def unconfigured(root: Path | None = None) -> tuple[str, ...]:
 
 
 def _declaration(root: Path | None) -> Any:
-    """`config/instance.json`, parsed. One reader for both halves: two
+    """`instance/config.json`, parsed. One reader for both halves: two
     would be two `json.loads` of one path in one language, which is the
     copy this whole design refuses wearing a smaller hat."""
     base = root if root is not None else repo_root()

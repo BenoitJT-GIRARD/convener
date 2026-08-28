@@ -178,7 +178,7 @@ export function cspMetaContent(env) {
  *   preamble, an inline module script the plugin injects into every
  *   served document. A hash would be narrower and was rejected: the
  *   preamble's text contains this build's own base path, so the hash
- *   would change with `config/instance.json` and again with any version
+ *   would change with `instance/config.json` and again with any version
  *   bump of the plugin, and the failure it produces -- a blank page with
  *   one console line -- is exactly the one this is fixing.
  * - `style-src 'unsafe-inline'`: in development Vite serves each CSS

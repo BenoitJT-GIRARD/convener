@@ -2,12 +2,12 @@
  * Changing one number in a `config/` file without losing the argument for
  * it.
  *
- * These files are not data. `config/queue-drain.yml` is five and a half
+ * These files are not data. `instance/queue-drain.yml` is five and a half
  * kilobytes, of which two lines are values and the rest is the reasoning:
  * why the floor is two drain periods and not one, why the ceiling is the
  * lane threshold minus the same, what happens to a participant when either
- * is wrong. `config/registration-lanes.yml` and
- * `config/actions-budget.yml` are the same shape. That prose is the only
+ * is wrong. `instance/registration-lanes.yml` and
+ * `instance/actions-budget.yml` are the same shape. That prose is the only
  * place those decisions are written down, and this repository's whole
  * method rests on it.
  *
@@ -16,7 +16,7 @@
  * argue its own case -- the cockpit would silently delete the reasoning
  * behind the very number it just changed. What happens instead is a
  * replacement of exactly one line, in place, leaving every other byte
- * alone: the same discipline `data/speakers.yml`'s own writer keeps for a
+ * alone: the same discipline `instance/data/speakers.yml`'s own writer keeps for a
  * different reason (`data/yaml.ts`'s `DUMP` options exist so the browser
  * and PyYAML write identical bytes).
  *

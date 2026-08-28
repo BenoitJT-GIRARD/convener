@@ -51,15 +51,18 @@ function declaration(relative: string): Record<string, string> {
 /** The two declarations, read where each one lives. Never a constant in
  *  this file: the point of the whole suite is that nothing composes one of
  *  these values from a literal. */
-const THIS_INSTANCE = declaration('config/instance.json');
-const EXAMPLE = declaration('instances/example/config/instance.json');
+const THIS_INSTANCE = declaration('instance/config.json');
+const EXAMPLE = declaration('instances/example/instance/config.json');
 
 /** The example's own counter, out of its own governance file -- the same
  *  number `demoConfig()` carries, read from the other end so the assertion
  *  is not the bundle agreeing with itself. */
 const EXAMPLE_COUNTER = (
   yaml.load(
-    readFileSync(resolve(ROOT, 'instances', 'example', 'data', 'config.yml'), 'utf8'),
+    readFileSync(
+      resolve(ROOT, 'instances', 'example', 'instance', 'data', 'config.yml'),
+      'utf8',
+    ),
   ) as { next_edition_number: number }
 ).next_edition_number;
 
@@ -237,13 +240,13 @@ describe('what the demonstration refuses to compose from', () => {
     const { exampleEditionPrefix } = await exampleWith(
       JSON.stringify({ files: {}, drainTriggers: {} }),
     );
-    expect(() => exampleEditionPrefix()).toThrow(/config\/instance\.json/);
+    expect(() => exampleEditionPrefix()).toThrow(/instance\/config\.json/);
   });
 
   it('stops when that declaration names no value to compose from', async () => {
     const { examplePublishedUrl } = await exampleWith(
       JSON.stringify({
-        files: { 'config/instance.json': '{"edition_prefix": "MRG"}' },
+        files: { 'instance/config.json': '{"edition_prefix": "MRG"}' },
         drainTriggers: {},
       }),
     );

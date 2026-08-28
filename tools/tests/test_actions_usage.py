@@ -52,7 +52,7 @@ _WORKFLOWS = _ROOT / ".github" / "workflows"
 #: against these rather than against numbers invented here, so "it fires"
 #: means it fires on the file a maintainer would edit.
 #: Read on demand, never while this module loads.
-#: `config/actions-budget.yml` is a path `config/boundary.yml` hands to the
+#: `instance/actions-budget.yml` is a path `config/boundary.yml` hands to the
 #: instance, and a derived repository is entitled not to have it until the
 #: derivation lays an example's own file there. At module scope the read
 #: took this whole module down at collection -- eighty tests, none of them
@@ -119,7 +119,7 @@ def _summarise(
 
 
 def test_the_committed_thresholds_parse() -> None:
-    """`config/actions-budget.yml` is the file a maintainer edits, and the
+    """`instance/actions-budget.yml` is the file a maintainer edits, and the
     one file that decides when the alarm goes off. If it stops parsing,
     every command below refuses to run rather than falling back to a
     number written in Python."""
@@ -486,7 +486,7 @@ def test_the_message_carries_the_caveat_that_this_is_not_the_bill() -> None:
     body = actions_usage.message(usage, actions_usage.alarms(usage, _real_budget()))
     assert body is not None
     assert actions_usage.LOWER_BOUND_NOTE in body
-    assert "data/actions-usage.yml" in body
+    assert "instance/data/actions-usage.yml" in body
 
 
 def test_the_message_names_no_person() -> None:
@@ -568,7 +568,7 @@ def test_the_staleness_boundary() -> None:
 
 
 def test_the_committed_record_is_readable_by_its_own_reader() -> None:
-    """`data/actions-usage.yml` ships committed, so a person can read what
+    """`instance/data/actions-usage.yml` ships committed, so a person can read what
     the runs cost by opening this repository -- no CI, no job log. If the
     file this repository actually holds ever stops parsing, the watchdog
     goes red on it, so it must parse here too."""
@@ -606,8 +606,8 @@ def _instance(tmp_path: Path, payloads: list[Any]) -> Path:
     clock and the collector's own output."""
     import json
 
-    (tmp_path / "config").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "config" / "actions-budget.yml").write_text(
+    (tmp_path / "instance").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "actions-budget.yml").write_text(
         actions_usage.budget_path(_ROOT).read_text(encoding="utf-8"), encoding="utf-8"
     )
     source = tmp_path / "actions-usage-input.jsonl"
@@ -699,7 +699,7 @@ def test_record_actions_usage_refuses_unreadable_thresholds(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _instance(tmp_path, [])
-    (tmp_path / "config" / "actions-budget.yml").write_text(
+    (tmp_path / "instance" / "actions-budget.yml").write_text(
         "v: 1\nmonthly_minutes: what\n", encoding="utf-8"
     )
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
@@ -820,7 +820,7 @@ def test_the_liveness_check_refuses_a_malformed_record(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _instance(tmp_path, [])
-    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
     actions_usage.usage_path(tmp_path).write_text(
         "v: 1\nlatest: []\n", encoding="utf-8"
     )
@@ -860,7 +860,7 @@ def test_an_unreadable_previous_record_costs_the_trend_and_not_the_measurement(
     nothing in the old file. A hand-mangled record restarts the trend and
     warns; it does not stop the budget being checked."""
     _instance(tmp_path, _minute_runs(2))
-    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
     actions_usage.usage_path(tmp_path).write_text("v: 1\n  bad: [\n", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_today(monkeypatch, date(2026, 8, 24))
@@ -879,7 +879,7 @@ def test_thresholds_that_are_not_valid_yaml_stop_both_commands(
     _set_today(monkeypatch, date(2026, 8, 24))
     assert record_actions_usage() == 0
 
-    (tmp_path / "config" / "actions-budget.yml").write_text(
+    (tmp_path / "instance" / "actions-budget.yml").write_text(
         "v: 1\n  broken: [\n", encoding="utf-8"
     )
     capsys.readouterr()
@@ -892,7 +892,7 @@ def test_the_liveness_check_refuses_a_record_that_is_not_valid_yaml(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _instance(tmp_path, [])
-    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
     actions_usage.usage_path(tmp_path).write_text("v: 1\n  bad: [\n", encoding="utf-8")
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     _set_today(monkeypatch, date(2026, 8, 24))
@@ -1035,7 +1035,7 @@ def test_the_measurement_re_derives_rather_than_rebases_on_a_rejected_push() -> 
     assert not any("git pull" in line for line in commands)
     assert 'git fetch origin "$TARGET_BRANCH"' in script
     assert 'git reset --hard "origin/$TARGET_BRANCH"' in script
-    assert "git add data/actions-usage.yml" in script
+    assert "git add instance/data/actions-usage.yml" in script
 
 
 def test_the_watchdog_also_asks_whether_the_alarm_itself_still_runs() -> None:

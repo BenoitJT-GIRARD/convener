@@ -3,7 +3,7 @@
 Schema v5 adds one field, `survey_enabled`.
 This mirrors test_migrate_v4.py's own shape, cut down to one field: the
 transformation is pure and tested here before it is ever pointed at
-`data/`, because the file it rewrites holds 31 real people's records.
+`instance/data/`, because the file it rewrites holds 31 real people's records.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from convener_ops.validate import validate_speakers
 
 
 def v4_speaker(**overrides: Any) -> dict[str, Any]:
-    """A speaker in the shape `data/speakers.yml` actually has before this
+    """A speaker in the shape `instance/data/speakers.yml` actually has before this
     migration -- same keys, same order, values shortened."""
     base: dict[str, Any] = {
         "id": "spk-001",
@@ -161,8 +161,8 @@ def test_the_migrated_data_passes_the_validator() -> None:
 
 
 def _write(tmp_path: Path, speakers: list[dict[str, Any]]) -> Path:
-    data = tmp_path / "data"
-    data.mkdir(exist_ok=True)
+    data = tmp_path / "instance" / "data"
+    data.mkdir(parents=True, exist_ok=True)
     path = data / "speakers.yml"
     path.write_text(yaml.safe_dump(speakers, sort_keys=False), encoding="utf-8")
     return path

@@ -1,11 +1,11 @@
-"""One-shot migration of `data/` from schema v5 to schema v6.
+"""One-shot migration of `instance/data/` from schema v5 to schema v6.
 
 Schema v6 renames one configuration key and changes nothing else. The
 counter that says which edition number to assign next was called
 `vw_counter`: two letters taken from the name of the one series that
 happened to be running this repository, written into the **product's**
 own schema. Every duplicate of this repository was therefore forced to
-carry another series' initials in its own `data/config.yml`, in the
+carry another series' initials in its own `instance/data/config.yml`, in the
 validator that reads it, in the model the browser narrows against, and in
 the schema appendix every duplicate ships.
 
@@ -18,12 +18,12 @@ has the old key.)*
 carries it.** The edition *prefix* was left alone for the opposite reason,
 and the difference is the whole argument: a code like `MRG-05` is in a
 published address, on every certificate issued for that event and in
-`keys/events/mrg-05.pub`, so renumbering it would break links nobody can
+`instance/keys/events/mrg-05.pub`, so renumbering it would break links nobody can
 reach. This key is a name in one file, read by two validators; the number
 it holds does not change, and neither does a single edition code.
 
 `next_edition_number` says what it holds. The prefix that number is
-written under stays where it is declared, `config/instance.json::
+written under stays where it is declared, `instance/config.json::
 edition_prefix`, and this key never spelled it.
 
 What it does, and the whole of what it does
@@ -41,8 +41,8 @@ What it does, and the whole of what it does
    unified schema down, and a file written after this migration that still
    announced v5 would be the only statement of that version, and wrong.
 
-**Two trees, not one.** `data/` is this instance's, and
-`instances/example/data/` is the product's own worked example -- the one
+**Two trees, not one.** `instance/data/` is this instance's, and
+`instances/example/instance/data/` is the product's own worked example -- the one
 `tools/tests/test_second_instance.py` builds this whole repository as.
 Migrating one and not the other would ship a product whose own example
 fails its own validator at the next `convener-validate`.
@@ -117,7 +117,7 @@ _V6_STAMP = "unified schema v6"
 #: The two data directories this repository ships, each holding the same
 #: two files. Relative to the repository root; see the module docstring
 #: for why the example instance is migrated too.
-DATA_DIRS = ("data", "instances/example/data")
+DATA_DIRS = ("instance/data", "instances/example/instance/data")
 
 
 class MigrationRefusedError(RuntimeError):
@@ -158,7 +158,7 @@ def migrate_config_text(text: str) -> str:
     """Rename the counter in one `config.yml`, and change nothing else.
 
     Text in, text out: the comments a reader of these files depends on --
-    the paragraph `instances/example/data/config.yml` opens with, most of
+    the paragraph `instances/example/instance/data/config.yml` opens with, most of
     all -- do not survive a load-and-dump round trip, and a migration that
     reformatted a file to rename one key would bury the rename it exists
     to make reviewable.
@@ -231,7 +231,7 @@ def migrate_tree(directory: Path, name: str) -> list[tuple[Path, str, str]]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Migrate data/ to schema v6.")
+    parser = argparse.ArgumentParser(description="Migrate instance/data/ to schema v6.")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -242,7 +242,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     root = repo_root()
 
     # Every tree is read and rewritten in memory before a single byte is
-    # written back. A migration that had already rewritten `data/` when it
+    # written back. A migration that had already rewritten `instance/data/` when it
     # met a refusal in the example would leave the repository between two
     # schema versions, which is the one state neither validator can name.
     planned: list[tuple[str, Path, str, str]] = []

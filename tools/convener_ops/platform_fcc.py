@@ -98,7 +98,7 @@ not attempt, and why release_recording stays a manual, per-event step
 The account is a single permanent room (D-06): every seminar is a fresh
 *conference* under it, each with its own numeric id the provider assigns,
 and nothing in the documented or undocumented API ties one to a
-`data/speakers.yml` record. A partner's working rule -- match a conference
+`instance/data/speakers.yml` record. A partner's working rule -- match a conference
 to an event by its timestamp, sound at one seminar a month -- was floated
 during research, but doing that automatically means listing conferences
 (`GET /conferences`) and trusting a response shape that was never
@@ -130,7 +130,7 @@ get_room does not call the API
 D-06 again: the provider does not create meetings, so there is no request
 that could return a join link `ManualPlatform.get_room` does not already
 give from the same two sources -- `zoom_link` on the matching speaker
-record, `instructions` from `data/config.yml`. `PlatformFCC`
+record, `instructions` from `instance/data/config.yml`. `PlatformFCC`
 reads them the same way rather than composing `ManualPlatform`, so that
 constructing a room never has to build the unrelated `events_dir` default
 `ManualPlatform` needs only for `get_attendance`.
@@ -191,7 +191,7 @@ hands**:
    schema change on either language's side. **Not yet wired into
    `app/src/state/phases.ts`'s journey UI** -- that is later
    work, the same way the token-renewal notice is documented but
-   unwired; until then a host (or whoever maintains `data/speakers.yml`)
+   unwired; until then a host (or whoever maintains `instance/data/speakers.yml`)
    sets it by hand.
 2. **`converted_recording_is_reachable`** confirms, independently, that
    the provider's own side shows a *successful open* of the converted
@@ -619,11 +619,11 @@ class PlatformFCC:
     #: docstring's token section for why that exchange does not belong
     #: here.
     access_token: str
-    #: The loaded contents of `data/speakers.yml`, read the same way
+    #: The loaded contents of `instance/data/speakers.yml`, read the same way
     #: `ManualPlatform` reads them -- never from a file this class opens
     #: itself.
     speakers: Sequence[Mapping[str, Any]] = ()
-    #: The loaded contents of `data/config.yml`, for `instructions`,
+    #: The loaded contents of `instance/data/config.yml`, for `instructions`,
     #: read the same way `ManualPlatform` reads it.
     config: Mapping[str, Any] | None = None
     #: `event_id -> FCC conference id`, already resolved by whoever

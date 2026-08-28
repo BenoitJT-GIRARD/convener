@@ -31,7 +31,7 @@ const VISUALS = 'scheduled/T-30/visuals';
 const LINKEDIN = 'scheduled/T-21/linkedin';
 const SUMMARY = 'delivered/forum-summary';
 /** A line of the journey that does not exist in `state/phases.ts`: it comes
- *  from the channel list in `data/config.yml`, through `state/channels.ts`. */
+ *  from the channel list in `instance/data/config.yml`, through `state/channels.ts`. */
 const CHANNEL = 'promotion/forum';
 
 /** A scheduled talk, the phase whose lines are the ones volunteers divide up. */
@@ -182,7 +182,7 @@ describe('writing an owner', () => {
   });
 
   it('clears a line the journey no longer has, which is the only way back', () => {
-    // Drop a channel from `data/config.yml` and the entries already written
+    // Drop a channel from `instance/data/config.yml` and the entries already written
     // under `promotion/<key>` stay in `speakers.yml`, on a line that no
     // longer renders. This used to refuse them -- the app would not undo what
     // the app had written, and nothing else can.

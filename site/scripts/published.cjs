@@ -1,5 +1,5 @@
 // The one address this project is published at, read from
-// `config/instance.json` -- the showcase's side of it.
+// `instance/config.json` -- the showcase's side of it.
 //
 // `tools/convener_ops/published.py` is Python's reader of the same file and
 // `app/scripts/published.mjs` the application build's. Three readers of
@@ -44,8 +44,8 @@
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
 
-const DECLARATION = path.join(__dirname, '..', '..', 'config', 'instance.json');
-const NAMED = 'config/instance.json';
+const DECLARATION = path.join(__dirname, '..', '..', 'instance', 'config.json');
+const NAMED = 'instance/config.json';
 
 // The checks mirror `published.py::from_data` clause for clause, and
 // deliberately so: each one is a shape that reads plausible and publishes
@@ -206,10 +206,10 @@ const EXAMPLE_DECLARATION = path.join(
   '..',
   'instances',
   'example',
-  'config',
-  'instance.json'
+  'instance',
+  'config.json'
 );
-const EXAMPLE_NAMED = 'instances/example/config/instance.json';
+const EXAMPLE_NAMED = 'instances/example/instance/config.json';
 
 /** The eleven values a declaration carries about *who* is publishing,
  *  under the declaration's own names. Raw, deliberately: the question is

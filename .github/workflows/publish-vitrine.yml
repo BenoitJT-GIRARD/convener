@@ -1,7 +1,7 @@
 name: Publish vitrine
 
 # A revocation is a change to
-# data/events/<id>/certificates.yml, and until this trigger named that
+# instance/data/events/<id>/certificates.yml, and until this trigger named that
 # path, such a change would not even fire this workflow at all. The
 # `paths:` trigger below still names certificates.yml for that reason,
 # even though nothing in this job's own steps depends on that path any
@@ -21,7 +21,7 @@ name: Publish vitrine
 # of this fix.
 #
 # This workflow used to also write
-# `public-data/certificates-public.json` to the showcase's own
+# `instance/public-data/certificates-public.json` to the showcase's own
 # `src/_data/certificates.json` -- a file no Eleventy template in that
 # repository ever reads (`grep -rn certificates src/` there is empty).
 # That write was removed: it made the three certificate workflows *look*
@@ -44,7 +44,7 @@ name: Publish vitrine
 # no-op (the ordinary D-13 shape, not a defect, but motion with no
 # effect all the same). `sweep-and-notify.yml` and `retention.yml` still dispatch
 # this workflow, unaffected: the sweep genuinely can change
-# `data/speakers.yml`, this workflow's own input.
+# `instance/data/speakers.yml`, this workflow's own input.
 #
 # Renamed from "Publish vitrine data" when
 # the showcase's own templates (`index.njk`, `layout.njk`, `style.css`,
@@ -62,8 +62,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'data/speakers.yml'
-      - 'data/events/*/certificates.yml'
+      - 'instance/data/speakers.yml'
+      - 'instance/data/events/*/certificates.yml'
       - 'tools/**'
       - 'site/**'
       # `site/.eleventy.js` reads the one address this
@@ -71,7 +71,7 @@ on:
       # every absolute URL this build emits depends on it. Without this
       # entry, changing that address would leave the showcase published at
       # the old one until some unrelated commit happened to run this.
-      - 'config/instance.json'
+      - 'instance/config.json'
       # And `site/.eleventy.js` reads the product's own Appropriate Legal
       # Notice from here, through `site/scripts/notice.cjs`: the copyright
       # line, the terms, the warranty and the licence link every page of
@@ -107,7 +107,7 @@ jobs:
       # the current private data, never the fixture a contributor last
       # committed.
       - name: Refresh site data
-        run: cp public-data/events-public.json site/src/_data/events.json
+        run: cp instance/public-data/events-public.json site/src/_data/events.json
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
@@ -144,8 +144,8 @@ jobs:
       # mode. A field can be non-empty in production and still be empty
       # in every fixture a test happens to carry.
       #
-      # Reads `data/speakers.yml`'s own `zoom_link`
-      # directly, never `public-data/events-public.json` -- that file no
+      # Reads `instance/data/speakers.yml`'s own `zoom_link`
+      # directly, never `instance/public-data/events-public.json` -- that file no
       # longer carries the room link under any name. It used to, as
       # `registration_link` (`public_data.py::PUBLIC_FIELD_SOURCES`), a
       # name that read as exactly the opposite of what it carried once
@@ -197,7 +197,7 @@ jobs:
           git config --global user.name "convener-publisher"
           git config --global user.email "convener-publisher@users.noreply.github.com"
           # Where the built output is pushed. Derived from
-          # `config/instance.json`'s own `published_url`, never named here:
+          # `instance/config.json`'s own `published_url`, never named here:
           # GitHub Pages serves a project repository at
           # `https://<owner>.github.io/<repository>/` and nowhere else, so
           # the address a visitor sees and the repository this push writes

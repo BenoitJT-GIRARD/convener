@@ -29,7 +29,7 @@ programs.
   licence covers all of it, in full, with nothing held back and no field of
   use excluded.
 - **An instance's own identity.** A series' name, an organisation's logo, the
-  palette in `data/brand.json`: those belong to whoever runs that instance and
+  palette in `instance/data/brand.json`: those belong to whoever runs that instance and
   never to this project. D-16 is where the two charters are kept apart, and
   the product claims nothing over the instance's.
 - **Saying true things.** "Built on Convener", "a fork of Convener",

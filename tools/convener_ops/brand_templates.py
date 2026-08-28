@@ -26,8 +26,8 @@ arithmetic:
 
 Regenerating them by hand would have fixed those three numbers and left
 nothing to stop a fourth. So they are generated here instead, from
-`data/brand.json` (or the product's own charter, when an instance has not
-written one) and `config/instance.json`, and `--check` holds them exactly
+`instance/data/brand.json` (or the product's own charter, when an instance has not
+written one) and `instance/config.json`, and `--check` holds them exactly
 as it holds the two stylesheets.
 
 Which mark these leave the repository wearing
@@ -46,7 +46,7 @@ wrote and left incomplete (`brand.py`).
 
 Every pairing is checked, not only the ones the charter names
 --------------------------------------------------------------
-`data/brand.json`'s `contrast` table records the pairings the *composition*
+`instance/data/brand.json`'s `contrast` table records the pairings the *composition*
 creates. These two files create a few more of their own -- a caption on a
 photographic frame, a label beside a QR slot -- and it was precisely an
 uninspected pairing that let the 1.00 above survive. So `_LEGIBILITY`
@@ -59,7 +59,7 @@ duplicate writes tomorrow.
 The ribbon these files draw is the ribbon
 -------------------------------------------
 Both files drew three bare circles and arcs in place of the motif until
-2026-08-28, which is what `data/brand.json::motif._ribbon` had always
+2026-08-28, which is what `instance/data/brand.json::motif._ribbon` had always
 said they were: a stroke ending in a closed ring reads as a line with a
 circle stuck on it, not as one continuous ribbon running off the edges.
 `ribbon.py` had the real curve all along -- traced against the designer's
@@ -512,7 +512,7 @@ def _values(root: Path) -> dict[str, str]:
 #: files as XML now, so the next one is a failing test instead.
 _GENERATED_NOTE: Final = """\
   <!-- Generated, not drawn: scripts/generate_brand_css.py writes this file
-  from data/brand.json (the colours and the motif) and config/instance.json
+  from instance/data/brand.json (the colours and the motif) and instance/config.json
   (the names). Change one of those, run that command, and commit what it
   writes; an edit made here is overwritten, and the check fails until it
   is. Once you have downloaded a copy it is yours, of course: edit that as

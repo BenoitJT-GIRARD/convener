@@ -1,12 +1,12 @@
 """The charter: the system ships with the product, the values stay with the
 instance, and the design ships whole rather than being demanded.
 
-Three things used to read `data/brand.json`, each with its own two-line
+Three things used to read `instance/data/brand.json`, each with its own two-line
 loader: `scripts/generate_brand_css.py` for the two stylesheets,
 `ribbon.py` for the motif, `visual.py` for the colours. Three loaders were
 harmless while there was exactly one file to load. They stopped being
 harmless the moment the file became optional: a duplicate that ships no
-`data/brand.json` would have had one reader fall back to the product's own
+`instance/data/brand.json` would have had one reader fall back to the product's own
 palette and two others raise `FileNotFoundError`, which is the same defect
 this repository keeps meeting -- one notion, several homes, free to
 disagree. So the fallback is decided here, once, and the three read it.
@@ -25,7 +25,7 @@ is the product's own colours (`brand/convener/README.md`), and it clears
 the same AA floor under the same `--check`; a palette that does not is a
 palette that does not build.
 
-**The values are the instance's**, `data/brand.json`, and
+**The values are the instance's**, `instance/data/brand.json`, and
 `config/boundary.yml` hands that whole directory to the instance. Nothing
 about this instance's own colours moved: the file is what it was.
 

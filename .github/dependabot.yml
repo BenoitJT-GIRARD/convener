@@ -25,7 +25,7 @@
 # gates a human pull request runs. `groups:` is what keeps that to one per
 # directory rather than one per package, and `interval: monthly` to twelve
 # rounds a year rather than fifty-two. Measured against the allowance
-# `config/actions-budget.yml` reads, that is the price of not carrying a
+# `instance/actions-budget.yml` reads, that is the price of not carrying a
 # known-vulnerable package from one advisory to the next time somebody
 # thinks to look, and it is worth paying here.
 #

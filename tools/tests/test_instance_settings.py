@@ -5,7 +5,7 @@ Three of the four files in `config/` that
 `config/boundary.yml` hands to the instance are numbers a maintainer
 edits, and until this check existed the only thing standing between a
 maintainer and an illegal one was a test -- run later, somewhere else, by
-somebody else. `config/queue-drain.yml`'s `alarm_after_hours` is the sharp case:
+somebody else. `instance/queue-drain.yml`'s `alarm_after_hours` is the sharp case:
 **both** its bounds are derived from other declarations, and with this
 repository's current settings they meet exactly at 48, so there is
 precisely one legal value and nothing in the file says so. A file cannot
@@ -101,14 +101,14 @@ def _admissible(case: dict[str, Any]) -> tuple[float, float]:
     key = case["key"]
     file = case["file"]
 
-    if file == "config/queue-drain.yml" and key == "alarm_after_hours":
+    if file == "instance/queue-drain.yml" and key == "alarm_after_hours":
         floor, ceiling = queue_watch.alarm_bounds(
             period, int(context["queue_beyond_hours"])
         )
         return float(floor), float(ceiling)
-    if file == "config/queue-drain.yml" and key == "max_silent_days":
+    if file == "instance/queue-drain.yml" and key == "max_silent_days":
         return float(queue_watch.silence_floor_days(period)), math.inf
-    if file == "config/registration-lanes.yml" and key == "queue_beyond_hours":
+    if file == "instance/registration-lanes.yml" and key == "queue_beyond_hours":
         # Both ends of the same coupling, seen from the other file. The lane
         # threshold's own floor is `floor_hours`; its *coupled* floor is
         # whatever leaves the alarm already written next door still legal,
@@ -117,7 +117,7 @@ def _admissible(case: dict[str, Any]) -> tuple[float, float]:
         alarm = int(context["alarm_after_hours"])
         coupled = alarm + registration_routing.floor_hours(period)
         return float(max(registration_routing.floor_hours(period), coupled)), math.inf
-    if file == "config/actions-budget.yml" and key == "warn_at_share":
+    if file == "instance/actions-budget.yml" and key == "warn_at_share":
         # `budget_from_data` refuses anything outside ]0, 1]. The open lower
         # end is why this function returns floats: the bound is not "at least
         # nought", it is "more than nought".
@@ -224,14 +224,14 @@ def test_every_edited_key_is_one_a_parser_already_knows() -> None:
     """
     offered = {(row["file"], row["key"]) for row in _EDITED}
 
-    drain = {row["key"]: 2 for _, row in _by_file("config/queue-drain.yml")}
+    drain = {row["key"]: 2 for _, row in _by_file("instance/queue-drain.yml")}
     parsed = queue_watch.thresholds_from_data(
         {"v": queue_watch.CONFIG_FILE_VERSION, **drain}
     )
     assert set(drain) == {"alarm_after_hours", "max_silent_days"}
     assert parsed.alarm_after_hours == 2
 
-    lanes = {row["key"]: 96 for _, row in _by_file("config/registration-lanes.yml")}
+    lanes = {row["key"]: 96 for _, row in _by_file("instance/registration-lanes.yml")}
     assert set(lanes) == {"queue_beyond_hours"}
     assert (
         registration_routing.threshold_from_data(
@@ -242,7 +242,7 @@ def test_every_edited_key_is_one_a_parser_already_knows() -> None:
 
     budget = {
         row["key"]: (0.5 if row["kind"] == "share" else 1)
-        for _, row in _by_file("config/actions-budget.yml")
+        for _, row in _by_file("instance/actions-budget.yml")
     }
     resolved = actions_usage.budget_from_data(
         {"v": actions_usage.USAGE_FILE_VERSION, **budget}
@@ -278,7 +278,7 @@ def test_the_parsers_agree_with_the_minimums_this_module_states() -> None:
     lanes = registration_routing.CONFIG_FILE_VERSION
     drain = queue_watch.CONFIG_FILE_VERSION
 
-    least = _PARSER_MINIMUM[("config/queue-drain.yml", "alarm_after_hours")]
+    least = _PARSER_MINIMUM[("instance/queue-drain.yml", "alarm_after_hours")]
     assert queue_watch.thresholds_from_data(
         {"v": drain, "alarm_after_hours": least, "max_silent_days": least}
     ) == queue_watch.Thresholds(alarm_after_hours=least, max_silent_days=least)

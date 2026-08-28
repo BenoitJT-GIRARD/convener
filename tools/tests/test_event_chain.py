@@ -107,11 +107,11 @@ _ATTENDANCE_CSV_HEADER = "display_name,email,joined_at,left_at,duration_seconds"
 
 
 def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, str]:
-    """`keys/events/<id>.pub`, committed -- the one file this whole chain
+    """`instance/keys/events/<id>.pub`, committed -- the one file this whole chain
     treats as public, never a secret. Returns `(private_pem, public_pem)`
     for a test's own env var and its own encryption calls."""
     private_pem, public_pem = eventkeys.generate()
-    keys_dir = tmp_path / "keys" / "events"
+    keys_dir = tmp_path / "instance" / "keys" / "events"
     keys_dir.mkdir(parents=True, exist_ok=True)
     (keys_dir / f"{event_id}.pub").write_text(public_pem, encoding="ascii")
     return private_pem, public_pem
@@ -120,7 +120,7 @@ def _publish_event_key(tmp_path: Path, event_id: str = "mrg-042") -> tuple[str, 
 def _write_registrations_directly(
     tmp_path: Path, event_id: str, private_pem: str, *registrations: Registration
 ) -> None:
-    """`data/events/<id>/registrations.enc`, built through `upsert` alone
+    """`instance/data/events/<id>/registrations.enc`, built through `upsert` alone
     -- never through `convener-handle-registration`. This is the "a register
     with one entry" intermediate state."""
     file = _load_registration_file(None)
@@ -128,7 +128,7 @@ def _write_registrations_directly(
         file, _replaced = _upsert_registration(
             file, registration, private_pem=private_pem
         )
-    path = tmp_path / "data" / "events" / event_id / "registrations.enc"
+    path = tmp_path / "instance" / "data" / "events" / event_id / "registrations.enc"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump_registration_file(file), encoding="utf-8", newline="")
 
@@ -136,7 +136,7 @@ def _write_registrations_directly(
 def _write_encrypted_attendance_directly(
     tmp_path: Path, event_id: str, public_pem: str, *rows: str
 ) -> None:
-    """`data/events/<id>/attendance-import.csv.enc`, built through
+    """`instance/data/events/<id>/attendance-import.csv.enc`, built through
     `parse_attendance_csv` + `platform.encrypt_attendance_rows` alone --
     never through `convener-encrypt-attendance-export` itself, so a test of a
     *later* step (matching, issuance) can never accidentally depend on
@@ -147,7 +147,14 @@ def _write_encrypted_attendance_directly(
     text = "\n".join((_ATTENDANCE_CSV_HEADER, *rows)) + "\n"
     parsed_rows, issues = _parse_attendance_csv(text)
     assert issues == []
-    path = tmp_path / "data" / "events" / event_id / "attendance-import.csv.enc"
+    path = (
+        tmp_path
+        / "instance"
+        / "data"
+        / "events"
+        / event_id
+        / "attendance-import.csv.enc"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         encrypt_attendance_rows(public_pem, parsed_rows), encoding="utf-8", newline=""
@@ -162,8 +169,8 @@ def _write_speakers_and_config(
     runbook_progress: dict[str, object] | None = None,
     publication_consent: str = "",
 ) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
     record = speaker(
         edition_code=event_id.upper(),
         title="On analytical engines",
@@ -182,7 +189,7 @@ def _write_speakers_and_config(
 def _write_certificates_register_directly(
     tmp_path: Path, event_id: str, entries: Sequence[CertificateEntry]
 ) -> None:
-    path = tmp_path / "data" / "events" / event_id / "certificates.yml"
+    path = tmp_path / "instance" / "data" / "events" / event_id / "certificates.yml"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         CERTIFICATES_HEADER
@@ -233,7 +240,7 @@ def test_encrypt_attendance_export_replays_from_a_plaintext_drop_alone(
     here with the private half this command never touched, the same key
     a later CI job would use for real."""
     private_pem, _public_pem = _publish_event_key(tmp_path)
-    event_dir = tmp_path / "data" / "events" / "mrg-042"
+    event_dir = tmp_path / "instance" / "data" / "events" / "mrg-042"
     event_dir.mkdir(parents=True)
     plain_text = (
         _ATTENDANCE_CSV_HEADER + "\n"
@@ -324,7 +331,9 @@ def test_issue_certificates_replays_from_committed_registrations_and_export_alon
     out = capsys.readouterr().out
     assert "1 issued, 0 already on record" in out
 
-    register_path = tmp_path / "data" / "events" / "mrg-042" / "certificates.yml"
+    register_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "certificates.yml"
+    )
     register_data = yaml.safe_load(register_path.read_text(encoding="utf-8"))
     [entry] = register_data["certificates"]
     assert entry["state"] == "issued"
@@ -414,9 +423,9 @@ def test_revoke_certificate_replays_from_an_issued_register_entry_alone(
     assert "revoked" in capsys.readouterr().out
 
     register_data = yaml.safe_load(
-        (tmp_path / "data" / "events" / "mrg-042" / "certificates.yml").read_text(
-            encoding="utf-8"
-        )
+        (
+            tmp_path / "instance" / "data" / "events" / "mrg-042" / "certificates.yml"
+        ).read_text(encoding="utf-8")
     )
     [row] = register_data["certificates"]
     assert row["state"] == "revoked"
@@ -471,7 +480,9 @@ def test_deliver_certificate_replays_from_an_issued_undelivered_entry_alone(
     ):
         monkeypatch.delenv(smtp_var, raising=False)
 
-    register_path = tmp_path / "data" / "events" / "mrg-042" / "certificates.yml"
+    register_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "certificates.yml"
+    )
     before = yaml.safe_load(register_path.read_text(encoding="utf-8"))
 
     # `deliver_certificate` returns 0 on every
@@ -551,7 +562,9 @@ def test_deliver_certificates_batch_replays_from_multiple_issued_entries_alone(
     ):
         monkeypatch.delenv(smtp_var, raising=False)
 
-    register_path = tmp_path / "data" / "events" / "mrg-042" / "certificates.yml"
+    register_path = (
+        tmp_path / "instance" / "data" / "events" / "mrg-042" / "certificates.yml"
+    )
     before = yaml.safe_load(register_path.read_text(encoding="utf-8"))
 
     # Making the delivery loop `continue`
@@ -647,10 +660,12 @@ def test_record_destructions_replays_from_env_alone_recovering_a_wedged_sweep(
 
     assert record_destructions() == 0
     assert "mrg-042" in capsys.readouterr().out
-    assert not (tmp_path / "keys" / "events" / "mrg-042.pub").exists()
+    assert not (tmp_path / "instance" / "keys" / "events" / "mrg-042.pub").exists()
 
     registry = yaml.safe_load(
-        (tmp_path / "data" / "event-key-destructions.yml").read_text(encoding="utf-8")
+        (tmp_path / "instance" / "data" / "event-key-destructions.yml").read_text(
+            encoding="utf-8"
+        )
     )
     [entry] = registry["destructions"]
     assert entry == {"event_id": "mrg-042", "destroyed_on": "2026-08-20"}
@@ -681,8 +696,8 @@ def test_erase_registration_replays_from_a_committed_register_alone(
     assert "erased a registration" in capsys.readouterr().out
 
     remaining = _load_registration_file(
-        (tmp_path / "data" / "events" / "mrg-042" / "registrations.enc").read_text(
-            encoding="utf-8"
-        )
+        (
+            tmp_path / "instance" / "data" / "events" / "mrg-042" / "registrations.enc"
+        ).read_text(encoding="utf-8")
     )
     assert remaining.entries == ()

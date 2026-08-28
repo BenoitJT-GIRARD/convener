@@ -94,7 +94,7 @@ describe('the window', () => {
   });
 
   it('places an undated lead in neither population, and says how many there are', () => {
-    // Seven of the thirty-one speakers in data/speakers.yml carry an empty
+    // Seven of the thirty-one speakers in instance/data/speakers.yml carry an empty
     // `opened_on`. Dropping them silently would shrink the denominator with
     // no trace; the count is reported so the screen can caption it.
     const speakers = [
@@ -287,7 +287,7 @@ describe('share', () => {
   });
 
   it('reports the programme as unmeasured when nobody has declared anything', () => {
-    // The state of data/speakers.yml today: thirty-one speakers, every one of
+    // The state of instance/data/speakers.yml today: thirty-one speakers, every one of
     // them `undisclosed` on both attributes. The measure must say so.
     const { applicants } = distribution(cohort(31), WINDOW, ON);
     expect(applicants.total).toBe(31);

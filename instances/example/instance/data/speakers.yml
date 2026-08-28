@@ -1,5 +1,5 @@
 # The example instance's own speakers and editions (unified schema v6 --
-# see docs/reference/schema.md). The same file `data/speakers.yml` is for
+# see docs/reference/schema.md). The same file `instance/data/speakers.yml` is for
 # the instance that runs this repository, written for one that does not
 # exist.
 #
@@ -10,7 +10,7 @@
 # synthetic even if a name it invents happens to be somebody's somewhere.
 #
 # `edition_code` is `MRG-N`: this instance's own prefix, declared once in
-# `../config/instance.json` as `edition_prefix` and written nowhere else.
+# `../instance/config.json` as `edition_prefix` and written nowhere else.
 # It is deliberately not `identity.short_name` (`TEC`) -- the two are free
 # to differ, which is the whole reason the prefix has a key of its own --
 # and `validate.validate_speakers` builds its pattern from the declaration

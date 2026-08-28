@@ -121,7 +121,7 @@ def test_compose_the_same_event_gives_every_recipient_the_identical_link() -> No
 
 
 # ------------------------------------------------------------------ #
-# The invitation registry: `data/survey-invitations.yml`. Mirrors
+# The invitation registry: `instance/data/survey-invitations.yml`. Mirrors
 # `eventkeys.registry_from_data`/`registry_to_data`'s own test coverage
 # shape closely, on purpose -- same file family, same closed-shape
 # discipline.
@@ -129,7 +129,10 @@ def test_compose_the_same_event_gives_every_recipient_the_identical_link() -> No
 
 
 def test_invitations_path_is_relative_to_root(tmp_path: Path) -> None:
-    assert invitations_path(tmp_path) == tmp_path / "data" / "survey-invitations.yml"
+    assert (
+        invitations_path(tmp_path)
+        == tmp_path / "instance" / "data" / "survey-invitations.yml"
+    )
 
 
 def test_registry_from_data_with_none_starts_empty() -> None:

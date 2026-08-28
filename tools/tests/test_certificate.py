@@ -1113,7 +1113,7 @@ def test_organiser_is_a_non_empty_constant() -> None:
     the name this instance happens to declare: `ORGANISER` is what a
     stranger reads at the top of a certificate, and a literal here
     would be a second place the name is written down -- exactly the
-    shape `config/instance.json` exists to end."""
+    shape `instance/config.json` exists to end."""
     declared = json.loads(
         (repo_root() / published.INSTANCE_PATH).read_text(encoding="utf-8")
     )
@@ -1215,7 +1215,7 @@ def test_the_shared_fixture_base_matches_this_modules_own_constant() -> None:
     """The fixture states the *path* -- `verify/#/`,
     which is the product's own route plus the fragment that keeps a
     holder's name out of every request -- and the root comes from
-    `config/instance.json`, the one place it is written down."""
+    `instance/config.json`, the one place it is written down."""
     assert published.load().under(_FIXTURE["verification_path"]) == VERIFICATION_BASE
 
 

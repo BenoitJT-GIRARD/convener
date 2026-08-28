@@ -53,8 +53,8 @@ series.
 **Your downloaded copy is yours: change anything in it.** What the paragraph
 above is about is the file *in the repository*, and that one is not edited by
 hand at all any more. It is generated from the visual identity
-(`data/brand.json`) and from this series' own declaration
-(`config/instance.json`), so every colour in it is the charter's and every name
+(`instance/data/brand.json`) and from this series' own declaration
+(`instance/config.json`), so every colour in it is the charter's and every name
 in it is this series'. To change one, change one of those two files and run
 `uv run python ../scripts/generate_brand_css.py` from `tools/`; the same
 command's `--check` fails the build if a template stops agreeing with them.
@@ -109,7 +109,7 @@ hinting and anti-aliasing differ. A committed PNG could then only be checked
 loosely, or checked strictly and fail on somebody else's laptop for a reason
 that is not a mistake; and either way nothing in this repository could read
 what it said. The SVG is checked exactly, character for character, against
-`data/brand.json` and `config/instance.json`. The cost of that is this one
+`instance/data/brand.json` and `instance/config.json`. The cost of that is this one
 export, and it is a cost worth naming rather than hiding.
 
 Export a copy; **do not overwrite the template**. The file in the repository is

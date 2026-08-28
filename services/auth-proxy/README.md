@@ -15,7 +15,7 @@ command. That is the condition of transferability — see decision D-03.
 ## Deploying
 
 Run *Deploy auth relay* from the Actions tab. That workflow reads the one
-address `config/instance.json` declares this project is published at, and
+address `instance/config.json` declares this project is published at, and
 passes its origin to Wrangler:
 
 ```bash

@@ -3,7 +3,7 @@
 The gap the submission queue leaves behind:
 "the saving can disappear in silence". A registration has
 two lanes, and `registration_routing.py` states in as many words that
-**every** failure to resolve `public-data/registration-routing.json`
+**every** failure to resolve `instance/public-data/registration-routing.json`
 resolves to the *immediate* lane -- a 404, a body that will not decode, a
 version the relay does not know, an event absent from the file, a rate
 limit, an unreachable GitHub. That direction is right, and nothing here
@@ -23,8 +23,8 @@ module is that requirement applied to a saving rather than to a protection.
 
 The signal: what the file can still route, never how old it is
 ----------------------------------------------------------------
-This module recomputes the projection from `data/speakers.yml` and
-`config/registration-lanes.yml` -- the same pure function `deploy.yml`
+This module recomputes the projection from `instance/data/speakers.yml` and
+`instance/registration-lanes.yml` -- the same pure function `deploy.yml`
 runs, called here rather than reimplemented -- and compares it with the
 committed file, **restricted to the events whose lane a registration
 arriving right now still depends on**.
@@ -33,7 +33,7 @@ An age check was the obvious candidate and it is the wrong one, for three
 mechanical reasons rather than a preference:
 
 * `deploy.yml` declares `paths-ignore: config/**`. Editing
-  `config/registration-lanes.yml` changes every cutoff and starts nothing,
+  `instance/registration-lanes.yml` changes every cutoff and starts nothing,
   so the published file can be minutes old and already wrong -- and that
   drift never heals on its own, which that file's own header warns about.
 * Between seminars nothing that feeds the projection moves at all, so a
@@ -71,7 +71,7 @@ That scope is what keeps this quiet when it should be quiet:
   this module says nothing. That is the direct consequence of measuring the
   ability to route rather than freshness, and it is the case an age check
   gets exactly backwards.
-* **An event the file names that `data/speakers.yml` no longer dates** is
+* **An event the file names that `instance/data/speakers.yml` no longer dates** is
   in scope only while its published cutoff is still in the future -- the
   one shape of that case where somebody could still be queued for an event
   this repository can no longer place in time -- a question about routing,
@@ -91,7 +91,7 @@ There is no `config/` file beside `actions-budget.yml`,
 `registration-lanes.yml` and `queue-drain.yml` for this control, because
 nothing in it is a matter of taste. The comparison is exact -- two strings
 either match or they do not -- and the one boundary it has, "is this event
-still live", is `config/registration-lanes.yml`'s own `queue_beyond_hours`
+still live", is `instance/registration-lanes.yml`'s own `queue_beyond_hours`
 read through the lane rule itself. A knob added here would be a number with
 no correct setting, and this repository already has thirteen recorded
 instances of what an unsettable control is worth.
@@ -201,7 +201,7 @@ class Finding:
 
 
 def published_from_data(data: Any) -> dict[str, str]:
-    """Parse an already JSON-loaded `public-data/registration-routing.json`.
+    """Parse an already JSON-loaded `instance/public-data/registration-routing.json`.
 
     Raises `ValueError`, naming the file, on anything that is not the shape
     `registration_routing.to_routing_data` writes. Refusing rather than
@@ -343,7 +343,7 @@ def describe(divergence: Divergence) -> str:
         return (
             f"{divergence.event}: the published file still queues "
             f"registrations for it until {divergence.published}, but "
-            "data/speakers.yml no longer gives it a usable date"
+            "instance/data/speakers.yml no longer gives it a usable date"
         )
     return (
         f"{divergence.event}: the published file says {divergence.published}, "

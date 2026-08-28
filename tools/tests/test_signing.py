@@ -114,7 +114,7 @@ def test_a_certificate_signed_by_a_retired_key_still_verifies() -> None:
     published (`retired_public`), alongside the public half of whatever key
     *is* now in service (`current_public`, generated but never used to sign
     anything here). `verify` is handed the list a real caller would build
-    from `keys/signing/*.pub`, newest first (the current key, then the
+    from `instance/keys/signing/*.pub`, newest first (the current key, then the
     retired one) -- and still returns the payload, because the retired
     key's public half is *somewhere* in the list, which is the only thing
     correctness ever depended on.
@@ -427,7 +427,7 @@ def test_sign_rejects_a_private_key_of_the_wrong_kind() -> None:
 
 
 def test_verify_returns_no_matching_key_for_an_empty_key_list() -> None:
-    """Not only a defensive edge case: `keys/signing/` genuinely holds no
+    """Not only a defensive edge case: `instance/keys/signing/` genuinely holds no
     key at all until an operator generates the first one (see that
     directory's own README), so a caller that built `public_pems` from an
     empty directory listing must get this same honest "cannot confirm"
@@ -702,7 +702,7 @@ def test_public_key_path_is_under_keys_signing(
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
     assert public_key_path(date(2026, 8, 20)) == (
-        tmp_path / "keys" / "signing" / "2026-08-20.pub"
+        tmp_path / "instance" / "keys" / "signing" / "2026-08-20.pub"
     )
 
 

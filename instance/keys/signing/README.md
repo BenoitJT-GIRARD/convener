@@ -1,4 +1,4 @@
-# `keys/signing/`
+# `instance/keys/signing/`
 
 Published public halves of the certificate signing key -- see
 `tools/convener_ops/signing.py`'s module docstring for the full design, and
@@ -31,7 +31,7 @@ It arrived in *ops: sign a certificate payload, verify it against every
 published key* and left again in *ops: drop the orphaned signing key, keep
 the layout contract in a readme* -- the commit that wrote this file. Anyone
 who wants to see the bytes can run
-`git log --all --diff-filter=A -- keys/signing/2026-08-20.pub` and read the
+`git log --all --diff-filter=A -- instance/keys/signing/2026-08-20.pub` and read the
 blob out of the commit it names. It is not a "lost key" to account for or
 worry about recovering -- it never signed a single real certificate, and no
 verifier should ever need to know it existed. The real, first signing key
@@ -60,7 +60,7 @@ key is newest.
 
 Rotating the signing key never means deleting a `.pub` file from this
 directory. A signing key's whole reason for existing separately from an
-event key (`keys/events/`) is that retiring one from *service* -- no
+event key (`instance/keys/events/`) is that retiring one from *service* -- no
 longer used to sign new certificates -- must never invalidate a
 certificate it already signed. The only thing that ever
 changes on rotation is which private key is loaded into the
@@ -174,11 +174,11 @@ This section used to describe a design where every published public half
 is bundled straight into the verification page's own JS at build time.
 That is not what was built, and the difference is worth stating plainly
 rather than leaving the two documents disagree about it: `app/scripts/
-copy-signing-keys.mjs` copies every `keys/signing/*.pub` verbatim into
+copy-signing-keys.mjs` copies every `instance/keys/signing/*.pub` verbatim into
 `app/public/keys/signing/` at build time, newest-first order recorded
 separately in a generated `index.json` manifest (one array of PEM
 strings) -- the same idiom `copy-event-keys.mjs` already applies to
-`keys/events/`. `app/src/verify/publicKeys.ts::loadSigningPublicKeys`
+`instance/keys/events/`. `app/src/verify/publicKeys.ts::loadSigningPublicKeys`
 then **fetches** `index.json` at runtime, once, the first time the
 verification page needs to check a signature.
 
@@ -204,7 +204,7 @@ certificate is genuine.
 
 `verify` handed an empty list returns `NO_MATCHING_KEY` for every token,
 cleanly: no crash, and no token is ever treated as valid with nothing to
-check it against. An empty `keys/signing/` directory at build time -- the
+check it against. An empty `instance/keys/signing/` directory at build time -- the
 current, real state -- produces an empty `index.json` (`[]`), not a build
 failure, and the verification page shows its "cannot confirm this
 certificate right now" state for every certificate it is asked to check --

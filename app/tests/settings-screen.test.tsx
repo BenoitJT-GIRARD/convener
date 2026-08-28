@@ -22,6 +22,7 @@ import { MemoryRouter } from 'react-router-dom';
 import yaml from 'js-yaml';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { Settings } from '../src/screens/Settings';
+import { CONFIG_DIRS, CONFIG_SUFFIXES } from '../src/settings/declaration';
 
 const ROOT = resolve(__dirname, '..', '..');
 
@@ -38,12 +39,19 @@ function decodeUtf8(b64: string): string {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
-/** Every file this repository's own `config/` holds, by path. */
+/** Every configuration file this repository holds, by path -- both the
+ *  directories `CONFIG_DIRS` names, which is what the screen lists. */
 function realConfig(): Record<string, string> {
   const files: Record<string, string> = {};
-  for (const name of readdirSync(resolve(ROOT, 'config'))) {
-    if (!name.endsWith('.yml') && !name.endsWith('.json')) continue;
-    files[`config/${name}`] = readFileSync(resolve(ROOT, 'config', name), 'utf-8');
+  for (const directory of CONFIG_DIRS) {
+    for (const entry of readdirSync(resolve(ROOT, directory), { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      if (!CONFIG_SUFFIXES.some(suffix => entry.name.endsWith(suffix))) continue;
+      files[`${directory}/${entry.name}`] = readFileSync(
+        resolve(ROOT, directory, entry.name),
+        'utf-8',
+      );
+    }
   }
   return files;
 }
@@ -92,15 +100,18 @@ function makeBackend(options: { secretNames?: string[]; refuseSecrets?: boolean 
       }
       return Promise.resolve({ ok: true, json: async () => ({ variables: [] }) });
     }
-    if (url.endsWith('/contents/config')) {
+    const listed = CONFIG_DIRS.find(directory => url.endsWith(`/contents/${directory}`));
+    if (listed !== undefined) {
       return Promise.resolve({
         ok: true,
         json: async () =>
-          Object.keys(files).map(path => ({
-            name: path.slice('config/'.length),
-            path,
-            type: 'file',
-          })),
+          Object.keys(files)
+            .filter(path => path.startsWith(`${listed}/`))
+            .map(path => ({
+              name: path.slice(listed.length + 1),
+              path,
+              type: 'file',
+            })),
       });
     }
     const path = decodeURIComponent(url.split('/contents/')[1] ?? '');
@@ -159,7 +170,7 @@ const FIRST_RENDER = { timeout: 5000 };
 /** The alarm field, once the screen has finished reading the repository. */
 function alarmField() {
   return screen.findByLabelText(
-    'alarm_after_hours in config/queue-drain.yml',
+    'alarm_after_hours in instance/queue-drain.yml',
     undefined,
     FIRST_RENDER,
   );
@@ -176,12 +187,12 @@ describe('the settings screen', () => {
     renderSettings(makeBackend());
     // From `config/boundary.yml`'s own list...
     expect(await screen.findByText('docs/governance/register.md', undefined, FIRST_RENDER)).toBeInTheDocument();
-    expect(screen.getByText('keys/')).toBeInTheDocument();
-    // ...and from each `config/` file's own `owner:` header.
-    expect(screen.getByText('config/queue-drain.yml')).toBeInTheDocument();
-    // Never the product's own files, which sit in the same directory. The
-    // prose above the list names `config/boundary.yml` as the declaration it
-    // read, so the list itself is what is asked.
+    expect(screen.getByText('instance/keys/')).toBeInTheDocument();
+    // ...and from each configuration file's own `owner:` header.
+    expect(screen.getByText('instance/queue-drain.yml')).toBeInTheDocument();
+    // Never the product's own files, which answer the same way and say the
+    // other thing. The prose above the list names `config/boundary.yml` as
+    // the declaration it read, so the list itself is what is asked.
     const owned = screen.getByRole('heading', { name: 'What this instance owns' })
       .parentElement!;
     expect(owned.textContent).not.toContain('config/integrations.yml');
@@ -219,7 +230,7 @@ describe('the settings screen', () => {
 
     const refusal = await screen.findByRole('alert');
     expect(refusal.textContent).toContain('ceiling');
-    expect(refusal.textContent).toContain('config/registration-lanes.yml');
+    expect(refusal.textContent).toContain('instance/registration-lanes.yml');
     expect(refusal.textContent).toContain('queue_beyond_hours (96)');
   });
 
@@ -233,13 +244,13 @@ describe('the settings screen', () => {
     fireEvent.click(save);
     await waitFor(() => expect(screen.getByText(/out of bounds/)).toBeInTheDocument());
     expect(backend.subjects).toEqual([]);
-    expect(backend.files['config/queue-drain.yml']).toContain('alarm_after_hours: 48');
+    expect(backend.files['instance/queue-drain.yml']).toContain('alarm_after_hours: 48');
   });
 
   it('refuses the other end of the coupling from the other file', async () => {
     renderSettings(makeBackend());
     const lane = await screen.findByLabelText(
-      'queue_beyond_hours in config/registration-lanes.yml',
+      'queue_beyond_hours in instance/registration-lanes.yml',
       undefined,
       FIRST_RENDER,
     );
@@ -247,7 +258,7 @@ describe('the settings screen', () => {
 
     const refusal = await screen.findByRole('alert');
     expect(refusal.textContent).toContain('coupling');
-    expect(refusal.textContent).toContain('config/queue-drain.yml');
+    expect(refusal.textContent).toContain('instance/queue-drain.yml');
     expect(refusal.textContent).toContain('alarm_after_hours: 48');
   });
 
@@ -258,7 +269,7 @@ describe('the settings screen', () => {
     // the manoeuvre nothing tells anybody about today.
     fireEvent.change(
       await screen.findByLabelText(
-        'queue_beyond_hours in config/registration-lanes.yml',
+        'queue_beyond_hours in instance/registration-lanes.yml',
         undefined,
         FIRST_RENDER,
       ),
@@ -267,7 +278,7 @@ describe('the settings screen', () => {
     fireEvent.click(screen.getByRole('button', { name: /Save 1 change/ }));
 
     await waitFor(() =>
-      expect(backend.files['config/registration-lanes.yml']).toContain(
+      expect(backend.files['instance/registration-lanes.yml']).toContain(
         'queue_beyond_hours: 168',
       ),
     );
@@ -276,16 +287,16 @@ describe('the settings screen', () => {
     // was quoted here once, and `config/registration-
     // lanes.yml` is the *instance's* file: quoting its prose made a
     // product test an assertion about which repository was running it.
-    const lanes = readFileSync(resolve(ROOT, 'config/registration-lanes.yml'), 'utf8');
+    const lanes = readFileSync(resolve(ROOT, 'instance/registration-lanes.yml'), 'utf8');
     const comments = lanes.split('\n').filter(line => line.trimStart().startsWith('#'));
     expect(comments.length).toBeGreaterThan(2);
     comments.forEach(line =>
-      expect(backend.files['config/registration-lanes.yml']).toContain(line),
+      expect(backend.files['instance/registration-lanes.yml']).toContain(line),
     );
-    expect(backend.files['config/registration-lanes.yml']).toContain('owner: instance');
+    expect(backend.files['instance/registration-lanes.yml']).toContain('owner: instance');
     // And the subject names the key and the file, never the value.
     expect(backend.subjects).toEqual([
-      'config: set queue_beyond_hours in config/registration-lanes.yml',
+      'config: set queue_beyond_hours in instance/registration-lanes.yml',
     ]);
     expect(backend.subjects[0]).not.toContain('168');
   });
@@ -295,7 +306,7 @@ describe('the settings screen', () => {
     renderSettings(backend);
     fireEvent.change(
       await screen.findByLabelText(
-        'queue_beyond_hours in config/registration-lanes.yml',
+        'queue_beyond_hours in instance/registration-lanes.yml',
         undefined,
         FIRST_RENDER,
       ),
@@ -391,7 +402,7 @@ describe('the same screen, demonstrated', () => {
     // signed-in path uses -- the four `config/` files `instances/example/`
     // holds, plus the product's two.
     const example = yaml.load(
-      readFileSync(resolve(ROOT, 'instances/example/config/queue-drain.yml'), 'utf-8'),
+      readFileSync(resolve(ROOT, 'instances/example/instance/queue-drain.yml'), 'utf-8'),
     ) as Record<string, number>;
     expect(await alarmField()).toHaveValue(example.alarm_after_hours);
     expect(screen.getByText(/The drain runs every/)).toBeInTheDocument();
@@ -425,7 +436,7 @@ describe('the same screen, demonstrated', () => {
     );
     fireEvent.change(
       await screen.findByLabelText(
-        'queue_beyond_hours in config/registration-lanes.yml',
+        'queue_beyond_hours in instance/registration-lanes.yml',
         undefined,
         FIRST_RENDER,
       ),

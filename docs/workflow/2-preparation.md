@@ -24,14 +24,14 @@ coming along.
 
 - [ ] Speaker told the promotion is starting — before anything is posted
 - [ ] LinkedIn post published
-- [ ] Mailing list / newsletter message sent — to every mailing-list and newsletter channel on the speaker's own promotion lines (the Board's list, in `data/config.yml`)
+- [ ] Mailing list / newsletter message sent — to every mailing-list and newsletter channel on the speaker's own promotion lines (the Board's list, in `instance/data/config.yml`)
 
 ### T-14 days
 
 - [ ] Meeting link in hand, recording arranged
 - [ ] LinkedIn access in place
 - [ ] **Speaker registered on the forum and to their own talk**
-- [ ] One line per promotion channel — as many as there are entries in `channels` in `data/config.yml`, so what you see is what the Board has set
+- [ ] One line per promotion channel — as many as there are entries in `channels` in `instance/data/config.yml`, so what you see is what the Board has set
 
 ### T-7 days
 

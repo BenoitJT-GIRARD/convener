@@ -12,7 +12,7 @@ What it cannot mean
 "No future commit touches this." No test sees the future, and any check
 claiming to would be worse than none: a reviewer trusts it instead of
 looking. Nothing here reads git history either -- that upstream *has* not
-written into `data/` is a fact about a repository's past, not a property of
+written into `instance/data/` is a fact about a repository's past, not a property of
 its current state, and a green suite would say nothing about the next pull
 request.
 
@@ -34,8 +34,8 @@ Three decidable clauses come out of that, one test each:
    is how this repository has drifted every previous time.
 
 2. **No instance path holds code.** Source is the thing upstream fixes bugs
-   in. The day a `.py`, a `.ts` or a `.njk` lives under `data/` or
-   `keys/`, "upstream never writes here" stops being a promise anybody can
+   in. The day a `.py`, a `.ts` or a `.njk` lives under `instance/data/` or
+   `instance/keys/`, "upstream never writes here" stops being a promise anybody can
    keep -- not because someone was careless, but because a bug will
    eventually be there and it will have to be fixed. This is the clause
    that bites, and it is checked over the files the working tree really
@@ -43,7 +43,7 @@ Three decidable clauses come out of that, one test each:
 
 3. **Nothing sits inside an instance path by accident.** The two product
    files that live inside instance directories today
-   (`data/schema.md`, `keys/signing/README.md`) are named in the
+   (`instance/data/schema.md`, `instance/keys/signing/README.md`) are named in the
    declaration with their reasons, must exist, and are the only exceptions
    there are. An unjustifiable one cannot be added quietly.
 
@@ -57,12 +57,12 @@ discovered:
   declared paths is invisible: the boundary can only hold what somebody
   declared. Clause 2 catches the reverse mistake (code moving into an
   instance path), never this one.
-- **Runtime writes.** The instance's own scheduled jobs write into `data/`
-  and `public-data/` constantly, and must. Nothing here distinguishes a
+- **Runtime writes.** The instance's own scheduled jobs write into `instance/data/`
+  and `instance/public-data/` constantly, and must. Nothing here distinguishes a
   write by the instance from a write by upstream, because in a checkout
   they look identical; the distinction lives in who commits, which is a
   fact about a repository's history and therefore outside this module.
-- **Correctness of a judgement.** That `config/queue-drain.yml` is the
+- **Correctness of a judgement.** That `instance/queue-drain.yml` is the
   instance's is an argument, written in that file's own header. This module
   holds the answer, never the argument.
 """
@@ -114,14 +114,17 @@ def _write_root(
     owners: dict[str, str] | None = None,
 ) -> Path:
     """A repository root holding only what this module reads: a
-    declaration and a `config/` directory whose files state an owner."""
-    (tmp_path / "config").mkdir(exist_ok=True)
+    declaration, and the two directories whose configuration files state
+    an owner. `owners` names a file inside one of them, path and all, so a
+    case can put the same file on either side of `boundary.CONFIG_DIRS`."""
+    for directory in boundary.CONFIG_DIRS:
+        (tmp_path / directory).mkdir(exist_ok=True)
     body = _MINIMAL if declaration is None else declaration
     (tmp_path / boundary.DECLARATION_PATH).write_text(
         yaml.safe_dump(body), encoding="utf-8"
     )
     for name, owner in (owners or {}).items():
-        (tmp_path / "config" / name).write_text(f"owner: {owner}\n", encoding="utf-8")
+        (tmp_path / name).write_text(f"owner: {owner}\n", encoding="utf-8")
     return tmp_path
 
 
@@ -139,14 +142,19 @@ def test_this_repository_declares_a_boundary_that_reads() -> None:
     would be the second copy this whole design exists to refuse.
 
     `site/src/_data/site.json` was the fourth of these until
-    its four keys were folded into `config/instance.json`'s own
+    its four keys were folded into `instance/config.json`'s own
     `identity` and left `site/.eleventy.js` composing them. The file
     entry went with the file, and nothing under `site/` is the instance's
     now -- so the anchor moved to `docs/governance/register.md`, the one
     path here that a scheduled job rewrites rather than a person.
     """
     declared = load().instance_paths
-    for owned in ("data/", "keys/", "public-data/", "docs/governance/register.md"):
+    for owned in (
+        "instance/data/",
+        "instance/keys/",
+        "instance/public-data/",
+        "docs/governance/register.md",
+    ):
         assert owned in declared, f"{owned} is no longer declared: {declared}"
 
 
@@ -156,22 +164,24 @@ def test_every_file_in_config_states_which_it_is() -> None:
     where everything said `product` would satisfy a weaker test while
     saying nothing at all.
 
-    Every file in every format `boundary.CONFIG_READERS` knows, compared
-    against what the directory really holds: `config/instance.json` is
-    JSON, and a check that only ever globbed `*.yml`
-    would have let a second format arrive here with nobody deciding what
-    it is -- the exact silence this directory was in before.
+    Every file in every format `boundary.CONFIG_READERS` knows, in both
+    the directories `boundary.CONFIG_DIRS` names, compared against what
+    they really hold: `instance/config.json` is JSON, and a check that
+    only ever globbed `*.yml` would have let a second format arrive with
+    nobody deciding what it is -- the exact silence `config/` was in
+    before.
     """
     owners = load().config_owners
     assert set(owners) == {
         path.relative_to(ROOT).as_posix()
+        for directory in boundary.CONFIG_DIRS
         for suffix in boundary.CONFIG_READERS
-        for path in (ROOT / "config").glob(f"*{suffix}")
+        for path in (ROOT / directory).glob(f"*{suffix}")
     }
     assert set(owners.values()) == {INSTANCE, PRODUCT}
     assert owners["config/integrations.yml"] == PRODUCT
     assert owners["config/boundary.yml"] == PRODUCT
-    assert owners["config/instance.json"] == INSTANCE
+    assert owners["instance/config.json"] == INSTANCE
 
 
 def test_the_packages_own_config_constants_agree_with_the_declaration() -> None:
@@ -190,10 +200,11 @@ def test_every_path_this_package_names_is_classified() -> None:
     `convener_ops` declares, put through the boundary.
 
     Its value is the direction it fails in. The ledgers the scheduled jobs
-    write (`data/queue-watch.yml`, `data/actions-usage.yml`,
-    `data/retention-last-run.yml`, ...) and the key directories
-    (`keys/events`, `keys/signing`) must stay the instance's; a `kept:`
-    entry added carelessly, or a declaration narrowed from `data/` to one
+    write (`instance/data/queue-watch.yml`, `instance/data/actions-usage.yml`,
+    `instance/data/retention-last-run.yml`, ...) and the key directories
+    (`instance/keys/events`, `instance/keys/signing`) must stay the
+    instance's; a `kept:` entry added carelessly, or a declaration narrowed
+    from `instance/data/` to one
     of its files, would quietly un-own them and nothing else would notice.
     """
     board = load()
@@ -225,26 +236,26 @@ def test_a_config_file_with_no_owner_is_refused_by_name(tmp_path: Path) -> None:
 
 
 def test_a_json_config_file_answers_the_same_question(tmp_path: Path) -> None:
-    """`config/instance.json` is JSON because three languages read it and
+    """`instance/config.json` is JSON because three languages read it and
     only JSON has a parser on all three sides without a dependency two of
     them do not carry. That must not become a way around the rule above:
     a JSON file states the same `owner` key, and one that does not is
     refused by name exactly as a YAML one is."""
     root = _write_root(tmp_path)
-    named = root / "config" / "instance.json"
+    named = root / "instance" / "config.json"
 
     named.write_text('{"v": 1}', encoding="utf-8")
-    with pytest.raises(ValueError, match=r"config/instance\.json declares no owner"):
+    with pytest.raises(ValueError, match=r"instance/config\.json declares no owner"):
         config_owners(root)
 
     named.write_text('{"owner": "instance", "v": 1}', encoding="utf-8")
-    assert config_owners(root)["config/instance.json"] == INSTANCE
+    assert config_owners(root)["instance/config.json"] == INSTANCE
 
 
 def test_a_config_file_with_an_invented_owner_is_refused(tmp_path: Path) -> None:
     """Two answers, and only two. `owner: both` is the mixing this
     declaration exists to end, spelled out."""
-    root = _write_root(tmp_path, owners={"thresholds.yml": "both"})
+    root = _write_root(tmp_path, owners={"config/thresholds.yml": "both"})
 
     with pytest.raises(ValueError, match="declares no owner"):
         config_owners(root)
@@ -259,7 +270,7 @@ def test_a_config_file_that_is_not_a_mapping_is_refused(tmp_path: Path) -> None:
 
 
 def test_the_declaration_refuses_to_name_a_config_path() -> None:
-    """One fact, one place. `config/queue-drain.yml` says what it is in its
+    """One fact, one place. `instance/queue-drain.yml` says what it is in its
     own header; a second home for that answer is how two lists start
     disagreeing, which is this repository's oldest defect."""
     with pytest.raises(ValueError, match="state their own owner"):
@@ -268,7 +279,7 @@ def test_the_declaration_refuses_to_name_a_config_path() -> None:
                 "owner": PRODUCT,
                 "v": boundary.DECLARATION_VERSION,
                 "instance": [
-                    {"path": "config/queue-drain.yml", "reason": "the instance's"}
+                    {"path": "instance/queue-drain.yml", "reason": "the instance's"}
                 ],
             }
         )
@@ -283,8 +294,8 @@ def test_the_declaration_refuses_one_entry_inside_another() -> None:
                 "owner": PRODUCT,
                 "v": boundary.DECLARATION_VERSION,
                 "instance": [
-                    {"path": "data/", "reason": "the records"},
-                    {"path": "data/events/", "reason": "the events"},
+                    {"path": "instance/data/", "reason": "the records"},
+                    {"path": "instance/data/events/", "reason": "the events"},
                 ],
             }
         )
@@ -302,7 +313,7 @@ def test_the_declaration_refuses_one_entry_inside_another() -> None:
         ),
         ({"owner": PRODUCT, "v": 1}, "must be a non-empty list"),
         ({"owner": PRODUCT, "v": 1, "instance": []}, "must be a non-empty list"),
-        ({"owner": PRODUCT, "v": 1, "instance": ["data/"]}, "not an entry"),
+        ({"owner": PRODUCT, "v": 1, "instance": ["instance/data/"]}, "not an entry"),
         (
             {"owner": PRODUCT, "v": 1, "instance": [{"reason": "b"}]},
             "must be a non-empty path",
@@ -311,7 +322,7 @@ def test_the_declaration_refuses_one_entry_inside_another() -> None:
             {
                 "owner": PRODUCT,
                 "v": 1,
-                "instance": [{"path": " data/ ", "reason": "b"}],
+                "instance": [{"path": " instance/data/ ", "reason": "b"}],
             },
             "surrounding whitespace",
         ),
@@ -327,7 +338,10 @@ def test_the_declaration_refuses_one_entry_inside_another() -> None:
             {"owner": PRODUCT, "v": 1, "instance": [{"path": "../x/", "reason": "b"}]},
             "relative POSIX path",
         ),
-        ({"owner": PRODUCT, "v": 1, "instance": [{"path": "data/"}]}, "carry a reason"),
+        (
+            {"owner": PRODUCT, "v": 1, "instance": [{"path": "instance/data/"}]},
+            "carry a reason",
+        ),
     ],
 )
 def test_a_declaration_that_cannot_be_read_stops_rather_than_guesses(
@@ -346,8 +360,8 @@ def test_a_declaration_that_cannot_be_read_stops_rather_than_guesses(
 
 def test_every_declared_file_exists_and_every_kept_file_with_it() -> None:
     """A directory entry may name something a fresh duplicate has not
-    created yet -- `keys/events/`, `public-data/` -- so its existence is
-    not asserted. A *file* entry, and every `kept:` exception, names
+    created yet -- `instance/keys/events/`, `instance/public-data/` -- so
+    its existence is not asserted. A *file* entry, and every `kept:` exception, names
     something that is in this repository right now, and an entry pointing
     at nothing is an exception nobody can check."""
     board = load()
@@ -365,7 +379,7 @@ def test_the_kept_exceptions_are_the_two_this_task_found() -> None:
     operator will meet it, and both are candidates for a move later --
     which is a maintainer's call, not this module's."""
     kept = {kept.path for entry in load().handed for kept in entry.kept}
-    assert kept == {"data/schema.md", "keys/signing/README.md"}
+    assert kept == {"instance/data/schema.md", "instance/keys/signing/README.md"}
 
 
 def test_a_directory_is_the_instance_s_only_when_all_of_it_is() -> None:
@@ -376,11 +390,11 @@ def test_a_directory_is_the_instance_s_only_when_all_of_it_is() -> None:
     The second half is the one that earns the method: a directory holding
     a file the product keeps cannot be dropped without dropping that file
     with it, so it is not the instance's however the entry above it
-    reads. `keys/signing/README.md` is the verification page's own
+    reads. `instance/keys/signing/README.md` is the verification page's own
     contract, and it is meant to ship."""
     board = load()
-    assert board.owns_directory("public-data")
-    assert board.owns_directory("public-data/")
+    assert board.owns_directory("instance/public-data")
+    assert board.owns_directory("instance/public-data/")
     assert not board.owns_directory("site")
     for kept in (kept for entry in board.handed for kept in entry.kept):
         parent = kept.path.rsplit("/", 1)[0]
@@ -396,7 +410,7 @@ def test_a_kept_file_outside_its_own_entry_is_refused() -> None:
                 "v": boundary.DECLARATION_VERSION,
                 "instance": [
                     {
-                        "path": "data/",
+                        "path": "instance/data/",
                         "reason": "the records",
                         "kept": [{"path": "docs/schema.md", "reason": "elsewhere"}],
                     }
@@ -427,8 +441,11 @@ def test_a_file_entry_cannot_keep_anything_inside_itself() -> None:
     [
         ("a string", "must be a list"),
         (["a string"], "not an entry"),
-        ([{"path": "data/x.md"}], "carry a reason"),
-        ([{"path": "data/sub/", "reason": "a directory"}], "not a file inside"),
+        ([{"path": "instance/data/x.md"}], "carry a reason"),
+        (
+            [{"path": "instance/data/sub/", "reason": "a directory"}],
+            "not a file inside",
+        ),
     ],
 )
 def test_a_kept_entry_that_cannot_be_read_stops(kept: Any, expected: str) -> None:
@@ -437,7 +454,9 @@ def test_a_kept_entry_that_cannot_be_read_stops(kept: Any, expected: str) -> Non
             {
                 "owner": PRODUCT,
                 "v": boundary.DECLARATION_VERSION,
-                "instance": [{"path": "data/", "reason": "the records", "kept": kept}],
+                "instance": [
+                    {"path": "instance/data/", "reason": "the records", "kept": kept}
+                ],
             }
         )
 
@@ -504,7 +523,7 @@ def test_a_directory_cannot_be_declared_regenerated() -> None:
                 "v": boundary.DECLARATION_VERSION,
                 "instance": [
                     {
-                        "path": "public-data/",
+                        "path": "instance/public-data/",
                         "reason": "the published derivative",
                         "regenerated": True,
                     }
@@ -521,7 +540,7 @@ def test_a_regenerated_flag_that_is_not_a_flag_is_refused() -> None:
                 "v": boundary.DECLARATION_VERSION,
                 "instance": [
                     {
-                        "path": "data/x.md",
+                        "path": "instance/data/x.md",
                         "reason": "a record",
                         "regenerated": "yes",
                     }
@@ -537,7 +556,7 @@ def test_a_path_nobody_declared_regenerated_is_not() -> None:
         {
             "owner": PRODUCT,
             "v": boundary.DECLARATION_VERSION,
-            "instance": [{"path": "data/", "reason": "the records"}],
+            "instance": [{"path": "instance/data/", "reason": "the records"}],
         }
     )
     assert entry.regenerated is False
@@ -552,23 +571,23 @@ def test_the_walk_sees_the_files_this_repository_really_holds() -> None:
     """An empty walk would make the clause below pass for free, which is
     exactly how a sweep stops meaning anything."""
     found = instance_files(ROOT, load())
-    assert "data/config.yml" in found
-    assert "data/brand.json" in found
-    assert "config/registration-lanes.yml" in found
+    assert "instance/data/config.yml" in found
+    assert "instance/data/brand.json" in found
+    assert "instance/registration-lanes.yml" in found
     assert "docs/governance/register.md" in found
-    assert "data/schema.md" not in found, "a kept file is the product's"
-    assert "keys/signing/README.md" not in found
+    assert "instance/data/schema.md" not in found, "a kept file is the product's"
+    assert "instance/keys/signing/README.md" not in found
     assert "config/integrations.yml" not in found
 
 
 def test_no_instance_path_holds_code() -> None:
     """The clause that bites.
 
-    Upstream fixes bugs in source. A `.py` under `data/`, a `.ts` under
-    `keys/`, a `.njk` under `public-data/` -- each is a file upstream will
-    one day have to edit, in a path it promised never to touch. The promise
-    does not survive that, however careful everybody is, so the state is
-    refused rather than watched.
+    Upstream fixes bugs in source. A `.py` under `instance/data/`, a `.ts`
+    under `instance/keys/`, a `.njk` under `instance/public-data/` -- each
+    is a file upstream will one day have to edit, in a path it promised
+    never to touch. The promise does not survive that, however careful
+    everybody is, so the state is refused rather than watched.
     """
     offenders = code_among(instance_files(ROOT, load()))
     assert offenders == (), (
@@ -595,8 +614,15 @@ def test_the_code_detector_finds_code_when_there_is_some(tmp_path: Path) -> None
 def test_the_code_detector_leaves_data_alone() -> None:
     """Pure, so it can be exercised against a list somebody made up rather
     than only against whatever this repository happens to hold."""
-    assert code_among(["data/config.yml", "keys/events/MRG-05.pub", "a/b.md"]) == ()
-    assert code_among(["data/x.PY", "site/src/_data/site.json"]) == ("data/x.PY",)
+    assert (
+        code_among(
+            ["instance/data/config.yml", "instance/keys/events/MRG-05.pub", "a/b.md"]
+        )
+        == ()
+    )
+    assert code_among(["instance/data/x.PY", "site/src/_data/site.json"]) == (
+        "instance/data/x.PY",
+    )
 
 
 def test_the_walk_ignores_a_file_entry_that_is_not_there(tmp_path: Path) -> None:
@@ -630,12 +656,12 @@ def test_a_path_nobody_declared_belongs_to_the_product() -> None:
 
 
 def test_a_windows_separator_reads_the_same_as_a_posix_one() -> None:
-    """Callers hand this module `Path` objects built with `Path("data") /
+    """Callers hand this module `Path` objects built with `DATA_DIR /
     "config.yml"`, which spells itself with a backslash on Windows -- where
     this project is developed."""
     board = load()
-    assert board.owner_of(Path("data") / "config.yml") == INSTANCE
-    assert board.owner_of("data\\config.yml") == INSTANCE
+    assert board.owner_of(Path("instance") / "data" / "config.yml") == INSTANCE
+    assert board.owner_of("instance\\data\\config.yml") == INSTANCE
 
 
 def test_the_two_halves_are_one_list() -> None:
@@ -651,8 +677,8 @@ def test_the_two_halves_are_one_list() -> None:
 
 
 def test_a_directory_entry_is_told_from_a_file_entry() -> None:
-    assert Handed(path="data/", reason="r").is_directory
-    assert not Handed(path="data/config.yml", reason="r").is_directory
+    assert Handed(path="instance/data/", reason="r").is_directory
+    assert not Handed(path="instance/data/config.yml", reason="r").is_directory
 
 
 # ------------------------------------------------------------------ #
@@ -674,8 +700,8 @@ def _module_level_reads(source: str) -> list[tuple[int, str]]:
     string literals, as (line, path).
 
     The run has to start at the statement's first literal, which is what
-    `_ROOT / "config" / "instance.json"` looks like and what
-    `ROOT / "instances" / "example" / "config" / "instance.json"` does
+    `_ROOT / "instance" / "config.json"` looks like and what
+    `ROOT / "instances" / "example" / "instance" / "config.json"` does
     not: the second names the example's own file, which is the product's,
     and reading it at import is exactly right.
     """

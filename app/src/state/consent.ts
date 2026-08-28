@@ -359,7 +359,7 @@ export function answeredList(speakers: readonly Speaker[]): Speaker[] {
  * verdict on it.
  * ------------------------------------------------------------------ */
 
-/** `data/speakers.yml` statuses a public announcement may ever describe.
+/** `instance/data/speakers.yml` statuses a public announcement may ever describe.
  *  Mirrors `tools/convener_ops/public_data.PUBLIC_STATUSES`. */
 const PUBLIC_STATUSES: readonly Speaker['status'][] = ['scheduled', 'delivered', 'archived'];
 

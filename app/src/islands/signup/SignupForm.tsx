@@ -48,7 +48,7 @@ import type { Registration } from '../../signup/encrypt';
 
 // `public/keys/events/<id>.pub` is still populated at build time by
 // `app/scripts/copy-event-keys.mjs` from this repository's own
-// `keys/events/`, and still ships inside the app's own build output --
+// `instance/keys/events/`, and still ships inside the app's own build output --
 // see that script's own comment for why a missing file here is a normal
 // state, not a build failure. `base` for this island's own Vite build
 // (`app/vite.config.ts`, `mode === 'island-signup'`) is the app's own
@@ -62,7 +62,7 @@ import type { Registration } from '../../signup/encrypt';
 // domain, so that root is one path segment below the domain root a bare
 // `/foo` actually addresses -- see `app/vite.config.ts`'s own comment on
 // `islandSignupConfig` for the fix this island shares with every template
-// in `site/`, and `config/instance.json` for where that one path segment
+// in `site/`, and `instance/config.json` for where that one path segment
 // is now declared.
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
 
@@ -79,7 +79,7 @@ function relayUrl(): string | undefined {
 }
 
 // The address a participant writes to about their own data. Declared
-// once in `config/instance.json` and carried into this
+// once in `instance/config.json` and carried into this
 // bundle by `vite.config.ts`'s own define, because this runs in a
 // participant's browser. A duplicate that left this literal here would
 // send its own participants' data-protection requests to the previous

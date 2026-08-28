@@ -4,17 +4,17 @@
  *
  * Same-origin, same mechanism as `SignupForm.tsx::fetchEventPublicKey`
  * -----------------------------------------------------------------------
- * `scripts/copy-signing-keys.mjs` publishes every `keys/signing/*.pub`
+ * `scripts/copy-signing-keys.mjs` publishes every `instance/keys/signing/*.pub`
  * this repository has ever committed into `app/public/keys/signing/`
  * at build time -- the exact idiom `scripts/copy-event-keys.mjs` already
- * uses for `keys/events/`, adapted the way `keys/signing/README.md`'s own
+ * uses for `instance/keys/events/`, adapted the way `instance/keys/signing/README.md`'s own
  * "How a verifier should use this directory" section asks for: one ordered
  * list, embedded at build time, not one file fetched per event id (a
  * verification page has no single event to key a fetch off of, and
  * `verify()` may need to try more than one key -- rotation must never
  * invalidate a certificate already signed).
  *
- * This module fetches `keys/signing/index.json` rather than truly
+ * This module fetches `instance/keys/signing/index.json` rather than truly
  * bundling the keys into this page's JS -- a same-origin static asset,
  * deployed alongside the app itself by the same build, never a request to
  * a live backend "for the payload": the file is the same for every
@@ -55,7 +55,7 @@ const KEYS_FETCH_TIMEOUT_MS = 15_000;
  * verifiable" appearance a page with zero *published* keys already shows.
  * That conflated two different facts: "no key we publish confirms this"
  * (true once a manifest was actually read, even an empty one --
- * `keys/signing/README.md`'s own "What the verification page actually
+ * `instance/keys/signing/README.md`'s own "What the verification page actually
  * does with this directory" section names an empty directory as the current, real,
  * normal state) and "we could not check, because we could not even load
  * our own key list" (a transient failure that says nothing about the

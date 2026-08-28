@@ -3,7 +3,7 @@
  * reason `handbook-files.mjs` is kept apart from `copy-handbook.mjs`: a
  * rule `app/tests/copy-signing-keys.test.ts` can call directly, rather
  * than one only ever exercised by running the whole script against the
- * real `keys/signing/` tree.
+ * real `instance/keys/signing/` tree.
  */
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
@@ -37,11 +37,11 @@ export const PUBLIC_KEYS_DIR = resolve(
 /**
  * `.pub` filenames sorted newest first (descending).
  *
- * `keys/signing/<YYYY-MM-DD>.pub` names sort the same way the keys age
+ * `instance/keys/signing/<YYYY-MM-DD>.pub` names sort the same way the keys age
  * (`signing.py`'s own "Key layout" section) -- a plain descending string
  * sort on ISO 8601 dates *is* chronological order, newest first, with no
  * separate manifest to keep in sync. That is the order
- * `signing.py::verify`'s docstring and `keys/signing/README.md` both
+ * `signing.py::verify`'s docstring and `instance/keys/signing/README.md` both
  * recommend a caller build its key list in: most verifications are of a
  * certificate signed under the key currently in service, so trying that
  * one first makes the common case the cheapest -- correctness never
@@ -60,10 +60,10 @@ export function sortDescending(filenames) {
  * Every `*.pub` file's raw text under `dir`, newest first.
  *
  * An absent or empty directory returns `[]`, not an error --
- * `keys/signing/README.md` documents this as the current, real, normal
+ * `instance/keys/signing/README.md` documents this as the current, real, normal
  * state until an operator generates the first signing key, and the same
  * "empty is normal" discipline `copy-event-keys.mjs` already applies to
- * `keys/events/`.
+ * `instance/keys/events/`.
  */
 export async function readPublicKeys(dir) {
   let entries;

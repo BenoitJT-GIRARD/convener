@@ -28,7 +28,7 @@ if (!VALID_CASE || !INVALID_CASE) {
 }
 
 // The repository this worker dispatches into is not this package's to
-// know. It is what `config/instance.json` declares as
+// know. It is what `instance/config.json` declares as
 // `identity.repository`, and it reaches `handle` as `env.REPOSITORY` --
 // passed to `wrangler deploy --var` by
 // `.github/workflows/deploy-form-relay.yml`, which reads the declaration

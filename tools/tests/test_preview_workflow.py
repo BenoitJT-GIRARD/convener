@@ -20,7 +20,7 @@ their own checkers):
   path prefix GitHub Pages actually serves this project under (D-26) --
   the exact defect that cost this project seven earlier screenshot passes;
 * it could read a stale, hand-typed copy of that prefix instead of the one
-  place `config/instance.json` declares it.
+  place `instance/config.json` declares it.
 
 Read as text and asserted against with `in`/regex checks and `safe_load`,
 the same idiom every workflow-pinning module in this suite already uses --
@@ -170,7 +170,7 @@ def test_the_workflow_generates_event_keys_before_building_the_app() -> None:
 def test_the_site_build_never_regenerates_data_from_the_private_repository() -> None:
     """Unlike `publish-vitrine.yml`'s own "Refresh site data" step, this
     job must never run `uv run convener-public-data` (or an equivalent) to
-    overwrite `site/src/_data/events.json` from `data/speakers.yml` --
+    overwrite `site/src/_data/events.json` from `instance/data/speakers.yml` --
     that data is private, a fork PR has no access to it, and this preview
     exists to reread a template or layout change against the committed
     fixture, not this week's real programme (see this workflow's own
@@ -184,13 +184,17 @@ def test_the_site_build_never_regenerates_data_from_the_private_repository() -> 
     step_texts = [step.get("name", "") for step in _job()["steps"]]
     step_texts += [step["run"] for step in _job()["steps"] if "run" in step]
     joined = "\n".join(step_texts)
-    for forbidden in ("convener-public-data", "Refresh site data", "data/speakers.yml"):
+    for forbidden in (
+        "convener-public-data",
+        "Refresh site data",
+        "instance/data/speakers.yml",
+    ):
         assert forbidden not in joined
 
 
 def test_the_path_prefix_is_derived_not_retyped() -> None:
     """D-26: a second, hand-typed prefix standing in for the one
-    `config/instance.json` declares could silently drift from it the way
+    `instance/config.json` declares could silently drift from it the way
     the site's own templates once could. That replaced this
     workflow's `grep -oP` over `.eleventy.js` -- which had become a scrape
     of a file that no longer holds the value -- with a `node -p` call into
@@ -289,13 +293,13 @@ def test_the_leak_guard_reads_the_fixture_never_the_private_speakers_file() -> N
     `test_the_site_build_never_regenerates_data_from_the_private_
     repository`, above), so the only place a room link could come from
     here is that same fixture's own `registration_link` field -- never
-    `data/speakers.yml`'s `zoom_link`, which `publish-vitrine.yml`'s own
+    `instance/data/speakers.yml`'s `zoom_link`, which `publish-vitrine.yml`'s own
     analogous guard reads instead, and which this job has no access to
     build from in the first place."""
     leak_guard = _step_run(_LEAK_STEP)
     assert "site/src/_data/events.json" in leak_guard
     assert "registration_link" in leak_guard
-    assert "data/speakers.yml" not in _WORKFLOW_TEXT
+    assert "instance/data/speakers.yml" not in _WORKFLOW_TEXT
     assert "zoom_link" not in _WORKFLOW_TEXT
 
 

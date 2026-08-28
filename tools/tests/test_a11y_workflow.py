@@ -40,7 +40,7 @@ _PACKAGE_JSON = (_ROOT / "site" / "package.json").read_text(encoding="utf-8")
 
 def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
     """D-26: "Verify the shape that will actually be deployed, never a
-    convenient local one". `config/instance.json` is the one place this
+    convenient local one". `instance/config.json` is the one place this
     project's published address is written down -- a second, hand-typed
     prefix here
     could drift from it exactly the way the site's own templates once
@@ -53,7 +53,7 @@ def test_the_checker_reads_the_path_prefix_from_its_one_source() -> None:
     assert "from './published.cjs'" in _CHECKER, (
         "check-a11y.mjs no longer reads the published address through "
         "site/scripts/published.cjs -- it must derive the served prefix from "
-        "config/instance.json, never restate it"
+        "instance/config.json, never restate it"
     )
     assert "publishedAddress().pathPrefix" in _CHECKER
 

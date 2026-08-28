@@ -5,7 +5,7 @@
 Convener's README, its documentation and the demonstration built out of it.
 It is **not** one of the themes an instance chooses. `config/boundary.yml`
 says why this directory sits outside the instance's paths, and
-`data/brand.json` is where an instance's own charter goes instead.
+`instance/data/brand.json` is where an instance's own charter goes instead.
 
 ## The mark
 
@@ -65,7 +65,7 @@ and the figure written here are the same one.
 **The role those numbers impose:** coral is an accent **on the ink**, never text
 on white — 2.84 is below AA at any size. Navy on white clears AAA with room.
 
-This is the same shape of constraint `data/brand.json` records for the other
+This is the same shape of constraint `instance/data/brand.json` records for the other
 palette here, so these values entered the system without bending it. **They are
 declared now**, in `brand.json` beside this file, and
 `generate_brand_css.py --check` recomputes every pairing in it on every run and
@@ -75,8 +75,8 @@ README; it is a rule.
 ## The charter beside this file
 
 `brand.json` is what `tools/convener_ops/brand.py` reads when an instance has written
-no `data/brand.json` of its own — so a fresh duplicate builds a finished-looking
-site rather than a grey one. Two of its values are the two above; every other
+no `instance/data/brand.json` of its own — so a fresh duplicate builds a
+finished-looking site rather than a grey one. Two of its values are the two above; every other
 token is derived from them by one stated rule, and `brand.json`'s own
 `derived._derivation` gives it: **the product's own hues, at the lightness the
 system measures each role at.** The neutrals come from navy and coral in equal
@@ -120,8 +120,8 @@ the wobbly curves a vector exists to avoid, and building a publicly redistribute
 product's identity on an unidentified, unlicensed face is a liability nobody
 would notice until it mattered.
 
-Archivo is the face and weight `data/brand.json` already declares as `body`, and
-it ships here under the SIL Open Font License 1.1 (`fonts/`,
+Archivo is the face and weight `instance/data/brand.json` already declares
+as `body`, and it ships here under the SIL Open Font License 1.1 (`fonts/`,
 `Archivo-LICENSE.txt`). The glyphs are paths, so no font is needed to render.
 
 It reads about 9 % wider than the original wordmark at the same cap height,

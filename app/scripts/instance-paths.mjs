@@ -5,7 +5,7 @@
  * `tools/convener_ops/paths.py` is Python's reader of the same
  * declaration. Each of them names the declared paths once and every
  * caller builds the files it touches out of those names, so moving
- * `data/` in the declaration moves them with it.
+ * `instance/data/` in the declaration moves them with it.
  *
  * Read at build time, in Node, with `node:fs`: the copy scripts under
  * this directory run before `vite build` and `vite.config.ts` loads in
@@ -37,7 +37,23 @@ const NAMED = 'config/boundary.yml';
 const DECLARATION_VERSION = 1;
 
 const PRODUCT = 'product';
-const CONFIG_DIR = 'config';
+
+/** The two directories whose configuration files state their own owner,
+ *  and what such a file may be written in. Mirrors `boundary.CONFIG_DIRS`
+ *  and `boundary.CONFIG_READERS`. */
+const CONFIG_DIRS = ['config', 'instance'];
+const CONFIG_SUFFIXES = ['.yml', '.json'];
+
+/** Whether `path` is a configuration file that answers for itself.
+ *  Mirrors `boundary.states_its_own_owner`. */
+function statesItsOwnOwner(path) {
+  const cut = path.lastIndexOf('/');
+  const parent = cut === -1 ? '' : path.slice(0, cut);
+  const name = path.slice(cut + 1);
+  return (
+    CONFIG_DIRS.includes(parent) && CONFIG_SUFFIXES.some(suffix => name.endsWith(suffix))
+  );
+}
 
 /**
  * The declared paths, keyed by their final component.
@@ -69,9 +85,9 @@ export function byLastComponent(paths) {
  * Every path an already-loaded declaration hands to the instance.
  *
  * The checks mirror `boundary.declaration_from_data` and
- * `src/settings/declaration.ts::handedFromData`, including the `config/`
- * path that would put one fact in two places: each file there states its
- * own answer in its own `owner:` key.
+ * `src/settings/declaration.ts::handedFromData`, including the
+ * configuration file that would put one fact in two places: each of those
+ * states its own answer in its own `owner:` key.
  */
 export function handedFrom(data) {
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
@@ -95,9 +111,9 @@ export function handedFrom(data) {
     if (typeof path !== 'string' || path.trim() !== path || path === '') {
       throw new Error(`${NAMED}: instance: holds an entry whose path is ${path}`);
     }
-    if (path.split('/')[0] === CONFIG_DIR) {
+    if (statesItsOwnOwner(path)) {
       throw new Error(
-        `${NAMED}: ${path} is under ${CONFIG_DIR}/, whose files state their own ` +
+        `${NAMED}: ${path} is a configuration file, whose files state their own ` +
           'owner in their own `owner:` key. Naming it here too would make one ' +
           'fact two places.'
       );

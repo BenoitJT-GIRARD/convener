@@ -9,7 +9,7 @@
  * six for the settings screen, and `state/agenda.ts` needs the one value
  * the example numbers its editions under. They read it through here, so
  * the define has a single reader on this side exactly as
- * `config/instance.json` has one per language on the other.
+ * `instance/config.json` has one per language on the other.
  *
  * Throws rather than defaulting, the rule `../instance.ts` and
  * `scripts/example-settings.mjs` both follow: a bundle built without the
@@ -29,10 +29,10 @@ export interface ExampleSettings {
 
 /** Where the example instance says who it is, keyed by the path it holds
  *  in the tree the settings screen describes -- the same path
- *  `config/instance.json` is for the instance that built this bundle.
+ *  `instance/config.json` is for the instance that built this bundle.
  *  `scripts/example-settings.mjs` reads it out of
- *  `instances/example/config/`. */
-const DECLARATION = 'config/instance.json';
+ *  `instances/example/instance/`. */
+const DECLARATION = 'instance/config.json';
 
 /** The six declarations, as text. */
 export function exampleSettings(): ExampleSettings {
@@ -41,7 +41,7 @@ export function exampleSettings(): ExampleSettings {
     throw new Error(
       'VITE_EXAMPLE_SETTINGS is unset: this bundle was built without ' +
         "vite.config.ts's own define, so the demonstration has no settings to " +
-        'show (see instances/example/config/)',
+        'show (see instances/example/instance/)',
     );
   }
   return JSON.parse(raw) as ExampleSettings;
@@ -56,7 +56,7 @@ function declaration(): Record<string, unknown> {
       `VITE_EXAMPLE_SETTINGS carries no ${DECLARATION}: this bundle was built ` +
         "without the example instance's own declaration, so the demonstration " +
         'cannot say anything about the instance whose records it shows (see ' +
-        'instances/example/config/instance.json)',
+        'instances/example/instance/config.json)',
     );
   }
   return JSON.parse(text) as Record<string, unknown>;
@@ -66,7 +66,7 @@ function declaredString(key: string): string {
   const value = declaration()[key];
   if (typeof value !== 'string' || value === '') {
     throw new Error(
-      `instances/example/config/instance.json declares no ${key}, so the ` +
+      `instances/example/instance/config.json declares no ${key}, so the ` +
         "demonstration has nothing to compose the example instance's own " +
         'values from',
     );

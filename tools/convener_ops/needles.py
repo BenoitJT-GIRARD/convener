@@ -10,7 +10,7 @@ exists and still owns the *deferred register*; it imports what is here
 rather than restating it, so there is one derivation and not two.
 
 **Derived, never typed.** The address and the identity come from
-`config/instance.json` through the reader that owns them, the palette from
+`instance/config.json` through the reader that owns them, the palette from
 the charter in force through `brand.source`. A needle nobody can derive is
 a needle that goes stale the day the declaration moves, and this project
 has already been caught by exactly that (see `needles`' own docstring).
@@ -35,7 +35,7 @@ def needles(root: Path) -> dict[str, str]:
     """Every writable form of what one instance declares about itself.
 
     Derived, never typed: the address and the identity from
-    `config/instance.json` through the reader that owns them, the palette
+    `instance/config.json` through the reader that owns them, the palette
     from the charter in force through `brand.source`. A needle nobody can
     derive is a needle that goes stale the day the declaration moves.
 
@@ -87,7 +87,7 @@ def needles(root: Path) -> dict[str, str]:
         # The edition prefix, as the two forms that actually reach an
         # artefact: `MRG-` in a code the showcase prints and the poster
         # sets, `mrg-` in the event page's own address, in
-        # `keys/events/<id>.pub` and in a certificate's verification
+        # `instance/keys/events/<id>.pub` and in a certificate's verification
         # link (D-19). The declared value alone -- two letters, no
         # separator -- is *not* a needle, and that is a decision rather
         # than an omission: `contains` would match it on word boundaries,

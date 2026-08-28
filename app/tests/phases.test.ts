@@ -106,7 +106,7 @@ describe('the view-counting window is a convention, so it is configuration', () 
   /**
    * Views arrive for years; a count is only comparable with another count
    * taken the same number of days out. The number is therefore arbitrary,
-   * agreed once and written in `data/config.yml` -- and the field a volunteer
+   * agreed once and written in `instance/data/config.yml` -- and the field a volunteer
    * fills in has to say which number is in force, or the handbook and the
    * form can end up asking for two different measurements of the same talk.
    * `docs/workflow/4-after.md` is where the convention is stated.

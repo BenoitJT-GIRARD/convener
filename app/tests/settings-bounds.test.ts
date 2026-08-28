@@ -4,8 +4,8 @@
  *
  * `tools/convener_ops/queue_watch.py` and
  * `tools/convener_ops/registration_routing.py` decide what
- * `config/queue-drain.yml`'s `alarm_after_hours` and
- * `config/registration-lanes.yml`'s `queue_beyond_hours` may be; the
+ * `instance/queue-drain.yml`'s `alarm_after_hours` and
+ * `instance/registration-lanes.yml`'s `queue_beyond_hours` may be; the
  * scheduled jobs enforce it, and no browser is running when one runs. The
  * settings screen computes the same bounds where somebody types, because a
  * file takes whatever is written into it and the bound is discovered later
@@ -46,6 +46,8 @@ import {
 import type { Coupling } from '../src/settings/bounds';
 import { SETTINGS } from '../src/settings/form';
 import {
+  CONFIG_DIRS,
+  CONFIG_SUFFIXES,
   configOwner,
   handedFromData,
   instancePaths,
@@ -280,10 +282,16 @@ describe('what this instance owns', () => {
   function derived(): string[] {
     const boundaryText = readFileSync(resolve(ROOT, 'config', 'boundary.yml'), 'utf-8');
     const owners: Record<string, string> = {};
-    for (const name of readdirSync(resolve(ROOT, 'config'))) {
-      if (!name.endsWith('.yml') && !name.endsWith('.json')) continue;
-      const path = `config/${name}`;
-      owners[path] = configOwner(path, readFileSync(resolve(ROOT, 'config', name), 'utf-8'));
+    for (const directory of CONFIG_DIRS) {
+      for (const name of readdirSync(resolve(ROOT, directory), { withFileTypes: true })) {
+        if (!name.isFile()) continue;
+        if (!CONFIG_SUFFIXES.some(suffix => name.name.endsWith(suffix))) continue;
+        const path = `${directory}/${name.name}`;
+        owners[path] = configOwner(
+          path,
+          readFileSync(resolve(ROOT, directory, name.name), 'utf-8'),
+        );
+      }
     }
     return instancePaths(handedFromData(yaml.load(boundaryText)), owners);
   }
@@ -292,12 +300,12 @@ describe('what this instance owns', () => {
     expect(derived()).toEqual(declaredPaths);
   });
 
-  it('refuses a declaration that names a path in config/', () => {
+  it('refuses a declaration that names a configuration file', () => {
     expect(() =>
       handedFromData({
         v: 1,
         owner: 'product',
-        instance: [{ path: 'config/queue-drain.yml', reason: 'because' }],
+        instance: [{ path: 'instance/queue-drain.yml', reason: 'because' }],
       }),
     ).toThrow(/one fact two places/);
   });

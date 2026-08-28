@@ -32,7 +32,7 @@ A service account tied to one person's mailbox defeats the whole point:
 anyone with organisation access must be able to pick this up. Do the vault
 first.
 
-This repository must stay private: `data/speakers.yml` holds personal data
+This repository must stay private: `instance/data/speakers.yml` holds personal data
 (names and institutional email addresses of external academics).
 
 ## Authentication relay
@@ -49,7 +49,7 @@ fully usable; onboarding is simply slower.
 2. Create a Cloudflare account with the organisation address; deploy the
    worker in `services/auth-proxy/` by running *Deploy auth relay* from the
    Actions tab. That workflow derives the origin the relay answers
-   cross-origin requests for from `config/instance.json` and passes it to
+   cross-origin requests for from `instance/config.json` and passes it to
    Wrangler, so there is nothing to fill in first — see the worker's README.
 
 **Secrets to set:**
@@ -113,7 +113,7 @@ still holds.
    suffix (the worker's only route is its root) — any other path 404s and
    the submission is silently lost — and set the same signing secret in
    Tally that is set below as `TALLY_WEBHOOK_SECRET`.
-4. Write the published form's own address into `config/instance.json` as
+4. Write the published form's own address into `instance/config.json` as
    `identity.proposal_form`. This is the half a reader sees: the showcase's
    `/propose/` page links it, and it is the only way a visitor reaches the
    form the three steps above just built. Until it is written, that page
@@ -134,7 +134,7 @@ still holds.
   `services/form-relay/`. A GitHub token scoped to *Contents: read & write*
   on this repository only, sufficient to send it a `repository_dispatch`.
   Which repository that is, the worker is told at deploy time: *Deploy form
-  relay* reads `config/instance.json` and passes the answer to Wrangler, so
+  relay* reads `instance/config.json` and passes the answer to Wrangler, so
   the worker's own source names none.
 - Repository secret `CLOUDFLARE_API_TOKEN` — the same one already set for
   *Deploy auth relay* above; *Deploy form relay* reads it too, since both
@@ -144,7 +144,7 @@ Neither Wrangler secret belongs in `wrangler.toml` — both are set with
 `npx wrangler secret put`, never committed.
 
 **To verify:** submit the Tally form; a new lead should appear in
-`data/speakers.yml` shortly after, committed by *Handle proposal*.
+`instance/data/speakers.yml` shortly after, committed by *Handle proposal*.
 
 ## Signup relay
 
@@ -191,16 +191,16 @@ the same `VITE_SIGNUP_RELAY_URL`, with `/survey` appended by
 **`/survey` also checks the survey switch
 itself.** It first fetched `SURVEY_STATUS_URL`, a plain deployed
 example-showcase page; that gave way to a read of this
-repository's own `public-data/survey-status.json` through the GitHub
+repository's own `instance/public-data/survey-status.json` through the GitHub
 Contents API — the same `CONVENER_DISPATCH_TOKEN` credential and the same call
-shape the relay already spends one read of for `keys/events/<id>.pub` —
+shape the relay already spends one read of for `instance/keys/events/<id>.pub` —
 because the deployed URL pointed at a site that had never actually been
 built, and made the relay's own answer lag the handler's by a build cycle
 it had no reason to inherit on top of the handler's own. There is no
 `wrangler.toml` var for this any more: the repository and the token cover
 both reads.
 
-`public-data/survey-status.json` is still built by
+`instance/public-data/survey-status.json` is still built by
 `convener-survey-status-public-data` (`deploy.yml`'s own "Build survey status"
 step, alongside "Build public data") and still baked into the app's own
 built output by `app/scripts/copy-survey-status.mjs` for the *page* to
@@ -222,7 +222,7 @@ why one alone was not enough.
    Cloudflare account used for the other two workers. Two further values
    the worker needs — the origin it answers cross-origin requests for, and
    the repository it reads keys from, queues submissions on and dispatches
-   into — are derived from `config/instance.json` by that workflow and
+   into — are derived from `instance/config.json` by that workflow and
    passed to Wrangler, so neither is yours to fill in.
    `SIGNUP_RATE_LIMITER`, the burst limiter, needs no equivalent
    creation step and ships already configured in `wrangler.toml`.
@@ -240,7 +240,7 @@ why one alone was not enough.
   `services/signup-relay/`. A GitHub token scoped to *Contents: read &
   write* on this repository only — the same scope the form relay's own
   `CONVENER_DISPATCH_TOKEN` uses, since this worker both reads
-  `keys/events/<id>.pub` to confirm an event is known and sends the
+  `instance/keys/events/<id>.pub` to confirm an event is known and sends the
   `repository_dispatch` itself. Create a **separate** token from the form
   relay's rather than reusing it: this worker spends two GitHub API calls
   per registration against the same 5,000/hour budget the form relay also
@@ -265,7 +265,7 @@ the registration form for an event with a published key; the worker answers
 `204`. **What happens next depends on how far away the seminar is**, and both
 outcomes are correct:
 
-- **More than `queue_beyond_hours` away** (`config/registration-lanes.yml`): the
+- **More than `queue_beyond_hours` away** (`instance/registration-lanes.yml`): the
   worker writes the encrypted envelope to the `submission-queue` branch and
   starts nothing. The confirmation goes out on the next daily drain, from the
   scheduled *Sweep and notify the board* run. Seeing no workflow run at all is
@@ -285,8 +285,8 @@ fallback is right for the participant and invisible by construction: nothing
 is lost, nobody waits, the queue simply stays empty — which looks exactly
 like a quiet day while every registration bills a run again. The daily
 *Sweep and notify the board* run therefore recomputes what
-`public-data/registration-routing.json` should hold, from `data/speakers.yml`
-and `config/registration-lanes.yml`, and compares it with the committed file
+`instance/public-data/registration-routing.json` should hold, from
+`instance/data/speakers.yml` and `instance/registration-lanes.yml`, and compares it with the committed file
 over the events a registration arriving today could still be queued for. A
 file that is missing, unreadable, carrying an unknown version, or wrong about
 one of those events turns the job red and posts to the board's thread naming
@@ -298,7 +298,7 @@ ignores `config/**` and is not started by the pushes this repository's own
 jobs make — so nothing heals it on its own. Run *Deploy app* from the
 Actions tab (`workflow_dispatch`) and the next daily run goes quiet. Two
 consequences worth knowing before you go looking for a data problem: editing
-`config/registration-lanes.yml` changes every cutoff and starts nothing, and
+`instance/registration-lanes.yml` changes every cutoff and starts nothing, and
 a file untouched for a month is perfectly healthy as long as it still names
 every event that is open for registration — the alarm is about what the file
 can still route, never about its age. A season with no upcoming event is
@@ -315,7 +315,7 @@ Pages will not serve a private repository without a paid plan, which the
 project's no-cost constraint rules out.
 
 Pages is instead enabled on the separate, public repository the built
-site is pushed into — `config/instance.json`'s `published_url` says which
+site is pushed into — `instance/config.json`'s `published_url` says which
 one, and nothing names it a second time
 (`published.Published.publish_repository` derives it, and both publishing
 workflows read that): Settings → Pages → Source =
@@ -349,7 +349,7 @@ https://<owner>.github.io/<repository>/verify/        certificate verification
 ```
 
 `<owner>` and `<repository>` are not a placeholder anybody fills in by
-hand: they are the two halves of `config/instance.json`'s own
+hand: they are the two halves of `instance/config.json`'s own
 `published_url`, which is where this project says once what address it is
 published at.
 
@@ -524,7 +524,7 @@ admits the scripts that document actually contains, and the built
 document carries neither an inline script nor an `'unsafe-inline'`.
 
 **To verify:** build both `site/` and `app/`, serve the result under the
-path prefix `config/instance.json` declares (D-26 — a bare `localhost`
+path prefix `instance/config.json` declares (D-26 — a bare `localhost`
 root hides the path-prefix
 class of defect this project has already paid for once), and read a real
 browser's console on every page. `site/scripts/check-a11y.mjs` already
@@ -633,7 +633,7 @@ delete unless both
    ("Recording retrieved and archived somewhere durable", first line of
    the Delivered — wrap-up journey, `app/src/state/phases.ts`); a
    volunteer without the app to hand can still set it directly on
-   `data/speakers.yml`'s `runbook_progress` map, the same raw-YAML edit
+   `instance/data/speakers.yml`'s `runbook_progress` map, the same raw-YAML edit
    `youtube_url` itself already tolerates when set by hand. Ticked once
    the host has downloaded the recording and archived it somewhere
    durable, independent of whether it will ever be published — **not**
@@ -739,7 +739,7 @@ cd tools && EVENT_ID=mrg-042 REGISTRATION_EMAIL=person@example.org \
   uv run convener-encrypt-identifier
 ```
 
-which needs no secret (`keys/events/<id>.pub` is public data, not a
+which needs no secret (`instance/keys/events/<id>.pub` is public data, not a
 secret) and prints one line of ciphertext to paste into the workflow's own
 form. GitHub still renders and retains a `workflow_dispatch` input's own
 value on the run page for as long as the run's history exists, but what it
@@ -784,8 +784,8 @@ delivery mechanism.
    members to it. Name it `editorial-board`: that slug is the one
    `app/src/auth/role.ts` asks GitHub about when it decides who signs in
    as a Board member, so a team under any other name leaves every member
-   falling back to `data/config.yml` alone. The organisation is your own
-   (`config/instance.json`'s `identity.repository`), so the handle reads
+   falling back to `instance/data/config.yml` alone. The organisation is your own
+   (`instance/config.json`'s `identity.repository`), so the handle reads
    `@<your-organisation>/editorial-board`. A team,
    never a person: the channel must keep working when any one volunteer
    stops reading.
@@ -830,7 +830,7 @@ would not be a per-event key at all.
    `_` before uppercasing. Never commit the private half, never write it to
    a file outside a CI job's environment, and never let it appear in a job
    log.
-2. Commit the public half as `keys/events/<event id>.pub`. This is not a
+2. Commit the public half as `instance/keys/events/<event id>.pub`. This is not a
    secret: it is what lets the static registration page encrypt in the
    browser without asking a server for anything first.
 
@@ -861,14 +861,14 @@ this absence is not a harmless fallback (`absent_is_normal: false` in
 **Destroying a key:** at the end of an event's retention window,
 remove `CONVENER_EVENT_KEY_<EVENT ID>` from the repository's
 secrets. The encrypted registrations already committed under
-`data/events/<event id>/` stay in git, with no history rewrite, and become
+`instance/data/events/<event id>/` stay in git, with no history rewrite, and become
 permanently unreadable the moment the secret is gone — nothing else needs
 to happen to the repository itself. Record the destruction by running
 `cd tools && DESTROYED_IDS=<event id> DESTROYED_ON=<YYYY-MM-DD> uv run
 convener-record-destructions` so the register can tell "destroyed on purpose"
 apart from "this event never had a key" two years from now — the two look
 identical from the repository alone, and only the register carries the
-difference. That same command also removes `keys/events/<event id>.pub`
+difference. That same command also removes `instance/keys/events/<event id>.pub`
 once the registry write succeeds, so a destroyed event stops accepting new
 registrations too — do not delete the `.pub` by hand first, or
 `convener-record-destructions`' own guard (it refuses to record a destruction
@@ -888,7 +888,7 @@ proved by a test (`tools/tests/test_retention.py`,
 `test_after_the_key_is_destroyed_the_ciphertext_is_unreadable_forever`).
 
 **This same destruction also covers
-`data/events/<id>/survey-responses.enc`, the post-event survey's own
+`instance/data/events/<id>/survey-responses.enc`, the post-event survey's own
 storage — with no change to this job at all.** `CONVENER_EVENT_KEY_<ID>`
 is the one key both files are encrypted under; deleting the secret makes
 both permanently unreadable in the same one operation. There is no second
@@ -904,16 +904,16 @@ delete`, converging on the secret being *absent* regardless of that
 command's own exit code — a secret already gone from a previous, partial
 run is success, not failure); and records every destruction it actually
 carried out (`convener-record-destructions`, reading `DESTROYED_IDS` and
-`DESTROYED_ON`) in `data/event-key-destructions.yml`, the registry
+`DESTROYED_ON`) in `instance/data/event-key-destructions.yml`, the registry
 `convener_ops.eventkeys.key_status` reads to tell "destroyed on purpose" apart
 from "this event never had a key". That same step also removes the
-event's `keys/events/<id>.pub` once the registry write succeeds, so a
+event's `instance/keys/events/<id>.pub` once the registry write succeeds, so a
 destroyed event stops accepting new registrations too — the signup relay
 has no other way to know an event has closed. Once that commit actually
 pushes, the same step dispatches `deploy.yml`:
 the commit itself lands with `GITHUB_TOKEN`, which never starts
 a new workflow run on its own, so without this the deployed app bundle —
-built from `copy-event-keys.mjs`'s own copy of `keys/events/` — would
+built from `copy-event-keys.mjs`'s own copy of `instance/keys/events/` — would
 keep serving a destroyed event's public key until some unrelated push to
 `main` happened to rebuild it, the same suppression trap the certificate
 workflows already dispatch around. `publish-vitrine.yml` is dispatched
@@ -990,7 +990,7 @@ erase.
 
 **Once an event's key is destroyed, there is nothing left to erase, and
 this is provable rather than merely asserted.**
-`convener-erase-registration` checks `data/event-key-destructions.yml` first —
+`convener-erase-registration` checks `instance/data/event-key-destructions.yml` first —
 before asking for a private key at all — and, if the event is already on
 record as destroyed, prints the destruction date and exits cleanly: the
 request is already satisfied. If `EVENT_PRIVATE_KEY` is supplied anyway
@@ -1012,7 +1012,7 @@ files together, not one response on its own.
 
 **Dropping one response by hand is possible, without erasing the rest —
 `survey.py`'s own module docstring names the property, this is the
-procedure.** `data/events/<id>/survey-responses.enc` holds one JSON object
+procedure.** `instance/data/events/<id>/survey-responses.enc` holds one JSON object
 per response under its top-level `"responses"` array
 (`tools/convener_ops/survey.py::ResponseFile`), each entry an independent
 hybrid-encrypted envelope with its own AES key and nonce — removing one
@@ -1089,10 +1089,10 @@ its private half until it is pasted into GitHub Secrets and never printed
 or saved again. There is exactly one of these in service at a time —
 unlike an event key, this is not per-event.
 
-1. Commit the public half as `keys/signing/<YYYY-MM-DD>.pub`, dated the day
+1. Commit the public half as `instance/keys/signing/<YYYY-MM-DD>.pub`, dated the day
    it was generated (`convener_ops.signing.public_key_path`). This is not a
    secret: it is what lets a public verification page confirm a
-   certificate offline, with no request to us at all. `keys/signing/`
+   certificate offline, with no request to us at all. `instance/keys/signing/`
    holds a `README.md` describing this layout even when the directory is
    otherwise empty — an empty directory there is the normal state before
    the first key is ever generated, not a sign of anything missing.
@@ -1116,10 +1116,10 @@ shaped bug, and the same fix: publish, then enable signing.
 private half stays `CONVENER_SIGNING_KEY`'s value until it is deliberately
 replaced. Once it is, the certificates already signed under it keep
 verifying: `convener_ops.signing.verify` is handed every published
-`keys/signing/*.pub`, not only the one currently in service, and tries each
+`instance/keys/signing/*.pub`, not only the one currently in service, and tries each
 in turn (see the module docstring's "how a verifier chooses" section for
 the recommended, but not required, newest-first order). **Never remove a
-`.pub` file from `keys/signing/`** — doing so is exactly what would make an
+`.pub` file from `instance/keys/signing/`** — doing so is exactly what would make an
 already-issued certificate stop verifying, the one outcome this whole
 design exists to prevent. Do not generate two signing keys on the same
 calendar day: the filename collides (see the module docstring).
@@ -1141,7 +1141,7 @@ is ever read.
 *Handle registration* (`.github/workflows/registration.yml`) runs on that
 dispatch and does exactly two things: it decrypts, and it re-encrypts —
 `tools/convener_ops/registration.py`'s module docstring explains why the stored
-file (`data/events/<event id>/registrations.enc`) holds one independent
+file (`instance/data/events/<event id>/registrations.enc`) holds one independent
 hybrid envelope per registration rather than one for the whole event, and
 what that costs and buys. The plaintext never touches disk, a log, or
 standard output at any point; a test
@@ -1211,7 +1211,7 @@ attempts, the same as `candidate-form.yml`'s own retry loop.
 
 **To verify:** submit the registration form for an event with a published
 key (see *Signup relay* above); *Handle registration* runs, and
-`data/events/<event id>/registrations.enc` gains one entry. Submitting
+`instance/data/events/<event id>/registrations.enc` gains one entry. Submitting
 again with the same address updates that same entry rather than adding a
 second one. Submitting for two different addresses to the same event in
 quick succession — the case the retry loop exists for — leaves both.
@@ -1265,23 +1265,23 @@ checkout), plan, drain, and clear:
    workflow file, reading a previous step's output.
 2. the **drain** step decrypts, checks each event's survey switch,
    validates and re-encrypts every waiting response into
-   `data/events/<event id>/survey-responses.enc`
+   `instance/data/events/<event id>/survey-responses.enc`
    (`tools/convener_ops/survey.py`) — one independent envelope per response,
    appended, never matched to an existing entry, because nothing about a
    response identifies who submitted it (see `survey.py`, "Why no identity
    travels with a response"). It commits **the responses and
-   `data/queue-ledger.yml` together, in one commit**, and pushes.
+   `instance/data/queue-ledger.yml` together, in one commit**, and pushes.
 3. the **clear** step removes what was handled from the queue branch,
    **only after that push succeeded**.
 4. the last step turns the job red if anything is still waiting.
 
 **That order is the whole of "nothing is lost".** An interruption between
 the commit and the clear leaves entries in the queue that
-`data/queue-ledger.yml` already records as handled, so tomorrow's drain
+`instance/data/queue-ledger.yml` already records as handled, so tomorrow's drain
 clears them without applying them twice. The reverse order would lose a
 submission outright and no ledger could recover it.
 
-**`data/queue-ledger.yml`** holds the entry names a drain has applied, and
+**`instance/data/queue-ledger.yml`** holds the entry names a drain has applied, and
 nothing else — an entry name is a timestamp and a uuid, never anything a
 participant wrote. It does not grow without bound: an id is forgotten by
 the first drain that sees the entry is no longer in the queue.
@@ -1312,7 +1312,7 @@ institution, an abstract. Queuing it would write a stranger's personal
 data into this repository's history in the clear, where D-22's key
 destruction — which is what makes every other stored submission
 unreadable — has no purchase at all, and it would keep a copy of
-proposals the Board declined and deleted from `data/speakers.yml`.
+proposals the Board declined and deleted from `instance/data/speakers.yml`.
 `.github/workflows/candidate-form.yml` therefore still handles one
 proposal per run. Changing that is a decision about personal data, not a
 refactor.
@@ -1332,7 +1332,7 @@ answer was discarded here, silently, with nobody told. Now the page checks
 first (never offering the form), the relay checks second (refusing the
 queue write, see *Signup relay* above), and the drain still checks a third
 time, reading the event's speaker record
-(`survey_enabled`, `data/speakers.yml`) itself, because it is the only one
+(`survey_enabled`, `instance/data/speakers.yml`) itself, because it is the only one
 of the three reading the authoritative file rather than a possibly
 momentarily stale, published copy of it. There is no D-13 fallback here at
 any of the three layers: a switch that is off is the ordinary state for
@@ -1352,13 +1352,13 @@ That is precisely why the survey could be moved to the slowest cadence
 with no trade-off at all, and why registration could not.
 
 **To verify:** with an event's `survey_enabled` set to `true` in
-`data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
+`instance/data/speakers.yml` — the "Post-event survey" checkbox in the cockpit
 (`AdminOverride.tsx`) — submit the survey form
 (`/survey/<event id>/` on the vitrine, its own island). **Nothing runs at
 that moment, and that is the change:** a file
 appears under `queue/survey/` on the `submission-queue` branch. Run *Sweep
 and notify the board* by hand (`workflow_dispatch`) rather than waiting
-for 05:00 UTC, and `data/events/<event id>/survey-responses.enc` gains one
+for 05:00 UTC, and `instance/data/events/<event id>/survey-responses.enc` gains one
 entry while the queue file disappears. Submitting again adds a second,
 independent entry — this is by design, not a defect; see `survey.py`'s own
 docstring. With `survey_enabled` left `false` (the default for every
@@ -1366,7 +1366,7 @@ event), the submission is refused by the relay before it
 is ever queued, and no file is written at all.
 
 **Toggling that checkbox is not immediately live for a participant:**
-`data/speakers.yml` is the authoritative record
+`instance/data/speakers.yml` is the authoritative record
 the drain reads, but `SurveyForm.tsx` and the signup
 relay both read `survey-status.json` instead (see *Signup relay* above),
 which only reflects a new checkbox state once *Deploy app* next builds and
@@ -1423,19 +1423,19 @@ matching salt* moves from `absent` to `production`.
 For an event using the manual implementation (no `CONVENER_MEETING_API_TOKEN`
 configured), the host's own attendance export never reaches continuous
 integration in the clear -- personal data must not, and `.gitignore` keeps
-`data/events/<event id>/attendance-import.csv` out of every checkout on
+`instance/data/events/<event id>/attendance-import.csv` out of every checkout on
 purpose. `convener-encrypt-attendance-export`
 (`tools/convener_ops/cli.py::encrypt_attendance_export`) is the step that
 closes that gap:
 
 1. Download the attendance export from the meeting platform, saving it
-   locally as `data/events/<event id>/attendance-import.csv` (never
+   locally as `instance/data/events/<event id>/attendance-import.csv` (never
    committed).
 2. Run, on your own machine, no CI job and no secret needed: `cd tools &&
    EVENT_ID=<event id> uv run convener-encrypt-attendance-export`. This reads
    only the event's already-published public key
-   (`keys/events/<event id>.pub`) and the plaintext file above, and writes
-   `data/events/<event id>/attendance-import.csv.enc` -- one independent
+   (`instance/keys/events/<event id>.pub`) and the plaintext file above, and writes
+   `instance/data/events/<event id>/attendance-import.csv.enc` -- one independent
    `eventkeys` envelope per attendance row (the same
    per-record shape `registrations.enc` and `survey-responses.enc` already
    use, not one envelope for the whole file), safe to commit: the public
@@ -1520,12 +1520,12 @@ file is safe: the file itself carries no name and no address any more
 **The manual implementation can be run against real attendance in CI**,
 closing a gap this page used to record. Before that, with
 no `CONVENER_MEETING_API_TOKEN`, the manual implementation looked only for
-`data/events/<event id>/attendance-import.csv`, which `.gitignore` keeps
+`instance/data/events/<event id>/attendance-import.csv`, which `.gitignore` keeps
 out of every checkout -- there was nowhere to run this command *from* that
 could hold that file, and the resulting contradiction with acceptance
 criterion 8 stood recorded until it was fixed.
 `ManualPlatform.get_attendance` now reads
-`data/events/<event id>/attendance-import.csv.enc` first: a host encrypts
+`instance/data/events/<event id>/attendance-import.csv.enc` first: a host encrypts
 the raw export under the event's own published public key with
 `convener-encrypt-attendance-export` (needs no secret at all -- see *Event
 registration keys* above for why the public half is not one) and commits
@@ -1552,7 +1552,7 @@ the Actions tab (`workflow_dispatch`). All three re-derive registrations and
 attendance from scratch on every run, so a
 corrected match recalculates without anybody re-registering, the same way
 *Handling a registration* re-derives rather than trusts a prior run's own
-answer, and all three commit straight to `data/events/<event
+answer, and all three commit straight to `instance/data/events/<event
 id>/certificates.yml` with the same re-derive-rather-than-rebase retry
 *Handling a registration* uses for `registrations.enc` -- see that section
 above for why a rejected push is never resolved with `git pull --rebase`
@@ -1650,13 +1650,13 @@ rebuilds `certificates.json` inside the app's built `dist/` -- the file
 `src/verify/register.ts` fetches -- so this dispatch, not a *Publish
 vitrine data* one, is what a verifier's page depends on. These three jobs
 used to *also* dispatch *Publish vitrine data* alongside it, but nothing
-a certificate change writes ever touches `data/speakers.yml`, the only
+a certificate change writes ever touches `instance/data/speakers.yml`, the only
 input that workflow's own "Build public data" step turns into anything
 it pushes -- so that second dispatch was always a no-op run there, never
 a second publication anything depended on, and it was removed.
 
 **To verify:** run one of the three workflows for a test event with a
-published key and a settled attendance export; `data/events/<event
+published key and a settled attendance export; `instance/data/events/<event
 id>/certificates.yml` gains, changes or flips the state of one row, and
 that same job's own dispatch step starts *Deploy app*, which republishes
 `certificates.json` with the new state -- visible as a second, separate
@@ -1798,7 +1798,7 @@ unsafe.** Unlike `issue-certificates.yml`'s own
 `resend_all`, which restricts an ordinary run to what was freshly
 minted and can name a single failed delivery by its certificate's own
 public identifier, `convener-invite-survey` mints no identifier at all.
-`data/survey-invitations.yml` records only that an event was invited, and
+`instance/data/survey-invitations.yml` records only that an event was invited, and
 on what day — no name, no address, no count. By default, it refuses
 outright once an event already has an entry there, printing that date and
 sending nothing; the workflow's own `resend_all` input is the only
@@ -1813,10 +1813,10 @@ reason is proportionality: a certificate register earns its permanence
 because a certificate is an attestation its holder may need verified years
 later; an invitation record exists only to avoid mailing one person twice
 inside a single campaign, a purpose whose useful life is days, not years —
-and `data/survey-invitations.yml` is one file shared across every event,
+and `instance/data/survey-invitations.yml` is one file shared across every event,
 so a per-person handle kept there would not be swept with any one event's
 key at all, unlike `certificates.yml`, which already lives under
-`data/events/<id>/`. `CONVENER_MATCHING_SALT` is also ordinary D-13 for this
+`instance/data/events/<id>/`. `CONVENER_MATCHING_SALT` is also ordinary D-13 for this
 command (unlike for certificate issuance), so such a handle could not
 always be computed in the first place. See
 `tools/convener_ops/survey_invite.py`'s own module docstring
@@ -1849,7 +1849,7 @@ unsent message filed against.
 **To verify:** with a test event whose survey is enabled and at least one
 matched attendee, dispatch *Invite the post-event survey*; the run's own
 summary line reports a sent count, the configured mailbox receives one
-message per matched attendee, and `data/survey-invitations.yml` gains one
+message per matched attendee, and `instance/data/survey-invitations.yml` gains one
 entry. Re-dispatching the same event without `resend_all` sends nothing
 further and says so.
 
@@ -1860,7 +1860,7 @@ the record that stops a re-dispatch from doing it again did not land. This
 is the one state where re-dispatching the workflow re-invites every
 currently matched attendee, which is exactly what the per-event bound
 exists to prevent. **Do not re-dispatch to recover from it.** Instead,
-commit `data/survey-invitations.yml` by hand, adding this event's own
+commit `instance/data/survey-invitations.yml` by hand, adding this event's own
 `event_id`/`invited_on` row (`convener-record-survey-invitation`, run locally
 with `EVENT_ID` set, produces the exact row to add) — the same recovery a
 wedged `retention_sweep` already documents for its own registry, applied
@@ -1890,7 +1890,7 @@ repository still needs to know they exist and where they live.
   reads.
 - **`VITRINE_DEPLOY_TOKEN`** — a fine-grained personal access token,
   scoped to the separate published repository (contents: read & write
-  only) — `config/instance.json`'s `published_url` says which one — that
+  only) — `instance/config.json`'s `published_url` says which one — that
   both *Publish vitrine*
   (`.github/workflows/publish-vitrine.yml`) and *Deploy app*
   (`.github/workflows/deploy.yml`) use to push into it — the built
@@ -1914,7 +1914,7 @@ repository still needs to know they exist and where they live.
 A Board member who has cast no ballot for `inactivity_months` stops counting
 toward the vote threshold. Nothing about this happens on its own.
 
-The window is **twelve months** (decision G-09), set in `data/config.yml`.
+The window is **twelve months** (decision G-09), set in `instance/data/config.yml`.
 The series runs roughly monthly, so six months of silence is an ordinary
 heavy year, a sabbatical or a period of leave; twelve is long enough that a
 proposal cannot be triggered by accident, which matters because every line
@@ -1938,13 +1938,13 @@ Board inactivity (G-09) - proposed, not applied; a human decides:
 
 Nothing is printed when the rule has nothing to propose, which is the live
 case today (see the first of the three points below). The proposed config the
-rule returns is discarded on the spot: `convener-sweep` writes `data/speakers.yml`
-and never `data/config.yml`, and what it writes is byte-for-byte the same
+rule returns is discarded on the spot: `convener-sweep` writes
+`instance/data/speakers.yml` and never `instance/data/config.yml`, and what it writes is byte-for-byte the same
 whether or not there were proposals to print. A scheduled job with nobody's
 name on it must not be able to change a volunteer's standing overnight — the
 same reason a vote window that runs out parks a lead rather than declining it.
 Applying the proposal is a human act on the Board screen, or a hand edit to
-`data/config.yml`, and the annual meeting is what settles the question.
+`instance/data/config.yml`, and the annual meeting is what settles the question.
 
 `inactive` is not a departure and not a judgement. The entry stays in the
 file with its `login` and `joined_on` intact; the seat is kept; the only
@@ -1955,7 +1955,7 @@ through a nomination is reactivated in place rather than added twice.
 
 **This never touches the person's real GitHub access, and that gap is a
 security-relevant one — a manual step this rule does not take.** `inactive`
-is a flag in `data/config.yml`; a security review's finding on
+is a flag in `instance/data/config.yml`; a security review's finding on
 write access is about a live GitHub setting (Settings → Collaborators, or
 whichever team grants access to this repository), which nothing in this
 codebase reads or writes. A member marked `inactive` here — or one who has
@@ -1998,7 +1998,7 @@ through this checklist after someone's role changes.
 Three things the rule will not do:
 
 - name anyone whose record cannot say when the silence began. Every
-  `joined_on` in `data/config.yml` is empty today, so on the live data the
+  `joined_on` in `instance/data/config.yml` is empty today, so on the live data the
   proposal is empty — by design, not by accident. *`joined_on`, empty
   everywhere* under **Deferred governance configuration** below is what
   ends that, and until it is done this rule cannot say anything at all.
@@ -2047,13 +2047,13 @@ derived from and refuses at the point of entry, naming the bound and where
 it comes from.
 
 **One pair is coupled, and today it leaves exactly one legal value.**
-`config/queue-drain.yml`'s `alarm_after_hours` is bounded on both sides:
+`instance/queue-drain.yml`'s `alarm_after_hours` is bounded on both sides:
 
 - its **floor** is twice the drain's own cron period in
   `.github/workflows/sweep-and-notify.yml` (48 hours today) — an alarm that
   fires before a healthy drain has had its chance is an alarm people learn
   to ignore;
-- its **ceiling** is `config/registration-lanes.yml`'s `queue_beyond_hours`
+- its **ceiling** is `instance/registration-lanes.yml`'s `queue_beyond_hours`
   minus the same margin (96 − 48 = 48 today) — later than that and the Board
   is told about a registration as its seminar begins.
 
@@ -2069,17 +2069,17 @@ starts nothing at all:
 
 | value | read by | live from |
 |---|---|---|
-| `alarm_after_hours`, all of `config/actions-budget.yml` | *Sweep and notify the board* | its next run |
-| `config/queue-drain.yml`'s `max_silent_days` | *Retention liveness watchdog* | its next run |
-| `queue_beyond_hours` | the signup relay, through `public-data/registration-routing.json` | the next run of *Deploy app*, which regenerates and commits that file |
+| `alarm_after_hours`, all of `instance/actions-budget.yml` | *Sweep and notify the board* | its next run |
+| `instance/queue-drain.yml`'s `max_silent_days` | *Retention liveness watchdog* | its next run |
+| `queue_beyond_hours` | the signup relay, through `instance/public-data/registration-routing.json` | the next run of *Deploy app*, which regenerates and commits that file |
 
 Until *Deploy app* runs, a registration is routed on the threshold already
-published in `public-data/registration-routing.json`. Run that workflow by
+published in `instance/public-data/registration-routing.json`. Run that workflow by
 hand (`workflow_dispatch`) if the change is urgent; nothing is lost either
 way, because a stale threshold only routes a registration to the wrong
 *lane*.
 
-**`config/instance.json` is reported there and never edited there.** The
+**`instance/config.json` is reported there and never edited there.** The
 address, the identity and the edition prefix are compiled into the built
 cockpit and the built showcase, so a change takes effect at the next deploy
 and not before — and the screen doing the editing is running on the previous
@@ -2087,7 +2087,7 @@ build. The edition prefix is frozen besides: it is in published addresses, on
 issued certificates and in key filenames.
 
 **A duplicate that has not edited it says so, on its own pages.** Every value
-in `instances/example/config/instance.json` is invented and reserved — `.test`
+in `instances/example/instance/config.json` is invented and reserved — `.test`
 addresses no registry will ever delegate (RFC 2606), a GitHub Pages host nobody
 is asked to register, an organisation that does not exist — so a declaration
 still
@@ -2117,7 +2117,7 @@ ever run on GitHub. Ceilings and real durations can differ by a large
 factor in either direction, so no ceiling should ever be quoted as a
 prediction.
 
-`data/actions-usage.yml` is the one place a *measured* minute lives. The
+`instance/data/actions-usage.yml` is the one place a *measured* minute lives. The
 daily job in `.github/workflows/sweep-and-notify.yml` reads the Actions API
 for this repository's own runs over a rolling window, adds up what each one
 actually billed, and commits the result. It is committed rather than
@@ -2142,7 +2142,7 @@ retention, and any minute multiplier — everything here runs on
 `ubuntu-latest`, whose multiplier is one, and the measurement raises its own
 alarm rather than quietly mis-adding if that ever stops being true.
 
-**When it goes off.** The thresholds are in `config/actions-budget.yml`,
+**When it goes off.** The thresholds are in `instance/actions-budget.yml`,
 with the reasoning for each written beside it; they are configuration
 precisely because they are guesses until real durations exist, and they are
 meant to be re-cut once this file holds a few weeks of them. Two of them
@@ -2161,8 +2161,8 @@ finding into silence.
 **If the alarm itself stops.** An exhausted minute budget does not fail
 loudly; it simply stops work — which includes the very job this alarm lives
 in. `retention-watchdog.yml`, on its own independent schedule, therefore
-checks that `data/actions-usage.yml` is still moving, exactly as it already
-checks `data/retention-last-run.yml`. What neither can catch is the whole
+checks that `instance/data/actions-usage.yml` is still moving, exactly as it already
+checks `instance/data/retention-last-run.yml`. What neither can catch is the whole
 repository going dark at once, for the reason that workflow's own header
 comment gives; what survives even that is the committed file, readable by
 anyone who opens this repository.
@@ -2186,7 +2186,7 @@ transforms and writes, both are idempotent, and each has a test file that
 pins, field by field, what it touched and — more usefully — what it left
 alone: `tools/tests/test_migrate_v3.py` and
 `tools/tests/test_open_vote_window.py`. Deleting the scripts would leave the
-two commits that changed every record in `data/speakers.yml` with no
+two commits that changed every record in `instance/data/speakers.yml` with no
 statement of what they changed.
 
 Separate, because they are two decisions taken for two reasons. The
@@ -2217,7 +2217,7 @@ for example `data: record a ballot on spk-007 by ada (recused)`,
 list (`tools/convener_ops/commit_format.py`, mirrored in
 `app/src/state/decisions.ts`), each naming a record rather than a person,
 and the qualifier is closed per act. So the register can be read back with
-`git log --format=%s -- data/` and filtered on one act, and no line in it
+`git log --format=%s -- instance/data/` and filtered on one act, and no line in it
 can say anything about a volunteer beyond which record they touched.
 
 Ordinary commits -- code, docs, the nightly sweep, the public form -- are
@@ -2231,8 +2231,8 @@ Three settings in the governance data are ordinarily left unfinished
 until an instance's people are in a room together. They are a **deferred
 configuration** in the sense of decision D-13 — the state below is normal
 and expected, not a defect to be rediscovered and not something to fix
-piecemeal by guessing. All three touch `data/config.yml`, the first two
-`data/speakers.yml` as well, and they are easiest done together, in one
+piecemeal by guessing. All three touch `instance/data/config.yml`, the first two
+`instance/data/speakers.yml` as well, and they are easiest done together, in one
 commit, with `cd tools && uv run convener-validate` run before it is
 pushed.
 
@@ -2244,7 +2244,7 @@ business here would be reading somebody else's to-do list.
 
 ### 1. Board identifiers that are not GitHub logins
 
-`data/config.yml` lists the Board, and each entry's `login` is meant to be
+`instance/data/config.yml` lists the Board, and each entry's `login` is meant to be
 a GitHub login. Entries are often seeded with first names instead — the
 file is the only place that says which is which. Role detection matches
 the signed-in GitHub account against these values, so an entry that is not
@@ -2252,14 +2252,14 @@ a login recognises nobody, and that member is treated as a visitor.
 
 Collect each member's GitHub login, then rewrite both files in step:
 
-1. `data/config.yml` — every `board[].login`.
-2. `data/speakers.yml` — every `selection.ballots[].voter`, using exactly
+1. `instance/data/config.yml` — every `board[].login`.
+2. `instance/data/speakers.yml` — every `selection.ballots[].voter`, using exactly
    the same mapping. A ballot on record carries whatever identifier was
    current when it was cast, and a vote is tallied only from ballots whose
    voter is on the Board (`tools/convener_ops/governance.py`), so a Board
    renamed on its own would silently discard every vote already cast.
 
-Check before starting that nothing *else* in `data/speakers.yml` holds a
+Check before starting that nothing *else* in `instance/data/speakers.yml` holds a
 Board identifier: `assigned_to` and `publication.approved_by` do, when
 they are filled in, and `host_1` and `host_2` hold people's display names,
 which are not logins and must not be rewritten.
@@ -2276,7 +2276,7 @@ rewrite the ballots of whichever identifier disappears to the surviving
 one. If any lead ends up with two ballots from the merged person, keep
 one: one person casts one voice, and a repeated voter is a validation
 error. Do not assume no lead carries ballots from both identifiers —
-search `data/speakers.yml` for each of the two before you merge, and
+search `instance/data/speakers.yml` for each of the two before you merge, and
 confirm it.
 
 `board_min` is the Board's stated target, and a Board that has just

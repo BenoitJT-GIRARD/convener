@@ -2,7 +2,7 @@
  * Changing a number in a `config/` file without deleting the argument for
  * it.
  *
- * `config/queue-drain.yml` is five and a half kilobytes of which two lines
+ * `instance/queue-drain.yml` is five and a half kilobytes of which two lines
  * are values: the rest is why the floor is two drain periods and not one,
  * why the ceiling is the lane threshold minus the same, and what happens to
  * a participant when either is wrong. A parse-and-serialise through
@@ -39,19 +39,19 @@ function differing(before: string, after: string): string[] {
 
 describe('one number, changed in place', () => {
   it('moves exactly one line of the real queue-drain declaration', () => {
-    const before = repositoryFile('config/queue-drain.yml');
+    const before = repositoryFile('instance/queue-drain.yml');
     const after = setScalar(before, 'alarm_after_hours', 72);
     expect(differing(before, after)).toEqual(['-alarm_after_hours: 48', '+alarm_after_hours: 72']);
   });
 
   it('keeps every word of the argument the file makes for itself', () => {
-    const before = repositoryFile('config/queue-drain.yml');
+    const before = repositoryFile('instance/queue-drain.yml');
     const after = setScalar(before, 'alarm_after_hours', 72);
     // Every comment line the file had, still there. A YAML round trip
     // takes all of them out and nothing would have said so.
     //
     // Two of its sentences were quoted here once, and
-    // they were one instance's: `config/queue-drain.yml` is the
+    // they were one instance's: `instance/queue-drain.yml` is the
     // instance's file, so a product test quoting its prose asserted
     // which repository it was running in. The example instance's copy
     // of that file argues its case in four lines rather than forty.
@@ -62,13 +62,13 @@ describe('one number, changed in place', () => {
   });
 
   it('writes a share without a tail of digits', () => {
-    const before = repositoryFile('config/actions-budget.yml');
+    const before = repositoryFile('instance/actions-budget.yml');
     const after = setScalar(before, 'warn_at_share', 0.9);
     expect(differing(before, after)).toEqual(['-warn_at_share: 0.75', '+warn_at_share: 0.9']);
   });
 
   it('changes the file the key is in and no other key in it', () => {
-    const before = repositoryFile('config/actions-budget.yml');
+    const before = repositoryFile('instance/actions-budget.yml');
     const after = setScalar(before, 'max_silent_days', 3);
     expect(after).toContain('max_runs: 200');
     expect(after).toContain('monthly_minutes: 2000');
@@ -76,7 +76,7 @@ describe('one number, changed in place', () => {
   });
 
   it('leaves the owner header alone, so the file still answers for itself', () => {
-    const after = setScalar(repositoryFile('config/registration-lanes.yml'), 'queue_beyond_hours', 168);
+    const after = setScalar(repositoryFile('instance/registration-lanes.yml'), 'queue_beyond_hours', 168);
     expect(after).toContain('owner: instance');
   });
 });
@@ -124,7 +124,7 @@ describe('what it refuses rather than repairs', () => {
 
 describe('a save that changes nothing', () => {
   it('is recognised before anything is asked of GitHub', () => {
-    const text = repositoryFile('config/queue-drain.yml');
+    const text = repositoryFile('instance/queue-drain.yml');
     expect(alreadySays(text, 'alarm_after_hours', 48)).toBe(true);
     expect(alreadySays(text, 'alarm_after_hours', 72)).toBe(false);
     expect(alreadySays('not: yaml: at: all', 'alarm_after_hours', 48)).toBe(false);

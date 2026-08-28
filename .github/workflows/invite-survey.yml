@@ -33,7 +33,7 @@ on:
       resend_all:
         description: >-
           By default this run refuses outright once this event already has
-          an entry in data/survey-invitations.yml -- there is no
+          an entry in instance/data/survey-invitations.yml -- there is no
           per-person record to restrict a resend to the way
           issue-certificates.yml's own resend_all can, since a
           survey invitation carries no identifier (see
@@ -103,7 +103,7 @@ jobs:
           CONVENER_MATCHING_SALT: ${{ secrets.CONVENER_MATCHING_SALT }}
           # Absent is ordinary D-13 too: platform_from_env falls back to
           # ManualPlatform, reading
-          # data/events/<id>/attendance-import.csv.
+          # instance/data/events/<id>/attendance-import.csv.
           CONVENER_MEETING_API_TOKEN: ${{ secrets.CONVENER_MEETING_API_TOKEN }}
           CONVENER_FCC_CONFERENCE_ID: ${{ inputs.conference_id }}
           RESEND_ALL: ${{ inputs.resend_all }}
@@ -136,7 +136,7 @@ jobs:
 
           for attempt in 1 2 3; do
             (cd tools && uv run convener-record-survey-invitation)
-            git add data/survey-invitations.yml
+            git add instance/data/survey-invitations.yml
             if git diff --staged --quiet; then
               echo "no change to commit"
               exit 0

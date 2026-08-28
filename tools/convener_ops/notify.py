@@ -36,7 +36,7 @@ platform's own issue thread, and the platform is what turns that into email
 
 What may leave the repository
 -----------------------------
-`data/speakers.yml` holds real names, institutional email addresses,
+`instance/data/speakers.yml` holds real names, institutional email addresses,
 affiliations and countries of external researchers. **None of them appears in
 anything this module renders.** A message names a record by its `id`
 (`spk-014`), quotes stored ISO days, and uses the fixed step labels below --
@@ -193,7 +193,7 @@ def _maybe(step: str, since: Any, config: Any) -> Deadline | None:
     """The deadline for `step`, or `None` when it cannot be computed.
 
     A deadline that cannot be computed is *absent*, never guessed. Seven of the
-    31 records in `data/speakers.yml` carry no `selection.opened_on` at all;
+    31 records in `instance/data/speakers.yml` carry no `selection.opened_on` at all;
     inventing an anchor for them would manufacture a number a volunteer would
     then read as if the record held it.
     """

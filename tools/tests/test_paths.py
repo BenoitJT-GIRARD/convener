@@ -9,29 +9,32 @@ writes an instance path out in a string of its own, with the list of paths
 it refuses read from the declaration at run time.
 
 **What counts as writing a path out.** A string constant whose value is,
-or begins with, a declared instance path -- `"data/config.yml"`,
-`"public-data/registration-routing.json"` -- and a `/` chain that spells
-one segment by segment: `Path("data") / "events"`, `root / "data" /
-"speakers.yml"`, `Path("docs") / "governance" / "register.md"`. The chain
-is read the way `Path` reads it, so a constant that is only a *fragment* of
-a path is caught in the position it actually occupies.
+or begins with, a declared instance path -- `"instance/data/config.yml"`,
+`"instance/public-data/registration-routing.json"` -- and a `/` chain that spells
+one segment by segment: `Path("instance") / "data" / "events"`, `root /
+"instance" / "data" / "speakers.yml"`, `Path("docs") / "governance" /
+"register.md"`. The chain is read the way `Path` reads it, so a constant
+that is only a *fragment* of a path is caught in the position it actually
+occupies.
 
-**A bare word is a path only where the code uses it as one.** `"data"` on
-its own, with no separator in it, is refused inside a `/` chain and
-admitted everywhere else, because three places in this package hold that
-exact string meaning something else: `cli.py::handle_proposal` and
+**A bare word is a path only where the code uses it as one.** A word with
+no separator in it is refused inside a `/` chain and admitted everywhere
+else. The clause was written for `"data"`, which three places in this
+package hold meaning something else: `cli.py::handle_proposal` and
 `platform_fcc.py` both read a `data` key off a JSON payload a third party
 sends, and `commit_format.DOMAIN` is the domain word a decision commit's
-subject carries. Each of those is a name in somebody else's vocabulary
-that happens to be spelt like this repository's directory, and each would
-survive the directory being moved. Refusing them would need three
-exemptions for a rule with four entries.
+subject carries. None of the four declared paths is a bare word any more
+-- every one of them is under `instance/` or under `docs/` -- so the
+clause guards a shape the declaration does not currently have, and those
+three lookalikes are now simply not paths. It is kept because the
+declaration is free to hand over a single top-level name again, and the
+day it does the three would be back.
 
 **A comment or a docstring may name a path, and this sweep leaves it
 alone.** The distinction `test_cross_references.py` draws between code and
 prose, applied to the other half: that module reads a file's comments and
 docstrings and ignores its code, and this one reads a file's code and
-ignores its comments and docstrings. Prose that names `data/config.yml` is
+ignores its comments and docstrings. Prose that names `instance/data/config.yml` is
 explaining something to a reader, and the paragraph around it usually has
 to be rewritten by hand anyway when the path moves. Prose is where the
 argument for a path lives, and an argument that cannot quote the path it
@@ -84,13 +87,14 @@ def declared_instance_paths() -> tuple[str, ...]:
 def offence(value: str, *, as_path: bool) -> str | None:
     """The declared instance path `value` writes out, if it writes one.
 
-    A string spelled exactly as the declaration spells it -- `data/`,
-    trailing slash and all -- is refused wherever it appears, including
-    outside a path expression. The comparison below strips the trailing
-    slash from both sides, which leaves `data/` looking like the bare
-    word `data`, and a bare word is only refused where the code uses it
-    as a path. The cockpit's own sweep found that gap and closes it the
-    same way (`app/tests/instance-paths.test.ts`).
+    A string spelled exactly as the declaration spells it --
+    `instance/data/`, trailing slash and all -- is refused wherever it
+    appears, including outside a path expression. The comparison below
+    strips the trailing slash from both sides, which leaves a directory
+    entry looking like the path without it, and a name with no separator
+    in it is only refused where the code uses it as a path. The cockpit's
+    own sweep found that gap and closes it the same way
+    (`app/tests/instance-paths.test.ts`).
     """
     normalised = value.replace("\\", "/")
     if normalised in declared_instance_paths():
@@ -111,7 +115,8 @@ def joined(node: ast.expr) -> list[str] | None:
     """The string segments of a `/` chain, in order, or `None`.
 
     `Path("docs") / "governance" / "register.md"` gives three segments and
-    `root / "data" / "speakers.yml"` gives two: a chain rooted in something
+    `root / "instance" / "data" / "speakers.yml"` gives three: a chain
+    rooted in something
     this cannot read -- a variable, a call, a constant of the package --
     contributes the segments to its right, which is the suffix a path
     joined onto it would end in.
@@ -166,8 +171,9 @@ def _path_operands(node: ast.expr) -> list[ast.Constant]:
     """The strings `node` uses as a path segment in its own right.
 
     A single one of them spells a whole entry on its own -- `root /
-    "public-data"`, `Path("data")` -- which is what tells a bare word used
-    as a path apart from the same word used as a key.
+    "instance" / "public-data"`, `Path("instance") / "data"` -- which is
+    what tells a bare word used as a path apart from the same word used as
+    a key.
     """
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
         sides = [node.left, node.right]
@@ -248,7 +254,7 @@ def test_repo_root_walks_upward_to_find_marker(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("CONVENER_REPO_ROOT", raising=False)
-    (tmp_path / DATA_DIR).mkdir()
+    (tmp_path / DATA_DIR).mkdir(parents=True)
     (tmp_path / DATA_DIR / "config.yml").write_text("season: 2026\n", encoding="utf-8")
     nested = tmp_path / "a" / "b" / "c"
     nested.mkdir(parents=True)
@@ -303,7 +309,7 @@ def test_two_declared_paths_ending_in_the_same_name_are_refused() -> None:
     declaration made up here, so the rule is exercised rather than the
     accident that this repository has no such pair today."""
     entries = (
-        boundary.Handed(path="data/", reason="the instance's records"),
+        boundary.Handed(path="instance/data/", reason="the instance's records"),
         boundary.Handed(path="archive/data/", reason="last season's"),
     )
 
@@ -384,14 +390,14 @@ def test_no_module_writes_an_instance_path_out() -> None:
 
 
 REFUSED = (
-    'PATH = Path("data") / "config.yml"',
-    'path = root / "data" / "speakers.yml"',
-    'path = repo_root() / "keys" / "events" / f"{event_id}.pub"',
-    'out = root / "public-data"',
+    'PATH = Path("instance") / "data" / "config.yml"',
+    'path = root / "instance" / "data" / "speakers.yml"',
+    'path = repo_root() / "instance" / "keys" / "events" / f"{event_id}.pub"',
+    'out = root / "instance" / "public-data"',
     'REGISTER = Path("docs") / "governance" / "register.md"',
-    'EVENTS = Path("data")',
-    'raise ValueError("data/queue-ledger.yml holds no usable handled list")',
-    'return f"data/events/{event_id}/registrations.enc"',
+    'EVENTS = Path("instance") / "data"',
+    'raise ValueError("instance/data/queue-ledger.yml holds no usable handled list")',
+    'return f"instance/data/events/{event_id}/registrations.enc"',
 )
 
 ADMITTED = (
@@ -404,8 +410,8 @@ ADMITTED = (
     'raise ValueError(f"{LEDGER_PATH.as_posix()} holds no usable handled list")',
     'DEFAULT_PATH: Final = Path("brand") / "convener" / "brand.json"',
     'TOOLKIT_DIR: Final = Path("docs") / "toolkit"',
-    'BUDGET_PATH: Final = Path("config") / "actions-budget.yml"',
-    '"""data/config.yml is the instance\'s own board configuration."""',
+    'BUDGET_PATH: Final = Path("instance") / "actions-budget.yml"',
+    '"""instance/data/config.yml is the instance\'s own board configuration."""',
 )
 
 

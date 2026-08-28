@@ -405,8 +405,8 @@ def test_an_unreadable_entry_the_ledger_holds_is_still_just_cleared() -> None:
 
 
 def _repo(tmp_path: Path, event_id: str = _EVENT) -> tuple[str, str]:
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "speakers.yml").write_text(
+    (tmp_path / "instance" / "data").mkdir(parents=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         yaml.safe_dump(
             [
                 speaker(
@@ -420,7 +420,7 @@ def _repo(tmp_path: Path, event_id: str = _EVENT) -> tuple[str, str]:
         ),
         encoding="utf-8",
     )
-    (tmp_path / "data" / "config.yml").write_text(
+    (tmp_path / "instance" / "data" / "config.yml").write_text(
         yaml.safe_dump(config()), encoding="utf-8"
     )
     return eventkeys.generate()

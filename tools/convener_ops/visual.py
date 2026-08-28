@@ -25,7 +25,7 @@ browser-side "shrink to fit" script).
 
 Where the identity comes from, and where it does not
 --------------------------------------------------------
-Every colour below is read out of `data/brand.json` by this module's own
+Every colour below is read out of `instance/data/brand.json` by this module's own
 `_load_colours`, never imported from `scripts/generate_brand_css.py`:
 `convener_ops` ships as an installed package (`tools/pyproject.toml`'s own
 `[tool.hatch.build.targets.wheel]` lists only this one package), and
@@ -44,7 +44,7 @@ not: two independent readers of one JSON source, which is what D-16 asks
 for), but because a third name for the same colour would be one more thing
 to keep in step by hand.
 
-Every *name* below comes from `config/instance.json`, through
+Every *name* below comes from `instance/config.json`, through
 `published.load_identity` -- the same reader `announce.py` and the two
 generated SVG templates already use, never a fourth. Three of this page's
 fixed parts used to be this instance's own prose: the wordmark
@@ -84,7 +84,7 @@ the code rather than in the abstract:
   `<text ... fill="{purple}">{forum_host}</text>`, plain and lower case,
   derived from this same declaration. Two renderings of one poster
   disagreeing about their own wordmark is precisely the second source
-  this project keeps deleting. `data/brand.json`'s own `_roles` agrees
+  this project keeps deleting. `instance/data/brand.json`'s own `_roles` agrees
   independently: "purple: Headlines, ribbon, wordmark. The dominant
   colour, **not an accent**."
 
@@ -230,7 +230,7 @@ The variable parts, and how each is handled
   a speaker's `photo_url` clears the consent gate
   (`public_data.PUBLISHABLE_ON_CONSENT`), and `_frame_html` below renders a
   composed placeholder for it, never a hole or a broken `<img>`. This
-  module never fetches a URL and never reads `data/speakers.yml` itself --
+  module never fetches a URL and never reads `instance/data/speakers.yml` itself --
   `photo_url` is, by the schema's own words, "a link, not an upload: the
   repository holds records, not media"
   (`docs/reference/schema.md`), so turning it into something this function
@@ -415,7 +415,7 @@ def _load_colours(root: Path) -> dict[str, str]:
 #: (`generate_brand_css.render_site_root_block`), reused here so a reader
 #: who knows the showcase's tokens recognises this page's CSS on sight --
 #: see the module docstring for why this is a second reader of
-#: `data/brand.json`, not an import of the generator.
+#: `instance/data/brand.json`, not an import of the generator.
 def _root_css_block(colours: dict[str, str]) -> str:
     return f"""\
   --paper:        {colours["white"]};
@@ -438,7 +438,7 @@ def _root_css_block(colours: dict[str, str]) -> str:
 
 
 #: Hand-typed, and correctly so: file paths and Unicode ranges are not
-#: colours `data/brand.json` carries an opinion about, and this project
+#: colours `instance/data/brand.json` carries an opinion about, and this project
 #: already has two other hand-authored copies of this exact block
 #: (`site/src/style.css`, `app/src/design/tokens.css`) -- a third bespoke
 #: surface reading the same self-hosted files (D-17) is the established
@@ -653,7 +653,7 @@ def _wordmark_html(forum_host: str) -> str:
 def _series_html(strapline: str, forum_host: str) -> str:
     """The hero band: the series' own strapline, and where to discuss it.
 
-    `strapline` is `config/instance.json`'s own key, not a
+    `strapline` is `instance/config.json`'s own key, not a
     motto typed here: until it existed, a duplicate's posters announced
     *this* series' motto above *its* talks. `published.Identity`'s own
     docstring records why it is not `tagline` -- that one is a sentence,
@@ -995,7 +995,7 @@ def render_announcement(
     page -- see the module docstring for what is fixed, what varies, and
     why this is a page rather than an SVG template.
 
-    Reads `data/brand.json` for colour, and `ribbon.py` for the
+    Reads `instance/data/brand.json` for colour, and `ribbon.py` for the
     motif; touches nothing else on disk and makes no network request of
     its own -- `portrait_data_uri`, if given, is inlined as-is (a `data:`
     URI is what a caller should normally pass, so the rendered page never
@@ -1341,7 +1341,7 @@ def render_announcement(
      `frame`'s own "auto" width) are exactly the shape `.band--talk-title`
      needs to *not* have -- a cream band confined to one column reads as a
      truncated accident, not the "cream bands run full width" rule
-     `data/brand.json`'s own `layout._bands` states outright. See
+     `instance/data/brand.json`'s own `layout._bands` states outright. See
      `.poster--wide .wide-title-row`'s own comment below for the fix. */
   .poster--wide {{
     display: grid;

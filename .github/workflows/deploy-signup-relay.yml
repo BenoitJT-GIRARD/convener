@@ -79,7 +79,7 @@ jobs:
           # see that configuration's own header, and
           # `services/auth-proxy/wrangler.toml`'s for the origin's
           # reasoning in full -- so both are derived here, from
-          # `config/instance.json`, through the Python readers that own the
+          # `instance/config.json`, through the Python readers that own the
           # derivations (`published.Published.origin` and
           # `published.Identity.repository`). The same
           # `uv run --project tools python -c` shape `deploy.yml` already
@@ -88,13 +88,13 @@ jobs:
           origin="$(uv run --project tools python -c \
             'from convener_ops.published import load; print(load().origin)')"
           if [ -z "$origin" ]; then
-            echo "::error::config/instance.json yielded no origin - refusing to deploy a relay that would answer a CORS preflight for nobody"
+            echo "::error::instance/config.json yielded no origin - refusing to deploy a relay that would answer a CORS preflight for nobody"
             exit 1
           fi
           repository="$(uv run --project tools python -c \
             'from convener_ops.published import load_identity; print(load_identity().repository)')"
           if [ -z "$repository" ]; then
-            echo "::error::config/instance.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"
+            echo "::error::instance/config.json yielded no repository - refusing to deploy a relay that would dispatch nowhere"
             exit 1
           fi
           # Each --var reaches src/index.js as an env entry exactly as a

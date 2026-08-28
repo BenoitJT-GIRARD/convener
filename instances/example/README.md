@@ -6,9 +6,9 @@ today.
 
 `config/boundary.yml` names the paths an instance owns. This directory
 holds one file for each of them, at the same relative path — so
-`instances/example/config/instance.json` is what
-`config/instance.json` would be, and `instances/example/data/brand.json`
-is what `data/brand.json` would be. Nothing here is read at run time by
+`instances/example/instance/config.json` is what
+`instance/config.json` would be, and `instances/example/instance/data/brand.json`
+is what `instance/data/brand.json` would be. Nothing here is read at run time by
 anything: a build that uses these files is a build in which they have
 been copied into the places the boundary names.
 
@@ -37,7 +37,7 @@ demonstration; it is what a duplicate looks like on the day it is made.
 **Being what "not configured" is measured against.** The declaration here
 is the thing every instance's own declaration is compared
 with, value by value: while any of the eleven values in
-`config/instance.json` is still one of these, the showcase prints a band
+`instance/config.json` is still one of these, the showcase prints a band
 above its masthead on every page and the cockpit prints one above its
 sign-in screen, naming the keys still to fill in
 (`tools/convener_ops/published.py::unconfigured`, and one reader per language
@@ -75,10 +75,10 @@ here, and each absence is a decision recorded in
 ever gains a counterpart or if a new instance path gains neither one nor a
 reason:
 
-- **`keys/`** — a fresh duplicate holds no cryptographic material at all.
+- **`instance/keys/`** — a fresh duplicate holds no cryptographic material at all.
   Generating an event key or a signing key is an operator's act.
-- **`public-data/`** — empty in a fresh clone by construction: everything
-  in it is derived from `data/` by the product's own commands, and the
+- **`instance/public-data/`** — empty in a fresh clone by construction: everything
+  in it is derived from `instance/data/` by the product's own commands, and the
   second-instance build runs them.
 - **`docs/governance/register.md`** — declared `regenerated: true`, which
   means a scheduled job rewrites it in full on both sides of any merge. A
@@ -87,8 +87,8 @@ reason:
 
 ## What it numbers its own editions
 
-`config/instance.json` declares `edition_prefix: MRG`, and
-`data/speakers.yml` numbers the reading group's sessions `MRG-1`, `MRG-2`,
+`instance/config.json` declares `edition_prefix: MRG`, and
+`instance/data/speakers.yml` numbers the reading group's sessions `MRG-1`, `MRG-2`,
 `MRG-3`. The prefix is the instance's, not the product's: nothing in
 `tools/convener_ops/` or `app/src/` fixes one, and `validate_speakers` builds
 its pattern from whatever the declaration holds.
@@ -98,6 +98,6 @@ The two have no reason to move together — a series can want one form in
 an e-mail subject and another in an identifier — and `short_name` is
 prose, which gets reworded. An edition code cannot be: it is in a
 published address (`/events/mrg-1/`), on every certificate issued for that
-event and in `keys/events/mrg-1.pub`, so it is declared once and then
+event and in `instance/keys/events/mrg-1.pub`, so it is declared once and then
 frozen. Changing it after an edition has been assigned makes every code
 already written fail validation, by name and with the reason.

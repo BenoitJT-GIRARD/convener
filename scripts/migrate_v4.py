@@ -1,4 +1,4 @@
-"""One-shot migration of `data/speakers.yml` from schema v3 to schema v4.
+"""One-shot migration of `instance/data/speakers.yml` from schema v3 to schema v4.
 
 Schema v4 adds the six fields the checklists have always asked for and the
 model never had, so they travelled by e-mail and were lost: a portrait, a
@@ -158,7 +158,7 @@ def diff(before: str, after: str, name: str) -> str:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Migrate data/speakers.yml to schema v4."
+        description="Migrate instance/data/speakers.yml to schema v4."
     )
     parser.add_argument(
         "--dry-run",
@@ -167,7 +167,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    speakers_path = repo_root() / "data" / "speakers.yml"
+    speakers_path = repo_root() / "instance" / "data" / "speakers.yml"
     before = speakers_path.read_text(encoding="utf-8")
     after = dump_speakers(migrate_speakers(safe_load(before) or []))
 
@@ -175,7 +175,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"{speakers_path.name}: already migrated, nothing to do")
         return 0
     if args.dry_run:
-        print(_ascii(diff(before, after, "data/speakers.yml")), end="")
+        print(_ascii(diff(before, after, "instance/data/speakers.yml")), end="")
         print("dry run: nothing written")
         return 0
     speakers_path.write_text(after, encoding="utf-8", newline="")

@@ -38,7 +38,7 @@ function config(overrides: Partial<Config> = {}): Config {
     board_min: 3,
     board_max: 9,
     vote_window_days: 14,
-    // The value data/config.yml carries, and the one G-10 states:
+    // The value instance/data/config.yml carries, and the one G-10 states:
     // three *working* days.
     objection_window_working_days: 3,
     inactivity_months: 6,

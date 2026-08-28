@@ -343,7 +343,7 @@ def test_encrypt_rejects_a_public_key_of_the_wrong_kind() -> None:
 # ------------------------------------------------------------------ #
 # derive_public_pem(): the public half, re-derived rather than read from a
 # file -- so a re-encryption never depends on what is (or is not) committed
-# at keys/events/<id>.pub.
+# at instance/keys/events/<id>.pub.
 # ------------------------------------------------------------------ #
 
 
@@ -403,7 +403,10 @@ def test_public_key_path_is_under_keys_events(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    assert public_key_path("mrg-042") == tmp_path / "keys" / "events" / "mrg-042.pub"
+    assert (
+        public_key_path("mrg-042")
+        == tmp_path / "instance" / "keys" / "events" / "mrg-042.pub"
+    )
 
 
 @pytest.mark.parametrize(
@@ -465,7 +468,7 @@ def test_secret_name_rejects_an_event_id_over_the_length_cap() -> None:
     """A 65-character id is exactly the shape
     `services/signup-relay/src/index.js::EVENT_ID_RE` already refuses with
     a bare 400 -- before this fix, `secret_name` accepted it, so an id
-    this long could be published as `keys/events/<id>.pub` and be
+    this long could be published as `instance/keys/events/<id>.pub` and be
     unusable at the one place a participant would ever submit against
     it."""
     event_id = "a" * 65

@@ -5,12 +5,11 @@
  * what does this instance own, and what may each of its numbers be --
  * and none of them is a list typed into a component:
  *
- * - `config/boundary.yml` names the paths outside `config/` that the
- *   instance owns;
- * - every file *in* `config/` states its own owner in its own header, so
- *   the directory is listed rather than enumerated here: a file added to
- *   it appears on this screen because it exists, not because somebody
- *   remembered;
+ * - `config/boundary.yml` names the directories the instance owns whole;
+ * - every configuration file `CONFIG_DIRS` holds directly states its own
+ *   owner in its own header, so those directories are listed rather than
+ *   enumerated here: a file added to one of them appears on this screen
+ *   because it exists, not because somebody remembered;
  * - `config/integrations.yml` says what each external dependency is for
  *   and what breaks without it;
  * - `.github/workflows/sweep-and-notify.yml` carries the drain's own cron,
@@ -19,7 +18,7 @@
  * Two ways in, one reader
  * -----------------------
  * Signed in, the six files are read from the repository through
- * `github/contents.ts` -- the same door `data/speakers.yml` comes through,
+ * `github/contents.ts` -- the same door `instance/data/speakers.yml` comes through,
  * because a bound computed from a stale copy of `queue_beyond_hours` is a
  * bound that is wrong exactly when it matters. In demo mode nothing may be
  * read from anywhere but the origin that served the page, so the same six
@@ -42,7 +41,8 @@ import { isDemoMode } from '../data/demo';
 import { exampleSettings } from './example';
 import {
   BOUNDARY_PATH,
-  CONFIG_DIR,
+  CONFIG_DIRS,
+  CONFIG_SUFFIXES,
   INTEGRATIONS_PATH,
   configOwner,
   handedFromData,
@@ -63,13 +63,13 @@ import {
 /** What the screen renders. Every field is derived from bytes this module
  *  read; nothing here is a default. */
 export interface SettingsDocument {
-  /** Every file in `config/`, by its repository path, as text. Kept as
+  /** Every configuration file, by its repository path, as text. Kept as
    *  text and not only as parsed values because an edit is a *surgical*
    *  replacement of one line in it -- see `./edit.ts` for why. */
   files: Record<string, string>;
   /** Each of those files' declared owner. */
   owners: Record<string, string>;
-  /** The paths outside `config/` the declaration hands to the instance. */
+  /** The directories the declaration hands to the instance whole. */
   handed: Handed[];
   /** Both halves, sorted -- `boundary.Boundary.instance_paths`. */
   instancePaths: string[];
@@ -89,17 +89,12 @@ export interface SettingsDocument {
   cadenceRefusal: string | null;
 }
 
-/** One entry of the `config/` directory listing. */
+/** One entry of a configuration directory's listing. */
 interface DirectoryEntry {
   name: string;
   path: string;
   type: string;
 }
-
-/** What a file in `config/` may be written in, and nothing else -- mirrors
- *  `boundary.CONFIG_READERS`. A format nobody enumerated is a file in that
- *  directory whose owner nothing ever asks for. */
-const CONFIG_SUFFIXES = ['.yml', '.json'];
 
 function isConfigFile(entry: DirectoryEntry): boolean {
   return entry.type === 'file' && CONFIG_SUFFIXES.some(suffix => entry.name.endsWith(suffix));
@@ -198,17 +193,23 @@ export async function loadSettings(token: string): Promise<SettingsDocument> {
     const example = exampleSettings();
     return documentFrom(example.files, example.drainTriggers);
   }
-  const listing = (await gh(`/contents/${CONFIG_DIR}`, {
-    token,
-    method: 'GET',
-  })) as DirectoryEntry[];
-  if (!Array.isArray(listing)) {
-    throw new Error(
-      `${CONFIG_DIR}/ is not a directory in this repository, so there are no ` +
-        'declarations to settle',
-    );
-  }
-  const names = listing.filter(isConfigFile).map(entry => entry.path);
+  const listings = (await Promise.all(
+    CONFIG_DIRS.map(directory =>
+      gh(`/contents/${directory}`, { token, method: 'GET' }),
+    ),
+  )) as DirectoryEntry[][];
+  CONFIG_DIRS.forEach((directory, index) => {
+    if (!Array.isArray(listings[index])) {
+      throw new Error(
+        `${directory}/ is not a directory in this repository, so there are no ` +
+          'declarations to settle',
+      );
+    }
+  });
+  const names = listings
+    .flat()
+    .filter(isConfigFile)
+    .map(entry => entry.path);
   const [texts, workflowText] = await Promise.all([
     Promise.all(names.map(name => getFile(name, token))),
     getFile(DRAIN_WORKFLOW, token),

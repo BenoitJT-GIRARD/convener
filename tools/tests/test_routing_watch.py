@@ -1,7 +1,7 @@
 """Nothing detects that the saving has quietly stopped.
 
 A registration has two lanes, and the relay resolves every
-failure to read `public-data/registration-routing.json` to the *immediate*
+failure to read `instance/public-data/registration-routing.json` to the *immediate*
 one -- correctly, because the confirmation carries the room link and the
 matching code and there is no second channel for either. The consequence
 this module covers is that the whole economy of the phase can therefore
@@ -42,7 +42,7 @@ _SWEEP = _SWEEP_PATH.read_text(encoding="utf-8")
 #: A Tuesday morning, the hour the drain is scheduled for.
 _NOW = datetime(2026, 8, 25, 5, 0, tzinfo=UTC)
 
-#: `config/registration-lanes.yml`'s own value, restated here rather than
+#: `instance/registration-lanes.yml`'s own value, restated here rather than
 #: read, so a maintainer moving the real threshold cannot silently move
 #: what these fixtures mean.
 _THRESHOLD = 96
@@ -175,7 +175,7 @@ def test_a_file_that_is_wrong_about_an_event_inside_the_threshold_is_silent() ->
 
 
 def test_a_live_event_published_with_the_wrong_cutoff_diverges() -> None:
-    """The `config/registration-lanes.yml` case: `deploy.yml` ignores
+    """The `instance/registration-lanes.yml` case: `deploy.yml` ignores
     `config/**`, so a threshold edited there changes what this repository
     would publish and regenerates nothing."""
     expected = _cutoffs(_LIVE)
@@ -320,12 +320,12 @@ def _repo(
     `published` is the mapping to publish, a raw string to write verbatim,
     or `None` to leave the file out entirely.
     """
-    (tmp_path / "data").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "data" / "speakers.yml").write_text(
+    (tmp_path / "instance" / "data").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "data" / "speakers.yml").write_text(
         json.dumps(speakers), encoding="utf-8"
     )
-    (tmp_path / "config").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "config" / "registration-lanes.yml").write_text(
+    (tmp_path / "instance").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "instance" / "registration-lanes.yml").write_text(
         f"v: 1\nqueue_beyond_hours: {_THRESHOLD}\n", encoding="utf-8"
     )
     routing = tmp_path / registration_routing.ROUTING_PATH
@@ -525,16 +525,18 @@ def test_an_unconfigured_channel_still_leaves_the_finding_red(
 def test_the_repository_s_own_unreadable_inputs_are_a_different_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A missing `data/speakers.yml` or a threshold nobody can read is a
+    """A missing `instance/data/speakers.yml` or a threshold nobody can read is a
     broken repository, not a stale deployment: exit 1, no `routing_alert`
     at all, and no message claiming the deploy is at fault."""
     root = _repo(tmp_path, monkeypatch, speakers=[_LIVE], published={})
     _github_output(tmp_path, monkeypatch)
-    (root / "config" / "registration-lanes.yml").write_text("v: 9\n", encoding="utf-8")
+    (root / "instance" / "registration-lanes.yml").write_text(
+        "v: 9\n", encoding="utf-8"
+    )
     assert check_registration_routing() == 1
     assert "not a supported format version" in capsys.readouterr().err
 
-    (root / "data" / "speakers.yml").unlink()
+    (root / "instance" / "data" / "speakers.yml").unlink()
     assert check_registration_routing() == 1
     assert "file missing" in capsys.readouterr().err
 

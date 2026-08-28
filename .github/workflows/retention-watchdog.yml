@@ -11,7 +11,7 @@
 # What this workflow catches, honestly
 # -------------------------------------
 # `retention.yml`'s own last step, "Record that the retention workflow ran
-# today", commits `data/retention-last-run.yml` unconditionally, every day
+# today", commits `instance/data/retention-last-run.yml` unconditionally, every day
 # its schedule fires -- regardless of whether that day's actual sweep
 # succeeded (a separate concern, already loud on its own: that job's own
 # red status on the Actions tab, and GitHub's own failure e-mail to the
@@ -39,7 +39,7 @@
 # scheduler going dark; nothing running inside GitHub Actions can, at zero
 # cost (a hosted external monitor is a paid account, ruled out by the same
 # constraint that shapes every other fix in this audit). What survives
-# that scenario regardless is `data/retention-last-run.yml` itself: a
+# that scenario regardless is `instance/data/retention-last-run.yml` itself: a
 # person who opens this repository -- no workflow run required -- can read
 # the date it names and draw the same conclusion this workflow would have
 # reported, by hand. That is the residue this fix leaves, stated rather
@@ -49,7 +49,7 @@
 # A second record, watched the same way
 # --------------------------------------
 # This job now asks the same question twice, about two different daily
-# jobs. The second is `data/actions-usage.yml`, written at the bottom of
+# jobs. The second is `instance/data/actions-usage.yml`, written at the bottom of
 # `sweep-and-notify.yml`'s own daily job (05:00 UTC, so a healthy day's
 # record is already written by the time this checks it at 12:00, exactly
 # as with retention.yml's 06:11). That job is where the Actions *budget*
@@ -60,7 +60,7 @@
 #
 # A third record, and the reason it is here and not there
 # --------------------------------------------------------
-# `data/queue-watch.yml` is what the public submission queue still held the
+# `instance/data/queue-watch.yml` is what the public submission queue still held the
 # last time a drain looked at it. A survey response and a
 # far-off registration no longer start a run each: they wait in a branch,
 # and one drain a day -- steps of `sweep-and-notify.yml`'s daily job again
@@ -79,7 +79,7 @@
 # the board's thread and team mention; it is there, and it posts and goes
 # red there. **The other half is the drain having stopped running at all,
 # and a control hosted inside the job that stopped reports nothing.** That
-# is this step: the daily job rewrites `data/queue-watch.yml` every day
+# is this step: the daily job rewrites `instance/data/queue-watch.yml` every day
 # whatever it found, and this reads its freshness, here, on a different
 # schedule.
 #
@@ -87,7 +87,7 @@
 # named. Two red runs a day saying the same thing is how an operator learns
 # to ignore both.
 #
-# One overlap, named rather than quietly relied on: `data/actions-usage.yml`
+# One overlap, named rather than quietly relied on: `instance/data/actions-usage.yml`
 # above is written by the *same* daily job, so "that job died" is detected
 # twice today. That is an accident of two records sharing a job and not a
 # contract -- this one is written by the queue steps and that one by the

@@ -70,7 +70,7 @@ Best regards,
   exists.** The certificate itself verifies forever — the register's own
   state is what a verifier checks, and revocation never touches the
   signature. But redelivering it needs the address to send it to, which
-  lives only in `data/events/<id>/registrations.enc`; once the
+  lives only in `instance/data/events/<id>/registrations.enc`; once the
   retention sweep destroys that event's key, 90 days after the event, a
   certificate already issued can still be verified by anyone who holds it,
   but can never be delivered again by us.

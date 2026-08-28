@@ -31,7 +31,7 @@ const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
  *  and `survey-status-projection.mjs`'s docstrings for the whole
  *  publish-and-fetch pipeline this closes: a bare JSON array of
  *  the event ids currently open for the survey, derived from
- *  `data/speakers.yml`'s `survey_enabled` field and published outside the
+ *  `instance/data/speakers.yml`'s `survey_enabled` field and published outside the
  *  consent gate entirely, because it is an operational fact rather than
  *  programme data.
  *

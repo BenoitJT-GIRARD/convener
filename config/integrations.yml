@@ -134,11 +134,11 @@ integrations:
       - CONVENER_MEETING_API_TOKEN
     absent_behaviour: >-
       The manual adapter (tools/convener_ops/platform.py::ManualPlatform) is used.
-      The room and recording links are typed by hand into data/speakers.yml's
+      The room and recording links are typed by hand into instance/data/speakers.yml's
       existing zoom_link and youtube_url, join instructions into
-      data/config.yml's instructions (one value for the whole series -- the
+      instance/data/config.yml's instructions (one value for the whole series -- the
       account is the permanent room), and attendance is imported from
-      data/events/<id>/attendance-import.csv, a file that is never committed.
+      instance/data/events/<id>/attendance-import.csv, a file that is never committed.
       No room link is published automatically, and no recording storage is
       managed on our side. Once set, tools/convener_ops/platform_fcc.py::PlatformFCC
       is used instead (selected by platform_fcc.py::platform_from_env, D-13):

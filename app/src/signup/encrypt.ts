@@ -42,7 +42,7 @@
  *
  * PEM in, DER in: the one gap eventkeys.py leaves for this file to close
  * -----------------------------------------------------------------------
- * `keys/events/<id>.pub` is PEM (`-----BEGIN PUBLIC KEY----- ... -----END
+ * `instance/keys/events/<id>.pub` is PEM (`-----BEGIN PUBLIC KEY----- ... -----END
  * PUBLIC KEY-----`), but `crypto.subtle.importKey("spki", ...)` refuses PEM
  * outright -- it wants only the DER bytes the PEM wraps. `pemToDer` strips
  * the header and footer lines and `atob`s what is left, before the key is
@@ -98,7 +98,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 /** See the module docstring: `importKey("spki", ...)` wants DER, and
- *  `keys/events/<id>.pub` is PEM. Built with `new Uint8Array(n)` rather
+ *  `instance/keys/events/<id>.pub` is PEM. Built with `new Uint8Array(n)` rather
  *  than `Uint8Array.from`, whose return type is not specific enough about
  *  its backing buffer for `crypto.subtle.importKey`'s `BufferSource`
  *  parameter to accept directly. */

@@ -4,7 +4,7 @@
 institute's own newsletter, internal messaging, a research network's list.
 These are the plain-text channels reaching people
 who did not ask about this particular talk. Which ones they are is the
-Board's own list of channels (`data/config.yml`), shown on each speaker's
+Board's own list of channels (`instance/data/config.yml`), shown on each speaker's
 promotion lines, rather than three names written out here. Sent around
 T-14, alongside the
 LinkedIn post. Whoever edits an institute's newsletter or sends to a list

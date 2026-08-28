@@ -20,7 +20,7 @@ name: Quality
 # `docs/decisions/**`; `test_workflows.py` parses every file under
 # `.github/workflows/`; the schema and brand-token checks derive from
 # `app/src/data/types.ts`, `docs/reference/schema.md` and
-# `data/brand.json`. A filter list built to be honestly safe here would
+# `instance/data/brand.json`. A filter list built to be honestly safe here would
 # have to include most of the tree, which is not a filter, it is a
 # larger diff with the same risk of a missed entry and none of the
 # saving. `enable-cache: true` below still reduces this job's own run
@@ -293,7 +293,7 @@ jobs:
       - name: Brand tokens and templates
         working-directory: tools
         # site/src/style.css, app/src/design/tokens.css and tokens.ts each
-        # carried data/brand.json's colours retyped by hand -- the shape
+        # carried instance/data/brand.json's colours retyped by hand -- the shape
         # that let the application drift to a reconstruction's palette
         # unnoticed. Same
         # assertion-only run as the schema check above: writes nothing,
@@ -409,7 +409,7 @@ jobs:
       # module, the performance-budget checker's own, the shared
       # Paris-offset fixture's own
       # CommonJS check script, and this package's reader
-      # of `config/instance.json` and the script that prints what it and
+      # of `instance/config.json` and the script that prints what it and
       # `.eleventy.js` resolve, each under its own scoped override in that
       # same config file.
       - name: Lint site

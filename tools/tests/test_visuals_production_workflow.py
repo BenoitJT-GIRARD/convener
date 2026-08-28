@@ -5,7 +5,7 @@ for the regression workflow beside it.
 
 Read as text and (for the path filter's own contents) parsed as YAML,
 exactly as that module does, for the identical reason: this file's own
-explanatory comments deliberately name `data/speakers.yml`, `pull_request`
+explanatory comments deliberately name `instance/data/speakers.yml`, `pull_request`
 and `og:image` to say why each is absent or handled the way it is, and a
 plain substring check would trip over its own prose. Never executed here:
 running it for real needs a real browser download, exactly the network
@@ -65,11 +65,11 @@ def test_the_workflow_has_no_pull_request_trigger() -> None:
 
 def test_data_speakers_yml_is_the_one_new_path_this_job_adds() -> None:
     """The one deliberate difference from visuals.yml's own list: that
-    workflow names `data/speakers.yml` only to say why it is absent (it
+    workflow names `instance/data/speakers.yml` only to say why it is absent (it
     never touches real data); this workflow exists *because* real data can
     change, so the file real editions live in must be in its own filter."""
     paths = _TRIGGERS["push"]["paths"]
-    assert "data/speakers.yml" in paths
+    assert "instance/data/speakers.yml" in paths
 
 
 #: The *code* both jobs render through. A change to any of these changes
@@ -120,21 +120,21 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
     a decision and cannot decay into an omission.
 
     This job renders *real* editions, as the instance that runs this
-    repository, so it watches `config/instance.json` and
-    `data/brand.json`. visuals.yml renders a fixed fictional fixture as
+    repository, so it watches `instance/config.json` and
+    `instance/data/brand.json`. visuals.yml renders a fixed fictional fixture as
     `instances/example/`, so it watches that instance's two files instead
     -- which is what stopped it going red for every duplicate that chose
     its own colours and had them diffed against a committed image of
     somebody else's poster.
 
     `brand/convener/brand.json`, the product's default charter, stays here
-    and only here: a duplicate that has written no `data/brand.json` falls
+    and only here: a duplicate that has written no `instance/data/brand.json` falls
     back to it for a real render, while the example always declares one of
     its own."""
     mine = set(_TRIGGERS["push"]["paths"])
     production_only = (
-        "config/instance.json",
-        "data/brand.json",
+        "instance/config.json",
+        "instance/data/brand.json",
         "brand/convener/brand.json",
     )
     for path in production_only:
@@ -144,8 +144,8 @@ def test_the_two_jobs_watch_their_own_instances_files() -> None:
             "instance and cannot be affected by it"
         )
     for path in (
-        "instances/example/config/instance.json",
-        "instances/example/data/brand.json",
+        "instances/example/instance/config.json",
+        "instances/example/instance/data/brand.json",
     ):
         assert f"'{path}'" in _VISUALS_WORKFLOW, (
             f"{path} is missing from visuals.yml, which renders from it"
@@ -215,7 +215,7 @@ def test_the_commit_step_dispatches_publish_vitrine_after_a_successful_push() ->
     `GITHUB_TOKEN` cannot fire `publish-vitrine.yml`'s own `push` trigger,
     even though `site/**` (which `site/src/banners/` sits under) is one of
     the paths that trigger names -- the identical mechanism `sweep.yml`'s
-    own header comment documents for `data/speakers.yml`. Without this
+    own header comment documents for `instance/data/speakers.yml`. Without this
     dispatch, a freshly committed banner would sit in this repository
     unpublished until something else happened to touch `site/**` or
     `tools/**`."""

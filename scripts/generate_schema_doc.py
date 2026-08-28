@@ -32,7 +32,7 @@ here, not in the generated page, and the page says so at the top.
 
 Pure, so `--check` means something
 ----------------------------------
-The rendering reads `types.ts` and nothing else: no clock, no `data/*.yml`, no
+The rendering reads `types.ts` and nothing else: no clock, no `instance/data/*.yml`, no
 environment. Two runs over the same model produce byte-identical files, so a
 difference can only be an edit made outside the types -- which is exactly what
 `--check` refuses, without repairing it. A check that silently rewrote the file
@@ -509,18 +509,18 @@ and commit what it writes, and CI refuses a page the types do not derive.
 Every field, type, enumerated value and note below comes from the model; the
 prose between the tables lives in `scripts/generate_schema_doc.py`.*
 
-The repository stores all operational data in two YAML files under `data/`:
+The repository stores all operational data in two YAML files under `instance/data/`:
 
-- `data/speakers.yml` — the unified speaker + event entity, one entry per
+- `instance/data/speakers.yml` — the unified speaker + event entity, one entry per
   invitation lifecycle
-- `data/config.yml` — repository-wide configuration: the board, the thresholds,
+- `instance/data/config.yml` — repository-wide configuration: the board, the thresholds,
   the season counters
 
 Both files are validated in CI by `convener-validate` (see
 `docs/reference/operations.md`) on every commit.
 """
 
-_SPEAKERS: Final = """## `data/speakers.yml`
+_SPEAKERS: Final = """## `instance/data/speakers.yml`
 
 Top-level: a list of speaker entries. Each entry covers the full lifecycle from
 lead to archived. Speaker and event are the same record — the speaker fields
@@ -569,7 +569,7 @@ owner has never been asked of anybody and is not asked for here either: the app
 raises no warning and no reminder over an empty checklist.
 """
 
-_CONFIG: Final = """## `data/config.yml`
+_CONFIG: Final = """## `instance/data/config.yml`
 
 One mapping, with the keys below.
 """
@@ -586,12 +586,12 @@ is what records store, so renaming one re-keys what is already written and is a
 migration rather than an edit; the `label` is only ever shown, and can be
 reworded at any time. Removing a channel has the same property from the other
 side: the owners already written under `promotion/<key>` stay in
-`data/speakers.yml`, on a line no screen shows any more. They are harmless, and
+`instance/data/speakers.yml`, on a line no screen shows any more. They are harmless, and
 nothing in the app offers to clear them: the record page lists the lines the
 journey currently has, so a key it no longer has has no control beside it.
 Clearing one means putting the channel back in `channels`, taking the name off
 the line on the record page, and removing the channel again — or editing
-`data/speakers.yml` on GitHub. Neither is urgent: an entry under a key no phase
+`instance/data/speakers.yml` on GitHub. Neither is urgent: an entry under a key no phase
 holds is read by nothing. An empty list is a legal answer and means nothing is
 promoted through this app; a `channels` that is missing, that is not a list,
 that repeats a key, or that holds a channel with no label stops the file being
@@ -618,7 +618,7 @@ check and not a test; see `docs/governance/editorial-board.md`.
 
 _HISTORY: Final = """## History
 
-`data/speakers.yml` was originally split across two files, joined on an event
+`instance/data/speakers.yml` was originally split across two files, joined on an event
 id. `scripts/` holds the one-shot scripts that merged them into today's unified
 schema; they already ran and are kept only as a record, not as something to run
 again.

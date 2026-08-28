@@ -159,12 +159,12 @@ describe('verify -- malformed input the fixture does not enumerate', () => {
 
 describe('verify -- a corrupt or unparsable key in the list must not stop the rest from being tried', () => {
   // signing-keys-files.mjs:61 copies whatever .pub text it finds under
-  // keys/signing/ with no validation at all, so a truncated or corrupted
+  // instance/keys/signing/ with no validation at all, so a truncated or corrupted
   // key file is a reachable input in production. verifiesWith's two
   // blanket catches (an unparsable PEM at crypto.subtle.importKey, and
   // crypto.subtle.verify itself throwing) are the module's only
   // uncovered lines -- and the rotation guarantee
-  // keys/signing/README.md rests on depends on one bad key never
+  // instance/keys/signing/README.md rests on depends on one bad key never
   // stopping the loop before it reaches a good one.
   it('an unparsable PEM ahead of the genuine key still lets the genuine key verify', async () => {
     const result = await verify(cases.signed_example.token, [

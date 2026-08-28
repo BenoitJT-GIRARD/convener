@@ -10,7 +10,7 @@ uses, so this page cannot quietly drift from what runs.
 
 This page covers one pipeline: registering for an event, being recognised
 in the room, and being issued a certificate afterwards. It does not cover
-`data/speakers.yml`, a different file under a different legal footing
+`instance/data/speakers.yml`, a different file under a different legal footing
 entirely — a participant here chose to register for an event they already
 knew was happening, where a speaker candidate may not know their name was
 put forward at all. That file has its own record:
@@ -37,8 +37,8 @@ it to travel through.
 
 ## What we hold
 
-- **Registration (G-18)**, per event, encrypted (`data/events/<id>/registrations.enc`):
-  first name, surname, email address, an optional institution, and an
+- **Registration (G-18)**, per event, encrypted
+  (`instance/data/events/<id>/registrations.enc`): first name, surname, email address, an optional institution, and an
   announce-list opt-in — exactly the fields the event page's form asks for,
   and nothing else.
 - **Attendance**, matched automatically against the registration above by a
@@ -102,7 +102,7 @@ named in `config/integrations.yml` and `docs/reference/operations.md`.
 Registration and attendance data is destroyed **90 days** after the event,
 by destroying the one key that could ever decrypt it — the retention window
 `tools/convener_ops/eventkeys.py` reads for every event. The encrypted files
-themselves are not deleted: `data/events/<id>/registrations.enc`, the
+themselves are not deleted: `instance/data/events/<id>/registrations.enc`, the
 attendance export and `survey-responses.enc` all stay committed —
 unreadable, not absent, so no commit history anywhere in
 this repository is ever rewritten to make that happen. The one credential

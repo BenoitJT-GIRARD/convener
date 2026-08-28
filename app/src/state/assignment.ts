@@ -48,7 +48,7 @@ import { PHASES, isItemDone, phaseItems, phaseOf, type RunbookItem } from './pha
  *
  *  Built rather than listed, and built through `phaseItems`, so an item added
  *  to `PHASES` is assignable the same day -- and so is a promotion channel
- *  added to `data/config.yml`, which is why this is a function of the config
+ *  added to `instance/data/config.yml`, which is why this is a function of the config
  *  and not a constant. A channel is a line of the journey like any other; a
  *  guard that only knew the static table would have refused every one of them
  *  with "is not a step of the journey", leaving the series a list of places to
@@ -112,7 +112,7 @@ function withChecklist(
  * how a filter starts disagreeing with a display.
  *
  * `config` is what makes the promotion channels assignable: they are lines of
- * the journey that live in `data/config.yml`, so which keys exist cannot be
+ * the journey that live in `instance/data/config.yml`, so which keys exist cannot be
  * answered without it. `null` -- no config loaded -- accepts the lines of the
  * static table and nothing more.
  */
@@ -151,7 +151,7 @@ export function assignItem(
  * **Any key can be cleared, including one the journey no longer has.** The
  * guard on `assignItem` is about writing a name onto a line that does not
  * exist; taking a name off is never that. Drop a channel from
- * `data/config.yml` and the `checklist['promotion/<key>']` entries already
+ * `instance/data/config.yml` and the `checklist['promotion/<key>']` entries already
  * written stay in `speakers.yml`, on a line that no longer renders -- and the
  * guard, applied here as it once was, made them permanent: the app refused
  * the one operation that would clear them. Refusing to undo what the app

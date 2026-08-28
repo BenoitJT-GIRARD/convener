@@ -54,13 +54,13 @@ _RELAY = (_ROOT / "services" / "signup-relay" / "src" / "index.js").read_text(
 
 
 def _write_data(tmp_path: Path, speakers: object, threshold: object) -> None:
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
+    data_dir = tmp_path / "instance" / "data"
+    data_dir.mkdir(parents=True)
     (data_dir / "speakers.yml").write_text(json.dumps(speakers), encoding="utf-8")
     (data_dir / "config.yml").write_text(json.dumps(config()), encoding="utf-8")
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    (config_dir / "registration-lanes.yml").write_text(
+    instance_dir = tmp_path / "instance"
+    instance_dir.mkdir(parents=True, exist_ok=True)
+    (instance_dir / "registration-lanes.yml").write_text(
         json.dumps(threshold), encoding="utf-8"
     )
 
@@ -227,7 +227,7 @@ def test_the_floor_leaves_room_for_one_drain_that_never_runs() -> None:
 def test_the_configured_threshold_sits_above_the_floor_the_drain_imposes() -> None:
     """**The property this whole task turns on, and it is not the number.**
 
-    `config/registration-lanes.yml` is meant to be edited. What must not be
+    `instance/registration-lanes.yml` is meant to be edited. What must not be
     editable into existence is a threshold shorter than the drain can
     honour: at twelve hours against a once-daily drain, a far-lane
     registrant is told they are registered and then hears nothing until
@@ -245,7 +245,7 @@ def test_the_configured_threshold_sits_above_the_floor_the_drain_imposes() -> No
     )
     floor = floor_hours(drain_period_hours(_drain_workflow()))
     assert configured >= floor, (
-        f"config/registration-lanes.yml queues a registration until "
+        f"instance/registration-lanes.yml queues a registration until "
         f"{configured}h before its event, but the drain that has to send "
         f"its confirmation only runs every "
         f"{drain_period_hours(_drain_workflow())}h and GitHub drops "
@@ -377,11 +377,11 @@ def test_the_console_script_reports_a_missing_file_and_writes_nothing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CONVENER_REPO_ROOT", str(tmp_path))
-    (tmp_path / "data").mkdir()
+    (tmp_path / "instance" / "data").mkdir(parents=True)
 
     assert registration_routing_public_data() == 1
     assert "file missing" in capsys.readouterr().out
-    assert not (tmp_path / "public-data").exists()
+    assert not (tmp_path / "instance" / "public-data").exists()
 
 
 # ------------------------------------------------------------------ #
@@ -390,7 +390,7 @@ def test_the_console_script_reports_a_missing_file_and_writes_nothing(
 
 
 def test_gitignore_keeps_the_published_routing_file_tracked() -> None:
-    """`public-data/*` is ignored wholesale; this one file needs a named
+    """`instance/public-data/*` is ignored wholesale; this one file needs a named
     exception or `deploy.yml` has no tracked path to commit it to, and the
     relay reads a 404 for ever -- safe, silent, and permanently one billed
     run per registration."""

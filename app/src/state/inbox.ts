@@ -38,7 +38,7 @@ function daysBetween(from: string, to: string): number {
  * **The lines of a phase are read through `phaseItems`, never `phase.items`.**
  * `state/phases.ts` says so of everything that walks them, and names this
  * module among the three. It did not: the promotion channels live in
- * `data/config.yml` and enter the journey through `phaseItems`, so the seven
+ * `instance/data/config.yml` and enter the journey through `phaseItems`, so the seven
  * places an event is announced were the only T-window boxes in the whole
  * journey that never raised a reminder here -- invisible everywhere but the
  * speaker page, which is where nobody goes looking for what is due.

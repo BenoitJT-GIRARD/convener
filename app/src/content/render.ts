@@ -39,7 +39,7 @@ const MISSING = (path: string) => `«missing: ${path}»`;
  * byte-for-byte against Python's `tools/convener_ops/registration.SIGNUP_BASE`
  * and bound to it by a shared fixture -- a binding that could say the two
  * copies still agreed, never that there was one. It now comes from
- * `config/instance.json`, substituted into this bundle at build time by
+ * `instance/config.json`, substituted into this bundle at build time by
  * `vite.config.ts`'s own `define` (this code runs in a volunteer's
  * browser, which can read no file), while `events/` stays written here:
  * that segment is the *product's* own route shape, inherited by every
@@ -79,7 +79,7 @@ function signupBase(): string {
     throw new Error(
       'VITE_PUBLISHED_URL is unset: this bundle was built without ' +
         "vite.config.ts's own define, so it cannot say where this project " +
-        'is published (see config/instance.json)'
+        'is published (see instance/config.json)'
     );
   }
   return `${published}events/`;

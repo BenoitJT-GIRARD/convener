@@ -45,10 +45,10 @@ describe('reading a file the app itself wrote', () => {
   });
 });
 
-describe('what a volunteer is told when data/config.yml is malformed', () => {
+describe('what a volunteer is told when instance/data/config.yml is malformed', () => {
   it('names the file, the setting, and who can fix it -- and blames nobody', () => {
     const message = refusal(() => parseConfig(configYaml() + 'vote_threshold: 3\n'));
-    expect(message).toContain('data/config.yml');
+    expect(message).toContain('instance/data/config.yml');
     expect(message).toContain('vote_threshold');
     expect(message).toContain('does not use');
     expect(message).toContain('repository');
@@ -74,7 +74,7 @@ describe('what a volunteer is told when data/config.yml is malformed', () => {
   });
 
   it('refuses an empty config rather than inventing one', () => {
-    expect(refusal(() => parseConfig(''))).toContain('data/config.yml');
+    expect(refusal(() => parseConfig(''))).toContain('instance/data/config.yml');
     expect(refusal(() => parseConfig('- a\n- list\n'))).toContain('a list');
   });
 
@@ -138,11 +138,11 @@ describe('what a volunteer is told when data/config.yml is malformed', () => {
   });
 });
 
-describe('what a volunteer is told when data/speakers.yml is malformed', () => {
+describe('what a volunteer is told when instance/data/speakers.yml is malformed', () => {
   it('points at the record by its id, not by counting down the file', () => {
     const message = refusal(() => parseSpeakers(speakersYaml([speaker(), speaker({ id: 'spk-042' })])
       .replace('status: lead\n  selection', 'status: postponed\n  selection')));
-    expect(message).toContain('data/speakers.yml');
+    expect(message).toContain('instance/data/speakers.yml');
     expect(message).toContain('speaker 1 (spk-001)');
     expect(message).toContain('"postponed"');
   });
@@ -248,11 +248,11 @@ describe('the config the tests themselves stand on', () => {
 describe('the repository this app actually reads', () => {
   // The one assertion that would have caught every defect in this class
   // before a volunteer did: the real files, through the real reader. It
-  // needs no network -- `data/` is in the repository the tests run from --
+  // needs no network -- `instance/data/` is in the repository the tests run from --
   // and it fails the moment the model and the data part company, whichever
   // of the two moved.
   function dataFile(name: string): string {
-    return readFileSync(resolve(__dirname, `../../data/${name}`), 'utf-8');
+    return readFileSync(resolve(__dirname, `../../instance/data/${name}`), 'utf-8');
   }
 
   // `parseSpeakers` throws on anything the model refuses -- a top level that
@@ -267,12 +267,12 @@ describe('the repository this app actually reads', () => {
   // records is an ordinary cockpit operation, not a repair. An empty list is
   // a shape the model has to accept. The check still fails on its own the
   // moment the file and the model part company, which is what it is for.
-  it('reads data/speakers.yml as the model says it is', () => {
+  it('reads instance/data/speakers.yml as the model says it is', () => {
     expect(() => parseSpeakers(dataFile('speakers.yml'))).not.toThrow();
     expect(parseSpeakers(dataFile('speakers.yml')).every(s => s.id !== '')).toBe(true);
   });
 
-  it('reads data/config.yml as the model says it is', () => {
+  it('reads instance/data/config.yml as the model says it is', () => {
     const cfg = parseConfig(dataFile('config.yml'));
     expect(cfg.board.length).toBeGreaterThan(0);
     expect(cfg.sla_days.invitation_follow_up).toBeGreaterThan(0);

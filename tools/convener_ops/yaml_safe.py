@@ -9,7 +9,7 @@ PyYAML's default resolvers still carry two YAML 1.1 behaviours that YAML 1.2
 
 The app's browser-side YAML writer (js-yaml) always quotes both fields, so
 files it produces are unambiguous either way. But this repository is meant
-to survive a volunteer hand-editing `data/speakers.yml` in a text editor,
+to survive a volunteer hand-editing `instance/data/speakers.yml` in a text editor,
 and an unquoted `time: 12:30` typed by hand must still come back as the
 string `"12:30"`, not the integer 750 — which is exactly what broke
 `validate-data`, the nightly sweep, and the browser's own re-read of the

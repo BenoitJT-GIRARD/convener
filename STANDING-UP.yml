@@ -81,7 +81,7 @@ repositories:
     visibility: private
     what: >-
       The instance itself: the code, the workflows, the participant records,
-      and every secret. Private because `data/speakers.yml` and the per-event
+      and every secret. Private because `instance/data/speakers.yml` and the per-event
       registration files hold personal data, and a repository holding those
       cannot be public. Created as a new repository of your own, never as a
       fork — repositories in one fork network share an object store, so a
@@ -303,7 +303,7 @@ steps:
     check: >-
       Settings → Pages names `main` and `/ (root)`, and shows the address the
       site will be served at. That address, with its trailing slash, is what
-      the next stage writes into `config/instance.json`.
+      the next stage writes into `instance/config.json`.
     degraded: >-
       Nothing is served, or — worse, and this is the failure this project has
       already met once — the wrong thing is served with no sign of it. A push
@@ -317,7 +317,7 @@ steps:
     title: Who is publishing, and where
     actor: agent
     does: >-
-      Edit `config/instance.json`: the published address and its trailing
+      Edit `instance/config.json`: the published address and its trailing
       slash, the edition prefix your talks are numbered under, and the nine
       identity values a stranger reads — the organisation and its short form,
       the series, its strapline and its tagline, the forum, the contact
@@ -356,7 +356,7 @@ steps:
     title: The Board, the season and the bar a vote is measured against
     actor: agent
     does: >-
-      Edit `data/config.yml`: the Editorial Board's GitHub logins, the season,
+      Edit `instance/data/config.yml`: the Editorial Board's GitHub logins, the season,
       and the thresholds a vote is counted against. Logins, not names — the
       cockpit asks GitHub who is signed in, and a first name is not an answer
       to that question.
@@ -377,7 +377,7 @@ steps:
     title: Your own records, starting empty
     actor: agent
     does: >-
-      Empty `data/speakers.yml`. A duplicate starts with no speakers and no
+      Empty `instance/data/speakers.yml`. A duplicate starts with no speakers and no
       events; the file that ships holds the worked example's invented reading
       group, which exists to prove the product can be built as somebody else
       and for nothing else.
@@ -449,7 +449,7 @@ steps:
       Every later step in this sequence is verified against a site nobody has
       opened. The two failures this stage is here to surface — a Pages source
       pointing at a branch nothing pushes to, and an address written into
-      `config/instance.json` that does not match the one Pages serves — both
+      `instance/config.json` that does not match the one Pages serves — both
       look like success from inside the repository, and both are obvious from
       one browser tab.
 
@@ -547,7 +547,7 @@ steps:
       pasting each printed id over the placeholder in that worker's own
       `wrangler.toml`. Nothing else in those workers is yours to correct.
       Two values were, and neither is written down anywhere but
-      `config/instance.json` now: the origin each relay answers cross-origin
+      `instance/config.json` now: the origin each relay answers cross-origin
       requests for, and the repository the form relay and the signup relay
       dispatch into. Each deploy workflow derives what its worker needs and
       hands it to `wrangler deploy`.
@@ -747,9 +747,9 @@ steps:
       Open the draft in Tally, confirm the hint text renders under the two
       dropdowns, publish it, point its webhook at the deployed form relay, set
       the signing secret Tally shows in the two places that verify it, and
-      write the published form's address into `config/instance.json`.
+      write the published form's address into `instance/config.json`.
     check: >-
-      Submit the form yourself. A new lead appears in `data/speakers.yml`
+      Submit the form yourself. A new lead appears in `instance/data/speakers.yml`
       shortly afterwards, committed by *Handle proposal*, and the showcase's
       propose page links the form instead of saying it is not open yet.
     sets:
@@ -782,7 +782,7 @@ steps:
         a repository secret of the same name on the private repository. The
         worker verifies it before forwarding anything, and the workflow
         verifies it again on arrival.
-      - Copy the published form's address into `config/instance.json` as
+      - Copy the published form's address into `instance/config.json` as
         `identity.proposal_form`, and commit. Until that value is a real
         address, the showcase's propose page reads as not yet open.
 
@@ -836,7 +836,7 @@ steps:
       again.
     check: >-
       Run the configuration report: *Certificate signing key* moves from
-      `absent` to `production`, and `keys/signing/` holds one public half
+      `absent` to `production`, and `instance/keys/signing/` holds one public half
       named for the day it was generated.
     command: cd tools && uv run convener-check-config
     sets:
@@ -847,7 +847,7 @@ steps:
       - Open a Python shell inside `tools/` with `uv run python`, and generate
         the pair with `from convener_ops.signing import generate; private_pem,
         public_pem = generate()`.
-      - Commit the public half first, as `keys/signing/` plus the day it was
+      - Commit the public half first, as `instance/keys/signing/` plus the day it was
         generated and a `.pub` suffix. The order is load-bearing, because a
         private secret set before its public half is published lets a job sign
         a certificate nothing can yet verify.

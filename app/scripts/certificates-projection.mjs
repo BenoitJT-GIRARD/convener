@@ -1,4 +1,4 @@
-/* Reading and writing `public-data/certificates-public.json`, the way
+/* Reading and writing `instance/public-data/certificates-public.json`, the way
  * `copy-certificates.mjs` needs to. Kept apart from that script, the same
  * reason `handbook-files.mjs` is kept apart from `copy-handbook.mjs`: a
  * rule `app/tests/copy-certificates.test.ts` can call directly, including
@@ -40,7 +40,7 @@ export const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..',
  * `npm run dev` with nobody having run
  * `uv run convener-certificates-public-data` first -- the same "empty is
  * normal" discipline `signing-keys-files.mjs::readPublicKeys` applies to
- * an absent `keys/signing/`.
+ * an absent `instance/keys/signing/`.
  */
 export async function readProjection(srcPath) {
   let text;

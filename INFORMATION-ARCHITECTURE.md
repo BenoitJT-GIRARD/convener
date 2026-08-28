@@ -28,11 +28,11 @@ The fragment is an entry in `app/src/content/registry.ts` carrying an `anchor`: 
 | T-minus runbook steps | `app/src/state/phases.ts` |
 | Templates | `docs/toolkit/` |
 | What each screen of the app is for | `docs/reference/the-workspace.md` |
-| Live speaker & event data | `data/speakers.yml` |
+| Live speaker & event data | `instance/data/speakers.yml` |
 | External integrations | `config/integrations.yml`, documented in `docs/reference/operations.md` |
 | How somebody with no repositories and no accounts gets a running instance | `STANDING-UP.yml`, rendered by `scripts/generate_standing_up_doc.py` into `docs/reference/standing-up.md` for a person and by `scripts/generate_standing_up_skill.py` into `.claude/skills/standing-up/SKILL.md` for an agent — which carries the order and the actor, and reads every step's own content back out of the declaration |
 | Which paths belong to this series rather than to the code | `config/boundary.yml`, and each `config/` file's own `owner:` key |
-| The address this project is published at | `config/instance.json`, read by `tools/convener_ops/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
+| The address this project is published at | `instance/config.json`, read by `tools/convener_ops/published.py`, `app/scripts/published.mjs` and `site/scripts/published.cjs` |
 | A second, invented instance to build as | `instances/example/`, one file per path `config/boundary.yml` hands to the instance |
 | The terms this software is under, and what the name is not under | `LICENSE`, whose head carries the term declining the name, and `TRADEMARK.md` |
 | How to report a vulnerability, and what a report can expect | `SECURITY.md` |

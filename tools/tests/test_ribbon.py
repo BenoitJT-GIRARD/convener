@@ -56,7 +56,7 @@ def _points(text: str) -> list[Point]:
 
 
 # ---------------------------------------------------------------------------
-# data/brand.json wiring -- the colour and ratio are read, never hand-typed
+# instance/data/brand.json wiring -- the colour and ratio are read, never hand-typed
 # ---------------------------------------------------------------------------
 
 
@@ -70,7 +70,7 @@ def test_ribbon_width_ratio_reads_brand_json() -> None:
     The expected value used to be `0.024` -- one instance's
     measured ratio, in a test of the *product's* reader, which therefore
     said nothing about reading and everything about which repository it
-    ran in. See `data/brand.json::motif._ribbon_width_ratio` for how a
+    ran in. See `instance/data/brand.json::motif._ribbon_width_ratio` for how a
     ratio is measured against a reference poster.
     """
     charter = brand.load(ROOT)

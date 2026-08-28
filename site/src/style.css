@@ -1,6 +1,6 @@
 /* The public showcase's stylesheet
  *
- * Every value below comes from the charter in force -- data/brand.json if
+ * Every value below comes from the charter in force -- instance/data/brand.json if
  * this instance has chosen its colours, brand/convener/brand.json if it has
  * not (tools/convener_ops/brand.py::source) -- which is the one source of fact
  * for the identity and carries the reasoning for each token. Do not
@@ -35,7 +35,7 @@
  * public site. One variable file covers every weight the site uses, which
  * is also why display and body are the same family here where the
  * originals used two.
- * See data/brand.json for the full reasoning.
+ * See instance/data/brand.json for the full reasoning.
  *
  * The path-prefix defect: the three `url(...)` references
  * below are deliberately relative (`fonts/...`, no leading slash), not
@@ -103,10 +103,10 @@
   --purple-d:     #011f51;
   --purple-l:     #d8dde7;
 
-  /* No data/brand.json equivalent: no original the designer drew ever
+  /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. Measured against
    * this file's own --surface (cream), the certificate-verification panel's
-   * ground: see data/brand.json's contrast._comment for both numbers. */
+   * ground: see instance/data/brand.json's contrast._comment for both numbers. */
   --danger:       #9b2226;
   --info:         #4a6c75;
 
@@ -120,7 +120,7 @@
    * coloured background need "white" as a role of its own. */
   --white:        #ffffff;
   --white-rgb:    255, 255, 255;
-/* END GENERATED TOKENS -- edit data/brand.json, not this block */
+/* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */
 
   --gutter:       clamp(1.25rem, 4vw, 2.5rem);
   --content-w:    1100px;
@@ -302,7 +302,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   z-index: 1;
 }
 .hero__loops {
-  /* The ribbon motif -- data/brand.json's motif.ribbon_stroke, i.e. purple.
+  /* The ribbon motif -- instance/data/brand.json's motif.ribbon_stroke, i.e. purple.
    * Never a hand-typed hex here: the SVG in index.njk carries no colour of
    * its own and takes this rule's stroke instead. */
   stroke: var(--purple);
@@ -469,7 +469,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
 .signup-form__error {
   /* `--purple`, not `--purple-d`: this text sits directly on the
    * turquoise field, and `--purple` on turquoise is the pairing
-   * `data/brand.json` already measures (7.93, AAA) -- `--purple-d` is
+   * `instance/data/brand.json` already measures (7.93, AAA) -- `--purple-d` is
    * used elsewhere only as a background or a hover border, never as text
    * on this ground, and introducing it here would be a new pairing no
    * measurement covers yet: every text-on-ground pairing introduced is
@@ -504,13 +504,13 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   margin-bottom: .85rem;
 }
 /* `--purple` on `--surface` is `purple_on_cream`, already measured at
- * 11.26 (data/brand.json). `--turquoise-d` on `--surface` is a new
+ * 11.26 (instance/data/brand.json). `--turquoise-d` on `--surface` is a new
  * newer pairing -- turquoise_text_on_cream, 5.41, recorded
- * in data/brand.json alongside the rest of that table, under the standing
+ * in instance/data/brand.json alongside the rest of that table, under the standing
  * rule that every text-on-ground pairing introduced is measured and the
  * table updated. `--danger`/`--info` are measured on the same ground
- * too, recorded in data/brand.json's contrast._comment rather than as a
- * recomputed pairing, since neither is a data/brand.json colour. */
+ * too, recorded in instance/data/brand.json's contrast._comment rather than as a
+ * recomputed pairing, since neither is a instance/data/brand.json colour. */
 .verify__eyebrow--primary { color: var(--turquoise-d); }
 .verify__eyebrow--accent  { color: var(--purple); }
 .verify__eyebrow--danger  { color: var(--danger); }
@@ -610,7 +610,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   /* `--purple`, not `--purple-d` -- the identical pairing rationale
    * `.signup-form__error`'s own comment gives: this text sits directly on
    * the turquoise field, and `--purple` on turquoise is the measured
-   * pairing (`data/brand.json`), not `--purple-d`. */
+   * pairing (`instance/data/brand.json`), not `--purple-d`. */
   color: var(--purple);
   font-weight: 700;
   margin-top: .85rem;
@@ -643,7 +643,7 @@ a.unstyled, a.unstyled:hover { border-bottom: 0; }
   /* Purple, not turquoise: the field itself is turquoise now (D-18), and a
    * turquoise-filled button on a turquoise field has no visible edge at
    * all -- never mind that white text on turquoise measures 1.61. White on
-   * purple measures 12.74 (data/brand.json). */
+   * purple measures 12.74 (instance/data/brand.json). */
   background: var(--purple);
   color: var(--white);
   border-color: var(--purple);
@@ -921,12 +921,12 @@ a.btn--ghost:hover { border-color: var(--purple); }
 .archive__action:hover {
   /* Carried for a long time as a known, recorded defect rather than
    * fixed on the spot -- a solid
-   * turquoise fill under white text measures 1.61 (data/brand.json's
+   * turquoise fill under white text measures 1.61 (instance/data/brand.json's
    * `_forbidden`), badly below the 4.5 floor for normal text; a browser's
    * own rendering measured it at 2.54. Purple, not turquoise, for the
    * identical reason `.btn--primary` already fills with purple rather
    * than the page's own turquoise ground (see that rule's comment): white
-   * on purple is 12.74 (`data/brand.json`'s `white_on_purple`, already
+   * on purple is 12.74 (`instance/data/brand.json`'s `white_on_purple`, already
    * measured -- no new pairing to add). `.archive__action--alt:hover`
    * already used this same fill; this now matches it rather than
    * disagreeing on hover while differing on the resting state above.
@@ -1036,7 +1036,7 @@ a.btn--ghost:hover { border-color: var(--purple); }
 .coda__loops {
   /* Turquoise here rather than the ribbon's usual purple: the coda's own
    * background *is* purple (.coda below), and a purple ribbon on a purple
-   * ground would not be visible. Still a data/brand.json colour, never a
+   * ground would not be visible. Still a instance/data/brand.json colour, never a
    * hand-typed hex. */
   stroke: var(--turquoise);
   position: absolute;

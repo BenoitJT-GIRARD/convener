@@ -10,7 +10,7 @@
  * What "not configured" means, mechanically, is decided on the other side
  * of the language boundary and stated once in
  * `tools/convener_ops/published.py::unconfigured`: a declared value still
- * equal to the one the product ships in `instances/example/config/
+ * equal to the one the product ships in `instances/example/instance/
  * instance.json`. `app/scripts/published.mjs::unconfigured` is this
  * build's reader of it and `vite.config.ts` carries the answer into the
  * bundle; what is tested here is the browser end of that -- the reader of
@@ -27,7 +27,7 @@ import { render, screen } from '@testing-library/react';
 import { AuthProvider } from '../src/auth/AuthContext';
 import { Login } from '../src/auth/Login';
 
-/** Every value `config/instance.json` declares about who is publishing,
+/** Every value `instance/config.json` declares about who is publishing,
  *  as `published.py::declared_values` names them. Written out here rather
  *  than derived, because this side of the boundary has no reader of the
  *  file: `tools/tests/test_published.py::test_the_declaration_names_every_

@@ -13,7 +13,7 @@ claiming different windows" - but only the form's label is derived
 under the sentence saying that could not happen.
 
 This module is the control the sentence names. It is on the Python side
-because the number is `data/config.yml`'s, which is the series' own file
+because the number is `instance/data/config.yml`'s, which is the series' own file
 rather than a test double: the app suite deliberately reads doubles so that a
 Board edit cannot turn a screen test red, and this claim is precisely a claim
 about what the Board has set.
@@ -107,13 +107,15 @@ _HOURS_PER_DAY: Final = 24
 
 
 def _config() -> dict[str, Any]:
-    loaded = safe_load((ROOT / "data" / "config.yml").read_text(encoding="utf-8"))
+    loaded = safe_load(
+        (ROOT / "instance" / "data" / "config.yml").read_text(encoding="utf-8")
+    )
     assert isinstance(loaded, dict)
     return loaded
 
 
 def _declaration(name: str) -> dict[str, Any]:
-    loaded = safe_load((ROOT / "config" / name).read_text(encoding="utf-8"))
+    loaded = safe_load((ROOT / "instance" / name).read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
@@ -154,7 +156,7 @@ def test_the_page_states_the_window_the_configuration_sets() -> None:
     stated = _WINDOW.search(page)
     assert stated is not None, (
         f"{PAGE.as_posix()} no longer states the view-counting window in the "
-        "form this test reads; the page and data/config.yml can drift again."
+        "form this test reads; the page and instance/data/config.yml can drift again."
     )
     assert int(stated.group(1)) == _config()["view_count_window_days"]
 
@@ -165,7 +167,7 @@ def test_the_operations_page_states_the_inactivity_window_it_is_set_to() -> None
     stated = _stated(OPERATIONS, _INACTIVITY).group(1)
     assert stated == _SPELLED[_config()["inactivity_months"]], (
         f"{OPERATIONS.as_posix()} says the inactivity window is {stated}, "
-        f"and data/config.yml sets it to {_config()['inactivity_months']}"
+        f"and instance/data/config.yml sets it to {_config()['inactivity_months']}"
     )
 
 
@@ -213,7 +215,7 @@ def test_the_hosting_page_states_the_session_length_it_is_set_to() -> None:
     stated = int(_stated(HOSTING, _SESSION).group(1))
     assert stated == _config()["seminar_duration_minutes"], (
         f"{HOSTING.as_posix()} plans a {stated}-minute day, and "
-        f"data/config.yml sets seminar_duration_minutes to "
+        f"instance/data/config.yml sets seminar_duration_minutes to "
         f"{_config()['seminar_duration_minutes']}"
     )
 
@@ -250,7 +252,7 @@ def test_the_operations_page_states_the_coupled_bounds_it_computes() -> None:
     )
     assert meets == alarm_after_hours, (
         f"{OPERATIONS.as_posix()} says the two bounds meet at {meets}, and "
-        f"config/queue-drain.yml holds alarm_after_hours: {alarm_after_hours}"
+        f"instance/queue-drain.yml holds alarm_after_hours: {alarm_after_hours}"
     )
     assert meets == floor == queue_beyond_hours - margin, (
         f"{OPERATIONS.as_posix()} says the two bounds meet, and with these "

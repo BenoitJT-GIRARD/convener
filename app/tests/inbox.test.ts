@@ -235,7 +235,7 @@ describe('deriveInbox v2', () => {
     // `state/phases.ts` says everything that walks a phase's lines walks
     // them from `phaseItems`, and names the inbox as one of the three. This
     // one walked `phase.items`, so the places an event is announced -- which
-    // live in `data/config.yml` and enter the journey only through
+    // live in `instance/data/config.yml` and enter the journey only through
     // `phaseItems` -- raised no reminder anywhere. The channel line has no
     // window of its own; it is due in the window of the line it follows,
     // which is where the phase places it.

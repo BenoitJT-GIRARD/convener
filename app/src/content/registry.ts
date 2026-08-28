@@ -11,7 +11,7 @@ export interface ContentEntry {
  *  and the attribution line under an included passage are built from it.
  *
  *  `owner/name` is the instance's, declared once in
- *  `config/instance.json` and reaching this bundle through
+ *  `instance/config.json` and reaching this bundle through
  *  `vite.config.ts`'s own define. A duplicate's "edit this page" link used
  *  to send its volunteers to *this* organisation's repository, where they
  *  have no write access and where the page they were reading is not the
@@ -46,7 +46,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
     anchor: null,
   },
   // The record above named
-  // `data/speakers.yml` in one sentence and pointed at
+  // `instance/data/speakers.yml` in one sentence and pointed at
   // `governance/selection-criteria` for the rest, which never described a
   // data-handling process. This page replaces that sentence with its own
   // record, so it is registered and linked from the page above rather than
@@ -229,7 +229,7 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
  *  frame, never a real name or a real photograph; the background carries
  *  no person and no event. The background was a hand-drawn PNG until
  *  2026-08-28: readable by nobody, and disagreeing with
- *  `config/instance.json` about the series' own strapline the whole time. A fourth file, the kit's
+ *  `instance/config.json` about the series' own strapline the whole time. A fourth file, the kit's
  *  "finished example", was on this list and is not any more --
  *  it was a real speaker's own photograph and name, kept without a later,
  *  separate consent to use them as a sample (`git log --follow` on

@@ -8,7 +8,7 @@ shared fixtures -- with tests binding the copies to each other. Those
 tests were honest about what they could say, and it was never "there is
 one": only "these still agree today".
 
-`config/instance.json` is the one. This module holds four things, and the
+`instance/config.json` is the one. This module holds four things, and the
 order matters because the last two are the only ones a reader should
 trust without checking:
 
@@ -132,7 +132,7 @@ _MINIMAL: dict[str, Any] = {
 #: there, so a field added to the declaration and not to the example
 #: fails loudly rather than being skipped.
 _OTHER_IDENTITY: dict[str, Any] = json.loads(
-    (ROOT / "instances" / "example" / "config" / "instance.json").read_text(
+    (ROOT / "instances" / "example" / "instance" / "config.json").read_text(
         encoding="utf-8"
     )
 )[published.IDENTITY_KEY]
@@ -446,7 +446,7 @@ def test_no_source_file_writes_the_published_address_a_second_time() -> None:
     offending = _files_writing_the_address({published.INSTANCE_PATH.as_posix()})
     assert offending == [], (
         "these files write this project's published address a second time, "
-        f"which config/instance.json exists to make impossible: {offending}"
+        f"which instance/config.json exists to make impossible: {offending}"
     )
 
 
@@ -489,7 +489,7 @@ def test_no_relay_configuration_names_an_origin_at_all() -> None:
         assert "ALLOWED_ORIGIN" not in config.get("vars", {}), (
             f"{path.as_posix()} declares ALLOWED_ORIGIN again "
             f"({config['vars']['ALLOWED_ORIGIN']!r}). That value is "
-            "config/instance.json's published_url and has one home; the "
+            "instance/config.json's published_url and has one home; the "
             "deploy workflow derives it and passes it to `wrangler deploy "
             "--var`, so nothing has to be written here"
         )
@@ -561,7 +561,7 @@ def test_no_build_configuration_reads_the_address_out_of_another_readers_source(
         text = (ROOT / path).read_text(encoding="utf-8")
         assert "PATH_PREFIX" not in text, (
             f"{path.as_posix()} names site/.eleventy.js's own former "
-            "PATH_PREFIX again -- read config/instance.json through the "
+            "PATH_PREFIX again -- read instance/config.json through the "
             "reader for that side of the boundary instead of scraping "
             "another reader's source"
         )
@@ -878,7 +878,7 @@ _LITERAL_IDENTITY_FILES = (Path(".github/CODEOWNERS"),)
 #: them from the declaration. Not a second copy in the sense this module
 #: refuses -- nothing here is authored, and
 #: `scripts/generate_brand_css.py --check` fails the build the moment one
-#: of them stops agreeing with `config/instance.json`. Checked below all
+#: of them stops agreeing with `instance/config.json`. Checked below all
 #: the same, rather than exempted: a generated file nobody compares is a
 #: hand-written one with better manners.
 _DERIVED_IDENTITY_FILES = (
@@ -968,7 +968,7 @@ def test_no_source_file_writes_this_instances_identity_a_second_time() -> None:
 
     assert offending == [], (
         "these files write this instance's own identity a second time, which "
-        f"config/instance.json exists to make impossible: {offending}"
+        f"instance/config.json exists to make impossible: {offending}"
     )
 
 
@@ -1000,7 +1000,7 @@ def test_the_generated_templates_carry_the_identity_the_declaration_names() -> N
 
     These three files are what a collaborator downloads, so the identity
     travelling outward is whatever they say. They are generated from
-    `config/instance.json` and
+    `instance/config.json` and
     `scripts/generate_brand_css.py --check` refuses them the moment they
     stop being what it derives -- this is the assertion that the
     derivation is of *this* declaration and not of a literal somebody
@@ -1037,7 +1037,7 @@ def test_the_literals_that_cannot_read_the_declaration_still_agree_with_it() -> 
     codeowners = (ROOT / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
     assert f"@{owner}/editorial-board" in codeowners, (
         ".github/CODEOWNERS names a team outside the organisation "
-        f"config/instance.json declares ({owner}) -- every review request it "
+        f"instance/config.json declares ({owner}) -- every review request it "
         "makes would go to nobody"
     )
 
@@ -1082,7 +1082,7 @@ def test_no_relay_source_names_a_repository_at_all() -> None:
     Two of the three workers talk to this repository's own GitHub API: the
     form relay to send one `repository_dispatch`, the signup relay to read
     a published event key, check the survey switch, write a queue entry and
-    dispatch. Which repository that is, is `config/instance.json`'s
+    dispatch. Which repository that is, is `instance/config.json`'s
     `identity.repository`, and it is passed to `wrangler deploy --var` as
     `REPOSITORY`, so no source here writes one.
 
@@ -1097,7 +1097,7 @@ def test_no_relay_source_names_a_repository_at_all() -> None:
         text = (ROOT / path).read_text(encoding="utf-8")
         assert declared not in text, (
             f"{path.as_posix()} names the repository this cockpit lives in "
-            f"({declared}) again. That value is config/instance.json's "
+            f"({declared}) again. That value is instance/config.json's "
             "identity.repository and has one home; the deploy workflow "
             "derives it and passes it to `wrangler deploy --var`, so "
             "nothing has to be written here"
@@ -1151,7 +1151,7 @@ def test_this_repository_declares_the_prefix_its_editions_are_numbered_under() -
     The two derived forms are asserted beside the value because they are
     what actually reaches a reader: the code the showcase prints and the
     poster sets, and the event id (D-19) that is in the address of every
-    event page, in `keys/events/<id>.pub` and in a certificate's own
+    event page, in `instance/keys/events/<id>.pub` and in a certificate's own
     verification link."""
     editions = published.load_edition_prefix()
     assert editions.code_prefix == f"{editions.value}-"
@@ -1173,10 +1173,10 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
 
     **Where the evidence lives has moved**, and the
     reasoning is worth keeping. This used to read the `edition_code` of
-    every row of `data/speakers.yml` and refuse an empty list, so that the
+    every row of `instance/data/speakers.yml` and refuse an empty list, so that the
     check could not pass by having nothing to check (D-25). Those rows
     were then cleared of personal data and every code went with them --
-    but the editions themselves did not. `data/config.yml`'s
+    but the editions themselves did not. `instance/data/config.yml`'s
     `next_edition_number` is a **high-water mark, not a count of rows**:
     it is what still says this series is already numbering under this
     prefix, and it is the one thing left in the repository that a
@@ -1190,7 +1190,9 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
     assertion is what refuses that.
     """
     editions = published.load_edition_prefix()
-    config = yaml.safe_load((ROOT / "data" / "config.yml").read_text(encoding="utf-8"))
+    config = yaml.safe_load(
+        (ROOT / "instance" / "data" / "config.yml").read_text(encoding="utf-8")
+    )
     counter = config["next_edition_number"]
     assert isinstance(counter, int) and counter > 1, (
         "this instance has assigned no edition at all"
@@ -1198,7 +1200,7 @@ def test_the_declared_prefix_is_the_one_this_instances_editions_use() -> None:
     assert editions.describes(f"{editions.code_prefix}{counter - 1}")
 
     speakers = yaml.safe_load(
-        (ROOT / "data" / "speakers.yml").read_text(encoding="utf-8")
+        (ROOT / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
     )
     assigned = [
         entry["edition_code"]
@@ -1235,7 +1237,7 @@ def test_a_prefix_that_reads_plausibly_and_is_wrong_is_refused_at_declaration(
 
     A lower-case prefix breaks the one identity D-19 rests on -- an event
     id *is* the edition code lower-cased -- so `Vw-1` and `MRG-1` would be
-    two codes with one address, one `keys/events/mrg-1.pub` and one
+    two codes with one address, one `instance/keys/events/mrg-1.pub` and one
     `CONVENER_EVENT_KEY_MRG_1`. A prefix carrying its own separator collides two
     editions on one repository secret, because `eventkeys.secret_name`
     folds `.` and `-` to `_` and says itself that the fold is lossy. A

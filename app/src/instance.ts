@@ -1,7 +1,7 @@
 /**
  * Who runs this series, on the application's side of the language boundary.
  *
- * One declaration -- `config/instance.json` -- and one reader per language:
+ * One declaration -- `instance/config.json` -- and one reader per language:
  * `tools/convener_ops/published.py::load_identity` for Python,
  * `site/scripts/published.cjs::identity` for the showcase's build,
  * `app/scripts/published.mjs::identity` for this one. This module is not a
@@ -69,7 +69,7 @@ export function instanceIdentity(): InstanceIdentity {
     throw new Error(
       'VITE_INSTANCE_IDENTITY is unset: this bundle was built without ' +
         "vite.config.ts's own define, so it cannot say who runs this series " +
-        '(see config/instance.json)',
+        '(see instance/config.json)',
     );
   }
   cached = JSON.parse(raw) as InstanceIdentity;
@@ -123,7 +123,7 @@ export function editionPrefix(): string {
     throw new Error(
       'VITE_INSTANCE_EDITION_PREFIX is unset: this bundle was built without ' +
         "vite.config.ts's own define, so it cannot say what this series " +
-        'numbers its editions (see config/instance.json)',
+        'numbers its editions (see instance/config.json)',
     );
   }
   cachedEditionPrefix = raw;
@@ -142,7 +142,7 @@ let cachedUnconfigured: string[] | null = null;
 
 /**
  * Which of this instance's declared values are still the ones the product
- * ships in `instances/example/config/instance.json` -- empty for an
+ * ships in `instances/example/instance/config.json` -- empty for an
  * instance somebody has configured, and the names of the offending keys
  * for one nobody has.
  *
@@ -169,7 +169,7 @@ export function unconfiguredFields(): string[] {
     throw new Error(
       'VITE_INSTANCE_UNCONFIGURED is unset: this bundle was built without ' +
         "vite.config.ts's own define, so it cannot say whether this instance " +
-        'has been configured (see config/instance.json)',
+        'has been configured (see instance/config.json)',
     );
   }
   cachedUnconfigured = JSON.parse(raw) as string[];

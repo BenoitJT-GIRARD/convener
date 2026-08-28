@@ -219,7 +219,7 @@ function EditFields({ speaker }: { speaker: Speaker }) {
         </L>
         {/* The one per-event field that had no
             control here before this -- `survey_enabled` round-tripped
-            safely regardless (a hand edit of data/speakers.yml, or this
+            safely regardless (a hand edit of instance/data/speakers.yml, or this
             very object spread, both preserve it), but the person who
             needs to turn a survey on is a board member in this app, not
             someone editing YAML by hand. */}

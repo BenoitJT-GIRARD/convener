@@ -96,13 +96,13 @@ def test_registration_code_svg_draws_in_the_given_colour() -> None:
     """`dark` reaches the rendered stroke -- proof that the colour is a
     parameter threaded through, not a value baked into this module (see
     `test_the_registration_code_is_drawn_in_brand_black` for proof it is
-    actually *called* with `data/brand.json`'s own black)."""
+    actually *called* with `instance/data/brand.json`'s own black)."""
     svg = registration_code_svg("mrg-4", dark="#123456")
     assert 'stroke="#123456"' in svg
 
 
 def test_the_registration_code_is_drawn_in_brand_black() -> None:
-    """`render_announcement` threads `data/brand.json`'s own "black" into
+    """`render_announcement` threads `instance/data/brand.json`'s own "black" into
     the code -- not a hand-typed literal that happens to match today (the
     guard `test_visual.py::
     test_no_brand_colour_hand_typed_outside_root_or_ribbon_stroke` already
@@ -110,7 +110,9 @@ def test_the_registration_code_is_drawn_in_brand_black() -> None:
     "#000000" in its own shortened three-digit form, so that guard's
     literal substring search would not have caught a hand-typed value here
     either -- this test checks the actual, expanded colour instead)."""
-    brand = json.loads((ROOT / "data" / "brand.json").read_text(encoding="utf-8"))
+    brand = json.loads(
+        (ROOT / "instance" / "data" / "brand.json").read_text(encoding="utf-8")
+    )
     black = brand["colour"]["black"].lower()
 
     doc = render_announcement(

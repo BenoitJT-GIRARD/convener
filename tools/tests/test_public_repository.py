@@ -90,20 +90,20 @@ EDIT_LIST_HEADING: Final = "## What a duplicate edits"
 #: `DELIBERATELY_ABSENT` applied to the other question: not "why does the
 #: example ship no counterpart" but "why does a duplicate need no edit".
 NOT_EDITED: Final[dict[str, str]] = {
-    "config/actions-budget.yml": (
+    "instance/actions-budget.yml": (
         "Numbers rather than identity: an organisation's Actions allowance "
         "and how busy the series gets. The shipped values are the GitHub "
         "Free plan's own and a ceiling-derived guess at the rest, so they "
         "work on day one and are meant to be re-cut against real "
         "measurements later. The file says so itself."
     ),
-    "config/queue-drain.yml": (
+    "instance/queue-drain.yml": (
         "One threshold, whose admissible range is derived from the drain's "
-        "own cron and from config/registration-lanes.yml -- so the shipped "
+        "own cron and from instance/registration-lanes.yml -- so the shipped "
         "value is inside its own bounds by construction, and a duplicate "
         "that never touches it is never wrong."
     ),
-    "config/registration-lanes.yml": (
+    "instance/registration-lanes.yml": (
         "The distance to an event at which a registration stops queueing. "
         "A statement about a series' rhythm, with a working default; "
         "getting it wrong routes a submission to the slower lane and "
@@ -116,13 +116,13 @@ NOT_EDITED: Final[dict[str, str]] = {
         "next push replaces it, so editing it would be editing a generated "
         "file."
     ),
-    "keys/": (
+    "instance/keys/": (
         "Empty of keys in a fresh duplicate and in this repository alike. "
         "Generating an event key or a signing key is an operator's act "
         "performed by a command, never a file anybody types."
     ),
-    "public-data/": (
-        "Derived from data/ by the product's own commands and committed by "
+    "instance/public-data/": (
+        "Derived from instance/data/ by the product's own commands and committed by "
         ".github/workflows/deploy.yml. Empty in a fresh clone by "
         "construction; a duplicate that authored something here would be "
         "authoring a projection of its own input."
@@ -135,7 +135,7 @@ NOT_EDITED: Final[dict[str, str]] = {
 #: site without providing any design file at all. That is a property of the
 #: repository (`brand/convener/brand.json` exists and is the product's), not
 #: an opinion, so the two are asserted together below.
-CHARTER = "data/brand.json"
+CHARTER = "instance/data/brand.json"
 PRODUCT_CHARTER = Path("brand") / "convener" / "brand.json"
 
 
@@ -214,8 +214,8 @@ def test_every_path_the_boundary_hands_over_is_listed_or_exempt() -> None:
     """The other direction, and the one that actually catches drift: a new
     instance path arriving in the declaration and nobody remembering the
     README. Answered by being on the list, by being covered by something on
-    the list (`data/` is answered by `data/config.yml`), or by an entry in
-    `NOT_EDITED` carrying its reason."""
+    the list (`instance/data/` is answered by `instance/data/config.yml`),
+    or by an entry in `NOT_EDITED` carrying its reason."""
     declared = _boundary()
     listed = _listed_paths()
     unanswered = []

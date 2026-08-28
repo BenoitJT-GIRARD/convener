@@ -81,7 +81,7 @@ to exactly what one run minted, and report exactly which identifier
 failed, because an identifier is a certificate's own public name, never a
 person's. This module could, in principle, keep the equivalent for an
 invitation: a salted HMAC of an address, committed to
-`data/survey-invitations.yml` and never published -- the exact construction
+`instance/data/survey-invitations.yml` and never published -- the exact construction
 `certificate.fingerprint` already uses, domain-separated the same way, for
 the identical purpose of idempotence without a public name. **That
 construction would not undo the survey response's own anonymity.** A
@@ -105,11 +105,11 @@ permanent, salted, committed linkage between a person and the event they
 attended would outlive its own reason to exist, and it would outlive it
 specifically by surviving the one event meant to end it: the
 retention sweep destroys `CONVENER_EVENT_KEY_<ID>` per event, but
-`data/survey-invitations.yml` is one file shared across every event (unlike
-`certificates.yml`, which already lives under `data/events/<id>/` and is
+`instance/data/survey-invitations.yml` is one file shared across every event (unlike
+`certificates.yml`, which already lives under `instance/data/events/<id>/` and is
 swept by construction) -- so a per-person fingerprint kept there would not
 be swept with any one event's key at all, and would need moving under
-`data/events/<id>/` to ever be, a real structural cost this module does not
+`instance/data/events/<id>/` to ever be, a real structural cost this module does not
 pay for a two-day problem. The second cost is `CONVENER_MATCHING_SALT`: an
 ordinary D-13 absence for this command (`invite_survey` never refuses
 without it, unlike `issue_certificates`, which cannot fingerprint safely
@@ -118,7 +118,7 @@ the first place, only sometimes, which is a worse property for an
 idempotence key than having none at all.
 
 **So the bound is per event, not per person, by choice: convenient, not
-forced.** `data/survey-invitations.yml` (`registry_from_data`/
+forced.** `instance/data/survey-invitations.yml` (`registry_from_data`/
 `registry_to_data`, below) records only that event *X* was invited, and on
 what day -- no name, no address, no count of how many. `cli.py::invite_survey`
 refuses outright, before composing anything, once an event already carries
@@ -220,7 +220,7 @@ __all__ = [
 #: holds `registration.SIGNUP_BASE` to.
 #:
 #: The host and prefix come from
-#: `config/instance.json` through `published.load()`, exactly as
+#: `instance/config.json` through `published.load()`, exactly as
 #: `registration.SIGNUP_BASE` does; `survey/` stays here because it is the
 #: product's own route shape (`site/src/survey.njk`'s permalink).
 SURVEY_BASE: Final = published.load().under("survey/")
@@ -299,11 +299,11 @@ def compose(
 
 #: Where the registry lives, relative to a repository root -- mirrors
 #: `eventkeys.DESTRUCTIONS_PATH`'s own role for
-#: `data/event-key-destructions.yml`: a single file, an event id and a
+#: `instance/data/event-key-destructions.yml`: a single file, an event id and a
 #: date, nothing that could ever be personal data.
 INVITATIONS_PATH: Final = DATA_DIR / "survey-invitations.yml"
 
-#: `data/survey-invitations.yml`'s own format version -- the file-level
+#: `instance/data/survey-invitations.yml`'s own format version -- the file-level
 #: analogue of `eventkeys.DESTRUCTIONS_FILE_VERSION`.
 INVITATIONS_FILE_VERSION: Final = 1
 
@@ -318,14 +318,14 @@ InvitationRegistry = dict[str, date]
 
 
 def invitations_path(root: Path) -> Path:
-    """`data/survey-invitations.yml`, relative to `root`. Pure path
+    """`instance/data/survey-invitations.yml`, relative to `root`. Pure path
     computation -- `cli.py` is still the only module that ever opens the
     path this returns."""
     return root / INVITATIONS_PATH
 
 
 def registry_from_data(data: Any) -> InvitationRegistry:
-    """Parse an already YAML-loaded `data/survey-invitations.yml`, or start
+    """Parse an already YAML-loaded `instance/data/survey-invitations.yml`, or start
     empty when `data` is `None` -- no event has ever been invited yet, the
     ordinary state before the first dispatch of *Invite the post-event
     survey*.

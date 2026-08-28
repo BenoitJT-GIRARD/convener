@@ -129,7 +129,7 @@ from convener_ops.published import load_identity
 #: parameter, so it is found by paging through every form and comparing) and
 #: updates it in place rather than creating a second one.
 #: The form a proposer lands on names whoever runs the series. Read
-#: from `config/instance.json` like every other public name.
+#: from `instance/config.json` like every other public name.
 FORM_TITLE: Final = f"Propose a speaker for {load_identity().organisation}"
 
 #: `api.tally.so`, the one host this script ever talks to.

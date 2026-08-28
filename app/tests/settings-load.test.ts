@@ -42,41 +42,41 @@ describe('the boundary declaration', () => {
 
   it('refuses an empty list, which would hand the instance nothing at all', () => {
     expect(() => handedFromData(declaration([]))).toThrow(/non-empty list/);
-    expect(() => handedFromData(declaration('data/'))).toThrow(/non-empty list/);
+    expect(() => handedFromData(declaration('instance/data/'))).toThrow(/non-empty list/);
   });
 
   it('refuses an entry with no path, no reason, or no shape', () => {
-    expect(() => handedFromData(declaration(['data/']))).toThrow(/not an entry/);
+    expect(() => handedFromData(declaration(['instance/data/']))).toThrow(/not an entry/);
     expect(() => handedFromData(declaration([{ reason: 'because' }]))).toThrow(
       /instance path/,
     );
-    expect(() => handedFromData(declaration([{ path: 'data/' }]))).toThrow(/reason/);
+    expect(() => handedFromData(declaration([{ path: 'instance/data/' }]))).toThrow(/reason/);
   });
 
   it('reads a kept file and a regenerated flag as the other reader does', () => {
     const handed = handedFromData(
       declaration([
         {
-          path: 'data/',
+          path: 'instance/data/',
           reason: 'the records',
-          kept: [{ path: 'data/schema.md', reason: 'a stub' }],
+          kept: [{ path: 'instance/data/schema.md', reason: 'a stub' }],
         },
         { path: 'docs/governance/register.md', reason: 'the register', regenerated: true },
       ]),
     );
-    expect(handed[0].kept).toEqual(['data/schema.md']);
+    expect(handed[0].kept).toEqual(['instance/data/schema.md']);
     expect(handed[1].regenerated).toBe(true);
     expect(handed[0].regenerated).toBe(false);
   });
 
   it('sorts both halves together, so the screen reads as one list', () => {
-    const handed = handedFromData(declaration([{ path: 'keys/', reason: 'material' }]));
+    const handed = handedFromData(declaration([{ path: 'instance/keys/', reason: 'material' }]));
     expect(
       instancePaths(handed, {
-        'config/queue-drain.yml': 'instance',
+        'instance/queue-drain.yml': 'instance',
         'config/boundary.yml': 'product',
       }),
-    ).toEqual(['config/queue-drain.yml', 'keys/']);
+    ).toEqual(['instance/keys/', 'instance/queue-drain.yml']);
   });
 
   it('reads a JSON file’s owner out of the same key a YAML one uses', () => {
@@ -139,15 +139,15 @@ describe('the cadence, and the bound that rests on it', () => {
     expect(
       couplingOf({
         ...base,
-        files: { 'config/registration-lanes.yml': 'queue_beyond_hours: 96' },
+        files: { 'instance/registration-lanes.yml': 'queue_beyond_hours: 96' },
       }),
     ).toBeNull();
     expect(
       couplingOf({
         ...base,
         files: {
-          'config/registration-lanes.yml': 'queue_beyond_hours: 96',
-          'config/queue-drain.yml': 'not: valid: yaml:',
+          'instance/registration-lanes.yml': 'queue_beyond_hours: 96',
+          'instance/queue-drain.yml': 'not: valid: yaml:',
         },
       }),
     ).toBeNull();
@@ -158,8 +158,8 @@ describe('the cadence, and the bound that rests on it', () => {
     expect(
       couplingOf({
         files: {
-          'config/registration-lanes.yml': 'queue_beyond_hours: 96',
-          'config/queue-drain.yml': 'alarm_after_hours: 48',
+          'instance/registration-lanes.yml': 'queue_beyond_hours: 96',
+          'instance/queue-drain.yml': 'alarm_after_hours: 48',
         },
         owners: {},
         handed: [],

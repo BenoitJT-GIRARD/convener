@@ -1,7 +1,7 @@
 import { instanceIdentity } from '../instance';
 import { request } from '../net/request';
 // The repository this cockpit reads and writes. `owner/name` is the
-// instance's, declared once in `config/instance.json` and carried into
+// instance's, declared once in `instance/config.json` and carried into
 // this bundle by `vite.config.ts`'s own define -- a duplicate that left
 // the literal here would have every Board member's ballot written into
 // somebody else's repository, or refused by it.

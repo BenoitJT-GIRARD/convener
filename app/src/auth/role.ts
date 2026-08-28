@@ -8,7 +8,7 @@ import { request } from '../net/request';
  *  product's -- every duplicate creates a team by this name, and
  *  `docs/reference/operations.md` says so -- while the organisation it
  *  belongs to is the instance's, taken from the one repository name
- *  `config/instance.json` declares. Two facts, each in the place that
+ *  `instance/config.json` declares. Two facts, each in the place that
  *  owns it. */
 const TEAM = 'editorial-board';
 

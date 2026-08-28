@@ -65,7 +65,7 @@ no address, no matching code -- and by `_PLAINTEXT_PAD_BYTES` (below),
 which closes the one channel outside that list the encryption itself did
 not already cover: an unpadded ciphertext's length reveals `feedback`'s
 length. What remains, on purpose, is the one channel padding cannot touch
--- `data/events/<id>/survey-responses.enc`'s own commit history pairs
+-- `instance/data/events/<id>/survey-responses.enc`'s own commit history pairs
 array position with arrival time, at whatever resolution the workflow that
 writes it commits at. That is a property of an append-only git store, not
 a defect this module introduces or could remove without breaking the
@@ -75,7 +75,7 @@ which carries the full argument for whoever next builds on this file.
 
 Same storage shape, same reason, as `registration.py`
 --------------------------------------------------------
-`data/events/<id>/survey-responses.enc` is one JSON object::
+`instance/data/events/<id>/survey-responses.enc` is one JSON object::
 
     {"v": 1, "responses": [ {<envelope>}, {<envelope>}, ... ]}
 
@@ -379,7 +379,7 @@ def add_response(
     `eventkeys.derive_public_pem(private_pem)`, the public half that
     mathematically matches the private key this call already needs to have
     been handed to decrypt the incoming submission in the first place --
-    never whatever happens to be committed at `keys/events/<id>.pub`.
+    never whatever happens to be committed at `instance/keys/events/<id>.pub`.
 
     The plaintext is padded to `_PLAINTEXT_PAD_BYTES` before encryption:
     re-encrypting for storage is exactly the moment this module

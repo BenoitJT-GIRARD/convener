@@ -1,6 +1,6 @@
 """Everything the charter derives: the design tokens and the two templates.
 
-`data/brand.json` measured the designer's own colours -- turquoise `#FECAC1`,
+`instance/data/brand.json` measured the designer's own colours -- turquoise `#FECAC1`,
 cream `#F4F0F1`, purple `#012765` -- and the contrast each pairing gives. Both
 implementations that draw the identity were still a hand-typed copy of that
 file: `site/src/style.css` and `app/src/design/tokens.css` each carried the
@@ -22,8 +22,8 @@ resurrected as an unread copy.
 
 What the charter is
 --------------------
-`data/brand.json` is no longer *the* source of fact; it is *this
-instance's*. `config/boundary.yml` hands `data/` to the instance, so a
+`instance/data/brand.json` is no longer *the* source of fact; it is *this
+instance's*. `config/boundary.yml` hands `instance/data/` to the instance, so a
 duplicate writes its own values there and never merges a conflict with
 upstream over them. A duplicate that has not chosen colours yet has no such
 file at all, and `convener_ops.brand.load` reads the product's own charter,
@@ -55,29 +55,30 @@ What is generated and what stays hand-authored
 Neither stylesheet is generated whole. `site/src/style.css` and
 `app/src/design/tokens.css` hold real, hand-authored component CSS --
 layout, buttons, prose rendering -- that no JSON file could sensibly derive,
-and `data/brand.json` itself only ever claimed the **colour tokens**, not the
+and `instance/data/brand.json` itself only ever claimed the **colour tokens**, not the
 rest of either file. So each stylesheet keeps one block of custom properties
 between two marker comments, and this script owns only what is between them:
 it reads the committed file, keeps everything outside the markers exactly as
-it stood, and replaces what is between them with what `data/brand.json`
+it stood, and replaces what is between them with what `instance/data/brand.json`
 currently derives.
 
 Two colours the stylesheets need have no measurement to derive from at all:
 `--danger` and `--info` name states (a rejected token, a soft banner) that
 none of the designer's originals ever had reason to draw, so
-`data/brand.json` does not carry them and this script does not pretend it
+`instance/data/brand.json` does not carry them and this script does not pretend it
 does -- they are named constants below, clearly marked as the one exception,
 rather than invented brand data.
 
 What a marker guards, and what it cannot
 -----------------------------------------
 `--check` catches a value hand-edited inside the marked block without
-`data/brand.json` changing, and a `data/brand.json` value changed without
-regenerating -- the two mutations this module's own tests prove against. It
+`instance/data/brand.json` changing, and a `instance/data/brand.json` value
+changed without regenerating -- the two mutations this module's own tests
+prove against. It
 cannot stop a colour from being hand-typed **outside** any marked block --
 that is a different property, and `tools/tests/test_brand.py` guards it
 separately, by asking the committed files themselves whether one of
-`data/brand.json`'s values, or one of the reconstruction's, appears anywhere
+`instance/data/brand.json`'s values, or one of the reconstruction's, appears anywhere
 outside the block this script owns.
 
 The three downloadable files are generated whole
@@ -86,19 +87,19 @@ The three downloadable files are generated whole
 `video-call-background.svg` are the files `docs/toolkit/visual-kit.md`
 hands a volunteer. Nothing in them is hand-authored any more, so there are
 no markers and no splice: they are written entire, from the charter and
-from `config/instance.json`. All three were drawn by hand once. The two
+from `instance/config.json`. All three were drawn by hand once. The two
 templates had drifted onto the palette D-16 discarded -- including one
 line set in the page's own ground colour, invisible in every poster ever
 downloaded. The background was a PNG, which is worse than drifting: no
 check in this repository could read a word of it, and it disagreed with
-`config/instance.json` about the series' own strapline for as long as it
+`instance/config.json` about the series' own strapline for as long as it
 existed. See `convener_ops/brand_templates.py` for the measurements, for
 why the mark is what makes a duplicate's build refuse, and for why the
 background is committed as vector with no raster beside it.
 
 Contrast is recomputed, not read
 ---------------------------------
-`data/brand.json` also carries measured contrast ratios. This script exposes
+`instance/data/brand.json` also carries measured contrast ratios. This script exposes
 the same WCAG 2.1 relative-luminance arithmetic the measurement used
 (`relative_luminance`, `contrast_ratio`) so that `test_brand.py` can
 recompute every stored ratio from the colours that produce it and fail the
@@ -154,10 +155,12 @@ COMMAND: Final = "uv run python ../scripts/generate_brand_css.py"
 #: Markers wrapping the generated block inside each stylesheet. Everything
 #: outside them, in either file, is this script's to leave alone.
 _BEGIN: Final = "/* BEGIN GENERATED TOKENS -- scripts/generate_brand_css.py */"
-_END: Final = "/* END GENERATED TOKENS -- edit data/brand.json, not this block */"
+_END: Final = (
+    "/* END GENERATED TOKENS -- edit instance/data/brand.json, not this block */"
+)
 
 #: No original the designer drew ever needed a rejection colour or a soft
-#: informational one, so `data/brand.json` does not carry either -- these are
+#: informational one, so `instance/data/brand.json` does not carry either -- these are
 #: the one deliberate exception to "every colour comes from the brand file".
 _DANGER: Final = "#9b2226"
 _INFO: Final = "#4a6c75"
@@ -178,7 +181,7 @@ def load_brand(root: Path) -> dict[str, Any]:
 
     One line, and it is `convener_ops.brand`'s: this script, `ribbon.py` and
     `visual.py` each used to carry their own two-line loader, which was
-    harmless while `data/brand.json` was the only file there was to load
+    harmless while `instance/data/brand.json` was the only file there was to load
     and stopped being harmless the moment it became optional.
     """
     return brand.load(root)
@@ -216,7 +219,7 @@ def _splice(current: str, inner: str) -> str:
 #: measured values had been restored by hand, plus `--white`/`--white-rgb`,
 #: added here because
 #: `#fff` was hand-typed more than a dozen times below the block for plain
-#: white text and borders, and a value `data/brand.json` carries cannot be
+#: white text and borders, and a value `instance/data/brand.json` carries cannot be
 #: one this stylesheet retypes either. `--danger`/`--info` joined later:
 #: the certificate-verification page needed them and got them
 #: hand-typed outside this block instead, the same duplication `--white`
@@ -245,10 +248,10 @@ _SITE_ROOT_TEMPLATE: Final = """\
   --purple-d:     {purple_hover};
   --purple-l:     {purple_tint};
 
-  /* No data/brand.json equivalent: no original the designer drew ever
+  /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. Measured against
    * this file's own --surface (cream), the certificate-verification panel's
-   * ground: see data/brand.json's contrast._comment for both numbers. */
+   * ground: see instance/data/brand.json's contrast._comment for both numbers. */
   --danger:       {danger};
   --info:         {info};
 
@@ -298,7 +301,7 @@ def render_site_css(root: Path) -> str:
 #: `app/src/design/tokens.css`'s tokens. Same variable *names* the file
 #: already declared -- `tailwind.config.ts` reads them by name, and renaming
 #: would be a second change wearing this one's clothes -- but every value
-#: corrected from the reconstruction's palette to `data/brand.json`'s.
+#: corrected from the reconstruction's palette to `instance/data/brand.json`'s.
 _APP_ROOT_TEMPLATE: Final = """\
   --paper:         {white};
   --paper-soft:    {cream};
@@ -315,7 +318,7 @@ _APP_ROOT_TEMPLATE: Final = """\
   --accent-soft:   {purple_tint};
   --border:        {rule};
   --border-strong: {rule_strong};
-  /* No data/brand.json equivalent: no original the designer drew ever
+  /* No instance/data/brand.json equivalent: no original the designer drew ever
    * needed a rejection colour or a soft informational one. */
   --danger:        {danger};
   --info:          {info};

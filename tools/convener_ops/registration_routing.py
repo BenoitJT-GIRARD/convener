@@ -30,7 +30,7 @@ whose whole constraint is that the bill stays at zero.
 
 The floor, which is the part that is not a matter of taste
 -----------------------------------------------------------
-The threshold is configuration (`config/registration-lanes.yml`), and a
+The threshold is configuration (`instance/registration-lanes.yml`), and a
 maintainer is meant to move it. What a maintainer must *not* be able to do
 is move it somewhere that silently loses people: set it to twelve hours
 against a once-daily drain and a far-lane registrant is told they are
@@ -55,19 +55,19 @@ shape, not a wrong number.
 
 How the answer reaches the relay
 ----------------------------------
-`services/signup-relay` cannot read `data/speakers.yml` (it is YAML, and
+`services/signup-relay` cannot read `instance/data/speakers.yml` (it is YAML, and
 that worker has no parser for it) and must not be trusted to re-derive
 Europe/Paris start times from a date and an optional wall-clock string.
 So the whole of the arithmetic happens here, and what is published is one
 already-resolved instant per event: **the moment that event stops being
 far away**. `to_routing_data` writes it to
-`public-data/registration-routing.json`, `deploy.yml` commits it, and the
+`instance/public-data/registration-routing.json`, `deploy.yml` commits it, and the
 worker's entire share of the rule becomes `Date.now() < cutoff`.
 
-That file is a projection, exactly like `public-data/survey-status.json`
+That file is a projection, exactly like `instance/public-data/survey-status.json`
 beside it, read by the relay through the Contents API with the credential
-and the call shape it already uses for `keys/events/<id>.pub`. It is
-regenerated whenever `data/speakers.yml` moves, which is precisely when an
+and the call shape it already uses for `instance/keys/events/<id>.pub`. It is
+regenerated whenever `instance/data/speakers.yml` moves, which is precisely when an
 event's date can have changed. A *threshold* edited in `config/` lands one
 run later -- see that file's own header for the one-line answer to that.
 
@@ -96,21 +96,21 @@ from .governance import PARIS
 from .paths import PUBLIC_DATA_DIR
 
 #: The maintainer-editable threshold, relative to a repository root. Beside
-#: `actions-budget.yml` and `integrations.yml`, never in `data/config.yml`
+#: `actions-budget.yml` and `integrations.yml`, never in `instance/data/config.yml`
 #: -- see that file's own header for why the app's validator makes the
 #: latter impossible.
-CONFIG_PATH: Final = Path("config") / "registration-lanes.yml"
+CONFIG_PATH: Final = Path("instance") / "registration-lanes.yml"
 
-#: `config/registration-lanes.yml`'s own format version.
+#: `instance/registration-lanes.yml`'s own format version.
 CONFIG_FILE_VERSION: Final = 1
 
 #: The projection the relay reads, relative to a repository root.
 #: `.gitignore` carries a named exception for it, the same shape
-#: `!public-data/survey-status.json` already has, because
+#: `!instance/public-data/survey-status.json` already has, because
 #: `deploy.yml` needs a tracked path to commit it to.
 ROUTING_PATH: Final = PUBLIC_DATA_DIR / "registration-routing.json"
 
-#: `public-data/registration-routing.json`'s own format version. Read by
+#: `instance/public-data/registration-routing.json`'s own format version. Read by
 #: `services/signup-relay/src/index.js`, which refuses any other value
 #: rather than guessing at a shape it does not know.
 ROUTING_FILE_VERSION: Final = 1
@@ -157,7 +157,7 @@ class CronShapeError(ValueError):
 
 
 def threshold_from_data(data: Any) -> int:
-    """Parse an already YAML-loaded `config/registration-lanes.yml`.
+    """Parse an already YAML-loaded `instance/registration-lanes.yml`.
 
     Raises `ValueError` on anything that is not this exact shape -- the
     same closed-shape discipline `submission_queue.ledger_from_data` holds
@@ -298,7 +298,7 @@ def queue_until(start: datetime, threshold_hours: int) -> datetime:
 
 
 def to_routing_data(speakers: Sequence[object], threshold_hours: int) -> dict[str, Any]:
-    """`public-data/registration-routing.json`'s whole content: one
+    """`instance/public-data/registration-routing.json`'s whole content: one
     already-resolved UTC instant per event that has a usable date.
 
     A projection of exactly two fields, `edition_code` and `date` (plus
@@ -317,7 +317,7 @@ def to_routing_data(speakers: Sequence[object], threshold_hours: int) -> dict[st
 
     `Sequence[object]`, not a sequence of mappings, for
     `to_survey_status`'s own stated reason: the caller hands over whatever
-    `data/speakers.yml` parsed to, and a hand-edited list whose entries are
+    `instance/data/speakers.yml` parsed to, and a hand-edited list whose entries are
     not mappings is what the `isinstance` guard below is actually for.
     """
     cutoffs: dict[str, str] = {}

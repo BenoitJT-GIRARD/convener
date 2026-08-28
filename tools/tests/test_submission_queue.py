@@ -559,8 +559,8 @@ def test_a_replayed_drain_records_nothing_a_second_time() -> None:
 
 
 def _repo(tmp_path: Path, *, survey_enabled: bool = True) -> Path:
-    data = tmp_path / "data"
-    data.mkdir()
+    data = tmp_path / "instance" / "data"
+    data.mkdir(parents=True)
     (data / "speakers.yml").write_text(
         yaml.safe_dump(
             [speaker(id="spk-001", edition_code=_EVENT, survey_enabled=survey_enabled)]
@@ -895,11 +895,11 @@ def test_the_drain_commits_the_data_and_the_ledger_together() -> None:
     """One commit, or a replay records a submission twice: a ledger
     committed without its data, or data without its ledger, is exactly the
     interruption the ledger exists to survive."""
-    assert "git add -- data/queue-ledger.yml" in _SWEEP
-    assert "git add -- data/events" in _SWEEP
+    assert "git add -- instance/data/queue-ledger.yml" in _SWEEP
+    assert "git add -- instance/data/events" in _SWEEP
     commit = _SWEEP.index('git commit -m "data: drain the public submission queue"')
-    assert _SWEEP.index("git add -- data/queue-ledger.yml") < commit
-    assert _SWEEP.index("git add -- data/events") < commit
+    assert _SWEEP.index("git add -- instance/data/queue-ledger.yml") < commit
+    assert _SWEEP.index("git add -- instance/data/events") < commit
 
 
 def test_the_queue_is_cleared_only_after_the_drain_has_pushed() -> None:
@@ -912,7 +912,7 @@ def test_the_queue_is_cleared_only_after_the_drain_has_pushed() -> None:
 
 
 def test_the_queue_is_exported_outside_the_checkout() -> None:
-    """A queued entry caught by a `git add` meant for `data/` would land on
+    """A queued entry caught by a `git add` meant for `instance/data/` would land on
     the default branch, which is the one place it must never be."""
     assert "CONVENER_QUEUE_DIR: ${{ runner.temp }}/queue" in _SWEEP
     assert 'rm -rf "$RUNNER_TEMP/queue"' in _SWEEP

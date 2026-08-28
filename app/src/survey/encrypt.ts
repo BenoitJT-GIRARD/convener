@@ -105,7 +105,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 /** See the module docstring: `importKey("spki", ...)` wants DER, and
- *  `keys/events/<id>.pub` is PEM. Identical to `signup/encrypt.ts::pemToDer`
+ *  `instance/keys/events/<id>.pub` is PEM. Identical to `signup/encrypt.ts::pemToDer`
  *  -- not imported from it, for the reason the module docstring gives for
  *  this file's own independence. */
 function pemToDer(pem: string): Uint8Array<ArrayBuffer> {

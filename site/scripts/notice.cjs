@@ -4,7 +4,7 @@
 // for Eleventy, `app/scripts/notice.mjs` reads it for the cockpit's build.
 // Two readers of one file, one per side of the language boundary, is the
 // arrangement `published.cjs` beside this file already follows for
-// `config/instance.json` (D-14). What neither of them holds is a value.
+// `instance/config.json` (D-14). What neither of them holds is a value.
 //
 // CommonJS and `.cjs` rather than `.js`, for the reason `published.cjs`
 // states for itself: `.eleventy.js` is CommonJS and `require`s this at

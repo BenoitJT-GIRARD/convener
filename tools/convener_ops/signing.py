@@ -169,9 +169,9 @@ to authenticate whatever was genuinely signed, not to second-guess it, and
 every payload `sign` has ever accepted already satisfies it by
 construction.
 
-Key layout: `keys/signing/<YYYY-MM-DD>.pub`, and how a verifier chooses
+Key layout: `instance/keys/signing/<YYYY-MM-DD>.pub`, and how a verifier chooses
 --------------------------------------------------------------------------
-`public_key_path(generated_on)` returns `keys/signing/<date>.pub` -- the day
+`public_key_path(generated_on)` returns `instance/keys/signing/<date>.pub` -- the day
 the pair was generated, ISO 8601, the same sortable-by-filename idiom
 `eventkeys.py` uses for event ids, chosen here for a second reason: sorting
 these filenames *is* sorting the keys by age, with no separate manifest
@@ -181,14 +181,14 @@ new certificates) never means removing its file. The promise that an
 already-issued certificate keeps verifying after a rotation is kept
 entirely by this file simply staying put; there is no companion
 "retire" or "destroy" operation in this module, on purpose (see above). See
-`keys/signing/README.md` for the current, real state of that directory and
+`instance/keys/signing/README.md` for the current, real state of that directory and
 what a verifier should do with it.
 
 `verify` accepts an ordered list, `public_pems: list[str]`, and tries each
 in turn, returning the payload from the first one that checks out. The
 order is the caller's choice, not this module's -- but the convention this
 module's own layout implies, and the one the build step and any
-future caller should follow, is **newest first**: list `keys/signing/*.pub`,
+future caller should follow, is **newest first**: list `instance/keys/signing/*.pub`,
 sort filenames in *descending* order, and build the list from that. Almost
 every verification is of a certificate signed under the key currently in
 service, so that ordering makes the common case the cheapest one --
@@ -227,7 +227,7 @@ bounded by `MAX_TOKEN_BYTES`, and `RecursionError` was caught either way
 -- and that is exactly why it is worth fixing anyway rather than filing
 away as low-severity: this module is the reference implementation for
 the browser-side verifier, and a verifier ported from the control
-flow rather than from `keys/signing/README.md`'s numbered steps inherits
+flow rather than from `instance/keys/signing/README.md`'s numbered steps inherits
 "parse untrusted bytes before authenticating them" in a language whose
 JSON parser this project does not control -- the one habit this module's
 whole design argues against. One consequence fell out by accident, not by
@@ -305,7 +305,7 @@ Two more properties `verify` guarantees regardless of input:
 - **`public_pems == []` is not a special case in the code below** -- the
   trial loop simply never runs, falling straight to `NO_MATCHING_KEY` --
   but it is a real, expected input, not only a theoretical one:
-  `keys/signing/` legitimately holds no key at all until an operator
+  `instance/keys/signing/` legitimately holds no key at all until an operator
   generates the first one (see that directory's own `README.md`), and a
   caller that built its list from an empty directory listing must get the
   same honest "cannot confirm" outcome as any other unmatched token, never
@@ -588,7 +588,7 @@ def derive_public_pem(private_pem: str) -> str:
 
     Mirrors `eventkeys.derive_public_pem` for an analogous reason: a job
     that holds `CONVENER_SIGNING_KEY` can confirm -- against
-    `keys/signing/<date>.pub` -- that the secret it was just handed is
+    `instance/keys/signing/<date>.pub` -- that the secret it was just handed is
     genuinely the private half of the key that date's file publishes,
     rather than trusting a filename-to-secret correspondence nothing else
     checks. Raises `SigningError` for a key that will not load or is not
@@ -682,7 +682,7 @@ def verify(token: str, public_pems: list[str]) -> VerifyResult:
 
 def public_key_path(generated_on: date) -> Path:
     """Where the published public half generated on `generated_on` lives:
-    `keys/signing/<date>.pub`, relative to the repository root. Pure path
+    `instance/keys/signing/<date>.pub`, relative to the repository root. Pure path
     computation -- reads nothing; see the module docstring's "key layout"
     section for the naming convention, the recommended verify order, and
     the one documented collision (two rotations on the same calendar day).
