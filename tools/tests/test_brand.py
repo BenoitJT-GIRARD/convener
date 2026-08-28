@@ -1127,21 +1127,35 @@ def test_the_background_carries_no_word_of_this_instance_for_another(
 ) -> None:
     """The other half, and the reason the file had to stop being a PNG: a
     duplicate's own background says who *it* is, and nothing of the first
-    instance."""
+    instance.
+
+    The invented values are held apart from this instance's before they
+    are used, because a duplicate that happened to write one of them
+    would leave the three assertions below passing for a reason that is
+    not separation. `Read together` stood in the strapline here and is
+    the strapline `instances/example/` declares, so in a repository whose
+    instance is the example -- a derived one, and every duplicate before
+    it declares its own -- the check demanded the absence of a string the
+    duplicate was told to write.
+    """
     charter = _charter(brand.DEFAULT_PATH)
     charter[brand.MOTIF_KEY] = _SYNTHETIC_MOTIF
     _write_json(default_repo / BRAND_PATH, charter)
 
     ours = published.load_identity(ROOT)
+    theirs = {
+        "organisation": "ReadingRoomTrust",
+        "strapline": "Meet weekly",
+        "forum": "https://forum.example.org",
+    }
+    assert theirs["organisation"] != ours.organisation
+    assert theirs["strapline"] != ours.strapline
+    assert ours.forum_host not in theirs["forum"]
+
     declaration = json.loads(
         (default_repo / published.INSTANCE_PATH).read_text(encoding="utf-8")
     )
-    declaration["identity"] = {
-        **declaration["identity"],
-        "organisation": "ReadingRoomTrust",
-        "strapline": "Read together",
-        "forum": "https://forum.example.org",
-    }
+    declaration["identity"] = {**declaration["identity"], **theirs}
     _write_json(default_repo / published.INSTANCE_PATH, declaration)
 
     svg = brand_templates.render_video_call_background(default_repo)
