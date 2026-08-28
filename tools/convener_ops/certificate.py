@@ -376,6 +376,7 @@ from urllib.parse import quote
 
 from . import published
 from .attendance import MatchedAttendee
+from .paths import DATA_DIR
 from .registration import normalize_email
 from .signing import sign
 
@@ -1167,7 +1168,7 @@ def register_to_data(entries: Sequence[CertificateEntry]) -> dict[str, Any]:
 #: other place that needs "where do events' own directories live" (the
 #: glob) shares this one definition instead of typing `"data" / "events"`
 #: a second time.
-EVENTS_DIR: Final = Path("data") / "events"
+EVENTS_DIR: Final = DATA_DIR / "events"
 
 
 def certificates_path(root: Path, event_id: str) -> Path:

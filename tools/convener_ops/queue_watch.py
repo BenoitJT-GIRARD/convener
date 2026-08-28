@@ -106,12 +106,13 @@ from math import ceil
 from pathlib import Path
 from typing import Any, Final
 
+from .paths import DATA_DIR
 from .registration_routing import MISSED_DRAINS_COVERED
 
 #: Where the record lives, relative to a repository root -- the same "one
 #: function names the path" discipline `retention_liveness.LAST_RUN_PATH`
 #: and `submission_queue.LEDGER_PATH` already hold themselves to.
-WATCH_PATH: Final = Path("data") / "queue-watch.yml"
+WATCH_PATH: Final = DATA_DIR / "queue-watch.yml"
 
 #: `data/queue-watch.yml`'s own format version.
 WATCH_FILE_VERSION: Final = 1

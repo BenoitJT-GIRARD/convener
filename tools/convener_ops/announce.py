@@ -96,7 +96,7 @@ __all__ = [
     "recording_announcement",
 ]
 
-#: Relative to the repository root, the same convention `register.py::
+#: Relative to the repository root, the same convention `paths.py::
 #: REGISTER_PATH` already uses for a `docs/` file -- and the exact
 #: directory `app/scripts/copy-handbook.mjs` copies into the cockpit's own
 #: `public/handbook/toolkit/`, so this is provably the file an operator's

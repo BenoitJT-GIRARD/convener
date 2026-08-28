@@ -184,6 +184,7 @@ from typing import Any, Final
 from urllib.parse import quote
 
 from . import confirmation, published
+from .paths import DATA_DIR
 from .registration import Registration
 
 __all__ = [
@@ -300,7 +301,7 @@ def compose(
 #: `eventkeys.DESTRUCTIONS_PATH`'s own role for
 #: `data/event-key-destructions.yml`: a single file, an event id and a
 #: date, nothing that could ever be personal data.
-INVITATIONS_PATH: Final = Path("data") / "survey-invitations.yml"
+INVITATIONS_PATH: Final = DATA_DIR / "survey-invitations.yml"
 
 #: `data/survey-invitations.yml`'s own format version -- the file-level
 #: analogue of `eventkeys.DESTRUCTIONS_FILE_VERSION`.
@@ -343,34 +344,34 @@ def registry_from_data(data: Any) -> InvitationRegistry:
         return {}
     if not isinstance(data, dict) or data.get("v") != INVITATIONS_FILE_VERSION:
         raise ValueError(
-            "data/survey-invitations.yml is not a supported format version"
+            f"{INVITATIONS_PATH.as_posix()} is not a supported format version"
         )
     raw_entries = data.get("invitations")
     if not isinstance(raw_entries, list):
-        raise ValueError("data/survey-invitations.yml is malformed")
+        raise ValueError(f"{INVITATIONS_PATH.as_posix()} is malformed")
 
     registry: InvitationRegistry = {}
     for raw in raw_entries:
         if not isinstance(raw, dict) or set(raw) != _INVITATION_FIELDS:
             raise ValueError(
-                "data/survey-invitations.yml holds an entry that is not "
-                "exactly an event id and an invitation date"
+                f"{INVITATIONS_PATH.as_posix()} holds an entry that is "
+                "not exactly an event id and an invitation date"
             )
         event_id, invited_on_raw = raw["event_id"], raw["invited_on"]
         if not isinstance(event_id, str) or not isinstance(invited_on_raw, str):
             raise ValueError(
-                "data/survey-invitations.yml holds a field of the wrong type"
+                f"{INVITATIONS_PATH.as_posix()} holds a field of the wrong type"
             )
         if event_id in registry:
             raise ValueError(
-                "data/survey-invitations.yml holds event id "
+                f"{INVITATIONS_PATH.as_posix()} holds event id "
                 f"{event_id!r} more than once"
             )
         try:
             registry[event_id] = date.fromisoformat(invited_on_raw)
         except ValueError as exc:
             raise ValueError(
-                "data/survey-invitations.yml holds an invalid invited_on "
+                f"{INVITATIONS_PATH.as_posix()} holds an invalid invited_on "
                 f"date for event {event_id!r}"
             ) from exc
     return registry

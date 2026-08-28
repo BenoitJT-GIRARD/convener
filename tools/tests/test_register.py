@@ -18,9 +18,9 @@ from convener_ops.commit_format import (
     format_decision,
     judgemental_terms,
 )
+from convener_ops.paths import REGISTER_PATH
 from convener_ops.register import (
     LOG_FORMAT,
-    REGISTER_PATH,
     RegisterEntry,
     entries_from_log,
     render_register,

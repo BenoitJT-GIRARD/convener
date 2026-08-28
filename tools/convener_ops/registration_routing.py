@@ -93,6 +93,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from .governance import PARIS
+from .paths import PUBLIC_DATA_DIR
 
 #: The maintainer-editable threshold, relative to a repository root. Beside
 #: `actions-budget.yml` and `integrations.yml`, never in `data/config.yml`
@@ -107,7 +108,7 @@ CONFIG_FILE_VERSION: Final = 1
 #: `.gitignore` carries a named exception for it, the same shape
 #: `!public-data/survey-status.json` already has, because
 #: `deploy.yml` needs a tracked path to commit it to.
-ROUTING_PATH: Final = Path("public-data") / "registration-routing.json"
+ROUTING_PATH: Final = PUBLIC_DATA_DIR / "registration-routing.json"
 
 #: `public-data/registration-routing.json`'s own format version. Read by
 #: `services/signup-relay/src/index.js`, which refuses any other value

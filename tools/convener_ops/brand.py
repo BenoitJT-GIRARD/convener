@@ -71,6 +71,8 @@ import json
 from pathlib import Path
 from typing import Any, Final
 
+from .paths import DATA_DIR
+
 __all__ = [
     "AA_NORMAL_TEXT",
     "DEFAULT_PATH",
@@ -94,7 +96,7 @@ __all__ = [
 #: duplicate that has not chosen its colours yet simply does not have this
 #: file, and `config/boundary.yml` hands the directory it sits in to the
 #: instance so that upstream never edits it.
-INSTANCE_PATH: Final = Path("data") / "brand.json"
+INSTANCE_PATH: Final = DATA_DIR / "brand.json"
 
 #: The product's own, shipped with the code and never edited by an
 #: instance. Beside the mark it belongs to (`brand/convener/`) rather than

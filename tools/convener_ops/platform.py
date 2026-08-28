@@ -217,7 +217,7 @@ from typing import Any, Final, Protocol, runtime_checkable
 
 from . import eventkeys
 from .commit_format import _TOKEN
-from .paths import repo_root
+from .paths import DATA_DIR, repo_root
 from .registration import normalize_email
 
 #: The five columns `attendance-import.csv` must carry, by name. Extra
@@ -722,7 +722,7 @@ class ManualPlatform:
     `attendance-import.csv` -- the one file it does read -- is treated
     differently by `.gitignore` than everything else under `data/`."""
 
-    events_dir: Path = field(default_factory=lambda: repo_root() / "data" / "events")
+    events_dir: Path = field(default_factory=lambda: repo_root() / DATA_DIR / "events")
     #: The loaded contents of `data/speakers.yml` -- already validated and
     #: read by whoever constructs this class, never by this class itself
     #: (see the module docstring's "Where the event's configuration lives"
@@ -810,7 +810,7 @@ class ManualPlatform:
         # inside `_event_dir` above has already accepted `event_id` by
         # this point, so it is safe to reuse verbatim in a relative,
         # hand-built path rather than in either path above.
-        relative = Path("data") / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
+        relative = DATA_DIR / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
         raise AttendanceImportError(
             f"no attendance export for event {event_id!r}: expected "
             f"{relative.as_posix()} (or its never-committed plaintext "

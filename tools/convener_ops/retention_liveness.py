@@ -33,10 +33,12 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Final
 
+from .paths import DATA_DIR
+
 #: Where the record lives, relative to a repository root -- the same
 #: "one function names the path" discipline `eventkeys.destructions_path`
 #: already holds itself to.
-LAST_RUN_PATH: Final = Path("data") / "retention-last-run.yml"
+LAST_RUN_PATH: Final = DATA_DIR / "retention-last-run.yml"
 
 #: `data/retention-last-run.yml`'s own format version -- the file-level
 #: analogue of `eventkeys.DESTRUCTIONS_FILE_VERSION`.
@@ -78,16 +80,16 @@ def last_run_from_data(data: Any) -> date:
     """
     if not isinstance(data, dict) or data.get("v") != LAST_RUN_FILE_VERSION:
         raise ValueError(
-            "data/retention-last-run.yml is not a supported format version"
+            f"{LAST_RUN_PATH.as_posix()} is not a supported format version"
         )
     raw = data.get("last_run")
     if not isinstance(raw, str):
-        raise ValueError("data/retention-last-run.yml holds no usable last_run date")
+        raise ValueError(f"{LAST_RUN_PATH.as_posix()} holds no usable last_run date")
     try:
         return date.fromisoformat(raw)
     except ValueError as exc:
         raise ValueError(
-            "data/retention-last-run.yml holds an invalid last_run date"
+            f"{LAST_RUN_PATH.as_posix()} holds an invalid last_run date"
         ) from exc
 
 

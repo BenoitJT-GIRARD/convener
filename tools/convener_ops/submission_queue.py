@@ -166,10 +166,10 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Final
 
 from . import confirmation, eventkeys, survey
+from .paths import DATA_DIR
 from .registration import (
     dump_registration_file,
     event_id_from_payload,
@@ -220,7 +220,7 @@ ENTRY_ID_RE: Final = re.compile(
 #: Where the ledger lives, relative to a repository root -- the same "one
 #: function names the path" discipline `retention_liveness.LAST_RUN_PATH`
 #: already holds itself to.
-LEDGER_PATH: Final = Path("data") / "queue-ledger.yml"
+LEDGER_PATH: Final = DATA_DIR / "queue-ledger.yml"
 
 #: `data/queue-ledger.yml`'s own format version.
 LEDGER_FILE_VERSION: Final = 1
@@ -244,7 +244,7 @@ def responses_path(event_id: str) -> str:
     POSIX path -- the file `survey.py` owns the format of and the drain
     rewrites. A string, not a `Path`, because it is a key in
     `DrainOutcome.files` and has to compare equal across platforms."""
-    return f"data/events/{event_id}/survey-responses.enc"
+    return f"{(DATA_DIR / 'events').as_posix()}/{event_id}/survey-responses.enc"
 
 
 def registrations_path(event_id: str) -> str:
@@ -254,7 +254,7 @@ def registrations_path(event_id: str) -> str:
     took the immediate lane, written here by the same
     `registration.upsert` for one that took the slow one. A string for the
     same reason: it is a key in `DrainOutcome.files`."""
-    return f"data/events/{event_id}/registrations.enc"
+    return f"{(DATA_DIR / 'events').as_posix()}/{event_id}/registrations.enc"
 
 
 @dataclass(frozen=True)
@@ -374,10 +374,10 @@ def ledger_from_data(data: Any) -> frozenset[str]:
     ledger.
     """
     if not isinstance(data, dict) or data.get("v") != LEDGER_FILE_VERSION:
-        raise ValueError("data/queue-ledger.yml is not a supported format version")
+        raise ValueError(f"{LEDGER_PATH.as_posix()} is not a supported format version")
     handled = data.get("handled")
     if not isinstance(handled, list) or not all(isinstance(h, str) for h in handled):
-        raise ValueError("data/queue-ledger.yml holds no usable handled list")
+        raise ValueError(f"{LEDGER_PATH.as_posix()} holds no usable handled list")
     return frozenset(handled)
 
 

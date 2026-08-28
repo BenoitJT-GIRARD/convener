@@ -56,15 +56,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
-from pathlib import Path
 from typing import Final
 
 from convener_ops.commit_format import ACTS, Decision, parse_decision
 from convener_ops.governance import paris_today
-
-#: Where the derived file lives, relative to the repository root. Under
-#: `docs/` because it is written for a volunteer to read, not for a program.
-REGISTER_PATH: Final = Path("docs") / "governance" / "register.md"
 
 #: The `git log --format=` string this module's parser expects: the author
 #: instant, a unit separator, the subject. The separator is a character no

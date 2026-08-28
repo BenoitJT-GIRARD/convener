@@ -73,6 +73,8 @@ from math import ceil
 from pathlib import Path
 from typing import Any, Final
 
+from .paths import DATA_DIR
+
 #: Where a maintainer edits the thresholds. Deliberately **not**
 #: `data/config.yml`: that file is the app's own governance config, read
 #: and rewritten by the browser through a closed shape
@@ -85,7 +87,7 @@ from typing import Any, Final
 BUDGET_PATH: Final = Path("config") / "actions-budget.yml"
 
 #: Where the measurement is written: a committed file, not a log line.
-USAGE_PATH: Final = Path("data") / "actions-usage.yml"
+USAGE_PATH: Final = DATA_DIR / "actions-usage.yml"
 
 #: `data/actions-usage.yml`'s own format version -- the same file-level
 #: guard `retention_liveness.LAST_RUN_FILE_VERSION` carries.
@@ -693,16 +695,16 @@ def observed_on_from_data(data: Any) -> date:
     fix into a checkmark over a silence.
     """
     if not isinstance(data, Mapping) or data.get("v") != USAGE_FILE_VERSION:
-        raise ValueError("data/actions-usage.yml is not a supported format version")
+        raise ValueError(f"{USAGE_PATH.as_posix()} is not a supported format version")
     latest = data.get("latest")
     raw = latest.get("observed_on") if isinstance(latest, Mapping) else None
     if not isinstance(raw, str):
-        raise ValueError("data/actions-usage.yml holds no usable observed_on date")
+        raise ValueError(f"{USAGE_PATH.as_posix()} holds no usable observed_on date")
     try:
         return date.fromisoformat(raw)
     except ValueError as exc:
         raise ValueError(
-            "data/actions-usage.yml holds an invalid observed_on date"
+            f"{USAGE_PATH.as_posix()} holds an invalid observed_on date"
         ) from exc
 
 

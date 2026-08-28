@@ -46,8 +46,6 @@ from typing import Any, Final
 
 import yaml
 
-from .paths import repo_root
-
 #: The declaration itself, relative to a repository root. In `config/`
 #: rather than beside it: that directory was already mixing product and
 #: instance by accumulation, and the
@@ -393,6 +391,12 @@ def config_owners(root: Path) -> dict[str, str]:
 
 def load(root: Path | None = None) -> Boundary:
     """The boundary as this repository declares it."""
+    # Imported here because `paths` reads this declaration at import to
+    # give each path it hands to the instance a name, and a module-level
+    # import in both directions is a cycle. `load` is the only place in
+    # this module that needs a root.
+    from .paths import repo_root
+
     base = root if root is not None else repo_root()
     data = yaml.safe_load((base / DECLARATION_PATH).read_text(encoding="utf-8"))
     return Boundary(

@@ -191,9 +191,9 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from . import paths
 from .commit_format import _TOKEN
 from .governance import paris_today
-from .paths import repo_root
 
 #: RSA modulus size. 2048 bits keeps key generation and RSA-OAEP fast in
 #: both a browser and a CI job, and is accepted by NIST guidance well past
@@ -223,7 +223,7 @@ ENVELOPE_FIELDS: Final = frozenset({"v", "encrypted_key", "iv", "ciphertext"})
 
 #: Where the published public half of an event's key pair lives, relative to
 #: the repository root.
-KEYS_DIR: Final = Path("keys") / "events"
+KEYS_DIR: Final = paths.KEYS_DIR / "events"
 
 #: The RSA-OAEP parameters both sides of the wire format use: SHA-256 for
 #: both the hash and the MGF1 mask, no label. `crypto.subtle`'s
@@ -480,7 +480,7 @@ def public_key_path(event_id: str) -> Path:
     -- this reads nothing, and callers decide whether to check `.exists()`
     or read it."""
     _validate_event_id(event_id)
-    return repo_root() / KEYS_DIR / f"{event_id}.pub"
+    return paths.repo_root() / KEYS_DIR / f"{event_id}.pub"
 
 
 def key_status(
@@ -545,7 +545,7 @@ def is_due_for_destruction(event_date: date, today: date) -> bool:
 #: Where the destruction registry lives, relative to a repository root --
 #: see the module docstring's "the destruction registry lives in one
 #: file" section for why this is a single file rather than one per event.
-DESTRUCTIONS_PATH: Final = Path("data") / "event-key-destructions.yml"
+DESTRUCTIONS_PATH: Final = paths.DATA_DIR / "event-key-destructions.yml"
 
 #: `data/event-key-destructions.yml`'s own format version -- the file-level
 #: analogue of `WIRE_VERSION` and `registration.FILE_VERSION`.
@@ -584,35 +584,35 @@ def registry_from_data(data: Any) -> dict[str, date]:
         return {}
     if not isinstance(data, dict) or data.get("v") != DESTRUCTIONS_FILE_VERSION:
         raise ValueError(
-            "data/event-key-destructions.yml is not a supported format version"
+            f"{DESTRUCTIONS_PATH.as_posix()} is not a supported format version"
         )
     raw_entries = data.get("destructions")
     if not isinstance(raw_entries, list):
-        raise ValueError("data/event-key-destructions.yml is malformed")
+        raise ValueError(f"{DESTRUCTIONS_PATH.as_posix()} is malformed")
 
     registry: dict[str, date] = {}
     for raw in raw_entries:
         if not isinstance(raw, dict) or set(raw) != _DESTRUCTION_FIELDS:
             raise ValueError(
-                "data/event-key-destructions.yml holds an entry that is not "
-                "exactly an event id and a destruction date"
+                f"{DESTRUCTIONS_PATH.as_posix()} holds an entry that is "
+                "not exactly an event id and a destruction date"
             )
         event_id, destroyed_on_raw = raw["event_id"], raw["destroyed_on"]
         if not isinstance(event_id, str) or not isinstance(destroyed_on_raw, str):
             raise ValueError(
-                "data/event-key-destructions.yml holds a field of the wrong type"
+                f"{DESTRUCTIONS_PATH.as_posix()} holds a field of the wrong type"
             )
         _validate_event_id(event_id)
         if event_id in registry:
             raise ValueError(
-                "data/event-key-destructions.yml holds event id "
+                f"{DESTRUCTIONS_PATH.as_posix()} holds event id "
                 f"{event_id!r} more than once"
             )
         try:
             registry[event_id] = date.fromisoformat(destroyed_on_raw)
         except ValueError as exc:
             raise ValueError(
-                "data/event-key-destructions.yml holds an invalid "
+                f"{DESTRUCTIONS_PATH.as_posix()} holds an invalid "
                 f"destroyed_on date for event {event_id!r}"
             ) from exc
     return registry

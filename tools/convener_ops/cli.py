@@ -72,7 +72,7 @@ from convener_ops.integrations import (
     resolve_states,
 )
 from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
-from convener_ops.paths import repo_root
+from convener_ops.paths import DATA_DIR, PUBLIC_DATA_DIR, REGISTER_PATH, repo_root
 from convener_ops.platform import (
     ENCRYPTED_ATTENDANCE_FILENAME,
     AttendanceImportError,
@@ -96,7 +96,6 @@ from convener_ops.proposal import field_value, skip_reason, to_lead, verify_sign
 from convener_ops.public_data import to_public, to_survey_status
 from convener_ops.register import (
     LOG_FORMAT,
-    REGISTER_PATH,
     entries_from_log,
     render_register,
 )
@@ -285,8 +284,8 @@ def _load(path: Path) -> tuple[Any, list[str]]:
 
 def validate() -> int:
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
-    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, cfg_errors = _load(root / DATA_DIR / "config.yml")
     errors += cfg_errors
 
     # The prefix this instance numbers its editions under,
@@ -427,9 +426,9 @@ def _report_inactivity(
 
 def sweep() -> int:
     root = repo_root()
-    speakers_path = root / "data" / "speakers.yml"
+    speakers_path = root / DATA_DIR / "speakers.yml"
     speakers, errors = _load(speakers_path)
-    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    cfg, cfg_errors = _load(root / DATA_DIR / "config.yml")
     if errors or cfg_errors:
         for error in errors + cfg_errors:
             print(f"  - {error}")
@@ -452,14 +451,14 @@ def sweep() -> int:
 
 def public_data() -> int:
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     if errors:
         for error in errors:
             print(f"  - {error}")
         return 1
 
     rows = to_public(speakers or [])
-    out_dir = root / "public-data"
+    out_dir = root / PUBLIC_DATA_DIR
     out_dir.mkdir(exist_ok=True)
     (out_dir / "events-public.json").write_text(
         json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -486,14 +485,14 @@ def survey_status_public_data() -> int:
     for an event that has not even happened yet.
     """
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     if errors:
         for error in errors:
             print(f"  - {error}")
         return 1
 
     ids = to_survey_status(speakers or [])
-    out_dir = root / "public-data"
+    out_dir = root / PUBLIC_DATA_DIR
     out_dir.mkdir(exist_ok=True)
     (out_dir / "survey-status.json").write_text(
         json.dumps(ids, indent=2) + "\n", encoding="utf-8"
@@ -532,7 +531,7 @@ def registration_routing_public_data() -> int:
     finding that out.
     """
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     config_data, config_errors = _load(root / registration_routing.CONFIG_PATH)
     if errors or config_errors:
         for error in errors + config_errors:
@@ -567,15 +566,15 @@ def agenda_internal() -> int:
     "Commit internal agenda" step for where the committed copy comes from.
     """
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
-    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, cfg_errors = _load(root / DATA_DIR / "config.yml")
     if errors or cfg_errors:
         for error in errors + cfg_errors:
             print(f"  - {error}")
         return 1
 
     calendar = agenda.build_internal_calendar(speakers or [], cfg or {})
-    out_dir = root / "public-data"
+    out_dir = root / PUBLIC_DATA_DIR
     out_dir.mkdir(exist_ok=True)
     # Binary, not text mode: this string already carries real CRLF line
     # endings RFC 5545 requires, and a text-mode write on this project's own
@@ -645,9 +644,9 @@ def handle_proposal() -> int:
     }
 
     root = repo_root()
-    speakers_path = root / "data" / "speakers.yml"
+    speakers_path = root / DATA_DIR / "speakers.yml"
     speakers, errors = _load(speakers_path)
-    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    cfg, cfg_errors = _load(root / DATA_DIR / "config.yml")
     if errors or cfg_errors:
         for error in errors + cfg_errors:
             print(f"  - {error}")
@@ -741,8 +740,8 @@ def _send_confirmation(
     """
     try:
         root = repo_root()
-        speakers, _errors = _load(root / "data" / "speakers.yml")
-        cfg, _errors = _load(root / "data" / "config.yml")
+        speakers, _errors = _load(root / DATA_DIR / "speakers.yml")
+        cfg, _errors = _load(root / DATA_DIR / "config.yml")
         speaker_list = speakers if isinstance(speakers, list) else []
         config_map = cfg if isinstance(cfg, dict) else None
         platform = platform_from_env(os.environ, speaker_list, config_map)
@@ -879,7 +878,7 @@ def handle_registration() -> int:
         return 1
 
     root = repo_root()
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     existing_text = enc_path.read_text(encoding="utf-8") if enc_path.exists() else None
     try:
@@ -1030,7 +1029,7 @@ def resend_confirmation() -> int:
         return 1
 
     root = repo_root()
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -1137,7 +1136,7 @@ def _survey_enabled(root: Path, event_id: str) -> bool:
     to prevent, and there is no direction it is safer to guess wrong in
     than "closed".
     """
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     if errors or not isinstance(speakers, list):
         return False
     try:
@@ -1945,7 +1944,7 @@ def check_registration_routing() -> int:
     broken repository rather than a stale deployment.
     """
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     config_data, config_errors = _load(root / registration_routing.CONFIG_PATH)
     if errors or config_errors:
         for error in errors + config_errors:
@@ -2065,7 +2064,7 @@ def retention_sweep() -> int:
         return 1
 
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     if errors:
         for error in errors:
             print(f"  - {error}", file=sys.stderr)
@@ -2695,7 +2694,7 @@ def erase_registration() -> int:
             )
             return 1
 
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -2752,7 +2751,7 @@ def erase_registration() -> int:
     # write it could not actually make -- the same "say it only once it
     # is true" discipline this fix exists to restore.
     attendance_path = (
-        root / "data" / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
+        root / DATA_DIR / "events" / event_id / ENCRYPTED_ATTENDANCE_FILENAME
     )
     attendance_rows_removed = 0
     updated_attendance_file = None
@@ -2879,9 +2878,9 @@ def encrypt_attendance_export() -> int:
         print(f"no public key published for event {event_id}", file=sys.stderr)
         return 1
 
-    plain_path = root / "data" / "events" / event_id / "attendance-import.csv"
+    plain_path = root / DATA_DIR / "events" / event_id / "attendance-import.csv"
     if not plain_path.exists():
-        relative = Path("data") / "events" / event_id / "attendance-import.csv"
+        relative = DATA_DIR / "events" / event_id / "attendance-import.csv"
         print(
             f"no attendance export to encrypt for event {event_id}: expected "
             f"{relative.as_posix()}",
@@ -2908,7 +2907,7 @@ def encrypt_attendance_export() -> int:
     envelope_file = encrypt_attendance_rows(public_pem, rows)
 
     enc_path = plain_path.parent / f"{plain_path.name}.enc"
-    rel_enc = Path("data") / "events" / event_id / enc_path.name
+    rel_enc = DATA_DIR / "events" / event_id / enc_path.name
     # This has no date or content to compare against
     # -- it always encrypts whatever the local plaintext currently says --
     # so a stray or stale local export would otherwise replace a good
@@ -3060,7 +3059,7 @@ def match_attendance() -> int:
         return 1
 
     root = repo_root()
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -3075,8 +3074,8 @@ def match_attendance() -> int:
         current.entries, private_pem
     )
 
-    speakers, _errors = _load(root / "data" / "speakers.yml")
-    cfg, _errors = _load(root / "data" / "config.yml")
+    speakers, _errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, _errors = _load(root / DATA_DIR / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     config_map = cfg if isinstance(cfg, dict) else None
     platform = platform_from_env(
@@ -3381,7 +3380,7 @@ def invite_survey() -> int:
         print(f"no private key configured for event {event_id}", file=sys.stderr)
         return 1
 
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -3396,8 +3395,8 @@ def invite_survey() -> int:
         current.entries, private_pem
     )
 
-    speakers, _errors = _load(root / "data" / "speakers.yml")
-    cfg, _errors = _load(root / "data" / "config.yml")
+    speakers, _errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, _errors = _load(root / DATA_DIR / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     config_map = cfg if isinstance(cfg, dict) else None
 
@@ -3626,7 +3625,7 @@ def issue_certificates() -> int:
         return 0
 
     root = repo_root()
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -3641,12 +3640,13 @@ def issue_certificates() -> int:
         current.entries, private_pem
     )
 
-    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
-    cfg, _errors = _load(root / "data" / "config.yml")
+    speakers, speaker_errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, _errors = _load(root / DATA_DIR / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     if not isinstance(cfg, dict):
         print(
-            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            f"{(DATA_DIR / 'config.yml').as_posix()} is missing or invalid "
+            "-- cannot compute eligibility",
             file=sys.stderr,
         )
         return 1
@@ -3683,7 +3683,8 @@ def issue_certificates() -> int:
     if not title or not event_date:
         if speaker_errors:
             print(
-                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                f"{(DATA_DIR / 'speakers.yml').as_posix()}: "
+                f"{'; '.join(speaker_errors)} -- refusing "
                 "to sign a certificate naming no event and no date",
                 file=sys.stderr,
             )
@@ -3816,7 +3817,7 @@ def certificates_public_data() -> int:
                 return 1
 
     rows = public_register(entries)
-    out_dir = root / "public-data"
+    out_dir = root / PUBLIC_DATA_DIR
     out_dir.mkdir(exist_ok=True)
     (out_dir / "certificates-public.json").write_text(
         json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -4006,7 +4007,7 @@ def reissue_certificate() -> int:
         return 1
 
     root = repo_root()
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -4034,12 +4035,13 @@ def reissue_certificate() -> int:
         )
         return 1
 
-    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
-    cfg, _errors = _load(root / "data" / "config.yml")
+    speakers, speaker_errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, _errors = _load(root / DATA_DIR / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     if not isinstance(cfg, dict):
         print(
-            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            f"{(DATA_DIR / 'config.yml').as_posix()} is missing or invalid "
+            "-- cannot compute eligibility",
             file=sys.stderr,
         )
         return 1
@@ -4089,7 +4091,8 @@ def reissue_certificate() -> int:
     if not title or not event_date:
         if speaker_errors:
             print(
-                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                f"{(DATA_DIR / 'speakers.yml').as_posix()}: "
+                f"{'; '.join(speaker_errors)} -- refusing "
                 "to sign a certificate naming no event and no date",
                 file=sys.stderr,
             )
@@ -4357,7 +4360,7 @@ def deliver_certificates() -> int:
         return 0
 
     root = repo_root()
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -4372,12 +4375,13 @@ def deliver_certificates() -> int:
         current.entries, private_pem
     )
 
-    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
-    cfg, _errors = _load(root / "data" / "config.yml")
+    speakers, speaker_errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, _errors = _load(root / DATA_DIR / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     if not isinstance(cfg, dict):
         print(
-            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            f"{(DATA_DIR / 'config.yml').as_posix()} is missing or invalid "
+            "-- cannot compute eligibility",
             file=sys.stderr,
         )
         return 1
@@ -4407,7 +4411,8 @@ def deliver_certificates() -> int:
     if not title or not event_date:
         if speaker_errors:
             print(
-                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                f"{(DATA_DIR / 'speakers.yml').as_posix()}: "
+                f"{'; '.join(speaker_errors)} -- refusing "
                 "to sign a certificate naming no event and no date",
                 file=sys.stderr,
             )
@@ -4619,7 +4624,7 @@ def deliver_certificate() -> int:
         return 1
 
     root = repo_root()
-    rel_path = Path("data") / "events" / event_id / "registrations.enc"
+    rel_path = DATA_DIR / "events" / event_id / "registrations.enc"
     enc_path = root / rel_path
     if not enc_path.exists():
         print(f"no registrations recorded for event {event_id}", file=sys.stderr)
@@ -4657,12 +4662,13 @@ def deliver_certificate() -> int:
         )
         return 1
 
-    speakers, speaker_errors = _load(root / "data" / "speakers.yml")
-    cfg, _errors = _load(root / "data" / "config.yml")
+    speakers, speaker_errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, _errors = _load(root / DATA_DIR / "config.yml")
     speaker_list = speakers if isinstance(speakers, list) else []
     if not isinstance(cfg, dict):
         print(
-            "data/config.yml is missing or invalid -- cannot compute eligibility",
+            f"{(DATA_DIR / 'config.yml').as_posix()} is missing or invalid "
+            "-- cannot compute eligibility",
             file=sys.stderr,
         )
         return 1
@@ -4704,7 +4710,8 @@ def deliver_certificate() -> int:
     if not title or not event_date:
         if speaker_errors:
             print(
-                f"data/speakers.yml: {'; '.join(speaker_errors)} -- refusing "
+                f"{(DATA_DIR / 'speakers.yml').as_posix()}: "
+                f"{'; '.join(speaker_errors)} -- refusing "
                 "to sign a certificate naming no event and no date",
                 file=sys.stderr,
             )
@@ -4896,8 +4903,8 @@ def release_recording() -> int:
         return 1
 
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
-    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, cfg_errors = _load(root / DATA_DIR / "config.yml")
     if errors or cfg_errors:
         for error in errors + cfg_errors:
             print(f"  - {error}")
@@ -5078,8 +5085,8 @@ def discard_recording() -> int:
         return 1
 
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
-    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, cfg_errors = _load(root / DATA_DIR / "config.yml")
     if errors or cfg_errors:
         for error in errors + cfg_errors:
             print(f"  - {error}")
@@ -5283,7 +5290,7 @@ def notify_immediate() -> int:
     clone would announce every lead in it at once.
     """
     root = repo_root()
-    after, errors = _load(root / "data" / "speakers.yml")
+    after, errors = _load(root / DATA_DIR / "speakers.yml")
     if errors:
         for error in errors:
             print(f"  - {error}")
@@ -5308,8 +5315,8 @@ def notify_digest() -> int:
     `--dry-run` composes and prints, and writes nothing.
     """
     root = repo_root()
-    speakers, errors = _load(root / "data" / "speakers.yml")
-    cfg, cfg_errors = _load(root / "data" / "config.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
+    cfg, cfg_errors = _load(root / DATA_DIR / "config.yml")
     if errors or cfg_errors:
         for error in errors + cfg_errors:
             print(f"  - {error}")
@@ -5657,7 +5664,7 @@ def render_visuals() -> int:
     root = repo_root()
     out = Path(sys.argv[1])
 
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     if errors:
         for error in errors:
             print(f"::error::{error}", file=sys.stderr)
@@ -5782,7 +5789,7 @@ def render_announcements() -> int:
     root = repo_root()
     out = Path(sys.argv[1])
 
-    speakers, errors = _load(root / "data" / "speakers.yml")
+    speakers, errors = _load(root / DATA_DIR / "speakers.yml")
     if errors:
         for error in errors:
             print(f"::error::{error}", file=sys.stderr)

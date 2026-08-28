@@ -376,7 +376,7 @@ from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-from .paths import repo_root
+from . import paths
 
 #: RSA modulus size for a signing key -- 3072, not `eventkeys.RSA_KEY_BITS`
 #: (2048). See the module docstring's "Key size" section for why a key
@@ -413,7 +413,7 @@ PAYLOAD_FIELDS: Final = frozenset(
 MAX_TOKEN_BYTES: Final = 8192
 
 #: Where the published public halves live, relative to the repository root.
-KEYS_DIR: Final = Path("keys") / "signing"
+KEYS_DIR: Final = paths.KEYS_DIR / "signing"
 
 #: `VerifyResult.reason` for a token that does not even parse as a signing
 #: token -- see `verify`'s docstring for the full list of what falls here.
@@ -687,4 +687,4 @@ def public_key_path(generated_on: date) -> Path:
     section for the naming convention, the recommended verify order, and
     the one documented collision (two rotations on the same calendar day).
     """
-    return repo_root() / KEYS_DIR / f"{generated_on.isoformat()}.pub"
+    return paths.repo_root() / KEYS_DIR / f"{generated_on.isoformat()}.pub"
