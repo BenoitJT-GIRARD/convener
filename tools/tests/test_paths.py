@@ -82,8 +82,20 @@ def declared_instance_paths() -> tuple[str, ...]:
 
 
 def offence(value: str, *, as_path: bool) -> str | None:
-    """The declared instance path `value` writes out, if it writes one."""
-    written = value.replace("\\", "/").rstrip("/")
+    """The declared instance path `value` writes out, if it writes one.
+
+    A string spelled exactly as the declaration spells it -- `data/`,
+    trailing slash and all -- is refused wherever it appears, including
+    outside a path expression. The comparison below strips the trailing
+    slash from both sides, which leaves `data/` looking like the bare
+    word `data`, and a bare word is only refused where the code uses it
+    as a path. The cockpit's own sweep found that gap and closes it the
+    same way (`app/tests/instance-paths.test.ts`).
+    """
+    normalised = value.replace("\\", "/")
+    if normalised in declared_instance_paths():
+        return normalised
+    written = normalised.rstrip("/")
     if not written:
         return None
     for declared in declared_instance_paths():
