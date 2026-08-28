@@ -74,6 +74,35 @@
 # statement about merges any more -- a path carrying identity that nobody
 # declared here survives that deletion, and the sweep finds it.
 #
+# `retired:` -- where the instance's paths used to be
+# ---------------------------------------------------
+# `instance:` above is present tense. It answers "is this path the
+# instance's *now*", which is the question the runtime, the settings
+# screen and the second-instance build have. Anything reading this
+# repository's **history** has a different one -- "was this path ever the
+# instance's" -- and for two years the two were answered by the same
+# call. `instance/data/speakers.yml` lived at `data/speakers.yml` until
+# the move above, so every earlier version of this instance's records
+# read as the product's, and a derived public repository would have
+# carried all of them.
+#
+# So the second question gets a second list. Entries have the shape the
+# ones above have, `kept:` included, and the same parser reads them; what
+# is different is that no entry here names a path that exists, and no
+# entry here is a path `instance:` still hands over -- one of the two
+# would be a copy of the other, and `boundary.retired_from_data` refuses
+# it. `Boundary.ever_owned` is `owner_of` widened by this list, and it is
+# read by the history-reading half only: `convener_ops.derivation`, which
+# decides what a derived repository may carry. The two JavaScript readers
+# do not mirror it, because neither of them ever asks about a commit.
+#
+# `site/src/_data/site.json` is the entry that is not a move. Its four
+# identity keys were folded into `instance/config.json` and the file was
+# deleted, which removed it from the working tree and from nothing else:
+# its blobs are reachable from every commit that added them. It was
+# instance data with no entry anywhere from the day it went, which is the
+# hole this list closes as well as the one the move opened.
+
 # `kept:` -- the product's own files inside a directory the instance owns
 # ----------------------------------------------------------------------
 # Two directories hand their *contents* to the instance while still carrying
@@ -139,3 +168,60 @@ instance:
       .github/workflows/deploy.yml. Upstream ships no content here at all --
       the directory is empty in a fresh clone, and .gitignore's own
       exceptions name the three files a running instance commits into it.
+
+retired:
+  - path: data/
+    reason: >-
+      Where instance/data/ was until 2026-08-28: the board and its
+      thresholds (config.yml), the speakers and events (speakers.yml and,
+      before the v6 unification, events.yml), the charter's measured
+      values (brand.json) and the scheduled jobs' ledgers. Twenty-eight
+      versions of speakers.yml and thirty-two of config.yml are reachable
+      here, and every one of them holds names, affiliations and
+      addresses.
+    kept:
+      - path: data/schema.md
+        reason: >-
+          The same three-line stub instance/data/schema.md is, at the
+          path it had before the move. It described the product's model
+          then as it does now, so a derived repository keeps its history
+          rather than starting it at the move.
+  - path: keys/
+    reason: >-
+      Where instance/keys/ was until 2026-08-28. One published signing
+      key is reachable under it, and a fresh duplicate has no reason to
+      inherit this instance's.
+    kept:
+      - path: keys/signing/README.md
+        reason: >-
+          The wire format and the directory's contract, at the path it
+          had before the move. Product documentation then as now.
+  - path: config/instance.json
+    reason: >-
+      Where instance/config.json was until 2026-08-28: this series'
+      published address, its organisation, its name in every form the
+      templates print, and the repository the showcase is pushed into.
+      A configuration file states its own owner in its own header, and a
+      file that is not there any more states nothing -- which is why a
+      retired configuration path is named here and a live one may not be.
+  - path: config/actions-budget.yml
+    reason: >-
+      Where instance/actions-budget.yml was until 2026-08-28: this
+      organisation's GitHub Actions allowance and the thresholds it is
+      watched against.
+  - path: config/queue-drain.yml
+    reason: >-
+      Where instance/queue-drain.yml was until 2026-08-28: how fast this
+      instance drains its submission queue.
+  - path: config/registration-lanes.yml
+    reason: >-
+      Where instance/registration-lanes.yml was until 2026-08-28: the
+      lanes this instance routes registrations through.
+  - path: site/src/_data/site.json
+    reason: >-
+      Four identity keys the showcase's build read through Eleventy's
+      global-data convention -- the series' title, its tagline, its
+      forum, its proposal form. They were folded into
+      instance/config.json's own identity and the file was deleted, so
+      this is a retirement rather than a move: no path today holds these
+      bytes, and nothing but this entry says they were the instance's.

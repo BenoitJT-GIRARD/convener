@@ -40,7 +40,7 @@ leaves uncovered.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Final
@@ -182,11 +182,23 @@ class Handed:
 
 @dataclass(frozen=True)
 class Boundary:
-    """The whole answer: the declared paths, and the headers the
-    configuration files state their own owner in."""
+    """The whole answer: the declared paths, the headers the
+    configuration files state their own owner in, and where those paths
+    used to be.
+
+    **Two questions, and they are not the same one.** `owner_of` is
+    present tense: is this path the instance's *now*. That is what the
+    runtime, the settings screen and the second-instance build ask, and
+    it is the only question a working tree can raise. Anything reading a
+    *history* asks the other one -- was this path ever the instance's --
+    and `ever_owned` is that one. Answering the second with the first is
+    how every version of this instance's records read as the product's
+    for as long as it took somebody to move a directory.
+    """
 
     handed: tuple[Handed, ...]
     config_owners: Mapping[str, str]
+    retired: tuple[Handed, ...] = ()
 
     def owner_of(self, relative: str | Path) -> str:
         """`INSTANCE` or `PRODUCT` for one root-relative path.
@@ -229,6 +241,49 @@ class Boundary:
             for entry in self.handed
             for kept in entry.kept
         )
+
+    def ever_owned(self, relative: str | Path) -> bool:
+        """Whether the instance owns this path now **or ever did**.
+
+        The history-reading half's question, and the only one it may ask.
+        `owner_of` reads `config/boundary.yml` as it stands, so the day a
+        declared directory moves, every earlier version of everything
+        inside it becomes the product's as far as `owner_of` is
+        concerned -- and a tool walking `rev-list` would carry the lot
+        into a public repository. This widens the same answer by the
+        `retired:` list, which is where the paths that used to be the
+        instance's are written down.
+
+        The same shape as `owner_of` and for the same reason: a caller
+        with a directory rather than a file cannot always spell it as
+        one, and `Handed.covers` answers both. A file the product keeps
+        inside a retired directory is not covered, exactly as one inside
+        a live directory is not.
+        """
+        if self.owner_of(relative) == INSTANCE:
+            return True
+        name = str(relative).replace("\\", "/")
+        return any(entry.covers(name) for entry in self.retired)
+
+    @property
+    def kept_files(self) -> tuple[str, ...]:
+        """Every file the product keeps inside a directory the instance
+        owns or used to, sorted. Both lists, because a path filter
+        walking a history meets a retired directory's kept file as
+        readily as a live one's."""
+        return tuple(
+            sorted(
+                kept.path
+                for entry in (*self.handed, *self.retired)
+                for kept in entry.kept
+            )
+        )
+
+    @property
+    def retired_paths(self) -> tuple[str, ...]:
+        """Every path the instance used to own and does not any more,
+        sorted."""
+        return tuple(sorted(entry.path for entry in self.retired))
 
     @property
     def regenerated_paths(self) -> tuple[str, ...]:
@@ -367,6 +422,17 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
                 regenerated=regenerated,
             )
         )
+    _no_nesting(entries)
+    return tuple(entries)
+
+
+def _no_nesting(entries: Sequence[Handed]) -> None:
+    """Refuse one entry inside another, in either list.
+
+    Whichever is read first wins, silently, and a boundary settled by
+    reading order is not one anybody decided.
+    """
+    named = DECLARATION_PATH.as_posix()
     for entry in entries:
         for other in entries:
             if entry is not other and entry.covers(other.path):
@@ -375,6 +441,70 @@ def declaration_from_data(data: Any) -> tuple[Handed, ...]:
                     "path, one entry -- nesting them means whichever is read "
                     "first decides, which is not a decision anybody made."
                 )
+
+
+def retired_from_data(data: Any) -> tuple[Handed, ...]:
+    """Parse the optional top-level `retired:` list.
+
+    Where the instance's paths used to be, in the shape `instance:`
+    entries have and through the same helpers -- so a retired directory
+    carries `kept:` for the product's own files inside it, and a
+    malformed entry is refused by the same message.
+
+    Three differences, and each is what makes this list a second answer
+    rather than a second copy:
+
+    - **A retired path may be a configuration file.** `instance:` refuses
+      one, because a file in `config/` or `instance/` states its own
+      owner in its own header and a second home for that fact is how the
+      two start disagreeing. A file that is not there any more states
+      nothing, so this list is the only place its former ownership can
+      be written.
+    - **A retired path may not be `regenerated:`.** That flag says a
+      scheduled job rewrites the path in full on both sides of a merge,
+      which is a statement about a file git still has to merge.
+    - **A retired path may not be one `instance:` still hands over.** One
+      of the two would be a copy of the other, and the copy is the defect
+      this whole declaration exists downstream of.
+    """
+    named = DECLARATION_PATH.as_posix()
+    raw = data.get("retired") if isinstance(data, dict) else None
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(
+            f"{named}: retired: must be a non-empty list when it is there at "
+            "all -- an empty one says the instance has never owned a path it "
+            "does not own now, which is a claim, not an omission"
+        )
+    entries: list[Handed] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            raise ValueError(f"{named}: retired: holds {item!r}, not an entry")
+        path = _relative_path(item.get("path"), "a retired instance path")
+        if "regenerated" in item:
+            raise ValueError(
+                f"{named}: {path!r} is retired, so nothing regenerates it and "
+                "git has no version of it left to merge. regenerated: is "
+                "about a path both sides still rewrite."
+            )
+        entries.append(
+            Handed(
+                path=path,
+                reason=_reason(item.get("reason"), path),
+                kept=_kept_from(item.get("kept"), path),
+            )
+        )
+    _no_nesting(entries)
+    live = declaration_from_data(data)
+    for entry in entries:
+        if any(held.covers(entry.path) or held.path == entry.path for held in live):
+            raise ValueError(
+                f"{named}: {entry.path!r} is retired and is also a path "
+                "instance: hands over. A path is one or the other, and two "
+                "entries for it is the copy this declaration exists to "
+                "prevent."
+            )
     return tuple(entries)
 
 
@@ -427,6 +557,7 @@ def load(root: Path | None = None) -> Boundary:
     return Boundary(
         handed=declaration_from_data(data),
         config_owners=config_owners(base),
+        retired=retired_from_data(data),
     )
 
 

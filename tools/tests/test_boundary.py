@@ -563,6 +563,146 @@ def test_a_path_nobody_declared_regenerated_is_not() -> None:
 
 
 # ------------------------------------------------------------------ #
+# Where the instance's paths used to be
+# ------------------------------------------------------------------ #
+
+
+def _retiring(*entries: dict[str, Any]) -> dict[str, Any]:
+    """A whole declaration whose `retired:` list is `entries`."""
+    return {
+        "owner": PRODUCT,
+        "v": boundary.DECLARATION_VERSION,
+        "instance": [{"path": "instance/data/", "reason": "the records"}],
+        "retired": list(entries),
+    }
+
+
+def test_the_two_questions_have_two_answers() -> None:
+    """`owner_of` is present tense and `ever_owned` is not. Conflating
+    them is how every version of this instance's records written before
+    they moved into `instance/` read as the product's."""
+    board = load()
+    for path in board.retired_paths:
+        probe = path + "left-behind.yml" if path.endswith("/") else path
+        assert board.owner_of(probe) == PRODUCT
+        assert board.ever_owned(probe)
+
+
+def test_no_retired_path_is_in_this_repository_any_more() -> None:
+    """A retired path that still exists is a live one, and the entry for
+    it says the opposite of what the tree does."""
+    for path in load().retired_paths:
+        assert not (ROOT / path).exists(), f"{path} is still here"
+
+
+def test_every_retired_path_carries_its_reason() -> None:
+    for entry in load().retired:
+        assert entry.reason.strip()
+
+
+def test_the_retirement_this_repository_did_not_notice_is_declared() -> None:
+    """`site/src/_data/site.json` held four identity keys the showcase's
+    build read, and they were folded into `instance/config.json` and the
+    file deleted. That removed it from the working tree and from nothing
+    else, and nothing excluded it: it was instance data with an entry
+    nowhere for as long as it took somebody to move a directory and go
+    looking."""
+    assert "site/src/_data/site.json" in load().retired_paths
+
+
+def test_a_retired_path_may_be_a_configuration_file() -> None:
+    """Where a live one may not. A file in `config/` states its own owner
+    in its own header, so naming a live one here would put one fact in
+    two places -- and a file that is not there any more states nothing,
+    which leaves this list as the only place its former ownership can be
+    written."""
+    (entry,) = boundary.retired_from_data(
+        _retiring({"path": "config/instance.json", "reason": "where it was"})
+    )
+    assert entry.path == "config/instance.json"
+
+
+def test_a_path_cannot_be_retired_and_handed_over_at_once() -> None:
+    """One of the two entries would be a copy of the other, which is the
+    defect this whole declaration exists downstream of."""
+    with pytest.raises(ValueError, match="retired and is also"):
+        boundary.retired_from_data(
+            _retiring({"path": "instance/data/", "reason": "where it was"})
+        )
+    with pytest.raises(ValueError, match="retired and is also"):
+        boundary.retired_from_data(
+            _retiring({"path": "instance/data/speakers.yml", "reason": "where it was"})
+        )
+
+
+def test_a_retired_path_cannot_be_regenerated() -> None:
+    """The flag says a scheduled job rewrites a path in full on both
+    sides of a merge, which is a statement about a file git still has to
+    merge."""
+    with pytest.raises(ValueError, match="nothing regenerates it"):
+        boundary.retired_from_data(
+            _retiring({"path": "data/", "reason": "where it was", "regenerated": False})
+        )
+
+
+def test_a_retired_entry_that_cannot_be_read_stops_rather_than_guesses() -> None:
+    """A declaration that cannot be read must stop the check rather than
+    run it against a guess -- the same rule the live list is held to."""
+    with pytest.raises(ValueError, match="must carry a reason"):
+        boundary.retired_from_data(_retiring({"path": "data/"}))
+    with pytest.raises(ValueError, match="must be a non-empty path"):
+        boundary.retired_from_data(_retiring({"reason": "no path at all"}))
+    document = _retiring({"path": "data/", "reason": "where they were"})
+    document["retired"] = ["data/"]
+    with pytest.raises(ValueError, match="not an entry"):
+        boundary.retired_from_data(document)
+
+
+def test_an_empty_retired_list_is_refused() -> None:
+    """Absent and empty are different claims. Absent says nothing has
+    moved; empty says somebody looked and there is nothing, which is a
+    statement a list of zero entries cannot support."""
+    assert (
+        boundary.retired_from_data(
+            {
+                "owner": PRODUCT,
+                "v": boundary.DECLARATION_VERSION,
+                "instance": [{"path": "instance/data/", "reason": "the records"}],
+            }
+        )
+        == ()
+    )
+    with pytest.raises(ValueError, match="must be a non-empty list"):
+        boundary.retired_from_data(_retiring())
+
+
+def test_one_retired_entry_cannot_sit_inside_another() -> None:
+    with pytest.raises(ValueError, match="sits inside"):
+        boundary.retired_from_data(
+            _retiring(
+                {"path": "data/", "reason": "where they were"},
+                {"path": "data/keys/", "reason": "where the keys were"},
+            )
+        )
+
+
+def test_the_product_keeps_its_own_files_inside_a_retired_directory_too() -> None:
+    """`kept:` reads the same on this list as on the other one, through
+    the same parser -- and `kept_files` is what a walk of a history asks,
+    because it meets a retired directory's kept file as readily as a live
+    one's."""
+    board = load()
+    assert set(board.kept_files) >= {
+        "data/schema.md",
+        "keys/signing/README.md",
+        "instance/data/schema.md",
+        "instance/keys/signing/README.md",
+    }
+    for kept in board.kept_files:
+        assert not board.ever_owned(kept)
+
+
+# ------------------------------------------------------------------ #
 # Clause 2 -- no instance path holds code
 # ------------------------------------------------------------------ #
 
