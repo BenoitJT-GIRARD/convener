@@ -13,6 +13,7 @@ import {
   withConfigHeader,
 } from './yaml';
 import { isDemoMode, demoSpeakers, demoConfig } from './demo';
+import { configFile, speakersFile } from '../paths';
 import type { Speaker, Config } from './types';
 import type { Subject } from '../state/decisions';
 
@@ -104,8 +105,8 @@ function initialState(token: string | null): State {
  *  volunteers opening the app at once can never race on the same write. */
 async function fetchState(token: string): Promise<State> {
   const [spk, cfg] = await Promise.all([
-    getFile('data/speakers.yml', token),
-    getFile('data/config.yml', token),
+    getFile(speakersFile(), token),
+    getFile(configFile(), token),
   ]);
   const speakers = parseSpeakers(spk.text);
   const config = parseConfig(cfg.text);
@@ -200,7 +201,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const result = await mutate({
         store: githubStore(token),
-        path: 'data/speakers.yml',
+        path: speakersFile(),
         parse: parseSpeakers,
         serialize: v => withSpeakersHeader(serializeSpeakers(v)),
         transform,
@@ -226,7 +227,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const result = await mutate({
         store: githubStore(token),
-        path: 'data/config.yml',
+        path: configFile(),
         parse: parseConfig,
         serialize: v => withConfigHeader(serializeConfig(v)),
         transform,

@@ -29,10 +29,12 @@
  */
 import { relative, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { publicDataDir } from './instance-paths.mjs';
 import { PUBLIC_DIR, writeProjection } from './certificates-projection.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(__dirname, '..', '..', 'public-data', 'certificates-public.json');
+const ROOT = resolve(__dirname, '..', '..');
+const SRC = resolve(ROOT, publicDataDir(), 'certificates-public.json');
 
 const { rows, dest } = await writeProjection(SRC, PUBLIC_DIR);
 

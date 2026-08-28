@@ -40,6 +40,7 @@
  * Pure: no clock, no state, no reading of `data/` beyond the config handed in.
  */
 import { DataShapeError } from '../data/validate';
+import { configFile } from '../paths';
 import type { Channel, Config } from '../data/types';
 import type { RunbookItem } from './phases';
 
@@ -68,7 +69,7 @@ export function channelsOf(config: Config): Channel[] {
   const listed: unknown = (config as { channels?: unknown }).channels;
   if (!Array.isArray(listed)) {
     throw new DataShapeError(
-      'data/config.yml: "channels" should be the list of places an event is ' +
+      `${configFile()}: "channels" should be the list of places an event is ` +
         'announced, and this app cannot read it as one. Someone with access ' +
         'to the repository will need to correct it on GitHub.',
     );

@@ -52,7 +52,13 @@ from convener_ops import (
     survey_invite,
 )
 from convener_ops import cli as cli_module
-from convener_ops.paths import repo_root
+from convener_ops.paths import (
+    DATA_DIR,
+    KEYS_DIR,
+    PUBLIC_DATA_DIR,
+    REGISTER_PATH,
+    repo_root,
+)
 from convener_ops.yaml_safe import safe_load
 
 ROOT = repo_root()
@@ -4495,9 +4501,13 @@ def test_narrowing_the_push_trigger_left_the_default_branch_covered(
 #
 #   1. `_repository_paths_reached_from` -- a file under `app/` that names
 #      a path outside `app/`. Every copy script `package.json`'s own
-#      `prebuild` runs works this way (`resolve(__dirname, '..', '..',
-#      ...)`), and so would an app source file importing across the
-#      boundary.
+#      `prebuild` runs works this way (`resolve(ROOT, keysDir(),
+#      'events')`), and so would an app source file importing across the
+#      boundary. The instance's own paths reach those scripts through
+#      `app/scripts/instance-paths.mjs`, which reads them from
+#      `config/boundary.yml`; `_JS_INSTANCE_PATHS` below reads the same
+#      declaration through `convener_ops.paths` and resolves each name to
+#      the path it stands for.
 #   2. `_published_handbook_paths` -- the one input directory whose
 #      contents are filtered rather than copied wholesale. `docs/` is
 #      reached by `copy-handbook.mjs`, but only the pages
@@ -4558,16 +4568,38 @@ _JS_LINE_COMMENT_RE = re.compile(r"(?m)(?<![:'\"\w])//[^\n]*")
 #: One single- or double-quoted string literal, on one line.
 _JS_STRING_RE = re.compile(r"'([^'\n]*)'|\"([^\"\n]*)\"")
 
-#: A `resolve(...)`/`join(...)` call with no nested call inside it -- the
-#: shape every copy script under `app/scripts/` uses to reach out of
-#: `app/`, one path segment per argument.
-_JS_PATH_CALL_RE = re.compile(r"\b(?:resolve|join)\(([^()]*)\)")
+#: The argument list of a `resolve(...)`/`join(...)` call: path segments,
+#: each either a literal or an argument-less call. That second shape is
+#: how a copy script names an instance path --
+#: `resolve(ROOT, keysDir(), 'events')`, `app/scripts/instance-paths.mjs`
+#: -- and `_JS_INSTANCE_PATHS` below is what it resolves to.
+_JS_PATH_ARGUMENTS = r"(?:[^()]|\b[A-Za-z_$][\w$]*\(\))*"
+
+#: A `resolve(...)`/`join(...)` call -- the shape every copy script under
+#: `app/scripts/` uses to reach out of `app/`, one path segment per
+#: argument.
+_JS_PATH_CALL_RE = re.compile(rf"\b(?:resolve|join)\(({_JS_PATH_ARGUMENTS})\)")
 
 #: `const NAME = resolve(...)`, so a path assembled in two steps (a repo
 #: root bound once, then joined) is followed one level.
 _JS_PATH_BINDING_RE = re.compile(
-    r"\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:resolve|join)\(([^()]*)\)"
+    rf"\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*(?:resolve|join)\(({_JS_PATH_ARGUMENTS})\)"
 )
+
+#: The names `app/scripts/instance-paths.mjs` gives the paths
+#: `config/boundary.yml` hands to the instance, against the same paths as
+#: `convener_ops.paths` reads them. Both sides answer from that one
+#: declaration, so a copy script that reaches `keys/` through `keysDir()`
+#: is read here as reaching `keys/`.
+_JS_INSTANCE_PATHS: Final = {
+    "dataDir": DATA_DIR,
+    "keysDir": KEYS_DIR,
+    "publicDataDir": PUBLIC_DATA_DIR,
+    "registerPath": REGISTER_PATH,
+}
+
+#: An argument-less call, which is the form each of those names takes.
+_JS_NAMED_PATH_RE = re.compile(r"([A-Za-z_$][\w$]*)\(\)")
 
 #: `uv run convener-something` inside one of `deploy.yml`'s own `run:` blocks.
 _UV_RUN_RE = re.compile(r"\buv run (convener-[a-z0-9-]+)")
@@ -4593,7 +4625,12 @@ def _strip_js_comments(text: str) -> str:
 
 
 def _js_string_literal(token: str) -> str | None:
-    match = _JS_STRING_RE.fullmatch(token.strip())
+    stripped = token.strip()
+    named = _JS_NAMED_PATH_RE.fullmatch(stripped)
+    if named is not None:
+        declared = _JS_INSTANCE_PATHS.get(named.group(1))
+        return None if declared is None else declared.as_posix()
+    match = _JS_STRING_RE.fullmatch(stripped)
     if match is None:
         return None
     single, double = match.group(1), match.group(2)
@@ -4710,6 +4747,16 @@ def test_the_input_reader_sees_a_new_repository_input_for_what_it_is(
 
     imported = "import { relay } from '../../services/signup-relay/api.mjs';"
     assert reached(imported) == {"services/signup-relay/api.mjs"}
+
+    named = (
+        "const ROOT = resolve(__dirname, '..', '..');\n"
+        "const SRC = resolve(ROOT, keysDir(), 'events');\n"
+    )
+    assert reached(named) == {f"{KEYS_DIR.as_posix()}/events"}, (
+        "a copy script reaching an instance path through the name "
+        "`app/scripts/instance-paths.mjs` gives it was not read as an "
+        "input -- the four copy scripts all reach out of `app/` that way"
+    )
 
     decoy = (
         "/* styled by `site/src/style.css`, which the event page already\n"

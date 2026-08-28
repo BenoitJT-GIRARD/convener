@@ -7,6 +7,7 @@ import { applyTransition, canTransition } from '../state/transitions';
 import { parisToday } from '../state/derived';
 import { dataEdit, formatDecision, identifier } from '../state/decisions';
 import { CAREER_STAGES, GENDERS } from '../data/types';
+import { speakersFile } from '../paths';
 import type { Speaker, SpeakerStatus, Gender, CareerStage } from '../data/types';
 
 const ALL_STATUSES: SpeakerStatus[] = [
@@ -536,7 +537,7 @@ function DeleteSpeaker({ speaker }: { speaker: Speaker }) {
         Danger zone — delete speaker
       </h3>
       <p className="text-sm text-ink-muted mb-3">
-        Removes the entry permanently from <code className="font-mono">data/speakers.yml</code>.
+        Removes the entry permanently from <code className="font-mono">{speakersFile()}</code>.
         The Git commit is the audit trail. Type the exact name{' '}
         <strong>{speaker.name}</strong> to confirm.
       </p>

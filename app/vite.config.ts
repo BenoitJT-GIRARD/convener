@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { cspMetaContent, devCspMetaContent } from './scripts/csp.mjs';
 import { exampleInstance } from './scripts/example-instance.mjs';
 import { exampleSettings } from './scripts/example-settings.mjs';
+import { instancePaths } from './scripts/instance-paths.mjs';
 import { notice } from './scripts/notice.mjs';
 import {
   editionPrefix,
@@ -115,6 +116,23 @@ const EXAMPLE_SETTINGS = exampleSettings();
 const EDITION_PREFIX = editionPrefix();
 
 /**
+ * Where this instance's own files sit, read from `config/boundary.yml`
+ * and carried into the bundle the same way everything above it is.
+ *
+ * `src/data/DataContext.tsx` asks GitHub for the speaker and config
+ * records, `src/settings/form.ts` says of each declared path why it is
+ * not a form, and both run in a volunteer's browser, where no file can be
+ * read. `src/paths.ts` is what reads the value back.
+ *
+ * Declared for all four configurations along with the rest, for the same
+ * reason: no island references it and `define` only substitutes a token a
+ * bundle actually contains, but a value present in one configuration and
+ * absent from another is the shape that passes a test suite and ships
+ * broken.
+ */
+const INSTANCE_PATHS = instancePaths();
+
+/**
  * Which of this instance's declared values are still
  * the ones the product ships in `instances/example/config/instance.json`,
  * carried into the bundle the same way as everything above it.
@@ -173,6 +191,7 @@ const INSTANCE_DEFINE = {
   'import.meta.env.VITE_EXAMPLE_INSTANCE': JSON.stringify(JSON.stringify(EXAMPLE)),
   'import.meta.env.VITE_EXAMPLE_SETTINGS': JSON.stringify(JSON.stringify(EXAMPLE_SETTINGS)),
   'import.meta.env.VITE_INSTANCE_UNCONFIGURED': JSON.stringify(JSON.stringify(UNCONFIGURED)),
+  'import.meta.env.VITE_INSTANCE_PATHS': JSON.stringify(JSON.stringify(INSTANCE_PATHS)),
 };
 
 /** What every one of the four configurations below substitutes. Both halves,

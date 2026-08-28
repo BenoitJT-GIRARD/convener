@@ -5,6 +5,7 @@ import { useRole } from '../auth/useRole';
 import { useData } from '../data/DataContext';
 import { isDemoMode, exitDemoMode } from '../data/demo';
 import { instanceIdentity } from '../instance';
+import { dataDir, speakersFile } from '../paths';
 import { productNotice } from '../notice';
 import { UnconfiguredBanner } from './UnconfiguredBanner';
 
@@ -112,7 +113,7 @@ export function Layout() {
                 that has never held them. */}
             <em>Operational workspace</em> &middot; data lives in{' '}
             <code className="text-ink">
-              {demo ? 'instances/example/data/' : 'data/speakers.yml'}
+              {demo ? `instances/example/${dataDir()}` : speakersFile()}
             </code>
           </p>
           <a

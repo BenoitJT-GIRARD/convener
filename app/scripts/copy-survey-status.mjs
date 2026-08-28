@@ -38,10 +38,12 @@
  */
 import { relative, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { publicDataDir } from './instance-paths.mjs';
 import { PUBLIC_DIR, writeProjection } from './survey-status-projection.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(__dirname, '..', '..', 'public-data', 'survey-status.json');
+const ROOT = resolve(__dirname, '..', '..');
+const SRC = resolve(ROOT, publicDataDir(), 'survey-status.json');
 
 const { ids, dest } = await writeProjection(SRC, PUBLIC_DIR);
 

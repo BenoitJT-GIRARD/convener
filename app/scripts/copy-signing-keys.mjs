@@ -29,10 +29,12 @@
  */
 import { relative, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { keysDir } from './instance-paths.mjs';
 import { PUBLIC_KEYS_DIR, writeSigningKeys } from './signing-keys-files.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(__dirname, '..', '..', 'keys', 'signing');
+const ROOT = resolve(__dirname, '..', '..');
+const SRC = resolve(ROOT, keysDir(), 'signing');
 
 const { pems, indexPath } = await writeSigningKeys(SRC, PUBLIC_KEYS_DIR);
 

@@ -47,6 +47,7 @@ import type {
   SpeakerSelection,
 } from './types';
 import { BALLOT_VALUES, CAREER_STAGES, DATE_ANSWERS, GENDERS, SPEAKER_FIELDS } from './types';
+import { configFile, speakersFile } from '../paths';
 
 /**
  * A data file the app cannot read as the model it is meant to hold.
@@ -471,7 +472,7 @@ function readSpeaker(at: Cursor, entry: unknown): Speaker {
  * An empty file is an empty list, not an error: that is where the repository
  * starts, and it is the one absence that means exactly what it looks like.
  */
-export function readSpeakers(loaded: unknown, file = 'data/speakers.yml'): Speaker[] {
+export function readSpeakers(loaded: unknown, file = speakersFile()): Speaker[] {
   if (loaded === null || loaded === undefined) return [];
   if (!Array.isArray(loaded)) {
     throw new DataShapeError(
@@ -622,7 +623,7 @@ const CONFIG_KEYS = [
  * the load is the honest answer: the
  * made-up config is not guarded, it does not exist.
  */
-export function readConfig(loaded: unknown, file = 'data/config.yml'): Config {
+export function readConfig(loaded: unknown, file = configFile()): Config {
   const at: Cursor = { file, where: 'the file' };
   const raw = object(at, loaded);
   keys(at, raw, CONFIG_KEYS);

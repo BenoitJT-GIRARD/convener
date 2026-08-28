@@ -23,16 +23,18 @@ import { cp, mkdir, readdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { keysDir } from './instance-paths.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(__dirname, '..', '..', 'keys', 'events');
+const ROOT = resolve(__dirname, '..', '..');
+const SRC = resolve(ROOT, keysDir(), 'events');
 const DST = resolve(__dirname, '..', 'public', 'keys', 'events');
 
 if (existsSync(DST)) await rm(DST, { recursive: true });
 await mkdir(DST, { recursive: true });
 
 if (!existsSync(SRC)) {
-  console.log('copy-event-keys: no keys/events/ yet -- 0 .pub, nothing to publish');
+  console.log(`copy-event-keys: no ${keysDir()}events/ yet -- 0 .pub, nothing to publish`);
   process.exit(0);
 }
 
