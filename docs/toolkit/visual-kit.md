@@ -39,7 +39,7 @@ Any of these works, and none of them costs anything:
 
 Each file has two groups. Everything in `id="variable"` is yours to edit for
 this event; everything in `id="fixed"` is the series identity — the wordmark,
-the coloured field and its cream bands, the decorative loops, the *what to
+the coloured field and its cream bands, the ribbon, the *what to
 expect* block — and stays as it is, so two events in a row look like the same
 series.
 

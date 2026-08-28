@@ -1,12 +1,16 @@
 """The charter's ribbon: one continuous meandering stroke, not four circles.
 
-`data/brand.json::motif._ribbon` names the defect this module fixes: both
-announcement SVGs already in this repository stand in four bare `<circle>`
-elements for the purple stroke that runs through the designer's own poster
+`data/brand.json::motif._ribbon` names the defect this module fixes: the
+purple stroke that runs through the designer's own poster
 (`docs/assets/example_and_template_initial_assets/announcement-template_initial.png`,
-gitignored -- it carries a real person's photograph). A poster built from
+gitignored -- it carries a real person's photograph) was stood in for by
+three bare circles and arcs everywhere it appeared. A poster built from
 circles does not
 read as that mark, no matter how faithfully every other measurement passes.
+This module drew the ribbon for the generated posters (`visual.py`) alone
+until 2026-08-28; `brand_templates.py` sets it in the two downloadable
+templates as well now, which is what it took to retire the last of those
+circles.
 
 What the reference actually shows
 ----------------------------------

@@ -19,33 +19,67 @@
     <rect y="700" width="2100" height="470" fill="#f4f0f1"/>
     <rect y="2760" width="2100" height="210" fill="#f4f0f1"/>
 
-    <!-- Decorative loops, bled off the edges, in the charter's own motif
-         colour and at its own stroke weight, each placed clear of every
-         word on the page. They carry no text: move or delete them. -->
-    <g fill="none" stroke="#012765" stroke-width="50.4">
-      <path d="M210 300 C 60 420, 60 640, 210 760 C 360 880, 360 1100, 210 1220"/>
-      <circle cx="2060" cy="470" r="180"/>
-      <circle cx="60" cy="2500" r="170"/>
+    <!-- The ribbon: one continuous stroke, running off the edges and
+         turning back on itself, in the charter's own motif colour and at
+         its own weight. It carries no text and every word on this page is
+         placed clear of it. Move or delete it freely; if you move a word
+         instead, keep it out of the stroke. -->
+    <g fill="none" stroke="#012765" stroke-width="50.4"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 222.6 0
+               C 222.6 315.56 111.3 631.12 0 631.12
+               C -525 720.83 -525 810.54 0 900.24
+               C 18.6 894.17 73.93 865.53 111.61 863.79
+               C 149.3 862.04 192.88 871.94 226.12 889.79
+               C 259.35 907.63 291.67 938.49 311.04 970.87
+               C 330.4 1003.25 342.3 1046.32 342.3 1084.05
+               C 342.3 1121.78 330.4 1164.85 311.04 1197.23
+               C 291.67 1229.61 259.35 1260.47 226.12 1278.31
+               C 192.88 1296.16 149.3 1306.06 111.61 1304.31
+               C 73.93 1302.57 -62.95 1115.48 0 1267.86
+               C 62.95 1420.24 428.05 1934.9 489.3 2218.59
+               C 550.55 2502.28 387.8 2844.76 367.5 2970
+               C 367.5 8910 8040 8910 8040 8910
+               C 8040 1485 8040 55.71 8040 55.71
+               C 6258 55.71 3882 55.71 2100 55.71
+               C 2081.52 46.87 2027.9 8.87 1989.1 2.69
+               C 1950.31 -3.49 1903.12 2.69 1867.23 18.65
+               C 1831.33 34.61 1795.13 65.51 1773.73 98.45
+               C 1752.32 131.39 1738.8 177.02 1738.8 216.3
+               C 1738.8 255.58 1752.32 301.21 1773.73 334.15
+               C 1795.13 367.09 1831.33 397.99 1867.23 413.95
+               C 1903.12 429.91 1950.31 436.09 1989.1 429.91
+               C 2027.9 423.73 2075.22 378.73 2100 376.89
+               C 2124.78 375.06 2137.8 401.39 2137.8 418.89
+               C 2137.8 436.39 2122.75 357.67 2100 481.89
+               C 2077.25 606.12 2001.3 1009.43 2001.3 1164.24
+               C 2001.3 1319.05 2083.55 1369.66 2100 1410.75"/>
     </g>
 
-    <!-- Wordmark: three squares and a link, drawn rather than embedded. -->
-    <g transform="translate(250 92)">
-      <rect x="0" y="10" width="44" height="44" fill="#fecac1"/>
-      <rect x="58" y="0" width="44" height="44" fill="#fecac1"/>
-      <rect x="10" y="72" width="44" height="44" fill="#fecac1"/>
-      <rect x="76" y="62" width="44" height="44" fill="#fecac1"/>
-      <path d="M30 30 C 78 20, 106 44, 100 82" fill="none"
-            stroke="#012765" stroke-width="9"/>
-      <circle cx="27" cy="33" r="12" fill="none"
-              stroke="#012765" stroke-width="9"/>
-      <circle cx="100" cy="80" r="12" fill="none"
-              stroke="#012765" stroke-width="9"/>
+    <!-- Wordmark: five squares, two markers and the line joining them,
+         drawn rather than embedded. The rule is that line, continuing. -->
+    <g transform="translate(280 92) scale(1.75)">
+      <rect x="0" y="0" width="32" height="32" fill="#fecac1"/>
+      <rect x="68" y="0" width="32" height="32" fill="#fecac1"/>
+      <rect x="34" y="34" width="32" height="32" fill="#fecac1"/>
+      <rect x="0" y="68" width="32" height="32" fill="#fecac1"/>
+      <rect x="68" y="68" width="32" height="32" fill="#fecac1"/>
+      <g fill="none" stroke="#012765" stroke-width="3.5"
+         stroke-linecap="round">
+        <path d="M 48 15 L 73 15 C 79 15 83.5 20 83.5 29 L 83.5 38"/>
+        <path d="M 15.5 61 L 15.5 73 C 15.5 79 19 83 25 83"/>
+      </g>
+      <g fill="#012765" fill-rule="evenodd">
+        <path d="M 15.5 39 C 21 39.5 24.5 42 24.5 45.5 C 24.5 52 20.5 57.5 15.5 61 C 10.5 57.5 6.5 52 6.5 45.5 C 6.5 42 10 39.5 15.5 39 Z M 18 49 A 2.5 2.5 0 1 1 13 49 A 2.5 2.5 0 1 1 18 49 Z"/>
+        <path d="M 83.5 60 C 89 59.5 92.5 57 92.5 53.5 C 92.5 47 88.5 41 83.5 38 C 78.5 41 74.5 47 74.5 53.5 C 74.5 57 78 59.5 83.5 60 Z M 86 49 A 2.5 2.5 0 1 1 81 49 A 2.5 2.5 0 1 1 86 49 Z"/>
+      </g>
     </g>
-    <text x="420" y="196" font-size="98" font-weight="500"
-          fill="#012765">forum.example.test</text>
-    <rect x="420" y="228" width="1180" height="7" fill="#012765"/>
+    <text x="485" y="188" font-size="88"
+          font-weight="500"><tspan fill="#012765">www.The</tspan><tspan fill="#a24535">Behaviour</tspan><tspan fill="#012765">Forum.org</tspan></text>
+    <rect x="323.75" y="233.75" width="1366.25" height="7"
+          fill="#012765"/>
 
-    <text x="1050" y="430" text-anchor="middle" font-size="106"
+    <text x="1050" y="430" text-anchor="middle" font-size="86"
           font-weight="900" letter-spacing="2"
           fill="#012765">MONTHLY READING GROUP</text>
     <text x="1050" y="530" text-anchor="middle" font-size="50"
@@ -67,7 +101,7 @@
 
     <!-- DATE AND TIME. The app holds {{speaker.date}} as 2026-11-12 and
          {{speaker.time}} as 12:30; write them out the way they are said. -->
-    <text x="1050" y="1290" text-anchor="middle" font-size="76"
+    <text x="1050" y="1290" text-anchor="middle" font-size="72"
           font-weight="700"
           fill="#012765">{{speaker.date}} at {{speaker.time}} (CET)</text>
 
@@ -87,39 +121,41 @@
     </g>
 
     <!-- EDITION CODE. The series number this event carries in the data. -->
-    <text x="1050" y="2900" text-anchor="middle" font-size="40"
+    <text x="1050" y="2812" text-anchor="middle" font-size="40"
           font-weight="700" fill="#012765">{{speaker.edition_code}}</text>
   </g>
 
   <g id="fixed-what-to-expect">
-    <text x="230" y="1470" font-size="62" font-weight="800"
+    <text x="480" y="1470" font-size="62" font-weight="800"
           fill="#000000">WHAT TO EXPECT?</text>
     <text font-size="50" fill="#000000">
-      <tspan x="300" y="1590" font-weight="800"
+      <tspan x="560" y="1590" font-weight="800"
              fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
-      <tspan x="300" y="1652">questions to the speaker</tspan>
-      <tspan x="300" y="1714">at forum.example.test</tspan>
-      <tspan x="300" y="1846" font-weight="800"
+      <tspan x="560" y="1652">questions to the speaker</tspan>
+      <tspan x="560" y="1714">at forum.example.test</tspan>
+      <tspan x="560" y="1846" font-weight="800"
              fill="#012765">D-DAY: </tspan><tspan>Presentation</tspan>
-      <tspan x="300" y="1908">followed by a discussion</tspan>
-      <tspan x="300" y="1970">with the audience</tspan>
-      <tspan x="300" y="2102" font-weight="800"
+      <tspan x="560" y="1908">followed by a discussion</tspan>
+      <tspan x="560" y="1970">with the audience</tspan>
+      <tspan x="560" y="2102" font-weight="800"
              fill="#012765">AFTER: </tspan><tspan>Continue the</tspan>
-      <tspan x="300" y="2164">discussion and connect</tspan>
-      <tspan x="300" y="2226">with peers</tspan>
+      <tspan x="560" y="2164">discussion and connect</tspan>
+      <tspan x="560" y="2226">with peers</tspan>
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
-         offline generator, then drop it over this square. -->
-    <text x="300" y="2360" font-size="56" font-weight="800"
+         offline generator, then drop it over this square. It sits east of
+         the ribbon's tail, which crosses the foot of this page. -->
+    <text x="600" y="2360" font-size="56" font-weight="800"
           fill="#000000">REGISTER HERE</text>
-    <rect x="300" y="2400" width="360" height="340" fill="#ffffff"/>
-    <rect x="330" y="2430" width="300" height="280" fill="none"
+    <rect x="600" y="2400" width="360" height="340" fill="#ffffff"/>
+    <rect x="630" y="2430" width="300" height="280" fill="none"
           stroke="#b18f9b" stroke-width="5" stroke-dasharray="18 14"/>
-    <text x="480" y="2595" text-anchor="middle" font-size="40"
+    <text x="780" y="2595" text-anchor="middle" font-size="40"
           fill="#794658">QR code</text>
-    <text x="1050" y="2830" text-anchor="middle" font-size="46"
-          fill="#000000">Free · online · everyone welcome — register
-      at forum.example.test</text>
+    <text x="1180" y="2872" text-anchor="middle" font-size="46"
+          fill="#000000">Free · online · everyone welcome</text>
+    <text x="1180" y="2928" text-anchor="middle" font-size="46"
+          fill="#000000">Register at forum.example.test</text>
   </g>
 </svg>

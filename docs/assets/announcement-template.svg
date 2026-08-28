@@ -17,38 +17,70 @@
     <rect y="0" width="1200" height="168" fill="#f4f0f1"/>
     <rect y="400" width="1200" height="146" fill="#f4f0f1"/>
 
-    <!-- Decorative loops, bled off three edges. Their colour and their
-         stroke weight are the charter's own motif, so neither can drift
-         from it. Each one is placed clear of every word on the page: the
-         weight the charter measures is nearly twice what these were drawn
-         at, and a heavy stroke behind dark type is unreadable type. Move
-         or delete them freely; they carry no text. -->
-    <g fill="none" stroke="#012765" stroke-width="28.8">
-      <circle cx="1165" cy="55" r="95"/>
-      <path d="M120 40 C 20 130, 20 250, 120 330 C 220 410, 220 530, 120 610"/>
-      <circle cx="70" cy="700" r="120"/>
+    <!-- The ribbon: one continuous stroke, running off three edges and
+         turning back on itself, in the charter's own motif colour and at
+         its own weight so neither can drift from it. It carries no text
+         and every word on this page is placed clear of it. Move or delete
+         it freely; if you move a word instead, keep it out of the stroke,
+         because a heavy line behind dark type is unreadable type. -->
+    <g fill="none" stroke="#012765" stroke-width="28.8"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 127.2 0
+               C 127.2 127.5 63.6 255 0 255
+               C -300 280.99 -300 306.98 0 332.97
+               C 10.63 329.5 42.24 313.13 63.78 312.13
+               C 85.31 311.14 110.22 316.79 129.21 326.99
+               C 148.2 337.19 166.67 354.83 177.74 373.33
+               C 188.8 391.83 195.6 416.44 195.6 438
+               C 195.6 459.56 188.8 484.17 177.74 502.67
+               C 166.67 521.17 148.2 538.81 129.21 549.01
+               C 110.22 559.21 85.31 564.86 63.78 563.87
+               C 42.24 562.87 -35.97 487.61 0 543.03
+               C 35.97 598.45 244.6 786.91 279.6 896.4
+               C 314.6 1005.89 221.6 1149.4 210 1200
+               C 210 3600 3600 3600 3600 3600
+               C 3600 600 3600 31.83 3600 31.83
+               C 2880 31.83 1920 31.83 1200 31.83
+               C 1189.44 26.78 1158.8 5.07 1136.63 1.54
+               C 1114.46 -1.99 1087.5 1.54 1066.99 10.66
+               C 1046.47 19.78 1025.79 37.43 1013.56 56.26
+               C 1001.33 75.08 993.6 101.15 993.6 123.6
+               C 993.6 146.05 1001.33 172.12 1013.56 190.94
+               C 1025.79 209.77 1046.47 227.42 1066.99 236.54
+               C 1087.5 245.66 1114.46 249.19 1136.63 245.66
+               C 1158.8 242.13 1185.84 216.42 1200 215.37
+               C 1214.16 214.32 1221.6 229.37 1221.6 239.37
+               C 1221.6 249.37 1213 236.86 1200 275.37
+               C 1187 313.87 1143.6 421.29 1143.6 470.4
+               C 1143.6 519.51 1190.6 553.4 1200 570"/>
     </g>
 
-    <!-- Wordmark. The mark is three squares and a link, drawn rather than
-         embedded: an SVG that references an external logo file is an SVG
-         that travels broken. -->
-    <g transform="translate(168 52)">
-      <rect x="0" y="6" width="26" height="26" fill="#fecac1"/>
-      <rect x="34" y="0" width="26" height="26" fill="#fecac1"/>
-      <rect x="6" y="42" width="26" height="26" fill="#fecac1"/>
-      <rect x="44" y="36" width="26" height="26" fill="#fecac1"/>
-      <path d="M18 18 C 46 12, 62 26, 58 48" fill="none"
-            stroke="#012765" stroke-width="5"/>
-      <circle cx="16" cy="20" r="7" fill="none"
-              stroke="#012765" stroke-width="5"/>
-      <circle cx="58" cy="46" r="7" fill="none"
-              stroke="#012765" stroke-width="5"/>
+    <!-- Wordmark. The mark is five squares, two markers and the line
+         joining them, drawn rather than embedded: an SVG that references
+         an external logo file is an SVG that travels broken. The rule
+         under the address is the same line, continuing east. -->
+    <g transform="translate(165 57)">
+      <rect x="0" y="0" width="32" height="32" fill="#fecac1"/>
+      <rect x="68" y="0" width="32" height="32" fill="#fecac1"/>
+      <rect x="34" y="34" width="32" height="32" fill="#fecac1"/>
+      <rect x="0" y="68" width="32" height="32" fill="#fecac1"/>
+      <rect x="68" y="68" width="32" height="32" fill="#fecac1"/>
+      <g fill="none" stroke="#012765" stroke-width="3.5"
+         stroke-linecap="round">
+        <path d="M 48 15 L 73 15 C 79 15 83.5 20 83.5 29 L 83.5 38"/>
+        <path d="M 15.5 61 L 15.5 73 C 15.5 79 19 83 25 83"/>
+      </g>
+      <g fill="#012765" fill-rule="evenodd">
+        <path d="M 15.5 39 C 21 39.5 24.5 42 24.5 45.5 C 24.5 52 20.5 57.5 15.5 61 C 10.5 57.5 6.5 52 6.5 45.5 C 6.5 42 10 39.5 15.5 39 Z M 18 49 A 2.5 2.5 0 1 1 13 49 A 2.5 2.5 0 1 1 18 49 Z"/>
+        <path d="M 83.5 60 C 89 59.5 92.5 57 92.5 53.5 C 92.5 47 88.5 41 83.5 38 C 78.5 41 74.5 47 74.5 53.5 C 74.5 57 78 59.5 83.5 60 Z M 86 49 A 2.5 2.5 0 1 1 81 49 A 2.5 2.5 0 1 1 86 49 Z"/>
+      </g>
     </g>
-    <text x="268" y="112" font-size="58" font-weight="500"
-          fill="#012765">forum.example.test</text>
-    <rect x="268" y="130" width="690" height="4" fill="#012765"/>
+    <text x="282" y="112" font-size="50"
+          font-weight="500"><tspan fill="#012765">www.The</tspan><tspan fill="#a24535">Behaviour</tspan><tspan fill="#012765">Forum.org</tspan></text>
+    <rect x="190" y="138" width="774" height="4"
+          fill="#012765"/>
 
-    <text x="600" y="262" text-anchor="middle" font-size="66"
+    <text x="600" y="272" text-anchor="middle" font-size="50"
           font-weight="900" letter-spacing="1"
           fill="#012765">MONTHLY READING GROUP</text>
     <text x="600" y="330" text-anchor="middle" font-size="31"
@@ -90,31 +122,33 @@
   <g id="fixed-what-to-expect">
     <text x="240" y="730" font-size="34" font-weight="800"
           fill="#000000">WHAT TO EXPECT?</text>
-    <text font-size="29" fill="#000000">
-      <tspan x="280" y="796" font-weight="800"
+    <text font-size="27" fill="#000000">
+      <tspan x="320" y="796" font-weight="800"
              fill="#012765">BEFORE: </tspan><tspan>Ask your</tspan>
-      <tspan x="280" y="832">questions to the speaker</tspan>
-      <tspan x="280" y="868">at forum.example.test</tspan>
-      <tspan x="280" y="944" font-weight="800"
+      <tspan x="320" y="832">questions to the speaker</tspan>
+      <tspan x="320" y="868">at forum.example.test</tspan>
+      <tspan x="320" y="944" font-weight="800"
              fill="#012765">D-DAY: </tspan><tspan>Presentation</tspan>
-      <tspan x="280" y="980">followed by a discussion</tspan>
-      <tspan x="280" y="1016">with the audience</tspan>
-      <tspan x="280" y="1092" font-weight="800"
+      <tspan x="320" y="980">followed by a discussion</tspan>
+      <tspan x="320" y="1016">with the audience</tspan>
+      <tspan x="320" y="1092" font-weight="800"
              fill="#012765">AFTER: </tspan><tspan>Continue the</tspan>
-      <tspan x="280" y="1128">discussion and connect</tspan>
-      <tspan x="280" y="1164">with peers</tspan>
+      <tspan x="320" y="1128">discussion and connect</tspan>
+      <tspan x="320" y="1164">with peers</tspan>
     </text>
 
     <!-- REGISTRATION QR. Generate it from the registration link with any
-         offline generator, or in the app; then drop it over this square. -->
-    <text x="40" y="928" font-size="32" font-weight="800"
+         offline generator, or in the app; then drop it over this square.
+         It sits where the ribbon's tail leaves it room, which is why the
+         slot is 180 and not the width of the margin beside it. -->
+    <text x="24" y="898" font-size="32" font-weight="800"
           fill="#000000">REGISTER</text>
-    <text x="40" y="966" font-size="32" font-weight="800"
+    <text x="24" y="936" font-size="32" font-weight="800"
           fill="#000000">HERE</text>
-    <rect x="40" y="990" width="200" height="200" fill="#ffffff"/>
-    <rect x="60" y="1010" width="160" height="160" fill="none"
+    <rect x="24" y="960" width="180" height="180" fill="#ffffff"/>
+    <rect x="42" y="978" width="144" height="144" fill="none"
           stroke="#b18f9b" stroke-width="3" stroke-dasharray="10 8"/>
-    <text x="140" y="1098" text-anchor="middle" font-size="22"
+    <text x="114" y="1058" text-anchor="middle" font-size="22"
           fill="#794658">QR code</text>
   </g>
 </svg>
