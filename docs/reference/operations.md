@@ -293,9 +293,9 @@ one of those events turns the job red and posts to the board's thread naming
 the events affected.
 
 **The fix is always the same, and it is a deployment rather than an
-edit:** that file is regenerated and committed by *Deploy app*, which
-ignores `config/**` and is not started by the pushes this repository's own
-jobs make — so nothing heals it on its own. Run *Deploy app* from the
+edit:** that file is regenerated and committed by *Deploy app*, which is
+not started by the pushes this repository's own jobs make — so nothing
+heals it on its own. Run *Deploy app* from the
 Actions tab (`workflow_dispatch`) and the next daily run goes quiet. Two
 consequences worth knowing before you go looking for a data problem: editing
 `instance/registration-lanes.yml` changes every cutoff and starts nothing, and
@@ -2064,8 +2064,9 @@ end. Editing the files by hand still works and is still checked, but only
 later, by `tools/tests/test_queue_watch.py`.
 
 **When a saved value starts being read is not "on save", and it differs per
-value.** `.github/workflows/deploy.yml` ignores `config/**`, so a commit here
-starts nothing at all:
+value.** A commit here starts `.github/workflows/deploy.yml`, which is what
+makes one of these values live; the others are read by other jobs on their
+own schedules:
 
 | value | read by | live from |
 |---|---|---|

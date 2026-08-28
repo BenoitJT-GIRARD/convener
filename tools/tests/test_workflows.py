@@ -138,6 +138,61 @@ def _survey_status_step_script() -> str:
     )
 
 
+def _settings_form_source() -> str:
+    return (ROOT / "app" / "src" / "settings" / "form.ts").read_text(encoding="utf-8")
+
+
+def _deploy_paths_ignored() -> list[str]:
+    """What `deploy.yml` declines to run for.
+
+    `on:` is read back as the boolean `True` by every YAML 1.1 loader,
+    so the key is looked up both ways.
+    """
+    raw: dict[Any, Any] = dict(_load_workflow())
+    on = raw.get(True) or raw.get("on") or {}
+    push = on.get("push") or {}
+    return [str(entry) for entry in (push.get("paths-ignore") or [])]
+
+
+def test_the_deploy_runs_for_the_files_the_settings_screen_writes() -> None:
+    """The fact the settings screen's advice rests on.
+
+    `config/**` sat in `paths-ignore` until the published address moved
+    into a file the bundle reads, and removing it is what stopped a
+    changed address publishing nothing and going green. The settings
+    screen tells a volunteer what saving does, so if that entry ever
+    comes back the screen's answer changes with it.
+    """
+    ignored = _deploy_paths_ignored()
+    written = [p.name for p in (ROOT / "instance").glob("*.yml")]
+    written.append("config.json")
+    for pattern in ignored:
+        head = pattern.split("*")[0].rstrip("/")
+        assert head not in ("instance", "config"), (
+            f"deploy.yml declines to run for {pattern!r}, which covers the "
+            "files the settings screen writes. app/src/settings/form.ts "
+            "tells a volunteer that saving starts this workflow; that "
+            "sentence is now wrong and has to change with this list."
+        )
+    assert written, "no settings file found to check the filter against"
+
+
+def test_the_settings_form_claims_no_workflow_ignores_what_it_writes() -> None:
+    """The prose half of the same rule.
+
+    Seven sentences across four files claimed `deploy.yml` ignored the
+    directory the settings screen writes into. It had stopped being true,
+    nothing read the claim, and one of the seven was a string shown on
+    screen telling a volunteer to run the workflow by hand.
+    """
+    source = _settings_form_source()
+    assert "ignores config/" not in source and "ignores `config/" not in source, (
+        "app/src/settings/form.ts claims a workflow ignores the directory "
+        "it writes into. deploy.yml runs for those files, and a volunteer "
+        "reading otherwise dispatches a run they did not need."
+    )
+
+
 def test_deploy_workflow_survey_status_retry_re_derives_rather_than_rebases() -> None:
     """The same defence `registration.yml`'s and
     `survey.yml`'s own retry loops use -- a rejected push is handled by

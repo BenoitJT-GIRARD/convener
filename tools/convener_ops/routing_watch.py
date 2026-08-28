@@ -361,9 +361,9 @@ def remedy() -> str:
     return (
         f"{registration_routing.ROUTING_PATH.as_posix()} is regenerated and "
         f"committed by *{PUBLISHER_NAME}* ({PUBLISHER_PATH.as_posix()}), "
-        "which ignores config/** and is not started by the pushes this "
-        "repository's own jobs make -- so nothing here will fix it on its "
-        "own. Run that workflow from the Actions tab."
+        "which is not started by the pushes this repository's own jobs "
+        "make -- so nothing here will fix it on its own. Run that workflow "
+        "from the Actions tab."
     )
 
 

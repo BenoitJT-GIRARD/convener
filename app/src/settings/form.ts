@@ -3,11 +3,10 @@
  * it changes anything.
  *
  * The second half of this module is the half that is easy
- * to leave out and expensive to leave out. `.github/workflows/deploy.yml`
- * ignores `config/**`, so committing a threshold here starts nothing at
- * all: the number sits in the repository, correct and inert, until
- * something reads it. What that something is differs per value, and the
- * differences are not cosmetic --
+ * to leave out and expensive to leave out. Saving commits the number and
+ * starts `.github/workflows/deploy.yml`; whether that makes the number
+ * live depends on which job reads it, and the differences are not
+ * cosmetic --
  *
  * - `alarm_after_hours` and the whole of `instance/actions-budget.yml` are
  *   read by *Sweep and notify the board* at the top of each of its runs, so
@@ -17,9 +16,10 @@
  *   liveness watchdog*, a different schedule;
  * - `queue_beyond_hours` reaches nothing at all until *Deploy app*
  *   regenerates and commits `instance/public-data/registration-routing.json`, which
- *   is what the registration relay actually reads. Until that runs, a
- *   registration is still routed on the threshold already published there.
- *   That workflow ignores `config/**`, so saving here does not start it.
+ *   is what the registration relay actually reads. Saving starts that
+ *   workflow, so the new threshold reaches the relay on its next
+ *   successful run; until then a registration is still routed on the
+ *   threshold already published there.
  *
  * A form that implied any of these took effect on save would be lying in
  * the direction that costs a participant their seat, so every field carries
@@ -59,10 +59,9 @@ const DEPLOY: Effect = {
   when:
     'only once Deploy app has regenerated and committed ' +
     `${publicDataDir()}registration-routing.json, which is what the registration ` +
-    'relay reads. That workflow ignores config/**, so saving here does not ' +
-    'start it: it lands with the next commit that workflow watches, or run it ' +
-    'by hand if this is urgent. Until then registrations route on the ' +
-    'threshold already published there.',
+    'relay reads. Saving starts that workflow, so the new threshold reaches ' +
+    'the relay on its next successful run. Until then registrations route ' +
+    'on the threshold already published there.',
   where: '.github/workflows/deploy.yml',
 };
 

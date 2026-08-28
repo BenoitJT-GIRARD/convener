@@ -42,9 +42,10 @@
  * When a change takes effect
  * --------------------------
  * Not on save, in every case, and the differences matter enough to be
- * printed beside each field rather than once at the top: `deploy.yml`
- * ignores `config/**`, so committing here starts nothing. The queue alarm
- * is live at the next run of the daily sweep; the lane threshold reaches
+ * printed beside each field rather than once at the top. Saving starts
+ * `deploy.yml`, and for one value that is what makes it live; for the
+ * others the reader is a different job on its own schedule. The queue
+ * alarm is live at the next run of the daily sweep; the lane threshold reaches
  * the registration relay only once *Deploy app* has regenerated
  * `instance/public-data/registration-routing.json`, and until then registrations
  * route on the threshold already published there. See `../settings/form.ts`.
