@@ -80,17 +80,21 @@ separately, by asking the committed files themselves whether one of
 `data/brand.json`'s values, or one of the reconstruction's, appears anywhere
 outside the block this script owns.
 
-The two downloadable templates are generated whole
-----------------------------------------------------
-`docs/assets/announcement-template.svg` and `flyer-template.svg` are the
-files `docs/toolkit/visual-kit.md` hands a volunteer. Nothing in them is
-hand-authored any more, so there are no markers and no splice: they are
-written entire, from the charter and from `config/instance.json`. They
-were drawn by hand once, and had drifted onto the palette
-D-16 discarded -- including one line set in the page's own ground colour,
-invisible in every poster ever downloaded. See
-`convener_ops/brand_templates.py` for the measurements and for why the mark is
-what makes a duplicate's build refuse.
+The three downloadable files are generated whole
+--------------------------------------------------
+`docs/assets/announcement-template.svg`, `flyer-template.svg` and
+`video-call-background.svg` are the files `docs/toolkit/visual-kit.md`
+hands a volunteer. Nothing in them is hand-authored any more, so there are
+no markers and no splice: they are written entire, from the charter and
+from `config/instance.json`. All three were drawn by hand once. The two
+templates had drifted onto the palette D-16 discarded -- including one
+line set in the page's own ground colour, invisible in every poster ever
+downloaded. The background was a PNG, which is worse than drifting: no
+check in this repository could read a word of it, and it disagreed with
+`config/instance.json` about the series' own strapline for as long as it
+existed. See `convener_ops/brand_templates.py` for the measurements, for
+why the mark is what makes a duplicate's build refuse, and for why the
+background is committed as vector with no raster beside it.
 
 Contrast is recomputed, not read
 ---------------------------------
@@ -141,6 +145,7 @@ SITE_CSS_PATH: Final = Path("site") / "src" / "style.css"
 APP_TOKENS_CSS_PATH: Final = Path("app") / "src" / "design" / "tokens.css"
 ANNOUNCEMENT_SVG_PATH: Final = brand_templates.ANNOUNCEMENT_PATH
 FLYER_SVG_PATH: Final = brand_templates.FLYER_PATH
+BACKGROUND_SVG_PATH: Final = brand_templates.BACKGROUND_PATH
 
 #: How the script is invoked, quoted in every failure message. One string,
 #: so the messages cannot come to name two different commands.
@@ -370,6 +375,7 @@ _TARGETS: Final = (
     _Target(APP_TOKENS_CSS_PATH, render_app_tokens_css),
     _Target(ANNOUNCEMENT_SVG_PATH, brand_templates.render_announcement_template),
     _Target(FLYER_SVG_PATH, brand_templates.render_flyer_template),
+    _Target(BACKGROUND_SVG_PATH, brand_templates.render_video_call_background),
 )
 
 

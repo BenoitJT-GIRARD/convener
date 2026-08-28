@@ -54,6 +54,7 @@ from generate_brand_css import (
     _END,
     ANNOUNCEMENT_SVG_PATH,
     APP_TOKENS_CSS_PATH,
+    BACKGROUND_SVG_PATH,
     BRAND_PATH,
     COMMAND,
     FLYER_SVG_PATH,
@@ -94,10 +95,12 @@ _GUARDED_FILES = (
     Path("site") / "src" / "index.njk",
     Path("app") / "src" / "design" / "tokens.css",
     Path("app") / "src" / "auth" / "Login.tsx",
-    # The two files a collaborator downloads. They carried
-    # all three of these values until they stopped being drawn by hand.
+    # The files a collaborator downloads. The two templates carried
+    # all three of these values until they stopped being drawn by hand;
+    # the background was a PNG, where no sweep could have found one.
     ANNOUNCEMENT_SVG_PATH,
     FLYER_SVG_PATH,
+    BACKGROUND_SVG_PATH,
 )
 
 #: The reconstruction's own three values, exactly as they shipped: the
@@ -914,17 +917,27 @@ def test_a_palette_that_measures_below_aa_does_not_build(
 
 
 # --------------------------------------------------------------------------
-# The two files a collaborator downloads
+# The three files a collaborator downloads
 # --------------------------------------------------------------------------
 
+#: The two a volunteer fills in for an event.
 _TEMPLATES = (ANNOUNCEMENT_SVG_PATH, FLYER_SVG_PATH)
+
+#: All three, including the one there is nothing to fill in on. Every
+#: property below the section heading holds for a file this kit hands out,
+#: not for a file with placeholders in it, so each is parametrised over
+#: this and the two tests that really are about placeholders say so by
+#: using `_TEMPLATES` instead.
+_DOWNLOADS = (*_TEMPLATES, BACKGROUND_SVG_PATH)
+
 _RENDERERS = {
     ANNOUNCEMENT_SVG_PATH: brand_templates.render_announcement_template,
     FLYER_SVG_PATH: brand_templates.render_flyer_template,
+    BACKGROUND_SVG_PATH: brand_templates.render_video_call_background,
 }
 
 
-@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+@pytest.mark.parametrize("rel", _DOWNLOADS, ids=lambda p: p.name)
 def test_the_committed_template_is_what_the_charter_derives(rel: Path) -> None:
     committed = (ROOT / rel).read_text(encoding="utf-8")
     assert committed == _RENDERERS[rel](ROOT), (
@@ -932,7 +945,7 @@ def test_the_committed_template_is_what_the_charter_derives(rel: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+@pytest.mark.parametrize("rel", _DOWNLOADS, ids=lambda p: p.name)
 def test_the_committed_template_parses_as_xml(rel: Path) -> None:
     """Found by rendering one in a browser rather than by reading it: `--`
     anywhere inside an XML comment makes the whole document unparseable,
@@ -943,7 +956,7 @@ def test_the_committed_template_parses_as_xml(rel: Path) -> None:
     ElementTree.parse(ROOT / rel)
 
 
-@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+@pytest.mark.parametrize("rel", _DOWNLOADS, ids=lambda p: p.name)
 def test_no_colour_in_a_template_comes_from_anywhere_but_the_charter(
     rel: Path,
 ) -> None:
@@ -969,12 +982,12 @@ def test_no_colour_in_a_template_comes_from_anywhere_but_the_charter(
     assert found <= allowed, f"{rel.as_posix()} draws in {sorted(found - allowed)}"
 
 
-@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+@pytest.mark.parametrize("rel", _DOWNLOADS, ids=lambda p: p.name)
 def test_a_template_says_it_is_generated(rel: Path) -> None:
     assert "generate_brand_css.py" in (ROOT / rel).read_text(encoding="utf-8")
 
 
-@pytest.mark.parametrize("rel", _TEMPLATES, ids=lambda p: p.name)
+@pytest.mark.parametrize("rel", _DOWNLOADS, ids=lambda p: p.name)
 def test_a_template_reaches_out_to_nothing(rel: Path) -> None:
     """The property `app/tests/visual-kit.test.tsx` holds from the other
     side, restated where the generator lives so that a change to the
@@ -1054,3 +1067,211 @@ def test_the_legibility_list_would_notice_a_pairing_that_failed() -> None:
     flat = dict.fromkeys(_charter_colours(BRAND_PATH), "#fecac1")
     problems = brand_templates._legibility_problems(flat, named="a flat palette")
     assert len(problems) == len(brand_templates._LEGIBILITY)
+
+
+# --------------------------------------------------------------------------
+# The third file: the video-call background
+# --------------------------------------------------------------------------
+
+
+def _background_texts(svg: str) -> list[str]:
+    """Every string the background actually sets as type, in order."""
+    root = ElementTree.fromstring(svg)
+    return [
+        "".join(node.itertext()).strip()
+        for node in root.iter("{http://www.w3.org/2000/svg}text")
+    ]
+
+
+def test_every_line_on_the_background_is_a_declared_string(
+    default_repo: Path,
+) -> None:
+    """The defect this file replaced: a hand-drawn PNG whose middle line
+    read `THE PLACE TO DISCUSS ANIMAL BEHAVIOUR` -- a third string, in no
+    declaration, agreeing with neither `identity.strapline` nor
+    `identity.tagline`, and invisible to every check in this repository
+    because nothing here reads an image.
+
+    So this asserts the whole list and not a membership: five lines, three
+    of them declared values and two of them the product's own label. A
+    sixth would fail here whatever it said.
+    """
+    charter = _charter(brand.DEFAULT_PATH)
+    charter[brand.MOTIF_KEY] = _SYNTHETIC_MOTIF
+    _write_json(default_repo / BRAND_PATH, charter)
+
+    declaration = json.loads(
+        (default_repo / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    declaration["identity"] = {
+        **declaration["identity"],
+        "organisation": "ReadingRoomTrust",
+        "strapline": "Read together",
+        "forum": "https://forum.example.org",
+    }
+    _write_json(default_repo / published.INSTANCE_PATH, declaration)
+
+    texts = _background_texts(
+        brand_templates.render_video_call_background(default_repo)
+    )
+    assert texts == [
+        "READING ROOM TRUST",
+        "READ TOGETHER",
+        "FORUM.EXAMPLE.ORG",
+        *brand_templates._CODE_LABEL,
+    ]
+
+
+def test_the_background_carries_no_word_of_this_instance_for_another(
+    default_repo: Path,
+) -> None:
+    """The other half, and the reason the file had to stop being a PNG: a
+    duplicate's own background says who *it* is, and nothing of the first
+    instance."""
+    charter = _charter(brand.DEFAULT_PATH)
+    charter[brand.MOTIF_KEY] = _SYNTHETIC_MOTIF
+    _write_json(default_repo / BRAND_PATH, charter)
+
+    ours = published.load_identity(ROOT)
+    declaration = json.loads(
+        (default_repo / published.INSTANCE_PATH).read_text(encoding="utf-8")
+    )
+    declaration["identity"] = {
+        **declaration["identity"],
+        "organisation": "ReadingRoomTrust",
+        "strapline": "Read together",
+        "forum": "https://forum.example.org",
+    }
+    _write_json(default_repo / published.INSTANCE_PATH, declaration)
+
+    svg = brand_templates.render_video_call_background(default_repo)
+    assert ours.organisation not in svg
+    assert ours.forum_host not in svg
+    assert ours.strapline.upper() not in svg
+
+
+def test_a_long_name_on_the_background_shrinks_instead_of_overflowing() -> None:
+    """SVG does not wrap, and D-08 names the overflowing hand-made poster
+    as a real, lived failure. A name twice the length of this instance's
+    has to come back smaller, and small enough to fit the plate it is set
+    in -- not merely smaller."""
+    short = brand_templates._fitted_font_size(
+        "READING ROOM", cap_height=76.0, available=1000.0
+    )
+    long = brand_templates._fitted_font_size(
+        "READING ROOM AND LENDING LIBRARY TRUST", cap_height=76.0, available=1000.0
+    )
+    assert long < short
+    assert (
+        len("READING ROOM AND LENDING LIBRARY TRUST")
+        * long
+        * (brand_templates._ADVANCE_EM)
+        <= 1000.0
+    )
+    # And a name that already fits is never shrunk merely for existing.
+    assert short == pytest.approx(76.0 / brand_templates._CAP_HEIGHT_EM)
+
+
+#: How far above its slot the code's label reaches: the higher of its
+#: two baselines, plus the capitals that sit on it.
+_LABEL_BAND = brand_templates._CODE_LABEL_BASELINES[0] + brand_templates._CODE_LABEL_CAP
+
+
+def _sampled_ribbon(width: float, height: float) -> list[tuple[float, float]]:
+    """Points on the rendered ribbon, not the waypoints it is fitted to.
+
+    `ribbon.safe_margins` answers from the waypoints, which is the right
+    place to *derive* a margin from; this walks the cubics that are
+    actually drawn, so the test below is a check on the composition rather
+    than a restatement of the arithmetic that placed it.
+    """
+    commands: list[tuple[str, list[float]]] = []
+    for line in ribbon.ribbon_path(width, height).splitlines():
+        parts = line.split()
+        commands.append((parts[0], [float(value) for value in parts[1:]]))
+    points: list[tuple[float, float]] = []
+    current = (0.0, 0.0)
+    for kind, numbers in commands:
+        if kind == "M":
+            current = (numbers[0], numbers[1])
+            points.append(current)
+            continue
+        c1 = (numbers[0], numbers[1])
+        c2 = (numbers[2], numbers[3])
+        end = (numbers[4], numbers[5])
+        for step in range(1, 41):
+            t = step / 40
+            u = 1 - t
+            x = (
+                u**3 * current[0]
+                + 3 * u**2 * t * c1[0]
+                + 3 * u * t**2 * c2[0]
+                + t**3 * end[0]
+            )
+            y = (
+                u**3 * current[1]
+                + 3 * u**2 * t * c1[1]
+                + 3 * u * t**2 * c2[1]
+                + t**3 * end[1]
+            )
+            points.append((x, y))
+        current = end
+    return points
+
+
+def test_the_background_keeps_the_ribbon_off_every_word_it_sets() -> None:
+    """The property `ribbon.safe_margins` exists to give the plate, held
+    against the file that is actually committed.
+
+    Both boxes are read out of the rendered document rather than
+    recomputed here, and the ribbon is walked as the cubics it is drawn as
+    rather than as the waypoints it is fitted to -- so this fails both
+    ways round: a block moved onto the stroke, and a margin that agreed
+    with the waypoints while the drawn curve went further.
+
+    Neither block may be crossed. The plate carries three lines of type,
+    and heavy purple behind dark type is unreadable type; the code carries
+    a symbol whose whole job is to be scanned, and a stroke across it
+    destroys modules no error correction was sized for. Half the stroke's
+    own width is added to every box, because a `d` attribute describes a
+    centreline and the stroke is painted either side of it.
+    """
+    width, height = (
+        brand_templates._BACKGROUND_WIDTH,
+        brand_templates._BACKGROUND_HEIGHT,
+    )
+    half = (
+        ribbon.ribbon_stroke_width(width, height, ratio=ribbon.ribbon_width_ratio(ROOT))
+        / 2
+    )
+
+    document = ElementTree.fromstring(
+        (ROOT / BACKGROUND_SVG_PATH).read_text(encoding="utf-8")
+    )
+    white = _charter_colours(BRAND_PATH)["white"]
+    boxes = [
+        (
+            float(rect.get("x", "0")),
+            float(rect.get("y", "0")),
+            float(rect.get("x", "0")) + float(rect.get("width", "0")),
+            float(rect.get("y", "0")) + float(rect.get("height", "0")),
+        )
+        for rect in document.iter("{http://www.w3.org/2000/svg}rect")
+        if rect.get("fill") == white
+    ]
+    assert len(boxes) == 2, "the plate and the code slot are what this checks"
+    # The code's own label sits above its slot, on the field rather than
+    # on white, so it has no rectangle of its own to read: the slot is
+    # grown upwards by the label's own two baselines instead.
+    lowest = max(boxes, key=lambda box: box[1])
+    boxes = [
+        box if box is not lowest else (box[0], box[1] - _LABEL_BAND, box[2], box[3])
+        for box in boxes
+    ]
+
+    for x, y in _sampled_ribbon(width, height):
+        for x0, y0, x1, y1 in boxes:
+            assert not (x0 - half < x < x1 + half and y0 - half < y < y1 + half), (
+                f"the ribbon crosses ({x0:.0f}, {y0:.0f})-({x1:.0f}, {y1:.0f}) "
+                f"at ({x:.1f}, {y:.1f})"
+            )

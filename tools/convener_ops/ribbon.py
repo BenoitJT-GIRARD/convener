@@ -483,3 +483,60 @@ def ribbon_path(width: float, height: float) -> str:
         commands.append(_cubic(c1, c2, end))
 
     return "\n".join(commands)
+
+
+#: How much clearance a block of text keeps from the ribbon's own reach,
+#: in stroke widths. Half of it is the stroke's physical extent either side
+#: of its centreline; the other half is a documented buffer for the small
+#: overshoot a Catmull-Rom curve makes past an interior anchor on its way
+#: to the next one -- `_LEFT_TAIL_BULGE_X`'s own comment measures that at
+#: about 8 units on a 1200-unit canvas against a ~29-unit stroke there,
+#: comfortably inside one full stroke width.
+CLEARANCE_STROKE_WIDTHS: Final = 1.0
+
+
+def safe_margins(width: float, height: float, *, ratio: float) -> tuple[float, float]:
+    """How far in from each side a word has to start to clear the ribbon.
+
+    Two lengths in the canvas's own units -- left and right -- computed
+    from `waypoints` rather than sampled off the rendered curve:
+    `_catmull_rom` interpolates every one of those points exactly, so the
+    curve's own extremes cannot fall short of them, only overshoot
+    slightly past the tail bulge, which `CLEARANCE_STROKE_WIDTHS` covers.
+
+    Pure geometry, and `ratio` is threaded in by the caller for the same
+    reason `ribbon_stroke_width` takes one: this module draws the ribbon,
+    it does not decide whose charter is in force.
+
+    Two readers, one arithmetic: `visual._ribbon_safe_margins` turns these
+    into the `vw` its own CSS is written in, and
+    `brand_templates.render_video_call_background` places a plate of text
+    between them. They used to be one reader, and the second one arriving
+    is exactly when a measurement gets copied instead of called.
+    """
+    if width <= 0 or height <= 0:
+        raise ValueError("width and height must both be positive")
+    marks = waypoints(width, height)
+    stroke = ribbon_stroke_width(width, height, ratio=ratio)
+    clearance = stroke * CLEARANCE_STROKE_WIDTHS
+    left_reach = max(
+        x
+        for x, _y in (
+            marks.left_top_entry,
+            marks.left_top_exit,
+            *marks.left_loop_arc,
+            marks.left_tail_bulge,
+            marks.left_bottom_exit,
+        )
+    )
+    right_reach = width - min(
+        x
+        for x, _y in (
+            *marks.right_loop_arc,
+            marks.right_loop_out,
+            marks.right_tail_start,
+            marks.right_tail_bulge,
+            marks.right_tail_exit,
+        )
+    )
+    return left_reach + clearance, right_reach + clearance

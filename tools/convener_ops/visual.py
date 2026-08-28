@@ -273,11 +273,12 @@ from .governance import PARIS
 from .published import load_identity
 from .registration_code import registration_code_svg
 from .ribbon import (
+    CLEARANCE_STROKE_WIDTHS,
     ribbon_path,
     ribbon_stroke_colour,
     ribbon_stroke_width,
     ribbon_width_ratio,
-    waypoints,
+    safe_margins,
 )
 
 __all__ = [
@@ -794,54 +795,21 @@ def _frame_html(
 #: "Why a safe area, and why derived rather than hand-typed" for the two
 #: halves this covers (the stroke's own physical extent either side of its
 #: centreline, and a documented buffer for Catmull-Rom overshoot).
-_RIBBON_CLEARANCE_STROKE_WIDTHS: Final = 1.0
-
-
 def _ribbon_safe_margins(
     width: float, height: float, root: Path
 ) -> tuple[float, float]:
     """The left and right text safe-area margins, in `vw` (of the canvas
-    *width* -- the axis every margin below is subtracted from), derived from
-    `ribbon.waypoints` rather than hand-typed -- see the module docstring.
+    *width* -- the axis every margin below is subtracted from).
 
-    Takes the largest x-coordinate any on-curve point of the left motif
-    reaches (its top entry, its loop's own arc, the fitted tail bulge, its
-    bottom exit) and the smallest x-coordinate any point of the right motif
-    reaches, symmetrically -- exactly the two numbers "how far into the
-    canvas does this side's ribbon go" asks for, with no need to sample the
-    rendered curve itself: `ribbon._catmull_rom` interpolates every one of
-    these points exactly, so the curve's own extremes cannot fall short of
-    them, only overshoot slightly past the tail bulge on its way to the next
-    anchor -- which `_RIBBON_CLEARANCE_STROKE_WIDTHS`'s own clearance
-    covers (see the module docstring).
+    `ribbon.safe_margins` is the arithmetic and this is the unit
+    conversion: the two numbers are "how far into the canvas does this
+    side's ribbon reach", plus `ribbon.CLEARANCE_STROKE_WIDTHS`, read off
+    `ribbon.waypoints` rather than sampled from the rendered curve -- see
+    that function's own docstring, and the module docstring here for what
+    the margins are for.
     """
-    w = waypoints(width, height)
-    stroke = ribbon_stroke_width(width, height, ratio=ribbon_width_ratio(root))
-    clearance = stroke * _RIBBON_CLEARANCE_STROKE_WIDTHS
-
-    left_reach = max(
-        x
-        for x, _y in (
-            w.left_top_entry,
-            w.left_top_exit,
-            *w.left_loop_arc,
-            w.left_tail_bulge,
-            w.left_bottom_exit,
-        )
-    )
-    right_reach = width - min(
-        x
-        for x, _y in (
-            *w.right_loop_arc,
-            w.right_loop_out,
-            w.right_tail_start,
-            w.right_tail_bulge,
-            w.right_tail_exit,
-        )
-    )
-    left_margin_vw = (left_reach + clearance) / width * 100.0
-    right_margin_vw = (right_reach + clearance) / width * 100.0
-    return left_margin_vw, right_margin_vw
+    left, right = safe_margins(width, height, ratio=ribbon_width_ratio(root))
+    return left / width * 100.0, right / width * 100.0
 
 
 def _ribbon_content_right_margin(width: float, height: float, root: Path) -> float:
@@ -860,7 +828,7 @@ def _ribbon_content_right_margin(width: float, height: float, root: Path) -> flo
     rendering a one-character title and reading where `.content` actually
     starts, not merely assumed; the small residual gap that check found is
     well inside the tail's own approach to the edge in that band, in turn
-    well inside `_RIBBON_CLEARANCE_STROKE_WIDTHS`'s own buffer, applied
+    well inside `ribbon.CLEARANCE_STROKE_WIDTHS`'s own buffer, applied
     below unchanged). Reusing `_ribbon_safe_margins`'s own full-height right
     margin here would cost `.content` -- the "what to expect" copy and the
     photo frame beside it -- width the right motif was never going to
@@ -873,7 +841,7 @@ def _ribbon_content_right_margin(width: float, height: float, root: Path) -> flo
     above it the way the right motif's reach is.
     """
     stroke = ribbon_stroke_width(width, height, ratio=ribbon_width_ratio(root))
-    clearance = stroke * _RIBBON_CLEARANCE_STROKE_WIDTHS
+    clearance = stroke * CLEARANCE_STROKE_WIDTHS
     return clearance / width * 100.0
 
 

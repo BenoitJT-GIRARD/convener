@@ -12,7 +12,7 @@
  *    404 for everyone using the app. This is the failure the previous copy
  *    step had: it walked `.md` only and skipped `docs/assets/` outright, and
  *    the video-call background had been sitting unreachable behind that.
- * 3. A template drifts into a closed format, or grows until nobody wants to
+ * 3. A file drifts into a closed format, or grows until nobody wants to
  *    clone the repository — the two ways this kit's own purpose is undone.
  */
 import { readFileSync, statSync } from 'node:fs';
@@ -35,7 +35,13 @@ import { walk, isServed } from '../scripts/handbook-files.mjs';
 const KIT_KEY = 'toolkit/visual-kit';
 const DOCS = resolve(__dirname, '../../docs');
 const TEMPLATES = ['assets/announcement-template.svg', 'assets/flyer-template.svg'];
-const BACKGROUND = 'assets/zoom-background.png';
+const BACKGROUND = 'assets/video-call-background.svg';
+// All three are SVG now: the background was a hand-drawn PNG until
+// 2026-08-28, which made it the one file in this kit nothing could read --
+// including the sweep that keeps one instance's name out of another's
+// repository. `SOURCE` is what that changed: every file the kit hands out
+// is text a person and a check can both read.
+const SOURCE = [...TEMPLATES, BACKGROUND];
 // This used to be a fourth published asset. It was a real
 // speaker's own photograph and name, kept without a later, separate
 // consent to use them as a sample -- see `PUBLIC_ASSETS`'s own comment.
@@ -79,7 +85,7 @@ describe('the kit is reachable', () => {
 
   it('offers both templates and the video-call background', () => {
     const links = localLinks();
-    for (const file of [...TEMPLATES, BACKGROUND]) {
+    for (const file of SOURCE) {
       expect(links).toContain(`../${file}`);
     }
   });
@@ -91,10 +97,10 @@ describe('the build serves what the kit links to', () => {
   // asserting against it is asserting against what the build really does,
   // not against a rule the build no longer uses to decide this.
   it('names exactly the kit\'s two templates and its background -- no finished example', () => {
-    expect([...PUBLIC_ASSETS].sort()).toEqual([...TEMPLATES, BACKGROUND].sort());
+    expect([...PUBLIC_ASSETS].sort()).toEqual([...SOURCE].sort());
   });
 
-  it.each([...TEMPLATES, BACKGROUND])('%s is in the allowlist the build publishes', file => {
+  it.each(SOURCE)('%s is in the allowlist the build publishes', file => {
     expect(PUBLIC_ASSETS).toContain(file);
   });
 
@@ -138,7 +144,7 @@ describe('the build serves what the kit links to', () => {
 });
 
 describe('the templates stay open, and stay light', () => {
-  it.each(TEMPLATES)('%s is SVG source, not a wrapped bitmap', file => {
+  it.each(SOURCE)('%s is SVG source, not a wrapped bitmap', file => {
     const text = readFileSync(resolve(DOCS, file), 'utf-8');
     expect(text).toContain('<svg');
     // An SVG whose content is one embedded base64 image is a binary in a
@@ -153,7 +159,7 @@ describe('the templates stay open, and stay light', () => {
     expect(text).not.toContain('@import');
   });
 
-  it.each(TEMPLATES)('%s stays small enough to clone without thinking', file => {
+  it.each(SOURCE)('%s stays small enough to clone without thinking', file => {
     expect(statSync(resolve(DOCS, file)).size).toBeLessThan(30_000);
   });
 

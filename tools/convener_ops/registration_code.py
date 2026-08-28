@@ -1,4 +1,4 @@
-"""The registration code: what a scanner reads off the poster.
+"""The codes a scanner reads off this project's own printed work.
 
 Encodes exactly one thing -- `registration.signup_url(event_id)`, the
 event's own public page address (D-19) -- and nothing else.
@@ -19,6 +19,16 @@ impossible to repeat here by construction, not merely by convention.
 test_a_room_link_never_reaches_the_encoded_code` proves it against the
 real fixture that already carries one (`site/src/_data/events.json`'s
 own `MRG-05` entry).
+
+Two codes, one rule
+--------------------
+`forum_code_svg` is the second: the code on the video-call background
+(`brand_templates.py`), which belongs to the series rather than to any one
+edition and points at where the series is discussed. It takes no address
+either. Both functions derive their own target from a declaration, and
+neither has a parameter an address could arrive through -- that is the
+rule this module is, and a second encoder written somewhere else would be
+a second place to break it.
 
 The encoder: `segno`, already a dependency, not a new one
 ----------------------------------------------------------
@@ -68,9 +78,16 @@ from typing import Final
 
 import segno
 
+from . import published
 from .registration import signup_url
 
-__all__ = ["QR_BORDER", "registration_code_modules", "registration_code_svg"]
+__all__ = [
+    "QR_BORDER",
+    "forum_code_svg",
+    "forum_code_target",
+    "registration_code_modules",
+    "registration_code_svg",
+]
 
 #: Roughly 15% error correction -- the same choice `delivery.py` makes for
 #: the certificate's own QR code, for the same reason: comfortable
@@ -145,3 +162,71 @@ def registration_code_modules(event_id: str, *, root: Path | None = None) -> int
     qr = segno.make(url, error=_QR_ERROR_LEVEL)
     modules_across, _ = qr.symbol_size(border=QR_BORDER)
     return int(modules_across)
+
+
+# --------------------------------------------------------------------------
+# The series' own code: the one on the video-call background
+# --------------------------------------------------------------------------
+
+
+def forum_code_target(
+    identity: published.Identity, address: published.Published
+) -> str:
+    """Where the video-call background's code sends a person.
+
+    `identity.forum` -- the address the series discusses at, which every
+    poster this project draws already prints in words -- and the published
+    showcase when that declaration still carries a placeholder in place of
+    an address. The fallback is chosen for degrading to something that
+    cannot be absent: an instance with no published address is an instance
+    with no site, no event pages and no registration, which is not an
+    instance at all.
+
+    **The second branch is not reachable through
+    `published.load_identity` today, and that is worth saying rather than
+    leaving a reader to discover.** `forum` is in `IDENTITY_FIELDS` and
+    not in `DEGRADABLE_FIELDS`, so a declaration carrying a placeholder
+    there is refused outright before any renderer sees it -- the rule
+    above only ever takes its first branch from a loaded declaration. It
+    is written anyway because this is a *code*, not a line of prose: a
+    poster that prints `REPLACE` says something obviously unfinished to
+    whoever reads it, while a code that encodes it is scanned, resolves to
+    nothing, and says nothing to anybody. If `forum` ever earns a place
+    beside `proposal_form` in `DEGRADABLE_FIELDS` -- a duplicate running
+    webinars with no discussion forum is an ordinary thing to be -- this
+    is the one place that already answers for it.
+
+    Not a `Identity` property beside `proposal_form_url`, and not a
+    reader of its own: it needs both declarations at once, and
+    `Identity` deliberately knows nothing about the published address.
+    """
+    if published.is_placeholder(identity.forum):
+        return address.url
+    return identity.forum
+
+
+def forum_code_svg(*, dark: str, root: Path | None = None) -> str:
+    """The video-call background's QR code, as an embeddable `<svg>`.
+
+    Takes no address, exactly as `registration_code_svg` takes no URL, and
+    for the same reason: what a code on a shared surface points at is a
+    decision this module makes from the declarations, never one a caller
+    can pass in. `root` says which repository's declarations, and a root
+    is not an address.
+
+    `title` puts the encoded string into the document as text. That is
+    what makes the target of a printed code *readable* -- by a person
+    opening the file, and by `convener_ops.derivation_guard`, which sweeps
+    every blob for this instance's declared values and can read an SVG
+    where it could never read the modules of a rendered code.
+    """
+    url = forum_code_target(published.load_identity(root), published.load(root))
+    qr = segno.make(url, error=_QR_ERROR_LEVEL)
+    return qr.svg_inline(
+        border=QR_BORDER,
+        dark=dark,
+        omitsize=True,
+        svgclass="forum-qr",
+        lineclass="forum-qr__line",
+        title=url,
+    )

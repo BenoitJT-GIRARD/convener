@@ -1,5 +1,5 @@
-"""The registration code -- proving it decodes, and proving a room link can
-never reach it.
+"""The codes this project prints -- proving they decode, and proving an
+address can never be handed to one.
 
 A code nobody has decoded is a rectangle of noise, so every test below
 that touches an actual QR code decodes it with
@@ -13,13 +13,29 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import replace
 from datetime import date
 
+import pytest
 from qr_decode import decode_registration_qr
 
 from convener_ops.paths import repo_root
+from convener_ops.published import (
+    DEGRADABLE_FIELDS,
+    IDENTITY_FIELDS,
+    INSTANCE_PATH,
+    PLACEHOLDER_MARKER,
+    Identity,
+    Published,
+    identity_from_data,
+    load_identity,
+)
 from convener_ops.registration import signup_url
-from convener_ops.registration_code import registration_code_svg
+from convener_ops.registration_code import (
+    forum_code_svg,
+    forum_code_target,
+    registration_code_svg,
+)
 from convener_ops.visual import Announcement, render_announcement
 
 ROOT = repo_root()
@@ -183,6 +199,95 @@ def test_registration_code_svg_signature_has_no_url_or_link_parameter() -> None:
     # choose the address itself, which is the property this test exists
     # for, so the shape rule below is what carries the guard now and the
     # set above is only what makes a reviewer look.
+    assert not any(
+        word in name.lower()
+        for name in parameters
+        for word in ("url", "link", "href", "base", "address")
+    )
+
+
+# ---------------------------------------------------------------------------
+# The series' own code: the one on the video-call background
+# ---------------------------------------------------------------------------
+
+
+def _identity(**overrides: str) -> Identity:
+    """This instance's identity with one or two fields replaced, so a rule
+    can be exercised against a declaration this repository does not have."""
+    declared = load_identity(ROOT)
+    return replace(declared, **overrides)
+
+
+def test_the_background_code_points_at_the_declared_forum() -> None:
+    """The first branch, and the only one a loaded declaration reaches --
+    see `forum_code_target`'s own docstring for why the second is written
+    anyway."""
+    identity = _identity(forum="https://forum.example.org")
+    address = Published(url="https://example-instance.github.io/example-showcase/")
+    assert forum_code_target(identity, address) == "https://forum.example.org"
+
+
+def test_the_background_code_falls_back_to_the_published_showcase() -> None:
+    """The second branch. A code is not prose: a poster printing `REPLACE`
+    says something obviously unfinished, while a code encoding it is
+    scanned, resolves to nothing, and says nothing at all -- so the rule
+    degrades to the one address an instance cannot be without."""
+    identity = _identity(forum=f"https://{PLACEHOLDER_MARKER}")
+    address = Published(url="https://example-instance.github.io/example-showcase/")
+    assert forum_code_target(identity, address) == address.url
+
+
+def test_the_declaration_cannot_reach_that_second_branch_today() -> None:
+    """What makes the branch above unreachable, pinned where it is decided
+    rather than left for a reader to work out.
+
+    `forum` is required and is not degradable, so `identity_from_data`
+    refuses a placeholder there before any renderer sees the declaration.
+    This is not an argument for deleting the fallback -- it is the line
+    that would have to change first, named so that whoever changes it
+    finds the code that already answers for it.
+    """
+    assert "forum" in IDENTITY_FIELDS
+    assert "forum" not in DEGRADABLE_FIELDS
+
+    declaration = json.loads((ROOT / INSTANCE_PATH).read_text(encoding="utf-8"))
+    declaration["identity"] = {
+        **declaration["identity"],
+        "forum": f"https://{PLACEHOLDER_MARKER}",
+    }
+    with pytest.raises(ValueError, match="forum"):
+        identity_from_data(declaration)
+
+
+def test_the_background_code_decodes_to_the_forum_this_instance_declares() -> None:
+    """Decoded, not merely produced -- the same standard every other code
+    in this module is held to."""
+    svg = forum_code_svg(dark="#000000", root=ROOT)
+    assert decode_registration_qr(svg) == load_identity(ROOT).forum
+
+
+def test_the_background_code_encodes_no_edition_at_all() -> None:
+    """What the hand-drawn background it replaces got wrong. Its code
+    pointed at one forum thread for one 2024 edition, so a background
+    reused at every session since sent every scanner to a talk that had
+    already happened -- and nothing could see it, because nothing in this
+    repository reads an image. The series' code carries the series and
+    nothing an edition changes.
+    """
+    decoded = decode_registration_qr(forum_code_svg(dark="#000000", root=ROOT))
+    assert decoded == load_identity(ROOT).forum
+    assert signup_url("mrg-1", root=ROOT) not in decoded
+    assert not re.search(r"/t/|/events/", decoded)
+
+
+def test_forum_code_svg_signature_has_no_url_or_link_parameter() -> None:
+    """The same structural guard `registration_code_svg` carries, on the
+    second encoder: an address is derived from a declaration here, never
+    handed in."""
+    import inspect
+
+    parameters = inspect.signature(forum_code_svg).parameters
+    assert set(parameters) == {"dark", "root"}
     assert not any(
         word in name.lower()
         for name in parameters

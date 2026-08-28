@@ -223,10 +223,13 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
  *  would be a category error, not a page.
  *
  *  Every entry here was opened and read, not assumed safe from its
- *  extension or its role: the two templates are hand-authored SVG with
+ *  extension or its role: all three are generated SVG carrying the series
+ *  identity and nothing else -- the two templates additionally carry
  *  `{{speaker.*}}` placeholders and a literal "speaker photo" placeholder
- *  frame, never a real name or a real photograph; the background is a
- *  branded graphic with no person in it. A fourth file, the kit's
+ *  frame, never a real name or a real photograph; the background carries
+ *  no person and no event. The background was a hand-drawn PNG until
+ *  2026-08-28: readable by nobody, and disagreeing with
+ *  `config/instance.json` about the series' own strapline the whole time. A fourth file, the kit's
  *  "finished example", was on this list and is not any more --
  *  it was a real speaker's own photograph and name, kept without a later,
  *  separate consent to use them as a sample (`git log --follow` on
@@ -244,5 +247,5 @@ export const CONTENT_REGISTRY: Record<string, ContentEntry> = {
 export const PUBLIC_ASSETS: readonly string[] = [
   'assets/announcement-template.svg',
   'assets/flyer-template.svg',
-  'assets/zoom-background.png',
+  'assets/video-call-background.svg',
 ];

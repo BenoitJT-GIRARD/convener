@@ -7,7 +7,7 @@ The webinar runs on a **Thursday, 12:30–14:00 CET**, hosted by its **two Event
 | Time (CET) | What happens |
 |---|---|
 | 12:00 | The meeting room opens — the hosts can join. |
-| 12:15 | Hosts check everything works; apply the [video-call background](../assets/zoom-background.png). |
+| 12:15 | Hosts check everything works; apply the [video-call background](../assets/video-call-background.svg). |
 | 12:20 | Speaker joins (at least 10 minutes early). |
 | 12:25 | Quick tech check with the speaker — screen sharing, sound. |
 | 12:30 | Webinar starts — **on time**. |

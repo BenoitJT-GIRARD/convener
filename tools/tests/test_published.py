@@ -884,6 +884,7 @@ _LITERAL_IDENTITY_FILES = (Path(".github/CODEOWNERS"),)
 _DERIVED_IDENTITY_FILES = (
     Path("docs/assets/announcement-template.svg"),
     Path("docs/assets/flyer-template.svg"),
+    Path("docs/assets/video-call-background.svg"),
 )
 
 #: Files that still name this organisation and are somebody else's task,
@@ -997,13 +998,19 @@ def test_the_identity_sweep_would_see_a_second_copy_if_there_were_one() -> None:
 def test_the_generated_templates_carry_the_identity_the_declaration_names() -> None:
     """The exemption above, checked rather than merely granted.
 
-    These two files are what a collaborator downloads, so the identity
+    These three files are what a collaborator downloads, so the identity
     travelling outward is whatever they say. They are generated from
     `config/instance.json` and
     `scripts/generate_brand_css.py --check` refuses them the moment they
     stop being what it derives -- this is the assertion that the
     derivation is of *this* declaration and not of a literal somebody
     typed and forgot.
+
+    Each value is looked for in the declared spelling *or* in capitals,
+    because a display line is set in capitals and a document title is not,
+    and which of the two a given file uses is a typographic decision that
+    belongs to the composition rather than to this check. What is asserted
+    either way is that the string came from the declaration.
     """
     identity = published.load_identity()
     for path in _DERIVED_IDENTITY_FILES:
@@ -1012,7 +1019,7 @@ def test_the_generated_templates_carry_the_identity_the_declaration_names() -> N
             f"{path.as_posix()} no longer names the forum this instance "
             f"declares ({identity.forum_host})"
         )
-        assert identity.series.upper() in text, (
+        assert identity.series in text or identity.series.upper() in text, (
             f"{path.as_posix()} no longer names this series ({identity.series})"
         )
 

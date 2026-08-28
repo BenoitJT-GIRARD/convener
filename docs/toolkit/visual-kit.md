@@ -16,12 +16,19 @@ wait for.
 | --- | --- | --- |
 | [Announcement image](../assets/announcement-template.svg) | SVG, 1200 × 1200 | Square image for the forum post and the LinkedIn post |
 | [Flyer](../assets/flyer-template.svg) | SVG, A4 portrait | For printing, and for attaching to an invitation email |
-| [Video-call background](../assets/zoom-background.png) | PNG, 1920 × 1080 | What the hosts put behind them during the session — see [Hosting](../workflow/3-hosting.md) |
+| [Video-call background](../assets/video-call-background.svg) | SVG, 1920 × 1080 | What the hosts put behind them during the session — see [Hosting](../workflow/3-hosting.md). Nothing to fill in; export it and use it |
 | Finished example | — | No example is published here. The one that used to fill this row was a past speaker's own photograph and name, kept without a separate, later consent to use them as a sample — so it has been withdrawn from this kit rather than shipped on the strength of the original invitation alone. Fill in a template yourself and delete this row once you have made one you are happy to show. |
 
-SVG and PNG only. Both open in free software, on any machine, with no account
-and no licence — which is the whole point: a template you can only edit inside
-one company's website is the same problem in a different building.
+SVG only, and it opens in free software on any machine, with no account and no
+licence — which is the whole point: a template you can only edit inside one
+company's website is the same problem in a different building.
+
+The background used to be a PNG somebody drew by hand. It said
+`THE PLACE TO DISCUSS ANIMAL BEHAVIOUR`, which is not what this series says
+about itself anywhere else, and its QR code pointed at a single forum thread
+for one 2024 event. Nothing could see either problem: no check in this
+repository can read a word inside an image. It is generated from the same two
+files the templates are now, so what it says is what the declaration says.
 
 ## Opening one
 
@@ -37,8 +44,8 @@ Any of these works, and none of them costs anything:
 
 ## What to change, and what not to
 
-Each file has two groups. Everything in `id="variable"` is yours to edit for
-this event; everything in `id="fixed"` is the series identity — the wordmark,
+The two templates have two groups. Everything in `id="variable"` is yours to
+edit for this event; everything in `id="fixed"` is the series identity — the wordmark,
 the coloured field and its cream bands, the ribbon, the *what to
 expect* block — and stays as it is, so two events in a row look like the same
 series.
@@ -89,6 +96,21 @@ the layout still holds, the letterforms are simply not ours.
   forum and LinkedIn want.
 - **Flyer** — export to PDF for printing, or to PNG at 300 dpi to attach to an
   email.
+- **Video-call background** — export to PNG at 1920 × 1080. Video-call
+  applications take a bitmap, never an SVG, so this export is not optional —
+  but it is the whole job here, because there is nothing to fill in first. Any
+  of the tools above does it in one step: in Inkscape, *File > Export*, width
+  1920, *Export As…*. Do it once and keep the PNG; it only changes when the
+  series' own name, strapline or address does.
+
+**Why the background is not shipped as a PNG as well.** It would have to be
+rendered by a machine, and two machines do not render text identically —
+hinting and anti-aliasing differ. A committed PNG could then only be checked
+loosely, or checked strictly and fail on somebody else's laptop for a reason
+that is not a mistake; and either way nothing in this repository could read
+what it said. The SVG is checked exactly, character for character, against
+`data/brand.json` and `config/instance.json`. The cost of that is this one
+export, and it is a cost worth naming rather than hiding.
 
 Export a copy; **do not overwrite the template**. The file in the repository is
 the one the next person starts from.
