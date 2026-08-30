@@ -162,7 +162,7 @@ jobs:
           from convener_ops.declaration.yaml_safe import safe_load
 
           speakers = safe_load(
-              (repo_root() / "data" / "speakers.yml").read_text(encoding="utf-8")
+              (repo_root() / "instance" / "data" / "speakers.yml").read_text(encoding="utf-8")
           )
           for entry in speakers:
               if isinstance(entry, dict) and entry.get("zoom_link"):

@@ -159,14 +159,14 @@ jobs:
           uv run --project tools python -c '
           import json
 
-          from convener_ops import eventkeys
+          from convener_ops.journey import eventkeys
           from convener_ops.declaration.paths import repo_root
 
           root = repo_root()
           events = json.loads(
               (root / "site" / "src" / "_data" / "events.json").read_text(encoding="utf-8")
           )
-          keys_dir = root / "keys" / "events"
+          keys_dir = root / "instance" / "keys" / "events"
           keys_dir.mkdir(parents=True, exist_ok=True)
           for event in events:
               event_id = str(event["id"]).lower()
