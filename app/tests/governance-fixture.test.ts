@@ -138,13 +138,23 @@ function escapeForRegExp(text: string): string {
 }
 
 /** Every file under `dir` whose name matches `suffix`, read as one blob --
- *  the same flat `readdirSync` walk `dates.test.ts`'s cast-site sweep uses,
- *  narrowed to a suffix filter since neither `tools/tests/` nor
- *  `app/tests/` nests test files in subdirectories. */
-function corpus(dir: string, suffix: string): string {
-  return readdirSync(dir)
-    .filter(name => name.endsWith(suffix))
-    .map(name => readFileSync(resolve(dir, name), 'utf-8'))
+ *  the same `readdirSync` walk `dates.test.ts`'s cast-site sweep uses,
+ *  narrowed to a suffix filter. `deep` because `tools/tests/` now mirrors
+ *  `convener_ops`'s sub-packages, one directory per sub-package: a flat walk
+ *  reads the files left at its root and calls every block only the ones
+ *  below them read unread. `app/tests/` nests nothing and is walked flat,
+ *  which keeps this side exactly as wide as the Python twin's own
+ *  `test_governance_fixture.py`. */
+function corpus(dir: string, suffix: string, deep = false): string {
+  return readdirSync(dir, { withFileTypes: true })
+    .flatMap(entry => {
+      if (entry.isDirectory()) {
+        return deep ? [corpus(resolve(dir, entry.name), suffix, deep)] : [];
+      }
+      return entry.name.endsWith(suffix)
+        ? [readFileSync(resolve(dir, entry.name), 'utf-8')]
+        : [];
+    })
     .join('\n');
 }
 
@@ -182,7 +192,7 @@ describe('every top-level fixture key is read by somebody, in either language', 
     // language, actually looks the block up.
     const toolsTests = resolve(__dirname, '../../tools/tests');
     const text = [
-      corpus(toolsTests, '.py'),
+      corpus(toolsTests, '.py', true),
       corpus(__dirname, '.test.ts'),
       corpus(__dirname, '.test.tsx'),
     ].join('\n');
