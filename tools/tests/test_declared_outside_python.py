@@ -56,6 +56,17 @@ def run_blocks() -> list[tuple[str, str]]:
     return found
 
 
+#: An import of this package wherever it stands in an inline program, and
+#: not only at the start of a line. Half of them are written inside a
+#: `python -c '...'` one-liner, where the statement opens straight after
+#: the quote and closes with `)"`: a line-start test skips all six of
+#: those, and `ast.parse` on the whole line refuses the trailing bracket.
+IMPORT = re.compile(
+    r"from\s+convener_ops[\w.]*\s+import\s+\w+(?:\s*,\s*\w+)*"
+    r"|import\s+convener_ops[\w.]*"
+)
+
+
 def imported_names(script: str) -> set[tuple[str, str]]:
     """Every `(module, name)` an inline program imports from this package.
 
@@ -69,12 +80,9 @@ def imported_names(script: str) -> set[tuple[str, str]]:
     accepts either.
     """
     found: set[tuple[str, str]] = set()
-    for line in script.splitlines():
-        text = line.strip().rstrip("'\"")
-        if not text.startswith(("from convener_ops", "import convener_ops")):
-            continue
+    for statement in IMPORT.findall(script):
         try:
-            tree = ast.parse(text)
+            tree = ast.parse(statement)
         except SyntaxError:
             continue
         for node in ast.walk(tree):
@@ -189,6 +197,12 @@ def test_no_inline_program_reaches_a_path_the_instance_has_left() -> None:
         ),
         ("from convener_ops import cli", ("convener_ops", "cli")),
         ("import convener_ops.cli", ("convener_ops", "cli")),
+        (
+            "URL=$(uv run python -c "
+            "'from convener_ops.declaration.published import load; "
+            "print(load().origin)')",
+            ("convener_ops.declaration.published", "load"),
+        ),
     ],
 )
 def test_the_import_reader_sees_both_spellings(
@@ -196,6 +210,26 @@ def test_the_import_reader_sees_both_spellings(
 ) -> None:
     """Without this the sweep above passes by reading nothing."""
     assert expected in imported_names(script)
+
+
+def test_the_import_reader_reads_every_line_that_writes_one() -> None:
+    """A reader that sees half of them goes green as easily as one that
+    sees all of them, and half is what a line-start test saw.
+
+    Counted a second way, by a matcher that knows nothing about Python
+    beyond the two keywords -- loose enough to be wrong about what an
+    import is, and therefore never narrower than the reader it holds.
+    """
+    loose = re.compile(r"\b(?:from|import)\s+convener_ops")
+    unread = [
+        f"{name}: {line.strip()[:80]}"
+        for name, script in run_blocks()
+        for line in script.splitlines()
+        if loose.search(line) and not imported_names(line)
+    ]
+    assert not unread, (
+        "these lines write an import this reader does not resolve: " + "; ".join(unread)
+    )
 
 
 @pytest.mark.parametrize(
