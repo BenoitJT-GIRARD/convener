@@ -5864,11 +5864,18 @@ def _dev_dependencies() -> list[str]:
 
 
 def _modules_carrying_a_suppression() -> list[str]:
-    """Every module under `convener_ops` that silences a finding."""
+    """Every module under `convener_ops` that silences a finding.
+
+    `rglob`, because the package is `cli.py` and six sub-packages: a flat
+    walk reads one of the five modules that carry a suppression, and the
+    check below passes on that one whatever became of the other four.
+    `quality.yml` points bandit at the package with `-r`, so the sweep
+    that holds the step has to be as deep as the step itself.
+    """
     package = ROOT / "tools" / "convener_ops"
     return sorted(
-        path.name
-        for path in package.glob("*.py")
+        path.relative_to(package).as_posix()
+        for path in package.rglob("*.py")
         if _SUPPRESSION in path.read_text(encoding="utf-8")
     )
 
@@ -5910,4 +5917,9 @@ def test_the_security_scanner_is_declared_run_and_reads_its_own_suppressions() -
         f"so {_SECURITY_SCANNER} is being installed and run over a package "
         "with nothing left to say about it -- which is the point at which "
         "the comparison in tools/pyproject.toml is worth running again"
+    )
+    assert any("/" in name for name in suppressing), (
+        f"every module found carrying a {_SUPPRESSION!r} sits at the root of "
+        f"convener_ops ({suppressing}) -- the walk stopped at the package's "
+        "own directory, and whatever the sub-packages silence is unread"
     )
