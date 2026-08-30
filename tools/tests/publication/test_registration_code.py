@@ -31,12 +31,12 @@ from convener_ops.declaration.published import (
     load_identity,
 )
 from convener_ops.journey.registration import signup_url
-from convener_ops.registration_code import (
+from convener_ops.publication.registration_code import (
     forum_code_svg,
     forum_code_target,
     registration_code_svg,
 )
-from convener_ops.visual import Announcement, render_announcement
+from convener_ops.publication.visual import Announcement, render_announcement
 
 ROOT = repo_root()
 _W, _H = 1200.0, 1200.0

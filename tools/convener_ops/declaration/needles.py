@@ -21,7 +21,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .. import brand
+from ..publication import brand
 from . import published
 
 #: A needle short enough that an accidental run of the same letters inside

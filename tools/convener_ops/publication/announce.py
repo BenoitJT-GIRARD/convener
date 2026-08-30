@@ -37,7 +37,7 @@ engine (mechanics may exist twice; the words may not) that resolves the
 identical `{{ speaker.… }}`/`{{ public.… }}` vocabulary `render.ts::
 substitute` does, including the same `«missing: …»` marker for an unfilled
 field. A change to a template's wording now reaches both surfaces because
-there is only the one file to change; `tools/tests/test_announce.py`'s own
+there is only the one file to change; `tools/tests/publication/test_announce.py`'s own
 mutation of a template proves it.
 
 `root` is threaded in by the caller (`cli.py::render_announcements`) rather
@@ -72,7 +72,7 @@ since `row` is `to_public`'s own output. `registration.signup_url` takes an
 event id, never a URL, so the one address every text below points at is
 always the event's own public page (D-19), never a room. And no template
 below ever declares a `{{ speaker.zoom_link }}`/`{{ public.zoom_link }}`
-token in the first place (`tools/tests/test_announce.py`'s own room-link
+token in the first place (`tools/tests/publication/test_announce.py`'s own room-link
 mutation proves both halves: a token that is not in `row` cannot resolve,
 and a token that is not in the template is not there to resolve).
 """
@@ -85,8 +85,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Final
 
-from .declaration.published import load_identity
-from .journey.registration import signup_url
+from ..declaration.published import load_identity
+from ..journey.registration import signup_url
 from .visual import date_line
 
 __all__ = [

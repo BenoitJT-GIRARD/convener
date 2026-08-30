@@ -160,17 +160,17 @@ def test_the_path_filter_names_every_module_the_composition_reads() -> None:
     cli.py` re-runs this job for plenty of unrelated commands too, kept
     anyway because a path filter has no finer grain than a file."""
     expected_paths = {
-        "tools/convener_ops/visual.py",
-        "tools/convener_ops/ribbon.py",
-        "tools/convener_ops/registration_code.py",
-        "tools/convener_ops/formats.py",
+        "tools/convener_ops/publication/visual.py",
+        "tools/convener_ops/publication/ribbon.py",
+        "tools/convener_ops/publication/registration_code.py",
+        "tools/convener_ops/publication/formats.py",
         "tools/convener_ops/governance/governance.py",
         "tools/convener_ops/cli.py",
         "instances/example/instance/config.json",
         "tools/convener_ops/declaration/published.py",
         "tools/convener_ops/journey/registration.py",
         "instances/example/instance/data/brand.json",
-        "tools/convener_ops/brand.py",
+        "tools/convener_ops/publication/brand.py",
         "fonts/**",
         "tools/uv.lock",
         "tools/visuals/**",
@@ -215,7 +215,7 @@ def test_the_path_filter_never_reacts_to_this_instances_own_charter() -> None:
 
 
 def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:
-    """`tools/convener_ops/public_data.py` (the
+    """`tools/convener_ops/publication/public_data.py` (the
     module `instance/data/speakers.yml` is read *through*, the consent gate
     included) is deliberately absent here for the identical reason the
     test above gives for `instance/data/speakers.yml` itself --
@@ -225,7 +225,10 @@ def test_the_path_filter_never_reacts_to_the_consent_gate_either() -> None:
     to see. `visuals-production.yml` is where that module belongs, and
     does carry it (`test_visuals_production_workflow.py::
     test_public_data_py_is_in_the_filter_the_consent_gate_needs`)."""
-    assert "tools/convener_ops/public_data.py" not in _TRIGGERS["push"]["paths"]
+    assert (
+        "tools/convener_ops/publication/public_data.py"
+        not in _TRIGGERS["push"]["paths"]
+    )
 
 
 def test_job_permissions_are_read_only() -> None:

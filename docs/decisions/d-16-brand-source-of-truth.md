@@ -47,7 +47,7 @@ Separating the instance from the code changed which file this decision is
 about, and nothing else about it. `instance/data/brand.json` still holds this series'
 own values, unchanged, and every implementation still reads it. What is new is
 that the file is now **optional**: it belongs to the instance, and a duplicate
-that has not chosen colours yet has none. `tools/convener_ops/brand.py` is the one
+that has not chosen colours yet has none. `tools/convener_ops/publication/brand.py` is the one
 reader, and it takes the product's own charter — `brand/convener/brand.json` —
 whenever the instance has written nothing, so a fresh duplicate builds a
 finished-looking site rather than a grey one. Whole file or whole file, never a

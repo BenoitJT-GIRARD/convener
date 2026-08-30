@@ -14,14 +14,14 @@ name: Visuals
 # removing one, and prefer adding a path you are unsure about over leaving
 # it out):
 #
-# - `tools/convener_ops/visual.py` -- the composition itself (the HTML/CSS
+# - `tools/convener_ops/publication/visual.py` -- the composition itself (the HTML/CSS
 #   `render_announcement` builds) and `FIXTURE_ANNOUNCEMENT`, the fixed
 #   identity the reference images are rendered from.
-# - `tools/convener_ops/ribbon.py` -- the ribbon's own path, colour and stroke
+# - `tools/convener_ops/publication/ribbon.py` -- the ribbon's own path, colour and stroke
 #   width; painted last, on top of everything else.
-# - `tools/convener_ops/registration_code.py` -- the QR code generator;
+# - `tools/convener_ops/publication/registration_code.py` -- the QR code generator;
 #   its own pixels are part of every rendered format.
-# - `tools/convener_ops/formats.py` -- the three named canvas sizes and
+# - `tools/convener_ops/publication/formats.py` -- the three named canvas sizes and
 #   the registration-slot geometry it shares with `visual.py`.
 # - `tools/convener_ops/governance/governance.py` -- `PARIS`, the one `ZoneInfo` the date
 #   line's own text is computed from (`visual.paris_standing_start`); a
@@ -64,10 +64,10 @@ name: Visuals
 #   any others, and they are the one part of the composition no text sweep
 #   anywhere in this repository can read.
 # - `instances/example/instance/data/brand.json` -- the charter the fixture is
-#   rendered from, reached through `tools/convener_ops/brand.py` by
+#   rendered from, reached through `tools/convener_ops/publication/brand.py` by
 #   `visual.py`'s `_load_colours` and `ribbon.py`'s `_load_motif`. The
 #   example's, for the reason two entries up.
-# - `tools/convener_ops/brand.py` -- the reader itself: which charter is in
+# - `tools/convener_ops/publication/brand.py` -- the reader itself: which charter is in
 #   force, and which `motif` is drawn when that charter declares none.
 #
 # Deliberately absent, and each is a decision rather than an omission:
@@ -96,7 +96,7 @@ name: Visuals
 # - `.github/workflows/visuals.yml` -- this file.
 #
 # Deliberately absent: `instance/data/speakers.yml`, the real per-edition data, and
-# `tools/convener_ops/public_data.py`, the module that gates it (`to_public`,
+# `tools/convener_ops/publication/public_data.py`, the module that gates it (`to_public`,
 # `_gate_closed`, the consent check). `render_visual_fixtures` never
 # reads any of the three -- this check renders one fixed, fictional
 # fixture (Ada Lovelace, no photograph, `FIXTURE_ANNOUNCEMENT` built by
@@ -137,17 +137,17 @@ on:
     # tools/tests/test_workflows.py::test_no_workflow_uses_a_yaml_anchor_or_alias
     # for the sweep that refuses one anywhere else in this repository too.
     paths:
-      - 'tools/convener_ops/visual.py'
-      - 'tools/convener_ops/ribbon.py'
-      - 'tools/convener_ops/registration_code.py'
-      - 'tools/convener_ops/formats.py'
+      - 'tools/convener_ops/publication/visual.py'
+      - 'tools/convener_ops/publication/ribbon.py'
+      - 'tools/convener_ops/publication/registration_code.py'
+      - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/governance.py'
       - 'tools/convener_ops/cli.py'
       - 'instances/example/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
       - 'instances/example/instance/data/brand.json'
-      - 'tools/convener_ops/brand.py'
+      - 'tools/convener_ops/publication/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'
@@ -159,17 +159,17 @@ on:
     # fails test_the_two_path_filters_are_identical_lists in
     # tools/tests/test_visuals_workflow.py.
     paths:
-      - 'tools/convener_ops/visual.py'
-      - 'tools/convener_ops/ribbon.py'
-      - 'tools/convener_ops/registration_code.py'
-      - 'tools/convener_ops/formats.py'
+      - 'tools/convener_ops/publication/visual.py'
+      - 'tools/convener_ops/publication/ribbon.py'
+      - 'tools/convener_ops/publication/registration_code.py'
+      - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/governance.py'
       - 'tools/convener_ops/cli.py'
       - 'instances/example/instance/config.json'
       - 'tools/convener_ops/declaration/published.py'
       - 'tools/convener_ops/journey/registration.py'
       - 'instances/example/instance/data/brand.json'
-      - 'tools/convener_ops/brand.py'
+      - 'tools/convener_ops/publication/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'

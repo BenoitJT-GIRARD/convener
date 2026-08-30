@@ -26,7 +26,7 @@ What the charter is
 instance's*. `config/boundary.yml` hands `instance/data/` to the instance, so a
 duplicate writes its own values there and never merges a conflict with
 upstream over them. A duplicate that has not chosen colours yet has no such
-file at all, and `convener_ops.brand.load` reads the product's own charter,
+file at all, and `convener_ops.publication.brand.load` reads the product's own charter,
 `brand/convener/brand.json`, instead -- so a fresh duplicate builds a
 finished-looking site rather than a grey one. Which of the two is in force
 is `brand.py`'s answer and nobody else's; this script, `ribbon.py` and
@@ -76,7 +76,7 @@ What a marker guards, and what it cannot
 changed without regenerating -- the two mutations this module's own tests
 prove against. It
 cannot stop a colour from being hand-typed **outside** any marked block --
-that is a different property, and `tools/tests/test_brand.py` guards it
+that is a different property, and `tools/tests/publication/test_brand.py` guards it
 separately, by asking the committed files themselves whether one of
 `instance/data/brand.json`'s values, or one of the reconstruction's, appears anywhere
 outside the block this script owns.
@@ -93,7 +93,7 @@ line set in the page's own ground colour, invisible in every poster ever
 downloaded. The background was a PNG, which is worse than drifting: no
 check in this repository could read a word of it, and it disagreed with
 `instance/config.json` about the series' own strapline for as long as it
-existed. See `convener_ops/brand_templates.py` for the measurements, for
+existed. See `convener_ops/publication/brand_templates.py` for the measurements, for
 why the mark is what makes a duplicate's build refuse, and for why the
 background is committed as vector with no raster beside it.
 
@@ -129,9 +129,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
-from convener_ops import brand, brand_templates
-from convener_ops.brand import rgb_triplet, rgba
 from convener_ops.declaration.paths import repo_root
+from convener_ops.publication import brand, brand_templates
+from convener_ops.publication.brand import rgb_triplet, rgba
 
 #: The instance's own values, relative to the repository root. Not "the one
 #: source of fact" any more: an instance that
@@ -179,7 +179,7 @@ _APP_SELECT_ALPHA: Final = 0.25
 def load_brand(root: Path) -> dict[str, Any]:
     """The charter in force -- the instance's values, or the product's own.
 
-    One line, and it is `convener_ops.brand`'s: this script, `ribbon.py` and
+    One line, and it is `convener_ops.publication.brand`'s: this script, `ribbon.py` and
     `visual.py` each used to carry their own two-line loader, which was
     harmless while `instance/data/brand.json` was the only file there was to load
     and stopped being harmless the moment it became optional.
@@ -371,8 +371,8 @@ class _Target:
 #: Everything the charter derives. The two stylesheets keep one block
 #: between markers inside an otherwise hand-authored file; the two
 #: templates are written whole, because nobody hand-authors anything in
-#: them -- see `convener_ops/brand_templates.py` for what they are and why they
-#: had to stop being drawn.
+#: them -- see `convener_ops/publication/brand_templates.py` for what they are and why
+#: they had to stop being drawn.
 _TARGETS: Final = (
     _Target(SITE_CSS_PATH, render_site_css),
     _Target(APP_TOKENS_CSS_PATH, render_app_tokens_css),

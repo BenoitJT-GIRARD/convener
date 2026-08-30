@@ -121,7 +121,7 @@ describe('the publication classification of speaker fields', () => {
 });
 
 describe('the shared classification fixture', () => {
-  // Bound, not duplicated: `tools/tests/test_public_data.py` asserts the same
+  // Bound, not duplicated: `tools/tests/publication/test_public_data.py` asserts the same
   // three lists against the same file. A field moved on one side and not the
   // other fails in the language that was not updated.
   it('matches PUBLISHABLE_ALWAYS', () => {

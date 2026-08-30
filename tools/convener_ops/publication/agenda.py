@@ -29,7 +29,7 @@ Two feeds, two audiences:
   `app/scripts/copy-certificates.mjs` and `copy-survey-status.mjs`): that
   absence is what keeps this feed out of both published bundles, by
   construction rather than by a flag someone could leave off. See
-  `tools/tests/test_agenda.py::
+  `tools/tests/publication/test_agenda.py::
   test_nothing_in_the_build_ever_copies_the_internal_agenda_into_a_published_bundle`.
 
 Preparation deadlines are not re-derived here. `notify.due_date` already
@@ -56,7 +56,7 @@ RFC 5545 TEXT escaping and 75-octet line folding are, by contrast,
 deliberately *not* bound to a shared fixture the way the timezone rule is:
 they are mechanical, RFC-mandated transformations with no project decision
 in them for the two languages to disagree about, unlike "12:30 Europe/Paris,
-CET or CEST". `tools/tests/test_agenda.py` and `tools/tests/test_site.py`
+CET or CEST". `tools/tests/publication/test_agenda.py` and `tools/tests/test_site.py`
 each check their own side directly against the RFC -- parsing the rendered
 file back with an independent reader, never re-running this module's own
 escape/fold functions -- rather than cross-checking the two implementations
@@ -71,10 +71,10 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Final
 
-from .declaration import published
-from .governance.governance import PARIS
-from .governance.notify import Deadline, due_date
-from .journey.registration import signup_url
+from ..declaration import published
+from ..governance.governance import PARIS
+from ..governance.notify import Deadline, due_date
+from ..journey.registration import signup_url
 from .visual import STANDING_START_LOCAL
 
 #: `instance/data/config.yml::seminar_duration_minutes`'s own fallback --

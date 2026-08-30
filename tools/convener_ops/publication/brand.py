@@ -71,7 +71,7 @@ import json
 from pathlib import Path
 from typing import Any, Final
 
-from .declaration.paths import DATA_DIR
+from ..declaration.paths import DATA_DIR
 
 __all__ = [
     "AA_NORMAL_TEXT",

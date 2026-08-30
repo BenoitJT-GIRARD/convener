@@ -3,7 +3,7 @@
 The instance's visual identity, derived from the charter in force --
 `instance/data/brand.json` when this instance has written one, and the product's own
 `brand/convener/brand.json` when it has not, so a fresh duplicate is finished
-rather than grey (`tools/convener_ops/brand.py` decides which, once, for every
+rather than grey (`tools/convener_ops/publication/brand.py` decides which, once, for every
 reader). Here that is the designer's own turquoise and purple, warm neutrals,
 never a reconstruction's guess at them. Archivo for both display and body,
 JetBrains Mono for IDs, both self-hosted from the repository root's `fonts/`

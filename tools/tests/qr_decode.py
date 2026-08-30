@@ -58,7 +58,7 @@ from typing import cast
 from segno import consts
 from segno.consts import EC as _EC
 
-from convener_ops.registration_code import QR_BORDER
+from convener_ops.publication.registration_code import QR_BORDER
 
 __all__ = ["decode_registration_qr"]
 

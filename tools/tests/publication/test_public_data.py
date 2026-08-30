@@ -7,8 +7,8 @@ from typing import Any
 import pytest
 from conftest import speaker
 
-import convener_ops.public_data as public_data
-from convener_ops.public_data import (
+import convener_ops.publication.public_data as public_data
+from convener_ops.publication.public_data import (
     NEVER_PUBLISHED,
     PUBLIC_FIELD_SOURCES,
     PUBLIC_FIELDS,
@@ -355,7 +355,7 @@ def test_the_wrap_up_checklist_is_not_a_second_door_into_the_feed() -> None:
     # checklist. Filling it in records where the recording is; it does not
     # publish it. Both locks are asserted: the status is not one at which a
     # recording is linked, and the gate never ran.
-    from convener_ops.public_data import RECORDING_STATUSES
+    from convener_ops.publication.public_data import RECORDING_STATUSES
 
     assert "delivered" not in RECORDING_STATUSES
     out = to_public([_published(), _published()])
@@ -377,7 +377,7 @@ def test_a_forced_status_is_not_a_path_to_publication() -> None:
 # --- The classification, and the gate it feeds -------------------------------
 
 CASES = json.loads(
-    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+    (Path(__file__).parents[1] / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
 )

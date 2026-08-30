@@ -236,7 +236,7 @@ function resolvePath(path: string, resolved: Resolved): { value: string; present
  * a row to carry by the time this text is drafted, so its absence should
  * make the draft look exactly that unfinished (D-13).
  *
- * (`tools/convener_ops/announce.py::_render`'s own docstring carries
+ * (`tools/convener_ops/publication/announce.py::_render`'s own docstring carries
  * the argument in full; mirrored here so the two engines cannot show a
  * volunteer two different things for the identical template): a field that
  * is *ordinarily* absent -- `public.bio`, waiting on a consent nobody is

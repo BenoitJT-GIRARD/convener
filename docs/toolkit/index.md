@@ -46,7 +46,7 @@ through a second vocabulary instead, `{{ public.… }}` rather than
 `{{ speaker.… }}`. It carries the same names, but each one comes out empty —
 and so shows as `«missing: …»` — until the speaker's own recorded consent and
 the board's approval have actually cleared it, exactly the gate
-`tools/convener_ops/public_data.py` applies to the public feed itself
+`tools/convener_ops/publication/public_data.py` applies to the public feed itself
 (`state/consent.ts::toPublicFields`). A page that only ever tells the team
 something, never the outside world, keeps reading `{{ speaker.… }}`
 unfiltered, the same as it always has.

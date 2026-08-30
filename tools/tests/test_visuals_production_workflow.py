@@ -85,15 +85,15 @@ def test_data_speakers_yml_is_the_one_new_path_this_job_adds() -> None:
 #: charters, and `test_the_two_jobs_watch_their_own_instances_files` below
 #: pins that difference rather than letting it read as a drop.
 _SHARED_COMPOSITION_PATHS = {
-    "tools/convener_ops/visual.py",
-    "tools/convener_ops/ribbon.py",
-    "tools/convener_ops/registration_code.py",
+    "tools/convener_ops/publication/visual.py",
+    "tools/convener_ops/publication/ribbon.py",
+    "tools/convener_ops/publication/registration_code.py",
     "tools/convener_ops/journey/registration.py",
-    "tools/convener_ops/formats.py",
+    "tools/convener_ops/publication/formats.py",
     "tools/convener_ops/governance/governance.py",
     "tools/convener_ops/cli.py",
     "tools/convener_ops/declaration/published.py",
-    "tools/convener_ops/brand.py",
+    "tools/convener_ops/publication/brand.py",
     "fonts/**",
     "tools/uv.lock",
     "tools/visuals/**",
@@ -168,7 +168,7 @@ def test_public_data_py_is_in_the_filter_the_consent_gate_needs() -> None:
     must re-trigger this job the same way a change to `visual.py` itself
     already does."""
     paths = _TRIGGERS["push"]["paths"]
-    assert "tools/convener_ops/public_data.py" in paths
+    assert "tools/convener_ops/publication/public_data.py" in paths
 
 
 def test_the_workflow_names_its_own_file_in_its_own_filter() -> None:

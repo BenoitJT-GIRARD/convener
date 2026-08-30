@@ -304,7 +304,7 @@ describe('transitions v2', () => {
     // The override skips `canArchive` -- that is what an override is for --
     // but it must not become a second door onto the open web. It writes
     // `status` and leaves `publication` alone, and `publication.outcome` is
-    // what the public feed reads (`tools/convener_ops/public_data.py`).
+    // what the public feed reads (`tools/convener_ops/publication/public_data.py`).
     const delivered: Speaker = {
       ...base,
       status: 'delivered',

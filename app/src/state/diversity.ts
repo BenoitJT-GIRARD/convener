@@ -46,7 +46,7 @@
  * aggregating it discloses nothing new.
  *
  * Nothing computed here reaches `instance/public-data/`. The public feed is an
- * allowlist in `tools/convener_ops/public_data.py`, `gender` and `career_stage`
+ * allowlist in `tools/convener_ops/publication/public_data.py`, `gender` and `career_stage`
  * are not on it, and they must not be: aggregate-only inside the app, a
  * per-speaker attribute becomes individually identifying the moment it is
  * published per row.

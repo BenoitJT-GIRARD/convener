@@ -63,7 +63,7 @@ name: Visuals production
 # the one disk-writing module, the brand source, the self-hosted fonts and
 # the Python lockfile pinning the QR renderer all change what a *real*
 # rendered edition looks like just as much as they change the fixture
-# visuals.yml checks. The list also carries `tools/convener_ops/announce.py`,
+# visuals.yml checks. The list also carries `tools/convener_ops/publication/announce.py`,
 # `tools/convener_ops/journey/registration.py` (the registration address every drafted
 # text points at, D-19) and the four `docs/toolkit/*.md` pages themselves
 # -- `announce.py` now renders those files rather than composing its own
@@ -81,7 +81,7 @@ name: Visuals production
 # `forum_host` from it changes every rendered edition and the pinned
 # fixture alike.
 #
-# `tools/convener_ops/public_data.py` is in this
+# `tools/convener_ops/publication/public_data.py` is in this
 # list too, and deliberately *not* in visuals.yml's -- re-derived from what
 # each job's own render actually calls, not copied across the two.
 # `render_visuals` and `render_announcements` (this job's own two commands,
@@ -118,15 +118,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'tools/convener_ops/visual.py'
-      - 'tools/convener_ops/ribbon.py'
-      - 'tools/convener_ops/registration_code.py'
-      - 'tools/convener_ops/formats.py'
+      - 'tools/convener_ops/publication/visual.py'
+      - 'tools/convener_ops/publication/ribbon.py'
+      - 'tools/convener_ops/publication/registration_code.py'
+      - 'tools/convener_ops/publication/formats.py'
       - 'tools/convener_ops/governance/governance.py'
       - 'tools/convener_ops/cli.py'
-      - 'tools/convener_ops/announce.py'
+      - 'tools/convener_ops/publication/announce.py'
       - 'tools/convener_ops/journey/registration.py'
-      - 'tools/convener_ops/public_data.py'
+      - 'tools/convener_ops/publication/public_data.py'
       - 'docs/toolkit/forum-post-announce.md'
       - 'docs/toolkit/linkedin-post.md'
       - 'docs/toolkit/mailing-list-announce.md'
@@ -135,7 +135,7 @@ on:
       - 'tools/convener_ops/declaration/published.py'
       - 'instance/data/brand.json'
       - 'brand/convener/brand.json'
-      - 'tools/convener_ops/brand.py'
+      - 'tools/convener_ops/publication/brand.py'
       - 'fonts/**'
       - 'tools/uv.lock'
       - 'tools/visuals/**'

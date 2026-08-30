@@ -264,7 +264,7 @@ function absoluteUrl(path) {
 // `og:image`/`twitter:image` were left out of layout.njk
 // entirely at first rather than point either at a file that did not exist
 // yet (see that file's own comment, still there, on the block this feeds).
-// The banner (`tools/convener_ops/formats.py::BANNER`) existed before anything
+// The banner (`tools/convener_ops/publication/formats.py::BANNER`) existed before anything
 // carried it to a stable public address -- `.github/workflows/
 // visuals-production.yml` renders every currently *scheduled* real
 // edition's own banner on its one pinned-browser job (that cost is
@@ -290,7 +290,7 @@ function eventBannerUrl(event, banners) {
   return absoluteUrl(`/banners/${id}.png`);
 }
 
-// `tools/convener_ops/formats.py::BANNER`'s own pixel size, copied here by hand
+// `tools/convener_ops/publication/formats.py::BANNER`'s own pixel size, copied here by hand
 // -- the identical D-14 cross-language split `SEMINAR_DURATION_MINUTES`
 // above already accepts for the same reason (this file cannot import a
 // Python constant). Exposed as the global data `shareImageWidth`/
@@ -315,7 +315,7 @@ const SHARE_IMAGE_HEIGHT = 630;
 // The seminar's own fixed length, `instance/data/config.yml::
 // seminar_duration_minutes` (also read, with the same 90-minute default,
 // by `tools/convener_ops/sweep.py::sweep` and now by this feed's own Python
-// twin, `tools/convener_ops/agenda.py::build_internal_calendar`) -- a plain
+// twin, `tools/convener_ops/publication/agenda.py::build_internal_calendar`) -- a plain
 // site-wide constant, on the same footing `STANDING_START_LOCAL` above
 // already stands on, not a computed rule the D-14 fixture would need to
 // bind across languages. This build has no path to `instance/data/config.yml`
@@ -339,7 +339,7 @@ const SEMINAR_DURATION_MINUTES = 90;
 // Mechanical and RFC-mandated, unlike `parisStandingStart`: there is no
 // project decision here that the two languages could disagree about, so
 // this is not bound to a shared fixture the way that function is --
-// each side (this one, and `tools/convener_ops/agenda.py::_escape_text`) is
+// each side (this one, and `tools/convener_ops/publication/agenda.py::_escape_text`) is
 // instead checked independently against the RFC itself, by a test that
 // parses the rendered file back rather than re-running this same code.
 function icsEscapeText(value) {
@@ -382,7 +382,7 @@ function icsFoldLine(line) {
 // so this file's agenda calendar can build the identical address with no
 // Nunjucks `| sort` pipeline of its own. Never the meeting room:
 // `events.json` carries no column that could resolve to one --
-// `PUBLIC_FIELD_SOURCES` in `tools/convener_ops/public_data.py` maps
+// `PUBLIC_FIELD_SOURCES` in `tools/convener_ops/publication/public_data.py` maps
 // `zoom_link` to nothing published at all.
 function eventPageUrl(event) {
   return absoluteUrl(`/events/${String(event.id).toLowerCase()}/`);
@@ -627,7 +627,7 @@ module.exports = function (cfg) {
 
 // D-14: `parisStandingStart` above is one of three independent
 // implementations of the identical Europe/Paris seasonal-offset rule --
-// `tools/convener_ops/visual.py::paris_standing_start` and `app/src/state/
+// `tools/convener_ops/publication/visual.py::paris_standing_start` and `app/src/state/
 // derived.ts::parisStandingStart` are the other two -- and nothing bound
 // the three together until now: each side's own test suite pinned its own
 // hand-typed list of dates, and two of those lists had already drifted.

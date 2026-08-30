@@ -5,7 +5,7 @@ implementations of the identical Europe/Paris seasonal-offset rule -- three
 languages, three runtimes, so three implementations are legitimate (D-14),
 but nothing before this file bound them together: each side's own test
 suite pinned its own hand-typed list of dates, and two of those lists had
-already drifted apart -- `tools/tests/test_visual.py`'s own fixture-edition
+already drifted apart -- `tools/tests/publication/test_visual.py`'s own fixture-edition
 list pinned `2025-06-12` as its one committed summer case, while
 `app/tests/announce-drafts.test.ts`'s own list pinned `2026-06-11`, a
 different date asserted for the identical "this is the CEST case" claim.
@@ -33,7 +33,7 @@ from typing import Any
 import pytest
 
 from convener_ops.declaration.paths import repo_root
-from convener_ops.visual import date_line, paris_standing_start
+from convener_ops.publication.visual import date_line, paris_standing_start
 
 _ROOT = repo_root()
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "paris-standing-start.json"

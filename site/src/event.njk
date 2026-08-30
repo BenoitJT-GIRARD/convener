@@ -12,7 +12,7 @@ pagination:
   addAllPagesToCollections: true
 # D-19: `event_id` IS `edition_code`, lower-cased -- nothing else names an
 # event. `events.json`'s own `id` column carries `edition_code` verbatim,
-# not lower-cased (`tools/convener_ops/public_data.py::PUBLIC_FIELD_SOURCES`),
+# not lower-cased (`tools/convener_ops/publication/public_data.py::PUBLIC_FIELD_SOURCES`),
 # so the lower-casing happens here, once, the same rule `platform.find_speaker`
 # and `registration.signup_url` already apply on the Python side. This is
 # the *whole* address: never derived from the title, which changes when a

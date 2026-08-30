@@ -460,8 +460,8 @@ class Identity:
     @property
     def namespace(self) -> dict[str, str]:
         """The `{{ instance.* }}` vocabulary, exactly as both rendering
-        engines resolve it -- `tools/convener_ops/announce.py::_render` here,
-        `app/src/content/render.ts::substitute` on the other side of the
+        engines resolve it -- `tools/convener_ops/publication/announce.py::_render`
+        here, `app/src/content/render.ts::substitute` on the other side of the
         language boundary. Composed here rather than in each caller so
         that adding a field is one edit and not four."""
         values = {name: getattr(self, name) for name in IDENTITY_FIELDS}

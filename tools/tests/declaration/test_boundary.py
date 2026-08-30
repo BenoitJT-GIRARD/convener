@@ -199,7 +199,12 @@ def test_the_packages_own_config_constants_agree_with_the_declaration() -> None:
 
 def test_every_path_this_package_names_is_classified() -> None:
     """A derived sweep, not a list: every `Path` constant any module of
-    `convener_ops` declares, put through the boundary.
+    `convener_ops` declares, at any depth, put through the boundary.
+
+    `walk_packages`, not `iter_modules`: the package is `cli.py` and six
+    sub-packages, so a walk that stopped at the top level would read one
+    module of the forty-three and still hand back a plausible-looking
+    dictionary.
 
     Its value is the direction it fails in. The ledgers the scheduled jobs
     write (`instance/data/queue-watch.yml`, `instance/data/actions-usage.yml`,
@@ -211,11 +216,11 @@ def test_every_path_this_package_names_is_classified() -> None:
     """
     board = load()
     named: dict[str, str] = {}
-    for module in pkgutil.iter_modules(convener_ops.__path__):
-        loaded = import_module(f"convener_ops.{module.name}")
+    for module in pkgutil.walk_packages(convener_ops.__path__, "convener_ops."):
+        loaded = import_module(module.name)
         for name, value in vars(loaded).items():
             if name.isupper() and isinstance(value, Path):
-                named[value.as_posix()] = f"convener_ops.{module.name}.{name}"
+                named[value.as_posix()] = f"{module.name}.{name}"
     assert len(named) >= 15, f"the sweep found almost nothing: {named}"
     handed_roots = tuple(entry.path for entry in board.handed if entry.is_directory)
     for path, where in sorted(named.items()):

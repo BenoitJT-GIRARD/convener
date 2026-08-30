@@ -405,7 +405,7 @@ export const PHASES: PhaseDef[] = [
         // Records where the recording is. It does not publish it: the
         // public feed links a recording only once `finalize-archive` has
         // written `outcome: 'published'` on the record
-        // (`tools/convener_ops/public_data.py`), which is the gate below this
+        // (`tools/convener_ops/publication/public_data.py`), which is the gate below this
         // checklist, not a field in it.
         key: 'delivered/youtube-url',
         form: 'field',

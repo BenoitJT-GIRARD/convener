@@ -279,7 +279,7 @@ export function applyTransition(
       // the speaker changed their mind again: clearing it would have meant
       // resolving objections that do not exist. The takedown belongs to the
       // consent field, which is where it is now read from
-      // (`tools/convener_ops/public_data.py::recording_withheld`).
+      // (`tools/convener_ops/publication/public_data.py::recording_withheld`).
       //
       // Granting consent publishes nothing by itself -- it clears one of two
       // permissions, and `finalize-archive` still has to be run by a person,

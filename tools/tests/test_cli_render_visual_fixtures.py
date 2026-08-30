@@ -13,13 +13,13 @@ from pathlib import Path
 import instance_identity
 import pytest
 
-from convener_ops import brand
 from convener_ops.cli import render_visual_fixtures
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
-from convener_ops.formats import FORMATS
 from convener_ops.journey.registration import signup_url
-from convener_ops.visual import FIXTURE_ANNOUNCEMENT
+from convener_ops.publication import brand
+from convener_ops.publication.formats import FORMATS
+from convener_ops.publication.visual import FIXTURE_ANNOUNCEMENT
 
 ROOT = repo_root()
 EXAMPLE = ROOT / published.EXAMPLE_INSTANCE_ROOT

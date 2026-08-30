@@ -25,7 +25,7 @@
  * they reach a volunteer's browser -- so a page that still named this
  * organisation would reach a duplicate's volunteers verbatim, whatever the
  * repository's own sources said. It is also why the substitution happens at
- * *render* time and not at copy time: `tools/convener_ops/announce.py` reads the
+ * *render* time and not at copy time: `tools/convener_ops/publication/announce.py` reads the
  * identical files straight out of `docs/`, and its own docstring rests on
  * that being "provably the file an operator's browser fetches too, not a
  * second copy of it". Resolving on copy would have made it a second copy.

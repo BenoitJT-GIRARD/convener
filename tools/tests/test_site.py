@@ -37,11 +37,11 @@ from ics_reader import parse_calendar
 
 from convener_ops.declaration import published
 from convener_ops.declaration.paths import repo_root
-from convener_ops.formats import BANNER
 from convener_ops.journey.certificate import VERIFICATION_BASE
 from convener_ops.journey.confirmation import CONTACT_EMAIL
 from convener_ops.journey.registration import SIGNUP_BASE, signup_url
-from convener_ops.public_data import PUBLISHABLE_ALWAYS
+from convener_ops.publication.formats import BANNER
+from convener_ops.publication.public_data import PUBLISHABLE_ALWAYS
 
 #: The same zone `tools/convener_ops/governance/governance.py::PARIS` already
 #: anchors this project's Python side on -- `zoneinfo`, the standard
@@ -2340,7 +2340,7 @@ def test_the_sitemap_still_lists_the_static_pages_with_no_editions_at_all(
 # -- a reader written independently of `site/.eleventy.js`'s own escape/
 # fold functions (see that module's own docstring) -- rather than grepping
 # the file as text, the same "parse it back the way a client would" standard
-# `tools/tests/test_agenda.py` already holds the internal feed to.
+# `tools/tests/publication/test_agenda.py` already holds the internal feed to.
 # ------------------------------------------------------------------ #
 
 

@@ -1,6 +1,6 @@
 """A deliberately independent RFC 5545 reader, for testing an iCalendar
 feed the way a real client would -- unfolding, parsing and unescaping from
-scratch -- rather than by calling back into `convener_ops.agenda`'s or
+scratch -- rather than by calling back into `convener_ops.publication.agenda`'s or
 `site/.eleventy.js`'s own escape/fold functions.
 
 The point of this module existing at all is that a test built from the same
@@ -8,7 +8,7 @@ escape/fold code the generator uses cannot catch the generator's own
 mistake about what the RFC requires: both sides would share it. Everything
 below is written straight from RFC 5545 §3.1 (content lines and line
 folding) and §3.3.11 (the TEXT value type's escaping), independently of
-`tools/convener_ops/agenda.py` and `site/.eleventy.js`.
+`tools/convener_ops/publication/agenda.py` and `site/.eleventy.js`.
 
 Deliberately not a general-purpose iCalendar library: it reads exactly the
 shape of file this project's own two generators produce (`BEGIN:VEVENT`

@@ -614,7 +614,7 @@ record (`tools/convener_ops/cli.py::_consent_granted`) — **not**
 step writes and which governs a different question entirely (whether the
 talk is *linked in the public feed*, not whether our copy may leave the
 provider). An earlier version of this gate required both, modelled on
-`tools/convener_ops/public_data.py::recording_withheld`; that was wrong,
+`tools/convener_ops/publication/public_data.py::recording_withheld`; that was wrong,
 because it held the quota hostage to the board's own timeline and refused
 every fresh talk regardless of consent. `pending`, an unanswered field,
 and any value this project does not recognise are all silence, and

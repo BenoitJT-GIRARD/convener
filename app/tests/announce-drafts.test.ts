@@ -4,7 +4,7 @@
  *
  * - a speaker's biography, portrait and online identities may not appear in
  *   a drafted text until the publication gate has actually opened, exactly
- *   the rule `tools/convener_ops/public_data.py` applies to the public feed
+ *   the rule `tools/convener_ops/publication/public_data.py` applies to the public feed
  *   itself, applied to prose rather than an image;
  * - a room link must never reach a draft, under any name -- structurally,
  *   not merely by the discipline of nobody typing `zoom_link` into a
@@ -288,7 +288,7 @@ describe('an unopened forum thread (linkedin-post.md, mailing-list-announce.md)'
 
 describe('a drafted date names the real Paris offset, never a hard-coded one', () => {
   // D-14: this used to be a hand-typed SUMMER/WINTER pair of
-  // date lists, pinned independently of `tools/tests/test_visual.py`'s own
+  // date lists, pinned independently of `tools/tests/publication/test_visual.py`'s own
   // -- and they had already drifted (this list once pinned `2026-06-11` as
   // its "CEST" case, while the Python list pins `2025-06-12`; two different
   // dates for the identical claim). `paris-standing-start.json` is the one

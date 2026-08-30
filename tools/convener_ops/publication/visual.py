@@ -198,7 +198,7 @@ so a title long enough to exhaust `.content` down to nothing still has
 somewhere left to give before the registration code does. Only once both
 have given up everything they have could the register band itself be at
 risk, and even then it is title text that clips, never the code.
-`tests/test_visual.py::test_the_register_band_is_never_squeezed_by_flexible_content`
+`tests/publication/test_visual.py::test_the_register_band_is_never_squeezed_by_flexible_content`
 pins the properties this rests on -- the same kind of property test
 `test_the_safe_area_clears_every_ribbon_waypoint` already uses for the
 ribbon rather than a rendered pixel -- and its own docstring records what
@@ -268,9 +268,9 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Final
 
+from ..declaration.published import load_identity
+from ..governance.governance import PARIS
 from . import brand
-from .declaration.published import load_identity
-from .governance.governance import PARIS
 from .registration_code import registration_code_svg
 from .ribbon import (
     CLEARANCE_STROKE_WIDTHS,
@@ -398,7 +398,7 @@ def date_line(talk_date: date) -> str:
 
 def _load_colours(root: Path) -> dict[str, str]:
     """Every named colour this composition uses, `colour` and `derived`
-    merged -- read through `convener_ops.brand`, which is the one thing that
+    merged -- read through `convener_ops.publication.brand`, which is the one thing that
     decides *which* charter is in force (the instance's own values, or the
     product's default when a duplicate has not written any).
 
@@ -968,7 +968,7 @@ class Announcement:
 
 
 #: The one canonical announcement the versioned reference images
-#: render -- reusing `tools/tests/test_visual.py::_announcement`'s own
+#: render -- reusing `tools/tests/publication/test_visual.py::_announcement`'s own
 #: default identity rather than inventing a second "canonical" one (two
 #: fixture identities claiming to be *the* announcement is exactly the
 #: unforced drift D-14 warns against). Ada Lovelace has been dead for over

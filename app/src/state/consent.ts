@@ -34,7 +34,7 @@
  * mechanism: the default for an unclassified field is a red test, never a
  * publication.
  *
- * The Python side (`tools/convener_ops/public_data.py`) holds the same three sets --
+ * The Python side (`tools/convener_ops/publication/public_data.py`) holds the same three sets --
  * it is the side that actually writes the feed -- and the two copies are bound
  * by `tools/tests/fixtures/governance-cases.json`, read from both languages.
  */
@@ -66,7 +66,7 @@ import { standingObjections } from './governance';
  * page gained its own registration form. Nothing reads it
  * any more: registration happens on the event page's own address, and the
  * room link now reaches a participant only through the confirmation e-mail.
- * `tools/convener_ops/public_data.py::PUBLIC_FIELD_SOURCES` maps no column to it,
+ * `tools/convener_ops/publication/public_data.py::PUBLIC_FIELD_SOURCES` maps no column to it,
  * the same "permitted but unpublished" shape that mapping's own comment
  * already gives `links`.
  */
@@ -343,7 +343,7 @@ export function answeredList(speakers: readonly Speaker[]): Speaker[] {
  * record's own pages.
  *
  * A speaker's photograph, biography and online identities are gated exactly
- * like the recording (`tools/convener_ops/public_data.py::_gate_closed`, read in
+ * like the recording (`tools/convener_ops/publication/public_data.py::_gate_closed`, read in
  * full for the argument): agreeing to give a public talk is not agreeing to
  * any of them, so a drafted forum post or newsletter message that quotes a
  * biography or links a LinkedIn profile without the recorded permission is

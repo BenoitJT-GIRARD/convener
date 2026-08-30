@@ -260,7 +260,7 @@ def test_nothing_published_carries_the_key_at_all() -> None:
         "tools/convener_ops/journey/certificate.py",
         "tools/convener_ops/journey/eventkeys.py",
         "tools/convener_ops/journey/registration.py",
-        "tools/convener_ops/agenda.py",
+        "tools/convener_ops/publication/agenda.py",
         "tools/convener_ops/journey/signing.py",
     ):
         text = (ROOT / name).read_text(encoding="utf-8")

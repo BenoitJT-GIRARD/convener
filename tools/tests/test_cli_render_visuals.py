@@ -21,9 +21,9 @@ from conftest import speaker
 
 from convener_ops.cli import _scheduled_announcements, render_visuals
 from convener_ops.declaration.paths import repo_root
-from convener_ops.formats import FORMATS
-from convener_ops.public_data import to_public
-from convener_ops.visual import render_announcement
+from convener_ops.publication.formats import FORMATS
+from convener_ops.publication.public_data import to_public
+from convener_ops.publication.visual import render_announcement
 
 _REAL_ROOT = repo_root()
 

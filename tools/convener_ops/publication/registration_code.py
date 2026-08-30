@@ -15,7 +15,7 @@ to a wall, and a room link on a wall cannot be withdrawn. Encoding only an
 `event_id` -- never accepting a URL, a link, or a whole event/speaker
 record this function could reach into -- is what makes that mistake
 impossible to repeat here by construction, not merely by convention.
-`tools/tests/test_registration_code.py::
+`tools/tests/publication/test_registration_code.py::
 test_a_room_link_never_reaches_the_encoded_code` proves it against the
 real fixture that already carries one (`site/src/_data/events.json`'s
 own `MRG-05` entry).
@@ -78,8 +78,8 @@ from typing import Final
 
 import segno
 
-from .declaration import published
-from .journey.registration import signup_url
+from ..declaration import published
+from ..journey.registration import signup_url
 
 __all__ = [
     "QR_BORDER",

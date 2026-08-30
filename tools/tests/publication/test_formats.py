@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from convener_ops.formats import (
+from convener_ops.publication.formats import (
     BANNER,
     FORMATS,
     PRINT,
@@ -22,8 +22,8 @@ from convener_ops.formats import (
     SQUARE,
     qr_module_size_mm,
 )
-from convener_ops.registration_code import registration_code_modules
-from convener_ops.visual import is_wide
+from convener_ops.publication.registration_code import registration_code_modules
+from convener_ops.publication.visual import is_wide
 
 
 def test_formats_tuple_names_exactly_the_square_banner_and_print() -> None:

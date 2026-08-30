@@ -66,7 +66,7 @@ export function parisToday(): string {
 }
 
 /** This project's one standing start time, Europe/Paris local. Mirrors
- *  `tools/convener_ops/visual.py::STANDING_START_LOCAL` and
+ *  `tools/convener_ops/publication/visual.py::STANDING_START_LOCAL` and
  *  `site/.eleventy.js::STANDING_START_LOCAL`. */
 const STANDING_START_LOCAL = '12:30';
 
@@ -84,7 +84,7 @@ const _MONTHS = [
  * to late March, +02:00/CEST the rest of the year.
  *
  * A third independent reading of the identical fact
- * `tools/convener_ops/visual.py::paris_standing_start` and
+ * `tools/convener_ops/publication/visual.py::paris_standing_start` and
  * `site/.eleventy.js::parisStandingStart` already compute (D-14: a rule
  * crossing a language boundary is bound by a shared fixture, never moved to
  * one side -- `tools/tests/fixtures` names no site for this one because
@@ -133,7 +133,7 @@ export function parisStandingStart(isoDate: string): { offset: string; abbreviat
  * "Thursday, 12 March 2026 at 12:30 CET" -- the one sentence a drafted
  * announcement states an edition's date and time in, computed rather than
  * assembled by hand so the zone label can never be a stale copy-paste.
- * Mirrors `tools/convener_ops/visual.py::date_line` -- fixed English weekday and
+ * Mirrors `tools/convener_ops/publication/visual.py::date_line` -- fixed English weekday and
  * month names rather than `toLocaleDateString`, for the same reason that
  * module gives: a rendered page's wording must not depend on the locale of
  * whatever machine renders it.

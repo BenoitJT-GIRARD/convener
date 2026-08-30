@@ -284,7 +284,7 @@ jobs:
       # exception for this one path (see their own comments), and nothing
       # in `app/scripts/` or in the "Push to the published repository" step below ever
       # names it, which is what keeps this feed off both published
-      # bundles. `tools/tests/test_agenda.py` sweeps every copy script and
+      # bundles. `tools/tests/publication/test_agenda.py` sweeps every copy script and
       # every workflow's own push step to prove that absence holds, not
       # merely that it holds today.
       - name: Commit internal agenda

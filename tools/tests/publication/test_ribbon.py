@@ -16,9 +16,9 @@ import re
 
 import pytest
 
-from convener_ops import brand
 from convener_ops.declaration.paths import repo_root
-from convener_ops.ribbon import (
+from convener_ops.publication import brand
+from convener_ops.publication.ribbon import (
     Point,
     Waypoints,
     _arc_points,

@@ -27,12 +27,12 @@ from typing import Any
 import pytest
 from conftest import speaker
 
-import convener_ops.visual as visual
+import convener_ops.publication.visual as visual
 from convener_ops.declaration.paths import repo_root
-from convener_ops.formats import BANNER, FORMATS, PRINT, SQUARE
-from convener_ops.public_data import to_public
-from convener_ops.ribbon import waypoints
-from convener_ops.visual import (
+from convener_ops.publication.formats import BANNER, FORMATS, PRINT, SQUARE
+from convener_ops.publication.public_data import to_public
+from convener_ops.publication.ribbon import waypoints
+from convener_ops.publication.visual import (
     _AFFILIATION_FONT_MAX_VMIN,
     _AFFILIATION_FONT_MIN_VMIN,
     _NAME_FONT_MAX_VMIN,

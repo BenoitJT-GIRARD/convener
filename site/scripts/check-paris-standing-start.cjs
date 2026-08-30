@@ -4,7 +4,7 @@
  * seasonal-offset rule (`tools/tests/fixtures/paris-standing-start.json`),
  * checked here against `.eleventy.js::parisStandingStart` -- the third of
  * three independent implementations of the identical rule
- * (`tools/convener_ops/visual.py::paris_standing_start` and `app/src/state/
+ * (`tools/convener_ops/publication/visual.py::paris_standing_start` and `app/src/state/
  * derived.ts::parisStandingStart` are the other two, each checked against
  * the same file from its own test suite: `tools/tests/
  * test_paris_standing_start_fixture.py`, `app/tests/announce-drafts.test.ts`).

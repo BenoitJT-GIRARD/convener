@@ -2,7 +2,7 @@
  *
  * The block below is generated from the charter in force -- instance/data/brand.json
  * if this instance has chosen its colours, brand/convener/brand.json if it
- * has not (tools/convener_ops/brand.py::source) -- by
+ * has not (tools/convener_ops/publication/brand.py::source) -- by
  * tools/scripts/generate_brand_css.py, whose --check fails on a stylesheet that
  * has drifted from it. The token *names* are the product's and describe a
  * role rather than a hue: `primary` is the dominant colour, `turquoise` is
