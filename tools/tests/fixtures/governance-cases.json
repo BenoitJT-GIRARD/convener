@@ -757,7 +757,7 @@
     }
   ],
   "working_day_cases": {
-    "_comment": "Working-day arithmetic, pinned across app/src/state/working-days.ts and tools/convener_ops/governance.py. Weekends are Saturday and Sunday. PUBLIC HOLIDAYS ARE DELIBERATELY NOT MODELLED: the board's members do not share one national calendar, so a holiday list right for France would be wrong for the others, and an unmodelled holiday only ever makes a window longer, which is the prudent direction. The 1 May 2026 cases below pin that as a decision rather than an oversight. The count is of the days AFTER the start day, and `elapsed` is the exact inverse of `add`.",
+    "_comment": "Working-day arithmetic, pinned across app/src/state/working-days.ts and tools/convener_ops/governance/governance.py. Weekends are Saturday and Sunday. PUBLIC HOLIDAYS ARE DELIBERATELY NOT MODELLED: the board's members do not share one national calendar, so a holiday list right for France would be wrong for the others, and an unmodelled holiday only ever makes a window longer, which is the prudent direction. The 1 May 2026 cases below pin that as a decision rather than an oversight. The count is of the days AFTER the start day, and `elapsed` is the exact inverse of `add`.",
     "add": [
       {
         "name": "three working days from a Monday land on the Thursday",
@@ -944,7 +944,7 @@
     ],
     "_malformed_comment": "Malformed input, pinned deliberately. app/src/data/validate.ts narrows every field's type and checks no date's shape, so a hand-edited 'soon' reaches these functions from the file. add_working_days answers '' and working_days_elapsed answers 0 -- an unparsable date reads as 'no deadline' and 'no time has passed', which leaves a window standing open rather than closing it on a value nothing could make sense of. JavaScript's Date accepts 2026-02-30 and year zero where date.fromisoformat raises, so those two are here by name."
   },
-  "_board_headcount_comment": "board_min and board_max count *active* members, on both sides. app/src/state/board.ts::resolveNominations counts them before seating and tools/convener_ops/validate.py::validate_config checks the same number, so the app cannot write a config its own validator rejects. G-07's floor and ceiling are about who can vote, and an inactive entry is out of the denominator.",
+  "_board_headcount_comment": "board_min and board_max count *active* members, on both sides. app/src/state/board.ts::resolveNominations counts them before seating and tools/convener_ops/governance/validate.py::validate_config checks the same number, so the app cannot write a config its own validator rejects. G-07's floor and ceiling are about who can vote, and an inactive entry is out of the denominator.",
   "board_headcount_cases": [
     {
       "name": "a board of three active members sits on its floor",
@@ -1199,7 +1199,7 @@
       "within": true
     }
   ],
-  "_identifier_comment": "What a decision commit may point at. `_TOKEN` in tools/convener_ops/commit_format.py and `TOKEN` in app/src/state/decisions.ts are the same rule, read from both sides here. A record, never a person by name: a commit subject is permanent and unrewritable, so a name typed into a nomination box would be there for good.",
+  "_identifier_comment": "What a decision commit may point at. `_TOKEN` in tools/convener_ops/governance/commit_format.py and `TOKEN` in app/src/state/decisions.ts are the same rule, read from both sides here. A record, never a person by name: a commit subject is permanent and unrewritable, so a name typed into a nomination box would be there for good.",
   "identifier_cases": [
     {
       "name": "a speaker reference is an identifier",
@@ -1277,7 +1277,7 @@
       "identifier": false
     }
   ],
-  "_candidate_date_comment": "What identifies one slot of the date negotiation: the day, and never the pair (day, hour). The question put to a speaker is whether a day suits them, the reply is recorded against the day, and the hour of the evening locked is read off the slot that day names. The two readers of instance/data/speakers.yml disagreed about this: tools/convener_ops/validate.py de-duplicated on (date, time) while app/src/state/dates.ts keyed on date alone, so a file holding two hours on one day validated clean and then had one recorded reply marked against both -- with lockDate freezing whichever hour came first, an evening the speaker may have declined. `valid` is read by both readers (app/src/data/validate.ts, tools/convener_ops/validate.py); `answered` is what app/src/state/dates.ts must do with the slots, and says why the same-day pair is a file no reader accepts: the reply lands on the day, so both hours carry it.",
+  "_candidate_date_comment": "What identifies one slot of the date negotiation: the day, and never the pair (day, hour). The question put to a speaker is whether a day suits them, the reply is recorded against the day, and the hour of the evening locked is read off the slot that day names. The two readers of instance/data/speakers.yml disagreed about this: tools/convener_ops/governance/validate.py de-duplicated on (date, time) while app/src/state/dates.ts keyed on date alone, so a file holding two hours on one day validated clean and then had one recorded reply marked against both -- with lockDate freezing whichever hour came first, an evening the speaker may have declined. `valid` is read by both readers (app/src/data/validate.ts, tools/convener_ops/governance/validate.py); `answered` is what app/src/state/dates.ts must do with the slots, and says why the same-day pair is a file no reader accepts: the reply lands on the day, so both hours carry it.",
   "candidate_date_cases": [
     {
       "name": "one day, one hour, no reply yet -- where every negotiation starts",
@@ -1446,7 +1446,7 @@
       }
     }
   ],
-  "_checklist_assignee_comment": "Who may be named against a line of the journey. A GitHub login and nothing else: tools/convener_ops/validate.py refuses an assignee outside ^[a-zA-Z0-9-]+$, while app/src/data/validate.ts accepted any string and app/src/state/assignment.ts any non-empty trimmed one -- so the browser could write a record its own validator passes and convener-validate rejects. `''` is not in these cases: it is the answer 'nobody in particular, which is the hosts', legal on both sides and the state most lines stay in. Read by tools/tests/test_validate_v4.py and app/tests/assignment.test.ts. `assignItem` trims what a volunteer typed before applying the rule, so surrounding whitespace is not one of these cases: it is normalised on the writing side and refused on the reading one.",
+  "_checklist_assignee_comment": "Who may be named against a line of the journey. A GitHub login and nothing else: tools/convener_ops/governance/validate.py refuses an assignee outside ^[a-zA-Z0-9-]+$, while app/src/data/validate.ts accepted any string and app/src/state/assignment.ts any non-empty trimmed one -- so the browser could write a record its own validator passes and convener-validate rejects. `''` is not in these cases: it is the answer 'nobody in particular, which is the hosts', legal on both sides and the state most lines stay in. Read by tools/tests/test_validate_v4.py and app/tests/assignment.test.ts. `assignItem` trims what a volunteer typed before applying the rule, so surrounding whitespace is not one of these cases: it is normalised on the writing side and refused on the reading one.",
   "checklist_assignee_cases": [
     {
       "name": "a plain login",
@@ -1484,7 +1484,7 @@
       "valid": false
     }
   ],
-  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned. A member's own absence used to sit in that last list as free prose; it is a decision (it moves `N`, and with it the majority a speaker needs), so it is now `availability-set` and reads like every other line of the register.",
+  "_commit_message_comment": "The grammar of decision commits: tools/convener_ops/governance/commit_format.py reads and checks these lines, app/src/state/decisions.ts writes them. `commit_message_cases` must format identically in both languages and parse back in Python; `commit_message_rejects` must every one be flagged; `commit_message_ordinary` must every one be left alone, or the grammar becomes an obstacle and gets abandoned. A member's own absence used to sit in that last list as free prose; it is a decision (it moves `N`, and with it the majority a speaker needs), so it is now `availability-set` and reads like every other line of the register.",
   "commit_message_cases": [
     {
       "name": "a member declaring themselves away records it about their own entry",
@@ -1851,7 +1851,7 @@
       "message": "data: spk-001 admin edit"
     }
   ],
-  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/notify.py puts the same ones in the daily digest: one sentence, two readers, so a reword that reaches only one side fails here. Each case carries the whole `config` the two readers take, not just `sla_days`: the board-decision step is timed by `vote_window_days` and the other three by `sla_days`, one number per deadline. The two cases with a vote window other than 14 are what makes that testable rather than merely stated: a reader that hard-coded fourteen days for the board, or read a `lead_decision` key of its own, passes every other case here and fails those two. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
+  "_lateness_comment": "The overdue wording, pinned across the two languages. app/src/state/sla.ts renders these sentences on the screens and tools/convener_ops/governance/notify.py puts the same ones in the daily digest: one sentence, two readers, so a reword that reaches only one side fails here. Each case carries the whole `config` the two readers take, not just `sla_days`: the board-decision step is timed by `vote_window_days` and the other three by `sla_days`, one number per deadline. The two cases with a vote window other than 14 are what makes that testable rather than merely stated: a reader that hard-coded fourteen days for the board, or read a `lead_decision` key of its own, passes every other case here and fails those two. `state` is the arm of sla.ts's Lateness; `days`, `overdue_text` and `waiting_since` exist on the overdue arm only, because a step that is not late has no day count to render. Deadlines are counted in calendar days -- the fourteen-day case spanning two weekends is here so that reads as a decision rather than an oversight.",
   "lateness_cases": [
     {
       "name": "a lead past its board-decision deadline is overdue by whole calendar days",

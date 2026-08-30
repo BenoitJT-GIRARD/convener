@@ -9,11 +9,11 @@ count under a window that had become configuration. Every one of those was
 found by a person reading two files side by side, which is not a control.
 
 So the page is derived. `app/src/data/types.ts` is the model both readers
-share -- the browser validates against it and `tools/convener_ops/validate.py`
-enforces the same schema without becoming a second source -- and this script
-turns its interfaces, its enumerations and its documentation comments into the
-appendix. A field added to the model is a row in the handbook on the same
-commit, or `--check` fails the build.
+share -- the browser validates against it and
+`tools/convener_ops/governance/validate.py` enforces the same schema without becoming a
+second source -- and this script turns its interfaces, its enumerations and its
+documentation comments into the appendix. A field added to the model is a row in the
+handbook on the same commit, or `--check` fails the build.
 
 What is derived and what is written
 -----------------------------------
@@ -323,8 +323,8 @@ _NESTED: dict[str, Interface] = {}
 #: script can read distinguishes a whole-number "number" field from a
 #: fractional one; only the validator does (`whole()` versus `share()` in
 #: app/src/data/validate.ts, `isinstance(value, int)` versus the
-#: `]0, 1]` range check in tools/convener_ops/validate.py). So the type column
-#: says only what the type itself says.
+#: `]0, 1]` range check in tools/convener_ops/governance/validate.py). So the
+#: type column says only what the type itself says.
 #:
 #: A draft of this comment went on to claim each field's own doc
 #: comment "already carries the real constraint" -- sla_days's stating
@@ -349,7 +349,7 @@ _NESTED: dict[str, Interface] = {}
 #: enforced by the validator, not stated by this table:
 #: `whole()`/`share()` in app/src/data/validate.ts,
 #: `isinstance(value, int)`/the `]0, 1]` check in
-#: tools/convener_ops/validate.py.
+#: tools/convener_ops/governance/validate.py.
 _TYPE_WORDS: Final = {
     "string": "string",
     "number": "number",
@@ -539,7 +539,7 @@ eligible Board — active members, minus those who declared an absence, minus th
 recused on this lead — as two thirds rounded up, never fewer than three yes ballots.
 Below three eligible members the vote is suspended rather than decided on a bar that has
 stopped meaning anything. The rule lives in `app/src/state/governance.ts` and
-`tools/convener_ops/governance.py`, pinned in both languages by
+`tools/convener_ops/governance/governance.py`, pinned in both languages by
 `tools/tests/fixtures/governance-cases.json`.
 """
 

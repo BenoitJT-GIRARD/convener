@@ -90,7 +90,7 @@ _SHARED_COMPOSITION_PATHS = {
     "tools/convener_ops/registration_code.py",
     "tools/convener_ops/journey/registration.py",
     "tools/convener_ops/formats.py",
-    "tools/convener_ops/governance.py",
+    "tools/convener_ops/governance/governance.py",
     "tools/convener_ops/cli.py",
     "tools/convener_ops/declaration/published.py",
     "tools/convener_ops/brand.py",

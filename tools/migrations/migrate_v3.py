@@ -196,7 +196,7 @@ def migrate_config(
     for key, value in config.items():
         if key == "vote_threshold":
             # Deleted, not moved: the threshold is computed from the
-            # eligible board size (convener_ops.governance), never stored.
+            # eligible board size (convener_ops.governance.governance), never stored.
             continue
         if key == "board_members":
             declared = [login for login in value if isinstance(login, str)]

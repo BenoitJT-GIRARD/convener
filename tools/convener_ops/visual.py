@@ -270,7 +270,7 @@ from typing import Final
 
 from . import brand
 from .declaration.published import load_identity
-from .governance import PARIS
+from .governance.governance import PARIS
 from .registration_code import registration_code_svg
 from .ribbon import (
     CLEARANCE_STROKE_WIDTHS,

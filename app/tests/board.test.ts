@@ -130,7 +130,7 @@ describe('activeBoard', () => {
 
   // The BoardMember -> (logins, unavailable) step, pinned across both
   // languages: `tools/tests/test_governance_fixture.py` runs these same cases
-  // through `convener_ops.governance.active_board`. `decision_cases` start from
+  // through `convener_ops.governance.governance.active_board`. `decision_cases` start from
   // flat login lists, so they never covered this mapping -- which is where the
   // Python copies of it once drifted apart with both suites still green.
   it.each(cases.active_board_cases as ActiveBoardCase[])('shared fixture: $name', c => {
@@ -249,7 +249,7 @@ describe('the seat count, pinned to the validator', () => {
     within: boolean;
   }
 
-  // `tools/tests/test_validate.py` runs these same cases through
+  // `tools/tests/governance/test_validate.py` runs these same cases through
   // `validate_config`. The two used to disagree: this side counted active
   // members before seating, the validator counted entries, so a board with an
   // inactive entry could be seated up to `board_max` by the app and then

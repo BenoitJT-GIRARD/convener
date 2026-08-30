@@ -27,8 +27,8 @@ Instead the *address* is the thing that can be absent:
 
 And this package cannot send in any case: it holds **no transport at all**.
 No `smtplib`, no `urllib`, no `http`, no `socket`, no `subprocess` -- see
-`tests/test_notify.py::test_the_notification_module_holds_no_transport`, which
-reads this file's own source. Composing text and delivering it are separated
+`tests/governance/test_notify.py::test_the_notification_module_holds_no_transport`,
+which reads this file's own source. Composing text and delivering it are separated
 by a process boundary: `.github/workflows/sweep-and-notify.yml` is what posts,
 using the
 platform's own issue thread, and the platform is what turns that into email
@@ -43,7 +43,7 @@ anything this module renders.** A message names a record by its `id`
 and nothing else. That is not a filter applied to the output; there is no code
 path here that reads `name`, `email`, `affiliation`, `country`, `title`,
 `proposed_by`, `assigned_to`, `host_1`, `host_2` or a board `login`, so those
-values have no way in. `tests/test_notify.py` pins it by running every entry
+values have no way in. `tests/governance/test_notify.py` pins it by running every entry
 point over records whose every such field is filled with a distinctive string
 and asserting none of them reaches the text.
 
@@ -85,7 +85,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Final
 
-from convener_ops.governance import paris_today, vote_window_days
+from convener_ops.governance.governance import paris_today, vote_window_days
 
 # ------------------------------------------------------------------ #
 # Lateness -- the twin of `app/src/state/sla.ts`

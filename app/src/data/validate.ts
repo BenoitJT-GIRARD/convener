@@ -18,7 +18,7 @@
  *   declare every field as present; a record read with `date` absent would
  *   still be typed as having one, and the code downstream would compare
  *   `undefined` against a deadline and quietly conclude nothing is late.
- *   `tools/convener_ops/validate.py` requires the same keys on the write side --
+ *   `tools/convener_ops/governance/validate.py` requires the same keys on the write side --
  *   this is the same rule, on the side that had none.
  * - **An unknown key is an error too.** That is the `vote_threshold` case:
  *   a setting the app stopped honouring, still sitting in the file, reads to
@@ -147,7 +147,7 @@ function whole(at: Cursor, raw: Record<string, unknown>, key: string): number {
  *  other number here is a whole count `whole()` above actively rejects a
  *  fraction from, pinned by a test that a fractional window is refused
  *  rather than rounded. No `isinstance(value, bool)`-style guard is needed
- *  the way `tools/convener_ops/validate.py`'s mirror of this check needs one:
+ *  the way `tools/convener_ops/governance/validate.py`'s mirror of this check needs one:
  *  `typeof true === 'boolean'`, never `'number'`, so a boolean already
  *  fails the first condition below on its own. */
 function share(at: Cursor, raw: Record<string, unknown>, key: string): number {
@@ -236,13 +236,13 @@ function ticks(at: Cursor, raw: Record<string, unknown>, key: string): Record<st
  *  and the state most lines will stay in.
  *
  *  A name that is there is a GitHub login and nothing else -- the same rule
- *  `tools/convener_ops/validate.py` applies, and it lived only there, so the
+ *  `tools/convener_ops/governance/validate.py` applies, and it lived only there, so the
  *  browser could accept and write a file `convener-validate` then refuses.
  *  `checklist_assignee_cases` in `tools/tests/fixtures/governance-cases.json`
  *  is the two sides' shared statement of it. Refusing `Alba Quennell` here is
  *  also what keeps a person's name out of a field the app puts on screen
  *  beside a line of work. */
-/** A GitHub login, as `LOGIN_RE` in `tools/convener_ops/validate.py` spells it. */
+/** A GitHub login, as `LOGIN_RE` in `tools/convener_ops/governance/validate.py` spells it. */
 const LOGIN = /^[a-zA-Z0-9-]+$/;
 
 function assignees(
@@ -379,7 +379,7 @@ const SPEAKER_KEYS: readonly string[] = SPEAKER_FIELDS;
  *  `answer` is checked against the closed vocabulary rather than read as
  *  text -- `maybe` typed into the file would otherwise reach the lock-in,
  *  which has no reading for it. The day and the hour are checked as text
- *  here and as formats by `tools/convener_ops/validate.py`, the same division of
+ *  here and as formats by `tools/convener_ops/governance/validate.py`, the same division of
  *  labour as `date` and `time` on the record itself. */
 function readCandidateDate(at: Cursor, entry: unknown): CandidateDate {
   const raw = object(at, entry);
@@ -394,7 +394,7 @@ function readCandidateDate(at: Cursor, entry: unknown): CandidateDate {
 /** The slots a record offers, checked to hold each day once.
  *
  *  The day is what identifies a slot, here and in
- *  `tools/convener_ops/validate.py`. `state/dates.ts` finds a slot by its date,
+ *  `tools/convener_ops/governance/validate.py`. `state/dates.ts` finds a slot by its date,
  *  writes an answer to every entry carrying that date, and locks the hour of
  *  the day it locked; `proposeDates` refuses to offer the same day twice for
  *  exactly that reason. So a file holding two hours on one day would carry

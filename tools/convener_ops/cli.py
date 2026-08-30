@@ -44,8 +44,24 @@ from convener_ops.declaration.paths import (
     repo_root,
 )
 from convener_ops.declaration.yaml_safe import safe_load as yaml_safe_load
-from convener_ops.dispatch_alert import alert_message
-from convener_ops.governance import PARIS, paris_today
+from convener_ops.governance.dispatch_alert import alert_message
+from convener_ops.governance.governance import PARIS, paris_today
+from convener_ops.governance.notify import (
+    daily_digest,
+    dispatch,
+    immediate_events,
+    render_events,
+)
+from convener_ops.governance.register import (
+    LOG_FORMAT,
+    entries_from_log,
+    render_register,
+)
+from convener_ops.governance.validate import (
+    board_target_report,
+    validate_config,
+    validate_speakers,
+)
 from convener_ops.journey import (
     confirmation,
     delivery,
@@ -119,16 +135,9 @@ from convener_ops.journey.registration import (
     to_registration,
     upsert,
 )
-from convener_ops.notify import daily_digest, dispatch, immediate_events, render_events
 from convener_ops.public_data import to_public, to_survey_status
-from convener_ops.register import LOG_FORMAT, entries_from_log, render_register
 from convener_ops.sweep import expire_votes, sweep_inactive_members
 from convener_ops.sweep import sweep as sweep_speakers
-from convener_ops.validate import (
-    board_target_report,
-    validate_config,
-    validate_speakers,
-)
 
 #: The header line each data file carries. `app/src/data/yaml.ts` holds the
 #: same two strings: it is the browser's half of this file format, and the

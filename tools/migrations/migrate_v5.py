@@ -5,8 +5,8 @@ per-event switch. It is a fact about a speaker
 record, not a `instance/data/config.yml` setting, for the reasoning
 `app/src/data/types.ts::Speaker.survey_enabled`'s own doc comment gives --
 so every existing record, real data older than the field itself, has to
-gain it before `app/src/data/validate.ts` and `tools/convener_ops/validate.py`
-can both start requiring it.
+gain it before `app/src/data/validate.ts` and
+`tools/convener_ops/governance/validate.py` can both start requiring it.
 
 What it does, and the whole of what it does: every speaker gains
 `survey_enabled: false` when the key is absent, placed directly after

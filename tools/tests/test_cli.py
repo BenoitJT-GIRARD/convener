@@ -46,7 +46,7 @@ from convener_ops.cli import (
     validate,
 )
 from convener_ops.declaration.paths import repo_root
-from convener_ops.governance import paris_today
+from convener_ops.governance.governance import paris_today
 from convener_ops.journey import eventkeys
 from convener_ops.journey.attendance import MatchedAttendee
 from convener_ops.journey.certificate import (

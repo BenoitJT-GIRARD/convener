@@ -2,7 +2,7 @@
  * Whole records for the tests that stand in for GitHub.
  *
  * A test backend serving `season: 2026\nboard: []` was serving a file the
- * real repository could never contain and `tools/convener_ops/validate.py` would
+ * real repository could never contain and `tools/convener_ops/governance/validate.py` would
  * refuse. It passed only because `parseConfig` cast whatever it found; the
  * screens then read `undefined` out of settings the type said were there,
  * and the suite agreed. `data/validate.ts` reads the model now, so a test

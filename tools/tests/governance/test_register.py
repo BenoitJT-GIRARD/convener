@@ -11,15 +11,15 @@ from pathlib import Path
 import pytest
 
 from convener_ops import cli
-from convener_ops.commit_format import (
+from convener_ops.declaration.paths import REGISTER_PATH
+from convener_ops.governance.commit_format import (
     ACTS,
     QUALIFIERS,
     Decision,
     format_decision,
     judgemental_terms,
 )
-from convener_ops.declaration.paths import REGISTER_PATH
-from convener_ops.register import (
+from convener_ops.governance.register import (
     LOG_FORMAT,
     RegisterEntry,
     entries_from_log,

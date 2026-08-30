@@ -43,7 +43,7 @@ from convener_ops.journey.confirmation import CONTACT_EMAIL
 from convener_ops.journey.registration import SIGNUP_BASE, signup_url
 from convener_ops.public_data import PUBLISHABLE_ALWAYS
 
-#: The same zone `tools/convener_ops/governance.py::PARIS` already
+#: The same zone `tools/convener_ops/governance/governance.py::PARIS` already
 #: anchors this project's Python side on -- `zoneinfo`, the standard
 #: library's own IANA tzdata, rather than `site/.eleventy.js`'s `Intl`
 #: reimplemented here, so this test suite proves the build against an

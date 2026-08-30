@@ -58,7 +58,7 @@ function journeyItemKeys(config: Config | null): ReadonlySet<string> {
 }
 
 /** Who a line may be owned by: a GitHub login, the same rule
- *  `tools/convener_ops/validate.py` applies to `checklist[*].assignee` and
+ *  `tools/convener_ops/governance/validate.py` applies to `checklist[*].assignee` and
  *  `data/validate.ts` now applies when reading the file. It was enforced on
  *  the Python side alone, so `assignItem` -- which is exported, and whose
  *  `<select>` of logins is a screen and not a rule -- could write a record

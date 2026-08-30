@@ -25,7 +25,7 @@
  * direction. The shared fixture pins that choice with 1 May 2026 counted as an
  * ordinary Friday, so it reads as a decision rather than an oversight.
  *
- * `tools/convener_ops/governance.py` implements the same arithmetic for the
+ * `tools/convener_ops/governance/governance.py` implements the same arithmetic for the
  * unattended job, and `tools/tests/fixtures/governance-cases.json`'s
  * `working_day_cases` pins the two together.
  */
@@ -94,7 +94,7 @@ export function addWorkingDays(from: string, n: number): string {
   // whole number, as a hand-edited file may well hold. The caller reads that
   // as "no deadline can be computed" and leaves the window standing open, so
   // nothing acts on a date it could not parse. `add_working_days` in
-  // `tools/convener_ops/governance.py` answers `''` to the same input.
+  // `tools/convener_ops/governance/governance.py` answers `''` to the same input.
   let epoch = epochOf(from);
   if (Number.isNaN(epoch) || !Number.isInteger(n)) return '';
   for (let counted = 0; counted < n; ) {

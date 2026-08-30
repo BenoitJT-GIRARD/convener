@@ -15,14 +15,19 @@ from typing import Any
 import pytest
 
 from convener_ops.declaration.paths import repo_root
-from convener_ops.governance import (
+from convener_ops.governance.governance import (
     active_board,
     add_working_days,
     decide,
     threshold_for,
     working_days_elapsed,
 )
-from convener_ops.notify import due_date, overdue, overdue_text, waiting_since
+from convener_ops.governance.notify import (
+    due_date,
+    overdue,
+    overdue_text,
+    waiting_since,
+)
 from convener_ops.sweep import _unsettled_candidates
 
 CASES = json.loads(

@@ -105,7 +105,7 @@ describe('the grammar of decision commits', () => {
   });
 
   it('writes every act it declares, and declares every act it writes', () => {
-    // `tools/convener_ops/commit_format.py` holds the same table; the fixture
+    // `tools/convener_ops/governance/commit_format.py` holds the same table; the fixture
     // above is what stops the two drifting.
     const written = new Set(cases.commit_message_cases.map(c => c.kind));
     expect([...Object.keys(ACTS)].sort()).toEqual([...written].sort());
@@ -192,7 +192,7 @@ describe('the grammar of decision commits', () => {
   });
 
   it.each(cases.identifier_cases)('$name', c => {
-    // The same table `tools/tests/test_commit_format.py` reads. `_TOKEN`
+    // The same table `tools/tests/governance/test_commit_format.py` reads. `_TOKEN`
     // there and `TOKEN` here are one rule about what a commit subject may
     // point at, and this is what stops them drifting.
     expect(isIdentifier(c.value)).toBe(c.identifier);

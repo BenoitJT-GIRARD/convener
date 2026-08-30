@@ -19,7 +19,7 @@ from conftest import (
     speaker,
 )
 
-from convener_ops.validate import validate_config, validate_speakers
+from convener_ops.governance.validate import validate_config, validate_speakers
 
 
 def test_ballot_with_unknown_value_is_rejected() -> None:

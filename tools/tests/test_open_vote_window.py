@@ -31,7 +31,7 @@ from open_vote_window import (
 )
 
 from convener_ops.cli import SPEAKERS_HEADER
-from convener_ops.validate import STATUSES
+from convener_ops.governance.validate import STATUSES
 
 ON = "2026-08-18"
 

@@ -21,8 +21,8 @@ from typing import Any
 
 import pytest
 
-from convener_ops import commit_format
-from convener_ops.commit_format import (
+from convener_ops.governance import commit_format
+from convener_ops.governance.commit_format import (
     ACTS,
     QUALIFIERS,
     Decision,
@@ -34,7 +34,7 @@ from convener_ops.commit_format import (
 )
 
 CASES = json.loads(
-    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+    (Path(__file__).parents[1] / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
 )
@@ -237,7 +237,7 @@ def test_what_a_decision_may_point_at_is_the_same_rule_on_both_sides(
     identifiers, which is what keeps the browser from writing a line this
     module cannot read back.
     """
-    from convener_ops.commit_format import _TOKEN
+    from convener_ops.governance.commit_format import _TOKEN
 
     assert bool(re.fullmatch(_TOKEN, case["value"])) is case["identifier"]
 

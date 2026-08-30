@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from conftest import EDITIONS, board_member, config, speaker
 
+from convener_ops.governance.validate import validate_speakers
 from convener_ops.journey.proposal import (
     CAREER_STAGE_ORDER,
     CAREER_STAGES,
@@ -23,7 +24,6 @@ from convener_ops.journey.proposal import (
     verify_signature,
 )
 from convener_ops.sweep import expire_votes
-from convener_ops.validate import validate_speakers
 
 TODAY = "2026-01-08"
 
@@ -147,8 +147,8 @@ def test_the_next_id_generation_skips_a_non_mapping_entry_in_existing() -> None:
 
 def test_the_next_id_generation_skips_an_id_outside_the_spk_pattern() -> None:
     # validate_speakers checks that `id` is present and unique, not that it
-    # matches "spk-NNN" (convener_ops.validate.validate_speakers) -- so a legacy
-    # or hand-typed id in another shape can reach here. It must not raise,
+    # matches "spk-NNN" (convener_ops.governance.validate.validate_speakers) -- so a
+    # legacy or hand-typed id in another shape can reach here. It must not raise,
     # and must not perturb the next id computed from the ids that do match.
     existing = [speaker(id="legacy-042"), speaker(id="spk-007")]
     fields = _fields(("Name", "Grace Hopper"))

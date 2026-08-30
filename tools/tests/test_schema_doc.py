@@ -43,7 +43,7 @@ from generate_schema_doc import (
 )
 
 from convener_ops.declaration.paths import repo_root
-from convener_ops.validate import STATUSES
+from convener_ops.governance.validate import STATUSES
 
 ROOT = repo_root()
 
@@ -197,8 +197,8 @@ def test_every_stored_key_of_a_record_has_a_row() -> None:
 def test_every_status_the_readers_accept_is_listed_on_the_page() -> None:
     """The status list is the model's, not a second list kept beside it.
 
-    `convener_ops.validate.STATUSES` is the Python reader's own vocabulary. It is
-    read here as a second opinion about the same journey -- the page is
+    `convener_ops.governance.validate.STATUSES` is the Python reader's own vocabulary.
+    It is read here as a second opinion about the same journey -- the page is
     derived from the TypeScript, so a status the two languages disagree about
     shows up as a status the handbook does not list.
     """

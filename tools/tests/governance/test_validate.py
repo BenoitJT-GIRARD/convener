@@ -8,14 +8,14 @@ import pytest
 from conftest import EDITIONS, board_member, config, speaker
 
 from convener_ops.declaration.published import EditionPrefix
-from convener_ops.validate import (
+from convener_ops.governance.validate import (
     board_target_report,
     validate_config,
     validate_speakers,
 )
 
 CASES = json.loads(
-    (Path(__file__).parent / "fixtures" / "governance-cases.json").read_text(
+    (Path(__file__).parents[1] / "fixtures" / "governance-cases.json").read_text(
         encoding="utf-8"
     )
 )

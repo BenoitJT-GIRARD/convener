@@ -79,7 +79,7 @@ from convener_ops.cli import (
     retention_sweep,
     revoke_certificate,
 )
-from convener_ops.governance import paris_today
+from convener_ops.governance.governance import paris_today
 from convener_ops.journey import eventkeys, signing
 from convener_ops.journey.attendance import MatchedAttendee
 from convener_ops.journey.certificate import (

@@ -152,7 +152,7 @@ instance:
     reason: >-
       The decision register: a total re-rendering of this repository's own
       commit history, written by .github/workflows/register.yml on every
-      push (tools/convener_ops/register.py, cli.py::register) and never by hand
+      push (tools/convener_ops/governance/register.py, cli.py::register) and never by hand
       -- the file's own preamble says so, and convener-register --check fails
       the build if anybody tries. It sits under docs/ because it is written
       for a volunteer to read and because two handbook pages link to it and

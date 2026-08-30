@@ -72,9 +72,9 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Final
 
 from .declaration import published
-from .governance import PARIS
+from .governance.governance import PARIS
+from .governance.notify import Deadline, due_date
 from .journey.registration import signup_url
-from .notify import Deadline, due_date
 from .visual import STANDING_START_LOCAL
 
 #: `instance/data/config.yml::seminar_duration_minutes`'s own fallback --

@@ -15,7 +15,11 @@ from typing import Any
 
 import pytest
 
-from convener_ops.governance import DEFAULT_VOTE_WINDOW_DAYS, PARIS, vote_window_days
+from convener_ops.governance.governance import (
+    DEFAULT_VOTE_WINDOW_DAYS,
+    PARIS,
+    vote_window_days,
+)
 from convener_ops.sweep import expire_votes
 
 

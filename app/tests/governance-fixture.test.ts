@@ -109,7 +109,7 @@ function speakerFor(c: LatenessCase): Speaker {
 
 describe('the overdue wording, shared with the daily digest', () => {
   /* These sentences are rendered on the screens by `sla.ts` and posted in the
-   * notification digest by `tools/convener_ops/notify.py`. One sentence, two
+   * notification digest by `tools/convener_ops/governance/notify.py`. One sentence, two
    * readers: a reword that reaches only one side fails here and in
    * `tools/tests/test_governance_fixture.py` at the same time. */
   it.each(latenessCases)('$name', c => {

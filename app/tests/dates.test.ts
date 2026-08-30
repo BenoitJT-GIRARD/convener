@@ -278,7 +278,7 @@ describe('the AcceptedDate brand', () => {
  *
  * The day identifies a slot; the hour is part of the offer, not part of its
  * name. The two readers of `instance/data/speakers.yml` disagreed about that --
- * `tools/convener_ops/validate.py` de-duplicated on (date, time) while this
+ * `tools/convener_ops/governance/validate.py` de-duplicated on (date, time) while this
  * module keys on the date -- so a file holding two hours on one day passed
  * validation and then had one recorded reply written against both, with
  * `lockDate` freezing whichever hour came first. These cases are read from

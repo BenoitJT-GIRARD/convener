@@ -26,7 +26,11 @@ from typing import Any
 import pytest
 from conftest import EDITIONS, speaker
 
-from convener_ops.validate import DATE_ANSWERS, SPEAKER_TEXT_V4, validate_speakers
+from convener_ops.governance.validate import (
+    DATE_ANSWERS,
+    SPEAKER_TEXT_V4,
+    validate_speakers,
+)
 
 BOARD = frozenset({"carol"})
 

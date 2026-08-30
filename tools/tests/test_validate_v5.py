@@ -19,7 +19,7 @@ from __future__ import annotations
 import pytest
 from conftest import EDITIONS, speaker
 
-from convener_ops.validate import SPEAKER_BOOL_V5, validate_speakers
+from convener_ops.governance.validate import SPEAKER_BOOL_V5, validate_speakers
 
 BOARD = frozenset({"carol"})
 

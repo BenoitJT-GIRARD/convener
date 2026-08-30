@@ -18,13 +18,17 @@ import yaml
 from conftest import ballot, board_member, config, nomination, speaker
 
 from convener_ops import cli
-from convener_ops.governance import MINIMUM_ELIGIBLE, active_board, last_ballot_on
+from convener_ops.governance.governance import (
+    MINIMUM_ELIGIBLE,
+    active_board,
+    last_ballot_on,
+)
+from convener_ops.governance.validate import validate_config
 from convener_ops.sweep import (
     _inactivity_months,
     _months_before,
     sweep_inactive_members,
 )
-from convener_ops.validate import validate_config
 
 #: Every test reads the clock from here, in UTC, so the Paris conversion the
 #: function does is exercised rather than bypassed.

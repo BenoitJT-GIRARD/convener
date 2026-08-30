@@ -19,12 +19,13 @@ import pytest
 from conftest import ballot, nomination, objection, speaker, workflow_triggers
 from conftest import config as make_config
 
-from convener_ops import cli, notify
-from convener_ops.commit_format import judgemental_terms
+from convener_ops import cli
 from convener_ops.declaration.paths import repo_root
 from convener_ops.declaration.yaml_safe import safe_load
-from convener_ops.governance import vote_window_days
-from convener_ops.notify import (
+from convener_ops.governance import notify
+from convener_ops.governance.commit_format import judgemental_terms
+from convener_ops.governance.governance import vote_window_days
+from convener_ops.governance.notify import (
     EVENT_KINDS,
     MENTION_ENV,
     NEW_LEAD,
@@ -1171,38 +1172,64 @@ ALLOWED_IMPORTS = frozenset(
 #: for what that does and does not buy.
 DYNAMIC_IMPORT_CALLS = frozenset({"__import__", "import_module", "eval", "exec"})
 
-PACKAGE_DIR = Path(notify.__file__).parent
+#: The package root, whatever sub-package any one module of it sits in.
+PACKAGE_DIR = Path(notify.__file__).parents[1]
 
 
 def _reads(module: str) -> tuple[set[str], set[str], list[str]]:
     """What one module of this package imports: outsiders, siblings, dynamics.
 
-    A sibling is returned by its bare module name (`governance`), whichever of
-    the three spellings reached it -- `from . import x`, `from .x import y` or
-    `import convener_ops.x` -- so the walk below cannot be dodged by choosing a
-    different one.
+    `module` is a module's dotted path under `convener_ops`
+    (`governance.notify`), and a sibling comes back in that same spelling
+    whichever of the four ways reached it -- `from . import x`,
+    `from .x import y`, `from ..sub.x import y` or `import convener_ops.sub.x`
+    -- so the walk below cannot be dodged by choosing a different one.
     """
-    tree = ast.parse((PACKAGE_DIR / f"{module}.py").read_text(encoding="utf-8"))
+    source = PACKAGE_DIR.joinpath(*module.split(".")).with_suffix(".py")
+    tree = ast.parse(source.read_text(encoding="utf-8"))
     outside: set[str] = set()
     siblings: set[str] = set()
     dynamic: list[str] = []
+    #: The sub-package `module` itself sits in, which is what a relative
+    #: import inside it counts its leading dots from.
+    package = module.split(".")[:-1]
 
-    def place(dotted: str) -> None:
+    def is_module(parts: list[str]) -> bool:
+        return PACKAGE_DIR.joinpath(*parts).with_suffix(".py").is_file()
+
+    def sibling(parts: list[str], names: list[str]) -> None:
+        """The module `parts` reaches, taking each imported name as a
+        module first (`from ..journey import registration`) and falling
+        back to the shortest prefix of `parts` that is one (`from
+        ..journey.registration import signup_url`)."""
+        reached = [name for name in names if is_module([*parts, name])]
+        if reached:
+            siblings.update(".".join([*parts, name]) for name in reached)
+            return
+        walk = list(parts)
+        while walk and not is_module(walk):
+            walk.pop()
+        if walk:
+            siblings.add(".".join(walk))
+
+    def place(dotted: str, names: list[str]) -> None:
         parts = dotted.split(".")
         if parts[0] == "convener_ops":
-            siblings.add(parts[1] if len(parts) > 1 else "__init__")
+            sibling(parts[1:], names)
         else:
             outside.add(parts[0])
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                place(alias.name)
+                place(alias.name, [])
         elif isinstance(node, ast.ImportFrom):
+            names = [alias.name for alias in node.names]
             if node.level:  # a relative import: `from . import x`
-                siblings.add((node.module or "__init__").split(".")[0])
+                base = package[: len(package) - node.level + 1]
+                sibling(base + (node.module.split(".") if node.module else []), names)
             elif node.module:
-                place(node.module)
+                place(node.module, names)
         elif isinstance(node, ast.Call):
             func = node.func
             name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
@@ -1216,8 +1243,8 @@ def test_the_notification_module_holds_no_transport() -> None:
     """Nothing reachable from this module names a transport.
 
     Over the package's own import graph, not over this one file. `notify.py`
-    imports `convener_ops.governance`, so an `import urllib.request` added there is
-    reachable from here and would give this module a transport by way of an
+    imports `convener_ops.governance.governance`, so an `import urllib.request` added
+    there is reachable from here and would give this module a transport by way of an
     attribute; a check that read `notify.py` alone would call that clean. Every
     `convener_ops` module reachable from `notify.py` is parsed, and every import any
     of them makes has to be on the allowlist above.
@@ -1237,7 +1264,7 @@ def test_the_notification_module_holds_no_transport() -> None:
     to evade it.
     """
     seen: set[str] = set()
-    queue = ["notify"]
+    queue = ["governance.notify"]
     outside: set[str] = set()
     dynamic: list[str] = []
     while queue:
@@ -1252,7 +1279,7 @@ def test_the_notification_module_holds_no_transport() -> None:
 
     # The graph is walked, not assumed: if `notify.py` ever stops importing
     # `governance`, this says so rather than quietly checking one file again.
-    assert seen == {"notify", "governance"}, seen
+    assert seen == {"governance.notify", "governance.governance"}, seen
 
     assert dynamic == [], f"a module is fetched at runtime: {dynamic}"
     undeclared = outside - ALLOWED_IMPORTS

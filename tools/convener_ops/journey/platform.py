@@ -45,7 +45,7 @@ was reading a file at all, not which file it was reading. So:
   codebase defines that mapping, and it cannot be implemented without one:
   `edition_code` is the only candidate consistent with existing convention
   (`app/src/state/consent.ts` already treats it as the event's public id,
-  and `tools/convener_ops/validate.py` fixes its shape as the prefix this
+  and `tools/convener_ops/governance/validate.py` fixes its shape as the prefix this
   instance declares followed by digits), and it is what this project's own
   tests already use (`mrg-042` for `MRG-042`). `find_speaker` below is the one
   place this rule is written down.
@@ -215,8 +215,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Protocol, runtime_checkable
 
-from ..commit_format import _TOKEN
 from ..declaration.paths import DATA_DIR, repo_root
+from ..governance.commit_format import _TOKEN
 from . import eventkeys
 from .registration import normalize_email
 

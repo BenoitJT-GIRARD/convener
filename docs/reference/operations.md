@@ -797,7 +797,7 @@ delivery mechanism.
 **What travels:** record identifiers (`spk-014`), stored calendar days,
 `nomination N` labels and the four fixed step names. No speaker name, email
 address, affiliation, country, talk title or board login is ever included —
-`tools/convener_ops/notify.py` reads none of those fields.
+`tools/convener_ops/governance/notify.py` reads none of those fields.
 
 **To verify:** run `cd tools && uv run convener-check-config`; *Board
 notifications* moves from `absent` to `production`. Run
@@ -898,7 +898,7 @@ did not create a second thing to destroy.
 **`.github/workflows/retention.yml`** runs daily and on demand
 (`workflow_dispatch`, no inputs). Each run: computes which events'
 90-day windows have elapsed (`convener_ops.journey.eventkeys.is_due_for_destruction`,
-measured against `convener_ops.governance.paris_today` — never a raw clock
+measured against `convener_ops.governance.governance.paris_today` — never a raw clock
 read); deletes each one's `CONVENER_EVENT_KEY_<EVENT ID>` secret (`gh secret
 delete`, converging on the secret being *absent* regardless of that
 command's own exit code — a secret already gone from a previous, partial
@@ -2215,7 +2215,7 @@ data: <act> <record> by <login> (<qualifier>)
 for example `data: record a ballot on spk-007 by ada (recused)`,
 `data: reopen the vote on spk-012 by grace`, or
 `data: settle the nomination of erin by ada`. The acts are a closed
-list (`tools/convener_ops/commit_format.py`, mirrored in
+list (`tools/convener_ops/governance/commit_format.py`, mirrored in
 `app/src/state/decisions.ts`), each naming a record rather than a person,
 and the qualifier is closed per act. So the register can be read back with
 `git log --format=%s -- instance/data/` and filtered on one act, and no line in it
@@ -2257,7 +2257,7 @@ Collect each member's GitHub login, then rewrite both files in step:
 2. `instance/data/speakers.yml` — every `selection.ballots[].voter`, using exactly
    the same mapping. A ballot on record carries whatever identifier was
    current when it was cast, and a vote is tallied only from ballots whose
-   voter is on the Board (`tools/convener_ops/governance.py`), so a Board
+   voter is on the Board (`tools/convener_ops/governance/governance.py`), so a Board
    renamed on its own would silently discard every vote already cast.
 
 Check before starting that nothing *else* in `instance/data/speakers.yml` holds a

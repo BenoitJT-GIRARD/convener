@@ -12,7 +12,7 @@ import copy
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from convener_ops.governance import (
+from convener_ops.governance.governance import (
     MINIMUM_ELIGIBLE,
     PARIS,
     active_board,

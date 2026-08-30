@@ -8,7 +8,7 @@
  *     data: <act> <entity> by <actor>
  *     data: <act> <entity> by <actor> (<qualifier>)
  *
- * `tools/convener_ops/commit_format.py` holds the same table and can read these
+ * `tools/convener_ops/governance/commit_format.py` holds the same table and can read these
  * lines back; `tools/tests/fixtures/governance-cases.json` pins the two
  * copies together, so a phrase changed on one side fails on the other.
  *
@@ -49,7 +49,7 @@ import type {
 /**
  * An identifier the register is allowed to point at.
  *
- * Mirrors `_TOKEN` in `tools/convener_ops/commit_format.py`, and the pair is
+ * Mirrors `_TOKEN` in `tools/convener_ops/governance/commit_format.py`, and the pair is
  * pinned by `identifier_cases` in
  * `tools/tests/fixtures/governance-cases.json`. A speaker id (`spk-001`), a
  * GitHub login, or `board` -- never a person's name. A name is prose about a
@@ -297,7 +297,7 @@ function editPart(edit: Edit): string {
  * it was given. They are bookkeeping -- the file catching up with something
  * that already happened elsewhere -- and `validate_messages` is right to leave
  * them alone: a grammar that made every commit an obstacle would be abandoned
- * inside a week (`tools/convener_ops/commit_format.py`).
+ * inside a week (`tools/convener_ops/governance/commit_format.py`).
  *
  * They are routed through here all the same, and not because the string needs
  * building. It is so that the next reader finds a decision about them rather

@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 from conftest import config
 
-from convener_ops.validate import validate_config
+from convener_ops.governance.validate import validate_config
 
 
 def test_the_channels_are_required() -> None:

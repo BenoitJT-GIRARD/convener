@@ -192,7 +192,7 @@ export interface SpeakerSelection {
 
 /** `''` is a real stored value, not an oversight: `tools/migrations/migrate_v3.py`
  *  writes it for every speaker whose status never reached a publishable
- *  state, and `tools/convener_ops/validate.py` accepts it. It is spelled out here
+ *  state, and `tools/convener_ops/governance/validate.py` accepts it. It is spelled out here
  *  so that code reading `consent` has to face it -- neither `''` nor
  *  `pending` is an agreement, and the gate treats them identically. */
 export type PublicationConsent = 'granted' | 'refused' | 'pending' | '';
@@ -350,7 +350,7 @@ export interface Speaker {
    *  same rows said `organizer`: the field held a person on some records
    *  and a provenance on others, and nothing reading it could tell which.
    *  A provenance already had a field, and it was the wrong one that got
-   *  written. `tools/convener_ops/validate.py` now refuses a `proposed_by`
+   *  written. `tools/convener_ops/governance/validate.py` now refuses a `proposed_by`
    *  spelt like one of `source`'s own values, because the record has to
    *  say what it means -- no reader downstream can guess it, and one that
    *  tried would be guessing about somebody's name. */

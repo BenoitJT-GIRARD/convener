@@ -11,7 +11,7 @@ workflow step that runs `convener-handle-registration` passed none of
 `CONVENER_MATCHING_SALT` or the five `CONVENER_SMTP_*` secrets, so in production
 `matching_code` always returned `None` and `smtp_config_from_env` always
 returned `None` -- silently, since nothing in a unit test ever reads the
-workflow file itself. `tools/tests/test_notify.py` already has this same
+workflow file itself. `tools/tests/governance/test_notify.py` already has this same
 idiom for `notify.yml` (`test_the_immediate_job_fetches_enough_history...`,
 `test_the_workflow_asks_for_no_permission_beyond...`); this module is its
 own workflow file's twin.

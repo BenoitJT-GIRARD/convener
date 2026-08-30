@@ -251,7 +251,7 @@ export function nominationBlocker(
   // A GitHub username, not a name. Opening a nomination writes a commit
   // subject, and a commit subject is permanent: `Jane Doe (CNRS)` typed here
   // would put a real person's name into a history nothing rewrites, and the
-  // register (`tools/convener_ops/commit_format.py`) could not read the line back
+  // register (`tools/convener_ops/governance/commit_format.py`) could not read the line back
   // either, so the decision would be lost as well as the privacy. The
   // identifier is checked here, where a sentence can be shown, rather than
   // left to `decisions.identifier` to refuse at the moment of writing.
@@ -403,7 +403,7 @@ export function objectToNomination(
  *
  * The most recent one carrying an objection of theirs, and never an accepted
  * one: an accepted nomination holds no standing objection (`resolveNominations`
- * cannot produce one, and `tools/convener_ops/validate.py` refuses the pair in a
+ * cannot produce one, and `tools/convener_ops/governance/validate.py` refuses the pair in a
  * hand-edited file), so a hand-written objection on an accepted nomination
  * must not become a door back out of a seat that was granted.
  */
@@ -528,7 +528,7 @@ function seat(board: BoardMember[], candidate: string, on: string): BoardMember[
  * `accepted` nomination whose candidate is not on the board cannot exist. A
  * nomination is only accepted when it carries no objection, so an
  * `accepted` nomination with objections cannot exist either -- the
- * validator's cross-field check on that pair (`tools/convener_ops/validate.py`)
+ * validator's cross-field check on that pair (`tools/convener_ops/governance/validate.py`)
  * is now a statement about hand-edited files, not a live defence.
  *
  * Seats are counted as they are filled, so a run that accepts several
@@ -537,7 +537,7 @@ function seat(board: BoardMember[], candidate: string, on: string): BoardMember[
  * left; the ones that do not fit become
  * `waiting`, and stay in the running for the next call. Nothing here reads
  * `board_min`, whatever a given file declares it to be: `board_min` is a
- * target the tools report on -- `tools/convener_ops/validate.py::board_target_report`
+ * target the tools report on -- `tools/convener_ops/governance/validate.py::board_target_report`
  * and the Composition table on the Board screen -- never a rule that admits
  * or refuses anyone. Seating is a question about room, and only a ceiling
  * can run short of room; a floor could only ever argue for seating someone

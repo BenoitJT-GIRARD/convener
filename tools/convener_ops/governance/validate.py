@@ -19,7 +19,7 @@ import re
 from collections.abc import Collection
 from typing import Any
 
-from .declaration.published import EditionPrefix
+from ..declaration.published import EditionPrefix
 from .governance import MINIMUM_ELIGIBLE
 
 STATUSES = frozenset(

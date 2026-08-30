@@ -47,7 +47,7 @@ from migrate_v6 import (
 
 from convener_ops.cli import SPEAKERS_HEADER, dump_config
 from convener_ops.declaration.paths import repo_root
-from convener_ops.validate import validate_config
+from convener_ops.governance.validate import validate_config
 
 ROOT = repo_root()
 
@@ -231,7 +231,7 @@ def test_no_reader_of_the_config_still_asks_for_the_old_name() -> None:
     that decide whether a file loads at all: this package's validator, the
     browser's narrowing, and the model both derive from."""
     for name in (
-        "tools/convener_ops/validate.py",
+        "tools/convener_ops/governance/validate.py",
         "app/src/data/validate.ts",
         "app/src/data/types.ts",
     ):

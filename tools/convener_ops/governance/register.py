@@ -58,8 +58,8 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Final
 
-from convener_ops.commit_format import ACTS, Decision, parse_decision
-from convener_ops.governance import paris_today
+from convener_ops.governance.commit_format import ACTS, Decision, parse_decision
+from convener_ops.governance.governance import paris_today
 
 #: The `git log --format=` string this module's parser expects: the author
 #: instant, a unit separator, the subject. The separator is a character no
@@ -75,8 +75,8 @@ regenerated in full from the commits on every push, so a change made here is
 overwritten rather than kept.
 
 Every cell below is a calendar day, an identifier, or a phrase from the closed
-vocabulary in `tools/convener_ops/commit_format.py`. The table has no free-text
-column, so it records what happened to a record and never passes judgement on
+vocabulary in `tools/convener_ops/governance/commit_format.py`. The table has no
+free-text column, so it records what happened to a record and never passes judgement on
 the volunteer who acted. Reasons a volunteer chose to state live with the
 record itself, in `instance/data/speakers.yml`, where they can still be corrected; a
 line of this register, once written, never changes.

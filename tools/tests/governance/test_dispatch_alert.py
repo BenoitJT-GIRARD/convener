@@ -1,5 +1,5 @@
-"""Detection, never prevention -- see `convener_ops.dispatch_alert`'s own module
-docstring. The tests here split the same way the code does: `alert_message`
+"""Detection, never prevention -- see `convener_ops.governance.dispatch_alert`'s own
+module docstring. The tests here split the same way the code does: `alert_message`
 is a pure function, tested directly; `cli.alert_secret_workflow_run` is the
 thin wrapper the workflow actually calls, tested through its exit code, its
 `$GITHUB_OUTPUT` write and whether it leaves `notify-body.md` behind -- the
@@ -14,8 +14,8 @@ from pathlib import Path
 import pytest
 
 from convener_ops import cli
-from convener_ops.dispatch_alert import MAIN_BRANCH, alert_message
-from convener_ops.notify import MENTION_ENV, THREAD_ENV
+from convener_ops.governance.dispatch_alert import MAIN_BRANCH, alert_message
+from convener_ops.governance.notify import MENTION_ENV, THREAD_ENV
 
 
 @pytest.fixture(autouse=True)

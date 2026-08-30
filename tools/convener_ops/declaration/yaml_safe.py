@@ -45,8 +45,8 @@ _INT_RE = re.compile(
 
 # Drop the built-in timestamp resolver entirely (dates in this repository's
 # data files are always meant to come back as plain `YYYY-MM-DD` strings,
-# validated by regex in convener_ops.validate, not as datetime.date objects), and
-# drop the built-in int resolver too -- it's the one with the sexagesimal
+# validated by regex in convener_ops.governance.validate, not as datetime.date objects),
+# and drop the built-in int resolver too -- it's the one with the sexagesimal
 # alternative baked in. A corrected int resolver is added back below.
 _StrictLoader.yaml_implicit_resolvers = {
     first: [

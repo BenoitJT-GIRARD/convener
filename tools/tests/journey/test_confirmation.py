@@ -664,7 +664,11 @@ def test_the_retention_window_is_the_same_number_everywhere() -> None:
     from convener_ops.journey.confirmation import _DATA_PROTECTION
 
     eventkeys_source = (
-        Path(__file__).resolve().parents[3] / "tools" / "convener_ops" / "journey" / "eventkeys.py"
+        Path(__file__).resolve().parents[3]
+        / "tools"
+        / "convener_ops"
+        / "journey"
+        / "eventkeys.py"
     ).read_text(encoding="utf-8")
     event_page_source = (
         Path(__file__).resolve().parents[3] / "site" / "src" / "event.njk"

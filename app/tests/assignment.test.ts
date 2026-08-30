@@ -279,7 +279,7 @@ describe('what is waiting for me', () => {
 /**
  * Who may be named against a line, in both languages.
  *
- * `tools/convener_ops/validate.py` refused an assignee that is not a GitHub login;
+ * `tools/convener_ops/governance/validate.py` refused an assignee that is not a GitHub login;
  * this side accepted any string, in the file reader and in `assignItem`
  * alike. The `<select>` of board logins on the speaker page is a screen, not
  * a rule -- `assignItem` is exported, and a hand-edited file goes through the

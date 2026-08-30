@@ -23,7 +23,7 @@
  * recorded against the day, `AcceptedDate` is a day, and the hour of the
  * evening finally locked is read off the slot that day names. `proposeDates`
  * refuses to offer one day twice for that reason, and both file readers --
- * `data/validate.ts` here and `tools/convener_ops/validate.py` there -- now refuse
+ * `data/validate.ts` here and `tools/convener_ops/governance/validate.py` there -- now refuse
  * a record that holds two hours on one day, so a file edited by hand cannot
  * present this module with two answers to one question.
  * `candidate_date_cases` in `tools/tests/fixtures/governance-cases.json` is

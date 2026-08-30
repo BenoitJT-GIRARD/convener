@@ -2,7 +2,7 @@
  * What this instance numbers its editions, on this side of the language
  * boundary.
  *
- * `tools/convener_ops/validate.py` used to fix an edition code as
+ * `tools/convener_ops/governance/validate.py` used to fix an edition code as
  * `MRG-` and one to four digits -- the initials of the series that happens
  * to run this repository, written into the *product's* own validator --
  * and `state/agenda.ts::nextEditionCode` composed `MRG-${n}` from a

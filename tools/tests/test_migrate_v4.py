@@ -30,7 +30,7 @@ from migrate_v4 import (
 )
 
 from convener_ops.cli import SPEAKERS_HEADER, dump_speakers
-from convener_ops.validate import validate_speakers
+from convener_ops.governance.validate import validate_speakers
 
 
 def v3_speaker(**overrides: Any) -> dict[str, Any]:
